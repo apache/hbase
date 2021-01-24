@@ -101,8 +101,8 @@ public class TestGlobalReplicationThrottler {
     utility2.setZkCluster(miniZK);
     new ZKWatcher(conf2, "cluster2", null, true);
 
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(utility2.getClusterKey());
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(utility2.getClusterKey()).build();
 
     utility1.startMiniCluster();
     utility2.startMiniCluster();

@@ -623,7 +623,8 @@ public class TestMasterReplication {
     try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
       Admin admin = conn.getAdmin()) {
       admin.addReplicationPeer(id,
-        new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey()));
+        ReplicationPeerConfig.newBuilder().
+          setClusterKey(utilities[slaveClusterNumber].getClusterKey()).build());
     }
   }
 
@@ -633,9 +634,10 @@ public class TestMasterReplication {
       Admin admin = conn.getAdmin()) {
       admin.addReplicationPeer(
         id,
-        new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey())
-            .setReplicateAllUserTables(false)
-            .setTableCFsMap(ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCfs)));
+        ReplicationPeerConfig.newBuilder()
+          .setClusterKey(utilities[slaveClusterNumber].getClusterKey())
+          .setReplicateAllUserTables(false)
+          .setTableCFsMap(ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCfs)).build());
     }
   }
 

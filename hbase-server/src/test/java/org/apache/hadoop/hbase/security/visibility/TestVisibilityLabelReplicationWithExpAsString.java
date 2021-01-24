@@ -137,8 +137,9 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     TEST_UTIL1.startMiniCluster(1);
 
     admin = TEST_UTIL.getAdmin();
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(TEST_UTIL1.getClusterKey());
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(TEST_UTIL1.getClusterKey())
+      .build();
     admin.addReplicationPeer("2", rpc);
 
     TableDescriptor tableDescriptor =
