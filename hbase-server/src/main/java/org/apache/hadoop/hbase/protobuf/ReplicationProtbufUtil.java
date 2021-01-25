@@ -26,23 +26,19 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.UUID;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
@@ -83,7 +79,7 @@ public class ReplicationProtbufUtil {
    * found.
    */
   public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
-      buildReplicateWALEntryRequest(final Entry[] entries) {
+      buildReplicateWALEntryRequest(final Entry[] entries) throws IOException {
     // Accumulate all the Cells seen in here.
     return buildReplicateWALEntryRequest(entries, null, null, null, null);
   }
@@ -100,52 +96,30 @@ public class ReplicationProtbufUtil {
    */
   public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
       buildReplicateWALEntryRequest(final Entry[] entries, byte[] encodedRegionName,
-          String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir) {
+          String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir)
+    throws IOException {
     // Accumulate all the KVs seen in here.
     List<List<? extends Cell>> allCells = new ArrayList<List<? extends Cell>>(entries.length);
     int size = 0;
-    WALProtos.FamilyScope.Builder scopeBuilder = WALProtos.FamilyScope.newBuilder();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
     AdminProtos.ReplicateWALEntryRequest.Builder builder =
       AdminProtos.ReplicateWALEntryRequest.newBuilder();
-    HBaseProtos.UUID.Builder uuidBuilder = HBaseProtos.UUID.newBuilder();
     for (Entry entry: entries) {
       entryBuilder.clear();
-      // TODO: this duplicates a lot in WALKey#getBuilder
-      WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
       WALKey key = entry.getKey();
-      keyBuilder.setEncodedRegionName(
-        ByteStringer.wrap(encodedRegionName == null
-            ? key.getEncodedRegionName()
-            : encodedRegionName));
-      keyBuilder.setTableName(ByteStringer.wrap(key.getTablename().getName()));
-      keyBuilder.setLogSequenceNumber(key.getLogSeqNum());
-      keyBuilder.setWriteTime(key.getWriteTime());
-      if (key.getNonce() != HConstants.NO_NONCE) {
-        keyBuilder.setNonce(key.getNonce());
+      WALProtos.WALKey.Builder keyBuilder;
+      try {
+        keyBuilder = key.getBuilder(WALCellCodec.getNoneCompressor());
+      } catch (IOException e) {
+        throw new IOException(
+          "There should not throw exception since NoneCompressor do not throw any exceptions", e);
       }
-      if (key.getNonceGroup() != HConstants.NO_NONCE) {
-        keyBuilder.setNonceGroup(key.getNonceGroup());
+      if(encodedRegionName != null){
+        keyBuilder.setEncodedRegionName(
+          ByteStringer.wrap(encodedRegionName));
       }
-      for(UUID clusterId : key.getClusterIds()) {
-        uuidBuilder.setLeastSigBits(clusterId.getLeastSignificantBits());
-        uuidBuilder.setMostSigBits(clusterId.getMostSignificantBits());
-        keyBuilder.addClusterIds(uuidBuilder.build());
-      }
-      if(key.getOrigLogSeqNum() > 0) {
-        keyBuilder.setOrigSequenceNumber(key.getOrigLogSeqNum());
-      }
+      entryBuilder.setKey(keyBuilder.build());
       WALEdit edit = entry.getEdit();
-      NavigableMap<byte[], Integer> scopes = key.getScopes();
-      if (scopes != null && !scopes.isEmpty()) {
-        for (Map.Entry<byte[], Integer> scope: scopes.entrySet()) {
-          scopeBuilder.setFamily(ByteStringer.wrap(scope.getKey()));
-          WALProtos.ScopeType scopeType =
-              WALProtos.ScopeType.valueOf(scope.getValue().intValue());
-          scopeBuilder.setScopeType(scopeType);
-          keyBuilder.addScopes(scopeBuilder.build());
-        }
-      }
       List<Cell> cells = edit.getCells();
       // Add up the size.  It is used later serializing out the cells.
       for (Cell cell: cells) {
