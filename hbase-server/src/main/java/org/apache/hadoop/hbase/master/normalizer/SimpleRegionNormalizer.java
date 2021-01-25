@@ -183,6 +183,8 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     LOG.debug("Table " + table + ", average region size: " + avgRegionSize);
 
     int candidateIdx = 0;
+    int splitCount = 0;
+    int mergeCount = 0;
     while (candidateIdx < tableRegions.size()) {
       HRegionInfo hri = tableRegions.get(candidateIdx);
       long regionSize = getRegionSize(hri);
@@ -193,6 +195,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
           LOG.info("Table " + table + ", large region " + hri.getRegionNameAsString() + " has size "
               + regionSize + ", more than twice avg size, splitting");
           plans.add(new SplitNormalizationPlan(hri, null));
+          splitCount++;
         }
       } else {
         if (candidateIdx == tableRegions.size()-1) {
@@ -206,6 +209,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
               + " plus its neighbor size: " + regionSize2
               + ", less than the avg size " + avgRegionSize + ", merging them");
             plans.add(new MergeNormalizationPlan(hri, hri2));
+            mergeCount++;
             candidateIdx++;
           }
         }
@@ -217,6 +221,10 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       return null;
     }
     Collections.sort(plans, planComparator);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(String.format("Computed normalization plans for table %s. Total plans %d, split " +
+          "plans %d, merge plans %d", table, plans.size(), splitCount, mergeCount));
+    }
     return plans;
   }
 
