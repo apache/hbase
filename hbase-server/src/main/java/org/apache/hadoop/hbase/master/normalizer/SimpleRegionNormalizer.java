@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -220,10 +221,18 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   }
 
   private long getRegionSize(HRegionInfo hri) {
-    ServerName sn = masterServices.getAssignmentManager().getRegionStates().
-      getRegionServerOfRegion(hri);
-    RegionLoad regionLoad = masterServices.getServerManager().getLoad(sn).
-      getRegionsLoad().get(hri.getRegionName());
+    ServerName sn =
+        masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);
+    if (sn == null) {
+      LOG.debug(hri.getRegionNameAsString() + " region was not found on any Server");
+      return -1;
+    }
+    ServerLoad load = masterServices.getServerManager().getLoad(sn);
+    if (load == null) {
+      LOG.debug(sn.getServerName() + " was not found in online servers");
+      return -1;
+    }
+    RegionLoad regionLoad = load.getRegionsLoad().get(hri.getRegionName());
     if (regionLoad == null) {
       LOG.debug(hri.getRegionNameAsString() + " was not found in RegionsLoad");
       return -1;
