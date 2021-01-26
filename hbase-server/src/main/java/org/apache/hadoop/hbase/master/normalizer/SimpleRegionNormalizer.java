@@ -30,6 +30,7 @@ import java.util.function.BooleanSupplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
@@ -225,8 +226,16 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   private long getRegionSizeMB(RegionInfo hri) {
     ServerName sn =
       masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);
-    RegionMetrics regionLoad =
-      masterServices.getServerManager().getLoad(sn).getRegionMetrics().get(hri.getRegionName());
+    if (sn == null) {
+      LOG.debug("{} region was not found on any Server", hri.getRegionNameAsString());
+      return -1;
+    }
+    ServerMetrics serverMetrics = masterServices.getServerManager().getLoad(sn);
+    if (serverMetrics == null) {
+      LOG.debug("server {} was not found in ServerManager", sn.getServerName());
+      return -1;
+    }
+    RegionMetrics regionLoad = serverMetrics.getRegionMetrics().get(hri.getRegionName());
     if (regionLoad == null) {
       LOG.debug("{} was not found in RegionsLoad", hri.getRegionNameAsString());
       return -1;
