@@ -677,7 +677,7 @@ public class ColumnFamilyDescriptorBuilder {
      * @return this (for chained invocation)
      */
     private ModifyableColumnFamilyDescriptor setValue(Bytes key, Bytes value) {
-      if (value == null) {
+      if (value == null || value.getLength() == 0) {
         values.remove(key);
       } else {
         values.put(key, value);
@@ -1228,7 +1228,7 @@ public class ColumnFamilyDescriptorBuilder {
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setConfiguration(String key, String value) {
-      if (value == null) {
+      if (value == null || value.length() == 0) {
         configuration.remove(key);
       } else {
         configuration.put(key, value);
