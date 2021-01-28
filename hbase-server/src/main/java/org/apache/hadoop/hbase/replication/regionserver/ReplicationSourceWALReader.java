@@ -247,6 +247,8 @@ class ReplicationSourceWALReader extends Thread {
   // (highly likely we've closed the current log), we've hit the max retries, and autorecovery is
   // enabled, then dump the log
   private void handleEofException(IOException e) {
+    // Dump the log even if logQueue size is 1 if the source is from recovered Source
+    // since we don't add current log to recovered source queue so it is safe to remove.
     if ((e instanceof EOFException || e.getCause() instanceof EOFException) &&
       (source.isRecovered() || logQueue.size() > 1) && this.eofAutoRecovery) {
       try {
