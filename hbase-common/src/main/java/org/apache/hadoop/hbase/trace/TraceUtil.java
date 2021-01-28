@@ -106,6 +106,13 @@ public final class TraceUtil {
   }
 
   /**
+   * Create a span with {@link Kind#CLIENT}.
+   */
+  public static Span createClientSpan(String name) {
+    return createSpan(name, Kind.CLIENT);
+  }
+
+  /**
    * Trace an asynchronous operation for a table.
    */
   public static <T> CompletableFuture<T> tracedFuture(Supplier<CompletableFuture<T>> action,
