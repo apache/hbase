@@ -921,8 +921,13 @@ public class ServerManager {
   public void startChore() {
     Configuration c = master.getConfiguration();
     if (persistFlushedSequenceId) {
-      // when reach here, RegionStates should loaded, firstly, we call remove deleted regions
-      removeDeletedRegionFromLoadedFlushedSequenceIds();
+      new Thread(() -> {
+        // after AM#loadMeta, RegionStates should be loaded, and some regions are
+        // deleted by drop/split/merge during removeDeletedRegionFromLoadedFlushedSequenceIds,
+        // but these deleted regions are not added back to RegionStates,
+        // so we can safely remove deleted regions.
+        removeDeletedRegionFromLoadedFlushedSequenceIds();
+      }, "RemoveDeletedRegionSyncThread").start();
       int flushPeriod = c.getInt(FLUSHEDSEQUENCEID_FLUSHER_INTERVAL,
           FLUSHEDSEQUENCEID_FLUSHER_INTERVAL_DEFAULT);
       flushedSeqIdFlusher = new FlushedSequenceIdFlusher(
