@@ -395,7 +395,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   private Call callMethod(final Descriptors.MethodDescriptor md, final HBaseRpcController hrc,
     final Message param, Message returnType, final User ticket, final Address addr,
     final RpcCallback<Message> callback) {
-    Span span = TraceUtil.createSpan("RpcClient.callMethod")
+    Span span = TraceUtil.createClientSpan("RpcClient.callMethod")
       .setAttribute(TraceUtil.RPC_SERVICE_KEY, md.getService().getName())
       .setAttribute(TraceUtil.RPC_METHOD_KEY, md.getName())
       .setAttribute(TraceUtil.REMOTE_HOST_KEY, addr.getHostName())
