@@ -25,6 +25,7 @@ import java.util.Comparator;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
@@ -252,8 +253,16 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   private long getRegionSize(RegionInfo hri) {
     ServerName sn = masterServices.getAssignmentManager().getRegionStates().
       getRegionServerOfRegion(hri);
-    RegionMetrics regionLoad = masterServices.getServerManager().getLoad(sn).
-      getRegionMetrics().get(hri.getRegionName());
+    if (sn == null) {
+      LOG.debug("{} region was not found on any Server", hri.getRegionNameAsString());
+      return -1;
+    }
+    ServerMetrics serverMetrics = masterServices.getServerManager().getLoad(sn);
+    if (serverMetrics == null) {
+      LOG.debug("server {} was not found in ServerManager", sn.getServerName());
+      return -1;
+    }
+    RegionMetrics regionLoad = serverMetrics.getRegionMetrics().get(hri.getRegionName());
     if (regionLoad == null) {
       LOG.debug(hri.getRegionNameAsString() + " was not found in RegionsLoad");
       return -1;
