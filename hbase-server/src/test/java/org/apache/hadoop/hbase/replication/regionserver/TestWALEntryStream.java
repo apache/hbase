@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -616,5 +617,34 @@ public class TestWALEntryStream {
 
       assertFalse(entryStream.hasNext());
     }
+  }
+
+  /*
+    Test removal of 0 length log from logQueue if the source is a recovered source and
+    size of logQueue is only 1.
+   */
+  @Test
+  public void testEOFExceptionForRecoveredQueue() throws Exception {
+    PriorityBlockingQueue<Path> queue = new PriorityBlockingQueue<>();
+    // Create a 0 length log.
+    Path emptyLog = new Path("emptyLog");
+    FSDataOutputStream fsdos = fs.create(emptyLog);
+    fsdos.close();
+    assertEquals(0, fs.getFileStatus(emptyLog).getLen());
+    queue.add(emptyLog);
+
+    Configuration conf = new Configuration(CONF);
+    // Override the max retries multiplier to fail fast.
+    conf.setInt("replication.source.maxretriesmultiplier", 1);
+    conf.setBoolean("replication.source.eof.autorecovery", true);
+    // Create a reader thread with source as recovered source.
+    ReplicationSource source = mockReplicationSource(true, conf);
+    when(source.isPeerEnabled()).thenReturn(true);
+    ReplicationSourceWALReader reader =
+      new ReplicationSourceWALReader(fs, conf, queue, 0, getDummyFilter(), source);
+    reader.run();
+    // ReplicationSourceWALReaderThread#handleEofException method will
+    // remove empty log from logQueue.
+    assertEquals(0, queue.size());
   }
 }
