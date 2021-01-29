@@ -33,6 +33,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -691,5 +693,41 @@ public class TestWALEntryStream {
     assertEquals(position, entryBatch.getLastWalPosition());
     assertEquals(walPath, entryBatch.getLastWalPath());
     assertEquals(3, entryBatch.getNbRowKeys());
+  }
+
+  /*
+     Test removal of 0 length log from logQueue if the source is a recovered source and
+     size of logQueue is only 1.
+    */
+  @Test
+  public void testEOFExceptionForRecoveredQueue() throws Exception {
+    PriorityBlockingQueue<Path> queue = new PriorityBlockingQueue<>();
+    // Create a 0 length log.
+    Path emptyLog = new Path("emptyLog");
+    FSDataOutputStream fsdos = fs.create(emptyLog);
+    fsdos.close();
+    assertEquals(0, fs.getFileStatus(emptyLog).getLen());
+    queue.add(emptyLog);
+
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+
+    ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    // Make it look like the source is from recovered source.
+    when(mockSourceManager.getOldSources())
+      .thenReturn(new ArrayList<>(Arrays.asList((ReplicationSourceInterface)source)));
+    when(source.isPeerEnabled()).thenReturn(true);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
+    // Override the max retries multiplier to fail fast.
+    conf.setInt("replication.source.maxretriesmultiplier", 1);
+    conf.setBoolean("replication.source.eof.autorecovery", true);
+    // Create a reader thread.
+    ReplicationSourceWALReaderThread reader =
+      new ReplicationSourceWALReaderThread(mockSourceManager, getRecoveredQueueInfo(),
+        queue, 0, fs, conf, getDummyFilter(),
+        new MetricsSource("1"), (ReplicationSource) source);
+    reader.run();
+    // ReplicationSourceWALReaderThread#handleEofException method will
+    // remove empty log from logQueue.
+    assertEquals(0, queue.size());
   }
 }

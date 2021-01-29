@@ -81,6 +81,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
   private long totalBufferQuota;
 
   private ReplicationSource source;
+  private ReplicationSourceManager manager;
 
   /**
    * Creates a reader worker for a given WAL queue. Reads WAL entries off a given queue, batches the
@@ -121,6 +122,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
     this.metrics = metrics;
     this.entryBatchQueue = new LinkedBlockingQueue<>(batchCount);
     this.source = source;
+    this.manager = manager;
     LOG.info("peerClusterZnode=" + replicationQueueInfo.getPeerClusterZnode()
         + ", ReplicationSourceWALReaderThread : " + replicationQueueInfo.getPeerId()
         + " inited, replicationBatchSizeCapacity=" + replicationBatchSizeCapacity
@@ -229,7 +231,10 @@ public class ReplicationSourceWALReaderThread extends Thread {
   // (highly likely we've closed the current log), we've hit the max retries, and autorecovery is
   // enabled, then dump the log
   private void handleEofException(Exception e) {
-    if (e.getCause() instanceof EOFException && logQueue.size() > 1
+    boolean isRecoveredSource = manager.getOldSources().contains(source);
+    // Dump the log even if logQueue size is 1 if the source is from recovered Source since we don't
+    // add current log to recovered source queue so it is safe to remove.
+    if (e.getCause() instanceof EOFException && (isRecoveredSource || logQueue.size() > 1)
         && conf.getBoolean("replication.source.eof.autorecovery", false)) {
       try {
         if (fs.getFileStatus(logQueue.peek()).getLen() == 0) {
