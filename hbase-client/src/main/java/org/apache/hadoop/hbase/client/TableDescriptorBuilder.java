@@ -736,7 +736,7 @@ public class TableDescriptorBuilder {
               toBytesOrNull(value, Bytes::toBytes));
     }
 
-    /*
+    /**
      * @param key The key.
      * @param value The value. If null, removes the setting.
      */
@@ -745,14 +745,14 @@ public class TableDescriptorBuilder {
       return setValue(key, toBytesOrNull(value, Bytes::toBytes));
     }
 
-    /*
+    /**
      * Setter for storing metadata as a (key, value) pair in {@link #values} map
      *
      * @param key The key.
      * @param value The value. If null, removes the setting.
      */
     public ModifyableTableDescriptor setValue(final Bytes key, final Bytes value) {
-      if (value == null) {
+      if (value == null || value.getLength() == 0) {
         values.remove(key);
       } else {
         values.put(key, value);
