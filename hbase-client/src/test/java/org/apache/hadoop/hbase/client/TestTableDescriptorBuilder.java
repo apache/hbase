@@ -369,4 +369,22 @@ public class TestTableDescriptorBuilder {
     htd = TableDescriptorBuilder.newBuilder(htd).setRegionServerGroup(null).build();
     assertNull(htd.getValue(RSGroupInfo.TABLE_DESC_PROP_GROUP));
   }
+
+  @Test
+  public void testSetEmptyValue() {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    String testValue = "TestValue";
+    // test setValue
+    builder.setValue(testValue, "2");
+    assertEquals("2", builder.build().getValue(testValue));
+    builder.setValue(testValue, "");
+    assertNull(builder.build().getValue(Bytes.toBytes(testValue)));
+
+    // test setFlushPolicyClassName
+    builder.setFlushPolicyClassName("class");
+    assertEquals("class", builder.build().getFlushPolicyClassName());
+    builder.setFlushPolicyClassName("");
+    assertNull(builder.build().getFlushPolicyClassName());
+  }
 }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -210,6 +211,24 @@ public class TestColumnFamilyDescriptorBuilder {
       KeepDeletedCells.FALSE.toString());
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING),
       DataBlockEncoding.NONE.toString());
+  }
 
+  @Test
+  public void testSetEmptyValue() {
+    ColumnFamilyDescriptorBuilder builder =
+      ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY);
+    String testConf = "TestConfiguration";
+    String testValue = "TestValue";
+    // test set value
+    builder.setValue(testValue, "2");
+    assertEquals("2", Bytes.toString(builder.build().getValue(Bytes.toBytes(testValue))));
+    builder.setValue(testValue, "");
+    assertNull(builder.build().getValue(Bytes.toBytes(testValue)));
+
+    // test set configuration
+    builder.setConfiguration(testConf, "1");
+    assertEquals("1", builder.build().getConfigurationValue(testConf));
+    builder.setConfiguration(testConf, "");
+    assertNull(builder.build().getConfigurationValue(testConf));
   }
 }
