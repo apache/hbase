@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -314,5 +315,22 @@ public class TestHTableDescriptor {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("table"));
     htd.setPriority(42);
     assertEquals(42, htd.getPriority());
+  }
+
+  @Test
+  public void testSetEmptyValue() {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("table"));
+    String testValue = "TestValue";
+    // test setValue
+    htd.setValue(testValue, "2");
+    assertEquals("2", htd.getValue(testValue));
+    htd.setValue(testValue, "");
+    assertNull(htd.getValue(Bytes.toBytes(testValue)));
+
+    // test setFlushPolicyClassName
+    htd.setFlushPolicyClassName("class");
+    assertEquals("class", htd.getFlushPolicyClassName());
+    htd.setFlushPolicyClassName("");
+    assertNull(htd.getFlushPolicyClassName());
   }
 }

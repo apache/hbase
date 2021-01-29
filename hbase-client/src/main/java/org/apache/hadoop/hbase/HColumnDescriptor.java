@@ -583,8 +583,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
             "' for REPLICATION_SCOPE.");
       }
     }
-    values.put(new ImmutableBytesWritable(key),
-      new ImmutableBytesWritable(value));
+    if (value == null || value.length == 0) {
+      remove(key);
+    } else {
+      values.put(new ImmutableBytesWritable(key),
+        new ImmutableBytesWritable(value));
+    }
     return this;
   }
 
@@ -601,7 +605,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setValue(String key, String value) {
-    if (value == null) {
+    if (value == null || value.length() == 0) {
       remove(Bytes.toBytes(key));
     } else {
       setValue(Bytes.toBytes(key), Bytes.toBytes(value));
@@ -1526,7 +1530,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param value String value. If null, removes the configuration.
    */
   public HColumnDescriptor setConfiguration(String key, String value) {
-    if (value == null) {
+    if (value == null || value.length() == 0) {
       removeConfiguration(key);
     } else {
       configuration.put(key, value);
