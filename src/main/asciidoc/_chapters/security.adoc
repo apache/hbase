@@ -44,7 +44,7 @@ HBase provides mechanisms to secure various components and aspects of HBase and 
 === Using Secure HTTP (HTTPS) for the Web UI
 
 A default HBase install uses insecure HTTP connections for Web UIs for the master and region servers.
-To enable secure HTTP (HTTPS) connections instead, set `hbase.ssl.enabled` to `true` in _hbase-site.xml_.
+To enable secure HTTP (HTTPS) connections instead, set `hbase.ssl.enabled` to `true` in _hbase-site.xml_(Please prepare SSL certificate and ssl configuration file in advance).
 This does not change the port used by the Web UI.
 To change the port for the web UI for a given HBase component, configure that port's setting in hbase-site.xml.
 These settings are:
