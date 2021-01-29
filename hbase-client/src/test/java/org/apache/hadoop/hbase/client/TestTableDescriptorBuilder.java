@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -392,5 +393,23 @@ public class TestTableDescriptorBuilder {
         + "MAX_FILESIZE => '10737942528 B (10GB 512KB)', "
         + "MEMSTORE_FLUSHSIZE => '268435456 B (256MB)'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
       htd.toStringCustomizedValues());
+  }
+
+  @Test
+  public void testSetEmptyValue() {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    String testValue = "TestValue";
+    // test setValue
+    builder.setValue(testValue, "2");
+    assertEquals("2", builder.build().getValue(testValue));
+    builder.setValue(testValue, "");
+    assertNull(builder.build().getValue(Bytes.toBytes(testValue)));
+
+    // test setFlushPolicyClassName
+    builder.setFlushPolicyClassName("class");
+    assertEquals("class", builder.build().getFlushPolicyClassName());
+    builder.setFlushPolicyClassName("");
+    assertNull(builder.build().getFlushPolicyClassName());
   }
 }
