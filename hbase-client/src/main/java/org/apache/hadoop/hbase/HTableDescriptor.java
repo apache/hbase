@@ -556,7 +556,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     return this;
   }
 
-  /*
+  /**
    * @param key The key.
    * @param value The value.
    */
@@ -566,7 +566,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     return this;
   }
 
-  /*
+  /**
    * Setter for storing metadata as a (key, value) pair in {@link #values} map
    *
    * @param key The key.
@@ -581,7 +581,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       setDurability(isDeferredFlush ? Durability.ASYNC_WAL : DEFAULT_DURABLITY);
       return this;
     }
-    values.put(key, value);
+    if (value == null || value.getLength() == 0) {
+      remove(key);
+    } else {
+      values.put(key, value);
+    }
     return this;
   }
 
@@ -593,7 +597,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #values
    */
   public HTableDescriptor setValue(String key, String value) {
-    if (value == null) {
+    if (value == null || value.length() == 0) {
       remove(key);
     } else {
       setValue(Bytes.toBytes(key), Bytes.toBytes(value));
@@ -1779,7 +1783,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @param value String value. If null, removes the setting.
    */
   public HTableDescriptor setConfiguration(String key, String value) {
-    if (value == null) {
+    if (value == null || value.length() == 0) {
       removeConfiguration(key);
     } else {
       configuration.put(key, value);

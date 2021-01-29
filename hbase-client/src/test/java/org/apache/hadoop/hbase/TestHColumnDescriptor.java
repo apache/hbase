@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -124,5 +125,24 @@ public class TestHColumnDescriptor {
   public void testInvalidReplicationScope() {
     HColumnDescriptor column = new HColumnDescriptor("f1");
     column.setScope(5);
+  }
+
+  @Test
+  public void testSetEmptyValue() {
+    HColumnDescriptor hcd = new HColumnDescriptor(
+      HTableDescriptor.META_TABLEDESC.getColumnFamilies()[0]);
+    String testConf = "TestConfiguration";
+    String testValue = "TestValue";
+    // test set value
+    hcd.setValue(testValue, "2");
+    assertEquals("2", Bytes.toString(hcd.getValue(Bytes.toBytes(testValue))));
+    hcd.setValue(testValue, "");
+    assertNull(hcd.getValue(Bytes.toBytes(testValue)));
+
+    // test set configuration
+    hcd.setConfiguration(testConf, "1");
+    assertEquals("1", hcd.getConfigurationValue(testConf));
+    hcd.setConfiguration(testConf, "");
+    assertNull(hcd.getConfigurationValue(testConf));
   }
 }
