@@ -209,14 +209,21 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       ctx.getTableRegions().size());
 
     final List<NormalizationPlan> plans = new ArrayList<>();
+    int splitPlansCount = 0;
     if (proceedWithSplitPlanning) {
-      plans.addAll(computeSplitNormalizationPlans(ctx));
+      List<NormalizationPlan> splitPlans = computeSplitNormalizationPlans(ctx);
+      splitPlansCount = splitPlans.size();
+      plans.addAll(splitPlans);
     }
+    int mergePlansCount = 0;
     if (proceedWithMergePlanning) {
-      plans.addAll(computeMergeNormalizationPlans(ctx));
+      List<NormalizationPlan> mergePlans = computeMergeNormalizationPlans(ctx);
+      mergePlansCount = mergePlans.size();
+      plans.addAll(mergePlans);
     }
 
-    LOG.debug("Computed {} normalization plans for table {}", plans.size(), table);
+    LOG.debug("Computed normalization plans for table {}. Total plans: {}, split plans: {}, " +
+        "merge plans: {}", table, plans.size(), splitPlansCount, mergePlansCount);
     return plans;
   }
 
