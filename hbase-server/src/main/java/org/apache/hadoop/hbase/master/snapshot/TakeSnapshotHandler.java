@@ -26,11 +26,13 @@ import java.util.concurrent.CancellationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
@@ -139,11 +141,16 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   }
 
   private TableDescriptor loadTableDescriptor()
-      throws FileNotFoundException, IOException {
+      throws IOException {
     TableDescriptor htd =
       this.master.getTableDescriptors().get(snapshotTable);
     if (htd == null) {
       throw new IOException("TableDescriptor missing for " + snapshotTable);
+    }
+    if( htd.getMaxFileSize()==-1 &&
+        conf.getBoolean(SnapshotManager.SNAPSHOT_MAX_FILE_SIZE_PRESERVE, false) ){
+      htd = TableDescriptorBuilder.newBuilder(htd).setValue(TableDescriptorBuilder.MAX_FILESIZE,
+        conf.get(HConstants.HREGION_MAX_FILESIZE)).build();
     }
     return htd;
   }
