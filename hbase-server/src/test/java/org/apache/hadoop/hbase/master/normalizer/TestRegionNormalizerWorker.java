@@ -135,7 +135,7 @@ public class TestRegionNormalizerWorker {
     when(masterServices.getTableDescriptors().get(tn)).thenReturn(tnDescriptor);
     when(masterServices.mergeRegions(any(), anyBoolean(), anyLong(), anyLong()))
       .thenReturn(1L);
-    when(regionNormalizer.computePlansForTable(tn))
+    when(regionNormalizer.computePlansForTable(tnDescriptor))
       .thenReturn(singletonList(new MergeNormalizationPlan.Builder()
         .addTarget(RegionInfoBuilder.newBuilder(tn).build(), 10)
         .addTarget(RegionInfoBuilder.newBuilder(tn).build(), 20)
@@ -160,7 +160,7 @@ public class TestRegionNormalizerWorker {
     when(masterServices.getTableDescriptors().get(tn)).thenReturn(tnDescriptor);
     when(masterServices.splitRegion(any(), any(), anyLong(), anyLong()))
       .thenReturn(1L);
-    when(regionNormalizer.computePlansForTable(tn))
+    when(regionNormalizer.computePlansForTable(tnDescriptor))
       .thenReturn(singletonList(
         new SplitNormalizationPlan(RegionInfoBuilder.newBuilder(tn).build(), 10)));
 
@@ -192,7 +192,7 @@ public class TestRegionNormalizerWorker {
       .thenReturn(1L);
     when(masterServices.mergeRegions(any(), anyBoolean(), anyLong(), anyLong()))
       .thenReturn(1L);
-    when(regionNormalizer.computePlansForTable(tn))
+    when(regionNormalizer.computePlansForTable(tnDescriptor))
       .thenReturn(Arrays.asList(
         new SplitNormalizationPlan(splitRegionInfo, 2),
         new MergeNormalizationPlan.Builder()
