@@ -1397,6 +1397,13 @@ public final class HConstants {
       "hbase.master.executor.serverops.threads";
   public static final int MASTER_SERVER_OPERATIONS_THREADS_DEFAULT = 5;
 
+  /**
+   * Number of threads used to dispatch merge operations to the regionservers.
+   */
+  public static final String MASTER_MERGE_DISPATCH_THREADS =
+      "hbase.master.executor.merge.dispatch.threads";
+  public static final int MASTER_MERGE_DISPATCH_THREADS_DEFAULT = 2;
+
   public static final String MASTER_META_SERVER_OPERATIONS_THREADS =
       "hbase.master.executor.meta.serverops.threads";
   public static final int MASTER_META_SERVER_OPERATIONS_THREADS_DEFAULT = 5;
