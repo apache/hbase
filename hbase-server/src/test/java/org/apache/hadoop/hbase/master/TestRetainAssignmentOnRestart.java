@@ -199,10 +199,6 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
   }
 
   private void setupCluster() throws Exception, IOException, InterruptedException {
-    // Set Zookeeper based connection registry since we will stop master and start a new master
-    // without populating the underlying config for the connection.
-    UTIL.getConfiguration().set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-      HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     // Enable retain assignment during ServerCrashProcedure
     UTIL.getConfiguration().setBoolean(ServerCrashProcedure.MASTER_SCP_RETAIN_ASSIGNMENT, true);
     UTIL.startMiniCluster(NUM_OF_RS);
