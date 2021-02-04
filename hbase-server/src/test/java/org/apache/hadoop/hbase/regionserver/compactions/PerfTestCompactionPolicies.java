@@ -43,6 +43,11 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+/**
+ * This is not a unit test. It is not run as part of the general unit test suite. It is for
+ * comparing compaction policies. You must run it explicitly;
+ * e.g. mvn test -Dtest=PerfTestCompactionPolicies
+ */
 @Category({RegionServerTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
