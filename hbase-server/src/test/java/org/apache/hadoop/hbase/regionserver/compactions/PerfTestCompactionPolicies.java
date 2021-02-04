@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -44,6 +46,10 @@ import org.junit.runners.Parameterized;
 @Category({RegionServerTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(PerfTestCompactionPolicies.class);
 
   private final RatioBasedCompactionPolicy cp;
   private final StoreFileListGenerator generator;
