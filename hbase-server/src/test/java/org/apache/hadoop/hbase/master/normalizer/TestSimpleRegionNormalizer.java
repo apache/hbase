@@ -313,8 +313,17 @@ public class TestSimpleRegionNormalizer {
       normalizer.computePlansForTable(tableDescriptor),
       contains(instanceOf(SplitNormalizationPlan.class)));
 
+    // When hbase.normalizer.split.enabled is true in configuration, but false in table descriptor
     when(tableDescriptor.getValue(SPLIT_ENABLED_KEY)).thenReturn("false");
     assertThat(normalizer.computePlansForTable(tableDescriptor), empty());
+
+    // When hbase.normalizer.split.enabled is false in configuration, but true in table descriptor
+    conf.setBoolean(SPLIT_ENABLED_KEY, false);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    when(tableDescriptor.getValue(SPLIT_ENABLED_KEY)).thenReturn("true");
+    assertThat(
+      normalizer.computePlansForTable(tableDescriptor),
+      contains(instanceOf(SplitNormalizationPlan.class)));
   }
 
   @Test
@@ -346,8 +355,17 @@ public class TestSimpleRegionNormalizer {
       normalizer.computePlansForTable(tableDescriptor),
       contains(instanceOf(MergeNormalizationPlan.class)));
 
+    // When hbase.normalizer.merge.enabled is true in configuration, but false in table descriptor
     when(tableDescriptor.getValue(MERGE_ENABLED_KEY)).thenReturn("false");
     assertThat(normalizer.computePlansForTable(tableDescriptor), empty());
+
+    // When hbase.normalizer.merge.enabled is false in configuration, but true in table descriptor
+    conf.setBoolean(MERGE_ENABLED_KEY, false);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    when(tableDescriptor.getValue(MERGE_ENABLED_KEY)).thenReturn("true");
+    assertThat(
+      normalizer.computePlansForTable(tableDescriptor),
+      contains(instanceOf(MergeNormalizationPlan.class)));
   }
 
   @Test

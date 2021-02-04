@@ -282,7 +282,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     }
     TableName table = tableDescriptor.getTableName();
     double avgRegionSize;
-    long targetRegionCount = tableDescriptor.getNormalizerTargetRegionCount();
+    int targetRegionCount = tableDescriptor.getNormalizerTargetRegionCount();
     long targetRegionSize = tableDescriptor.getNormalizerTargetRegionSize();
     LOG.debug("Table {} configured with target region count {}, target region size {}", table,
       targetRegionCount, targetRegionSize);
