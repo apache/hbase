@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-import static org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR;
 import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -48,6 +48,10 @@ import org.junit.rules.TestName;
 public class TestTakeSnapshotHandler {
 
   private static HBaseTestingUtility UTIL;
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestTakeSnapshotHandler.class);
 
   @Rule
   public TestName name = new TestName();
