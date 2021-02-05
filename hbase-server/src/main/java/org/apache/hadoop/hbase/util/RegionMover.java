@@ -87,7 +87,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   public static final int DEFAULT_MOVE_RETRIES_MAX = 5;
   public static final int DEFAULT_MOVE_WAIT_MAX = 60;
   public static final int DEFAULT_SERVERSTART_WAIT_MAX = 180;
-  private final RackManager rackManager;
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionMover.class);
 
@@ -126,7 +125,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   private RegionMover() {
-    rackManager = new RackManager(conf);
   }
 
   @Override
