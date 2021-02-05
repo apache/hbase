@@ -406,7 +406,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   /**
    * Determine if a region in {@link RegionState} should be considered for a split operation.
    */
-  private boolean skipForSplit(final RegionState state, final RegionInfo regionInfo) {
+  private static boolean skipForSplit(final RegionState state, final RegionInfo regionInfo) {
     final String name = regionInfo.getEncodedName();
     return
       logTraceReason(
@@ -447,7 +447,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
    * Return {@code true} when {@code regionInfo} has a creation date that is old
    * enough to be considered for a merge operation, {@code false} otherwise.
    */
-  private boolean isOldEnoughForMerge(
+  private static boolean isOldEnoughForMerge(
     final NormalizerConfiguration normalizerConfiguration,
     final NormalizeContext ctx,
     final RegionInfo regionInfo
@@ -473,7 +473,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     return getRegionSizeMB(regionInfo) >= normalizerConfiguration.getMergeMinRegionSizeMb(ctx);
   }
 
-  private boolean logTraceReason(final BooleanSupplier predicate, final String fmtWhenTrue,
+  private static boolean logTraceReason(final BooleanSupplier predicate, final String fmtWhenTrue,
     final Object... args) {
     final boolean value = predicate.getAsBoolean();
     if (value) {
