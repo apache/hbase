@@ -20,7 +20,10 @@ package org.apache.hadoop.hbase.replication;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -49,7 +52,7 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
   // listeners to be notified
   private final List<ReplicationListener> listeners = new CopyOnWriteArrayList<>();
   // List of all the other region servers in this cluster
-  private final ArrayList<String> otherRegionServers = new ArrayList<>();
+  private final List<ServerName> otherRegionServers = new ArrayList<>();
 
   public ReplicationTrackerZKImpl(ZKWatcher zookeeper, Abortable abortable, Stoppable stopper) {
     this.zookeeper = zookeeper;
@@ -74,10 +77,10 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
    * Return a snapshot of the current region servers.
    */
   @Override
-  public List<String> getListOfRegionServers() {
+  public List<ServerName> getListOfRegionServers() {
     refreshOtherRegionServersList(false);
 
-    List<String> list = null;
+    List<ServerName> list = null;
     synchronized (otherRegionServers) {
       list = new ArrayList<>(otherRegionServers);
     }
@@ -162,7 +165,7 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
    *         if it was empty), false if the data was missing in ZK
    */
   private boolean refreshOtherRegionServersList(boolean watch) {
-    List<String> newRsList = getRegisteredRegionServers(watch);
+    List<ServerName> newRsList = getRegisteredRegionServers(watch);
     if (newRsList == null) {
       return false;
     } else {
@@ -178,7 +181,7 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
    * Get a list of all the other region servers in this cluster and set a watch
    * @return a list of server nanes
    */
-  private List<String> getRegisteredRegionServers(boolean watch) {
+  private List<ServerName> getRegisteredRegionServers(boolean watch) {
     List<String> result = null;
     try {
       if (watch) {
@@ -190,6 +193,7 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
     } catch (KeeperException e) {
       this.abortable.abort("Get list of registered region servers", e);
     }
-    return result;
+    return result == null ? null :
+      result.stream().map(ServerName::parseServerName).collect(Collectors.toList());
   }
 }
