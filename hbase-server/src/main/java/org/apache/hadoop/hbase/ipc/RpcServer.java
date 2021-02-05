@@ -825,4 +825,8 @@ public abstract class RpcServer implements RpcServerInterface,
   public SlowLogRecorder getSlowLogRecorder() {
     return slowLogRecorder;
   }
+
+  protected boolean needAuthorization() {
+    return authorize;
+  }
 }
