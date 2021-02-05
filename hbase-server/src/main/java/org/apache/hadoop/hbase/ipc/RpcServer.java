@@ -847,4 +847,8 @@ public abstract class RpcServer implements RpcServerInterface,
   public void setRsRpcServices(RSRpcServices rsRpcServices) {
     this.rsRpcServices = rsRpcServices;
   }
+
+  protected boolean needAuthorization() {
+    return authorize;
+  }
 }
