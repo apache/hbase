@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
@@ -147,8 +146,8 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     if (htd == null) {
       throw new IOException("TableDescriptor missing for " + snapshotTable);
     }
-    if( htd.getMaxFileSize()==-1 &&
-        conf.getBoolean(SnapshotManager.SNAPSHOT_MAX_FILE_SIZE_PRESERVE, false) ){
+    if(htd.getMaxFileSize()==-1 &&
+        conf.getBoolean(SnapshotManager.SNAPSHOT_MAX_FILE_SIZE_PRESERVE, false)){
       htd = TableDescriptorBuilder.newBuilder(htd).setValue(TableDescriptorBuilder.MAX_FILESIZE,
         conf.get(HConstants.HREGION_MAX_FILESIZE)).build();
     }
