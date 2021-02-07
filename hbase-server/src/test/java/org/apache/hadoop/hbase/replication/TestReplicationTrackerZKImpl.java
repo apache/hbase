@@ -115,26 +115,26 @@ public class TestReplicationTrackerZKImpl {
     assertEquals(0, rt.getListOfRegionServers().size());
 
     // 1 region server
-    ZKUtil.createWithParents(zkw,
-      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname1.example.org:1234"));
-    List<String> rss = rt.getListOfRegionServers();
+    ZKUtil.createWithParents(zkw, ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode,
+      "hostname1.example.org,1234,1611218678009"));
+    List<ServerName> rss = rt.getListOfRegionServers();
     assertEquals(rss.toString(), 1, rss.size());
 
     // 2 region servers
-    ZKUtil.createWithParents(zkw,
-      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname2.example.org:1234"));
+    ZKUtil.createWithParents(zkw, ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode,
+      "hostname2.example.org,1234,1611218678009"));
     rss = rt.getListOfRegionServers();
     assertEquals(rss.toString(), 2, rss.size());
 
     // 1 region server
-    ZKUtil.deleteNode(zkw,
-      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname2.example.org:1234"));
+    ZKUtil.deleteNode(zkw, ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode,
+      "hostname2.example.org,1234,1611218678009"));
     rss = rt.getListOfRegionServers();
     assertEquals(1, rss.size());
 
     // 0 region server
-    ZKUtil.deleteNode(zkw,
-      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname1.example.org:1234"));
+    ZKUtil.deleteNode(zkw, ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode,
+      "hostname1.example.org,1234,1611218678009"));
     rss = rt.getListOfRegionServers();
     assertEquals(rss.toString(), 0, rss.size());
   }
