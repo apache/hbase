@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -37,13 +38,13 @@ public interface ReplicationTracker {
    * Register a replication listener to receive replication events.
    * @param listener
    */
-  public void registerListener(ReplicationListener listener);
+  void registerListener(ReplicationListener listener);
 
-  public void removeListener(ReplicationListener listener);
+  void removeListener(ReplicationListener listener);
 
   /**
    * Returns a list of other live region servers in the cluster.
    * @return List of region servers.
    */
-  public List<String> getListOfRegionServers();
+  List<ServerName> getListOfRegionServers();
 }
