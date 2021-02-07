@@ -1973,7 +1973,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       } else {
         processConnectionHeader(buf);
         this.connectionHeaderRead = true;
-        if (!authorizeConnection()) {
+        if (authorize && !authorizeConnection()) {
           // Throw FatalConnectionException wrapping ACE so client does right thing and closes
           // down the connection instead of trying to read non-existent retun.
           throw new AccessDeniedException("Connection from " + this + " for service " +
