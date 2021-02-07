@@ -147,6 +147,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * short-term fluctuation. Backpressure has simple logic: more overshooting - more caching blocks.
  * <p/>
  * Find more information about improvement: https://issues.apache.org/jira/browse/HBASE-23887
+ *
  */
 @InterfaceAudience.Private
 public class AdaptiveLruBlockCache implements FirstLevelBlockCache {
