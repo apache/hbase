@@ -422,8 +422,6 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     this.elements = new AtomicLong(0);
     this.dataBlockElements = new LongAdder();
     this.dataBlockSize = new LongAdder();
-    this.overhead = calculateOverhead(maxSize, blockSize, mapConcurrencyLevel);
-    this.size = new AtomicLong(this.overhead);
     this.hardCapacityLimitFactor = hardLimitFactor;
     if (evictionThread) {
       this.evictionThread = new EvictionThread(this);
@@ -446,6 +444,10 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     // every five minutes.
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), STAT_THREAD_PERIOD,
       STAT_THREAD_PERIOD, TimeUnit.SECONDS);
+
+    this.overhead = calculateOverhead(maxSize, blockSize, mapConcurrencyLevel);
+    this.size = new AtomicLong(this.overhead);
+
   }
 
   @Override
