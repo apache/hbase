@@ -308,7 +308,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
     queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
     replicationTracker = ReplicationFactory.getReplicationTracker(zkw, new WarnOnlyAbortable(),
       new WarnOnlyStoppable());
-    Set<String> liveRegionServers = new HashSet<>(replicationTracker.getListOfRegionServers());
+    Set<ServerName> liveRegionServers = new HashSet<>(replicationTracker.getListOfRegionServers());
 
     // Loops each peer on each RS and dumps the queues
     List<ServerName> regionservers = queueStorage.getListOfReplicators();
@@ -317,7 +317,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
     }
     for (ServerName regionserver : regionservers) {
       List<String> queueIds = queueStorage.getAllQueues(regionserver);
-      if (!liveRegionServers.contains(regionserver.getServerName())) {
+      if (!liveRegionServers.contains(regionserver)) {
         deadRegionServers.add(regionserver.getServerName());
       }
       for (String queueId : queueIds) {
