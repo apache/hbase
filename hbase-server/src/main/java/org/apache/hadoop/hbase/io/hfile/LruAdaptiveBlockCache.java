@@ -48,9 +48,11 @@ import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * <b>This realisation improve performance of classical LRU cache up to 3 times via reduce GC job.</b>
+ * <b>This realisation improve performance of classical LRU
+ * cache up to 3 times via reduce GC job.</b>
  * </p>
- * The classical block cache implementation that is memory-aware using {@link HeapSize}, memory-bound using an
+ * The classical block cache implementation that is memory-aware using {@link HeapSize},
+ * memory-bound using an
  * LRU eviction algorithm, and concurrent: backed by a {@link ConcurrentHashMap} and with a
  * non-blocking eviction thread giving constant-time {@link #cacheBlock} and {@link #getBlock}
  * operations.
@@ -221,9 +223,10 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
   /**
    * Defined the cache map as {@link ConcurrentHashMap} here, because in
-   * {@link LruAdaptiveBlockCache#getBlock}, we need to guarantee the atomicity of map#computeIfPresent
-   * (key, func). Besides, the func method must execute exactly once only when the key is present
-   * and under the lock context, otherwise the reference count will be messed up. Notice that the
+   * {@link LruAdaptiveBlockCache#getBlock}, we need to guarantee the atomicity
+   * of map#computeIfPresent (key, func). Besides, the func method must execute exactly once only
+   * when the key is present and under the lock context, otherwise the reference count will be
+   * messed up. Notice that the
    * {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that.
    */
   private transient final ConcurrentHashMap<BlockCacheKey, LruCachedBlock> map;
@@ -344,7 +347,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT);
   }
 
-  public LruAdaptiveBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
+  public LruAdaptiveBlockCache(long maxSize, long blockSize,
+    boolean evictionThread, Configuration conf) {
     this(maxSize, blockSize, evictionThread,
       (int) Math.ceil(1.2 * maxSize / blockSize),
       DEFAULT_LOAD_FACTOR,
@@ -465,17 +469,17 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * The block cached in LruAdaptiveBlockCache will always be an heap block: on the one side, the heap
-   * access will be more faster then off-heap, the small index block or meta block cached in
-   * CombinedBlockCache will benefit a lot. on other side, the LruAdaptiveBlockCache size is always
-   * calculated based on the total heap size, if caching an off-heap block in LruAdaptiveBlockCache, the
-   * heap size will be messed up. Here we will clone the block into an heap block if it's an
-   * off-heap block, otherwise just use the original block. The key point is maintain the refCnt of
-   * the block (HBASE-22127): <br>
+   * The block cached in LruAdaptiveBlockCache will always be an heap block: on the one side,
+   * the heap access will be more faster then off-heap, the small index block or meta block
+   * cached in CombinedBlockCache will benefit a lot. on other side, the LruAdaptiveBlockCache
+   * size is always calculated based on the total heap size, if caching an off-heap block in
+   * LruAdaptiveBlockCache, the heap size will be messed up. Here we will clone the block into an
+   * heap block if it's an off-heap block, otherwise just use the original block. The key point is
+   * maintain the refCnt of the block (HBASE-22127): <br>
    * 1. if cache the cloned heap block, its refCnt is an totally new one, it's easy to handle; <br>
    * 2. if cache the original heap block, we're sure that it won't be tracked in ByteBuffAllocator's
-   * reservoir, if both RPC and LruAdaptiveBlockCache release the block, then it can be garbage collected by
-   * JVM, so need a retain here.
+   * reservoir, if both RPC and LruAdaptiveBlockCache release the block, then it can be garbage
+   * collected by JVM, so need a retain here.
    * @param buf the original block
    * @return an block with an heap memory backend.
    */
@@ -486,7 +490,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
         return HFileBlock.deepCloneOnHeap(blk);
       }
     }
-    // The block will be referenced by this LruAdaptiveBlockCache, so should increase its refCnt here.
+    // The block will be referenced by this LruAdaptiveBlockCache,
+    // so should increase its refCnt here.
     return buf.retain();
   }
 
@@ -532,7 +537,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     }
 
     LruCachedBlock cb = map.get(cacheKey);
-    if (cb != null && !BlockCacheUtil.shouldReplaceExistingCacheBlock(this, cacheKey, buf)) {
+    if (cb != null && !BlockCacheUtil.shouldReplaceExistingCacheBlock(this,
+      cacheKey, buf)) {
       return;
     }
     long currentSize = size.get();
@@ -801,9 +807,12 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       }
 
       // Instantiate priority buckets
-      BlockBucket bucketSingle = new BlockBucket("single", bytesToFree, blockSize, singleSize());
-      BlockBucket bucketMulti = new BlockBucket("multi", bytesToFree, blockSize, multiSize());
-      BlockBucket bucketMemory = new BlockBucket("memory", bytesToFree, blockSize, memorySize());
+      BlockBucket bucketSingle
+        = new BlockBucket("single", bytesToFree, blockSize, singleSize());
+      BlockBucket bucketMulti
+        = new BlockBucket("multi", bytesToFree, blockSize, multiSize());
+      BlockBucket bucketMemory
+        = new BlockBucket("memory", bytesToFree, blockSize, memorySize());
 
       // Scan entire map putting into appropriate buckets
       for (LruCachedBlock cachedBlock : map.values()) {
