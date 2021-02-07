@@ -37,9 +37,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -51,46 +49,41 @@ import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * A block cache implementation that is memory-aware using {@link HeapSize},
- * memory-bound using an LRU eviction algorithm, and concurrent: backed by a
- * {@link ConcurrentHashMap} and with a non-blocking eviction thread giving
- * constant-time {@link #cacheBlock} and {@link #getBlock} operations.<p>
- *
+ * A block cache implementation that is memory-aware using {@link HeapSize}, memory-bound using an
+ * LRU eviction algorithm, and concurrent: backed by a {@link ConcurrentHashMap} and with a
+ * non-blocking eviction thread giving constant-time {@link #cacheBlock} and {@link #getBlock}
+ * operations.
+ * </p>
  * Contains three levels of block priority to allow for scan-resistance and in-memory families
- * {@link org.apache.hadoop.hbase.HColumnDescriptor#setInMemory(boolean)} (An in-memory column
- * family is a column family that should be served from memory if possible):
- * single-access, multiple-accesses, and in-memory priority.
- * A block is added with an in-memory priority flag if
- * {@link org.apache.hadoop.hbase.HColumnDescriptor#isInMemory()}, otherwise a block becomes a
- * single access priority the first time it is read into this block cache.  If a block is
- * accessed again while in cache, it is marked as a multiple access priority block.  This
- * delineation of blocks is used to prevent scans from thrashing the cache adding a
- * least-frequently-used element to the eviction algorithm.<p>
- *
- * Each priority is given its own chunk of the total cache to ensure
- * fairness during eviction.  Each priority will retain close to its maximum
- * size, however, if any priority is not using its entire chunk the others
- * are able to grow beyond their chunk size.<p>
- *
- * Instantiated at a minimum with the total size and average block size.
- * All sizes are in bytes.  The block size is not especially important as this
- * cache is fully dynamic in its sizing of blocks.  It is only used for
- * pre-allocating data structures and in initial heap estimation of the map.<p>
- *
- * The detailed constructor defines the sizes for the three priorities (they
- * should total to the <code>maximum size</code> defined).  It also sets the levels that
- * trigger and control the eviction thread.<p>
- *
- * The <code>acceptable size</code> is the cache size level which triggers the eviction
- * process to start.  It evicts enough blocks to get the size below the
- * minimum size specified.<p>
- *
- * Eviction happens in a separate thread and involves a single full-scan
- * of the map.  It determines how many bytes must be freed to reach the minimum
- * size, and then while scanning determines the fewest least-recently-used
- * blocks necessary from each of the three priorities (would be 3 times bytes
- * to free).  It then uses the priority chunk sizes to evict fairly according
- * to the relative sizes and usage.
+ * {@link org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder#setInMemory(boolean)} (An
+ * in-memory column family is a column family that should be served from memory if possible):
+ * single-access, multiple-accesses, and in-memory priority. A block is added with an in-memory
+ * priority flag if {@link org.apache.hadoop.hbase.client.ColumnFamilyDescriptor#isInMemory()},
+ * otherwise a block becomes a single access priority the first time it is read into this block
+ * cache. If a block is accessed again while in cache, it is marked as a multiple access priority
+ * block. This delineation of blocks is used to prevent scans from thrashing the cache adding a
+ * least-frequently-used element to the eviction algorithm.
+ * <p/>
+ * Each priority is given its own chunk of the total cache to ensure fairness during eviction. Each
+ * priority will retain close to its maximum size, however, if any priority is not using its entire
+ * chunk the others are able to grow beyond their chunk size.
+ * <p/>
+ * Instantiated at a minimum with the total size and average block size. All sizes are in bytes. The
+ * block size is not especially important as this cache is fully dynamic in its sizing of blocks. It
+ * is only used for pre-allocating data structures and in initial heap estimation of the map.
+ * <p/>
+ * The detailed constructor defines the sizes for the three priorities (they should total to the
+ * <code>maximum size</code> defined). It also sets the levels that trigger and control the eviction
+ * thread.
+ * <p/>
+ * The <code>acceptable size</code> is the cache size level which triggers the eviction process to
+ * start. It evicts enough blocks to get the size below the minimum size specified.
+ * <p/>
+ * Eviction happens in a separate thread and involves a single full-scan of the map. It determines
+ * how many bytes must be freed to reach the minimum size, and then while scanning determines the
+ * fewest least-recently-used blocks necessary from each of the three priorities (would be 3 times
+ * bytes to free). It then uses the priority chunk sizes to evict fairly according to the relative
+ * sizes and usage.
  */
 @InterfaceAudience.Private
 public class LruBlockCache implements FirstLevelBlockCache {
@@ -152,22 +145,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private static final int STAT_THREAD_PERIOD = 60 * 5;
   private static final String LRU_MAX_BLOCK_SIZE = "hbase.lru.max.block.size";
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
-
-  private static final String LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT
-    = "hbase.lru.cache.heavy.eviction.count.limit";
-  // Default value actually equal to disable feature of increasing performance.
-  // Because 2147483647 is about ~680 years (after that it will start to work)
-  // We can set it to 0-10 and get the profit right now.
-  // (see details https://issues.apache.org/jira/browse/HBASE-23887).
-  private static final int DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT = Integer.MAX_VALUE;
-
-  private static final String LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT
-    = "hbase.lru.cache.heavy.eviction.mb.size.limit";
-  private static final long DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT = 500;
-
-  private static final String LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT
-    = "hbase.lru.cache.heavy.eviction.overhead.coefficient";
-  private static final float DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT = 0.01f;
 
   /**
    * Defined the cache map as {@link ConcurrentHashMap} here, because in
@@ -249,18 +226,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
    */
   private transient BlockCache victimHandler = null;
 
-  /** Percent of cached data blocks */
-  private volatile int cacheDataBlockPercent;
-
-  /** Limit of count eviction process when start to avoid to cache blocks */
-  private final int heavyEvictionCountLimit;
-
-  /** Limit of volume eviction process when start to avoid to cache blocks */
-  private final long heavyEvictionMbSizeLimit;
-
-  /** Adjust auto-scaling via overhead of evition rate */
-  private final float heavyEvictionOverheadCoefficient;
-
   /**
    * Default constructor.  Specify maximum size and expected average block
    * size (approximation is fine).
@@ -288,10 +253,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
         DEFAULT_MEMORY_FACTOR,
         DEFAULT_HARD_CAPACITY_LIMIT_FACTOR,
         false,
-        DEFAULT_MAX_BLOCK_SIZE,
-        DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT,
-        DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT,
-        DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT);
+        DEFAULT_MAX_BLOCK_SIZE);
   }
 
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
@@ -307,13 +269,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
         conf.getFloat(LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME,
                       DEFAULT_HARD_CAPACITY_LIMIT_FACTOR),
         conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE),
-        conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE),
-        conf.getInt(LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT,
-                      DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT),
-        conf.getLong(LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT,
-                      DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT),
-        conf.getFloat(LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT,
-                      DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT));
+        conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE));
   }
 
   public LruBlockCache(long maxSize, long blockSize, Configuration conf) {
@@ -339,9 +295,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
       float minFactor, float acceptableFactor, float singleFactor,
       float multiFactor, float memoryFactor, float hardLimitFactor,
-      boolean forceInMemory, long maxBlockSize,
-      int heavyEvictionCountLimit, long heavyEvictionMbSizeLimit,
-      float heavyEvictionOverheadCoefficient) {
+      boolean forceInMemory, long maxBlockSize) {
     this.maxBlockSize = maxBlockSize;
     if(singleFactor + multiFactor + memoryFactor != 1 ||
         singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
@@ -377,17 +331,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
     } else {
       this.evictionThread = null;
     }
-
-    // check the bounds
-    this.heavyEvictionCountLimit = heavyEvictionCountLimit < 0 ? 0 : heavyEvictionCountLimit;
-    this.heavyEvictionMbSizeLimit = heavyEvictionMbSizeLimit < 1 ? 1 : heavyEvictionMbSizeLimit;
-    this.cacheDataBlockPercent = 100;
-    heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient > 0.1f
-      ? 1f : heavyEvictionOverheadCoefficient;
-    heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient < 0.001f
-      ? 0.001f : heavyEvictionOverheadCoefficient;
-    this.heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient;
-
     // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
     // every five minutes.
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), STAT_THREAD_PERIOD,
@@ -408,11 +351,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
     if (this.size.get() > acceptableSize() && !evictionInProgress) {
       runEviction();
     }
-  }
-
-  @VisibleForTesting
-  public int getCacheDataBlockPercent() {
-    return cacheDataBlockPercent;
   }
 
   /**
@@ -455,19 +393,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
-
-    // Some data blocks will not put into BlockCache when eviction rate too much.
-    // It is good for performance
-    // (see details: https://issues.apache.org/jira/browse/HBASE-23887)
-    // How to calculate it can find inside EvictionThread class.
-    if (cacheDataBlockPercent != 100 && buf.getBlockType().isData()) {
-      // It works like filter - blocks which two last digits of offset
-      // more than we calculate in Eviction Thread will not put into BlockCache
-      if (cacheKey.getOffset() % 100 >= cacheDataBlockPercent) {
-        return;
-      }
-    }
-
     if (buf.heapSize() > maxBlockSize) {
       // If there are a lot of blocks that are too
       // big this can make the logs way too noisy.
@@ -509,7 +434,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     map.put(cacheKey, cb);
     long val = elements.incrementAndGet();
     if (buf.getBlockType().isData()) {
-       dataBlockElements.increment();
+      dataBlockElements.increment();
     }
     if (LOG.isTraceEnabled()) {
       long size = map.size();
@@ -566,7 +491,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       heapsize *= -1;
     }
     if (bt != null && bt.isData()) {
-       dataBlockSize.add(heapsize);
+      dataBlockSize.add(heapsize);
     }
     return size.addAndGet(heapsize);
   }
@@ -652,8 +577,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
     int numEvicted = 0;
     for (BlockCacheKey key : map.keySet()) {
       if (key.getHfileName().equals(hfileName)) {
-        if (evictBlock(key))
+        if (evictBlock(key)) {
           ++numEvicted;
+        }
       }
     }
     if (victimHandler != null) {
@@ -722,25 +648,18 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /**
    * Eviction method.
-   *
-   * Evict items in order of use, allowing delete items
-   * which haven't been used for the longest amount of time.
-   *
-   * @return how many bytes were freed
    */
-  long evict() {
+  void evict() {
 
     // Ensure only one eviction at a time
     if (!evictionLock.tryLock()) {
-      return 0;
+      return;
     }
-    
-    long bytesToFree = 0L;
 
     try {
       evictionInProgress = true;
       long currentSize = this.size.get();
-      bytesToFree = currentSize - minSize();
+      long bytesToFree = currentSize - minSize();
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("Block cache LRU eviction started; Attempting to free " +
@@ -749,7 +668,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       }
 
       if (bytesToFree <= 0) {
-        return 0;
+        return;
       }
 
       // Instantiate priority buckets
@@ -849,7 +768,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
       stats.evict();
       evictionInProgress = false;
       evictionLock.unlock();
-      return bytesToFree;
     }
   }
 
@@ -1000,7 +918,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
    *
    * Thread is triggered into action by {@link LruBlockCache#runEviction()}
    */
-  static class EvictionThread extends HasThread {
+  static class EvictionThread extends Thread {
 
     private WeakReference<LruBlockCache> cache;
     private volatile boolean go = true;
@@ -1016,10 +934,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
     @Override
     public void run() {
       enteringRun = true;
-      long freedSumMb = 0;
-      int heavyEvictionCount = 0;
-      int freedDataOverheadPercent = 0;
-      long startTime = System.currentTimeMillis();
       while (this.go) {
         synchronized (this) {
           try {
@@ -1030,92 +944,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
           }
         }
         LruBlockCache cache = this.cache.get();
-        if (cache == null) break;
-        freedSumMb += cache.evict()/1024/1024;
-        /*
-        * Sometimes we are reading more data than can fit into BlockCache
-        * and it is the cause a high rate of evictions.
-        * This in turn leads to heavy Garbage Collector works.
-        * So a lot of blocks put into BlockCache but never read,
-        * but spending a lot of CPU resources.
-        * Here we will analyze how many bytes were freed and decide
-        * decide whether the time has come to reduce amount of caching blocks.
-        * It help avoid put too many blocks into BlockCache
-        * when evict() works very active and save CPU for other jobs.
-        * More delails: https://issues.apache.org/jira/browse/HBASE-23887
-        */
-
-        // First of all we have to control how much time
-        // has passed since previuos evict() was launched
-        // This is should be almost the same time (+/- 10s)
-        // because we get comparable volumes of freed bytes each time.
-        // 10s because this is default period to run evict() (see above this.wait)
-        long stopTime = System.currentTimeMillis();
-        if ((stopTime - startTime) > 1000 * 10 - 1) {
-          // Here we have to calc what situation we have got.
-          // We have the limit "hbase.lru.cache.heavy.eviction.bytes.size.limit"
-          // and can calculte overhead on it.
-          // We will use this information to decide,
-          // how to change percent of caching blocks.
-          freedDataOverheadPercent =
-            (int) (freedSumMb * 100 / cache.heavyEvictionMbSizeLimit) - 100;
-          if (freedSumMb > cache.heavyEvictionMbSizeLimit) {
-            // Now we are in the situation when we are above the limit
-            // But maybe we are going to ignore it because it will end quite soon
-            heavyEvictionCount++;
-            if (heavyEvictionCount > cache.heavyEvictionCountLimit) {
-              // It is going for a long time and we have to reduce of caching
-              // blocks now. So we calculate here how many blocks we want to skip.
-              // It depends on:
-              // 1. Overhead - if overhead is big we could more aggressive
-              // reducing amount of caching blocks.
-              // 2. How fast we want to get the result. If we know that our
-              // heavy reading for a long time, we don't want to wait and can
-              // increase the coefficient and get good performance quite soon.
-              // But if we don't sure we can do it slowly and it could prevent
-              // premature exit from this mode. So, when the coefficient is
-              // higher we can get better performance when heavy reading is stable.
-              // But when reading is changing we can adjust to it and set
-              // the coefficient to lower value.
-              int change =
-                (int) (freedDataOverheadPercent * cache.heavyEvictionOverheadCoefficient);
-              // But practice shows that 15% of reducing is quite enough.
-              // We are not greedy (it could lead to premature exit).
-              change = Math.min(15, change);
-              change = Math.max(0, change); // I think it will never happen but check for sure
-              // So this is the key point, here we are reducing % of caching blocks
-              cache.cacheDataBlockPercent -= change;
-              // If we go down too deep we have to stop here, 1% any way should be.
-              cache.cacheDataBlockPercent = Math.max(1, cache.cacheDataBlockPercent);
-            }
-          } else {
-            // Well, we have got overshooting.
-            // Mayby it is just short-term fluctuation and we can stay in this mode.
-            // It help avoid permature exit during short-term fluctuation.
-            // If overshooting less than 90%, we will try to increase the percent of
-            // caching blocks and hope it is enough.
-            if (freedSumMb >= cache.heavyEvictionMbSizeLimit * 0.1) {
-              // Simple logic: more overshooting - more caching blocks (backpressure)
-              int change = (int) (-freedDataOverheadPercent * 0.1 + 1);
-              cache.cacheDataBlockPercent += change;
-              // But it can't be more then 100%, so check it.
-              cache.cacheDataBlockPercent = Math.min(100, cache.cacheDataBlockPercent);
-            } else {
-              // Looks like heavy reading is over.
-              // Just exit form this mode.
-              heavyEvictionCount = 0;
-              cache.cacheDataBlockPercent = 100;
-            }
-          }
-          LOG.info("BlockCache evicted (MB): {}, overhead (%): {}, " +
-            "heavy eviction counter: {}, " +
-            "current caching DataBlock (%): {}",
-            freedSumMb, freedDataOverheadPercent,
-            heavyEvictionCount, cache.cacheDataBlockPercent);
-
-          freedSumMb = 0;
-          startTime = stopTime;
+        if (cache == null) {
+          break;
         }
+        cache.evict();
       }
     }
 
@@ -1191,10 +1023,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
     return this.stats;
   }
 
-  public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
-      (5 * Bytes.SIZEOF_LONG) + (11 * ClassSize.REFERENCE) +
-      (7 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN) +
-      (2 * Bytes.SIZEOF_INT) + ClassSize.OBJECT);
+  public final static long CACHE_FIXED_OVERHEAD =
+      ClassSize.estimateBase(LruBlockCache.class, false);
 
   @Override
   public long heapSize() {
@@ -1262,9 +1092,13 @@ public class LruBlockCache implements FirstLevelBlockCache {
           @Override
           public int compareTo(CachedBlock other) {
             int diff = this.getFilename().compareTo(other.getFilename());
-            if (diff != 0) return diff;
+            if (diff != 0) {
+              return diff;
+            }
             diff = Long.compare(this.getOffset(), other.getOffset());
-            if (diff != 0) return diff;
+            if (diff != 0) {
+              return diff;
+            }
             if (other.getCachedTime() < 0 || this.getCachedTime() < 0) {
               throw new IllegalStateException(this.getCachedTime() + ", " + other.getCachedTime());
             }
