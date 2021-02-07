@@ -984,7 +984,8 @@ public class TestAdaptiveLruBlockCache {
     HFileContext meta = new HFileContextBuilder().build();
     BlockCacheKey key = new BlockCacheKey("key1", 0);
     HFileBlock blk = new HFileBlock(BlockType.DATA, size, size, -1,
-      ByteBuff.wrap(ByteBuffer.wrap(byteArr, 0, size)), HFileBlock.FILL_HEADER, -1, 52, -1, meta,
+      ByteBuff.wrap(ByteBuffer.wrap(byteArr, 0, size)), HFileBlock.FILL_HEADER, -1,
+      52, -1, meta,
       HEAP);
     AtomicBoolean err1 = new AtomicBoolean(false);
     Thread t1 = new Thread(() -> {
@@ -1037,7 +1038,8 @@ public class TestAdaptiveLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
     AdaptiveLruBlockCache cache =
-      new AdaptiveLruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
+      new AdaptiveLruBlockCache(maxSize, blockSize, false, (
+        int) Math.ceil(1.2 * maxSize / blockSize),
         AdaptiveLruBlockCache.DEFAULT_LOAD_FACTOR, AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
         0.66f, // min
         0.99f, // acceptable
@@ -1056,10 +1058,12 @@ public class TestAdaptiveLruBlockCache {
     long maxSize = 100000000;
     int numBlocks = 100000;
     final long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
-    assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
+    assertTrue("calculateBlockSize appears broken.",
+      blockSize * numBlocks <= maxSize);
 
     final AdaptiveLruBlockCache cache =
-      new AdaptiveLruBlockCache(maxSize, blockSize, true, (int) Math.ceil(1.2 * maxSize / blockSize),
+      new AdaptiveLruBlockCache(maxSize, blockSize, true,
+        (int) Math.ceil(1.2 * maxSize / blockSize),
         AdaptiveLruBlockCache.DEFAULT_LOAD_FACTOR, AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
         0.5f, // min
         0.99f, // acceptable

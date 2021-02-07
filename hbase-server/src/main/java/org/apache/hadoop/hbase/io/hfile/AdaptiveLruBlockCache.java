@@ -327,7 +327,7 @@ public class AdaptiveLruBlockCache implements FirstLevelBlockCache {
    * @param blockSize approximate size of each block, in bytes
    */
   public AdaptiveLruBlockCache(long maxSize, long blockSize) {
-    this(maxSize, blockSize, true);
+    this(maxSize, blockSize,true);
   }
 
   /**
@@ -349,7 +349,8 @@ public class AdaptiveLruBlockCache implements FirstLevelBlockCache {
       DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT);
   }
 
-  public AdaptiveLruBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
+  public AdaptiveLruBlockCache(long maxSize, long blockSize,
+    boolean evictionThread, Configuration conf) {
     this(maxSize, blockSize, evictionThread,
       (int) Math.ceil(1.2 * maxSize / blockSize),
       DEFAULT_LOAD_FACTOR,
@@ -470,17 +471,17 @@ public class AdaptiveLruBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * The block cached in AdaptiveLruBlockCache will always be an heap block: on the one side, the heap
-   * access will be more faster then off-heap, the small index block or meta block cached in
-   * CombinedBlockCache will benefit a lot. on other side, the AdaptiveLruBlockCache size is always
-   * calculated based on the total heap size, if caching an off-heap block in AdaptiveLruBlockCache, the
-   * heap size will be messed up. Here we will clone the block into an heap block if it's an
-   * off-heap block, otherwise just use the original block. The key point is maintain the refCnt of
-   * the block (HBASE-22127): <br>
+   * The block cached in AdaptiveLruBlockCache will always be an heap block: on the one side,
+   * the heap access will be more faster then off-heap, the small index block or meta block
+   * cached in CombinedBlockCache will benefit a lot. on other side, the AdaptiveLruBlockCache size
+   * is always    * calculated based on the total heap size, if caching an off-heap block in
+   * AdaptiveLruBlockCache, the heap size will be messed up. Here we will clone the block into an
+   * heap block if it's an off-heap block, otherwise just use the original block. The key point is
+   * maintain the refCnt of the block (HBASE-22127): <br>
    * 1. if cache the cloned heap block, its refCnt is an totally new one, it's easy to handle; <br>
    * 2. if cache the original heap block, we're sure that it won't be tracked in ByteBuffAllocator's
-   * reservoir, if both RPC and AdaptiveLruBlockCache release the block, then it can be garbage collected by
-   * JVM, so need a retain here.
+   * reservoir, if both RPC and AdaptiveLruBlockCache release the block, then it can be garbage
+   * collected by JVM, so need a retain here.
    * @param buf the original block
    * @return an block with an heap memory backend.
    */
@@ -491,7 +492,8 @@ public class AdaptiveLruBlockCache implements FirstLevelBlockCache {
         return HFileBlock.deepCloneOnHeap(blk);
       }
     }
-    // The block will be referenced by this AdaptiveLruBlockCache, so should increase its refCnt here.
+    // The block will be referenced by this AdaptiveLruBlockCache,
+    // so should increase its refCnt here.
     return buf.retain();
   }
 
@@ -537,7 +539,8 @@ public class AdaptiveLruBlockCache implements FirstLevelBlockCache {
     }
 
     LruCachedBlock cb = map.get(cacheKey);
-    if (cb != null && !BlockCacheUtil.shouldReplaceExistingCacheBlock(this, cacheKey, buf)) {
+    if (cb != null && !BlockCacheUtil.shouldReplaceExistingCacheBlock(this, cacheKey,
+      buf)) {
       return;
     }
     long currentSize = size.get();
@@ -806,9 +809,12 @@ public class AdaptiveLruBlockCache implements FirstLevelBlockCache {
       }
 
       // Instantiate priority buckets
-      BlockBucket bucketSingle = new BlockBucket("single", bytesToFree, blockSize, singleSize());
-      BlockBucket bucketMulti = new BlockBucket("multi", bytesToFree, blockSize, multiSize());
-      BlockBucket bucketMemory = new BlockBucket("memory", bytesToFree, blockSize, memorySize());
+      BlockBucket bucketSingle
+        = new BlockBucket("single", bytesToFree, blockSize, singleSize());
+      BlockBucket bucketMulti
+        = new BlockBucket("multi", bytesToFree, blockSize, multiSize());
+      BlockBucket bucketMemory
+        = new BlockBucket("memory", bytesToFree, blockSize, memorySize());
 
       // Scan entire map putting into appropriate buckets
       for (LruCachedBlock cachedBlock : map.values()) {
