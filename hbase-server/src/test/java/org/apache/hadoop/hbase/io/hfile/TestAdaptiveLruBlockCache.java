@@ -71,7 +71,8 @@ public class TestAdaptiveLruBlockCache {
     int numBlocks = 9;
     int testRuns = 10;
     final long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
-    assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
+    assertTrue("calculateBlockSize appears broken.",
+      blockSize * numBlocks <= maxSize);
 
     final Configuration conf = HBaseConfiguration.create();
     final AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize, blockSize);
