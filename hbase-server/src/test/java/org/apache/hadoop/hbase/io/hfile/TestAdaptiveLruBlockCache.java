@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache.EvictionThread;
+import org.apache.hadoop.hbase.io.hfile.AdaptiveLruBlockCache.EvictionThread;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -50,20 +50,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests the concurrent LruBlockCache.<p>
+ * Tests the concurrent AdaptiveLruBlockCache.<p>
  *
  * Tests will ensure it grows and shrinks in size properly,
  * evictions run when they're supposed to and do what they should,
  * and that cached blocks are accessible when expected to be.
  */
 @Category({IOTests.class, SmallTests.class})
-public class TestLruBlockCache {
+public class TestAdaptiveLruBlockCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLruBlockCache.class);
+    HBaseClassTestRule.forClass(TestAdaptiveLruBlockCache.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestLruBlockCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAdaptiveLruBlockCache.class);
 
   @Test
   public void testCacheEvictionThreadSafe() throws Exception {
@@ -74,7 +74,7 @@ public class TestLruBlockCache {
     assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
 
     final Configuration conf = HBaseConfiguration.create();
-    final LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
+    final AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize, blockSize);
     EvictionThread evictionThread = cache.getEvictionThread();
     assertTrue(evictionThread != null);
     while (!evictionThread.isEnteringRun()) {
@@ -124,7 +124,7 @@ public class TestLruBlockCache {
     long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
     assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
 
-    LruBlockCache cache = new LruBlockCache(maxSize,blockSize);
+    AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize,blockSize);
     EvictionThread evictionThread = cache.getEvictionThread();
     assertTrue(evictionThread != null);
 
@@ -173,7 +173,7 @@ public class TestLruBlockCache {
     long maxSize = 1000000;
     long blockSize = calculateBlockSizeDefault(maxSize, 101);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
+    AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize, blockSize);
 
     CachedItem [] blocks = generateRandomBlocks(100, blockSize);
 
@@ -221,7 +221,7 @@ public class TestLruBlockCache {
 
     // Expect no evictions
     assertEquals(0, cache.getStats().getEvictionCount());
-    Thread t = new LruBlockCache.StatisticsThread(cache);
+    Thread t = new AdaptiveLruBlockCache.StatisticsThread(cache);
     t.start();
     t.join();
   }
@@ -232,7 +232,7 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize,blockSize,false);
+    AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize,blockSize,false);
 
     CachedItem [] blocks = generateFixedBlocks(10, blockSize, "block");
 
@@ -249,14 +249,14 @@ public class TestLruBlockCache {
 
     // Our expected size overruns acceptable limit
     assertTrue(expectedCacheSize >
-      (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+      (maxSize * AdaptiveLruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
 
     // But the cache did not grow beyond max
     assertTrue(cache.heapSize() < maxSize);
 
     // And is still below the acceptable limit
     assertTrue(cache.heapSize() <
-      (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+      (maxSize * AdaptiveLruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
 
     // All blocks except block 0  should be in the cache
     assertTrue(cache.getBlock(blocks[0].cacheKey, true, false, true) == null);
@@ -272,7 +272,7 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize,blockSize,false);
+    AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize,blockSize,false);
 
     CachedItem [] singleBlocks = generateFixedBlocks(5, 10000, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, 10000, "multi");
@@ -300,14 +300,14 @@ public class TestLruBlockCache {
 
     // Our expected size overruns acceptable limit
     assertTrue(expectedCacheSize >
-      (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+      (maxSize * AdaptiveLruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
 
     // But the cache did not grow beyond max
     assertTrue(cache.heapSize() <= maxSize);
 
     // And is now below the acceptable limit
     assertTrue(cache.heapSize() <=
-      (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+      (maxSize * AdaptiveLruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
 
     // We expect fairness across the two priorities.
     // This test makes multi go barely over its limit, in-memory
@@ -331,10 +331,10 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
+    AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize, blockSize, false,
       (int)Math.ceil(1.2*maxSize/blockSize),
-      LruBlockCache.DEFAULT_LOAD_FACTOR,
-      LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+      AdaptiveLruBlockCache.DEFAULT_LOAD_FACTOR,
+      AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
       0.98f, // min
       0.99f, // acceptable
       0.33f, // single
@@ -342,7 +342,10 @@ public class TestLruBlockCache {
       0.34f, // memory
       1.2f,  // limit
       false,
-      16 * 1024 * 1024);
+      16 * 1024 * 1024,
+      10,
+      500,
+      0.01f);
 
     CachedItem [] singleBlocks = generateFixedBlocks(5, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -453,10 +456,10 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
+    AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize, blockSize, false,
       (int)Math.ceil(1.2*maxSize/blockSize),
-      LruBlockCache.DEFAULT_LOAD_FACTOR,
-      LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+      AdaptiveLruBlockCache.DEFAULT_LOAD_FACTOR,
+      AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
       0.98f, // min
       0.99f, // acceptable
       0.2f, // single
@@ -464,7 +467,10 @@ public class TestLruBlockCache {
       0.5f, // memory
       1.2f, // limit
       true,
-      16 * 1024 * 1024);
+      16 * 1024 * 1024,
+      10,
+      500,
+      0.01f);
 
     CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
@@ -560,10 +566,10 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
+    AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize, blockSize, false,
       (int)Math.ceil(1.2*maxSize/blockSize),
-      LruBlockCache.DEFAULT_LOAD_FACTOR,
-      LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+      AdaptiveLruBlockCache.DEFAULT_LOAD_FACTOR,
+      AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
       0.66f, // min
       0.99f, // acceptable
       0.33f, // single
@@ -571,7 +577,10 @@ public class TestLruBlockCache {
       0.34f, // memory
       1.2f,  // limit
       false,
-      16 * 1024 * 1024);
+      16 * 1024 * 1024,
+      10,
+      500,
+      0.01f);
 
     CachedItem [] singleBlocks = generateFixedBlocks(20, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -624,10 +633,10 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
+    AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize, blockSize, false,
       (int)Math.ceil(1.2*maxSize/blockSize),
-      LruBlockCache.DEFAULT_LOAD_FACTOR,
-      LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+      AdaptiveLruBlockCache.DEFAULT_LOAD_FACTOR,
+      AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
       0.66f, // min
       0.99f, // acceptable
       0.33f, // single
@@ -635,7 +644,11 @@ public class TestLruBlockCache {
       0.34f, // memory
       1.2f,  // limit
       false,
-      1024);
+      1024,
+      10,
+      500,
+      0.01f);
+
     CachedItem [] tooLong = generateFixedBlocks(10, 1024+5, "long");
     CachedItem [] small = generateFixedBlocks(15, 600, "small");
 
@@ -664,10 +677,10 @@ public class TestLruBlockCache {
     long maxSize = 300000;
     long blockSize = calculateBlockSize(maxSize, 31);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
+    AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize, blockSize, false,
       (int)Math.ceil(1.2*maxSize/blockSize),
-      LruBlockCache.DEFAULT_LOAD_FACTOR,
-      LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+      AdaptiveLruBlockCache.DEFAULT_LOAD_FACTOR,
+      AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
       0.98f, // min
       0.99f, // acceptable
       0.33f, // single
@@ -675,7 +688,10 @@ public class TestLruBlockCache {
       0.34f, // memory
       1.2f,  // limit
       false,
-      16 * 1024 * 1024);
+      16 * 1024 * 1024,
+      10,
+      500,
+      0.01f);
 
     CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
@@ -826,10 +842,10 @@ public class TestLruBlockCache {
     HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
       ByteBuff.wrap(buf), HFileBlock.FILL_HEADER, -1, -1, -1, meta, HEAP);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
+    AdaptiveLruBlockCache cache = new AdaptiveLruBlockCache(maxSize, blockSize, false,
       (int)Math.ceil(1.2*maxSize/blockSize),
-      LruBlockCache.DEFAULT_LOAD_FACTOR,
-      LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+      AdaptiveLruBlockCache.DEFAULT_LOAD_FACTOR,
+      AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
       0.66f, // min
       0.99f, // acceptable
       0.33f, // single
@@ -837,7 +853,10 @@ public class TestLruBlockCache {
       0.34f, // memory
       1.2f,  // limit
       false,
-      1024);
+      1024,
+      10,
+      500,
+      0.01f);
 
     BlockCacheKey key = new BlockCacheKey("key1", 0);
     ByteBuffer actualBuffer = ByteBuffer.allocate(length);
@@ -889,10 +908,10 @@ public class TestLruBlockCache {
   private long calculateBlockSize(long maxSize, int numBlocks) {
     long roughBlockSize = maxSize / numBlocks;
     int numEntries = (int)Math.ceil((1.2)*maxSize/roughBlockSize);
-    long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD +
+    long totalOverhead = AdaptiveLruBlockCache.CACHE_FIXED_OVERHEAD +
       ClassSize.CONCURRENT_HASHMAP +
       (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
-      (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
+      (AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
     long negateBlockSize = (long)(totalOverhead/numEntries);
     negateBlockSize += LruCachedBlock.PER_BLOCK_OVERHEAD;
     return ClassSize.align((long)Math.floor((roughBlockSize - negateBlockSize)*0.99f));
@@ -901,14 +920,14 @@ public class TestLruBlockCache {
   private long calculateBlockSizeDefault(long maxSize, int numBlocks) {
     long roughBlockSize = maxSize / numBlocks;
     int numEntries = (int)Math.ceil((1.2)*maxSize/roughBlockSize);
-    long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD +
+    long totalOverhead = AdaptiveLruBlockCache.CACHE_FIXED_OVERHEAD +
       ClassSize.CONCURRENT_HASHMAP +
       (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
-      (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
+      (AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
     long negateBlockSize = totalOverhead / numEntries;
     negateBlockSize += LruCachedBlock.PER_BLOCK_OVERHEAD;
     return ClassSize.align((long)Math.floor((roughBlockSize - negateBlockSize)*
-      LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+      AdaptiveLruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
   }
 
   private static class CachedItem implements Cacheable {
@@ -1017,16 +1036,89 @@ public class TestLruBlockCache {
   public void testMultiThreadGetAndEvictBlock() throws Exception {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
-    LruBlockCache cache =
-      new LruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
-        LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+    AdaptiveLruBlockCache cache =
+      new AdaptiveLruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
+        AdaptiveLruBlockCache.DEFAULT_LOAD_FACTOR, AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
         0.66f, // min
         0.99f, // acceptable
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
         1.2f, // limit
-        false, 1024);
+        false, 1024,
+        10,
+        500,
+        0.01f);
     testMultiThreadGetAndEvictBlockInternal(cache);
+  }
+
+  public void testSkipCacheDataBlocksInteral(int heavyEvictionCountLimit) throws Exception {
+    long maxSize = 100000000;
+    int numBlocks = 100000;
+    final long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
+    assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
+
+    final AdaptiveLruBlockCache cache =
+      new AdaptiveLruBlockCache(maxSize, blockSize, true, (int) Math.ceil(1.2 * maxSize / blockSize),
+        AdaptiveLruBlockCache.DEFAULT_LOAD_FACTOR, AdaptiveLruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+        0.5f, // min
+        0.99f, // acceptable
+        0.33f, // single
+        0.33f, // multi
+        0.34f, // memory
+        1.2f, // limit
+        false,
+        maxSize,
+        heavyEvictionCountLimit,
+        200,
+        0.01f);
+
+    EvictionThread evictionThread = cache.getEvictionThread();
+    assertTrue(evictionThread != null);
+    while (!evictionThread.isEnteringRun()) {
+      Thread.sleep(1);
+    }
+
+    final String hfileName = "hfile";
+    for (int blockIndex = 0; blockIndex <= numBlocks * 3000; ++blockIndex) {
+      CachedItem block = new CachedItem(hfileName, (int) blockSize, blockIndex);
+      cache.cacheBlock(block.cacheKey, block, false);
+      if (cache.getCacheDataBlockPercent() < 70) {
+        // enough for test
+        break;
+      }
+    }
+
+    evictionThread.evict();
+    Thread.sleep(100);
+
+    if (heavyEvictionCountLimit == 0) {
+      // Check if all offset (last two digits) of cached blocks less than the percent.
+      // It means some of blocks haven't put into BlockCache
+      assertTrue(cache.getCacheDataBlockPercent() < 90);
+      for (BlockCacheKey key : cache.getMapForTests().keySet()) {
+        assertTrue(!(key.getOffset() % 100 > 90));
+      }
+    } else {
+      // Check that auto-scaling is not working (all blocks in BlockCache)
+      assertTrue(cache.getCacheDataBlockPercent() == 100);
+      int counter = 0;
+      for (BlockCacheKey key : cache.getMapForTests().keySet()) {
+        if (key.getOffset() % 100 > 90) {
+          counter++;
+        }
+      }
+      assertTrue(counter > 1000);
+    }
+    evictionThread.shutdown();
+  }
+
+  @Test
+  public void testSkipCacheDataBlocks() throws Exception {
+    // Check that auto-scaling will work right after start
+    testSkipCacheDataBlocksInteral(0);
+    // Check that auto-scaling will not work right after start
+    // (have to finished before auto-scaling)
+    testSkipCacheDataBlocksInteral(100);
   }
 }
