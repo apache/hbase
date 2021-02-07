@@ -48,7 +48,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * <b>This realisation improve performance of classical LRU cache up to 3 times via reduce GC job.</b>
+ * <b>This realisation improve performance of classical LRU
+ * cache up to 3 times via reduce GC job.</b>
  * </p>
  * The classical block cache implementation that is memory-aware using {@link HeapSize}, memory-bound using an
  * LRU eviction algorithm, and concurrent: backed by a {@link ConcurrentHashMap} and with a
