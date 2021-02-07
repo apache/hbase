@@ -266,8 +266,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     if (currentReplicators == null || currentReplicators.isEmpty()) {
       return;
     }
-    List<ServerName> otherRegionServers = replicationTracker.getListOfRegionServers().stream()
-        .map(ServerName::valueOf).collect(Collectors.toList());
+    List<ServerName> otherRegionServers = replicationTracker.getListOfRegionServers();
     LOG.info(
       "Current list of replicators: " + currentReplicators + " other RSs: " + otherRegionServers);
 
