@@ -300,8 +300,8 @@ public class AdaptiveLruBlockCache implements FirstLevelBlockCache {
   private boolean forceInMemory;
 
   /**
-   * Where to send victims (blocks evicted/missing from the cache). This is used only when we use an
-   * external cache as L2.
+   * Where to send victims (blocks evicted/missing from the cache).
+   * This is used only when we use an external cache as L2.
    * Note: See org.apache.hadoop.hbase.io.hfile.MemcachedBlockCache
    */
   private transient BlockCache victimHandler = null;
