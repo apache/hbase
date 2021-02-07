@@ -134,8 +134,8 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * can adjust to it and set  the coefficient to lower value.
  * For example, we set the coefficient = 0.01. It means the overhead (see above) will be
  * multiplied by 0.01 and the result is the value of reducing percent caching blocks. For example,
- * if the overhead = 300% and the coefficient = 0.01,
- * then percent of caching blocks will reduce by 3%.
+ * if the overhead = 300% and the coefficient = 0.01,  * then percent of caching blocks will
+ * reduce by 3%.
  * Similar logic when overhead has got negative value (overshooting).  Maybe it is just short-term
  * fluctuation and we will try to stay in this mode. It helps avoid premature exit during
  * short-term fluctuation. Backpressure has simple logic: more overshooting - more caching blocks.
