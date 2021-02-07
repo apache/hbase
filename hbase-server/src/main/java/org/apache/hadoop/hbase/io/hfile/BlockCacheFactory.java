@@ -145,7 +145,7 @@ public final class BlockCacheFactory {
       return new LruBlockCache(cacheSize, blockSize, true, c);
     } else if (policy.equalsIgnoreCase("TinyLFU")) {
       return new TinyLfuBlockCache(cacheSize, blockSize, ForkJoinPool.commonPool(), c);
-    } else if (policy.equalsIgnoreCase("TinyLFU")) {
+    } else if (policy.equalsIgnoreCase("AdaptiveLRU")) {
       return new LruAdaptiveBlockCache(cacheSize, blockSize, true, c);
     } else {
       throw new IllegalArgumentException("Unknown policy: " + policy);
