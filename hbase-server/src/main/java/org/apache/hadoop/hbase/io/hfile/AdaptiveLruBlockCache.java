@@ -51,10 +51,10 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * <b>This realisation improve performance of classical LRU
  * cache up to 3 times via reduce GC job.</b>
  * </p>
- * The classical block cache implementation that is memory-aware using {@link HeapSize}, memory-bound using an
- * LRU eviction algorithm, and concurrent: backed by a {@link ConcurrentHashMap} and with a
- * non-blocking eviction thread giving constant-time {@link #cacheBlock} and {@link #getBlock}
- * operations.
+ * The classical block cache implementation that is memory-aware using {@link HeapSize},
+ * memory-bound using an LRU eviction algorithm, and concurrent: backed by
+ * a {@link ConcurrentHashMap} and with a non-blocking eviction thread giving
+ * constant-time {@link #cacheBlock} and {@link #getBlock} operations.
  * </p>
  * Contains three levels of block priority to allow for scan-resistance and in-memory families
  * {@link org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder#setInMemory(boolean)} (An
