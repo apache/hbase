@@ -18,8 +18,9 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_READONLY_ENABLED;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_READONLY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.appendFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.compareOpFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deletesFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
@@ -31,33 +32,40 @@ import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.resultFromHBase;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.resultsFromHBase;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.rowMutationsFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.scanFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.splitKeyFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.tableNameFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.tableNamesFromHBase;
 import static org.apache.thrift.TBaseHelper.byteBufferToByteArray;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.thrift.ThriftMetrics;
+import org.apache.hadoop.hbase.thrift.HBaseServiceHandler;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
+import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
@@ -66,20 +74,27 @@ import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
+import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
+import org.apache.hadoop.hbase.thrift2.generated.TServerName;
+import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TTableName;
+import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.thrift.TException;
 
 /**
  * This class is a glue object that connects Thrift RPC calls to the HBase client API primarily
- * defined in the HTableInterface.
+ * defined in the Table interface.
  */
 @InterfaceAudience.Private
-public class ThriftHBaseServiceHandler implements THBaseService.Iface {
+@SuppressWarnings("deprecation")
+public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements THBaseService.Iface {
 
   // TODO: Size of pool configuraple
   private static final Log LOG = LogFactory.getLog(ThriftHBaseServiceHandler.class);
@@ -87,56 +102,13 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   // nextScannerId and scannerMap are used to manage scanner state
   // TODO: Cleanup thread for Scanners, Scanner id wrap
   private final AtomicInteger nextScannerId = new AtomicInteger(0);
-  private final Map<Integer, ResultScanner> scannerMap =
-      new ConcurrentHashMap<Integer, ResultScanner>();
-
-  private final ConnectionCache connectionCache;
-
-  static final String CLEANUP_INTERVAL = "hbase.thrift.connection.cleanup-interval";
-  static final String MAX_IDLETIME = "hbase.thrift.connection.max-idletime";
+  private final Map<Integer, ResultScanner> scannerMap = new ConcurrentHashMap<>();
 
   private static final IOException ioe
       = new DoNotRetryIOException("Thrift Server is in Read-only mode.");
   private boolean isReadOnly;
 
-  public static THBaseService.Iface newInstance(
-      THBaseService.Iface handler, ThriftMetrics metrics) {
-    return (THBaseService.Iface) Proxy.newProxyInstance(handler.getClass().getClassLoader(),
-      new Class[] { THBaseService.Iface.class }, new THBaseServiceMetricsProxy(handler, metrics));
-  }
-
-  private static class THBaseServiceMetricsProxy implements InvocationHandler {
-    private final THBaseService.Iface handler;
-    private final ThriftMetrics metrics;
-
-    private THBaseServiceMetricsProxy(THBaseService.Iface handler, ThriftMetrics metrics) {
-      this.handler = handler;
-      this.metrics = metrics;
-    }
-
-    @Override
-    public Object invoke(Object proxy, Method m, Object[] args) throws Throwable {
-      Object result;
-      long start = now();
-      try {
-        result = m.invoke(handler, args);
-      } catch (InvocationTargetException e) {
-        metrics.exception(e.getCause());
-        throw e.getTargetException();
-      } catch (Exception e) {
-        metrics.exception(e);
-        throw new RuntimeException("unexpected invocation exception: " + e.getMessage());
-      } finally {
-        long processTime = now() - start;
-        metrics.incMethodTime(m.getName(), processTime);
-      }
-      return result;
-    }
-  }
-
   private static class TIOErrorWithCause extends TIOError {
-    private static final long serialVersionUID = -1164984328968862207L;
-
     private Throwable cause;
 
     public TIOErrorWithCause(Throwable cause) {
@@ -171,24 +143,18 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     }
   }
 
-  private static long now() {
-    return System.nanoTime();
-  }
-
-  ThriftHBaseServiceHandler(final Configuration conf,
+  public ThriftHBaseServiceHandler(final Configuration conf,
       final UserProvider userProvider) throws IOException {
-    int cleanInterval = conf.getInt(CLEANUP_INTERVAL, 10 * 1000);
-    int maxIdleTime = conf.getInt(MAX_IDLETIME, 10 * 60 * 1000);
-    connectionCache = new ConnectionCache(
-      conf, userProvider, cleanInterval, maxIdleTime);
-    isReadOnly = conf.getBoolean("hbase.thrift.readonly", false);
+    super(conf, userProvider);
+    isReadOnly = conf.getBoolean(THRIFT_READONLY_ENABLED, THRIFT_READONLY_ENABLED_DEFAULT);
   }
 
-  private Table getTable(ByteBuffer tableName) {
+  @Override
+  protected Table getTable(ByteBuffer tableName) {
     try {
       return connectionCache.getTable(Bytes.toString(byteBufferToByteArray(tableName)));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+    } catch (IOException ie) {
+      throw new RuntimeException(ie);
     }
   }
 
@@ -232,10 +198,6 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
    */
   private ResultScanner getScanner(int id) {
     return scannerMap.get(id);
-  }
-
-  void setEffectiveUser(String effectiveUser) {
-    connectionCache.setEffectiveUser(effectiveUser);
   }
 
   /**
@@ -317,11 +279,11 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   public boolean checkAndPut(ByteBuffer table, ByteBuffer row, ByteBuffer family,
       ByteBuffer qualifier, ByteBuffer value, TPut put) throws TIOError, TException {
     checkReadOnlyMode();
+
     Table htable = getTable(table);
     try {
       return htable.checkAndPut(byteBufferToByteArray(row), byteBufferToByteArray(family),
-        byteBufferToByteArray(qualifier), (value == null) ? null : byteBufferToByteArray(value),
-        putFromThrift(put));
+          byteBufferToByteArray(qualifier), byteBufferToByteArray(value), putFromThrift(put));
     } catch (IOException e) {
       throw getTIOError(e);
     } finally {
@@ -369,19 +331,29 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     }
     return Collections.emptyList();
   }
-  
+
   @Override
   public boolean checkAndMutate(ByteBuffer table, ByteBuffer row, ByteBuffer family,
       ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations)
-          throws TIOError, TException {
+      throws TIOError, TException {
     checkReadOnlyMode();
     try (final Table htable = getTable(table)) {
       return htable.checkAndMutate(byteBufferToByteArray(row), byteBufferToByteArray(family),
-          byteBufferToByteArray(qualifier), compareOpFromThrift(compareOp),
+          byteBufferToByteArray(qualifier), CompareFilter.CompareOp.EQUAL,
           byteBufferToByteArray(value), rowMutationsFromThrift(rowMutations));
     } catch (IOException e) {
       throw getTIOError(e);
     }
+  }
+
+  @Override public TTableDescriptor getTableDescriptor(TTableName table)
+      throws TIOError, TException {
+    return null;
+  }
+
+  @Override public List<TTableDescriptor> getTableDescriptors(List<TTableName> tables)
+      throws TIOError, TException {
+    return null;
   }
 
   @Override
@@ -390,14 +362,9 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     checkReadOnlyMode();
     Table htable = getTable(table);
     try {
-      if (value == null) {
-        return htable.checkAndDelete(byteBufferToByteArray(row), byteBufferToByteArray(family),
-          byteBufferToByteArray(qualifier), null, deleteFromThrift(deleteSingle));
-      } else {
-        return htable.checkAndDelete(byteBufferToByteArray(row), byteBufferToByteArray(family),
-          byteBufferToByteArray(qualifier), byteBufferToByteArray(value),
-          deleteFromThrift(deleteSingle));
-      }
+      return htable.checkAndDelete(byteBufferToByteArray(row),
+          byteBufferToByteArray(family), byteBufferToByteArray(qualifier),
+          byteBufferToByteArray(value), deleteFromThrift(deleteSingle));
     } catch (IOException e) {
       throw getTIOError(e);
     } finally {
@@ -565,5 +532,175 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
 
   private boolean isReadOnly() {
     return isReadOnly;
+  }
+
+  @Override
+  public boolean tableExists(TTableName tTableName) throws TIOError, TException {
+    try {
+      TableName tableName = tableNameFromThrift(tTableName);
+      return connectionCache.getAdmin().tableExists(tableName);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+  }
+
+  @Override
+  public List<TTableDescriptor> getTableDescriptorsByPattern(String regex, boolean includeSysTables)
+      throws TIOError, TException {
+    return null;
+  }
+
+  @Override public List<TTableDescriptor> getTableDescriptorsByNamespace(String name)
+      throws TIOError, TException {
+    return null;
+  }
+
+  @Override
+  public List<TTableName> getTableNamesByPattern(String regex, boolean includeSysTables)
+      throws TIOError, TException {
+    try {
+      Pattern pattern = (regex == null ? null : Pattern.compile(regex));
+      TableName[] tableNames = connectionCache.getAdmin()
+          .listTableNames(pattern, includeSysTables);
+      return tableNamesFromHBase(tableNames);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+  }
+
+  @Override
+  public List<TTableName> getTableNamesByNamespace(String name) throws TIOError, TException {
+    try {
+      TableName[] tableNames = connectionCache.getAdmin().listTableNamesByNamespace(name);
+      return tableNamesFromHBase(tableNames);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+  }
+
+  @Override public void createTable(TTableDescriptor desc, List<ByteBuffer> splitKeys)
+      throws TIOError, TException {
+
+  }
+
+  @Override public void deleteTable(TTableName tableName) throws TIOError, TException {
+
+  }
+
+  @Override public void truncateTable(TTableName tableName, boolean preserveSplits)
+      throws TIOError, TException {
+
+  }
+
+  @Override public void enableTable(TTableName tableName) throws TIOError, TException {
+
+  }
+
+  @Override public void disableTable(TTableName tableName) throws TIOError, TException {
+
+  }
+
+  @Override
+  public boolean isTableEnabled(TTableName tableName) throws TIOError, TException {
+    try {
+      TableName table = tableNameFromThrift(tableName);
+      return connectionCache.getAdmin().isTableEnabled(table);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+  }
+
+  @Override
+  public boolean isTableDisabled(TTableName tableName) throws TIOError, TException {
+    try {
+      TableName table = tableNameFromThrift(tableName);
+      return connectionCache.getAdmin().isTableDisabled(table);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+  }
+
+  @Override
+  public boolean isTableAvailable(TTableName tableName) throws TIOError, TException {
+    try {
+      TableName table = tableNameFromThrift(tableName);
+      return connectionCache.getAdmin().isTableAvailable(table);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+  }
+
+  @Override
+  public boolean isTableAvailableWithSplit(TTableName tableName, List<ByteBuffer> splitKeys)
+      throws TIOError, TException {
+    try {
+      TableName table = tableNameFromThrift(tableName);
+      byte[][] split = splitKeyFromThrift(splitKeys);
+      return connectionCache.getAdmin().isTableAvailable(table, split);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+  }
+
+  @Override public void addColumnFamily(TTableName tableName, TColumnFamilyDescriptor column)
+      throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override public void deleteColumnFamily(TTableName tableName, ByteBuffer column)
+      throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override public void modifyColumnFamily(TTableName tableName, TColumnFamilyDescriptor column)
+      throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override public void modifyTable(TTableDescriptor desc) throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override public void createNamespace(TNamespaceDescriptor namespaceDesc)
+      throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override public void modifyNamespace(TNamespaceDescriptor namespaceDesc)
+      throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override public void deleteNamespace(String name) throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override public TNamespaceDescriptor getNamespaceDescriptor(String name)
+      throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override public List<TNamespaceDescriptor> listNamespaceDescriptors()
+      throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override public List<String> listNamespaces() throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public TThriftServerType getThriftServerType() {
+    return TThriftServerType.TWO;
+  }
+
+  @Override public List<TOnlineLogRecord> getSlowLogResponses(Set<TServerName> serverNames,
+      TLogQueryFilter logQueryFilter) throws TIOError, TException {
+    throw new NotImplementedException();
+  }
+
+  @Override public List<Boolean> clearSlowLogResponses(Set<TServerName> serverNames)
+      throws TIOError, TException {
+    throw new NotImplementedException();
   }
 }

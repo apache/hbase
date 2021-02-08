@@ -20,17 +20,22 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.util.JvmVersion"
   import="org.apache.hadoop.hbase.util.VersionInfo"
   import="java.util.Date"
 %>
+<%@ page import="org.apache.hadoop.hbase.thrift.ImplType" %>
 
 <%
 Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf");
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
 String listenPort = conf.get("hbase.regionserver.thrift.port", "9090");
 String serverInfo = listenPort + "," + String.valueOf(startcode);
-String implType = conf.get("hbase.regionserver.thrift.server.type", "threadpool");
+String implType;
+if (conf.getBoolean("hbase.regionserver.thrift.http", false)) {
+  implType = "http";
+} else {
+  implType = conf.get("hbase.regionserver.thrift.server.type", "threadpool");
+}
 String compact = conf.get("hbase.regionserver.thrift.compact", "false");
 String framed = conf.get("hbase.regionserver.thrift.framed", "false");
 %>
@@ -93,11 +98,6 @@ String framed = conf.get("hbase.regionserver.thrift.framed", "false");
             <th>Value</th>
             <th>Description</th>
         </tr>
-      <tr>
-        <td>JVM Version</td>
-        <td><%= JvmVersion.getVersion() %></td>
-        <td>JVM vendor and version information</td>
-      </tr>
         <tr>
             <td>HBase Version</td>
             <td><%= VersionInfo.getVersion() %>, r<%= VersionInfo.getRevision() %></td>
