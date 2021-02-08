@@ -312,6 +312,8 @@ public class ColumnFamilyDescriptorBuilder {
     switch (key) {
       case TTL:
         return Unit.TIME_INTERVAL;
+      case BLOCKSIZE:
+        return Unit.BYTE;
       default:
         return Unit.NONE;
     }
@@ -413,6 +415,11 @@ public class ColumnFamilyDescriptorBuilder {
   }
 
   public ColumnFamilyDescriptorBuilder setBlocksize(int value) {
+    desc.setBlocksize(value);
+    return this;
+  }
+
+  public ColumnFamilyDescriptorBuilder setBlocksize(String value) throws HBaseException {
     desc.setBlocksize(value);
     return this;
   }
@@ -767,6 +774,11 @@ public class ColumnFamilyDescriptorBuilder {
      */
     public ModifyableColumnFamilyDescriptor setBlocksize(int s) {
       return setValue(BLOCKSIZE_BYTES, Integer.toString(s));
+    }
+
+    public ModifyableColumnFamilyDescriptor setBlocksize(String blocksize) throws HBaseException {
+      return setBlocksize(Integer.parseInt(PrettyPrinter.
+        valueOf(blocksize, PrettyPrinter.Unit.BYTE)));
     }
 
     @Override

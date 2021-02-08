@@ -184,6 +184,34 @@ public class TestColumnFamilyDescriptorBuilder {
     Assert.assertEquals(43282800, builder.build().getTimeToLive());
   }
 
+  @Test
+  public void testSetBlocksize() throws HBaseException {
+    String blocksize;
+    ColumnFamilyDescriptorBuilder builder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
+
+    blocksize = "131072";
+    builder.setBlocksize(blocksize);
+    assertEquals(131072, builder.build().getBlocksize());
+
+    blocksize = "100KB";
+    builder.setBlocksize(blocksize);
+    assertEquals(102400, builder.build().getBlocksize());
+
+    blocksize = "1MB";
+    builder.setBlocksize(blocksize);
+    assertEquals(1048576, builder.build().getBlocksize());
+
+    // ignore case
+    blocksize = "64kb 512B";
+    builder.setBlocksize(blocksize);
+    assertEquals(66048, builder.build().getBlocksize());
+
+    blocksize = "66048 B (64KB 512B)";
+    builder.setBlocksize(blocksize);
+    assertEquals(66048, builder.build().getBlocksize());
+  }
+
   /**
    * Test for verifying the ColumnFamilyDescriptorBuilder's default values so that backward
    * compatibility with hbase-1.x can be mantained (see HBASE-24981).
