@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -1217,7 +1216,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     // source process. See "4.1 Skip maintaining zookeeper replication queue (offsets/WALs)" in the
     // design doc attached to HBASE-18070 'Enable memstore replication for meta replica' for detail.
     CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
-      this.clusterId.toString(), "meta_" + ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
+      this.clusterId.toString());
     final ReplicationSourceInterface crs = new CatalogReplicationSource();
     crs.init(conf, fs, this, new NoopReplicationQueueStorage(), peer, server, peer.getId(),
       clusterId, walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
