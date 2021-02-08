@@ -963,6 +963,11 @@ public class MasterRpcServices extends RSRpcServices implements
       if (execController.getFailedOn() != null) {
         throw execController.getFailedOn();
       }
+
+      String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+      AUDITLOG.info("User {} (remote address: {}) master service request for {}.{}", caller,
+        remoteAddress, serviceName, methodName);
+
       return CoprocessorRpcUtils.getResponse(execResult, HConstants.EMPTY_BYTE_ARRAY);
     } catch (IOException ie) {
       throw new ServiceException(ie);
