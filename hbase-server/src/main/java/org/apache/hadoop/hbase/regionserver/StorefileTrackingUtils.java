@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  * Utility class to support persistent storefile tracking
  */
 @InterfaceAudience.Private
-final class StorefileTrackingUtils {
+public final class StorefileTrackingUtils {
 
   private static Logger LOG = LoggerFactory.getLogger(StorefileTrackingUtils.class);
   public static final long SLEEP_DELTA_MS = TimeUnit.MILLISECONDS.toMillis(100);
