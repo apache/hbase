@@ -949,6 +949,8 @@ public class MasterRpcServices extends RSRpcServices implements
       MethodDescriptor methodDesc =
           CoprocessorRpcUtils.getMethodDescriptor(methodName, serviceDesc);
 
+      LOG.info(master.getClientIdAuditPrefix() + " master service request for: " +
+        serviceName + "." + methodName);
       Message execRequest =
           CoprocessorRpcUtils.getRequest(service, methodDesc, call.getRequest());
       final Message.Builder responseBuilder =
