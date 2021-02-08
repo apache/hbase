@@ -503,7 +503,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         LOG.warn("Scanner lease {} expired but no outstanding scanner", this.scannerName);
         return;
       }
-      LOG.info("Scanner lease {} expired {}", this.scannerName, rsh);
+      LOG.info("Scanner lease {} expired {}, user={}", this.scannerName, rsh,
+        RpcServer.getRequestUserName().orElse(null));
       RegionScanner s = rsh.s;
       HRegion region = null;
       try {
@@ -512,7 +513,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           region.getCoprocessorHost().preScannerClose(s);
         }
       } catch (IOException e) {
-        LOG.error("Closing scanner {} {}", this.scannerName, rsh, e);
+        LOG.error("Closing scanner {} {}, user={}", this.scannerName, rsh, e,
+          RpcServer.getRequestUserName().orElse(null));
       } finally {
         try {
           s.close();
@@ -520,7 +522,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             region.getCoprocessorHost().postScannerClose(s);
           }
         } catch (IOException e) {
-          LOG.error("Closing scanner {} {}", this.scannerName, rsh, e);
+          LOG.error("Closing scanner {} {}, user={}", this.scannerName, rsh, e,
+            RpcServer.getRequestUserName().orElse(null));
         }
       }
     }
