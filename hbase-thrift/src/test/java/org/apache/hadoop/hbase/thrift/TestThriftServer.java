@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.apache.hadoop.hbase.thrift.Constants.COALESCE_INC_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,8 +48,9 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
+import org.apache.hadoop.hbase.thrift.ThriftMetrics.ThriftServerType;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
@@ -60,19 +62,28 @@ import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
+import org.apache.hadoop.hbase.thrift.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
- * Unit testing for ThriftServerRunner.HBaseHandler, a part of the
+ * Unit testing for ThriftServerRunner.HBaseServiceHandler, a part of the
  * org.apache.hadoop.hbase.thrift package.
  */
-@Category(LargeTests.class)
+@Category({ClientTests.class, LargeTests.class})
 public class TestThriftServer {
+
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestThriftServer.class);
   private static final MetricsAssertHelper metricsHelper = CompatibilityFactory
@@ -100,10 +111,12 @@ public class TestThriftServer {
   private static ByteBuffer valueDname = asByteBuffer("valueD");
   private static ByteBuffer valueEname = asByteBuffer(100l);
 
+  @Rule
+  public TestName name = new TestName();
+
   @BeforeClass
   public static void beforeClass() throws Exception {
-    UTIL.getConfiguration().setBoolean(ThriftServerRunner.COALESCE_INC_KEY, true);
-    UTIL.getConfiguration().setBoolean("hbase.table.sanity.checks", false);
+    UTIL.getConfiguration().setBoolean(COALESCE_INC_KEY, true);
     UTIL.getConfiguration().setInt("hbase.client.retries.number", 3);
     UTIL.startMiniCluster();
   }
@@ -145,9 +158,9 @@ public class TestThriftServer {
    * @throws Exception
    */
   public void doTestTableCreateDrop() throws Exception {
-    ThriftServerRunner.HBaseHandler handler =
-      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()));
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
     doTestTableCreateDrop(handler);
   }
 
@@ -156,7 +169,7 @@ public class TestThriftServer {
     dropTestTables(handler);
   }
 
-  public static final class MySlowHBaseHandler extends ThriftServerRunner.HBaseHandler
+  public static final class MySlowHBaseHandler extends ThriftHBaseServiceHandler
       implements Hbase.Iface {
 
     protected MySlowHBaseHandler(Configuration c)
@@ -168,6 +181,10 @@ public class TestThriftServer {
     public List<ByteBuffer> getTableNames() throws IOError {
       Threads.sleepWithoutInterrupt(3000);
       return super.getTableNames();
+    }
+
+    @Override public TThriftServerType getThriftServerType() throws TException {
+      return null;
     }
   }
 
@@ -206,26 +223,26 @@ public class TestThriftServer {
     createTestTables(handler);
     dropTestTables(handler);;
     metricsHelper.assertCounter("createTable_num_ops", currentCountCreateTable + 2,
-      metrics.getSource());
+        metrics.getSource());
     metricsHelper.assertCounter("deleteTable_num_ops", currentCountDeleteTable + 2,
-      metrics.getSource());
+        metrics.getSource());
     metricsHelper.assertCounter("disableTable_num_ops", currentCountDisableTable + 2,
-      metrics.getSource());
+        metrics.getSource());
     handler.getTableNames(); // This will have an artificial delay.
 
     // 3 to 6 seconds (to account for potential slowness), measured in nanoseconds
-   try {
-     metricsHelper.assertGaugeGt("getTableNames_avg_time", 3L * 1000 * 1000 * 1000, metrics.getSource());
-     metricsHelper.assertGaugeLt("getTableNames_avg_time",6L * 1000 * 1000 * 1000, metrics.getSource());
-   } catch (AssertionError e) {
-     LOG.info("Fix me!  Why does this happen?  A concurrent cluster running?", e);
-   }
+    try {
+      metricsHelper.assertGaugeGt("getTableNames_avg_time", 3L * 1000 * 1000 * 1000, metrics.getSource());
+      metricsHelper.assertGaugeLt("getTableNames_avg_time",6L * 1000 * 1000 * 1000, metrics.getSource());
+    } catch (AssertionError e) {
+      LOG.info("Fix me!  Why does this happen?  A concurrent cluster running?", e);
+    }
   }
 
   private static Hbase.Iface getHandlerForMetricsTest(ThriftMetrics metrics, Configuration conf)
       throws Exception {
     Hbase.Iface handler = new MySlowHBaseHandler(conf);
-    return HbaseHandlerMetricsProxy.newInstance(handler, metrics, conf);
+    return HbaseHandlerMetricsProxy.newInstance((ThriftHBaseServiceHandler)handler, metrics, conf);
   }
 
   private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
@@ -252,7 +269,7 @@ public class TestThriftServer {
     handler.disableTable(tableBname);
     assertFalse(handler.isTableEnabled(tableBname));
     handler.deleteTable(tableBname);
-    assertEquals(handler.getTableNames().size(), 1);
+    assertEquals(1, handler.getTableNames().size());
     handler.disableTable(tableAname);
     assertFalse(handler.isTableEnabled(tableAname));
     /* TODO Reenable.
@@ -261,26 +278,26 @@ public class TestThriftServer {
     assertTrue(handler.isTableEnabled(tableAname));
     handler.disableTable(tableAname);*/
     handler.deleteTable(tableAname);
-    assertEquals(handler.getTableNames().size(), 0);
+    assertEquals(0, handler.getTableNames().size());
   }
 
   public void doTestIncrements() throws Exception {
-    ThriftServerRunner.HBaseHandler handler =
-      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()));
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
     createTestTables(handler);
     doTestIncrements(handler);
     dropTestTables(handler);
   }
 
-  public static void doTestIncrements(HBaseHandler handler) throws Exception {
-    List<Mutation> mutations = new ArrayList<Mutation>(1);
+  public static void doTestIncrements(ThriftHBaseServiceHandler handler) throws Exception {
+    List<Mutation> mutations = new ArrayList<>(1);
     mutations.add(new Mutation(false, columnAAname, valueEname, true));
     mutations.add(new Mutation(false, columnAname, valueEname, true));
     handler.mutateRow(tableAname, rowAname, mutations, null);
     handler.mutateRow(tableAname, rowBname, mutations, null);
 
-    List<TIncrement> increments = new ArrayList<TIncrement>();
+    List<TIncrement> increments = new ArrayList<>(3);
     increments.add(new TIncrement(tableAname, rowBname, columnAAname, 7));
     increments.add(new TIncrement(tableAname, rowBname, columnAAname, 7));
     increments.add(new TIncrement(tableAname, rowBname, columnAAname, 7));
@@ -313,9 +330,9 @@ public class TestThriftServer {
    * @throws Exception
    */
   public void doTestTableMutations() throws Exception {
-    ThriftServerRunner.HBaseHandler handler =
-      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()));
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
     doTestTableMutations(handler);
   }
 
@@ -330,11 +347,11 @@ public class TestThriftServer {
 
     // Assert that the changes were made
     assertEquals(valueAname,
-      handler.get(tableAname, rowAname, columnAname, null).get(0).value);
+        handler.get(tableAname, rowAname, columnAname, null).get(0).value);
     TRowResult rowResult1 = handler.getRow(tableAname, rowAname, null).get(0);
     assertEquals(rowAname, rowResult1.row);
     assertEquals(valueBname,
-      rowResult1.columns.get(columnBname).value);
+        rowResult1.columns.get(columnBname).value);
 
     // Apply a few BatchMutations for rowA and rowB
     // rowAmutations.add(new Mutation(true, columnAname, null));
@@ -371,7 +388,7 @@ public class TestThriftServer {
     assertEquals(0, size);
 
     // Try null mutation
-    List<Mutation> mutations = new ArrayList<Mutation>();
+    List<Mutation> mutations = new ArrayList<>(1);
     mutations.add(new Mutation(false, columnAname, null, true));
     handler.mutateRow(tableAname, rowAname, mutations, null);
     TRowResult rowResult3 = handler.getRow(tableAname, rowAname, null).get(0);
@@ -392,9 +409,9 @@ public class TestThriftServer {
    */
   public void doTestTableTimestampsAndColumns() throws Exception {
     // Setup
-    ThriftServerRunner.HBaseHandler handler =
-      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()));
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
@@ -416,9 +433,9 @@ public class TestThriftServer {
 
     // Assert that the timestamp-related methods retrieve the correct data
     assertEquals(2, handler.getVerTs(tableAname, rowAname, columnBname, time2,
-      MAXVERSIONS, null).size());
+        MAXVERSIONS, null).size());
     assertEquals(1, handler.getVerTs(tableAname, rowAname, columnBname, time1,
-      MAXVERSIONS, null).size());
+        MAXVERSIONS, null).size());
 
     TRowResult rowResult1 = handler.getRowTs(tableAname, rowAname, time1, null).get(0);
     TRowResult rowResult2 = handler.getRowTs(tableAname, rowAname, time2, null).get(0);
@@ -430,7 +447,7 @@ public class TestThriftServer {
     // ColumnAname has been deleted, and will never be visible even with a getRowTs()
     assertFalse(rowResult2.columns.containsKey(columnAname));
 
-    List<ByteBuffer> columns = new ArrayList<ByteBuffer>();
+    List<ByteBuffer> columns = new ArrayList<>(1);
     columns.add(columnBname);
 
     rowResult1 = handler.getRowWithColumns(tableAname, rowAname, columns, null).get(0);
@@ -472,9 +489,9 @@ public class TestThriftServer {
    */
   public void doTestTableScanners() throws Exception {
     // Setup
-    ThriftServerRunner.HBaseHandler handler =
-      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()));
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
@@ -498,12 +515,12 @@ public class TestThriftServer {
     // This used to be '1'.  I don't know why when we are asking for two columns
     // and when the mutations above would seem to add two columns to the row.
     // -- St.Ack 05/12/2009
-    assertEquals(rowResult1a.columns.size(), 1);
+    assertEquals(1, rowResult1a.columns.size());
     assertEquals(rowResult1a.columns.get(columnBname).value, valueCname);
 
     TRowResult rowResult1b = handler.scannerGet(scanner1).get(0);
     assertEquals(rowResult1b.row, rowBname);
-    assertEquals(rowResult1b.columns.size(), 2);
+    assertEquals(2, rowResult1b.columns.size());
     assertEquals(rowResult1b.columns.get(columnAname).value, valueCname);
     assertEquals(rowResult1b.columns.get(columnBname).value, valueDname);
     closeScanner(scanner1, handler);
@@ -511,7 +528,7 @@ public class TestThriftServer {
     // Test a scanner on all rows and all columns, with timestamp
     int scanner2 = handler.scannerOpenTs(tableAname, rowAname, getColumnList(true, true), time1, null);
     TRowResult rowResult2a = handler.scannerGet(scanner2).get(0);
-    assertEquals(rowResult2a.columns.size(), 1);
+    assertEquals(1, rowResult2a.columns.size());
     // column A deleted, does not exist.
     //assertTrue(Bytes.equals(rowResult2a.columns.get(columnAname).value, valueAname));
     assertEquals(rowResult2a.columns.get(columnBname).value, valueBname);
@@ -526,7 +543,7 @@ public class TestThriftServer {
     int scanner4 = handler.scannerOpenWithStopTs(tableAname, rowAname, rowBname,
         getColumnList(false, true), time1, null);
     TRowResult rowResult4a = handler.scannerGet(scanner4).get(0);
-    assertEquals(rowResult4a.columns.size(), 1);
+    assertEquals(1, rowResult4a.columns.size());
     assertEquals(rowResult4a.columns.get(columnBname).value, valueBname);
 
     // Test scanner using a TScan object once with sortColumns False and once with sortColumns true
@@ -536,7 +553,7 @@ public class TestThriftServer {
 
     int scanner5 = handler.scannerOpenWithScan(tableAname , scanNoSortColumns, null);
     TRowResult rowResult5 = handler.scannerGet(scanner5).get(0);
-    assertEquals(rowResult5.columns.size(), 1);
+    assertEquals(1, rowResult5.columns.size());
     assertEquals(rowResult5.columns.get(columnBname).value, valueCname);
 
     TScan scanSortColumns = new TScan();
@@ -546,10 +563,10 @@ public class TestThriftServer {
 
     int scanner6 = handler.scannerOpenWithScan(tableAname ,scanSortColumns, null);
     TRowResult rowResult6 = handler.scannerGet(scanner6).get(0);
-    assertEquals(rowResult6.sortedColumns.size(), 1);
+    assertEquals(1, rowResult6.sortedColumns.size());
     assertEquals(rowResult6.sortedColumns.get(0).getCell().value, valueCname);
 
-    List<Mutation> rowBmutations = new ArrayList<Mutation>();
+    List<Mutation> rowBmutations = new ArrayList<>(20);
     for (int i = 0; i < 20; i++) {
       rowBmutations.add(new Mutation(false, asByteBuffer("columnA:" + i), valueCname, true));
     }
@@ -577,7 +594,7 @@ public class TestThriftServer {
     int scanner8 = handler.scannerOpenWithScan(tableAname , reversedScan, null);
     List<TRowResult> results = handler.scannerGet(scanner8);
     handler.scannerClose(scanner8);
-    assertEquals(results.size(), 1);
+    assertEquals(1, results.size());
     assertEquals(ByteBuffer.wrap(results.get(0).getRow()), rowBname);
 
     // Teardown
@@ -592,27 +609,27 @@ public class TestThriftServer {
    * @throws Exception
    */
   public void doTestGetTableRegions() throws Exception {
-    ThriftServerRunner.HBaseHandler handler =
-      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()));
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
     doTestGetTableRegions(handler);
   }
 
   public static void doTestGetTableRegions(Hbase.Iface handler)
       throws Exception {
-    assertEquals(handler.getTableNames().size(), 0);
+    assertEquals(0, handler.getTableNames().size());
     handler.createTable(tableAname, getColumnDescriptors());
-    assertEquals(handler.getTableNames().size(), 1);
+    assertEquals(1, handler.getTableNames().size());
     List<TRegionInfo> regions = handler.getTableRegions(tableAname);
     int regionCount = regions.size();
     assertEquals("empty table should have only 1 region, " +
-            "but found " + regionCount, regionCount, 1);
+        "but found " + regionCount, 1, regionCount);
     LOG.info("Region found:" + regions.get(0));
     handler.disableTable(tableAname);
     handler.deleteTable(tableAname);
     regionCount = handler.getTableRegions(tableAname).size();
     assertEquals("non-existing table should have 0 region, " +
-            "but found " + regionCount, regionCount, 0);
+        "but found " + regionCount, 0, regionCount);
   }
 
   public void doTestFilterRegistration() throws Exception {
@@ -620,7 +637,7 @@ public class TestThriftServer {
 
     conf.set("hbase.thrift.filters", "MyFilter:filterclass");
 
-    ThriftServerRunner.registerFilters(conf);
+    ThriftServer.registerFilters(conf);
 
     Map<String, String> registeredFilters = ParseFilter.getAllFilters();
 
@@ -628,9 +645,9 @@ public class TestThriftServer {
   }
 
   public void doTestGetRegionInfo() throws Exception {
-    ThriftServerRunner.HBaseHandler handler =
-      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()));
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
     doTestGetRegionInfo(handler);
   }
 
@@ -644,7 +661,7 @@ public class TestThriftServer {
           HConstants.NINES, false);
       TRegionInfo regionInfo = handler.getRegionInfo(ByteBuffer.wrap(searchRow));
       assertTrue(Bytes.toStringBinary(regionInfo.getName()).startsWith(
-            Bytes.toStringBinary(tableAname)));
+          Bytes.toStringBinary(tableAname)));
     } finally {
       handler.disableTable(tableAname);
       handler.deleteTable(tableAname);
@@ -657,18 +674,18 @@ public class TestThriftServer {
    * @throws Exception
    */
   public static void doTestAppend() throws Exception {
-    ThriftServerRunner.HBaseHandler handler =
-      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()));
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
     handler.createTable(tableAname, getColumnDescriptors());
     try {
-      List<Mutation> mutations = new ArrayList<Mutation>(1);
+      List<Mutation> mutations = new ArrayList<>(1);
       mutations.add(new Mutation(false, columnAname, valueAname, true));
       handler.mutateRow(tableAname, rowAname, mutations, null);
 
-      List<ByteBuffer> columnList = new ArrayList<ByteBuffer>();
+      List<ByteBuffer> columnList = new ArrayList<>(1);
       columnList.add(columnAname);
-      List<ByteBuffer> valueList = new ArrayList<ByteBuffer>();
+      List<ByteBuffer> valueList = new ArrayList<>(1);
       valueList.add(valueBname);
 
       TAppend append = new TAppend(tableAname, rowAname, columnList, valueList);
@@ -677,7 +694,7 @@ public class TestThriftServer {
       TRowResult rowResult = handler.getRow(tableAname, rowAname, null).get(0);
       assertEquals(rowAname, rowResult.row);
       assertArrayEquals(Bytes.add(valueAname.array(), valueBname.array()),
-        rowResult.columns.get(columnAname).value.array());
+          rowResult.columns.get(columnAname).value.array());
     } finally {
       handler.disableTable(tableAname);
       handler.deleteTable(tableAname);
@@ -691,12 +708,12 @@ public class TestThriftServer {
    * @throws Exception
    */
   public static void doTestCheckAndPut() throws Exception {
-    ThriftServerRunner.HBaseHandler handler =
-      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()));
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
     handler.createTable(tableAname, getColumnDescriptors());
     try {
-      List<Mutation> mutations = new ArrayList<Mutation>(1);
+      List<Mutation> mutations = new ArrayList<>(1);
       mutations.add(new Mutation(false, columnAname, valueAname, true));
       Mutation putB = (new Mutation(false, columnBname, valueBname, true));
 
@@ -721,7 +738,7 @@ public class TestThriftServer {
     String family = "f";
     String col = "c";
     // create a table which will throw exceptions for requests
-    TableName tableName = TableName.valueOf("testMetricsWithException");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor tableDesc = new HTableDescriptor(tableName);
     tableDesc.addCoprocessor(ErrorThrowingGetObserver.class.getName());
     tableDesc.addFamily(new HColumnDescriptor(family));
@@ -733,8 +750,8 @@ public class TestThriftServer {
 
     Configuration conf = UTIL.getConfiguration();
     ThriftMetrics metrics = getMetrics(conf);
-    ThriftServerRunner.HBaseHandler hbaseHandler =
-        new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
+    ThriftHBaseServiceHandler hbaseHandler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
             UserProvider.instantiate(UTIL.getConfiguration()));
     Hbase.Iface handler = HbaseHandlerMetricsProxy.newInstance(hbaseHandler, metrics, conf);
 
@@ -764,8 +781,8 @@ public class TestThriftServer {
   }
 
   private void testExceptionType(Hbase.Iface handler, ThriftMetrics metrics,
-                                 ByteBuffer tTableName, String rowkey,
-                                 ErrorThrowingGetObserver.ErrorType errorType) throws Exception {
+      ByteBuffer tTableName, String rowkey,
+      ErrorThrowingGetObserver.ErrorType errorType) throws Exception {
     long preGetCounter = metricsHelper.getCounter("getRow_num_ops", metrics.getSource());
     String exceptionKey = errorType.getMetricName();
     long preExceptionCounter = metricsHelper.checkCounterExists(exceptionKey, metrics.getSource()) ?
@@ -790,7 +807,7 @@ public class TestThriftServer {
    * default ColumnDescriptor and one ColumnDescriptor with fewer versions
    */
   private static List<ColumnDescriptor> getColumnDescriptors() {
-    ArrayList<ColumnDescriptor> cDescriptors = new ArrayList<ColumnDescriptor>();
+    ArrayList<ColumnDescriptor> cDescriptors = new ArrayList<>(2);
 
     // A default ColumnDescriptor
     ColumnDescriptor cDescA = new ColumnDescriptor();
@@ -812,7 +829,7 @@ public class TestThriftServer {
    * @return a List of column names for use in retrieving a scanner
    */
   private List<ByteBuffer> getColumnList(boolean includeA, boolean includeB) {
-    List<ByteBuffer> columnList = new ArrayList<ByteBuffer>();
+    List<ByteBuffer> columnList = new ArrayList<>();
     if (includeA) columnList.add(columnAname);
     if (includeB) columnList.add(columnBname);
     return columnList;
@@ -824,7 +841,7 @@ public class TestThriftServer {
    * and columnB having valueB
    */
   private static List<Mutation> getMutations() {
-    List<Mutation> mutations = new ArrayList<Mutation>();
+    List<Mutation> mutations = new ArrayList<>(2);
     mutations.add(new Mutation(false, columnAname, valueAname, true));
     mutations.add(new Mutation(false, columnBname, valueBname, true));
     return mutations;
@@ -839,19 +856,19 @@ public class TestThriftServer {
    * (rowB, columnB): place valueD
    */
   private static List<BatchMutation> getBatchMutations() {
-    List<BatchMutation> batchMutations = new ArrayList<BatchMutation>();
+    List<BatchMutation> batchMutations = new ArrayList<>(3);
 
     // Mutations to rowA.  You can't mix delete and put anymore.
-    List<Mutation> rowAmutations = new ArrayList<Mutation>();
+    List<Mutation> rowAmutations = new ArrayList<>(1);
     rowAmutations.add(new Mutation(true, columnAname, null, true));
     batchMutations.add(new BatchMutation(rowAname, rowAmutations));
 
-    rowAmutations = new ArrayList<Mutation>();
+    rowAmutations = new ArrayList<>(1);
     rowAmutations.add(new Mutation(false, columnBname, valueCname, true));
     batchMutations.add(new BatchMutation(rowAname, rowAmutations));
 
     // Mutations to rowB
-    List<Mutation> rowBmutations = new ArrayList<Mutation>();
+    List<Mutation> rowBmutations = new ArrayList<>(2);
     rowBmutations.add(new Mutation(false, columnAname, valueCname, true));
     rowBmutations.add(new Mutation(false, columnBname, valueDname, true));
     batchMutations.add(new BatchMutation(rowBname, rowBmutations));
@@ -864,12 +881,43 @@ public class TestThriftServer {
    * the scanner.
    *
    * @param scannerId the scanner to close
-   * @param handler the HBaseHandler interfacing to HBase
+   * @param handler the HBaseServiceHandler interfacing to HBase
    * @throws Exception
    */
   private void closeScanner(
-      int scannerId, ThriftServerRunner.HBaseHandler handler) throws Exception {
+      int scannerId, ThriftHBaseServiceHandler handler) throws Exception {
     handler.scannerGet(scannerId);
     handler.scannerClose(scannerId);
+  }
+
+  @Test
+  public void testGetThriftServerType() throws Exception {
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
+    assertEquals(TThriftServerType.ONE, handler.getThriftServerType());
+  }
+
+  /**
+   * Verify that thrift client calling thrift2 server can get the thrift2 server type correctly.
+   */
+  @Test
+  public void testGetThriftServerOneType() throws Exception {
+    // start a thrift2 server
+    HBaseThriftTestingUtility THRIFT_TEST_UTIL = new HBaseThriftTestingUtility();
+
+    LOG.info("Starting HBase Thrift Server Two");
+    THRIFT_TEST_UTIL.startThriftServer(UTIL.getConfiguration(), ThriftServerType.TWO);
+    try (TTransport transport = new TSocket(InetAddress.getLocalHost().getHostName(),
+        THRIFT_TEST_UTIL.getServerPort())){
+      TProtocol protocol = new TBinaryProtocol(transport);
+      // This is our thrift client.
+      Hbase.Client client = new Hbase.Client(protocol);
+      // open the transport
+      transport.open();
+      assertEquals(TThriftServerType.TWO.name(), client.getThriftServerType().name());
+    } finally {
+      THRIFT_TEST_UTIL.stopThriftServer();
+    }
   }
 }
