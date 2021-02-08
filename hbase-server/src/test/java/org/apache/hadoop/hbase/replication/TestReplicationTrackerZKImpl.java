@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -117,26 +116,22 @@ public class TestReplicationTrackerZKImpl {
     // 1 region server
     ZKUtil.createWithParents(zkw,
       ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname1.example.org:1234"));
-    List<String> rss = rt.getListOfRegionServers();
-    assertEquals(rss.toString(), 1, rss.size());
+    assertEquals(1, rt.getListOfRegionServers().size());
 
     // 2 region servers
     ZKUtil.createWithParents(zkw,
       ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname2.example.org:1234"));
-    rss = rt.getListOfRegionServers();
-    assertEquals(rss.toString(), 2, rss.size());
+    assertEquals(2, rt.getListOfRegionServers().size());
 
     // 1 region server
     ZKUtil.deleteNode(zkw,
       ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname2.example.org:1234"));
-    rss = rt.getListOfRegionServers();
-    assertEquals(1, rss.size());
+    assertEquals(1, rt.getListOfRegionServers().size());
 
     // 0 region server
     ZKUtil.deleteNode(zkw,
       ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname1.example.org:1234"));
-    rss = rt.getListOfRegionServers();
-    assertEquals(rss.toString(), 0, rss.size());
+    assertEquals(0, rt.getListOfRegionServers().size());
   }
 
   @Test
