@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -55,7 +54,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -298,15 +296,18 @@ public class TestPersistedStoreFileManager {
     storeFileManager.clearCompactedFiles();
 
     List<HStoreFile> firstCompactionResult = createStoreFilesList();
-    List<Path> firstCompactionResultPath = StorefileTrackingUtils.convertStoreFilesToPaths(firstCompactionResult);
+    List<Path> firstCompactionResultPath =
+      StorefileTrackingUtils.convertStoreFilesToPaths(firstCompactionResult);
     List<HStoreFile> secondCompactionResult = createStoreFilesList();
-    List<Path> secondCompactionResultPath = StorefileTrackingUtils.convertStoreFilesToPaths(secondCompactionResult);
+    List<Path> secondCompactionResultPath =
+      StorefileTrackingUtils.convertStoreFilesToPaths(secondCompactionResult);
     List<HStoreFile> thirdCompactionResult = createStoreFilesList();
-    List<Path> thirdCompactionResultPath = StorefileTrackingUtils.convertStoreFilesToPaths(thirdCompactionResult);
+    List<Path> thirdCompactionResultPath =
+      StorefileTrackingUtils.convertStoreFilesToPaths(thirdCompactionResult);
     // Composition of all compaction results, loaded into tmpFiles to track that tmpFiles are being
     // removed correctly
-    List<Path> initialCompactionTmpPaths = ImmutableList.copyOf(
-      Iterables.concat(firstCompactionResultPath, secondCompactionResultPath, thirdCompactionResultPath));
+    List<Path> initialCompactionTmpPaths = ImmutableList.copyOf(Iterables
+      .concat(firstCompactionResultPath, secondCompactionResultPath, thirdCompactionResultPath));
 
     // manager.storefiles    = EMPTY_LIST            -> firstCompactionResult
     // manager.compactedfiles= [empty]               -> EMPTY_LIST

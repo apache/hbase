@@ -38,10 +38,14 @@ import org.slf4j.LoggerFactory;
  * Utility class to support persistent storefile tracking
  */
 @InterfaceAudience.Private
-public class StorefileTrackingUtils {
+final class StorefileTrackingUtils {
 
   private static Logger LOG = LoggerFactory.getLogger(StorefileTrackingUtils.class);
   public static final long SLEEP_DELTA_MS = TimeUnit.MILLISECONDS.toMillis(100);
+
+  private StorefileTrackingUtils() {
+    // private for utility class
+  }
 
   public static boolean isStorefileTrackingPersistEnabled(Configuration conf) {
     boolean isStoreTrackingPersistEnabled =
@@ -66,8 +70,8 @@ public class StorefileTrackingUtils {
    * if storefile tracking feature is configured, Initialize hbase:storefile table and wait for it
    * to be online. Otherwise, look for hbase:storefile table and remove it
    *
-   * @param masterServices
-   * @throws IOException
+   * @param masterServices masterServices
+   * @throws IOException if hbase:storefile table cannot be initialized and be online
    */
   public static void init(MasterServices masterServices) throws IOException {
     createStorefileTable(masterServices);
@@ -78,7 +82,7 @@ public class StorefileTrackingUtils {
    * Cleans up all storefile related state on the cluster. disable and delete hbase:storefile
    * if found
    * @param masterServices {@link MasterServices}
-   * @throws IOException
+   * @throws IOException if failures
    */
   private static void cleanup(MasterServices masterServices) throws IOException {
     try {

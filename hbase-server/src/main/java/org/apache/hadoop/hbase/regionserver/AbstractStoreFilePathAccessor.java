@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
@@ -77,9 +76,9 @@ public abstract class AbstractStoreFilePathAccessor implements StoreFilePathAcce
   /**
    * Get a rowkey in the order of regionName-storeName-tablename
    *
-   * @param tableName
-   * @param regionName
-   * @param storeName
+   * @param tableName table name
+   * @param regionName region encoded name
+   * @param storeName column family name
    * @return a joint rowkey in the form of regionName-storeName-tablename
    */
   protected String getKey(final String tableName, final String regionName, final String storeName) {

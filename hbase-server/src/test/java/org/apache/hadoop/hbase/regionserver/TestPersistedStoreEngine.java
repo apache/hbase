@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.hamcrest.core.Is.isA;
 import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;

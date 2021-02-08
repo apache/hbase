@@ -52,7 +52,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  *
  * <pre>
  *   ROW-KEY              FAMILY:QUALIFIER      DATA VALUE
- *   region-store-table   included:files        List<Path> filesIncludedInRead
+ *   region-store-table   included:files        List&lt;Path&gt; filesIncludedInRead
  * </pre>
  *
  * The region encoded name is set as prefix for region split loading balance, and we use the

@@ -24,11 +24,9 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
 
 /**
@@ -53,7 +51,7 @@ public interface StoreFileManager {
    * validation
    *
    * @return a list of {@link StoreFileInfo} for the requested store.
-   * @throws IOException
+   * @throws IOException if store files cannot be listed
    */
   Collection<StoreFileInfo> loadInitialFiles() throws IOException;
 
@@ -74,7 +72,7 @@ public interface StoreFileManager {
   /**
    * Remove the compacted files
    * @param compactedFiles the list of compacted files
-   * @throws IOException
+   * @throws IOException if compacted files cannot be cleaned
    */
   void removeCompactedFiles(Collection<HStoreFile> compactedFiles) throws IOException;
 
@@ -154,7 +152,7 @@ public interface StoreFileManager {
   /**
    * Gets the split point for the split of this set of store files (approx. middle).
    * @return The mid-point if possible.
-   * @throws IOException
+   * @throws IOException on failures
    */
   Optional<byte[]> getSplitPoint() throws IOException;
 

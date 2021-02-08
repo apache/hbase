@@ -87,14 +87,14 @@ public interface StoreFilePathAccessor {
    * @param tableName Table for which families being tracked needs to be figured out
    * @param regionName Region for which families being tracked needs to be figured out
    * @return Set of families being tracked
-   * @throws IOException
+   * @throws IOException if failures
    */
   Set<String> getTrackedFamilies(String tableName, String regionName) throws IOException;
 
   /**
    * Deletes the files tracked for all column families in the given region
    * @param regionName Region whose tracking data needs to be wiped
-   * @throws IOException
+   * @throws IOException if failures
    */
   void deleteRegion(final String regionName) throws IOException;
 

@@ -22,13 +22,12 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 @InterfaceAudience.Private
-class StoreFilePathUpdate {
+final class StoreFilePathUpdate {
 
   private final List<Path> storeFiles;
   private final boolean hasStoreFilesUpdate;
@@ -38,7 +37,8 @@ class StoreFilePathUpdate {
       "StoreFilePathUpdate must include an update");
     Preconditions.checkNotNull(storeFiles, "StoreFiles cannot be null");
     if (hasStoreFilesUpdate) {
-      Preconditions.checkArgument(CollectionUtils.isNotEmpty(storeFiles), "StoreFilePaths cannot be empty");
+      Preconditions
+        .checkArgument(CollectionUtils.isNotEmpty(storeFiles), "StoreFilePaths cannot be empty");
     }
     this.storeFiles = storeFiles;
     this.hasStoreFilesUpdate = hasStoreFilesUpdate;
@@ -60,9 +60,13 @@ class StoreFilePathUpdate {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
+    if (this == o) {
+      return true;
+    }
 
-    if (o == null || getClass() != o.getClass()) return false;
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     StoreFilePathUpdate that = (StoreFilePathUpdate) o;
 

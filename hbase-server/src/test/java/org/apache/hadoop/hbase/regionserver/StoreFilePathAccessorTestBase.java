@@ -26,7 +26,6 @@ import java.util.UUID;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.hamcrest.Matchers;
