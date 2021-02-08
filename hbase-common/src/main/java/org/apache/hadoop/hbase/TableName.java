@@ -116,6 +116,16 @@ public final class TableName implements Comparable<TableName> {
    */
   public static final TableName OLD_META_TABLE_NAME = getADummyTableName(OLD_META_STR);
 
+  /**
+   * The max length of table name which limited by hdfs path length
+   */
+  public static final int MAX_TABLE_NAME_LENGTH = 8000;
+
+  /**
+   * The max length of namespace which limited by hdfs path length
+   */
+  public static final int MAX_NAMESPACE_LENGTH = 8000;
+
   private final byte[] name;
   private final String nameAsString;
   private final byte[] namespace;
@@ -192,6 +202,9 @@ public final class TableName implements Comparable<TableName> {
     if(end - start < 1) {
       throw new IllegalArgumentException(isSnapshot ? "Snapshot" : "Table" + " qualifier must not be empty");
     }
+    if(qualifierName.length > MAX_TABLE_NAME_LENGTH){
+      throw new IllegalArgumentException("The length of table name must be less than " + MAX_TABLE_NAME_LENGTH);
+    }
     if (qualifierName[start] == '.' || qualifierName[start] == '-') {
       throw new IllegalArgumentException("Illegal first character <" + qualifierName[start] +
                                          "> at 0. " + (isSnapshot ? "Snapshot" : "User-space table") +
@@ -241,6 +254,9 @@ public final class TableName implements Comparable<TableName> {
       // Per https://zookeeper.apache.org/doc/r3.4.10/zookeeperProgrammers.html#ch_zkDataModel
       // A znode named "zookeeper" is disallowed by zookeeper.
       throw new IllegalArgumentException("Tables may not be named '" + DISALLOWED_TABLE_NAME + "'");
+    }
+    if(namespaceName.length > MAX_NAMESPACE_LENGTH){
+      throw new IllegalArgumentException("The length of namespace name must be less than " + MAX_NAMESPACE_LENGTH);
     }
     for (int i = 0; i < nsString.length(); i++) {
       // Treat the string as a char-array as some characters may be multi-byte
