@@ -137,7 +137,7 @@ public class TestTableName {
 
   @Test public void testIllegalHTableNames() {
     for (String tn : illegalTableNames) {
-      assertThrows(Exception.class,
+      assertThrows(IllegalArgumentException.class,
         () -> TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(tn)));
     }
   }
