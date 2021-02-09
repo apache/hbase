@@ -1020,6 +1020,9 @@ public class ReplicationSourceManager implements ReplicationListener {
     for (ReplicationSourceInterface source : this.sources.values()) {
       source.terminate("Region server is closing");
     }
+    for (ReplicationSourceInterface source : this.oldsources) {
+      source.terminate("Region server is closing");
+    }
   }
 
   /**
