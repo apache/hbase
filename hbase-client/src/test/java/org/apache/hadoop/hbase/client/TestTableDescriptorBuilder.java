@@ -371,7 +371,7 @@ public class TestTableDescriptorBuilder {
   public void testStringCustomizedValues() throws HBaseException {
     byte[] familyName = Bytes.toBytes("cf");
     ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName)
-            .setBlocksize(1000)
+            .setBlocksize(131072)
             .build();
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
             .setColumnFamily(hcd)
@@ -380,7 +380,8 @@ public class TestTableDescriptorBuilder {
 
     assertEquals(
       "'testStringCustomizedValues', " +
-        "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
+        "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, "
+        + "{NAME => 'cf', BLOCKSIZE => '131072 B (128KB)'}",
       htd.toStringCustomizedValues());
 
     htd = TableDescriptorBuilder.newBuilder(htd)
@@ -391,7 +392,8 @@ public class TestTableDescriptorBuilder {
       "'testStringCustomizedValues', " +
         "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL', "
         + "MAX_FILESIZE => '10737942528 B (10GB 512KB)', "
-        + "MEMSTORE_FLUSHSIZE => '268435456 B (256MB)'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
+        + "MEMSTORE_FLUSHSIZE => '268435456 B (256MB)'}}, "
+        + "{NAME => 'cf', BLOCKSIZE => '131072 B (128KB)'}",
       htd.toStringCustomizedValues());
   }
 

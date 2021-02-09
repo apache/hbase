@@ -313,6 +313,11 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return this;
   }
 
+  public HColumnDescriptor setBlocksize(String value) throws HBaseException {
+    getDelegateeForModification().setBlocksize(value);
+    return this;
+  }
+
   @Override
   public Compression.Algorithm getCompressionType() {
     return delegatee.getCompressionType();
