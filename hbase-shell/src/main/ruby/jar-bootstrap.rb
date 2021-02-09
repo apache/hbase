@@ -40,6 +40,7 @@ include Java
 # Some goodies for hirb. Should these be left up to the user's discretion?
 require 'irb/completion'
 require 'pathname'
+require 'getoptlong'
 
 # Add the directory names in hbase.jruby.sources commandline option
 # to the ruby load path so I can load up my HBase ruby modules
@@ -50,11 +51,6 @@ unless sources.nil?
   $LOAD_PATH.unshift Pathname.new(sources)
 end
 
-#
-# FIXME: Switch args processing to getopt
-#
-# See if there are args for this shell. If any, read and then strip from ARGV
-# so they don't go through to irb.  Output shell 'usage' if user types '--help'
 cmdline_help = <<HERE # HERE document output as shell usage
 Usage: shell [OPTIONS] [SCRIPTFILE [ARGUMENTS]]
 
@@ -82,6 +78,14 @@ def add_to_configuration(c, arg)
   c
 end
 
+opts = GetoptLong.new(
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+  [ '--debug', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--noninteractive', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--top-level-defs', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--Dkey=value', '-D', GetoptLong::NO_ARGUMENT ]
+)
+
 found = []
 script2run = nil
 log_level = org.apache.log4j.Level::ERROR
@@ -90,42 +94,43 @@ interactive = true
 top_level_definitions = false
 _configuration = nil
 D_ARG = '-D'.freeze
-while (arg = ARGV.shift)
-  if arg == '-h' || arg == '--help'
+
+opts.each do |opt, arg|
+  case opt || arg
+  when '--help' || '-h'
     puts cmdline_help
-    exit
-  elsif arg == D_ARG
+  when D_ARG
     argValue = ARGV.shift || (raise "#{D_ARG} takes a 'key=value' parameter")
     _configuration = add_to_configuration(_configuration, argValue)
     found.push(arg)
     found.push(argValue)
-  elsif arg.start_with? D_ARG
+  when arg.start_with?(D_ARG)
     _configuration = add_to_configuration(_configuration, arg[2..-1])
     found.push(arg)
-  elsif arg == '-d' || arg == '--debug'
+  when '--debug'|| '-d'
     log_level = org.apache.log4j.Level::DEBUG
     $fullBackTrace = true
     @shell_debug = true
     found.push(arg)
     puts 'Setting DEBUG log level...'
-  elsif arg == '-n' || arg == '--noninteractive'
-    interactive = false
-    found.push(arg)
-  elsif arg == '-r' || arg == '--return-values'
-    warn '[INFO] the -r | --return-values option is ignored. we always behave '\
-         'as though it was given.'
-    found.push(arg)
-  elsif arg == '--top-level-defs'
-    top_level_definitions = true
-  else
-    # Presume it a script. Save it off for running later below
-    # after we've set up some environment.
-    script2run = arg
-    found.push(arg)
-    # Presume that any other args are meant for the script.
-    break
+   when '--noninteractive'||  '-n'
+     interactive = false
+     found.push(arg)
+   when '--return-values' || 'r'
+     warn '[INFO] the -r | --return-values option is ignored. we always behave '\
+           'as though it was given.'
+     found.push(arg)
+   when '--top-level-defs'
+     top_level_definitions = true
+   else
+      # Presume it a script. Save it off for running later below
+      # after we've set up some environment.
+      script2run = arg
+      found.push(arg)
+      # Presume that any other args are meant for the script.
   end
 end
+
 
 # Delete all processed args
 found.each { |arg| ARGV.delete(arg) }
