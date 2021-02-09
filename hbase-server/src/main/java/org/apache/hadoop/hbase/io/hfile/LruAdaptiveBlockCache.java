@@ -121,9 +121,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * That leads to fit evicted bytes closer to 100% (500 MB).
  * The current situation we can find out in the log of RegionServer:
  * BlockCache evicted (MB): 0, overhead (%): -100, heavy eviction counter: 0, current caching
- * DataBlock (%): 100 < no eviction, 100% blocks is caching
+ * DataBlock (%): 100 - means no eviction, 100% blocks is caching
  * BlockCache evicted (MB): 2000, overhead (%): 300, heavy eviction counter: 1, current caching
- * DataBlock (%): 97 < eviction begin, reduce of caching blocks by 3%.
+ * DataBlock (%): 97 - means eviction begin, reduce of caching blocks by 3%.
  * It help to tune your system and find out what value is better set. Don't try to reach 0%
  * overhead, it is impossible. Quite good 50-100% overhead,
  * it prevents premature exit from this mode.
