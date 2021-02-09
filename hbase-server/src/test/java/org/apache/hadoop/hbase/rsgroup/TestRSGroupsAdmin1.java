@@ -24,7 +24,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,7 +43,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
@@ -64,7 +68,6 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRSGroupsAdmin1.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsAdmin1.class);
 
   @BeforeClass
@@ -624,12 +627,14 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
   }
 
   @Test
-  public void testHBASE25301() throws IOException, InterruptedException {
+  public void testBalanceRSGroupWithSplitRegion() throws Exception {
     String pgroup = "pgroup";
     ADMIN.addRSGroup(pgroup);
 
     ServerName serverName0 = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName();
     ServerName serverName1 = TEST_UTIL.getMiniHBaseCluster().getRegionServer(1).getServerName();
+
+    // move 2 servers to pgroup
     ADMIN.moveServersToRSGroup(Sets.newHashSet(serverName0.getAddress(), serverName1.getAddress()),
       pgroup);
 
@@ -638,17 +643,41 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     TEST_UTIL.createTable(table1, "cf");
     TEST_UTIL.createTable(table2, "cf");
 
+    // move 2 tables to pgroup
     ADMIN.setRSGroup(Sets.newHashSet(table1, table2), pgroup);
 
+    // create a list having all the regions of these 2 tables
     List<RegionInfo> regionInfoList = ADMIN.getRegions(table1);
     regionInfoList.addAll(ADMIN.getRegions(table2));
+
+    // move all the regions to single RS so that the rsGroup becomes unbalanced
+    final List<RegionInfo> regionsInServer0 = ADMIN.getRegions(serverName0);
     for (RegionInfo regionInfo : regionInfoList) {
-      ADMIN.move(regionInfo.getEncodedNameAsBytes(), serverName0);
+      // move if the region is not already in server0
+      if (!regionsInServer0.contains(regionInfo)) {
+        ADMIN.move(regionInfo.getEncodedNameAsBytes(), serverName0);
+      }
     }
 
+    // split 1 table so balancer runs on split parent region as well
     ADMIN.split(table2, "50".getBytes());
-    // Waiting briefly so that daughter regions are created but parent is not cleaned yet.
-    Thread.sleep(2000);
+
+    // Just wait enough so that parent region has state SPLIT
+    TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        final RegionStates regionStates =
+          TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+        for (RegionInfo ri : regionsInServer0) {
+          if (regionStates.getOrCreateRegionStateNode(ri).getState()
+            .equals(RegionState.State.SPLIT)) {
+            return true;
+          }
+        }
+        return false;
+      }
+    });
+
+    // ensure balancerSwitch is on
     ADMIN.balancerSwitch(true, true);
     try {
       ADMIN.balanceRSGroup(pgroup);
