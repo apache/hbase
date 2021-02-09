@@ -76,9 +76,9 @@ public class TestLruAdaptiveBlockCache {
     final Configuration conf = HBaseConfiguration.create();
     final LruAdaptiveBlockCache cache = new LruAdaptiveBlockCache(maxSize, blockSize);
     EvictionThread evictionThread = cache.getEvictionThread();
-    assertTrue(evictionThread != null);
+    assertNotNull(evictionThread);
     while (!evictionThread.isEnteringRun()) {
-      Thread.sleep(1);
+      Thread.sleep(1000);
     }
     final String hfileName = "hfile";
     int threads = 10;
@@ -87,9 +87,7 @@ public class TestLruAdaptiveBlockCache {
       final AtomicInteger blockCount = new AtomicInteger(0);
       ExecutorService service = Executors.newFixedThreadPool(threads);
       for (int i = 0; i != threads; ++i) {
-        service.execute(new Runnable() {
-          @Override
-          public void run() {
+        service.execute(() -> {
             for (int blockIndex = 0; blockIndex < blocksPerThread
               || (!cache.isEvictionInProgress()); ++blockIndex) {
               CachedItem block = new CachedItem(hfileName, (int) blockSize,
@@ -98,8 +96,7 @@ public class TestLruAdaptiveBlockCache {
               cache.cacheBlock(block.cacheKey, block, inMemory);
             }
             cache.evictBlocksByHfileName(hfileName);
-          }
-        });
+          });
       }
       service.shutdown();
       // The test may fail here if the evict thread frees the blocks too fast
@@ -119,6 +116,7 @@ public class TestLruAdaptiveBlockCache {
       assertEquals(cache.getOverhead(), cache.getCurrentSize());
     }
   }
+
   @Test
   public void testBackgroundEvictionThread() throws Exception {
     long maxSize = 100000;
@@ -129,7 +127,7 @@ public class TestLruAdaptiveBlockCache {
 
     LruAdaptiveBlockCache cache = new LruAdaptiveBlockCache(maxSize,blockSize);
     EvictionThread evictionThread = cache.getEvictionThread();
-    assertTrue(evictionThread != null);
+    assertNotNull(evictionThread);
 
     CachedItem[] blocks = generateFixedBlocks(numBlocks + 1, blockSize, "block");
 
@@ -1126,7 +1124,7 @@ public class TestLruAdaptiveBlockCache {
         0.01f);
 
     EvictionThread evictionThread = cache.getEvictionThread();
-    assertTrue(evictionThread != null);
+    assertNotNull(evictionThread);
     while (!evictionThread.isEnteringRun()) {
       Thread.sleep(1);
     }

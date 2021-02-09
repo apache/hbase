@@ -263,7 +263,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   private final AtomicLong count;
 
   /** hard capacity limit */
-  private float hardCapacityLimitFactor;
+  private final float hardCapacityLimitFactor;
 
   /** Cache statistics */
   private final CacheStats stats;
@@ -272,25 +272,25 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   private long maxSize;
 
   /** Approximate block size */
-  private long blockSize;
+  private final long blockSize;
 
   /** Acceptable size of cache (no evictions if size < acceptable) */
-  private float acceptableFactor;
+  private final float acceptableFactor;
 
   /** Minimum threshold of cache (when evicting, evict until size < min) */
-  private float minFactor;
+  private final float minFactor;
 
   /** Single access bucket size */
-  private float singleFactor;
+  private final float singleFactor;
 
   /** Multiple access bucket size */
-  private float multiFactor;
+  private final float multiFactor;
 
   /** In-memory bucket size */
-  private float memoryFactor;
+  private final float memoryFactor;
 
   /** Overhead of the structure itself */
-  private long overhead;
+  private final long overhead;
 
   /** Whether in-memory hfile's data block has higher priority when evicting */
   private boolean forceInMemory;
@@ -433,13 +433,11 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     }
 
     // check the bounds
-    this.heavyEvictionCountLimit = heavyEvictionCountLimit < 0 ? 0 : heavyEvictionCountLimit;
-    this.heavyEvictionMbSizeLimit = heavyEvictionMbSizeLimit < 1 ? 1 : heavyEvictionMbSizeLimit;
+    this.heavyEvictionCountLimit = Math.max(heavyEvictionCountLimit, 0);
+    this.heavyEvictionMbSizeLimit = Math.max(heavyEvictionCountLimit, 1);
     this.cacheDataBlockPercent = 100;
-    heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient > 0.1f
-      ? 1f : heavyEvictionOverheadCoefficient;
-    heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient < 0.001f
-      ? 0.001f : heavyEvictionOverheadCoefficient;
+    heavyEvictionOverheadCoefficient = Math.min(heavyEvictionOverheadCoefficient, 1.0f);
+    heavyEvictionOverheadCoefficient = Math.max(heavyEvictionOverheadCoefficient, 0.001f);
     this.heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient;
 
     // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
@@ -704,14 +702,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
-    int numEvicted = 0;
-    for (BlockCacheKey key : map.keySet()) {
-      if (key.getHfileName().equals(hfileName)) {
-        if (evictBlock(key)) {
-          ++numEvicted;
-        }
-      }
-    }
+    int numEvicted = (int) map.keySet().stream().filter(key -> key.getHfileName().equals(hfileName))
+      .filter(this::evictBlock).count();
     if (victimHandler != null) {
       numEvicted += victimHandler.evictBlocksByHfileName(hfileName);
     }
@@ -906,8 +898,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       stats.evict();
       evictionInProgress = false;
       evictionLock.unlock();
-      return bytesToFree;
     }
+    return bytesToFree;
   }
 
   @Override
@@ -936,9 +928,9 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   private class BlockBucket implements Comparable<BlockBucket> {
 
     private final String name;
-    private LruCachedBlockQueue queue;
+    private final LruCachedBlockQueue queue;
     private long totalSize = 0;
-    private long bucketSize;
+    private final long bucketSize;
 
     public BlockBucket(String name, long bytesToFree, long blockSize, long bucketSize) {
       this.name = name;
@@ -954,7 +946,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
     public long free(long toFree) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("freeing " + StringUtils.byteDesc(toFree) + " from " + this);
+        LOG.trace("freeing {} from {}", StringUtils.byteDesc(toFree), this);
       }
       LruCachedBlock cb;
       long freedBytes = 0;
@@ -965,7 +957,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
         }
       }
       if (LOG.isTraceEnabled()) {
-        LOG.trace("freed " + StringUtils.byteDesc(freedBytes) + " from " + this);
+        LOG.trace("freeing {} from {}", StringUtils.byteDesc(toFree), this);
       }
       return freedBytes;
     }
@@ -985,7 +977,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
     @Override
     public boolean equals(Object that) {
-      if (that == null || !(that instanceof BlockBucket)) {
+      if (!(that instanceof BlockBucket)) {
         return false;
       }
       return compareTo((BlockBucket)that) == 0;
@@ -1403,19 +1395,6 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   public void clearCache() {
     this.map.clear();
     this.elements.set(0);
-  }
-
-  /**
-   * Used in testing. May be very inefficient.
-   *
-   * @return the set of cached file names
-   */
-  SortedSet<String> getCachedFileNamesForTest() {
-    SortedSet<String> fileNames = new TreeSet<>();
-    for (BlockCacheKey cacheKey : map.keySet()) {
-      fileNames.add(cacheKey.getHfileName());
-    }
-    return fileNames;
   }
 
   public Map<DataBlockEncoding, Integer> getEncodingCountsForTest() {
