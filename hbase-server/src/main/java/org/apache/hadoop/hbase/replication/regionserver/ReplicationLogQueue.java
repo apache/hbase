@@ -94,7 +94,7 @@ public class ReplicationLogQueue {
 
   /**
    * Get the queue size for the given walGroupId.
-   * @param walGroupId
+   * @param walGroupId walGroupId
    */
   public int getQueueSize(String walGroupId) {
     Queue queue = queues.get(walGroupId);
@@ -119,7 +119,7 @@ public class ReplicationLogQueue {
    * Return queue for the given walGroupId
    * Please don't add or remove elements from the returned queue.
    * Use @enqueueLog and @remove methods respectively.
-   * @param walGroupId
+   * @param walGroupId walGroupId
    */
   public PriorityBlockingQueue<Path> getQueue(String walGroupId) {
     return queues.get(walGroupId);
@@ -127,7 +127,7 @@ public class ReplicationLogQueue {
 
   /**
    * Remove head from the queue corresponding to given walGroupId.
-   * @param walGroupId
+   * @param walGroupId walGroupId
    */
   public void remove(String walGroupId) {
     PriorityBlockingQueue<Path> queue = getQueue(walGroupId);
@@ -143,7 +143,7 @@ public class ReplicationLogQueue {
 
   /**
    * Remove all the elements from the queue corresponding to walGroupId
-   * @param walGroupId
+   * @param walGroupId walGroupId
    */
   public void clear(String walGroupId) {
     PriorityBlockingQueue<Path> queue = getQueue(walGroupId);
