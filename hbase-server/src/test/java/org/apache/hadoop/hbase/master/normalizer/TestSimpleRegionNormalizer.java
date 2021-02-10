@@ -54,6 +54,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -80,6 +82,7 @@ public class TestSimpleRegionNormalizer {
   private Configuration conf;
   private SimpleRegionNormalizer normalizer;
   private MasterServices masterServices;
+  private TableDescriptor tableDescriptor;
 
   @Rule
   public TableNameTestRule name = new TableNameTestRule();
@@ -87,16 +90,18 @@ public class TestSimpleRegionNormalizer {
   @Before
   public void before() {
     conf = HBaseConfiguration.create();
+    tableDescriptor = TableDescriptorBuilder.newBuilder(name.getTableName()).build();
   }
 
   @Test
   public void testNoNormalizationForMetaTable() {
     TableName testTable = TableName.META_TABLE_NAME;
+    TableDescriptor testMetaTd = TableDescriptorBuilder.newBuilder(testTable).build();
     List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();
 
     setupMocksForNormalizer(regionSizes, RegionInfo);
-    List<NormalizationPlan> plans = normalizer.computePlansForTable(testTable);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(testMetaTd);
     assertThat(plans, empty());
   }
 
@@ -107,7 +112,7 @@ public class TestSimpleRegionNormalizer {
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 10, 15);
     setupMocksForNormalizer(regionSizes, regionInfos);
 
-    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, empty());
   }
 
@@ -119,7 +124,7 @@ public class TestSimpleRegionNormalizer {
       createRegionSizesMap(regionInfos, 10, 15, 8, 10);
     setupMocksForNormalizer(regionSizes, regionInfos);
 
-    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, empty());
   }
 
@@ -134,7 +139,7 @@ public class TestSimpleRegionNormalizer {
       .thenReturn(RegionState.createForTesting(null, state));
     assertThat(normalizer.getMinRegionCount(), greaterThanOrEqualTo(regionInfos.size()));
 
-    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(format("Unexpected plans for RegionState %s", state), plans, empty());
   }
 
@@ -177,7 +182,7 @@ public class TestSimpleRegionNormalizer {
     setupMocksForNormalizer(regionSizes, regionInfos);
 
     assertThat(
-      normalizer.computePlansForTable(tableName),
+      normalizer.computePlansForTable(tableDescriptor),
       contains(new MergeNormalizationPlan.Builder()
         .addTarget(regionInfos.get(1), 5)
         .addTarget(regionInfos.get(2), 5)
@@ -194,7 +199,7 @@ public class TestSimpleRegionNormalizer {
     setupMocksForNormalizer(regionSizes, regionInfos);
 
     assertThat(
-      normalizer.computePlansForTable(tableName),
+      normalizer.computePlansForTable(tableDescriptor),
       contains(new MergeNormalizationPlan.Builder()
         .addTarget(regionInfos.get(4), 2700)
         .addTarget(regionInfos.get(5), 2700)
@@ -209,7 +214,7 @@ public class TestSimpleRegionNormalizer {
       createRegionSizesMap(regionInfos, 15, 5, 16, 15, 5);
     setupMocksForNormalizer(regionSizes, regionInfos);
 
-    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, empty());
   }
 
@@ -221,7 +226,7 @@ public class TestSimpleRegionNormalizer {
       createRegionSizesMap(regionInfos, 8, 6, 10, 30);
     setupMocksForNormalizer(regionSizes, regionInfos);
 
-    assertThat(normalizer.computePlansForTable(tableName), contains(
+    assertThat(normalizer.computePlansForTable(tableDescriptor), contains(
       new SplitNormalizationPlan(regionInfos.get(3), 30)));
   }
 
@@ -234,9 +239,8 @@ public class TestSimpleRegionNormalizer {
     setupMocksForNormalizer(regionSizes, regionInfos);
 
     // test when target region size is 20
-    when(masterServices.getTableDescriptors().get(any()).getNormalizerTargetRegionSize())
-        .thenReturn(20L);
-    assertThat(normalizer.computePlansForTable(tableName), contains(
+    when(tableDescriptor.getNormalizerTargetRegionSize()).thenReturn(20L);
+    assertThat(normalizer.computePlansForTable(tableDescriptor), contains(
       new SplitNormalizationPlan(regionInfos.get(2), 60),
       new SplitNormalizationPlan(regionInfos.get(3), 80),
       new SplitNormalizationPlan(regionInfos.get(4), 100),
@@ -244,10 +248,9 @@ public class TestSimpleRegionNormalizer {
     ));
 
     // test when target region size is 200
-    when(masterServices.getTableDescriptors().get(any()).getNormalizerTargetRegionSize())
-        .thenReturn(200L);
+    when(tableDescriptor.getNormalizerTargetRegionSize()).thenReturn(200L);
     assertThat(
-      normalizer.computePlansForTable(tableName),
+      normalizer.computePlansForTable(tableDescriptor),
       contains(
         new MergeNormalizationPlan.Builder()
           .addTarget(regionInfos.get(0), 20)
@@ -266,17 +269,15 @@ public class TestSimpleRegionNormalizer {
     setupMocksForNormalizer(regionSizes, regionInfos);
 
     // test when target region count is 8
-    when(masterServices.getTableDescriptors().get(any()).getNormalizerTargetRegionCount())
-        .thenReturn(8);
-    assertThat(normalizer.computePlansForTable(tableName), contains(
+    when(tableDescriptor.getNormalizerTargetRegionCount()).thenReturn(8);
+    assertThat(normalizer.computePlansForTable(tableDescriptor), contains(
       new SplitNormalizationPlan(regionInfos.get(2), 60),
       new SplitNormalizationPlan(regionInfos.get(3), 80)));
 
     // test when target region count is 3
-    when(masterServices.getTableDescriptors().get(any()).getNormalizerTargetRegionCount())
-        .thenReturn(3);
+    when(tableDescriptor.getNormalizerTargetRegionCount()).thenReturn(3);
     assertThat(
-      normalizer.computePlansForTable(tableName),
+      normalizer.computePlansForTable(tableDescriptor),
       contains(new MergeNormalizationPlan.Builder()
         .addTarget(regionInfos.get(0), 20)
         .addTarget(regionInfos.get(1), 40)
@@ -292,12 +293,37 @@ public class TestSimpleRegionNormalizer {
       createRegionSizesMap(regionInfos, 5, 5, 20, 5, 5);
     setupMocksForNormalizer(regionSizes, regionInfos);
     assertThat(
-      normalizer.computePlansForTable(tableName),
+      normalizer.computePlansForTable(tableDescriptor),
       contains(instanceOf(SplitNormalizationPlan.class)));
 
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
     setupMocksForNormalizer(regionSizes, regionInfos);
-    assertThat(normalizer.computePlansForTable(tableName), empty());
+    assertThat(normalizer.computePlansForTable(tableDescriptor), empty());
+  }
+
+  @Test
+  public void testHonorsSplitEnabledInTD() {
+    conf.setBoolean(SPLIT_ENABLED_KEY, true);
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
+    final Map<byte[], Integer> regionSizes =
+      createRegionSizesMap(regionInfos, 5, 5, 20, 5, 5);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    assertThat(
+      normalizer.computePlansForTable(tableDescriptor),
+      contains(instanceOf(SplitNormalizationPlan.class)));
+
+    // When hbase.normalizer.split.enabled is true in configuration, but false in table descriptor
+    when(tableDescriptor.getValue(SPLIT_ENABLED_KEY)).thenReturn("false");
+    assertThat(normalizer.computePlansForTable(tableDescriptor), empty());
+
+    // When hbase.normalizer.split.enabled is false in configuration, but true in table descriptor
+    conf.setBoolean(SPLIT_ENABLED_KEY, false);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    when(tableDescriptor.getValue(SPLIT_ENABLED_KEY)).thenReturn("true");
+    assertThat(
+      normalizer.computePlansForTable(tableDescriptor),
+      contains(instanceOf(SplitNormalizationPlan.class)));
   }
 
   @Test
@@ -309,12 +335,37 @@ public class TestSimpleRegionNormalizer {
       createRegionSizesMap(regionInfos, 20, 5, 5, 20, 20);
     setupMocksForNormalizer(regionSizes, regionInfos);
     assertThat(
-      normalizer.computePlansForTable(tableName),
+      normalizer.computePlansForTable(tableDescriptor),
       contains(instanceOf(MergeNormalizationPlan.class)));
 
     conf.setBoolean(MERGE_ENABLED_KEY, false);
     setupMocksForNormalizer(regionSizes, regionInfos);
-    assertThat(normalizer.computePlansForTable(tableName), empty());
+    assertThat(normalizer.computePlansForTable(tableDescriptor), empty());
+  }
+
+  @Test
+  public void testHonorsMergeEnabledInTD() {
+    conf.setBoolean(MERGE_ENABLED_KEY, true);
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
+    final Map<byte[], Integer> regionSizes =
+      createRegionSizesMap(regionInfos, 20, 5, 5, 20, 20);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    assertThat(
+      normalizer.computePlansForTable(tableDescriptor),
+      contains(instanceOf(MergeNormalizationPlan.class)));
+
+    // When hbase.normalizer.merge.enabled is true in configuration, but false in table descriptor
+    when(tableDescriptor.getValue(MERGE_ENABLED_KEY)).thenReturn("false");
+    assertThat(normalizer.computePlansForTable(tableDescriptor), empty());
+
+    // When hbase.normalizer.merge.enabled is false in configuration, but true in table descriptor
+    conf.setBoolean(MERGE_ENABLED_KEY, false);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    when(tableDescriptor.getValue(MERGE_ENABLED_KEY)).thenReturn("true");
+    assertThat(
+      normalizer.computePlansForTable(tableDescriptor),
+      contains(instanceOf(MergeNormalizationPlan.class)));
   }
 
   @Test
@@ -328,7 +379,7 @@ public class TestSimpleRegionNormalizer {
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 1, 10);
     setupMocksForNormalizer(regionSizes, regionInfos);
 
-    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, contains(
       new SplitNormalizationPlan(regionInfos.get(2), 10),
       new MergeNormalizationPlan.Builder()
@@ -339,7 +390,31 @@ public class TestSimpleRegionNormalizer {
     // have to call setupMocks again because we don't have dynamic config update on normalizer.
     conf.setInt(MIN_REGION_COUNT_KEY, 4);
     setupMocksForNormalizer(regionSizes, regionInfos);
-    assertThat(normalizer.computePlansForTable(tableName), contains(
+    assertThat(normalizer.computePlansForTable(tableDescriptor), contains(
+      new SplitNormalizationPlan(regionInfos.get(2), 10)));
+  }
+
+  @Test
+  public void testHonorsMinimumRegionCountInTD() {
+    conf.setInt(MIN_REGION_COUNT_KEY, 1);
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 3);
+    // create a table topology that results in both a merge plan and a split plan. Assert that the
+    // merge is only created when the when the number of table regions is above the region count
+    // threshold, and that the split plan is create in both cases.
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 1, 10);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
+    assertThat(plans, contains(
+      new SplitNormalizationPlan(regionInfos.get(2), 10),
+      new MergeNormalizationPlan.Builder()
+        .addTarget(regionInfos.get(0), 1)
+        .addTarget(regionInfos.get(1), 1)
+        .build()));
+
+    when(tableDescriptor.getValue(MIN_REGION_COUNT_KEY)).thenReturn("4");
+    assertThat(normalizer.computePlansForTable(tableDescriptor), contains(
       new SplitNormalizationPlan(regionInfos.get(2), 10)));
   }
 
@@ -353,7 +428,7 @@ public class TestSimpleRegionNormalizer {
     setupMocksForNormalizer(regionSizes, regionInfos);
     assertEquals(Period.ofDays(7), normalizer.getMergeMinRegionAge());
     assertThat(
-      normalizer.computePlansForTable(tableName),
+      normalizer.computePlansForTable(tableDescriptor),
       everyItem(not(instanceOf(MergeNormalizationPlan.class))));
 
     // have to call setupMocks again because we don't have dynamic config update on normalizer.
@@ -361,9 +436,35 @@ public class TestSimpleRegionNormalizer {
     setupMocksForNormalizer(regionSizes, regionInfos);
     assertEquals(
       Period.ofDays(DEFAULT_MERGE_MIN_REGION_AGE_DAYS), normalizer.getMergeMinRegionAge());
-    final List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
+    final List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, not(empty()));
     assertThat(plans, everyItem(instanceOf(MergeNormalizationPlan.class)));
+  }
+
+  @Test
+  public void testHonorsMergeMinRegionAgeInTD() {
+    conf.setInt(MERGE_MIN_REGION_AGE_DAYS_KEY, 7);
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
+    final Map<byte[], Integer> regionSizes =
+      createRegionSizesMap(regionInfos, 1, 1, 10, 10);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    assertEquals(Period.ofDays(7), normalizer.getMergeMinRegionAge());
+    assertThat(
+      normalizer.computePlansForTable(tableDescriptor),
+      everyItem(not(instanceOf(MergeNormalizationPlan.class))));
+
+    conf.unset(MERGE_MIN_REGION_AGE_DAYS_KEY);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    when(tableDescriptor.getValue(MERGE_MIN_REGION_AGE_DAYS_KEY)).thenReturn("-1");
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
+    assertThat(plans, not(empty()));
+    assertThat(plans, everyItem(instanceOf(MergeNormalizationPlan.class)));
+
+    when(tableDescriptor.getValue(MERGE_MIN_REGION_AGE_DAYS_KEY)).thenReturn("5");
+    plans = normalizer.computePlansForTable(tableDescriptor);
+    assertThat(plans, empty());
+    assertThat(plans, everyItem(not(instanceOf(MergeNormalizationPlan.class))));
   }
 
   @Test
@@ -378,7 +479,7 @@ public class TestSimpleRegionNormalizer {
     assertFalse(normalizer.isSplitEnabled());
     assertEquals(1, normalizer.getMergeMinRegionSizeMb());
     assertThat(
-      normalizer.computePlansForTable(tableName),
+      normalizer.computePlansForTable(tableDescriptor),
       contains(new MergeNormalizationPlan.Builder()
         .addTarget(regionInfos.get(0), 1)
         .addTarget(regionInfos.get(1), 2)
@@ -387,7 +488,29 @@ public class TestSimpleRegionNormalizer {
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 3);
     setupMocksForNormalizer(regionSizes, regionInfos);
     assertEquals(3, normalizer.getMergeMinRegionSizeMb());
-    assertThat(normalizer.computePlansForTable(tableName), empty());
+    assertThat(normalizer.computePlansForTable(tableDescriptor), empty());
+  }
+
+  @Test
+  public void testHonorsMergeMinRegionSizeInTD() {
+    conf.setBoolean(SPLIT_ENABLED_KEY, false);
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
+    final Map<byte[], Integer> regionSizes =
+      createRegionSizesMap(regionInfos, 1, 2, 0, 10, 10);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+
+    assertFalse(normalizer.isSplitEnabled());
+    assertEquals(1, normalizer.getMergeMinRegionSizeMb());
+    assertThat(
+      normalizer.computePlansForTable(tableDescriptor),
+      contains(new MergeNormalizationPlan.Builder()
+        .addTarget(regionInfos.get(0), 1)
+        .addTarget(regionInfos.get(1), 2)
+        .build()));
+
+    when(tableDescriptor.getValue(MERGE_MIN_REGION_SIZE_MB_KEY)).thenReturn("3");
+    assertThat(normalizer.computePlansForTable(tableDescriptor), empty());
   }
 
   @Test
@@ -402,7 +525,7 @@ public class TestSimpleRegionNormalizer {
 
     assertFalse(normalizer.isSplitEnabled());
     assertEquals(0, normalizer.getMergeMinRegionSizeMb());
-    assertThat(normalizer.computePlansForTable(tableName), contains(
+    assertThat(normalizer.computePlansForTable(tableDescriptor), contains(
       new MergeNormalizationPlan.Builder()
         .addTarget(regionInfos.get(0), 0)
         .addTarget(regionInfos.get(1), 1)
@@ -429,7 +552,7 @@ public class TestSimpleRegionNormalizer {
 
     assertFalse(normalizer.isSplitEnabled());
     assertEquals(0, normalizer.getMergeMinRegionSizeMb());
-    assertThat(normalizer.computePlansForTable(tableName), contains(
+    assertThat(normalizer.computePlansForTable(tableDescriptor), contains(
       new MergeNormalizationPlan.Builder()
         .addTarget(regionInfos.get(0), 0)
         .addTarget(regionInfos.get(1), 1)
@@ -460,7 +583,7 @@ public class TestSimpleRegionNormalizer {
 
     assertFalse(normalizer.isSplitEnabled());
     assertEquals(0, normalizer.getMergeMinRegionSizeMb());
-    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, contains(
       new MergeNormalizationPlan.Builder()
         .addTarget(regionInfos.get(0), 0)
@@ -492,7 +615,7 @@ public class TestSimpleRegionNormalizer {
     assertTrue(normalizer.isMergeEnabled());
     assertTrue(normalizer.isSplitEnabled());
     assertEquals(0, normalizer.getMergeMinRegionSizeMb());
-    assertThat(normalizer.computePlansForTable(tableName), contains(
+    assertThat(normalizer.computePlansForTable(tableDescriptor), contains(
       new SplitNormalizationPlan(regionInfos.get(3), 30),
       new MergeNormalizationPlan.Builder()
         .addTarget(regionInfos.get(0), 3)
@@ -528,7 +651,7 @@ public class TestSimpleRegionNormalizer {
     setupMocksForNormalizer(regionSizes, regionInfos);
 
     // Compute the plan, no merge plan returned as they are not adjacent.
-    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, empty());
   }
 
@@ -536,6 +659,7 @@ public class TestSimpleRegionNormalizer {
   private void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
     List<RegionInfo> regionInfoList) {
     masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
+    tableDescriptor = Mockito.mock(TableDescriptor.class, RETURNS_DEEP_STUBS);
 
     // for simplicity all regions are assumed to be on one server; doesn't matter to us
     ServerName sn = ServerName.valueOf("localhost", 0, 0L);
@@ -561,6 +685,7 @@ public class TestSimpleRegionNormalizer {
     }
 
     when(masterServices.isSplitOrMergeEnabled(any())).thenReturn(true);
+    when(tableDescriptor.getTableName()).thenReturn(name.getTableName());
 
     normalizer = new SimpleRegionNormalizer();
     normalizer.setConf(conf);
