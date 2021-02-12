@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -159,7 +158,6 @@ public class ReplicationSourceLogQueue {
   /*
     Returns the age of oldest wal.
    */
-  @VisibleForTesting
   long getOldestWalAge() {
     long now = EnvironmentEdgeManager.currentTime();
     long timestamp = getOldestWalTimestamp();
