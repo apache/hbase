@@ -49,8 +49,8 @@ public class ReplicationSourceLogQueue {
   private int logQueueWarnThreshold;
   private ReplicationSource source;
 
-
-  public ReplicationSourceLogQueue(Configuration conf, MetricsSource metrics, ReplicationSource source) {
+  public ReplicationSourceLogQueue(Configuration conf, MetricsSource metrics,
+      ReplicationSource source) {
     this.conf = conf;
     this.metrics = metrics;
     this.source = source;

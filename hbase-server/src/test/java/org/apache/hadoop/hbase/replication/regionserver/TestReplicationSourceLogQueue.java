@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -29,9 +31,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
 
 @Category({SmallTests.class,ReplicationTests.class})
 public class TestReplicationSourceLogQueue {
