@@ -54,4 +54,14 @@ public interface MetricsTableWrapperAggregate {
    * Get the table region size against this table
    */
   long getTableSize(String table);
+
+  /**
+   * Get the average region size for this table
+   */
+  long getAvgRegionSize(String table);
+
+  /**
+   * Get the number of regions hosted on for this table
+   */
+  long getNumRegions(String table);
 }

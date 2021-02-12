@@ -140,6 +140,12 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
         mrb.addGauge(Interns.info(tableNamePrefix + MetricsTableSource.TABLE_SIZE,
           MetricsTableSource.TABLE_SIZE_DESC),
           tableWrapperAgg.getTableSize(tableName.getNameAsString()));
+        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.AVERAGE_REGION_SIZE,
+          MetricsRegionServerSource.AVERAGE_REGION_SIZE_DESC),
+          tableWrapperAgg.getAvgRegionSize(tableName.getNameAsString()));
+        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.REGION_COUNT,
+          MetricsRegionServerSource.REGION_COUNT_DESC),
+          tableWrapperAgg.getNumRegions(tableName.getNameAsString()));
       }
     }
   }
