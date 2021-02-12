@@ -55,7 +55,7 @@ public class ReplicationSourceShipper extends Thread {
 
   private final Configuration conf;
   protected final String walGroupId;
-  protected final ReplicationLogQueue logQueue;
+  protected final ReplicationSourceLogQueue logQueue;
   private final ReplicationSource source;
 
   // Last position in the log that we sent to ZooKeeper
@@ -76,7 +76,7 @@ public class ReplicationSourceShipper extends Thread {
   private final int shipEditsTimeout;
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId,
-      ReplicationLogQueue logQueue, ReplicationSource source) {
+      ReplicationSourceLogQueue logQueue, ReplicationSource source) {
     this.conf = conf;
     this.walGroupId = walGroupId;
     this.logQueue = logQueue;

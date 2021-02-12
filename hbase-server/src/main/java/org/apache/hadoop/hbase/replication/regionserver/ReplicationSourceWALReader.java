@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
 class ReplicationSourceWALReader extends Thread {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceWALReader.class);
 
-  private final ReplicationLogQueue logQueue;
+  private final ReplicationSourceLogQueue logQueue;
   private final FileSystem fs;
   private final Configuration conf;
   private final WALEntryFilter filter;
@@ -90,7 +90,7 @@ class ReplicationSourceWALReader extends Thread {
    * @param source replication source
    */
   public ReplicationSourceWALReader(FileSystem fs, Configuration conf,
-      ReplicationLogQueue logQueue, long startPosition, WALEntryFilter filter,
+      ReplicationSourceLogQueue logQueue, long startPosition, WALEntryFilter filter,
       ReplicationSource source, String walGroupId) {
     this.logQueue = logQueue;
     this.currentPosition = startPosition;

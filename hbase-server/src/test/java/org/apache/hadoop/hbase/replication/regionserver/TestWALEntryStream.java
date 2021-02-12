@@ -110,7 +110,7 @@ public class TestWALEntryStream {
   }
 
   private WAL log;
-  ReplicationLogQueue logQueue;
+  ReplicationSourceLogQueue logQueue;
   private PathWatcher pathWatcher;
 
   @Rule
@@ -135,7 +135,7 @@ public class TestWALEntryStream {
   @Before
   public void setUp() throws Exception {
     ReplicationSource source = mock(ReplicationSource.class);
-    logQueue = new ReplicationLogQueue(CONF, new MetricsSource("2"), source);
+    logQueue = new ReplicationSourceLogQueue(CONF, new MetricsSource("2"), source);
     pathWatcher = new PathWatcher();
     final WALFactory wals = new WALFactory(CONF, tn.getMethodName());
     wals.getWALProvider().addWALActionsListener(pathWatcher);
@@ -694,7 +694,7 @@ public class TestWALEntryStream {
     MetricsSource metrics = mock(MetricsSource.class);
     doNothing().when(metrics).incrSizeOfLogQueue();
     doNothing().when(metrics).decrSizeOfLogQueue();
-    ReplicationLogQueue localLogQueue = new ReplicationLogQueue(conf, metrics, source);
+    ReplicationSourceLogQueue localLogQueue = new ReplicationSourceLogQueue(conf, metrics, source);
     localLogQueue.enqueueLog(emptyLog, fakeWalGroupId);
     ReplicationSourceWALReader reader =
       new ReplicationSourceWALReader(fs, conf, localLogQueue, 0,

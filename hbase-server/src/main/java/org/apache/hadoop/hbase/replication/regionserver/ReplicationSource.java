@@ -85,7 +85,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSource.class);
   // per group queue size, keep no more than this number of logs in each wal group
   protected int queueSizePerGroup;
-  protected ReplicationLogQueue logQueue;
+  protected ReplicationSourceLogQueue logQueue;
   protected ReplicationQueueStorage queueStorage;
   protected ReplicationPeer replicationPeer;
 
@@ -204,7 +204,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.maxRetriesMultiplier =
         this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
     this.queueSizePerGroup = this.conf.getInt("hbase.regionserver.maxlogs", 32);
-    this.logQueue = new ReplicationLogQueue(conf, metrics, this);
+    this.logQueue = new ReplicationSourceLogQueue(conf, metrics, this);
     this.queueStorage = queueStorage;
     this.replicationPeer = replicationPeer;
     this.manager = manager;
@@ -244,9 +244,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
     // Use WAL prefix as the WALGroupId for this peer.
     String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal.getName());
-    boolean queueAlreadyExisted = logQueue.enqueueLog(wal, walPrefix);
+    boolean queueExists = logQueue.enqueueLog(wal, walPrefix);
 
-    if (!queueAlreadyExisted) {
+    if (!queueExists) {
       if (this.isSourceActive() && this.walEntryFilter != null) {
         // new wal group observed after source startup, start a new worker thread to track it
         // notice: it's possible that wal enqueued when this.running is set but worker thread

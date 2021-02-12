@@ -43,7 +43,7 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
   private final SerialReplicationChecker checker;
 
   public SerialReplicationSourceWALReader(FileSystem fs, Configuration conf,
-      ReplicationLogQueue logQueue, long startPosition, WALEntryFilter filter,
+      ReplicationSourceLogQueue logQueue, long startPosition, WALEntryFilter filter,
       ReplicationSource source, String walGroupId) {
     super(fs, conf, logQueue, startPosition, filter, source, walGroupId);
     checker = new SerialReplicationChecker(conf, source);

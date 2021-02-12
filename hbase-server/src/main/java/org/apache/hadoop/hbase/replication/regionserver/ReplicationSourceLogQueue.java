@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.util.HashMap;
+import com.google.common.annotations.VisibleForTesting;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -31,15 +32,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /*
-  Class that does enqueueing/dequeueing of wal at one place so that we can update the metrics
+  Class that does enqueueing/dequeuing of wal at one place so that we can update the metrics
   just at one place.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class ReplicationLogQueue {
+public class ReplicationSourceLogQueue {
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSource.class);
   // Queues of logs to process, entry in format of walGroupId->queue,
   // each presents a queue for one wal group
-  private Map<String, PriorityBlockingQueue<Path>> queues = new HashMap<>();
+  private Map<String, PriorityBlockingQueue<Path>> queues = new ConcurrentHashMap<>();
   private MetricsSource metrics;
   private Configuration conf;
   // per group queue size, keep no more than this number of logs in each wal group
@@ -47,10 +49,9 @@ public class ReplicationLogQueue {
   // WARN threshold for the number of queued logs, defaults to 2
   private int logQueueWarnThreshold;
   private ReplicationSource source;
-  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSource.class);
 
 
-  public ReplicationLogQueue(Configuration conf, MetricsSource metrics, ReplicationSource source) {
+  public ReplicationSourceLogQueue(Configuration conf, MetricsSource metrics, ReplicationSource source) {
     this.conf = conf;
     this.metrics = metrics;
     this.source = source;
@@ -81,7 +82,7 @@ public class ReplicationLogQueue {
     // Increment size of logQueue
     this.metrics.incrSizeOfLogQueue();
     // Compute oldest wal age
-    setOldestWalAge();
+    this.metrics.setOldestWalAge(getOldestWalAge());
     // This will wal a warning for each new wal that gets created above the warn threshold
     int queueSize = queue.size();
     if (queueSize > this.logQueueWarnThreshold) {
@@ -136,9 +137,9 @@ public class ReplicationLogQueue {
     }
     queue.remove();
     // Decrease size logQueue.
-    metrics.decrSizeOfLogQueue();
+    this.metrics.decrSizeOfLogQueue();
     // Re-compute age of oldest wal metric.
-    setOldestWalAge();
+    this.metrics.setOldestWalAge(getOldestWalAge());
   }
 
   /**
@@ -152,20 +153,28 @@ public class ReplicationLogQueue {
       queue.remove();
       metrics.decrSizeOfLogQueue();
     }
-    setOldestWalAge();
+    this.metrics.setOldestWalAge(getOldestWalAge());
   }
 
-  private void setOldestWalAge() {
+  /*
+    Returns the age of oldest wal.
+   */
+  @VisibleForTesting
+  long getOldestWalAge() {
     long now = EnvironmentEdgeManager.currentTime();
     long timestamp = getOldestWalTimestamp();
-    // TODO: Should we handle the case where getOldestWalTimestamp returns Long.MAX_VALUE ?
+    if (timestamp == Long.MAX_VALUE) {
+      // If there are no wals in the queue then set the oldest wal timestamp to current time
+      // so that the oldest wal age will be 0.
+      timestamp = now;
+    }
     long age = now - timestamp;
-    this.metrics.setOldestWalAge(age);
+    return age;
   }
 
   /*
   Get the oldest wal timestamp from all the queues.
- */
+  */
   private long getOldestWalTimestamp() {
     long oldestWalTimestamp = Long.MAX_VALUE;
     for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : queues.entrySet()) {

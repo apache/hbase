@@ -499,7 +499,7 @@ public class TestReplicationSource {
     conf.setInt("replication.source.maxretriesmultiplier", -1);
     MetricsSource metricsSource = mock(MetricsSource.class);
     doNothing().when(metricsSource).incrSizeOfLogQueue();
-    ReplicationLogQueue logQueue = new ReplicationLogQueue(conf, metricsSource, source);
+    ReplicationSourceLogQueue logQueue = new ReplicationSourceLogQueue(conf, metricsSource, source);
     logQueue.enqueueLog(new Path("/www/html/test"), walGroupId);
     RecoveredReplicationSourceShipper shipper =
       new RecoveredReplicationSourceShipper(conf, walGroupId, logQueue, source, storage);
@@ -597,7 +597,7 @@ public class TestReplicationSource {
   }
 
   /*
-    Testing age of oldest wal metric.
+    Test age of oldest wal metric.
   */
   @Test
   public void testAgeOfOldestWal() throws Exception {

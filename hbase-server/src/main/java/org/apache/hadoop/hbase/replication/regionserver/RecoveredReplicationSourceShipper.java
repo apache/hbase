@@ -38,7 +38,7 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   private final ReplicationQueueStorage replicationQueues;
 
   public RecoveredReplicationSourceShipper(Configuration conf, String walGroupId,
-      ReplicationLogQueue logQueue, RecoveredReplicationSource source,
+      ReplicationSourceLogQueue logQueue, RecoveredReplicationSource source,
       ReplicationQueueStorage queueStorage) {
     super(conf, walGroupId, logQueue, source);
     this.source = source;

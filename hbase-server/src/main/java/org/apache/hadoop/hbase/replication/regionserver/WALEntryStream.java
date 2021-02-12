@@ -63,7 +63,7 @@ class WALEntryStream implements Closeable {
   private long currentPositionOfEntry = 0;
   // position after reading current entry
   private long currentPositionOfReader = 0;
-  private final ReplicationLogQueue logQueue;
+  private final ReplicationSourceLogQueue logQueue;
   private final String walGroupId;
   private final FileSystem fs;
   private final Configuration conf;
@@ -82,7 +82,7 @@ class WALEntryStream implements Closeable {
    * @param metrics the replication metrics
    * @throws IOException
    */
-  public WALEntryStream(ReplicationLogQueue logQueue, Configuration conf,
+  public WALEntryStream(ReplicationSourceLogQueue logQueue, Configuration conf,
       long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
       MetricsSource metrics, String walGroupId) throws IOException {
     this.logQueue = logQueue;
