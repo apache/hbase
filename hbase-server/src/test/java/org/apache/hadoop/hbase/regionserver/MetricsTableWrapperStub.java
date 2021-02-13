@@ -59,4 +59,14 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   public String getTableName() {
     return tableName;
   }
+
+  @Override
+  public long getNumRegions(String table) {
+    return 11;
+  }
+
+  @Override
+  public long getAvgRegionSize(String table) {
+    return 22;
+  }
 }

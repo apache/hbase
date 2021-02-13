@@ -107,6 +107,16 @@ public class TestMetricsTableSourceImpl {
       return 3000;
     }
 
+    @Override
+    public long getNumRegions(String table) {
+      return 3;
+    }
+
+    @Override
+    public long getAvgRegionSize(String table) {
+      return 3000;
+    }
+
     public String getTableName() {
       return tableName;
     }

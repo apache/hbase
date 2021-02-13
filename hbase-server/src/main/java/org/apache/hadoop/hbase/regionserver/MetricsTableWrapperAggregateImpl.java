@@ -74,10 +74,15 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
         }
         metricsTable.setMemstoresSize(metricsTable.getMemstoresSize() + r.getMemstoreSize());
         metricsTable.setStoreFilesSize(metricsTable.getStoreFilesSize() + tempStorefilesSize);
-        metricsTable.setTableSize(metricsTable.getMemstoresSize() + metricsTable.getStoreFilesSize());
-        metricsTable.setReadRequestsCount(metricsTable.getReadRequestsCount() + r.getReadRequestsCount());
-        metricsTable.setWriteRequestsCount(metricsTable.getWriteRequestsCount() + r.getWriteRequestsCount());
-        metricsTable.setTotalRequestsCount(metricsTable.getReadRequestsCount() + metricsTable.getWriteRequestsCount());
+        metricsTable
+            .setTableSize(metricsTable.getMemstoresSize() + metricsTable.getStoreFilesSize());
+        metricsTable
+            .setReadRequestsCount(metricsTable.getReadRequestsCount() + r.getReadRequestsCount());
+        metricsTable.setWriteRequestsCount(
+          metricsTable.getWriteRequestsCount() + r.getWriteRequestsCount());
+        metricsTable.setTotalRequestsCount(
+          metricsTable.getReadRequestsCount() + metricsTable.getWriteRequestsCount());
+        metricsTable.setRegionCount(metricsTable.getRegionCount() + 1);
       }
 
       for(Map.Entry<TableName, MetricsTableValues> entry : localMetricsTableMap.entrySet()) {
@@ -108,55 +113,75 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   @Override
   public long getReadRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
-      return metricsTable.getReadRequestsCount();
+    }
+    return metricsTable.getReadRequestsCount();
   }
 
   @Override
   public long getWriteRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
-      return metricsTable.getWriteRequestsCount();
+    }
+    return metricsTable.getWriteRequestsCount();
   }
 
   @Override
   public long getTotalRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
-      return metricsTable.getTotalRequestsCount();
+    }
+    return metricsTable.getTotalRequestsCount();
   }
 
   @Override
   public long getMemstoresSize(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
-      return metricsTable.getMemstoresSize();
+    }
+    return metricsTable.getMemstoresSize();
   }
 
   @Override
   public long getStoreFilesSize(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
-      return metricsTable.getStoreFilesSize();
+    }
+    return metricsTable.getStoreFilesSize();
   }
 
   @Override
   public long getTableSize(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
-      return metricsTable.getTableSize();
+    }
+    return metricsTable.getTableSize();
+  }
+
+  @Override
+  public long getNumRegions(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+    return metricsTable.regionCount;
+  }
+
+  @Override
+  public long getAvgRegionSize(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+    return metricsTable.regionCount == 0 ? 0
+        : (metricsTable.getMemstoresSize() + metricsTable.getStoreFilesSize())
+            / metricsTable.getRegionCount();
   }
 
   @Override
@@ -172,6 +197,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     private long memstoresSize;
     private long storeFilesSize;
     private long tableSize;
+    private long regionCount;
 
     public long getTotalRequestsCount() {
       return totalRequestsCount;
@@ -219,6 +245,14 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
 
     public void setTableSize(long tableSize) {
       this.tableSize = tableSize;
+    }
+
+    public long getRegionCount() {
+      return regionCount;
+    }
+
+    public void setRegionCount(long regionCount) {
+      this.regionCount = regionCount;
     }
   }
 
