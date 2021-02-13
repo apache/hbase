@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -677,6 +678,17 @@ public class TestHFile  {
     Cell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
+  }
+
+  private Cell getCell(byte[] row, byte[] family, byte[] qualifier) {
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(row)
+      .setFamily(family)
+      .setQualifier(qualifier)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY)
+      .build();
   }
 
   @Test
