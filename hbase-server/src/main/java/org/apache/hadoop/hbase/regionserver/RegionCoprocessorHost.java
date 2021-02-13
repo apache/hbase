@@ -1117,10 +1117,13 @@ public class RegionCoprocessorHost
   /**
    * Supports Coprocessor 'bypass'.
    * @param append append object
+   * @param edit The WALEdit object.
+   * @param durability The durability used
    * @return result to return to client if default operation should be bypassed, null otherwise
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result preAppend(final Append append) throws IOException {
+  public Result preAppend(final Append append, final WALEdit edit, final Durability durability)
+    throws IOException {
     boolean bypassable = true;
     Result defaultResult = null;
     if (this.coprocEnvironments.isEmpty()) {
@@ -1131,7 +1134,7 @@ public class RegionCoprocessorHost
             bypassable) {
           @Override
           public Result call(RegionObserver observer) throws IOException {
-            return observer.preAppend(this, append);
+            return observer.preAppend(this, append, edit, durability);
           }
         });
   }
@@ -1161,10 +1164,13 @@ public class RegionCoprocessorHost
   /**
    * Supports Coprocessor 'bypass'.
    * @param increment increment object
+   * @param edit The WALEdit object.
+   * @param durability The durability used
    * @return result to return to client if default operation should be bypassed, null otherwise
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result preIncrement(final Increment increment) throws IOException {
+  public Result preIncrement(final Increment increment, final WALEdit edit,
+    final Durability durability) throws IOException {
     boolean bypassable = true;
     Result defaultResult = null;
     if (coprocEnvironments.isEmpty()) {
@@ -1175,7 +1181,7 @@ public class RegionCoprocessorHost
             bypassable) {
           @Override
           public Result call(RegionObserver observer) throws IOException {
-            return observer.preIncrement(this, increment);
+            return observer.preIncrement(this, increment, edit, durability);
           }
         });
   }
@@ -1205,9 +1211,12 @@ public class RegionCoprocessorHost
   /**
    * @param append Append object
    * @param result the result returned by the append
+   * @param edit The WALEdit object.
+   * @param durability The durability used
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result postAppend(final Append append, final Result result) throws IOException {
+  public Result postAppend(final Append append, final Result result, final WALEdit edit,
+    final Durability durability) throws IOException {
     if (this.coprocEnvironments.isEmpty()) {
       return result;
     }
@@ -1215,7 +1224,7 @@ public class RegionCoprocessorHost
         new ObserverOperationWithResult<RegionObserver, Result>(regionObserverGetter, result) {
           @Override
           public Result call(RegionObserver observer) throws IOException {
-            return observer.postAppend(this, append, result);
+            return observer.postAppend(this, append, result, edit, durability);
           }
         });
   }
@@ -1223,9 +1232,12 @@ public class RegionCoprocessorHost
   /**
    * @param increment increment object
    * @param result the result returned by postIncrement
+   * @param edit The WALEdit object.
+   * @param durability The durability used
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result postIncrement(final Increment increment, Result result) throws IOException {
+  public Result postIncrement(final Increment increment, Result result, final WALEdit edit,
+    final Durability durability) throws IOException {
     if (this.coprocEnvironments.isEmpty()) {
       return result;
     }
@@ -1233,7 +1245,7 @@ public class RegionCoprocessorHost
         new ObserverOperationWithResult<RegionObserver, Result>(regionObserverGetter, result) {
           @Override
           public Result call(RegionObserver observer) throws IOException {
-            return observer.postIncrement(this, increment, getResult());
+            return observer.postIncrement(this, increment, getResult(), edit, durability);
           }
         });
   }

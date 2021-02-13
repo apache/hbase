@@ -459,8 +459,8 @@ public interface RegionObserver {
    * to memstore and WAL. The difference of this one with
    * {@link #postPut(ObserverContext, Put, WALEdit, Durability)}
    * and {@link #postDelete(ObserverContext, Delete, WALEdit, Durability)}
-   * and {@link #postIncrement(ObserverContext, Increment, Result)}
-   * and {@link #postAppend(ObserverContext, Append, Result)} is
+   * and {@link #postIncrement(ObserverContext, Increment, Result, WALEdit, Durability)}
+   * and {@link #postAppend(ObserverContext, Append, Result, WALEdit, Durability)} is
    * this hook will be executed before the mvcc transaction completion.
    * <p>
    * Note: Do not retain references to any Cells in Mutations beyond the life of this invocation.
@@ -968,10 +968,32 @@ public interface RegionObserver {
    * @param c the environment provided by the region server
    * @param append Append object
    * @return result to return to the client if bypassing default processing
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #preAppend(ObserverContext, Append, WALEdit, Durability)} instead.
    */
+  @Deprecated
   default Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
-      throws IOException {
+    throws IOException {
     return null;
+  }
+
+  /**
+   * Called before Append.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions.
+   * If 'bypass' is set, we skip out on calling any subsequent chained coprocessors.
+   * <p>
+   * Note: Do not retain references to any Cells in 'append' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param append Append object
+   * @param edit The WALEdit object that will be written to the wal
+   * @param durability Persistence guarantee for this Put
+   * @return result to return to the client if bypassing default processing
+   */
+  default Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
+    WALEdit edit, Durability durability) throws IOException {
+    return preAppend(c, append);
   }
 
   /**
@@ -989,9 +1011,12 @@ public interface RegionObserver {
    * @param c the environment provided by the region server
    * @param append Append object
    * @return result to return to the client if bypassing default processing
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #preBatchMutate(ObserverContext, MiniBatchOperationInProgress)} instead.
    */
+  @Deprecated
   default Result preAppendAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
-      Append append) throws IOException {
+    Append append) throws IOException {
     return null;
   }
 
@@ -1004,10 +1029,30 @@ public interface RegionObserver {
    * @param append Append object
    * @param result the result returned by increment
    * @return the result to return to the client
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #postAppend(ObserverContext, Append, Result, WALEdit, Durability)} instead.
+   */
+  @Deprecated
+  default Result postAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
+    Result result) throws IOException {
+    return result;
+  }
+
+  /**
+   * Called after Append
+   * <p>
+   * Note: Do not retain references to any Cells in 'append' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param append Append object
+   * @param result the result returned by increment
+   * @param edit The WALEdit object for the wal
+   * @param durability Persistence guarantee for this Put
+   * @return the result to return to the client
    */
   default Result postAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
-      Result result) throws IOException {
-    return result;
+    Result result, WALEdit edit, Durability durability) throws IOException {
+    return postAppend(c, append, result);
   }
 
   /**
@@ -1021,10 +1066,32 @@ public interface RegionObserver {
    * @param c the environment provided by the region server
    * @param increment increment object
    * @return result to return to the client if bypassing default processing
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #preIncrement(ObserverContext, Increment, WALEdit, Durability)} instead.
    */
+  @Deprecated
   default Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment)
-      throws IOException {
+    throws IOException {
     return null;
+  }
+
+  /**
+   * Called before Increment.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions.
+   * If 'bypass' is set, we skip out on calling any subsequent chained coprocessors.
+   * <p>
+   * Note: Do not retain references to any Cells in 'increment' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param increment increment object
+   * @param edit The WALEdit object that will be written to the wal
+   * @param durability Persistence guarantee for this Put
+   * @return result to return to the client if bypassing default processing
+   */
+  default Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment,
+    WALEdit edit, Durability durability) throws IOException {
+    return preIncrement(c, increment);
   }
 
   /**
@@ -1040,15 +1107,15 @@ public interface RegionObserver {
    * Note: Do not retain references to any Cells in 'increment' beyond the life of this invocation.
    * If need a Cell reference for later use, copy the cell and use that.
    *
-   * @param c
-   *          the environment provided by the region server
-   * @param increment
-   *          increment object
+   * @param c the environment provided by the region server
+   * @param increment increment object
    * @return result to return to the client if bypassing default processing
-   *           if an error occurred on the coprocessor
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #preBatchMutate(ObserverContext, MiniBatchOperationInProgress)} instead.
    */
+  @Deprecated
   default Result preIncrementAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
-      Increment increment) throws IOException {
+    Increment increment) throws IOException {
     return null;
   }
 
@@ -1061,10 +1128,30 @@ public interface RegionObserver {
    * @param increment increment object
    * @param result the result returned by increment
    * @return the result to return to the client
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #postIncrement(ObserverContext, Increment, Result, WALEdit, Durability)} instead.
+   */
+  @Deprecated
+  default Result postIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment,
+    Result result) throws IOException {
+    return result;
+  }
+
+  /**
+   * Called after increment
+   * <p>
+   * Note: Do not retain references to any Cells in 'increment' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param increment increment object
+   * @param result the result returned by increment
+   * @param edit The WALEdit object for the wal
+   * @param durability Persistence guarantee for this Put
+   * @return the result to return to the client
    */
   default Result postIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment,
-      Result result) throws IOException {
-    return result;
+    Result result, WALEdit edit, Durability durability) throws IOException {
+    return postIncrement(c, increment, result);
   }
 
   /**

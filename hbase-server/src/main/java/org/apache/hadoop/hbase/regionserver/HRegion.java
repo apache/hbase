@@ -4202,13 +4202,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 region.coprocessorHost.postDelete((Delete) m, walEdit, m.getDurability());
               } else if (m instanceof Increment) {
                 Result result = region.getCoprocessorHost().postIncrement((Increment) m,
-                  results[i]);
+                  results[i], walEdit, m.getDurability());
                 if (result != results[i]) {
                   retCodeDetails[i] =
                     new OperationStatus(retCodeDetails[i].getOperationStatusCode(), result);
                 }
               } else if (m instanceof Append) {
-                Result result = region.getCoprocessorHost().postAppend((Append) m, results[i]);
+                Result result = region.getCoprocessorHost().postAppend((Append) m, results[i],
+                  walEdit, m.getDurability());
                 if (result != results[i]) {
                   retCodeDetails[i] =
                     new OperationStatus(retCodeDetails[i].getOperationStatusCode(), result);
@@ -4292,7 +4293,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } else if (m instanceof Increment) {
         Increment increment = (Increment) m;
-        Result result = region.coprocessorHost.preIncrement(increment);
+        Result result = region.coprocessorHost.preIncrement(increment, walEdit, m.getDurability());
         if (result != null) {
           // pre hook says skip this Increment
           // mark as success and skip in doMiniBatchMutation
@@ -4301,7 +4302,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } else if (m instanceof Append) {
         Append append = (Append) m;
-        Result result = region.coprocessorHost.preAppend(append);
+        Result result = region.coprocessorHost.preAppend(append, walEdit, m.getDurability());
         if (result != null) {
           // pre hook says skip this Append
           // mark as success and skip in doMiniBatchMutation
