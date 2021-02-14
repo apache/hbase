@@ -434,7 +434,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
     // check the bounds
     this.heavyEvictionCountLimit = Math.max(heavyEvictionCountLimit, 0);
-    this.heavyEvictionMbSizeLimit = Math.max(heavyEvictionCountLimit, 1);
+    this.heavyEvictionMbSizeLimit = Math.max(heavyEvictionMbSizeLimit, 1);
     this.cacheDataBlockPercent = 100;
     heavyEvictionOverheadCoefficient = Math.min(heavyEvictionOverheadCoefficient, 1.0f);
     heavyEvictionOverheadCoefficient = Math.max(heavyEvictionOverheadCoefficient, 0.001f);
