@@ -388,6 +388,12 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
    * @param singleFactor        percentage of total size for single-access blocks
    * @param multiFactor         percentage of total size for multiple-access blocks
    * @param memoryFactor        percentage of total size for in-memory blocks
+   * @param hardLimitFactor     hard capacity limit
+   * @param forceInMemory       in-memory hfile's data block has higher priority when evicting
+   * @param maxBlockSize        maximum block size for caching
+   * @param heavyEvictionCountLimit   when starts AdaptiveLRU algoritm work
+   * @param heavyEvictionMbSizeLimit  how many bytes desirable putting into BlockCache
+   * @param heavyEvictionOverheadCoefficient  how aggressive AdaptiveLRU will reduce GC
    */
   public LruAdaptiveBlockCache(long maxSize, long blockSize, boolean evictionThread,
     int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
@@ -434,7 +440,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
     // check the bounds
     this.heavyEvictionCountLimit = Math.max(heavyEvictionCountLimit, 0);
-    this.heavyEvictionMbSizeLimit = Math.max(heavyEvictionCountLimit, 1);
+    this.heavyEvictionMbSizeLimit = Math.max(heavyEvictionMbSizeLimit, 1);
     this.cacheDataBlockPercent = 100;
     heavyEvictionOverheadCoefficient = Math.min(heavyEvictionOverheadCoefficient, 1.0f);
     heavyEvictionOverheadCoefficient = Math.max(heavyEvictionOverheadCoefficient, 0.001f);
