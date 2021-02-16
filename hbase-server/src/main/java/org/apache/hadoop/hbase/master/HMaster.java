@@ -1338,7 +1338,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         new ExecutorConfig().setCorePoolSize(masterSnapshotThreads).setAllowCoreThreadTimeout(true));
     final int masterMergeDispatchThreads = conf.getInt(HConstants.MASTER_MERGE_DISPATCH_THREADS,
         HConstants.MASTER_MERGE_DISPATCH_THREADS_DEFAULT);
-    // Allow core threads to timeout since this is non-critical.
     this.executorService.startExecutorService(ExecutorType.MASTER_MERGE_OPERATIONS,
         new ExecutorConfig().setCorePoolSize(masterMergeDispatchThreads)
             .setAllowCoreThreadTimeout(true));

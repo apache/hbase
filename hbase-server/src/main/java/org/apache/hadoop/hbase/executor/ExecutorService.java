@@ -207,6 +207,11 @@ public class ExecutorService {
       return allowCoreThreadTimeout;
     }
 
+    /**
+     * Allows timing out of core threads. Good to set this for non-critical thread pools for
+     * release of unused resources. Refer to {@link ThreadPoolExecutor#allowCoreThreadTimeOut}
+     * for additional details.
+     */
     public ExecutorConfig setAllowCoreThreadTimeout(boolean allowCoreThreadTimeout) {
       this.allowCoreThreadTimeout = allowCoreThreadTimeout;
       return this;
