@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.executor.TestExecutorService.TestEventHandler;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource;
@@ -58,8 +59,8 @@ public class TestExecutorStatusChore {
 
     // Start an executor service pool with max 5 threads
     ExecutorService executorService = new ExecutorService("unit_test");
-    executorService.startExecutorService(
-      ExecutorType.RS_PARALLEL_SEEK, maxThreads);
+    executorService.startExecutorService(ExecutorType.RS_PARALLEL_SEEK,
+        new ExecutorConfig().setCorePoolSize(maxThreads));
 
     MetricsRegionServerSource serverSource = CompatibilitySingletonFactory
         .getInstance(MetricsRegionServerSourceFactory.class).createServer(null);
