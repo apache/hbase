@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
+import org.apache.hadoop.hbase.replication.regionserver.helper.DummyServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -142,6 +143,8 @@ public class TestReplicationSourceManager {
 
   private static List<String> files = new ArrayList<String>();
 
+  private static DummyServer server;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
 
@@ -174,7 +177,8 @@ public class TestReplicationSourceManager {
         HConstants.HREGION_OLDLOGDIR_NAME);
     logDir = new Path(utility.getDataTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
-    replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
+    server = new DummyServer(conf, "example.hostname.com", zkw);
+    replication = new Replication(server, fs, logDir, oldLogDir);
     manager = replication.getReplicationManager();
 
     manager.addSource(slaveId);
@@ -288,7 +292,7 @@ public class TestReplicationSourceManager {
   @Test
   public void testClaimQueues() throws Exception {
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
-    final Server server = new DummyServer("hostname0.example.org");
+    final Server server = new DummyServer(conf, "hostname0.example.org", zkw);
     ReplicationQueues rq =
         ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
           server);
@@ -300,9 +304,9 @@ public class TestReplicationSourceManager {
       rq.addLog("1", file);
     }
     // create 3 DummyServers
-    Server s1 = new DummyServer("dummyserver1.example.org");
-    Server s2 = new DummyServer("dummyserver2.example.org");
-    Server s3 = new DummyServer("dummyserver3.example.org");
+    Server s1 = new DummyServer(conf, "dummyserver1.example.org", zkw);
+    Server s2 = new DummyServer(conf, "dummyserver2.example.org", zkw);
+    Server s3 = new DummyServer(conf, "dummyserver3.example.org", zkw);
 
     // create 3 DummyNodeFailoverWorkers
     DummyNodeFailoverWorker w1 = new DummyNodeFailoverWorker(
@@ -329,7 +333,7 @@ public class TestReplicationSourceManager {
 
   @Test
   public void testCleanupFailoverQueues() throws Exception {
-    final Server server = new DummyServer("hostname1.example.org");
+    final Server server = new DummyServer(conf, "hostname1.example.org", zkw);
     ReplicationQueues rq =
         ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
           server);
@@ -344,7 +348,7 @@ public class TestReplicationSourceManager {
     for (String file : files) {
       rq.addLog("1", file);
     }
-    Server s1 = new DummyServer("dummyserver1.example.org");
+    Server s1 = new DummyServer(conf, "dummyserver1.example.org", zkw);
     ReplicationQueues rq1 =
         ReplicationFactory.getReplicationQueues(s1.getZooKeeper(), s1.getConfiguration(), s1);
     rq1.init(s1.getServerName().toString());
@@ -368,7 +372,7 @@ public class TestReplicationSourceManager {
   public void testNodeFailoverDeadServerParsing() throws Exception {
     LOG.debug("testNodeFailoverDeadServerParsing");
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
-    final Server server = new DummyServer("ec2-54-234-230-108.compute-1.amazonaws.com");
+    final Server server = new DummyServer(conf, "ec2-54-234-230-108.compute-1.amazonaws.com", zkw);
     ReplicationQueues repQueues =
         ReplicationFactory.getReplicationQueues(server.getZooKeeper(), conf, server);
     repQueues.init(server.getServerName().toString());
@@ -380,9 +384,9 @@ public class TestReplicationSourceManager {
     }
 
     // create 3 DummyServers
-    Server s1 = new DummyServer("ip-10-8-101-114.ec2.internal");
-    Server s2 = new DummyServer("ec2-107-20-52-47.compute-1.amazonaws.com");
-    Server s3 = new DummyServer("ec2-23-20-187-167.compute-1.amazonaws.com");
+    Server s1 = new DummyServer(conf, "ip-10-8-101-114.ec2.internal", zkw);
+    Server s2 = new DummyServer(conf, "ec2-107-20-52-47.compute-1.amazonaws.com", zkw);
+    Server s3 = new DummyServer(conf, "ec2-23-20-187-167.compute-1.amazonaws.com", zkw);
 
     // simulate three servers fail sequentially
     ReplicationQueues rq1 =
@@ -423,7 +427,7 @@ public class TestReplicationSourceManager {
     LOG.debug("testFailoverDeadServerCversionChange");
 
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
-    final Server s0 = new DummyServer("cversion-change0.example.org");
+    final Server s0 = new DummyServer(conf, "cversion-change0.example.org", zkw);
     ReplicationQueues repQueues =
         ReplicationFactory.getReplicationQueues(s0.getZooKeeper(), conf, s0);
     repQueues.init(s0.getServerName().toString());
@@ -434,7 +438,7 @@ public class TestReplicationSourceManager {
       repQueues.addLog("1", file);
     }
     // simulate queue transfer
-    Server s1 = new DummyServer("cversion-change1.example.org");
+    Server s1 = new DummyServer(conf, "cversion-change1.example.org", zkw);
     ReplicationQueues rq1 =
         ReplicationFactory.getReplicationQueues(s1.getZooKeeper(), s1.getConfiguration(), s1);
     rq1.init(s1.getServerName().toString());
@@ -459,7 +463,7 @@ public class TestReplicationSourceManager {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="RU_INVOKE_RUN",
     justification="Intended")
   public void testCleanupUnknownPeerZNode() throws Exception {
-    final Server server = new DummyServer("hostname2.example.org");
+    final Server server = new DummyServer(conf, "hostname2.example.org", zkw);
     ReplicationQueues rq =
         ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
           server);
@@ -530,7 +534,6 @@ public class TestReplicationSourceManager {
     final ReplicationPeerConfig peerConfig =
         new ReplicationPeerConfig().setClusterKey("localhost:1:/hbase");
     try {
-      DummyServer server = new DummyServer();
       final ReplicationQueues rq =
           ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
               server);
@@ -740,72 +743,6 @@ public class TestReplicationSourceManager {
         UUID clusterId, ReplicationEndpoint replicationEndpoint, MetricsSource metrics)
         throws IOException {
       throw new IOException("Failing deliberately");
-    }
-  }
-
-  static class DummyServer implements Server {
-    String hostname;
-
-    DummyServer() {
-      hostname = "hostname.example.org";
-    }
-
-    DummyServer(String hostname) {
-      this.hostname = hostname;
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-      return conf;
-    }
-
-    @Override
-    public ZooKeeperWatcher getZooKeeper() {
-      return zkw;
-    }
-
-    @Override
-    public CoordinatedStateManager getCoordinatedStateManager() {
-      return null;
-    }
-    @Override
-    public ClusterConnection getConnection() {
-      return null;
-    }
-
-    @Override
-    public MetaTableLocator getMetaTableLocator() {
-      return null;
-    }
-
-    @Override
-    public ServerName getServerName() {
-      return ServerName.valueOf(hostname, 1234, 1L);
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-      // To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-
-    @Override
-    public void stop(String why) {
-      // To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public boolean isStopped() {
-      return false; // To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public ChoreService getChoreService() {
-      return null;
     }
   }
 }

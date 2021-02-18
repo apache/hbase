@@ -44,6 +44,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   String peerClusterId;
   Path currentPath;
   MetricsSource metrics;
+  public static final String fakeExceptionMessage = "Fake Exception";
 
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,

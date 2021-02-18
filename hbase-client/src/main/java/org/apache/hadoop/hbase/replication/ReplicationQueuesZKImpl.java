@@ -132,15 +132,43 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   @Override
-  public void removeLog(String queueId, String filename) {
+  public void removeLog(String queueId, String filename)
+      throws ReplicationSourceWithoutPeerException {
     try {
-      String znode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
-      znode = ZKUtil.joinZNode(znode, filename);
-      ZKUtil.deleteNode(this.zookeeper, znode);
-    } catch (KeeperException e) {
-      this.abortable.abort("Failed to remove wal from queue (queueId=" + queueId + ", filename="
-          + filename + ")", e);
+      try {
+        String znode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
+        znode = ZKUtil.joinZNode(znode, filename);
+        ZKUtil.deleteNode(this.zookeeper, znode);
+      } catch (KeeperException e) {
+        // in case of no node exception we should not crash the region server
+        // but instead check if the replication peer has been removed.
+        // If so, we can throw here so that the source can terminate itself.
+        // This situation can occur when the replication peer znodes has been
+        // removed but the sources not terminated due to any miss from zk node delete watcher.
+        if (e instanceof KeeperException.NoNodeException) {
+          if (!doesPeerExist(queueId)) {
+            LOG.warn("Replication peer " + queueId + " has been removed", e);
+            throw new ReplicationSourceWithoutPeerException(
+              "Znodes for peer has been delete where as source is still active", e);
+          }
+        }
+      }
+    } catch (KeeperException ke) {
+      this.abortable.abort(
+        "Failed to remove wal from queue (queueId=" + queueId + ", filename=" + filename + ")",
+        ke);
     }
+  }
+
+  private boolean doesPeerExist(String queueId) throws KeeperException {
+    String peerId = queueId;
+    if (peerId.contains("-")) {
+      // queueId will be in the form peerId + "-" + rsZNode.
+      // A peerId will not have "-" in its name, see HBASE-11394
+      peerId = queueId.split("-")[0];
+    }
+
+    return peerExists(peerId);
   }
 
   @Override

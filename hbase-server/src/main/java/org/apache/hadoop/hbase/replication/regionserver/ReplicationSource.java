@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.ReplicationSourceWithoutPeerException;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReaderThread.WALEntryBatch;
@@ -792,9 +793,13 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     private void updateLogPosition(long lastReadPosition) {
-      manager.logPositionAndCleanOldLogs(lastLoggedPath, peerClusterZnode, lastReadPosition,
-        this.replicationQueueInfo.isQueueRecovered(), false);
-      lastLoggedPosition = lastReadPosition;
+      try {
+        manager.logPositionAndCleanOldLogs(lastLoggedPath, peerClusterZnode, lastReadPosition,
+          this.replicationQueueInfo.isQueueRecovered(), false);
+        lastLoggedPosition = lastReadPosition;
+      } catch (ReplicationSourceWithoutPeerException re) {
+          this.terminate("Replication peer is removed and source should terminate", re);
+      }
     }
 
     public void startup() {

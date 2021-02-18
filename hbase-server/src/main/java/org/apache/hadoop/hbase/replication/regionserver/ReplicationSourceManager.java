@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.ReplicationSourceWithoutPeerException;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
@@ -188,7 +189,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param holdLogInZK if true then the log is retained in ZK
    */
   public synchronized void logPositionAndCleanOldLogs(Path log, String id, long position,
-    boolean queueRecovered, boolean holdLogInZK) {
+      boolean queueRecovered, boolean holdLogInZK) throws ReplicationSourceWithoutPeerException {
     String fileName = log.getName();
     this.replicationQueues.setLogPosition(id, fileName, position);
     if (holdLogInZK) {
@@ -204,7 +205,8 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param id id of the peer cluster
    * @param queueRecovered Whether this is a recovered queue
    */
-  public void cleanOldLogs(String key, String id, boolean queueRecovered) {
+  public void cleanOldLogs(String key, String id, boolean queueRecovered) 
+      throws ReplicationSourceWithoutPeerException {
     String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(key);
     if (queueRecovered) {
       Map<String, SortedSet<String>> walsForPeer = walsByIdRecoveredQueues.get(id);
@@ -224,7 +226,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
  }
 
-  private void cleanOldLogs(SortedSet<String> wals, String key, String id) {
+  private void cleanOldLogs(SortedSet<String> wals, String key, String id)
+      throws ReplicationSourceWithoutPeerException {
     SortedSet<String> walSet = wals.headSet(key);
     LOG.debug("Removing " + walSet.size() + " logs in the list: " + walSet);
     for (String wal : walSet) {
