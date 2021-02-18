@@ -86,59 +86,22 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.junit.After;
+
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
 @Category(MediumTests.class)
-public class TestReplicationSourceManager {
+public class TestReplicationSourceManager extends TestReplicationSourceBase {
 
   private static final Log LOG =
-      LogFactory.getLog(TestReplicationSourceManager.class);
-
-  private static Configuration conf;
-
-  private static HBaseTestingUtility utility;
-
-  private static Replication replication;
-
-  private static ReplicationSourceManager manager;
-
-  private static ZooKeeperWatcher zkw;
-
-  private static HTableDescriptor htd;
-
-  private static HRegionInfo hri;
-
-  private static final byte[] r1 = Bytes.toBytes("r1");
-
-  private static final byte[] r2 = Bytes.toBytes("r2");
-
-  private static final byte[] f1 = Bytes.toBytes("f1");
-
-  private static final byte[] f2 = Bytes.toBytes("f2");
-
+    LogFactory.getLog(TestReplicationSourceManager.class);
   private static final TableName test =
       TableName.valueOf("test");
-
   private static final String slaveId = "1";
-
-  private static FileSystem fs;
-
-  private static Path oldLogDir;
-
-  private static Path logDir;
-
   private static CountDownLatch latch;
-
-  private static List<String> files = new ArrayList<String>();
-
-  private static DummyServer server;
+  private static List<String> files = new ArrayList<>();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -193,26 +156,6 @@ public class TestReplicationSourceManager {
   public static void tearDownAfterClass() throws Exception {
     manager.join();
     utility.shutdownMiniCluster();
-  }
-
-  @Rule
-  public TestName testName = new TestName();
-
-  private void cleanLogDir() throws IOException {
-    fs.delete(logDir, true);
-    fs.delete(oldLogDir, true);
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    LOG.info("Start " + testName.getMethodName());
-    cleanLogDir();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    LOG.info("End " + testName.getMethodName());
-    cleanLogDir();
   }
 
   @Test

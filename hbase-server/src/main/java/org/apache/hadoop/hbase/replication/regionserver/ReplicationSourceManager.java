@@ -205,7 +205,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param id id of the peer cluster
    * @param queueRecovered Whether this is a recovered queue
    */
-  public void cleanOldLogs(String key, String id, boolean queueRecovered) 
+  public void cleanOldLogs(String key, String id, boolean queueRecovered)
       throws ReplicationSourceWithoutPeerException {
     String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(key);
     if (queueRecovered) {
