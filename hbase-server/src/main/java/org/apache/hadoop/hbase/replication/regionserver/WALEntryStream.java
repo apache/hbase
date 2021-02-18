@@ -267,6 +267,7 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
     }
     closeReader();
     logQueue.remove();
+    setCurrentPath(null);
     setPosition(0);
     metrics.decrSizeOfLogQueue();
   }
