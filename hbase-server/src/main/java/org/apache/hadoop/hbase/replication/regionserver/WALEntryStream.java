@@ -252,6 +252,7 @@ class WALEntryStream implements Closeable {
     LOG.debug("Reached the end of log {}", currentPath);
     closeReader();
     logQueue.remove();
+    setCurrentPath(null);
     setPosition(0);
     metrics.decrSizeOfLogQueue();
   }
