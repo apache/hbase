@@ -252,6 +252,7 @@ class WALEntryStream implements Closeable {
     LOG.debug("EOF, closing {}", currentPath);
     closeReader();
     logQueue.remove();
+    setCurrentPath(null);
     setPosition(0);
     metrics.decrSizeOfLogQueue();
   }
