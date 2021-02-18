@@ -648,9 +648,6 @@ public class TestReplicationSource {
   }
 
   private MetricsReplicationSourceSource getSourceMetrics(String sourceId) {
-/*    MetricsReplicationSourceFactoryImpl factory =
-      (MetricsReplicationSourceFactoryImpl) CompatibilitySingletonFactory.getInstance(
-        MetricsReplicationSourceFactory.class);*/
     MetricsReplicationSourceFactory factory = CompatibilitySingletonFactory
       .getInstance(MetricsReplicationSourceFactory.class);
     return factory.getSource(sourceId);
