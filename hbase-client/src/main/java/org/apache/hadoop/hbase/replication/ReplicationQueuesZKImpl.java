@@ -25,19 +25,19 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -133,30 +133,29 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   @Override
   public void removeLog(String queueId, String filename)
-      throws ReplicationSourceWithoutPeerException {
+    throws ReplicationSourceWithoutPeerException {
     try {
       try {
         String znode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
         znode = ZKUtil.joinZNode(znode, filename);
         ZKUtil.deleteNode(this.zookeeper, znode);
-      } catch (KeeperException e) {
+      } catch (KeeperException.NoNodeException e) {
         // in case of no node exception we should not crash the region server
         // but instead check if the replication peer has been removed.
         // If so, we can throw here so that the source can terminate itself.
         // This situation can occur when the replication peer znodes has been
         // removed but the sources not terminated due to any miss from zk node delete watcher.
-        if (e instanceof KeeperException.NoNodeException) {
-          if (!doesPeerExist(queueId)) {
-            LOG.warn("Replication peer " + queueId + " has been removed", e);
-            throw new ReplicationSourceWithoutPeerException(
-              "Znodes for peer has been delete where as source is still active", e);
-          }
+        if (!doesPeerExist(queueId)) {
+          LOG.warn("Replication peer " + queueId + " has been removed", e);
+          throw new ReplicationSourceWithoutPeerException(
+            "Znodes for peer has been delete while a source is still active", e);
+        } else {
+          throw e;
         }
       }
     } catch (KeeperException ke) {
       this.abortable.abort(
-        "Failed to remove wal from queue (queueId=" + queueId + ", filename=" + filename + ")",
-        ke);
+        "Failed to remove wal from queue (queueId=" + queueId + ", filename=" + filename + ")", ke);
     }
   }
 
@@ -454,8 +453,9 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
         // add delete op for peer
         listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
 
-        if (LOG.isTraceEnabled())
+        if (LOG.isTraceEnabled()) {
           LOG.trace(" The multi list size is: " + listOfOps.size());
+        }
       }
       ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
 
@@ -534,7 +534,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   /**
-   * @param lockOwner
+   * @param lockOwner lock owner
    * @return Serialized protobuf of <code>lockOwner</code> with pb magic prefix prepended suitable
    *         for use as content of an replication lock during region server fail over.
    */

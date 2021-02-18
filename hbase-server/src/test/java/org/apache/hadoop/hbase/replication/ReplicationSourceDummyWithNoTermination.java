@@ -16,6 +16,7 @@
 package org.apache.hadoop.hbase.replication;
 
 public class ReplicationSourceDummyWithNoTermination extends ReplicationSourceDummy {
+
   @Override
   public void terminate(String reason) {
     // This is to block the zk listener to close the queues

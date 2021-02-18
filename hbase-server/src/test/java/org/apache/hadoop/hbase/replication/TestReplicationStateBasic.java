@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +57,6 @@ public abstract class TestReplicationStateBasic {
   protected static String KEY_TWO;
 
   // For testing when we try to replicate to ourself
-  protected String OUR_ID = "3";
   protected String OUR_KEY;
 
   protected static int zkTimeoutCount;
@@ -119,7 +122,6 @@ public abstract class TestReplicationStateBasic {
     // 3 replicators should exist
     assertEquals(3, rq1.getListOfReplicators().size());
     rq1.removeQueue("bogus");
-    rq1.removeLog("bogus", "bogus");
     rq1.removeAllQueues();
     assertNull(rq1.getAllQueues());
     assertEquals(0, rq1.getLogPosition("bogus", "bogus"));
@@ -164,6 +166,19 @@ public abstract class TestReplicationStateBasic {
     rq2.removeAllQueues();
 
     assertEquals(0, rq2.getListOfReplicators().size());
+  }
+
+  @Test
+  public void testLogRemovalWithNoZnode() throws ReplicationException {
+    rq1.init(server1);
+    Exception expectedException = null;
+    try {
+      rq1.removeLog("bogus", "bogus");
+    } catch (ReplicationException e) {
+      expectedException = e;
+    }
+
+    assertTrue(expectedException instanceof ReplicationSourceWithoutPeerException);
   }
 
   @Test

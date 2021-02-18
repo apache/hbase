@@ -70,41 +70,25 @@ import org.junit.rules.TestName;
 public class TestReplicationSourceWithoutReplicationZnodes {
 
   private static final Log LOG =
-    LogFactory.getLog(TestReplicationSourceManager.class);
+    LogFactory.getLog(TestReplicationSourceWithoutReplicationZnodes.class);
 
   private static Configuration conf;
-
   private static HBaseTestingUtility utility;
-
   private static Replication replication;
-
   private static ReplicationSourceManager manager;
-
   private static ZooKeeperWatcher zkw;
-
   private static HTableDescriptor htd;
-
   private static HRegionInfo hri;
 
   private static final byte[] r1 = Bytes.toBytes("r1");
-
   private static final byte[] r2 = Bytes.toBytes("r2");
-
   private static final byte[] f1 = Bytes.toBytes("f1");
-
   private static final byte[] f2 = Bytes.toBytes("f2");
-
-  private static final TableName test =
-    TableName.valueOf("test");
-
+  private static final TableName test = TableName.valueOf("test");
   private static final String slaveId = "1";
-
   private static FileSystem fs;
-
   private static Path oldLogDir;
-
   private static Path logDir;
-
   private static DummyServer server;
 
   @BeforeClass
@@ -194,7 +178,7 @@ public class TestReplicationSourceWithoutReplicationZnodes {
    * or a race condition between source deleting the log znode and zk watcher
    * terminating the source, we might get the NoNode exception. In that case, the right
    * thing is to terminate the replication source.
-   * @throws Exception
+   * @throws Exception throws exception
    */
   @Test
   public void testReplicationSourceRunningWithoutPeerZnodes() throws Exception {
@@ -215,18 +199,16 @@ public class TestReplicationSourceWithoutReplicationZnodes {
       edit, true);
     wal.sync(txid);
 
-
     wal.rollWriter();
     ZKUtil.deleteNodeRecursively(zkw, "/hbase/replication/peers/1");
     ZKUtil.deleteNodeRecursively(zkw, "/hbase/replication/rs/"+ server.getServerName() + "/1");
 
     ReplicationException exceptionThrown = null;
     try {
-      manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(), "1", 0, false,
-        false);
+      manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
+        "1", 0, false, false);
     } catch (ReplicationException e) {
       exceptionThrown = e;
-
     }
 
     Assert.assertTrue(exceptionThrown instanceof ReplicationSourceWithoutPeerException);

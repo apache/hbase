@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.replication;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * This exception is thrown when attempts to read an HFile fail due to corruption or truncation
- * issues.
+ * This exception is thrown when the replication source is running with no
+ * corresponding peer. This can due to race condition between PeersWatcher
+ * zk listerner and source trying to remove the queues, or if zk listener for
+ * delete node was never invoked for any reason. See HBASE-25583
  */
 @InterfaceAudience.Private
 public class ReplicationSourceWithoutPeerException extends ReplicationException {

@@ -159,7 +159,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
    * @param clusterId unique UUID for the cluster
    * @param replicationEndpoint the replication endpoint implementation
    * @param metrics metrics for replication source
-   * @throws IOException
+   * @throws IOException IO Exception
    */
   @Override
   public void init(final Configuration conf, final FileSystem fs,
@@ -442,7 +442,9 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   @Override
   public Path getCurrentPath() {
     for (ReplicationSourceShipperThread worker : workerThreads.values()) {
-      if (worker.getCurrentPath() != null) return worker.getCurrentPath();
+      if (worker.getCurrentPath() != null) {
+        return worker.getCurrentPath();
+      }
     }
     return null;
   }
@@ -798,7 +800,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           this.replicationQueueInfo.isQueueRecovered(), false);
         lastLoggedPosition = lastReadPosition;
       } catch (ReplicationSourceWithoutPeerException re) {
-          this.terminate("Replication peer is removed and source should terminate", re);
+        this.terminate("Replication peer is removed and source should terminate", re);
       }
     }
 
@@ -981,7 +983,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
 
     /**
      * Set the worker state
-     * @param state
+     * @param state the state of the wal reader
      */
     public void setWorkerState(WorkerState state) {
       this.state = state;

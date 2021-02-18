@@ -126,14 +126,14 @@ public class ReplicationSourceManager implements ReplicationListener {
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
    * @param replicationQueues the interface for manipulating replication queues
-   * @param replicationPeers
-   * @param replicationTracker
+   * @param replicationPeers the replication peers maintenance class
+   * @param replicationTracker the replication tracker to track the states
    * @param conf the configuration to use
    * @param server the server for this region server
    * @param fs the file system to use
    * @param logDir the directory that contains all wal directories of live RSs
    * @param oldLogDir the directory where old logs are archived
-   * @param clusterId
+   * @param clusterId the cluster id of the source cluster
    */
   public ReplicationSourceManager(final ReplicationQueues replicationQueues,
       final ReplicationPeers replicationPeers, final ReplicationTracker replicationTracker,
@@ -182,7 +182,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * wal it belongs to and will log, for this region server, the current
    * position. It will also clean old logs from the queue.
    * @param log Path to the log currently being replicated from
-   * replication status in zookeeper. It will also delete older entries.
+   *            replication status in zookeeper. It will also delete older entries.
    * @param id id of the peer cluster
    * @param position current location in the log
    * @param queueRecovered indicates if this queue comes from another region server
@@ -224,7 +224,7 @@ public class ReplicationSourceManager implements ReplicationListener {
         }
       }
     }
- }
+  }
 
   private void cleanOldLogs(SortedSet<String> wals, String key, String id)
       throws ReplicationSourceWithoutPeerException {
@@ -270,7 +270,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * need to enqueue the latest log of each wal group and do replication
    * @param id the id of the peer cluster
    * @return the source that was created
-   * @throws IOException
+   * @throws IOException IO Exception
    */
   protected ReplicationSourceInterface addSource(String id) throws IOException,
       ReplicationException {
@@ -368,7 +368,7 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   /**
    * Get the normal source for a given peer
-   * @param peerId
+   * @param peerId the replication peer Id
    * @return the normal source for the give peer if it exists, otherwise null.
    */
   public ReplicationSourceInterface getSource(String peerId) {
@@ -405,7 +405,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Check and enqueue the given log to the correct source. If there's still no source for the
    * group to which the given log belongs, create one
    * @param logPath the log path to check and enqueue
-   * @throws IOException
+   * @throws IOException IO Exception
    */
   private void recordLog(Path logPath) throws IOException {
     String logName = logPath.getName();
@@ -470,7 +470,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param server the server object for this region server
    * @param peerId the id of the peer cluster
    * @return the created source
-   * @throws IOException
+   * @throws IOException IO Exception
    */
   protected ReplicationSourceInterface getReplicationSource(final Configuration conf,
       final FileSystem fs, final ReplicationSourceManager manager,
@@ -526,7 +526,8 @@ public class ReplicationSourceManager implements ReplicationListener {
       clusterId, replicationEndpoint, metrics);
 
     // init replication endpoint
-    replicationEndpoint.init(new ReplicationEndpoint.Context(conf, replicationPeer.getConfiguration(),
+    replicationEndpoint.init(new ReplicationEndpoint.Context(
+      conf, replicationPeer.getConfiguration(),
       fs, peerId, clusterId, replicationPeer, metrics, tableDescriptors, server));
 
     return src;
@@ -538,7 +539,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * znodes and finally will delete the old znodes.
    *
    * It creates one old source for any type of source of the old rs.
-   * @param rsZnode
+   * @param rsZnode znode for region server from where to transfer the queues
    */
   private void transferQueues(String rsZnode) {
     NodeFailoverWorker transfer =
@@ -667,7 +668,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     private final UUID clusterId;
 
     /**
-     * @param rsZnode
+     * @param rsZnode znode for dead region server
      */
     public NodeFailoverWorker(String rsZnode) {
       this(rsZnode, replicationQueues, replicationPeers, ReplicationSourceManager.this.clusterId);
@@ -823,7 +824,9 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Get the ReplicationPeers used by this ReplicationSourceManager
    * @return the ReplicationPeers used by this ReplicationSourceManager
    */
-  public ReplicationPeers getReplicationPeers() {return this.replicationPeers;}
+  public ReplicationPeers getReplicationPeers() {
+    return this.replicationPeers;
+  }
 
   /**
    * Get a string representation of all the sources' metrics
