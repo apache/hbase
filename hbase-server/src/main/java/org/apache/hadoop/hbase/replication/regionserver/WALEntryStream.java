@@ -63,7 +63,8 @@ class WALEntryStream implements Closeable {
   private long currentPositionOfEntry = 0;
   // position after reading current entry
   private long currentPositionOfReader = 0;
-  private final PriorityBlockingQueue<Path> logQueue;
+  private final ReplicationSourceLogQueue logQueue;
+  private final String walGroupId;
   private final FileSystem fs;
   private final Configuration conf;
   private final WALFileLengthProvider walFileLengthProvider;
@@ -81,9 +82,9 @@ class WALEntryStream implements Closeable {
    * @param metrics the replication metrics
    * @throws IOException
    */
-  public WALEntryStream(PriorityBlockingQueue<Path> logQueue, Configuration conf,
+  public WALEntryStream(ReplicationSourceLogQueue logQueue, Configuration conf,
       long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
-      MetricsSource metrics) throws IOException {
+      MetricsSource metrics, String walGroupId) throws IOException {
     this.logQueue = logQueue;
     this.fs = CommonFSUtils.getWALFileSystem(conf);
     this.conf = conf;
@@ -91,6 +92,7 @@ class WALEntryStream implements Closeable {
     this.walFileLengthProvider = walFileLengthProvider;
     this.serverName = serverName;
     this.metrics = metrics;
+    this.walGroupId = walGroupId;
   }
 
   /**
@@ -251,10 +253,9 @@ class WALEntryStream implements Closeable {
   private void dequeueCurrentLog() throws IOException {
     LOG.debug("EOF, closing {}", currentPath);
     closeReader();
-    logQueue.remove();
+    logQueue.remove(walGroupId);
     setCurrentPath(null);
     setPosition(0);
-    metrics.decrSizeOfLogQueue();
   }
 
   /**
@@ -301,7 +302,8 @@ class WALEntryStream implements Closeable {
 
   // open a reader on the next log in queue
   private boolean openNextLog() throws IOException {
-    Path nextPath = logQueue.peek();
+    PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
+    Path nextPath = queue.peek();
     if (nextPath != null) {
       openReader(nextPath);
       if (reader != null) {

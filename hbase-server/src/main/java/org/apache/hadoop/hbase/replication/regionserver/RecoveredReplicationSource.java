@@ -57,13 +57,13 @@ public class RecoveredReplicationSource extends ReplicationSource {
   }
 
   @Override
-  protected RecoveredReplicationSourceShipper createNewShipper(String walGroupId,
-      PriorityBlockingQueue<Path> queue) {
-    return new RecoveredReplicationSourceShipper(conf, walGroupId, queue, this, queueStorage);
+  protected RecoveredReplicationSourceShipper createNewShipper(String walGroupId) {
+    return new RecoveredReplicationSourceShipper(conf, walGroupId, logQueue, this, queueStorage);
   }
 
-  public void locateRecoveredPaths(PriorityBlockingQueue<Path> queue) throws IOException {
+  public void locateRecoveredPaths(String walGroupId) throws IOException {
     boolean hasPathChanged = false;
+    PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
     PriorityBlockingQueue<Path> newPaths = new PriorityBlockingQueue<Path>(queueSizePerGroup,
       new AbstractFSWALProvider.WALStartTimeComparator());
     pathsLoop: for (Path path : queue) {
@@ -116,9 +116,9 @@ public class RecoveredReplicationSource extends ReplicationSource {
       // put the correct locations in the queue
       // since this is a recovered queue with no new incoming logs,
       // there shouldn't be any concurrency issues
-      queue.clear();
+      logQueue.clear(walGroupId);
       for (Path path : newPaths) {
-        queue.add(path);
+        logQueue.enqueueLog(path, walGroupId);
       }
     }
   }

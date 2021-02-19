@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTi
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetries;
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.LongAccumulator;
 
 import org.apache.hadoop.conf.Configuration;
@@ -56,7 +55,7 @@ public class ReplicationSourceShipper extends Thread {
 
   private final Configuration conf;
   protected final String walGroupId;
-  protected final PriorityBlockingQueue<Path> queue;
+  protected final ReplicationSourceLogQueue logQueue;
   private final ReplicationSource source;
 
   // Last position in the log that we sent to ZooKeeper
@@ -77,10 +76,10 @@ public class ReplicationSourceShipper extends Thread {
   private final int shipEditsTimeout;
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId,
-      PriorityBlockingQueue<Path> queue, ReplicationSource source) {
+      ReplicationSourceLogQueue logQueue, ReplicationSource source) {
     this.conf = conf;
     this.walGroupId = walGroupId;
-    this.queue = queue;
+    this.logQueue = logQueue;
     this.source = source;
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second

@@ -49,6 +49,8 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   public static final String SOURCE_COMPLETED_LOGS = "source.completedLogs";
   public static final String SOURCE_COMPLETED_RECOVERY_QUEUES = "source.completedRecoverQueues";
   public static final String SOURCE_FAILED_RECOVERY_QUEUES = "source.failedRecoverQueues";
+  /* Used to track the age of oldest wal in ms since its creation time */
+  String OLDEST_WAL_AGE = "source.oldestWalAge";
 
   void setLastShippedAge(long age);
   void incrSizeOfLogQueue(int size);
@@ -76,4 +78,6 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   long getWALEditsRead();
   long getShippedOps();
   long getEditsFiltered();
+  void setOldestWalAge(long age);
+  long getOldestWalAge();
 }
