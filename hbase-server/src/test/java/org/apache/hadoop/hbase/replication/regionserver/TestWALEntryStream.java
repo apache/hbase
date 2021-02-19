@@ -26,6 +26,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALRead
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -109,9 +111,10 @@ public class TestWALEntryStream {
       new HRegionInfo(tableName, HConstants.EMPTY_START_ROW, HConstants.LAST_ROW, false);
   private static final HTableDescriptor htd = new HTableDescriptor(tableName);
   private static NavigableMap<byte[], Integer> scopes;
+  private final String fakeWalGroupId = "fake-wal-group-id";
 
   private WAL log;
-  PriorityBlockingQueue<Path> walQueue;
+  ReplicationSourceLogQueue logQueue;
   private PathWatcher pathWatcher;
 
   @Rule
@@ -139,7 +142,8 @@ public class TestWALEntryStream {
 
   @Before
   public void setUp() throws Exception {
-    walQueue = new PriorityBlockingQueue<>();
+    ReplicationSource source = mock(ReplicationSource.class);
+    logQueue = new ReplicationSourceLogQueue(conf, new MetricsSource("2"), source);
     List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     pathWatcher = new PathWatcher();
     listeners.add(pathWatcher);
@@ -174,7 +178,7 @@ public class TestWALEntryStream {
           log.rollWriter();
 
           try (WALEntryStream entryStream =
-              new WALEntryStream(walQueue, fs, conf, new MetricsSource("1"))) {
+              new WALEntryStream(logQueue, fs, conf, new MetricsSource("1"), fakeWalGroupId)) {
             int i = 0;
             for (WAL.Entry e : entryStream) {
               assertNotNull(e);
@@ -202,7 +206,7 @@ public class TestWALEntryStream {
 
     long oldPos;
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, new MetricsSource("1"), fakeWalGroupId)) {
       // There's one edit in the log, read it. Reading past it needs to throw exception
       assertTrue(entryStream.hasNext());
       WAL.Entry entry = entryStream.next();
@@ -220,7 +224,7 @@ public class TestWALEntryStream {
     appendToLog();
 
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, oldPos, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, oldPos, new MetricsSource("1"), fakeWalGroupId)) {
       // Read the newly added entry, make sure we made progress
       WAL.Entry entry = entryStream.next();
       assertNotEquals(oldPos, entryStream.getPosition());
@@ -234,7 +238,7 @@ public class TestWALEntryStream {
     appendToLog();
 
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, oldPos, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, oldPos, new MetricsSource("1"), fakeWalGroupId)) {
       WAL.Entry entry = entryStream.next();
       assertNotEquals(oldPos, entryStream.getPosition());
       assertNotNull(entry);
@@ -259,7 +263,7 @@ public class TestWALEntryStream {
     appendToLog("1");
     appendToLog("2");// 2
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, new MetricsSource("1"), fakeWalGroupId)) {
       assertEquals("1", getRow(entryStream.next()));
 
       appendToLog("3"); // 3 - comes in after reader opened
@@ -267,12 +271,12 @@ public class TestWALEntryStream {
       appendToLog("4"); // 4 - this append is in the rolled log
 
       assertEquals("2", getRow(entryStream.next()));
-      assertEquals(2, walQueue.size()); // we should not have dequeued yet since there's still an
+      assertEquals(2, getQueue().size()); // we should not have dequeued yet since there's still an
                                         // entry in first log
       assertEquals("3", getRow(entryStream.next())); // if implemented improperly, this would be 4
                                                      // and 3 would be skipped
       assertEquals("4", getRow(entryStream.next())); // 4
-      assertEquals(1, walQueue.size()); // now we've dequeued and moved on to next log properly
+      assertEquals(1, getQueue().size()); // now we've dequeued and moved on to next log properly
       assertFalse(entryStream.hasNext());
     }
   }
@@ -284,7 +288,7 @@ public class TestWALEntryStream {
   public void testNewEntriesWhileStreaming() throws Exception {
     appendToLog("1");
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, 0, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, 0, new MetricsSource("1"), fakeWalGroupId)) {
       entryStream.next(); // we've hit the end of the stream at this point
 
       // some new entries come in while we're streaming
@@ -307,7 +311,7 @@ public class TestWALEntryStream {
     long lastPosition = 0;
     appendToLog("1");
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, 0, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, 0, new MetricsSource("1"), fakeWalGroupId)) {
       entryStream.next(); // we've hit the end of the stream at this point
       appendToLog("2");
       appendToLog("3");
@@ -315,11 +319,12 @@ public class TestWALEntryStream {
     }
     // next stream should picks up where we left off
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, lastPosition, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, lastPosition, new MetricsSource("1"),
+        fakeWalGroupId)) {
       assertEquals("2", getRow(entryStream.next()));
       assertEquals("3", getRow(entryStream.next()));
       assertFalse(entryStream.hasNext()); // done
-      assertEquals(1, walQueue.size());
+      assertEquals(1, getQueue().size());
     }
   }
 
@@ -333,13 +338,15 @@ public class TestWALEntryStream {
     appendEntriesToLog(3);
     // read only one element
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, lastPosition, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, lastPosition, new MetricsSource("1"),
+        fakeWalGroupId)) {
       entryStream.next();
       lastPosition = entryStream.getPosition();
     }
     // there should still be two more entries from where we left off
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, lastPosition, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, lastPosition, new MetricsSource("1"),
+        fakeWalGroupId)) {
       assertNotNull(entryStream.next());
       assertNotNull(entryStream.next());
       assertFalse(entryStream.hasNext());
@@ -350,7 +357,7 @@ public class TestWALEntryStream {
   @Test
   public void testEmptyStream() throws Exception {
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, 0, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, 0, new MetricsSource("1"), fakeWalGroupId)) {
       assertFalse(entryStream.hasNext());
     }
   }
@@ -361,7 +368,7 @@ public class TestWALEntryStream {
     // get ending position
     long position;
     try (WALEntryStream entryStream =
-        new WALEntryStream(walQueue, fs, conf, new MetricsSource("1"))) {
+        new WALEntryStream(logQueue, fs, conf, new MetricsSource("1"), fakeWalGroupId)) {
       entryStream.next();
       entryStream.next();
       entryStream.next();
@@ -374,9 +381,9 @@ public class TestWALEntryStream {
     when(source.isPeerEnabled()).thenReturn(true);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     ReplicationSourceWALReaderThread batcher =
-            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(),walQueue, 0,
-                    fs, conf, getDummyFilter(), new MetricsSource("1"), source);
-    Path walPath = walQueue.peek();
+            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(),logQueue, 0,
+                    fs, conf, getDummyFilter(), new MetricsSource("1"), source, fakeWalGroupId);
+    Path walPath = getQueue().peek();
     batcher.start();
     WALEntryBatch entryBatch = batcher.take();
 
@@ -400,8 +407,13 @@ public class TestWALEntryStream {
     appendEntriesToLog(2);
 
     long position;
-    try (WALEntryStream entryStream = new WALEntryStream(new PriorityBlockingQueue<>(walQueue),
-            fs, conf, new MetricsSource("1"))) {
+    ReplicationSourceLogQueue tempQueue = new ReplicationSourceLogQueue(conf,
+        getMockMetrics(), mock(ReplicationSource.class));
+    for (Path path : getQueue()) {
+      tempQueue.enqueueLog(path, fakeWalGroupId);
+    }
+    try (WALEntryStream entryStream = new WALEntryStream(tempQueue,
+            fs, conf, new MetricsSource("1"), fakeWalGroupId)) {
       entryStream.next();
       entryStream.next();
       entryStream.next();
@@ -416,9 +428,9 @@ public class TestWALEntryStream {
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     ReplicationSourceWALReaderThread reader =
             new ReplicationSourceWALReaderThread(mockSourceManager, getRecoveredQueueInfo(),
-              walQueue, 0, fs, conf, getDummyFilter(),
-              new MetricsSource("1"), source);
-    Path walPath = walQueue.toArray(new Path[2])[1];
+            logQueue, 0, fs, conf, getDummyFilter(),
+            new MetricsSource("1"), source, fakeWalGroupId);
+    Path walPath = getQueue().toArray(new Path[2])[1];
     reader.start();
     WALEntryBatch entryBatch = reader.take();
 
@@ -476,8 +488,8 @@ public class TestWALEntryStream {
     when(source.isPeerEnabled()).thenReturn(true);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     final ReplicationSourceWALReaderThread reader =
-            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
-                    0, fs, conf, filter, new MetricsSource("1"), source);
+            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), logQueue,
+                    0, fs, conf, filter, new MetricsSource("1"), source, fakeWalGroupId);
     reader.start();
 
     WALEntryBatch entryBatch = reader.take();
@@ -504,7 +516,7 @@ public class TestWALEntryStream {
 
     appendToLogPlus(3, notReplicatedCf);
 
-    Path firstWAL = walQueue.peek();
+    Path firstWAL = getQueue().peek();
     final long eof = getPosition(firstWAL);
 
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
@@ -512,8 +524,8 @@ public class TestWALEntryStream {
     when(source.isPeerEnabled()).thenReturn(true);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     final ReplicationSourceWALReaderThread reader =
-            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
-                    0, fs, conf, filter, new MetricsSource("1"), source);
+            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), logQueue,
+                    0, fs, conf, filter, new MetricsSource("1"), source, fakeWalGroupId);
     reader.start();
 
     // reader won't put any batch, even if EOF reached.
@@ -529,21 +541,25 @@ public class TestWALEntryStream {
     // should get empty batch with current wal position, after wal rolled
     WALEntryBatch entryBatch = reader.take();
 
-    Path lastWAL= walQueue.peek();
+    Path lastWAL= getQueue().peek();
     long positionToBeLogged = getPosition(lastWAL);
 
     assertNotNull(entryBatch);
     assertTrue(entryBatch.isEmpty());
-    assertEquals(1, walQueue.size());
+    assertEquals(1, getQueue().size());
     assertNotEquals(firstWAL, entryBatch.getLastWalPath());
     assertEquals(lastWAL, entryBatch.getLastWalPath());
     assertEquals(positionToBeLogged, entryBatch.getLastWalPosition());
   }
 
   private long getPosition(Path walPath) throws IOException {
+    ReplicationSource source = mock(ReplicationSource.class);
+    ReplicationSourceLogQueue tempQueue =
+        new ReplicationSourceLogQueue(conf, getMockMetrics(), source);
+    String walPrefix = DefaultWALProvider.getWALPrefixFromWALName(walPath.getName());
+    tempQueue.enqueueLog(walPath, walPrefix);
     WALEntryStream entryStream =
-            new WALEntryStream(new PriorityBlockingQueue<>(Collections.singletonList(walPath)),
-                    fs, conf, new MetricsSource("1"));
+            new WALEntryStream(tempQueue, fs, conf, getMockMetrics(), walPrefix);
     entryStream.hasNext();
     return entryStream.getPosition();
   }
@@ -628,8 +644,8 @@ public class TestWALEntryStream {
     Path currentPath;
 
     @Override
-    public void preLogRoll(Path oldPath, Path newPath) throws IOException {
-      walQueue.add(newPath);
+    public void preLogRoll(Path oldPath, Path newPath) {
+      logQueue.enqueueLog(newPath, fakeWalGroupId);
       currentPath = newPath;
     }
   }
@@ -644,7 +660,7 @@ public class TestWALEntryStream {
     // get ending position
     long position;
     try (WALEntryStream entryStream =
-      new WALEntryStream(walQueue, fs, conf, 0, new MetricsSource("1"))) {
+      new WALEntryStream(logQueue, fs, conf, 0, new MetricsSource("1"), fakeWalGroupId)) {
       entryStream.next();
       entryStream.next();
       entryStream.next();
@@ -652,7 +668,7 @@ public class TestWALEntryStream {
     }
 
     // start up a reader
-    Path walPath = walQueue.peek();
+    Path walPath = getQueue().peek();
     ReplicationSource source = Mockito.mock(ReplicationSource.class);
     when(source.getSourceMetrics()).thenReturn(new MetricsSource("1"));
 
@@ -667,8 +683,8 @@ public class TestWALEntryStream {
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     final ReplicationSourceWALReaderThread reader =
-      new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
-        0, fs, conf, getDummyFilter(), new MetricsSource("1"), source);
+      new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), logQueue,
+        0, fs, conf, getDummyFilter(), new MetricsSource("1"), source, fakeWalGroupId);
 
     reader.start();
     Future<WALEntryBatch> future =
@@ -701,13 +717,11 @@ public class TestWALEntryStream {
     */
   @Test
   public void testEOFExceptionForRecoveredQueue() throws Exception {
-    PriorityBlockingQueue<Path> queue = new PriorityBlockingQueue<>();
     // Create a 0 length log.
-    Path emptyLog = new Path("emptyLog");
+    Path emptyLog = new Path("emptyLog.1");
     FSDataOutputStream fsdos = fs.create(emptyLog);
     fsdos.close();
     assertEquals(0, fs.getFileStatus(emptyLog).getLen());
-    queue.add(emptyLog);
 
     ReplicationSource source = Mockito.mock(ReplicationSource.class);
 
@@ -720,14 +734,29 @@ public class TestWALEntryStream {
     // Override the max retries multiplier to fail fast.
     conf.setInt("replication.source.maxretriesmultiplier", 1);
     conf.setBoolean("replication.source.eof.autorecovery", true);
+
+    ReplicationSourceLogQueue localLogQueue =
+        new ReplicationSourceLogQueue(conf, getMockMetrics(), source);
+    localLogQueue.enqueueLog(emptyLog, fakeWalGroupId);
     // Create a reader thread.
     ReplicationSourceWALReaderThread reader =
-      new ReplicationSourceWALReaderThread(mockSourceManager, getRecoveredQueueInfo(),
-        queue, 0, fs, conf, getDummyFilter(),
-        new MetricsSource("1"), (ReplicationSource) source);
+        new ReplicationSourceWALReaderThread(mockSourceManager, getRecoveredQueueInfo(),
+        localLogQueue, 0, fs, conf, getDummyFilter(), getMockMetrics(), source, fakeWalGroupId);
     reader.run();
     // ReplicationSourceWALReaderThread#handleEofException method will
     // remove empty log from logQueue.
-    assertEquals(0, queue.size());
+    assertEquals(0, localLogQueue.getQueueSize(fakeWalGroupId));
+  }
+
+  private PriorityBlockingQueue<Path> getQueue() {
+    return logQueue.getQueue(fakeWalGroupId);
+  }
+
+  private MetricsSource getMockMetrics() {
+    MetricsSource source = mock(MetricsSource.class);
+    doNothing().when(source).incrSizeOfLogQueue();
+    doNothing().when(source).decrSizeOfLogQueue();
+    doNothing().when(source).setOldestWalAge(Mockito.anyInt());
+    return source;
   }
 }

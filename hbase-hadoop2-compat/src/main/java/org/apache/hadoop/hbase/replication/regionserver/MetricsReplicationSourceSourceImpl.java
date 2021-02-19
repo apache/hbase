@@ -40,6 +40,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String logReadInBytesKey;
   private final String shippedHFilesKey;
   private final String sizeOfHFileRefsQueueKey;
+  private final String oldestWalAgeKey;
 
   private final MutableHistogram ageOfLastShippedOpHist;
   private final MutableGaugeLong sizeOfLogQueueGauge;
@@ -67,6 +68,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableFastCounter repeatedFileBytes;
   private final MutableFastCounter completedWAL;
   private final MutableFastCounter completedRecoveryQueue;
+  private final MutableGaugeLong oldestWalAge;
 
   public MetricsReplicationSourceSourceImpl(MetricsReplicationSourceImpl rms, String id) {
     this.rms = rms;
@@ -126,6 +128,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     completedRecoveryKey = this.keyPrefix + "completedRecoverQueues";
     completedRecoveryQueue = rms.getMetricsRegistry().getCounter(completedRecoveryKey, 0L);
+
+    oldestWalAgeKey = this.keyPrefix + "oldestWalAge";
+    oldestWalAge = rms.getMetricsRegistry().getGauge(oldestWalAgeKey, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -191,6 +196,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     rms.removeMetric(repeatedBytesKey);
     rms.removeMetric(completedLogsKey);
     rms.removeMetric(completedRecoveryKey);
+    rms.removeMetric(oldestWalAgeKey);
   }
 
   @Override
@@ -255,6 +261,14 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override
   public void incrFailedRecoveryQueue() {/*no op*/}
+
+  @Override public void setOldestWalAge(long age) {
+    oldestWalAge.set(age);
+  }
+
+  @Override public long getOldestWalAge() {
+    return oldestWalAge.value();
+  }
 
   @Override
   public void init() {
