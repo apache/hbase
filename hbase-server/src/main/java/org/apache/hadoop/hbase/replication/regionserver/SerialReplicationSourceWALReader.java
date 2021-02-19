@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,9 +43,9 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
   private final SerialReplicationChecker checker;
 
   public SerialReplicationSourceWALReader(FileSystem fs, Configuration conf,
-      PriorityBlockingQueue<Path> logQueue, long startPosition, WALEntryFilter filter,
-      ReplicationSource source) {
-    super(fs, conf, logQueue, startPosition, filter, source);
+      ReplicationSourceLogQueue logQueue, long startPosition, WALEntryFilter filter,
+      ReplicationSource source, String walGroupId) {
+    super(fs, conf, logQueue, startPosition, filter, source, walGroupId);
     checker = new SerialReplicationChecker(conf, source);
   }
 
