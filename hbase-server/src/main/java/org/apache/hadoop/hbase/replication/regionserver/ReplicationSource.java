@@ -463,7 +463,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     return 0;
   }
 
-  private boolean isSourceActive() {
+  public boolean isSourceActive() {
     return !this.stopper.isStopped() && this.sourceRunning;
   }
 
@@ -800,7 +800,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           this.replicationQueueInfo.isQueueRecovered(), false);
         lastLoggedPosition = lastReadPosition;
       } catch (ReplicationSourceWithoutPeerException re) {
-        this.terminate("Replication peer is removed and source should terminate", re);
+        source.terminate("Replication peer is removed and source should terminate", re);
       }
     }
 
