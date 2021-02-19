@@ -28,6 +28,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -104,7 +105,7 @@ public class TestReplicationSource {
   private static Configuration conf = TEST_UTIL.getConfiguration();
 
   /**
-   * @throws java.lang.Exception
+   * @throws java.lang.Exception exception
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -112,9 +113,13 @@ public class TestReplicationSource {
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
     Path rootDir = TEST_UTIL.createRootDir();
     oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    if (FS.exists(oldLogDir)) FS.delete(oldLogDir, true);
+    if (FS.exists(oldLogDir)) {
+      FS.delete(oldLogDir, true);
+    }
     logDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
-    if (FS.exists(logDir)) FS.delete(logDir, true);
+    if (FS.exists(logDir)) {
+      FS.delete(logDir, true);
+    }
   }
 
   @Before
@@ -154,7 +159,7 @@ public class TestReplicationSource {
    * Sanity check that we can move logs around while we are reading
    * from them. Should this test fail, ReplicationSource would have a hard
    * time reading logs that are being archived.
-   * @throws Exception
+   * @throws Exception exception
    */
   @Test
   public void testLogMoving() throws Exception{
@@ -275,6 +280,14 @@ public class TestReplicationSource {
       when(peers.getStatusOfPeer(anyString())).thenReturn(true);
       when(context.getReplicationPeer()).thenReturn(peer);
       when(manager.getTotalBufferUsed()).thenReturn(totalBufferUsed);
+    }
+
+    // source manager throws the exception while cleaning logs
+    private void setReplicationSourceWithoutPeerException()
+      throws ReplicationSourceWithoutPeerException {
+      doThrow(new ReplicationSourceWithoutPeerException("No peer")).when(manager)
+        .logPositionAndCleanOldLogs(Mockito.<Path>anyObject(), Mockito.anyString(),
+          Mockito.anyLong(), Mockito.anyBoolean(), Mockito.anyBoolean());
     }
 
     ReplicationSource createReplicationSourceWithMocks(ReplicationEndpoint endpoint)
@@ -468,6 +481,65 @@ public class TestReplicationSource {
               anyBoolean(), anyBoolean());
     assertThat(pathCaptor.getValue(), is(log2));
     assertThat(positionCaptor.getValue(), is(pos));
+  }
+
+  /**
+   * There can be a scenario of replication peer removed but the replication source
+   * still running since termination of source depends upon zk listener and there
+   * can a rare scenario where zk listener might not get invoked or get delayed.
+   * In that case, replication source manager will throw since it won't be able
+   * to remove the znode while removing the log. We should terminate the source
+   * in that case. See HBASE-25583
+   * @throws Exception any exception
+   */
+  @Test
+  public void testReplicationSourceTerminationWhenNoZnodeForPeerAndQueues() throws Exception {
+    Mocks mocks = new Mocks();
+    mocks.setReplicationSourceWithoutPeerException();
+    // set table cfs to filter all cells out
+    final TableName replicatedTable = TableName.valueOf("replicated_table");
+    final Map<TableName, List<String>> cfs =
+      Collections.singletonMap(replicatedTable, Collections.<String>emptyList());
+    when(mocks.peer.getTableCFs()).thenReturn(cfs);
+
+    // Append 3 entries in a log
+    final Path log1 = new Path(logDir, "log.1");
+    WALProvider.Writer writer1 = WALFactory.createWALWriter(FS, log1, TEST_UTIL.getConfiguration());
+    appendEntries(writer1, 3);
+
+    // Replication end point with no filter
+    final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest() {
+      @Override
+      public WALEntryFilter getWALEntryfilter() {
+        return null;
+      }
+    };
+
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint);
+    source.run();
+    source.enqueueLog(log1);
+
+    // Wait for source to replicate
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return endpoint.replicateCount.get() == 1;
+      }
+    });
+
+    // Wait for all the entries to get replicated
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return endpoint.lastEntries.size() == 3;
+      }
+    });
+
+    // After that the source should be terminated
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        // wait until reader read all cells
+        return !source.isSourceActive();
+      }
+    });
   }
 
   /**

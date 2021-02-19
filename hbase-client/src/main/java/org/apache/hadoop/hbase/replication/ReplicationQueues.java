@@ -59,7 +59,7 @@ public interface ReplicationQueues {
    * @param queueId a String that identifies the queue.
    * @param filename name of the WAL
    */
-  void removeLog(String queueId, String filename);
+  void removeLog(String queueId, String filename) throws ReplicationSourceWithoutPeerException;
 
   /**
    * Set the current position for a specific WAL in a given queue.

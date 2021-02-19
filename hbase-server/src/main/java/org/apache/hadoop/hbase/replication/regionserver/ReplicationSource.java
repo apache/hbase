@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.ReplicationSourceWithoutPeerException;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReaderThread.WALEntryBatch;
@@ -158,7 +159,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
    * @param clusterId unique UUID for the cluster
    * @param replicationEndpoint the replication endpoint implementation
    * @param metrics metrics for replication source
-   * @throws IOException
+   * @throws IOException IO Exception
    */
   @Override
   public void init(final Configuration conf, final FileSystem fs,
@@ -441,7 +442,9 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   @Override
   public Path getCurrentPath() {
     for (ReplicationSourceShipperThread worker : workerThreads.values()) {
-      if (worker.getCurrentPath() != null) return worker.getCurrentPath();
+      if (worker.getCurrentPath() != null) {
+        return worker.getCurrentPath();
+      }
     }
     return null;
   }
@@ -460,7 +463,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     return 0;
   }
 
-  private boolean isSourceActive() {
+  public boolean isSourceActive() {
     return !this.stopper.isStopped() && this.sourceRunning;
   }
 
@@ -792,9 +795,13 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     private void updateLogPosition(long lastReadPosition) {
-      manager.logPositionAndCleanOldLogs(lastLoggedPath, peerClusterZnode, lastReadPosition,
-        this.replicationQueueInfo.isQueueRecovered(), false);
-      lastLoggedPosition = lastReadPosition;
+      try {
+        manager.logPositionAndCleanOldLogs(lastLoggedPath, peerClusterZnode, lastReadPosition,
+          this.replicationQueueInfo.isQueueRecovered(), false);
+        lastLoggedPosition = lastReadPosition;
+      } catch (ReplicationSourceWithoutPeerException re) {
+        source.terminate("Replication peer is removed and source should terminate", re);
+      }
     }
 
     public void startup() {
@@ -976,7 +983,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
 
     /**
      * Set the worker state
-     * @param state
+     * @param state the state of the wal reader
      */
     public void setWorkerState(WorkerState state) {
       this.state = state;

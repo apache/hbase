@@ -47,9 +47,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -58,11 +56,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
@@ -78,6 +74,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
+import org.apache.hadoop.hbase.replication.regionserver.helper.DummyServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,61 +83,25 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.junit.After;
+
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
 @Category(MediumTests.class)
-public class TestReplicationSourceManager {
+public class TestReplicationSourceManager extends TestReplicationSourceBase {
 
   private static final Log LOG =
-      LogFactory.getLog(TestReplicationSourceManager.class);
-
-  private static Configuration conf;
-
-  private static HBaseTestingUtility utility;
-
-  private static Replication replication;
-
-  private static ReplicationSourceManager manager;
-
-  private static ZooKeeperWatcher zkw;
-
-  private static HTableDescriptor htd;
-
-  private static HRegionInfo hri;
-
-  private static final byte[] r1 = Bytes.toBytes("r1");
-
-  private static final byte[] r2 = Bytes.toBytes("r2");
-
-  private static final byte[] f1 = Bytes.toBytes("f1");
-
-  private static final byte[] f2 = Bytes.toBytes("f2");
-
+    LogFactory.getLog(TestReplicationSourceManager.class);
   private static final TableName test =
       TableName.valueOf("test");
-
   private static final String slaveId = "1";
-
-  private static FileSystem fs;
-
-  private static Path oldLogDir;
-
-  private static Path logDir;
-
   private static CountDownLatch latch;
-
-  private static List<String> files = new ArrayList<String>();
+  private static List<String> files = new ArrayList<>();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -174,7 +135,8 @@ public class TestReplicationSourceManager {
         HConstants.HREGION_OLDLOGDIR_NAME);
     logDir = new Path(utility.getDataTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
-    replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
+    server = new DummyServer(conf, "example.hostname.com", zkw);
+    replication = new Replication(server, fs, logDir, oldLogDir);
     manager = replication.getReplicationManager();
 
     manager.addSource(slaveId);
@@ -194,26 +156,6 @@ public class TestReplicationSourceManager {
   public static void tearDownAfterClass() throws Exception {
     manager.join();
     utility.shutdownMiniCluster();
-  }
-
-  @Rule
-  public TestName testName = new TestName();
-
-  private void cleanLogDir() throws IOException {
-    fs.delete(logDir, true);
-    fs.delete(oldLogDir, true);
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    LOG.info("Start " + testName.getMethodName());
-    cleanLogDir();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    LOG.info("End " + testName.getMethodName());
-    cleanLogDir();
   }
 
   @Test
@@ -288,7 +230,7 @@ public class TestReplicationSourceManager {
   @Test
   public void testClaimQueues() throws Exception {
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
-    final Server server = new DummyServer("hostname0.example.org");
+    final Server server = new DummyServer(conf, "hostname0.example.org", zkw);
     ReplicationQueues rq =
         ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
           server);
@@ -300,9 +242,9 @@ public class TestReplicationSourceManager {
       rq.addLog("1", file);
     }
     // create 3 DummyServers
-    Server s1 = new DummyServer("dummyserver1.example.org");
-    Server s2 = new DummyServer("dummyserver2.example.org");
-    Server s3 = new DummyServer("dummyserver3.example.org");
+    Server s1 = new DummyServer(conf, "dummyserver1.example.org", zkw);
+    Server s2 = new DummyServer(conf, "dummyserver2.example.org", zkw);
+    Server s3 = new DummyServer(conf, "dummyserver3.example.org", zkw);
 
     // create 3 DummyNodeFailoverWorkers
     DummyNodeFailoverWorker w1 = new DummyNodeFailoverWorker(
@@ -329,7 +271,7 @@ public class TestReplicationSourceManager {
 
   @Test
   public void testCleanupFailoverQueues() throws Exception {
-    final Server server = new DummyServer("hostname1.example.org");
+    final Server server = new DummyServer(conf, "hostname1.example.org", zkw);
     ReplicationQueues rq =
         ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
           server);
@@ -344,7 +286,7 @@ public class TestReplicationSourceManager {
     for (String file : files) {
       rq.addLog("1", file);
     }
-    Server s1 = new DummyServer("dummyserver1.example.org");
+    Server s1 = new DummyServer(conf, "dummyserver1.example.org", zkw);
     ReplicationQueues rq1 =
         ReplicationFactory.getReplicationQueues(s1.getZooKeeper(), s1.getConfiguration(), s1);
     rq1.init(s1.getServerName().toString());
@@ -368,7 +310,7 @@ public class TestReplicationSourceManager {
   public void testNodeFailoverDeadServerParsing() throws Exception {
     LOG.debug("testNodeFailoverDeadServerParsing");
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
-    final Server server = new DummyServer("ec2-54-234-230-108.compute-1.amazonaws.com");
+    final Server server = new DummyServer(conf, "ec2-54-234-230-108.compute-1.amazonaws.com", zkw);
     ReplicationQueues repQueues =
         ReplicationFactory.getReplicationQueues(server.getZooKeeper(), conf, server);
     repQueues.init(server.getServerName().toString());
@@ -380,9 +322,9 @@ public class TestReplicationSourceManager {
     }
 
     // create 3 DummyServers
-    Server s1 = new DummyServer("ip-10-8-101-114.ec2.internal");
-    Server s2 = new DummyServer("ec2-107-20-52-47.compute-1.amazonaws.com");
-    Server s3 = new DummyServer("ec2-23-20-187-167.compute-1.amazonaws.com");
+    Server s1 = new DummyServer(conf, "ip-10-8-101-114.ec2.internal", zkw);
+    Server s2 = new DummyServer(conf, "ec2-107-20-52-47.compute-1.amazonaws.com", zkw);
+    Server s3 = new DummyServer(conf, "ec2-23-20-187-167.compute-1.amazonaws.com", zkw);
 
     // simulate three servers fail sequentially
     ReplicationQueues rq1 =
@@ -423,7 +365,7 @@ public class TestReplicationSourceManager {
     LOG.debug("testFailoverDeadServerCversionChange");
 
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
-    final Server s0 = new DummyServer("cversion-change0.example.org");
+    final Server s0 = new DummyServer(conf, "cversion-change0.example.org", zkw);
     ReplicationQueues repQueues =
         ReplicationFactory.getReplicationQueues(s0.getZooKeeper(), conf, s0);
     repQueues.init(s0.getServerName().toString());
@@ -434,7 +376,7 @@ public class TestReplicationSourceManager {
       repQueues.addLog("1", file);
     }
     // simulate queue transfer
-    Server s1 = new DummyServer("cversion-change1.example.org");
+    Server s1 = new DummyServer(conf, "cversion-change1.example.org", zkw);
     ReplicationQueues rq1 =
         ReplicationFactory.getReplicationQueues(s1.getZooKeeper(), s1.getConfiguration(), s1);
     rq1.init(s1.getServerName().toString());
@@ -459,7 +401,7 @@ public class TestReplicationSourceManager {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="RU_INVOKE_RUN",
     justification="Intended")
   public void testCleanupUnknownPeerZNode() throws Exception {
-    final Server server = new DummyServer("hostname2.example.org");
+    final Server server = new DummyServer(conf, "hostname2.example.org", zkw);
     ReplicationQueues rq =
         ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
           server);
@@ -521,16 +463,15 @@ public class TestReplicationSourceManager {
    * corresponding ReplicationSourceInterface correctly cleans up the corresponding
    * replication queue and ReplicationPeer.
    * See HBASE-16096.
-   * @throws Exception
+   * @throws Exception exception
    */
   @Test
-  public void testPeerRemovalCleanup() throws Exception{
+  public void testPeerRemovalCleanup() throws Exception {
     String replicationSourceImplName = conf.get("replication.replicationsource.implementation");
     final String peerId = "FakePeer";
     final ReplicationPeerConfig peerConfig =
         new ReplicationPeerConfig().setClusterKey("localhost:1:/hbase");
     try {
-      DummyServer server = new DummyServer();
       final ReplicationQueues rq =
           ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
               server);
@@ -600,10 +541,10 @@ public class TestReplicationSourceManager {
 
   /**
    * Add a peer and wait for it to initialize
-   * @param peerId
-   * @param peerConfig
+   * @param peerId the replication peer Id
+   * @param peerConfig the replication peer config
    * @param waitForSource Whether to wait for replication source to initialize
-   * @throws Exception
+   * @throws Exception exception
    */
   private void addPeerAndWait(final String peerId, final ReplicationPeerConfig peerConfig,
       final boolean waitForSource) throws Exception {
@@ -622,8 +563,8 @@ public class TestReplicationSourceManager {
 
   /**
    * Remove a peer and wait for it to get cleaned up
-   * @param peerId
-   * @throws Exception
+   * @param peerId the replication peer Id
+   * @throws Exception exception
    */
   private void removePeerAndWait(final String peerId) throws Exception {
     final ReplicationPeers rp = manager.getReplicationPeers();
@@ -638,7 +579,6 @@ public class TestReplicationSourceManager {
       }
     });
   }
-
 
   private WALEdit getBulkLoadWALEdit() {
     // 1. Create store files for the families
@@ -740,72 +680,6 @@ public class TestReplicationSourceManager {
         UUID clusterId, ReplicationEndpoint replicationEndpoint, MetricsSource metrics)
         throws IOException {
       throw new IOException("Failing deliberately");
-    }
-  }
-
-  static class DummyServer implements Server {
-    String hostname;
-
-    DummyServer() {
-      hostname = "hostname.example.org";
-    }
-
-    DummyServer(String hostname) {
-      this.hostname = hostname;
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-      return conf;
-    }
-
-    @Override
-    public ZooKeeperWatcher getZooKeeper() {
-      return zkw;
-    }
-
-    @Override
-    public CoordinatedStateManager getCoordinatedStateManager() {
-      return null;
-    }
-    @Override
-    public ClusterConnection getConnection() {
-      return null;
-    }
-
-    @Override
-    public MetaTableLocator getMetaTableLocator() {
-      return null;
-    }
-
-    @Override
-    public ServerName getServerName() {
-      return ServerName.valueOf(hostname, 1234, 1L);
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-      // To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-
-    @Override
-    public void stop(String why) {
-      // To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public boolean isStopped() {
-      return false; // To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public ChoreService getChoreService() {
-      return null;
     }
   }
 }
