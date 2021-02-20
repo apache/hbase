@@ -147,14 +147,15 @@ class ReplicationSourceWALReader extends Thread {
           }
         }
       } catch (IOException e) { // stream related
-        if (sleepMultiplier < maxRetriesMultiplier) {
-          LOG.debug("Failed to read stream of replication entries: " + e);
-          sleepMultiplier++;
+        if (handleEofException(e)) {
+          sleepMultiplier = 1;
         } else {
-          LOG.error("Failed to read stream of replication entries", e);
-          handleEofException(e);
+          LOG.warn("Failed to read stream of replication entries", e);
+          if (sleepMultiplier < maxRetriesMultiplier) {
+            sleepMultiplier ++;
+          }
+          Threads.sleep(sleepForRetries * sleepMultiplier);
         }
-        Threads.sleep(sleepForRetries * sleepMultiplier);
       } catch (InterruptedException e) {
         LOG.trace("Interrupted while sleeping between WAL reads");
         Thread.currentThread().interrupt();
@@ -241,24 +242,29 @@ class ReplicationSourceWALReader extends Thread {
     }
   }
 
-  // if we get an EOF due to a zero-length log, and there are other logs in queue
-  // (highly likely we've closed the current log), we've hit the max retries, and autorecovery is
-  // enabled, then dump the log
-  private void handleEofException(IOException e) {
+  /**
+   * if we get an EOF due to a zero-length log, and there are other logs in queue
+   * (highly likely we've closed the current log), and autorecovery is
+   * enabled, then dump the log
+   * @return true only the IOE can be handled
+   */
+  private boolean handleEofException(IOException e) {
     // Dump the log even if logQueue size is 1 if the source is from recovered Source
     // since we don't add current log to recovered source queue so it is safe to remove.
     if ((e instanceof EOFException || e.getCause() instanceof EOFException) &&
       (source.isRecovered() || logQueue.size() > 1) && this.eofAutoRecovery) {
       try {
         if (fs.getFileStatus(logQueue.peek()).getLen() == 0) {
-          LOG.warn("Forcing removal of 0 length log in queue: " + logQueue.peek());
+          LOG.warn("Forcing removal of 0 length log in queue: {}", logQueue.peek());
           logQueue.remove();
           currentPosition = 0;
+          return true;
         }
       } catch (IOException ioe) {
-        LOG.warn("Couldn't get file length information about log " + logQueue.peek());
+        LOG.warn("Couldn't get file length information about log {}", logQueue.peek());
       }
     }
+    return false;
   }
 
   public Path getCurrentPath() {
