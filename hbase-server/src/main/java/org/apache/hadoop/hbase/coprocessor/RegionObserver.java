@@ -374,9 +374,29 @@ public interface RegionObserver {
    * @param put The Put object
    * @param edit The WALEdit object that will be written to the wal
    * @param durability Persistence guarantee for this Put
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #prePut(ObserverContext, Put, WALEdit)} instead.
    */
+  @Deprecated
   default void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
       Durability durability) throws IOException {}
+
+  /**
+   * Called before the client stores a value.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions.
+   * If 'bypass' is set, we skip out on calling any subsequent chained coprocessors.
+   * <p>
+   * Note: Do not retain references to any Cells in 'put' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param put The Put object
+   * @param edit The WALEdit object that will be written to the wal
+   */
+  default void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit)
+    throws IOException {
+    prePut(c, put, edit, put.getDurability());
+  }
 
   /**
    * Called after the client stores a value.
@@ -387,9 +407,26 @@ public interface RegionObserver {
    * @param put The Put object
    * @param edit The WALEdit object for the wal
    * @param durability Persistence guarantee for this Put
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #postPut(ObserverContext, Put, WALEdit)} instead.
    */
+  @Deprecated
   default void postPut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
       Durability durability) throws IOException {}
+
+  /**
+   * Called after the client stores a value.
+   * <p>
+   * Note: Do not retain references to any Cells in 'put' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param put The Put object
+   * @param edit The WALEdit object for the wal
+   */
+  default void postPut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit)
+    throws IOException {
+    postPut(c, put, edit, put.getDurability());
+  }
 
   /**
    * Called before the client deletes a value.
@@ -403,9 +440,29 @@ public interface RegionObserver {
    * @param delete The Delete object
    * @param edit The WALEdit object for the wal
    * @param durability Persistence guarantee for this Delete
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #preDelete(ObserverContext, Delete, WALEdit)} instead.
    */
+  @Deprecated
   default void preDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
       WALEdit edit, Durability durability) throws IOException {}
+
+  /**
+   * Called before the client deletes a value.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions.
+   * If 'bypass' is set, we skip out on calling any subsequent chained coprocessors.
+   * <p>
+   * Note: Do not retain references to any Cells in 'delete' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param delete The Delete object
+   * @param edit The WALEdit object for the wal
+   */
+  default void preDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
+    WALEdit edit) throws IOException {
+    preDelete(c, delete, edit, delete.getDurability());
+  }
 
   /**
    * Called before the server updates the timestamp for version delete with latest timestamp.
@@ -434,9 +491,26 @@ public interface RegionObserver {
    * @param delete The Delete object
    * @param edit The WALEdit object for the wal
    * @param durability Persistence guarantee for this Delete
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *   {@link #postDelete(ObserverContext, Delete, WALEdit)} instead.
    */
+  @Deprecated
   default void postDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
       WALEdit edit, Durability durability) throws IOException {}
+
+  /**
+   * Called after the client deletes a value.
+   * <p>
+   * Note: Do not retain references to any Cells in 'delete' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param delete The Delete object
+   * @param edit The WALEdit object for the wal
+   */
+  default void postDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
+    WALEdit edit) throws IOException {
+    postDelete(c, delete, edit, delete.getDurability());
+  }
 
   /**
    * This will be called for every batch mutation operation happening at the server. This will be
@@ -457,10 +531,10 @@ public interface RegionObserver {
   /**
    * This will be called after applying a batch of Mutations on a region. The Mutations are added
    * to memstore and WAL. The difference of this one with
-   * {@link #postPut(ObserverContext, Put, WALEdit, Durability)}
-   * and {@link #postDelete(ObserverContext, Delete, WALEdit, Durability)}
-   * and {@link #postIncrement(ObserverContext, Increment, Result, WALEdit, Durability)}
-   * and {@link #postAppend(ObserverContext, Append, Result, WALEdit, Durability)} is
+   * {@link #postPut(ObserverContext, Put, WALEdit)}
+   * and {@link #postDelete(ObserverContext, Delete, WALEdit)}
+   * and {@link #postIncrement(ObserverContext, Increment, Result, WALEdit)}
+   * and {@link #postAppend(ObserverContext, Append, Result, WALEdit)} is
    * this hook will be executed before the mvcc transaction completion.
    * <p>
    * Note: Do not retain references to any Cells in Mutations beyond the life of this invocation.
@@ -969,7 +1043,7 @@ public interface RegionObserver {
    * @param append Append object
    * @return result to return to the client if bypassing default processing
    * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
-   *   {@link #preAppend(ObserverContext, Append, WALEdit, Durability)} instead.
+   *   {@link #preAppend(ObserverContext, Append, WALEdit)} instead.
    */
   @Deprecated
   default Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
@@ -988,11 +1062,10 @@ public interface RegionObserver {
    * @param c the environment provided by the region server
    * @param append Append object
    * @param edit The WALEdit object that will be written to the wal
-   * @param durability Persistence guarantee for this Put
    * @return result to return to the client if bypassing default processing
    */
   default Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
-    WALEdit edit, Durability durability) throws IOException {
+    WALEdit edit) throws IOException {
     return preAppend(c, append);
   }
 
@@ -1030,7 +1103,7 @@ public interface RegionObserver {
    * @param result the result returned by increment
    * @return the result to return to the client
    * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
-   *   {@link #postAppend(ObserverContext, Append, Result, WALEdit, Durability)} instead.
+   *   {@link #postAppend(ObserverContext, Append, Result, WALEdit)} instead.
    */
   @Deprecated
   default Result postAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
@@ -1047,11 +1120,10 @@ public interface RegionObserver {
    * @param append Append object
    * @param result the result returned by increment
    * @param edit The WALEdit object for the wal
-   * @param durability Persistence guarantee for this Put
    * @return the result to return to the client
    */
   default Result postAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
-    Result result, WALEdit edit, Durability durability) throws IOException {
+    Result result, WALEdit edit) throws IOException {
     return postAppend(c, append, result);
   }
 
@@ -1067,7 +1139,7 @@ public interface RegionObserver {
    * @param increment increment object
    * @return result to return to the client if bypassing default processing
    * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
-   *   {@link #preIncrement(ObserverContext, Increment, WALEdit, Durability)} instead.
+   *   {@link #preIncrement(ObserverContext, Increment, WALEdit)} instead.
    */
   @Deprecated
   default Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment)
@@ -1086,11 +1158,10 @@ public interface RegionObserver {
    * @param c the environment provided by the region server
    * @param increment increment object
    * @param edit The WALEdit object that will be written to the wal
-   * @param durability Persistence guarantee for this Put
    * @return result to return to the client if bypassing default processing
    */
   default Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment,
-    WALEdit edit, Durability durability) throws IOException {
+    WALEdit edit) throws IOException {
     return preIncrement(c, increment);
   }
 
@@ -1129,7 +1200,7 @@ public interface RegionObserver {
    * @param result the result returned by increment
    * @return the result to return to the client
    * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
-   *   {@link #postIncrement(ObserverContext, Increment, Result, WALEdit, Durability)} instead.
+   *   {@link #postIncrement(ObserverContext, Increment, Result, WALEdit)} instead.
    */
   @Deprecated
   default Result postIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment,
@@ -1146,11 +1217,10 @@ public interface RegionObserver {
    * @param increment increment object
    * @param result the result returned by increment
    * @param edit The WALEdit object for the wal
-   * @param durability Persistence guarantee for this Put
    * @return the result to return to the client
    */
   default Result postIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment,
-    Result result, WALEdit edit, Durability durability) throws IOException {
+    Result result, WALEdit edit) throws IOException {
     return postIncrement(c, increment, result);
   }
 
