@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -976,7 +975,7 @@ public class RegionCoprocessorHost
     return execOperation(new RegionObserverOperationWithoutResult(bypassable) {
       @Override
       public void call(RegionObserver observer) throws IOException {
-         observer.preDelete(this, delete, edit);
+        observer.preDelete(this, delete, edit);
       }
     });
   }
@@ -988,12 +987,12 @@ public class RegionCoprocessorHost
    */
   public void postDelete(final Delete delete, final WALEdit edit) throws IOException {
     execOperation(coprocEnvironments.isEmpty()? null:
-        new RegionObserverOperationWithoutResult() {
-      @Override
-      public void call(RegionObserver observer) throws IOException {
-        observer.postDelete(this, delete, edit);
-      }
-    });
+      new RegionObserverOperationWithoutResult() {
+        @Override
+        public void call(RegionObserver observer) throws IOException {
+          observer.postDelete(this, delete, edit);
+        }
+      });
   }
 
   public void preBatchMutate(
