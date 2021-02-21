@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.replication.ReplicationSourceDummyWithNoTermination;
+import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.replication.regionserver.helper.DummyServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,10 +51,10 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
-public abstract class TestReplicationSourceBase {
+public abstract class TestReplicationSourceManagerBase {
 
   private static final Log LOG =
-    LogFactory.getLog(TestReplicationSourceBase.class);
+    LogFactory.getLog(TestReplicationSourceManagerBase.class);
 
   protected static Configuration conf;
   protected static HBaseTestingUtility utility;
@@ -75,11 +75,12 @@ public abstract class TestReplicationSourceBase {
   protected static Path logDir;
   protected static DummyServer server;
 
-  @BeforeClass public static void setUpBeforeClass() throws Exception {
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
 
     conf = HBaseConfiguration.create();
     conf.set("replication.replicationsource.implementation",
-      ReplicationSourceDummyWithNoTermination.class.getCanonicalName());
+      ReplicationSourceDummy.class.getCanonicalName());
     conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
     conf.setLong("replication.sleep.before.failover", 2000);
     conf.setInt("replication.source.maxretriesmultiplier", 10);

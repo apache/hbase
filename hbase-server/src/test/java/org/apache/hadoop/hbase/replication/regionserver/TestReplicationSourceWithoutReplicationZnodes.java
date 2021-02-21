@@ -21,25 +21,30 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationSourceWithoutPeerException;
+import org.apache.hadoop.hbase.replication.ReplicationSourceDummyWithNoTermination;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
-public class TestReplicationSourceWithoutReplicationZnodes extends TestReplicationSourceBase {
+public class TestReplicationSourceWithoutReplicationZnodes
+  extends TestReplicationSourceManagerBase {
+
+  @Before
+  public void removeExistingSourcesFromSourceManager() {
+    manager.getSources().clear();
+    manager.getOldSources().clear();
+  }
 
   /**
    * When the peer is removed, hbase remove the peer znodes and there is zk watcher
@@ -47,39 +52,47 @@ public class TestReplicationSourceWithoutReplicationZnodes extends TestReplicati
    * or a race condition between source deleting the log znode and zk watcher
    * terminating the source, we might get the NoNode exception. In that case, the right
    * thing is to terminate the replication source.
+   *
    * @throws Exception throws exception
    */
   @Test
   public void testReplicationSourceRunningWithoutPeerZnodes() throws Exception {
+    String replicationSourceImplName = conf.get("replication.replicationsource.implementation");
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     KeyValue kv = new KeyValue(r1, f1, r1);
     WALEdit edit = new WALEdit();
     edit.add(kv);
-
-    List<WALActionsListener> listeners = new ArrayList<>();
-    listeners.add(replication);
-    final WALFactory wals = new WALFactory(utility.getConfiguration(), listeners,
-      URLEncoder.encode("regionserver:60020", "UTF8"));
-    final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
-    manager.init();
-
-    final long txid = wal.append(htd, hri,
-      new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc),
-      edit, true);
-    wal.sync(txid);
-
-    wal.rollWriter();
-    ZKUtil.deleteNodeRecursively(zkw, "/hbase/replication/peers/1");
-    ZKUtil.deleteNodeRecursively(zkw, "/hbase/replication/rs/"+ server.getServerName() + "/1");
-
-    ReplicationException exceptionThrown = null;
     try {
-      manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
-        "1", 0, false, false);
-    } catch (ReplicationException e) {
-      exceptionThrown = e;
-    }
+      conf.set("replication.replicationsource.implementation",
+        ReplicationSourceDummyWithNoTermination.class.getCanonicalName());
+      List<WALActionsListener> listeners = new ArrayList<>();
+      listeners.add(replication);
+      final WALFactory wals = new WALFactory(utility.getConfiguration(), listeners,
+        URLEncoder.encode("regionserver:60020", "UTF8"));
+      final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
+      manager.init();
 
-    Assert.assertTrue(exceptionThrown instanceof ReplicationSourceWithoutPeerException);
+      final long txid = wal.append(htd, hri,
+        new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc), edit,
+        true);
+      wal.sync(txid);
+
+      wal.rollWriter();
+      ZKUtil.deleteNodeRecursively(zkw, "/hbase/replication/peers/1");
+      ZKUtil.deleteNodeRecursively(zkw, "/hbase/replication/rs/" + server.getServerName() + "/1");
+
+      Assert.assertEquals("There should be exactly one source",
+        1, manager.getSources().size());
+      Assert.assertEquals("Replication source is not correct",
+        ReplicationSourceDummyWithNoTermination.class,
+        manager.getSources().get(0).getClass());
+      manager
+        .logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(), "1", 0, false,
+          false);
+      Assert.assertTrue("Replication source should be terminated and removed",
+        manager.getSources().isEmpty());
+    } finally {
+      conf.set("replication.replicationsource.implementation", replicationSourceImplName);
+    }
   }
 }

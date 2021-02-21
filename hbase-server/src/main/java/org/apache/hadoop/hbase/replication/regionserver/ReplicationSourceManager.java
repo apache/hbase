@@ -189,13 +189,25 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param holdLogInZK if true then the log is retained in ZK
    */
   public synchronized void logPositionAndCleanOldLogs(Path log, String id, long position,
-      boolean queueRecovered, boolean holdLogInZK) throws ReplicationSourceWithoutPeerException {
+      boolean queueRecovered, boolean holdLogInZK) {
     String fileName = log.getName();
     this.replicationQueues.setLogPosition(id, fileName, position);
     if (holdLogInZK) {
       return;
     }
-    cleanOldLogs(fileName, id, queueRecovered);
+
+    try {
+      cleanOldLogs(fileName, id, queueRecovered);
+    } catch (ReplicationSourceWithoutPeerException rspe) {
+      // This means the source is running and replication peer have been removed
+      // We should call the removePeer workflow to terminate the source gracefully
+      LOG.warn("Replication peer" + id + "has been removed and source is still running", rspe);
+      String peerId = id;
+      if (peerId.contains("-")) {
+        peerId = peerId.split("-")[0];
+      }
+      removePeer(peerId);
+    }
   }
 
   /**
@@ -579,7 +591,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   /**
-   * Thie method first deletes all the recovered sources for the specified
+   * This method first deletes all the recovered sources for the specified
    * id, then deletes the normal source (deleting all related data in ZK).
    * @param id The id of the peer cluster
    */
