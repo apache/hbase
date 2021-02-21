@@ -24,7 +24,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
-import io.opentelemetry.api.trace.Span.Kind;
+import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import io.opentelemetry.sdk.trace.data.SpanData;
@@ -222,7 +222,7 @@ public class TestAsyncTableTracing {
     Waiter.waitFor(CONF, 1000,
       () -> traceRule.getSpans().stream()
         .anyMatch(span -> span.getName().equals("AsyncTable." + methodName) &&
-          span.getKind() == Kind.INTERNAL && span.hasEnded()));
+          span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
     SpanData data = traceRule.getSpans().stream()
       .filter(s -> s.getName().equals("AsyncTable." + methodName)).findFirst().get();
     assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
@@ -406,7 +406,7 @@ public class TestAsyncTableTracing {
     Waiter.waitFor(CONF, 1000,
       () -> traceRule.getSpans().stream()
         .anyMatch(span -> span.getName().equals("AsyncConnection.close") &&
-          span.getKind() == Kind.INTERNAL && span.hasEnded()));
+          span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
     SpanData data = traceRule.getSpans().stream()
       .filter(s -> s.getName().equals("AsyncConnection.close")).findFirst().get();
     assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
