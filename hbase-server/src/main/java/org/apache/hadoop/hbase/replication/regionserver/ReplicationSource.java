@@ -237,6 +237,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
   }
 
+  public Map<String, PriorityBlockingQueue<Path>> getQueues() {
+    return queues;
+  }
+
   @Override
   public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
       throws ReplicationException {
@@ -840,7 +844,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
 
     // If this is a recovered queue, the queue is already full and the first log
     // normally has a position (unless the RS failed between 2 logs)
-    private long getRecoveredQueueStartPos(long startPosition) {
+    public long getRecoveredQueueStartPos(long startPosition) {
       try {
         startPosition =
             (replicationQueues.getLogPosition(peerClusterZnode, this.queue.peek().getName()));

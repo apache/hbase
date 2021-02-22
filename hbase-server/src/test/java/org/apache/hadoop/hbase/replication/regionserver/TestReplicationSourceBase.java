@@ -76,7 +76,6 @@ public abstract class TestReplicationSourceBase {
   protected static DummyServer server;
 
   @BeforeClass public static void setUpBeforeClass() throws Exception {
-
     conf = HBaseConfiguration.create();
     conf.set("replication.replicationsource.implementation",
       ReplicationSourceDummyWithNoTermination.class.getCanonicalName());
