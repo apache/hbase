@@ -482,7 +482,7 @@ public final class ConnectionUtils {
   }
 
   // validate for well-formedness
-  static void validatePut(Put put, int maxKeyValueSize) throws IllegalArgumentException {
+  static void validatePut(Put put, int maxKeyValueSize) {
     if (put.isEmpty()) {
       throw new IllegalArgumentException("No columns to insert");
     }
@@ -493,6 +493,14 @@ public final class ConnectionUtils {
             throw new IllegalArgumentException("KeyValue size too large");
           }
         }
+      }
+    }
+  }
+
+  static void validatePutsInRowMutations(RowMutations rowMutations, int maxKeyValueSize) {
+    for (Mutation mutation : rowMutations.getMutations()) {
+      if (mutation instanceof Put) {
+        validatePut((Put) mutation, maxKeyValueSize);
       }
     }
   }
