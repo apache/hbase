@@ -51,7 +51,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A base for {@link TableInputFormat}s. Receives a {@link Connection}, a {@link TableName},
@@ -600,7 +599,7 @@ public abstract class TableInputFormatBase
     this.connection = connection;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected RegionSizeCalculator createRegionSizeCalculator(RegionLocator locator, Admin admin)
       throws IOException {
     return new RegionSizeCalculator(locator, admin);

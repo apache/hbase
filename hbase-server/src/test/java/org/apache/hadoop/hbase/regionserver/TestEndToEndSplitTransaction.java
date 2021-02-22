@@ -30,7 +30,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ChoreService;
@@ -306,24 +305,15 @@ public class TestEndToEndSplitTransaction {
 
     /** verify region boundaries obtained from HTable.getStartEndKeys() */
     void verifyRegionsUsingHTable() throws IOException {
-      Table table = null;
-      try {
-        // HTable.getStartEndKeys()
-        table = connection.getTable(tableName);
+      try (RegionLocator rl = connection.getRegionLocator(tableName)) {
+        Pair<byte[][], byte[][]> keys = rl.getStartEndKeys();
+        verifyStartEndKeys(keys);
 
-        try (RegionLocator rl = connection.getRegionLocator(tableName)) {
-          Pair<byte[][], byte[][]> keys = rl.getStartEndKeys();
-          verifyStartEndKeys(keys);
-
-          Set<RegionInfo> regions = new TreeSet<>(RegionInfo.COMPARATOR);
-          for (HRegionLocation loc : rl.getAllRegionLocations()) {
-            regions.add(loc.getRegion());
-          }
-          verifyTableRegions(regions);
+        Set<RegionInfo> regions = new TreeSet<>(RegionInfo.COMPARATOR);
+        for (HRegionLocation loc : rl.getAllRegionLocations()) {
+          regions.add(loc.getRegion());
         }
-
-      } finally {
-        IOUtils.closeQuietly(table);
+        verifyTableRegions(regions);
       }
     }
 

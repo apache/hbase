@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * This class is for maintaining the various replication statistics for a source and publishing them
  * through the metrics interfaces.
@@ -388,6 +386,17 @@ public class MetricsSource implements BaseSource {
     globalSourceSource.incrFailedRecoveryQueue();
   }
 
+  /*
+   Sets the age of oldest log file just for source.
+  */
+  public void setOldestWalAge(long age) {
+    singleSourceSource.setOldestWalAge(age);
+  }
+
+  public long getOldestWalAge() {
+    return singleSourceSource.getOldestWalAge();
+  }
+
   @Override
   public void init() {
     singleSourceSource.init();
@@ -450,7 +459,7 @@ public class MetricsSource implements BaseSource {
     return globalSourceSource.getMetricsName();
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public Map<String, MetricsReplicationTableSource> getSingleSourceSourceByTable() {
     return singleSourceSourceByTable;
   }

@@ -1,44 +1,67 @@
-Entrance script is _do-release-docker.sh_. Requires a local docker;
-for example, on mac os x, Docker for Desktop installed and running.
+Creates an HBase release candidate.
 
-For usage, pass '-h':
+The scripts in this directory came originally from spark
+(https://github.com/apache/spark/tree/master/dev/create-release). They were
+then modified to suit the hbase context. These scripts supercede the old
+_../make_rc.sh_ script for making release candidates because what is here is
+more comprehensive doing more steps of the RM process as well as running in a
+container so the RM build environment can be a constant.
 
- $ ./do-release-docker.sh -h
+It:
 
-To run a build w/o invoking docker (not recommended!), use _do_release.sh_.
+ * Tags release
+ * Sets version to the release version
+ * Sets version to next SNAPSHOT version.
+ * Builds, signs, and hashes all artifacts.
+ * Pushes release tgzs to the dev dir in a apache dist.
+ * Pushes to repository.apache.org staging.
 
-Both scripts will query interactively for needed parameters and passphrases.
+The entry point is the do-release-docker.sh script. It requires a local
+docker; for example, on mac os x, a Docker for Desktop installed and running.
+
+(To run a build w/o invoking docker (not recommended!), use _do_release.sh_.)
+
+The scripts will query interactively for needed parameters and passphrases.
 For explanation of the parameters, execute:
+
  $ release-build.sh --help
 
-Before starting the RC build, run a reconciliation of what is in
-JIRA with what is in the commit log. Make sure they align and that
-anomalies are explained up in JIRA.
+The scripts run in dry-run mode by default where only local builds are
+performed and nothing is uploaded to the ASF repos. Pass the '-f' flag
+to remove dry-run mode.
 
-See http://hbase.apache.org/book.html#maven.release
+Before starting the RC build, run a reconciliation of what is in JIRA with
+what is in the commit log. Make sure they align and that anomalies are
+explained up in JIRA. See http://hbase.apache.org/book.html#maven.release
+for how.
 
-Regardless of where your release build will run (locally, locally in docker, on a remote machine,
-etc) you will need a local gpg-agent with access to your secret keys. A quick way to tell gpg
-to clear out state and start a gpg-agent is via the following command phrase:
-
-$ gpgconf --kill all && gpg-connect-agent /bye
-
-Before starting an RC build, make sure your local gpg-agent has configs
-to properly handle your credentials, especially if you want to avoid
-typing the passphrase to your secret key.
-
-e.g. if you are going to run and step away, best to increase the TTL
-on caching the unlocked secret via ~/.gnupg/gpg-agent.conf
+Regardless of where your release build will run (locally, locally in docker,
+on a remote machine, etc) you will need a local gpg-agent with access to your
+secret keys. Before starting an RC build, make sure your local gpg-agent has
+configs to properly handle your credentials, especially if you want to avoid
+typing the passphrase to your secret key: e.g. if you are going to run
+and step away (the RC creation takes ~5 hours), best to increase the TTL on
+caching the unlocked secret by setting the following into local your
+~/.gnupg/gpg-agent.conf file:
   # in seconds, e.g. a day
   default-cache-ttl 86400
   max-cache-ttl 86400
 
+A quick way to tell gpg to clear out state, re-read the gpg-agent.conf file
+and start a new gpg-agent is via the following command phrase:
+
+ $ gpgconf --kill all && gpg-connect-agent /bye
+
+You can verify options took hold with '$ gpg --list-options gpg-agent'.
+
+Similarly, run ssh-agent with your ssh key added if building with docker.
+
 Running a build on GCE is easy enough. Here are some notes if of use.
-Create an instance. 4CPU/15G/10G disk seems to work well enough.
+Create an instance. 4CPU/15G/20G disk seems to work well enough.
 Once up, run the below to make your machine fit for RC building:
 
-# Presuming debian-compatible OS, do these steps on the VM
-# your VM username should be your ASF id, because it will show up in build artifacts.
+# Presuming debian-compatible OS, do these steps on the VM.
+# Your VM username should be your ASF id, because it will show up in build artifacts.
 # Follow the docker install guide: https://docs.docker.com/engine/install/debian/
 $ sudo apt-get install -y \
     apt-transport-https \
@@ -101,7 +124,3 @@ $ git clone https://github.com/apache/hbase.git
 $ mkdir ~/build
 $ cd hbase
 $ ./dev-support/create-release/do-release-docker.sh -d ~/build
-
-# for building the main repo specifically you can save an extra download by pointing the build
-# to the local clone you just made
-$ ./dev-support/create-release/do-release-docker.sh -d ~/build -r .git

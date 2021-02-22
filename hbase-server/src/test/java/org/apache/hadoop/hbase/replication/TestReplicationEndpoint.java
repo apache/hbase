@@ -142,8 +142,10 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   public void testCustomReplicationEndpoint() throws Exception {
     // test installing a custom replication endpoint other than the default one.
     hbaseAdmin.addReplicationPeer("testCustomReplicationEndpoint",
-        new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
-            .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()));
+      ReplicationPeerConfig.newBuilder()
+        .setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
+        .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName())
+        .build());
 
     // check whether the class has been constructed and started
     Waiter.waitFor(CONF1, 60000, new Waiter.Predicate<Exception>() {
@@ -184,8 +186,10 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     int peerCount = hbaseAdmin.listReplicationPeers().size();
     final String id = "testReplicationEndpointReturnsFalseOnReplicate";
     hbaseAdmin.addReplicationPeer(id,
-      new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
-        .setReplicationEndpointImpl(ReplicationEndpointReturningFalse.class.getName()));
+      ReplicationPeerConfig.newBuilder()
+        .setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
+        .setReplicationEndpointImpl(ReplicationEndpointReturningFalse.class.getName())
+        .build());
     // This test is flakey and then there is so much stuff flying around in here its, hard to
     // debug.  Peer needs to be up for the edit to make it across. This wait on
     // peer count seems to be a hack that has us not progress till peer is up.
@@ -236,8 +240,10 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
 
     hbaseAdmin.addReplicationPeer(id,
-        new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF2))
-            .setReplicationEndpointImpl(InterClusterReplicationEndpointForTest.class.getName()));
+      ReplicationPeerConfig.newBuilder()
+        .setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF2))
+        .setReplicationEndpointImpl(InterClusterReplicationEndpointForTest.class.getName())
+        .build());
 
     final int numEdits = totEdits;
     Waiter.waitFor(CONF1, 30000, new Waiter.ExplainingPredicate<Exception>() {
@@ -260,13 +266,15 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
   @Test
   public void testWALEntryFilterFromReplicationEndpoint() throws Exception {
-    ReplicationPeerConfig rpc =
-      new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
-        .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName());
-    // test that we can create mutliple WALFilters reflectively
-    rpc.getConfiguration().put(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
-      EverythingPassesWALEntryFilter.class.getName() + "," +
-        EverythingPassesWALEntryFilterSubclass.class.getName());
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
+      .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName())
+      // test that we can create mutliple WALFilters reflectively
+      .putConfiguration(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
+        EverythingPassesWALEntryFilter.class.getName() + "," +
+          EverythingPassesWALEntryFilterSubclass.class.getName())
+      .build();
+
     hbaseAdmin.addReplicationPeer("testWALEntryFilterFromReplicationEndpoint", rpc);
     // now replicate some data.
     try (Connection connection = ConnectionFactory.createConnection(CONF1)) {
@@ -290,23 +298,25 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
   @Test(expected = IOException.class)
   public void testWALEntryFilterAddValidation() throws Exception {
-    ReplicationPeerConfig rpc =
-      new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
-        .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName());
-    // test that we can create mutliple WALFilters reflectively
-    rpc.getConfiguration().put(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
-      "IAmNotARealWalEntryFilter");
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
+      .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName())
+      // test that we can create mutliple WALFilters reflectively
+      .putConfiguration(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
+        "IAmNotARealWalEntryFilter")
+      .build();
     hbaseAdmin.addReplicationPeer("testWALEntryFilterAddValidation", rpc);
   }
 
   @Test(expected = IOException.class)
   public void testWALEntryFilterUpdateValidation() throws Exception {
-    ReplicationPeerConfig rpc =
-      new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
-        .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName());
-    // test that we can create mutliple WALFilters reflectively
-    rpc.getConfiguration().put(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
-      "IAmNotARealWalEntryFilter");
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
+      .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName())
+      // test that we can create mutliple WALFilters reflectively
+      .putConfiguration(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
+        "IAmNotARealWalEntryFilter")
+      .build();
     hbaseAdmin.updateReplicationPeerConfig("testWALEntryFilterUpdateValidation", rpc);
   }
 

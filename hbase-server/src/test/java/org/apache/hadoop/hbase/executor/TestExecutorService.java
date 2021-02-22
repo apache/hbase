@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.executor.ExecutorService.Executor;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -70,8 +71,8 @@ public class TestExecutorService {
 
     // Start an executor service pool with max 5 threads
     ExecutorService executorService = new ExecutorService("unit_test");
-    executorService.startExecutorService(
-      ExecutorType.MASTER_SERVER_OPERATIONS, maxThreads);
+    executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
+        new ExecutorConfig().setCorePoolSize(maxThreads));
 
     Executor executor =
       executorService.getExecutor(ExecutorType.MASTER_SERVER_OPERATIONS);
@@ -138,7 +139,7 @@ public class TestExecutorService {
     }
 
     // Make sure threads are still around even after their timetolive expires.
-    Thread.sleep(ExecutorService.Executor.keepAliveTimeInMillis * 2);
+    Thread.sleep(ExecutorConfig.KEEP_ALIVE_TIME_MILLIS_DEFAULT * 2);
     assertEquals(maxThreads, pool.getPoolSize());
 
     executorService.shutdown();
@@ -197,7 +198,7 @@ public class TestExecutorService {
 
     ExecutorService executorService = new ExecutorService("unit_test");
     executorService.startExecutorService(
-      ExecutorType.MASTER_SERVER_OPERATIONS, 1);
+      ExecutorType.MASTER_SERVER_OPERATIONS, new ExecutorConfig().setCorePoolSize(1));
 
 
     executorService.submit(new EventHandler(server, EventType.M_SERVER_SHUTDOWN) {
@@ -229,7 +230,8 @@ public class TestExecutorService {
     when(server.getConfiguration()).thenReturn(conf);
 
     ExecutorService executorService = new ExecutorService("testSnapshotHandlers");
-    executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS, 1);
+    executorService.startExecutorService(
+        ExecutorType.MASTER_SNAPSHOT_OPERATIONS, new ExecutorConfig().setCorePoolSize(1));
 
     CountDownLatch latch = new CountDownLatch(1);
     CountDownLatch waitForEventToStart = new CountDownLatch(1);

@@ -51,7 +51,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -459,10 +459,8 @@ public final class HFile {
 
     DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
 
-    @VisibleForTesting
     HFileBlock.FSReader getUncachedBlockReader();
 
-    @VisibleForTesting
     boolean prefetchComplete();
 
     /**
@@ -507,7 +505,8 @@ public final class HFile {
           throw new IllegalArgumentException("Invalid HFile version " + trailer.getMajorVersion());
       }
     } catch (Throwable t) {
-      IOUtils.closeQuietly(context.getInputStreamWrapper());
+      IOUtils.closeQuietly(context.getInputStreamWrapper(),
+        e -> LOG.warn("failed to close input stream wrapper", e));
       throw new CorruptHFileException("Problem reading HFile Trailer from file "
           + context.getFilePath(), t);
     } finally {

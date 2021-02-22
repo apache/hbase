@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.util;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Allows multiple concurrent clients to lock on a numeric id with ReentrantReadWriteLock. The
@@ -43,7 +42,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public abstract class IdReadWriteLock<T> {
   public abstract ReentrantReadWriteLock getLock(T id);
 
-  @VisibleForTesting
   public void waitForWaiters(T id, int numWaiters) throws InterruptedException {
     for (ReentrantReadWriteLock readWriteLock;;) {
       readWriteLock = getLock(id);

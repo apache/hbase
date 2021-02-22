@@ -700,6 +700,14 @@ public final class HConstants {
   public static final int HOUR_IN_SECONDS = 60 * 60;
   public static final int MINUTE_IN_SECONDS = 60;
 
+  /**
+   * KB, MB, GB, TB equivalent to how many bytes
+   */
+  public static final long KB_IN_BYTES = 1024;
+  public static final long MB_IN_BYTES = 1024 * KB_IN_BYTES;
+  public static final long GB_IN_BYTES = 1024 * MB_IN_BYTES;
+  public static final long TB_IN_BYTES = 1024 * GB_IN_BYTES;
+
   //TODO: although the following are referenced widely to format strings for
   //      the shell. They really aren't a part of the public API. It would be
   //      nice if we could put them somewhere where they did not need to be
@@ -964,6 +972,17 @@ public final class HConstants {
    * Default value of {@link #HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY}
    */
   public static final int DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT = 10000;
+
+  /**
+   * Retry pause time for short operation RPC
+   */
+  public static final String HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME =
+      "hbase.rpc.shortoperation.retry.pause.time";
+
+  /**
+   * Default value of {@link #HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME}
+   */
+  public static final long DEFAULT_HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME = 1000;
 
   /**
    * Value indicating the server name was saved with no sequence number.
@@ -1389,9 +1408,7 @@ public final class HConstants {
   public static final String BUCKET_CACHE_IOENGINE_KEY = "hbase.bucketcache.ioengine";
 
   /**
-   * When using bucket cache, this is a float that EITHER represents a percentage of total heap
-   * memory size to give to the cache (if &lt; 1.0) OR, it is the capacity in
-   * megabytes of the cache.
+   * When using bucket cache, it is the capacity in megabytes of the cache.
    */
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
 
@@ -1587,6 +1604,13 @@ public final class HConstants {
   public static final String MASTER_SERVER_OPERATIONS_THREADS =
       "hbase.master.executor.serverops.threads";
   public static final int MASTER_SERVER_OPERATIONS_THREADS_DEFAULT = 5;
+
+  /**
+   * Number of threads used to dispatch merge operations to the regionservers.
+   */
+  public static final String MASTER_MERGE_DISPATCH_THREADS =
+      "hbase.master.executor.merge.dispatch.threads";
+  public static final int MASTER_MERGE_DISPATCH_THREADS_DEFAULT = 2;
 
   public static final String MASTER_META_SERVER_OPERATIONS_THREADS =
       "hbase.master.executor.meta.serverops.threads";

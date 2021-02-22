@@ -43,6 +43,7 @@ import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.hbase.http.ProxyUserAuthenticationFilter.getDoasFromHeader;
 
 /**
  * Thrift Http Servlet is used for performing Kerberos authentication if security is enabled and
@@ -112,7 +113,7 @@ public class ThriftHttpServlet extends TServlet {
       effectiveUser = serviceUGI.getShortUserName();
     }
 
-    String doAsUserFromQuery = request.getHeader("doAs");
+    String doAsUserFromQuery = getDoasFromHeader(request);
     if (doAsUserFromQuery != null) {
       if (!doAsEnabled) {
         throw new ServletException("Support for proxyuser is not configured");

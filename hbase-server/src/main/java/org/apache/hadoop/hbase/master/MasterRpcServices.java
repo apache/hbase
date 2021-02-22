@@ -2440,6 +2440,15 @@ public class MasterRpcServices extends RSRpcServices implements
         Set<Address> clearedServers = new HashSet<>();
         for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
           ServerName server = ProtobufUtil.toServerName(pbServer);
+
+          final boolean deadInProcess = master.getProcedures().stream().anyMatch(
+            p -> (p instanceof ServerCrashProcedure)
+              && ((ServerCrashProcedure) p).getServerName().equals(server));
+          if (deadInProcess) {
+            throw new ServiceException(
+              String.format("Dead server '%s' is not 'dead' in fact...", server));
+          }
+
           if (!deadServer.removeDeadServer(server)) {
             response.addServerName(pbServer);
           } else {
@@ -2518,6 +2527,7 @@ public class MasterRpcServices extends RSRpcServices implements
   @Override
   public GetTableStateResponse setTableStateInMeta(RpcController controller,
       SetTableStateInMetaRequest request) throws ServiceException {
+    rpcPreCheck("setTableStateInMeta");
     TableName tn = ProtobufUtil.toTableName(request.getTableName());
     try {
       TableState prevState = this.master.getTableStateManager().getTableState(tn);
@@ -2540,6 +2550,7 @@ public class MasterRpcServices extends RSRpcServices implements
   @Override
   public SetRegionStateInMetaResponse setRegionStateInMeta(RpcController controller,
     SetRegionStateInMetaRequest request) throws ServiceException {
+    rpcPreCheck("setRegionStateInMeta");
     SetRegionStateInMetaResponse.Builder builder = SetRegionStateInMetaResponse.newBuilder();
     try {
       for (RegionSpecifierAndState s : request.getStatesList()) {
@@ -2723,6 +2734,7 @@ public class MasterRpcServices extends RSRpcServices implements
   @Override
   public FixMetaResponse fixMeta(RpcController controller, FixMetaRequest request)
       throws ServiceException {
+    rpcPreCheck("fixMeta");
     try {
       MetaFixer mf = new MetaFixer(this.master);
       mf.fix();

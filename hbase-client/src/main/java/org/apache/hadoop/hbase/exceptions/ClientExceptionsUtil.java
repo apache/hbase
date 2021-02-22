@@ -28,7 +28,6 @@ import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -36,16 +35,14 @@ import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.RetryImmediatelyException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
-
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -150,7 +147,6 @@ public final class ClientExceptionsUtil {
    * For test only. Usually you should use the {@link #isConnectionException(Throwable)} method
    * below.
    */
-  @VisibleForTesting
   public static Set<Class<? extends Throwable>> getConnectionExceptionTypes() {
     return CONNECTION_EXCEPTION_TYPES;
   }

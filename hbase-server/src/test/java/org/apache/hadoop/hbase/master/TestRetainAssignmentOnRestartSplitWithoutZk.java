@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,21 +17,22 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
+import org.junit.experimental.categories.Category;
 
-@SuppressWarnings("serial")
-@InterfaceAudience.Private
-public class ClusterSchemaException extends HBaseIOException {
-  public ClusterSchemaException(String message) {
-    super(message);
-  }
+@Category({ MasterTests.class, MediumTests.class })
+public class TestRetainAssignmentOnRestartSplitWithoutZk
+    extends TestRetainAssignmentOnRestart {
 
-  public ClusterSchemaException(String message, Throwable cause) {
-    super(message, cause);
-  }
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRetainAssignmentOnRestartSplitWithoutZk.class);
 
-  public ClusterSchemaException(Throwable cause) {
-    super(cause);
+  @Override
+  protected boolean splitWALCoordinatedByZk() {
+    return false;
   }
 }

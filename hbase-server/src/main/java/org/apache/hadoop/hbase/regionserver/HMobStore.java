@@ -93,7 +93,6 @@ public class HMobStore extends HStore {
   private AtomicLong mobFlushedCellsSize = new AtomicLong();
   private AtomicLong mobScanCellsCount = new AtomicLong();
   private AtomicLong mobScanCellsSize = new AtomicLong();
-  private ColumnFamilyDescriptor family;
   private Map<TableName, List<Path>> map = new ConcurrentHashMap<>();
   private final IdLock keyLock = new IdLock();
   // When we add a MOB reference cell to the HFile, we will add 2 tags along with it
@@ -107,16 +106,15 @@ public class HMobStore extends HStore {
   public HMobStore(final HRegion region, final ColumnFamilyDescriptor family,
       final Configuration confParam, boolean warmup) throws IOException {
     super(region, family, confParam, warmup);
-    this.family = family;
     this.mobFileCache = region.getMobFileCache();
     this.homePath = MobUtils.getMobHome(conf);
     this.mobFamilyPath = MobUtils.getMobFamilyPath(conf, this.getTableName(),
-        family.getNameAsString());
+        getColumnFamilyName());
     List<Path> locations = new ArrayList<>(2);
     locations.add(mobFamilyPath);
     TableName tn = region.getTableDescriptor().getTableName();
     locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
-        .getEncodedName(), family.getNameAsString()));
+        .getEncodedName(), getColumnFamilyName()));
     map.put(tn, locations);
     List<Tag> tags = new ArrayList<>(2);
     tags.add(MobConstants.MOB_REF_TAG);
@@ -209,7 +207,7 @@ public class HMobStore extends HStore {
       Compression.Algorithm compression, byte[] startKey,
       boolean isCompaction) throws IOException {
     MobFileName mobFileName = MobFileName.create(startKey, date, UUID.randomUUID()
-        .toString().replaceAll("-", ""),  region.getRegionInfo().getEncodedName());
+        .toString().replaceAll("-", ""),  getHRegion().getRegionInfo().getEncodedName());
     return createWriterInTmp(mobFileName, basePath, maxKeyCount, compression, isCompaction);
   }
 
@@ -226,9 +224,11 @@ public class HMobStore extends HStore {
   public StoreFileWriter createWriterInTmp(MobFileName mobFileName, Path basePath,
       long maxKeyCount, Compression.Algorithm compression,
       boolean isCompaction) throws IOException {
-    return MobUtils.createWriter(conf, region.getFilesystem(), family,
-      new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, cacheConf,
-      cryptoContext, checksumType, bytesPerChecksum, blocksize, BloomType.NONE, isCompaction);
+    return MobUtils.createWriter(conf, getFileSystem(), getColumnFamilyDescriptor(),
+      new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, getCacheConfig(),
+      getStoreContext().getEncryptionContext(), StoreUtils.getChecksumType(conf),
+      StoreUtils.getBytesPerChecksum(conf), getStoreContext().getBlockSize(), BloomType.NONE,
+      isCompaction);
   }
 
   /**
@@ -245,10 +245,10 @@ public class HMobStore extends HStore {
     validateMobFile(sourceFile);
     LOG.info(" FLUSH Renaming flushed file from {} to {}", sourceFile, dstPath);
     Path parent = dstPath.getParent();
-    if (!region.getFilesystem().exists(parent)) {
-      region.getFilesystem().mkdirs(parent);
+    if (!getFileSystem().exists(parent)) {
+      getFileSystem().mkdirs(parent);
     }
-    if (!region.getFilesystem().rename(sourceFile, dstPath)) {
+    if (!getFileSystem().rename(sourceFile, dstPath)) {
       throw new IOException("Failed rename of " + sourceFile + " to " + dstPath);
     }
   }
@@ -261,7 +261,7 @@ public class HMobStore extends HStore {
   private void validateMobFile(Path path) throws IOException {
     HStoreFile storeFile = null;
     try {
-      storeFile = new HStoreFile(region.getFilesystem(), path, conf, this.cacheConf,
+      storeFile = new HStoreFile(getFileSystem(), path, conf, getCacheConfig(),
           BloomType.NONE, isPrimaryReplicaStore());
       storeFile.initReader();
     } catch (IOException e) {
@@ -352,9 +352,11 @@ public class HMobStore extends HStore {
         locations = map.get(tableName);
         if (locations == null) {
           locations = new ArrayList<>(2);
-          locations.add(MobUtils.getMobFamilyPath(conf, tableName, family.getNameAsString()));
+          locations.add(MobUtils.getMobFamilyPath(conf, tableName, getColumnFamilyDescriptor()
+            .getNameAsString()));
           locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tableName,
-            MobUtils.getMobRegionInfo(tableName).getEncodedName(), family.getNameAsString()));
+            MobUtils.getMobRegionInfo(tableName).getEncodedName(), getColumnFamilyDescriptor()
+              .getNameAsString()));
           map.put(tableName, locations);
         }
       } finally {
@@ -388,7 +390,7 @@ public class HMobStore extends HStore {
       MobFile file = null;
       Path path = new Path(location, fileName);
       try {
-        file = mobFileCache.openFile(fs, path, cacheConf);
+        file = mobFileCache.openFile(fs, path, getCacheConfig());
         return readPt != -1 ? file.readCell(search, cacheMobBlocks, readPt)
             : file.readCell(search, cacheMobBlocks);
       } catch (IOException e) {

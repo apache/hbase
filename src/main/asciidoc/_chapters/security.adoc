@@ -44,7 +44,7 @@ HBase provides mechanisms to secure various components and aspects of HBase and 
 === Using Secure HTTP (HTTPS) for the Web UI
 
 A default HBase install uses insecure HTTP connections for Web UIs for the master and region servers.
-To enable secure HTTP (HTTPS) connections instead, set `hbase.ssl.enabled` to `true` in _hbase-site.xml_.
+To enable secure HTTP (HTTPS) connections instead, set `hbase.ssl.enabled` to `true` in _hbase-site.xml_(Please prepare SSL certificate and ssl configuration file in advance).
 This does not change the port used by the Web UI.
 To change the port for the web UI for a given HBase component, configure that port's setting in hbase-site.xml.
 These settings are:
@@ -1585,6 +1585,23 @@ It is also possible to encrypt the WAL.
 Even though WALs are transient, it is necessary to encrypt the WALEdits to avoid circumventing HFile protections for encrypted column families, in the event that the underlying filesystem is compromised.
 When WAL encryption is enabled, all WALs are encrypted, regardless of whether the relevant HFiles are encrypted.
 
+
+==== Enable or disable the feature.
+
+The "Transparent Encryption of Data At Rest" feature is enabled by default, meaning the users can
+define tables with column families where the HFiles and WAL files will be encrypted by HBase,
+assuming the feature is properly configured (see <<hbase.encryption.server.configuration>>).
+
+In some cases (e.g. due to custom security policies), the operator of the HBase cluster might wish
+to only rely on an encryption at rest mechanism outside of HBase (e.g. those offered by HDFS) and
+wants to ensure that HBase's encryption at rest system is inactive. Since
+link:https://issues.apache.org/jira/browse/HBASE-25181[HBASE-25181] it is possible to explicitly
+disable HBase's own encryption by setting `hbase.crypto.enabled` to `false`. This configuration is
+`true` by default. If it is set to `false`, the users won't be able to create any table
+(column family) with HFile and WAL file encryption and the related create table shell (or API)
+commands will fail if they try.
+
+[[hbase.encryption.server.configuration]]
 ==== Server-Side Configuration
 
 This procedure assumes you are using the default Java keystore implementation.
@@ -1687,6 +1704,25 @@ You can include these in the HMaster's _hbase-site.xml_ as well, but the HMaster
 </property>
 ----
 
+. (Optional) Configure encryption key hash algorithm.
++
+Since link:https://issues.apache.org/jira/browse/HBASE-25181[HBASE-25181] it is possible to use
+custom encryption key hash algorithm instead of the default MD5 algorithm. This hash is needed to
+verify the secret key during decryption. The MD5 algorithm is considered weak, and can not be used
+in some (e.g. FIPS compliant) clusters.
++
+The hash is set via the configuration option `hbase.crypto.key.hash.algorithm`. It should be set to
+a JDK `MessageDigest` algorithm like "MD5", "SHA-384" or "SHA-512". The default is "MD5" for
+backward compatibility. An example of this configuration parameter on a FIPS-compliant cluster:
+[source,xml]
++
+----
+<property>
+  <name>hbase.crypto.key.hash.algorithm</name>
+  <value>SHA-384</value>
+</property>
+----
+
 . Configure permissions on the _hbase-site.xml_ file.
 +
 Because the keystore password is stored in the hbase-site.xml, you need to ensure that only the HBase user can read the _hbase-site.xml_ file, using file ownership and permissions.
@@ -1713,12 +1749,20 @@ Refer to the official API for usage instructions.
 Enable Encryption on a Column Family::
   To enable encryption on a column family, you can either use HBase Shell or the Java API.
   After enabling encryption, trigger a major compaction.
-  When the major compaction completes, the HFiles will be encrypted.
+  When the major compaction completes, the compacted new HFiles will be encrypted.
+  However, depending on the compaction settings, it is possible that not all the HFiles will be
+  rewritten during a major compaction and there still might remain some old unencrypted HFiles.
+  Also please note, that the snapshots are immutable. So the snapshots taken before you enabled the
+  encryption will still contain the unencrypted HFiles.
 
 Rotate the Data Key::
   To rotate the data key, first change the ColumnFamily key in the column descriptor, then trigger a major compaction.
-  When compaction is complete, all HFiles will be re-encrypted using the new data key.
   Until the compaction completes, the old HFiles will still be readable using the old key.
+  During compaction, the compacted HFiles will be re-encrypted using the new data key.
+  However, depending on the compaction settings, it is possible that not all the HFiles will be
+  rewritten during a major compaction and there still might remain some old HFiles encrypted with the old key.
+  Also please note, that the snapshots are immutable. So the snapshots taken before the changing of
+  the encryption key will still contain the HFiles written using the old key.
 
 Switching Between Using a Random Data Key and Specifying A Key::
   If you configured a column family to use a specific key and you want to return to the default behavior of using a randomly-generated key for that column family, use the Java API to alter the `HColumnDescriptor` so that no value is sent with the key `ENCRYPTION_KEY`.
@@ -1728,7 +1772,6 @@ Rotate the Master Key::
   Then update the KeyStore to contain a new master key, and keep the old master key in the KeyStore using a different alias.
   Next, configure fallback to the old master key in the _hbase-site.xml_ file.
 
-::
 
 [[hbase.secure.bulkload]]
 === Secure Bulk Load

@@ -19,22 +19,23 @@ package org.apache.hadoop.hbase.replication.master;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
@@ -45,7 +46,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationLogCleaner.class);
-  private ZKWatcher zkw;
+  private ZKWatcher zkw = null;
+  private boolean shareZK = false;
   private ReplicationQueueStorage queueStorage;
   private boolean stopped = false;
   private Set<String> wals;
@@ -94,18 +96,26 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   }
 
   @Override
-  public void setConf(Configuration config) {
-    // Make my own Configuration.  Then I'll have my own connection to zk that
-    // I can close myself when comes time.
-    Configuration conf = new Configuration(config);
+  public void init(Map<String, Object> params) {
+    super.init(params);
     try {
-      setConf(conf, new ZKWatcher(conf, "replicationLogCleaner", null));
+      if (MapUtils.isNotEmpty(params)) {
+        Object master = params.get(HMaster.MASTER);
+        if (master != null && master instanceof HMaster) {
+          zkw = ((HMaster) master).getZooKeeper();
+          shareZK = true;
+        }
+      }
+      if (zkw == null) {
+        zkw = new ZKWatcher(getConf(), "replicationLogCleaner", null);
+      }
+      this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
     } catch (IOException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public void setConf(Configuration conf, ZKWatcher zk) {
     super.setConf(conf);
     try {
@@ -115,7 +125,8 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
   }
-  @VisibleForTesting
+
+  @InterfaceAudience.Private
   public void setConf(Configuration conf, ZKWatcher zk,
       ReplicationQueueStorage replicationQueueStorage) {
     super.setConf(conf);
@@ -127,7 +138,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   public void stop(String why) {
     if (this.stopped) return;
     this.stopped = true;
-    if (this.zkw != null) {
+    if (!shareZK && this.zkw != null) {
       LOG.info("Stopping " + this.zkw);
       this.zkw.close();
     }

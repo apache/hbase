@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -102,6 +103,7 @@ public class TestMetaShutdownHandler {
     RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
     assertEquals("Wrong state for meta!", RegionState.State.OPEN, metaState.getState());
     assertNotEquals("Meta is on master!", metaServerName, master.getServerName());
+    HRegionServer metaRegionServer = cluster.getRegionServer(metaServerName);
 
     // Delete the ephemeral node of the meta-carrying region server.
     // This is trigger the expire of this region server on the master.
@@ -113,6 +115,7 @@ public class TestMetaShutdownHandler {
     // Wait for SSH to finish
     final ServerManager serverManager = master.getServerManager();
     final ServerName priorMetaServerName = metaServerName;
+    TEST_UTIL.waitFor(60000, 100, () -> metaRegionServer.isStopped());
     TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {

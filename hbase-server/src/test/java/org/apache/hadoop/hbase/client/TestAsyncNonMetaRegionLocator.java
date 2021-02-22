@@ -22,10 +22,10 @@ import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.client.RegionReplicaTestHelper.testLocator;
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -35,7 +35,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -62,6 +61,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
 @RunWith(Parameterized.class)
@@ -116,7 +117,7 @@ public class TestAsyncNonMetaRegionLocator {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    IOUtils.closeQuietly(CONN);
+    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 

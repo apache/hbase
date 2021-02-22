@@ -54,12 +54,11 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -75,13 +74,10 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionImpl.class);
 
-  @VisibleForTesting
   static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
     new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
       .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
     10, TimeUnit.MILLISECONDS);
-
-  private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
 
   private final Configuration conf;
 
@@ -96,8 +92,6 @@ class AsyncConnectionImpl implements AsyncConnection {
   protected final RpcClient rpcClient;
 
   final RpcControllerFactory rpcControllerFactory;
-
-  private final boolean hostnameCanChange;
 
   private final AsyncRegionLocator locator;
 
@@ -144,7 +138,6 @@ class AsyncConnectionImpl implements AsyncConnection {
     this.rpcClient = RpcClientFactory.createClient(
         conf, clusterId, localAddress, metrics.orElse(null));
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
-    this.hostnameCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
     this.rpcTimeout =
       (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
     this.locator = new AsyncRegionLocator(this, RETRY_TIMER);
@@ -192,6 +185,9 @@ class AsyncConnectionImpl implements AsyncConnection {
    * @return ChoreService
    */
   synchronized ChoreService getChoreService() {
+    if (isClosed()) {
+      throw new IllegalStateException("connection is already closed");
+    }
     if (choreService == null) {
       choreService = new ChoreService("AsyncConn Chore Service");
     }
@@ -217,11 +213,15 @@ class AsyncConnectionImpl implements AsyncConnection {
     if(LOG.isDebugEnabled()){
       logCallStack(Thread.currentThread().getStackTrace());
     }
-    IOUtils.closeQuietly(clusterStatusListener);
-    IOUtils.closeQuietly(rpcClient);
-    IOUtils.closeQuietly(registry);
-    if (choreService != null) {
-      choreService.shutdown();
+    IOUtils.closeQuietly(clusterStatusListener,
+      e -> LOG.warn("failed to close clusterStatusListener", e));
+    IOUtils.closeQuietly(rpcClient, e -> LOG.warn("failed to close rpcClient", e));
+    IOUtils.closeQuietly(registry, e -> LOG.warn("failed to close registry", e));
+    synchronized (this) {
+      if (choreService != null) {
+        choreService.shutdown();
+        choreService = null;
+      }
     }
     metrics.ifPresent(MetricsConnection::shutdown);
     ConnectionOverAsyncConnection c = this.conn;
@@ -266,7 +266,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(rsStubs,
-      getStubKey(ClientService.getDescriptor().getName(), serverName, hostnameCanChange),
+      getStubKey(ClientService.getDescriptor().getName(), serverName),
       () -> createRegionServerStub(serverName));
   }
 
@@ -280,7 +280,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   AdminService.Interface getAdminStub(ServerName serverName) throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(adminSubs,
-      getStubKey(AdminService.getDescriptor().getName(), serverName, hostnameCanChange),
+      getStubKey(AdminService.getDescriptor().getName(), serverName),
       () -> createAdminServerStub(serverName));
   }
 

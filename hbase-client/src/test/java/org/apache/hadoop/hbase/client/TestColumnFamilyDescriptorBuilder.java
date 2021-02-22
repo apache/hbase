@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -183,6 +184,34 @@ public class TestColumnFamilyDescriptorBuilder {
     Assert.assertEquals(43282800, builder.build().getTimeToLive());
   }
 
+  @Test
+  public void testSetBlocksize() throws HBaseException {
+    String blocksize;
+    ColumnFamilyDescriptorBuilder builder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
+
+    blocksize = "131072";
+    builder.setBlocksize(blocksize);
+    assertEquals(131072, builder.build().getBlocksize());
+
+    blocksize = "100KB";
+    builder.setBlocksize(blocksize);
+    assertEquals(102400, builder.build().getBlocksize());
+
+    blocksize = "1MB";
+    builder.setBlocksize(blocksize);
+    assertEquals(1048576, builder.build().getBlocksize());
+
+    // ignore case
+    blocksize = "64kb 512B";
+    builder.setBlocksize(blocksize);
+    assertEquals(66048, builder.build().getBlocksize());
+
+    blocksize = "66048 B (64KB 512B)";
+    builder.setBlocksize(blocksize);
+    assertEquals(66048, builder.build().getBlocksize());
+  }
+
   /**
    * Test for verifying the ColumnFamilyDescriptorBuilder's default values so that backward
    * compatibility with hbase-1.x can be mantained (see HBASE-24981).
@@ -210,6 +239,24 @@ public class TestColumnFamilyDescriptorBuilder {
       KeepDeletedCells.FALSE.toString());
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING),
       DataBlockEncoding.NONE.toString());
+  }
 
+  @Test
+  public void testSetEmptyValue() {
+    ColumnFamilyDescriptorBuilder builder =
+      ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY);
+    String testConf = "TestConfiguration";
+    String testValue = "TestValue";
+    // test set value
+    builder.setValue(testValue, "2");
+    assertEquals("2", Bytes.toString(builder.build().getValue(Bytes.toBytes(testValue))));
+    builder.setValue(testValue, "");
+    assertNull(builder.build().getValue(Bytes.toBytes(testValue)));
+
+    // test set configuration
+    builder.setConfiguration(testConf, "1");
+    assertEquals("1", builder.build().getConfigurationValue(testConf));
+    builder.setConfiguration(testConf, "");
+    assertNull(builder.build().getConfigurationValue(testConf));
   }
 }

@@ -234,7 +234,7 @@ public class MemorySizeUtil {
   }
 
   /**
-   * @param conf used to read config for bucket cache size. (< 1 is treated as % and > is treated as MiB)
+   * @param conf used to read config for bucket cache size. 
    * @return the number of bytes to use for bucket cache, negative if disabled.
    */
   public static long getBucketCacheSize(final Configuration conf) {

@@ -35,7 +35,7 @@ class CatalogReplicationSourcePeer extends ReplicationPeerImpl {
   /**
    * @param clusterKey Usually the UUID from zk passed in by caller as a String.
    */
-  CatalogReplicationSourcePeer(Configuration configuration, String clusterKey, String peerId) {
+  CatalogReplicationSourcePeer(Configuration configuration, String clusterKey) {
     super(configuration, ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER + "_catalog",
       ReplicationPeerConfig.newBuilder().
         setClusterKey(clusterKey).

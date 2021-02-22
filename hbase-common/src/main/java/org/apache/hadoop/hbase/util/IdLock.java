@@ -21,12 +21,10 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -213,12 +211,10 @@ public class IdLock {
     }
   }
 
-  @VisibleForTesting
   void assertMapEmpty() {
     assert map.isEmpty();
   }
 
-  @VisibleForTesting
   public void waitForWaiters(long id, int numWaiters) throws InterruptedException {
     for (Entry entry;;) {
       entry = map.get(id);

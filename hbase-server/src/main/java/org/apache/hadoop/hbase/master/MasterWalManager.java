@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class abstracts a bunch of operations the HMaster needs
@@ -66,7 +65,6 @@ public class MasterWalManager {
   /**
    * Filter *out* WAL files that are for the hbase:meta Region; i.e. return user-space WALs only.
    */
-  @VisibleForTesting
   public final static PathFilter NON_META_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path p) {
@@ -124,7 +122,6 @@ public class MasterWalManager {
     }
   }
 
-  @VisibleForTesting
   SplitLogManager getSplitLogManager() {
     return this.splitLogManager;
   }

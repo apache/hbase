@@ -229,7 +229,7 @@ def compare_results(tool_results, known_issues, compare_warnings):
                                       observed_count=tool_results[check][issue_type])
                      for check, known_issue_counts in known_issues.items()
                         for issue_type, known_count in known_issue_counts.items()
-                            if tool_results[check][issue_type] > known_count]
+                           if compare_tool_results_count(tool_results, check, issue_type, known_count)]
 
     if not compare_warnings:
         unexpected_issues = [tup for tup in unexpected_issues
@@ -241,6 +241,14 @@ def compare_results(tool_results, known_issues, compare_warnings):
 
     return bool(unexpected_issues)
 
+def compare_tool_results_count(tool_results, check, issue_type, known_count):
+    """ Check problem counts are no more than the known count.
+    (This function exists just so can add in logging; previous was inlined
+    one-liner but this made it hard debugging)
+    """
+    # logging.info("known_count=%s, check key=%s, tool_results=%s, issue_type=%s",
+    #        str(known_count), str(check), str(tool_results), str(issue_type))
+   return tool_results[check][issue_type] > known_count
 
 def process_java_acc_output(output):
     """ Process the output string to find the problems and warnings in both the

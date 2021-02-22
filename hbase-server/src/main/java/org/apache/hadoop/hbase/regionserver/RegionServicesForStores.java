@@ -22,12 +22,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -97,8 +97,9 @@ public class RegionServicesForStores {
 
   ThreadPoolExecutor getInMemoryCompactionPool() {
     if (rsServices != null) {
+      ExecutorConfig config = new ExecutorConfig().setCorePoolSize(inMemoryPoolSize);
       return rsServices.getExecutorService().getExecutorLazily(ExecutorType.RS_IN_MEMORY_COMPACTION,
-        inMemoryPoolSize);
+        config);
     } else {
       // this could only happen in tests
       return getInMemoryCompactionPoolForTest();
@@ -113,7 +114,6 @@ public class RegionServicesForStores {
     return region.getTableDescriptor().getColumnFamilyCount();
   }
 
-  @VisibleForTesting
   long getMemStoreSize() {
     return region.getMemStoreDataSize();
   }

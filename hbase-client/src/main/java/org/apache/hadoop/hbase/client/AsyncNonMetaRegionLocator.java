@@ -63,7 +63,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 
 /**
@@ -74,13 +73,11 @@ class AsyncNonMetaRegionLocator {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncNonMetaRegionLocator.class);
 
-  @VisibleForTesting
   static final String MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE =
     "hbase.client.meta.max.concurrent.locate.per.table";
 
   private static final int DEFAULT_MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE = 8;
 
-  @VisibleForTesting
   static String LOCATE_PREFETCH_LIMIT = "hbase.client.locate.prefetch.limit";
 
   private static final int DEFAULT_LOCATE_PREFETCH_LIMIT = 10;
@@ -214,7 +211,7 @@ class AsyncNonMetaRegionLocator {
 
         this.metaReplicaSelector = CatalogReplicaLoadBalanceSelectorFactory.createSelector(
           replicaSelectorClass, META_TABLE_NAME, conn, () -> {
-            int numOfReplicas = 1;
+            int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
             try {
               RegionLocations metaLocations = conn.registry.getMetaRegionLocations().get(
                 conn.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
@@ -709,7 +706,6 @@ class AsyncNonMetaRegionLocator {
   }
 
   // only used for testing whether we have cached the location for a region.
-  @VisibleForTesting
   RegionLocations getRegionLocationInCache(TableName tableName, byte[] row) {
     TableCache tableCache = cache.get(tableName);
     if (tableCache == null) {
@@ -719,7 +715,6 @@ class AsyncNonMetaRegionLocator {
   }
 
   // only used for testing whether we have cached the location for a table.
-  @VisibleForTesting
   int getNumberOfCachedRegionLocations(TableName tableName) {
     TableCache tableCache = cache.get(tableName);
     if (tableCache == null) {

@@ -29,8 +29,6 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Utility methods related to BloomFilters
  */
@@ -91,7 +89,6 @@ public final class BloomFilterUtil {
  *   This gets used in {@link #contains(ByteBuff, int, int, Hash, int, HashKey)}
    * @param random The random number source to use, or null to compute actual hashes
    */
-  @VisibleForTesting
   public static void setRandomGeneratorForTest(Random random) {
     randomGeneratorForTest = random;
   }

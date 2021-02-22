@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HConstants;
@@ -27,8 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Config manager for RegionsRecovery Chore - Dynamically reload config and update chore
- * accordingly
+ * Config manager for RegionsRecovery Chore - Dynamically reload config and update chore accordingly
  */
 @InterfaceAudience.Private
 public class RegionsRecoveryConfigManager implements ConfigurationObserver {
@@ -36,6 +36,7 @@ public class RegionsRecoveryConfigManager implements ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(RegionsRecoveryConfigManager.class);
 
   private final HMaster hMaster;
+  private RegionsRecoveryChore chore;
   private int prevMaxStoreFileRefCount;
   private int prevRegionsRecoveryInterval;
 
@@ -51,34 +52,35 @@ public class RegionsRecoveryConfigManager implements ConfigurationObserver {
     final int newMaxStoreFileRefCount = getMaxStoreFileRefCount(conf);
     final int newRegionsRecoveryInterval = getRegionsRecoveryChoreInterval(conf);
 
-    if (prevMaxStoreFileRefCount == newMaxStoreFileRefCount
-        && prevRegionsRecoveryInterval == newRegionsRecoveryInterval) {
+    if (prevMaxStoreFileRefCount == newMaxStoreFileRefCount &&
+      prevRegionsRecoveryInterval == newRegionsRecoveryInterval) {
       // no need to re-schedule the chore with updated config
       // as there is no change in desired configs
       return;
     }
 
-    LOG.info("Config Reload for RegionsRecovery Chore. prevMaxStoreFileRefCount: {}," +
+    LOG.info(
+      "Config Reload for RegionsRecovery Chore. prevMaxStoreFileRefCount: {}," +
         " newMaxStoreFileRefCount: {}, prevRegionsRecoveryInterval: {}, " +
-        "newRegionsRecoveryInterval: {}", prevMaxStoreFileRefCount, newMaxStoreFileRefCount,
-      prevRegionsRecoveryInterval, newRegionsRecoveryInterval);
+        "newRegionsRecoveryInterval: {}",
+      prevMaxStoreFileRefCount, newMaxStoreFileRefCount, prevRegionsRecoveryInterval,
+      newRegionsRecoveryInterval);
 
-    RegionsRecoveryChore regionsRecoveryChore = new RegionsRecoveryChore(this.hMaster,
-      conf, this.hMaster);
+    RegionsRecoveryChore regionsRecoveryChore =
+      new RegionsRecoveryChore(this.hMaster, conf, this.hMaster);
     ChoreService choreService = this.hMaster.getChoreService();
 
     // Regions Reopen based on very high storeFileRefCount is considered enabled
     // only if hbase.regions.recovery.store.file.ref.count has value > 0
-
     synchronized (this) {
+      if (chore != null) {
+        chore.shutdown();
+        chore = null;
+      }
       if (newMaxStoreFileRefCount > 0) {
-        // reschedule the chore
-        // provide mayInterruptIfRunning - false to take care of completion
-        // of in progress task if any
-        choreService.cancelChore(regionsRecoveryChore, false);
+        // schedule the new chore
         choreService.scheduleChore(regionsRecoveryChore);
-      } else {
-        choreService.cancelChore(regionsRecoveryChore, false);
+        chore = regionsRecoveryChore;
       }
       this.prevMaxStoreFileRefCount = newMaxStoreFileRefCount;
       this.prevRegionsRecoveryInterval = newRegionsRecoveryInterval;
@@ -86,15 +88,18 @@ public class RegionsRecoveryConfigManager implements ConfigurationObserver {
   }
 
   private int getMaxStoreFileRefCount(Configuration configuration) {
-    return configuration.getInt(
-      HConstants.STORE_FILE_REF_COUNT_THRESHOLD,
+    return configuration.getInt(HConstants.STORE_FILE_REF_COUNT_THRESHOLD,
       HConstants.DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD);
   }
 
   private int getRegionsRecoveryChoreInterval(Configuration configuration) {
-    return configuration.getInt(
-      HConstants.REGIONS_RECOVERY_INTERVAL,
+    return configuration.getInt(HConstants.REGIONS_RECOVERY_INTERVAL,
       HConstants.DEFAULT_REGIONS_RECOVERY_INTERVAL);
   }
 
+  @RestrictedApi(explanation = "Only visible for testing", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  RegionsRecoveryChore getChore() {
+    return chore;
+  }
 }

@@ -51,12 +51,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
@@ -197,7 +196,6 @@ public final class SnapshotManifest {
     addMobRegion(regionInfo, visitor);
   }
 
-  @VisibleForTesting
   protected void addMobRegion(RegionInfo regionInfo, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     final String snapshotName = desc.getName();
@@ -245,7 +243,6 @@ public final class SnapshotManifest {
     addRegion(region, visitor);
   }
 
-  @VisibleForTesting
   protected void addRegion(final HRegion region, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     final String snapshotName = desc.getName();
@@ -294,7 +291,6 @@ public final class SnapshotManifest {
     addRegion(tableDir, regionInfo, visitor);
   }
 
-  @VisibleForTesting
   protected void addRegion(final Path tableDir, final RegionInfo regionInfo, RegionVisitor visitor)
       throws IOException {
     boolean isMobRegion = MobUtils.isMobRegionInfo(regionInfo);

@@ -18,13 +18,15 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
@@ -59,8 +61,6 @@ abstract class RpcConnection {
 
   protected final Token<? extends TokenIdentifier> token;
 
-  protected final InetAddress serverAddress;
-
   protected final SecurityInfo securityInfo;
 
   protected final int reloginMaxBackoff; // max pause before relogin on sasl failure
@@ -68,6 +68,8 @@ abstract class RpcConnection {
   protected final Codec codec;
 
   protected final CompressionCodec compressor;
+
+  protected final MetricsConnection metrics;
 
   protected final HashedWheelTimer timeoutTimer;
 
@@ -83,17 +85,13 @@ abstract class RpcConnection {
   protected SaslClientAuthenticationProvider provider;
 
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
-      String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor)
-      throws IOException {
-    if (remoteId.getAddress().isUnresolved()) {
-      throw new UnknownHostException("unknown host: " + remoteId.getAddress().getHostName());
-    }
-    this.serverAddress = remoteId.getAddress().getAddress();
+      String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor,
+      MetricsConnection metrics) throws IOException {
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
     this.compressor = compressor;
     this.conf = conf;
-
+    this.metrics = metrics;
     User ticket = remoteId.getTicket();
     this.securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
     this.useSasl = isSecurityEnabled;
@@ -127,7 +125,7 @@ abstract class RpcConnection {
     this.remoteId = remoteId;
   }
 
-  protected void scheduleTimeoutTask(final Call call) {
+  protected final void scheduleTimeoutTask(final Call call) {
     if (call.timeout > 0) {
       call.timeoutTask = timeoutTimer.newTimeout(new TimerTask() {
 
@@ -142,7 +140,7 @@ abstract class RpcConnection {
     }
   }
 
-  protected byte[] getConnectionHeaderPreamble() {
+  protected final byte[] getConnectionHeaderPreamble() {
     // Assemble the preamble up in a buffer first and then send it. Writing individual elements,
     // they are getting sent across piecemeal according to wireshark and then server is messing
     // up the reading on occasion (the passed in stream is not buffered yet).
@@ -158,7 +156,7 @@ abstract class RpcConnection {
     return preamble;
   }
 
-  protected ConnectionHeader getConnectionHeader() {
+  protected final ConnectionHeader getConnectionHeader() {
     final ConnectionHeader.Builder builder = ConnectionHeader.newBuilder();
     builder.setServiceName(remoteId.getServiceName());
     final UserInformation userInfoPB  = provider.getUserInfo(remoteId.ticket);
@@ -179,6 +177,21 @@ abstract class RpcConnection {
           conf.get("hbase.rpc.crypto.encryption.aes.cipher.transform", "AES/CTR/NoPadding"));
     }
     return builder.build();
+  }
+
+  protected final InetSocketAddress getRemoteInetAddress(MetricsConnection metrics)
+    throws UnknownHostException {
+    if (metrics != null) {
+      metrics.incrNsLookups();
+    }
+    InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
+    if (remoteAddr.isUnresolved()) {
+      if (metrics != null) {
+        metrics.incrNsLookupsFailed();
+      }
+      throw new UnknownHostException(remoteId.getAddress() + " could not be resolved");
+    }
+    return remoteAddr;
   }
 
   protected abstract void callTimeout(Call call);

@@ -23,22 +23,16 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
-import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 import org.apache.hbase.thirdparty.io.netty.bootstrap.ServerBootstrap;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelInitializer;
@@ -124,7 +118,7 @@ public class NettyRpcServer extends RpcServer {
     this.scheduler.init(new RpcSchedulerContext(this));
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected NettyRpcServerPreambleHandler createNettyRpcServerPreambleHandler() {
     return new NettyRpcServerPreambleHandler(NettyRpcServer.this);
   }
@@ -181,22 +175,5 @@ public class NettyRpcServer extends RpcServer {
     int channelsCount = allChannels.size();
     // allChannels also contains the server channel, so exclude that from the count.
     return channelsCount > 0 ? channelsCount - 1 : channelsCount;
-  }
-
-  @Override
-  public Pair<Message, CellScanner> call(BlockingService service,
-      MethodDescriptor md, Message param, CellScanner cellScanner,
-      long receiveTime, MonitoredRPCHandler status) throws IOException {
-    return call(service, md, param, cellScanner, receiveTime, status,
-        System.currentTimeMillis(), 0);
-  }
-
-  @Override
-  public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
-      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
-      long startTime, int timeout) throws IOException {
-    NettyServerCall fakeCall = new NettyServerCall(-1, service, md, null, param, cellScanner, null,
-        -1, null, receiveTime, timeout, bbAllocator, cellBlockBuilder, null);
-    return call(fakeCall, status);
   }
 }
