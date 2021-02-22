@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.chaos.util;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.Set;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -35,7 +34,7 @@ import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 public class ChaosMonkeyRunner extends AbstractHBaseTool {
   private static final Log LOG = LogFactory.getLog(ChaosMonkeyRunner.class);

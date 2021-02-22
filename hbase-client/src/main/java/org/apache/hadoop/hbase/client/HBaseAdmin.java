@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;

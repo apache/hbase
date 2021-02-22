@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.base.Preconditions;
-
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,6 +33,8 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Finds the Jar for a class. If the class is in a directory in the

@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,7 +51,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Mut
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /** Creates multiple threads that write key/values into the */
 public class MultiThreadedUpdater extends MultiThreadedWriterBase {

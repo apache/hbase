@@ -29,7 +29,6 @@ import static org.mockito.Mockito.times;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Result;
@@ -42,7 +41,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 @Category(SmallTests.class)
 public class TestRowCounter {

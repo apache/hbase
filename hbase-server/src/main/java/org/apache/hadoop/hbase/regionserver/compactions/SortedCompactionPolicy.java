@@ -10,17 +10,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +22,11 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.collect.Collections2;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * An abstract compaction policy that select files on seq id order.
@@ -201,6 +200,9 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
       @Override
       public boolean apply(StoreFile input) {
         return input.excludeFromMinorCompaction();
+      }
+      public boolean test(StoreFile input) {
+        return apply(input);
       }
     }));
     return candidates;

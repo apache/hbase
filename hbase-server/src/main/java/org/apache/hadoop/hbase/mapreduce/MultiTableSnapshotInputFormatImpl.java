@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import java.io.IOException;
+import java.util.AbstractMap;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,12 +38,8 @@ import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 
-import java.io.IOException;
-import java.util.AbstractMap;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Shared implementation of mapreduce code over multiple table snapshots.

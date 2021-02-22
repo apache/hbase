@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
@@ -55,7 +54,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Cluster-wide testing of a distributed three-phase commit using a 'real' zookeeper cluster

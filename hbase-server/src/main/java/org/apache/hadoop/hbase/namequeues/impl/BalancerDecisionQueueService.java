@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.namequeues.impl;
 
-import com.google.common.collect.Lists;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -36,6 +35,8 @@ import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RecentLogs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * In-memory Queue service provider for Balancer Decision events

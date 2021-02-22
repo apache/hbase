@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
-
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

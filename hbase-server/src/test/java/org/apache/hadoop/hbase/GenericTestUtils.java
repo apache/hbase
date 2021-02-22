@@ -31,7 +31,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
@@ -44,9 +43,9 @@ import org.junit.Assert;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Supplier;
-import com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Test provides some very generic helpers which might be used across the tests

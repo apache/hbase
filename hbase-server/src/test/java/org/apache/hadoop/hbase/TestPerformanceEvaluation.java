@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.LinkedList;
-
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.GsonUtil;
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 @Category(SmallTests.class)
 public class TestPerformanceEvaluation {

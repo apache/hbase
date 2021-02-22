@@ -23,7 +23,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import com.google.common.reflect.TypeToken;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Type;
@@ -37,9 +37,11 @@ import javax.management.ObjectName;
 import javax.management.QueryExp;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.reflect.TypeToken;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**
  * Test {@link JSONBean}.

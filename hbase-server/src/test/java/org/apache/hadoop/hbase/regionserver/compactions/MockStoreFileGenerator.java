@@ -18,19 +18,18 @@
 
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-
-import com.google.common.base.Objects;
-import com.google.common.io.Files;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.util.StringUtils;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 
 /**
  * Base class of objects that can create mock store files with a given size.
@@ -78,7 +77,7 @@ class MockStoreFileGenerator {
     when(mockSf.isReference()).thenReturn(false); // TODO come back to
     // this when selection takes this into account
     when(mockSf.getReader()).thenReturn(reader);
-    String toString = Objects.toStringHelper("MockStoreFile")
+    String toString = MoreObjects.toStringHelper("MockStoreFile")
         .add("isReference", false)
         .add("fileSize", StringUtils.humanReadableInt(sizeInBytes))
         .add("seqId", seqId)

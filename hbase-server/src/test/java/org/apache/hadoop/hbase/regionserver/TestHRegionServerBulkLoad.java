@@ -27,7 +27,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -79,7 +78,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests bulk loading of HFiles and shows the atomicity or lack of atomicity of

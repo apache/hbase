@@ -24,8 +24,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
-import com.google.common.collect.ImmutableCollection;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -72,7 +70,7 @@ public interface StoreFileManager {
    * Clears all the files currently in use and returns them.
    * @return The files previously in use.
    */
-  ImmutableCollection<StoreFile> clearFiles();
+  Collection<StoreFile> clearFiles();
 
   /**
    * Clears all the compacted files and returns them. This method is expected to be

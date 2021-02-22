@@ -33,7 +33,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -42,11 +41,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.io.IOUtils;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.MapMaker;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 
 /**
  * ClassLoader used to load classes for Coprocessor instances.

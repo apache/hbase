@@ -1283,7 +1283,6 @@
     <httpclient.version>3.1</httpclient.version>
     <httpcore.version>4.4.4</httpcore.version>
     <metrics-core.version>2.2.0</metrics-core.version>
-    <guava.version>12.0.1</guava.version>
     <jackson1.version>1.9.13</jackson1.version>
     <jackson2.version>2.9.10</jackson2.version>
     <jackson2.databind.version>2.9.10.1</jackson2.databind.version>
@@ -1314,6 +1313,7 @@
     <bouncycastle.version>1.46</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
     <hbase.shaded.gson.version>3.0.0</hbase.shaded.gson.version>
+    <hbase.shaded.miscellaneous.version>3.0.0</hbase.shaded.miscellaneous.version>
     <!-- Plugin Dependencies -->
     <error-prone.version>2.1.1</error-prone.version>
     <maven.antrun.version>1.6</maven.antrun.version>
@@ -1623,17 +1623,6 @@
         <version>3.1.2</version>
       </dependency>
       <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava</artifactId>
-        <version>${guava.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
         <groupId>commons-collections</groupId>
         <artifactId>commons-collections</artifactId>
         <version>${collections.version}</version>
@@ -1839,6 +1828,11 @@
         <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-gson</artifactId>
         <version>${hbase.shaded.gson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-miscellaneous</artifactId>
+        <version>${hbase.shaded.miscellaneous.version}</version>
       </dependency>
       <dependency>
         <!--If this is not in the runtime lib, we get odd

@@ -22,9 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.RpcController;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -41,6 +38,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClientMetaService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -48,9 +47,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClientMetaService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdResponse;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestMasterRegistry {

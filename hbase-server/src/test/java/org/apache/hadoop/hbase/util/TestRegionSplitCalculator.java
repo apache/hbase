@@ -27,16 +27,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.UUID;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
-
-import com.google.common.collect.ComparisonChain;
-import com.google.common.collect.Multimap;
-
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ComparisonChain;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
 @Category(SmallTests.class)
 public class TestRegionSplitCalculator {

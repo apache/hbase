@@ -52,10 +52,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Strings;
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**
  * WALPrettyPrinter prints the contents of a given WAL with a variety of

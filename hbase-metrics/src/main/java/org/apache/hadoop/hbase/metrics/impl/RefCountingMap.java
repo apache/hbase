@@ -25,10 +25,9 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.google.common.base.Supplier;
+import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
 
 /**
  * A map of K to V, but does ref counting for added and removed values. The values are

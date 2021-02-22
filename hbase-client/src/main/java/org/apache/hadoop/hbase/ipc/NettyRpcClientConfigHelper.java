@@ -17,19 +17,17 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.common.base.Preconditions;
-
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Pair;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Helper class for passing config to {@link NettyRpcClient}.

@@ -27,7 +27,6 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -43,11 +42,11 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * An HColumnDescriptor contains information about a column family such as the

@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.stats.UniformSample;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
@@ -40,10 +42,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import com.google.common.base.Objects;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -96,15 +94,14 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.stats.UniformSample;
-
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 import org.apache.htrace.impl.ProbabilitySampler;
+
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
@@ -328,7 +325,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)) {
       needsDelete = true;
       // wait, why did it delete my table?!?
-      LOG.debug(Objects.toStringHelper("needsDelete")
+      LOG.debug(MoreObjects.toStringHelper("needsDelete")
         .add("needsDelete", needsDelete)
         .add("isReadCmd", isReadCmd)
         .add("exists", exists)

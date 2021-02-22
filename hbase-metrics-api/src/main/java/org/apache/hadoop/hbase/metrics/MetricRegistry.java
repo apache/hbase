@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.metrics;
 
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-import com.google.common.base.Optional;
+import org.apache.hbase.thirdparty.com.google.common.base.Optional;
 
 /**
  * General purpose factory for creating various metrics.

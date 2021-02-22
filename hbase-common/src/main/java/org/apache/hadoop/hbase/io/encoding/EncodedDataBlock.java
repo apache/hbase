@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import com.google.common.base.Preconditions;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -26,16 +25,18 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Compressor;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Encapsulates a data block compressed using a particular encoding algorithm.

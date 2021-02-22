@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.codec.prefixtree.column.data;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.prefixtree.column.TestColumnData;
 import org.apache.hadoop.hbase.util.ByteRange;
@@ -28,7 +27,7 @@ import org.apache.hadoop.hbase.util.byterange.ByteRangeSet;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeTreeSet;
 import org.apache.hadoop.hbase.util.RedundantKVGenerator;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class TestColumnDataRandom implements TestColumnData {
 

@@ -17,12 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -31,11 +29,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
-
-import com.google.common.collect.Sets;
-
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALKey;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * A WAL Entry for {@link FSHLog} implementation.  Immutable.

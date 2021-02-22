@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -51,7 +50,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 @Category(MediumTests.class)
 public class TestMaster {

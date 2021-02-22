@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.collect.Sets;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
@@ -26,7 +26,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.Set;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * This Integration Test verifies acid guarantees across column families by frequently writing

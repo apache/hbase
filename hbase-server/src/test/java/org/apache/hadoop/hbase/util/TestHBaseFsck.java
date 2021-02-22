@@ -50,7 +50,6 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -133,7 +132,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import com.google.common.collect.Multimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
 /**
  * This tests HBaseFsck's ability to detect reasons for inconsistent tables.

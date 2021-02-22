@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -61,7 +60,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBase {

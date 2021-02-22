@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionRequest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import static org.junit.Assert.*;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy {
 

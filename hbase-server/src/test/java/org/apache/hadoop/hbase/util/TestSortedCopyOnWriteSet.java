@@ -22,11 +22,11 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.Assert.*;
 
 import java.util.Iterator;
-
-import com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(SmallTests.class)
 public class TestSortedCopyOnWriteSet {

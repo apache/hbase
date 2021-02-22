@@ -20,11 +20,10 @@ package org.apache.hadoop.hbase.codec.prefixtree.builder;
 
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.hbase.codec.prefixtree.builder.data.TestTokenizerDataBasic;
 import org.apache.hadoop.hbase.codec.prefixtree.builder.data.TestTokenizerDataEdgeCase;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public interface TestTokenizerData {
 

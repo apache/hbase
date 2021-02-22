@@ -20,12 +20,6 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +46,12 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.LinkedListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * GroupBasedLoadBalancer, used when Region Server Grouping is configured (HBase-6721)

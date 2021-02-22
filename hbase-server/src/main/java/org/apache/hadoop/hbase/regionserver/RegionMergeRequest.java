@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -30,7 +29,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Handles processing region merges. Put in a queue, owned by HRegionServer.

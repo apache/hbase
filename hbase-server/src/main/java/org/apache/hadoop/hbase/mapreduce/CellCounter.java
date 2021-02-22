@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -47,8 +46,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
-import com.google.common.base.Preconditions;
-
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * A job with a a map and reduce phase to count cells in a table.

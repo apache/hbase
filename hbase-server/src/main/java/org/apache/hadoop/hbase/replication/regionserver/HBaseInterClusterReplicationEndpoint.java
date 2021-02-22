@@ -37,7 +37,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -444,13 +443,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     }
     close();
     notifyStopped();
-  }
-
-  // is this needed? Nobody else will call doStop() otherwise
-  @Override
-  public State stopAndWait() {
-    doStop();
-    return super.stopAndWait();
   }
 
   protected Replicator createReplicator(List<Entry> entries, int ordinal) {

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import com.sun.jersey.spi.container.servlet.ServletContainer;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -35,7 +36,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -47,7 +47,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -88,9 +87,8 @@ import org.mortbay.jetty.webapp.WebAppContext;
 import org.mortbay.thread.QueuedThreadPool;
 import org.mortbay.util.MultiException;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -28,7 +27,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * A split policy determines when a region should be split.

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.common.collect.ImmutableMap;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
@@ -38,6 +37,8 @@ import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LossyCounting;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * A coprocessor that collects metrics from meta table.

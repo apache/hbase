@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import com.google.common.math.LongMath;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.math.LongMath;
 
 /**
  * Exponential compaction window implementation.

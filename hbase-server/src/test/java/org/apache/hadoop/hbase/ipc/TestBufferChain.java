@@ -24,7 +24,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -33,8 +32,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
+import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
+import org.apache.hbase.thirdparty.com.google.common.io.Files;
 
 @Category(SmallTests.class)
 public class TestBufferChain {

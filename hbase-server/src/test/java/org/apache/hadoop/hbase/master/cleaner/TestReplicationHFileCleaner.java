@@ -17,14 +17,11 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
-import com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -64,6 +61,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({ MasterTests.class, SmallTests.class })
 public class TestReplicationHFileCleaner {

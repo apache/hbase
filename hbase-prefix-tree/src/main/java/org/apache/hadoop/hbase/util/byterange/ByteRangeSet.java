@@ -21,14 +21,13 @@ package org.apache.hadoop.hbase.util.byterange;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Performance oriented class for de-duping and storing arbitrary byte[]'s arriving in non-sorted

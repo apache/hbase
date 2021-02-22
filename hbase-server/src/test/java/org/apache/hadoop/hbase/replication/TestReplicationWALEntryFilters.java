@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -37,10 +39,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(SmallTests.class)
 public class TestReplicationWALEntryFilters {

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -35,6 +34,8 @@ import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ShellExecEndpoint.
 import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Receives shell commands from the client and executes them blindly. Intended only for use

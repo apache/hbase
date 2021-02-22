@@ -26,18 +26,16 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Locale;
-
 import javax.management.JMException;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Utilities for interacting with and monitoring DirectByteBuffer allocations.

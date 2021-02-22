@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +34,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * The storage engine that implements the stripe-based store/compaction scheme.

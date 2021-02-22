@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
@@ -30,7 +29,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
-import com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
 
 public class BulkLoadCellFilter {
   private static final Log LOG = LogFactory.getLog(BulkLoadCellFilter.class);

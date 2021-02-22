@@ -28,6 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.apache.hadoop.hbase.regionserver.TestHRegion.*;
 
+import com.google.protobuf.ByteString;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -91,8 +91,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests of HRegion methods for replaying flush, compaction, region open, etc events for secondary

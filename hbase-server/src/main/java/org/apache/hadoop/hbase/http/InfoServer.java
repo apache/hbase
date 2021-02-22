@@ -19,17 +19,14 @@
 
 package org.apache.hadoop.hbase.http;
 
-import com.google.common.net.HostAndPort;
-
 import java.io.IOException;
 import java.net.URI;
-
 import javax.servlet.http.HttpServlet;
-
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal

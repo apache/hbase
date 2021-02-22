@@ -21,11 +21,10 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.concurrent.Executors;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Base class used bulk assigning and unassigning regions.

@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**

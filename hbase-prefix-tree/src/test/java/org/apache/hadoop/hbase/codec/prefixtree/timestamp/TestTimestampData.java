@@ -20,12 +20,11 @@ package org.apache.hadoop.hbase.codec.prefixtree.timestamp;
 
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.hbase.codec.prefixtree.timestamp.data.TestTimestampDataBasic;
 import org.apache.hadoop.hbase.codec.prefixtree.timestamp.data.TestTimestampDataNumbers;
 import org.apache.hadoop.hbase.codec.prefixtree.timestamp.data.TestTimestampDataRepeats;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public interface TestTimestampData {
 

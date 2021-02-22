@@ -27,10 +27,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 
-import com.google.common.collect.Lists;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.ServiceException;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -38,9 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-
 import javax.security.sasl.SaslException;
-
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -73,6 +69,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @RunWith(Parameterized.class)
 @Category({ SecurityTests.class, SmallTests.class })

@@ -10,16 +10,10 @@
  */
 package org.apache.hadoop.hbase.replication.master;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +29,11 @@ import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Implementation of a file cleaner that checks if a hfile is still scheduled for replication before
@@ -77,6 +76,9 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
           }
         }
         return !foundHFileRefInQueue;
+      }
+      public boolean test(FileStatus file) {
+        return apply(file);
       }
     });
   }

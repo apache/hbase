@@ -27,7 +27,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,8 +38,8 @@ import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
  * Runs the CallRunners passed here via {@link #dispatch(CallRunner)}. Subclass and add particular

@@ -19,11 +19,9 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -57,6 +55,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @Category({ MediumTests.class })
 public class TestFIFOCompactionPolicy {

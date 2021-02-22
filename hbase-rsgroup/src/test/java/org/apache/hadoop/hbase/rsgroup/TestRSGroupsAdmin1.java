@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -59,7 +58,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({MediumTests.class})
 public class TestRSGroupsAdmin1 extends TestRSGroupsBase {

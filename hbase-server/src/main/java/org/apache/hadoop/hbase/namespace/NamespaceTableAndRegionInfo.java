@@ -16,11 +16,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.hbase.TableName;
-
-import com.google.common.base.Joiner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
  * NamespaceTableAndRegionInfo is a helper class that contains information about current state of

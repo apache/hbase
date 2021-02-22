@@ -22,7 +22,7 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-import com.google.common.net.HostAndPort;
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 
 /**
  * An immutable type to hold a hostname and port combo, like an Endpoint
@@ -77,7 +77,7 @@ public class Address implements Comparable<Address> {
    */
   @Deprecated
   public String getHostname() {
-    return this.hostAndPort.getHostText();
+    return this.hostAndPort.getHost();
   }
 
   public int getPort() {

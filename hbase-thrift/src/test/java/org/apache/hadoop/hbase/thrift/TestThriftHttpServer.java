@@ -27,7 +27,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -49,7 +48,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
-import com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
  * Start the HBase Thrift HTTP server on a random port through the command-line

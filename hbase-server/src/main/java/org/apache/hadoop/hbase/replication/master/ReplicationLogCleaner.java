@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.replication.master;
 
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -31,16 +35,12 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import org.apache.zookeeper.KeeperException;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Implementation of a log cleaner that checks if a log is still scheduled for
@@ -84,7 +84,11 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
           }
         }
        return !logInReplicationQueue;
-      }});
+      }
+      public boolean test(FileStatus file) {
+        return apply(file);
+      }
+    });
   }
 
   /**

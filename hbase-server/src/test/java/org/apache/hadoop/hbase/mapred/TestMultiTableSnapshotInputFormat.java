@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.hbase.mapred;
 
-import com.google.common.collect.Lists;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -36,11 +40,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.junit.experimental.categories.Category;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-
-import static org.junit.Assert.assertTrue;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({ LargeTests.class })
 @edu.umd.cs.findbugs.annotations.SuppressWarnings("NM_SAME_SIMPLE_NAME_AS_SUPERCLASS")

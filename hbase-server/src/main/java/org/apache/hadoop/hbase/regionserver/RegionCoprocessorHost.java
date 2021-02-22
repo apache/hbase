@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +30,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
-
 import org.apache.commons.collections.map.AbstractReferenceMap;
 import org.apache.commons.collections.map.ReferenceMap;
 import org.apache.commons.lang.ClassUtils;
@@ -73,7 +74,6 @@ import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
-import org.apache.hadoop.hbase.regionserver.DeleteTracker;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -84,10 +84,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -578,7 +575,7 @@ public class RegionCoprocessorHost
    * @param selected The store files selected to compact
    * @param request custom compaction
    */
-  public void postCompactSelection(final Store store, final ImmutableList<StoreFile> selected,
+  public void postCompactSelection(final Store store, final List<StoreFile> selected,
       final CompactionRequest request, final User user) {
     try {
       execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {

@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimaps;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
@@ -35,10 +36,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import org.apache.hbase.thirdparty.com.google.common.base.Function;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimaps;
 
 @Category({ LargeTests.class })
 public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTestBase {

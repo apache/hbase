@@ -18,7 +18,25 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
-import com.google.common.collect.Lists;
+import static java.nio.ByteBuffer.wrap;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.scanFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.incrementFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
+import static org.junit.Assert.*;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,14 +57,11 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.filter.ParseFilter;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -80,25 +95,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.scanFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.incrementFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
-import static org.junit.Assert.*;
-import static java.nio.ByteBuffer.wrap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Unit testing for ThriftServer.HBaseHandler, a part of the org.apache.hadoop.hbase.thrift2

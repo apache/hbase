@@ -61,8 +61,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Pair;
 
-import com.google.common.collect.ImmutableList;
-
 /**
  * Coprocessors implement this interface to observe and mediate client actions
  * on the region.
@@ -216,7 +214,7 @@ public interface RegionObserver extends Coprocessor {
    * @param request custom compaction request
    */
   void postCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final ImmutableList<StoreFile> selected, CompactionRequest request);
+      final Store store, final List<StoreFile> selected, CompactionRequest request);
 
   /**
    * Called after the {@link StoreFile}s to compact have been selected from the available
@@ -229,7 +227,7 @@ public interface RegionObserver extends Coprocessor {
    */
   @Deprecated
   void postCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final ImmutableList<StoreFile> selected);
+      final Store store, final List<StoreFile> selected);
 
   /**
    * Called prior to writing the {@link StoreFile}s selected for compaction into a new

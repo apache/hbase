@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -37,7 +36,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionPlan;
 
-import com.google.common.collect.MinMaxPriorityQueue;
+import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
  * Makes decisions about the placement and movement of Regions across

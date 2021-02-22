@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -48,8 +48,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServe
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 
-import com.google.common.collect.Sets;
-import com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Client used for managing region server group information.

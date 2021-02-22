@@ -18,15 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
-
 import java.util.ArrayList;
 import java.util.Collection;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -34,6 +27,12 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Function;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.collect.Collections2;
 
 /**
  * This class holds all logical details necessary to run a compaction.
@@ -294,6 +293,9 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
               @Override
               public boolean apply(StoreFile sf) {
                 return sf.getReader() != null;
+              }
+              public boolean test(StoreFile sf) {
+                return apply(sf);
               }
           }), new Function<StoreFile, String>() {
             @Override

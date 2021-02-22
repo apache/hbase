@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertEquals;
 
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
@@ -44,8 +44,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
-import com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(MediumTests.class)
 public class TestWALFiltering {

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -88,6 +87,8 @@ import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This class manages the procedure of taking and restoring snapshots. There is only one

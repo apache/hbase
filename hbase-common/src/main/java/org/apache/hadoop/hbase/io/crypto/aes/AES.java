@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.crypto.aes;
 
-import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -34,6 +33,8 @@ import org.apache.hadoop.hbase.io.crypto.CipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Context;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * AES-128, provided by the JCE

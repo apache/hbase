@@ -24,13 +24,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.io.WritableUtils;
 
-import com.google.common.primitives.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Bytes;
 
 /**
  * Generate list of key values which are very useful to test data block encoding

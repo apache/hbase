@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.namequeues;
 
-import com.google.common.base.Preconditions;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.RingBuffer;
@@ -32,6 +31,8 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.util.Threads;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * NamedQueue recorder that maintains various named queues.

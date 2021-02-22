@@ -19,9 +19,6 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -30,7 +27,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -56,6 +52,9 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 public abstract class TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroupsBase.class);

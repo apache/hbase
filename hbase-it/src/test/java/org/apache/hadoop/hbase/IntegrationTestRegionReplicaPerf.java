@@ -18,9 +18,19 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Sets;
+import static java.lang.String.format;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.yammer.metrics.core.Histogram;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.Callable;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,13 +51,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
 
-import java.util.*;
-import java.util.concurrent.Callable;
-
-import static java.lang.String.format;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Test for comparing the performance impact of region replicas. Uses
@@ -150,7 +155,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
     @Override
     public String toString() {
-      return Objects.toStringHelper(this)
+      return MoreObjects.toStringHelper(this)
         .add("numRows", numRows)
         .add("elapsedTime", elapsedTime)
         .toString();
@@ -215,7 +220,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     primaryTimeout =
       Integer.parseInt(cmd.getOptionValue(PRIMARY_TIMEOUT_KEY, PRIMARY_TIMEOUT_DEFAULT));
     clusterSize = Integer.parseInt(cmd.getOptionValue(NUM_RS_KEY, NUM_RS_DEFAULT));
-    LOG.debug(Objects.toStringHelper("Parsed Options")
+    LOG.debug(MoreObjects.toStringHelper("Parsed Options")
       .add(TABLE_NAME_KEY, tableName)
       .add(SLEEP_TIME_KEY, sleepTime)
       .add(REPLICA_COUNT_KEY, replicaCount)
@@ -314,7 +319,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     double withReplicas9999Mean =
         calcMean("withReplicas", Stat.FOUR_9S, resultsWithReplicas);
 
-    LOG.info(Objects.toStringHelper(this)
+    LOG.info(MoreObjects.toStringHelper(this)
       .add("withoutReplicas", resultsWithoutReplicas)
       .add("withReplicas", resultsWithReplicas)
       .add("withoutReplicasStdevMean", withoutReplicasStdevMean)

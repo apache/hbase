@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import com.google.common.base.Preconditions;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,6 +48,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @Category({SmallTests.class, MasterTests.class })
 public class TestMetaRegionLocationCache {

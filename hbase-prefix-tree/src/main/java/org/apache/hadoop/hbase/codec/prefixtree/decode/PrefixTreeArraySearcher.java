@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
 
-import com.google.common.primitives.UnsignedBytes;
+import org.apache.hbase.thirdparty.com.google.common.primitives.UnsignedBytes;
 
 /**
  * <p>

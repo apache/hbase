@@ -22,12 +22,9 @@ import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlocking
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import com.google.common.collect.Lists;
 import com.google.protobuf.ServiceException;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,6 +40,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Test for testing protocol buffer based RPC mechanism. This test depends on test.proto definition

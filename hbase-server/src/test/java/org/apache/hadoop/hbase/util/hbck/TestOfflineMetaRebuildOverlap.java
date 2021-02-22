@@ -23,7 +23,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 import java.util.Arrays;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,7 +36,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Multimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
 /**
  * This builds a table, builds an overlap, and then fails when attempting to

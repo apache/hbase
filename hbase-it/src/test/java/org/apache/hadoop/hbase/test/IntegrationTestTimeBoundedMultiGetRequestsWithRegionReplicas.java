@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.test;
 
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -28,7 +27,7 @@ import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Extends {@link IntegrationTestTimeBoundedRequestsWithRegionReplicas} for multi-gets

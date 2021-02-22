@@ -20,17 +20,13 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Sets;
-
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -97,6 +93,8 @@ import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.Shell;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 public class RSGroupAdminEndpoint extends RSGroupAdminService
     implements CoprocessorService, Coprocessor, MasterObserver {

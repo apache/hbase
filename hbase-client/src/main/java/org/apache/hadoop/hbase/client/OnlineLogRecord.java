@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.lang.reflect.Type;
-
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;

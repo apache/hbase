@@ -22,8 +22,6 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
-
-import com.google.common.collect.ListMultimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -46,6 +44,8 @@ import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 /**
  * Utility class to help manage {@link SnapshotDescription SnapshotDesriptions}.

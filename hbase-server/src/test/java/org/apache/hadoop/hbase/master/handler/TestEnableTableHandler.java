@@ -18,14 +18,14 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -54,9 +54,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({ MediumTests.class })
 public class TestEnableTableHandler {
@@ -137,6 +137,9 @@ public class TestEnableTableHandler {
       @Override
       public boolean apply(HRegionInfo input) {
         return input.getTable().equals(tableName);
+      }
+      public boolean test(HRegionInfo input) {
+        return apply(input);
       }
     }));
   }

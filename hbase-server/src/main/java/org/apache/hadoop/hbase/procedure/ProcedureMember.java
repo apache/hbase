@@ -25,14 +25,13 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 
-import com.google.common.collect.MapMaker;
+import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 
 /**
  * Process to kick off and manage a running {@link Subprocedure} on a member. This is the

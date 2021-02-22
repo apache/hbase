@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.base.Preconditions;
 import java.io.InterruptedIOException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -33,6 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Utility used running a cluster all in the one JVM.

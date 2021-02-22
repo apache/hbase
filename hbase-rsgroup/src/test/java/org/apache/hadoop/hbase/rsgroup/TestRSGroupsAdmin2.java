@@ -26,13 +26,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.google.common.collect.Sets;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -56,6 +53,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({MediumTests.class})
 public class TestRSGroupsAdmin2 extends TestRSGroupsBase {

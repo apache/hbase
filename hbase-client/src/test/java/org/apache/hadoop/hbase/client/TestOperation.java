@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -60,11 +59,12 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.GsonUtil;
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
-import org.apache.hbase.thirdparty.com.google.gson.reflect.TypeToken;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
+import org.apache.hbase.thirdparty.com.google.gson.reflect.TypeToken;
 
 /**
  * Run tests that use the functionality of the Operation superclass for

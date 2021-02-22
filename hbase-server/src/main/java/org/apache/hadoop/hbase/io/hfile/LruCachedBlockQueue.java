@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import com.google.common.collect.MinMaxPriorityQueue;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
  * A memory-bound queue that will grow until an element brings

@@ -27,7 +27,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -78,7 +77,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
  * Like {@link TestRegionMergeTransaction} in that we're testing

@@ -23,15 +23,14 @@ package org.apache.hadoop.hbase.metrics.impl;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.MetricRegistryFactory;
 import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
+import org.apache.hbase.thirdparty.com.google.common.base.Optional;
+import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
 
 /**
  * Implementation of MetricRegistries that does ref-counting.

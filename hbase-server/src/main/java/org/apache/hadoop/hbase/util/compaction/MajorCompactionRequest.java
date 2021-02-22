@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.util.compaction;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -37,6 +35,9 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Optional;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @InterfaceAudience.Private
 class MajorCompactionRequest {

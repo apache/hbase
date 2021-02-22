@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import com.google.common.base.Preconditions;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -30,13 +28,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Class to hold dead servers list and utility querying dead server list.

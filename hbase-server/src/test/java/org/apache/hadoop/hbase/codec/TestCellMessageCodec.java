@@ -26,7 +26,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
@@ -37,8 +36,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.io.CountingInputStream;
-import com.google.common.io.CountingOutputStream;
+import org.apache.hbase.thirdparty.com.google.common.io.CountingInputStream;
+import org.apache.hbase.thirdparty.com.google.common.io.CountingOutputStream;
 
 @Category(SmallTests.class)
 public class TestCellMessageCodec {

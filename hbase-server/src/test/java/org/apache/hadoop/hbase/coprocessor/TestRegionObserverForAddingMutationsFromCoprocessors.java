@@ -23,7 +23,6 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -54,7 +53,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(MediumTests.class)
 public class TestRegionObserverForAddingMutationsFromCoprocessors {

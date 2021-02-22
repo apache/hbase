@@ -20,12 +20,7 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
-import com.google.common.collect.Sets;
 import com.google.protobuf.ServiceException;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,7 +34,6 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
@@ -83,6 +77,10 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * This is an implementation of {@link RSGroupInfoManager}. Which makes

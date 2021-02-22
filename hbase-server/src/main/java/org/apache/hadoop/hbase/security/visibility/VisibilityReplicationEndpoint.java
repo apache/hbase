@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
@@ -35,29 +37,29 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Service;
 
 @InterfaceAudience.Private
 public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
 
   private static final Log LOG = LogFactory.getLog(VisibilityReplicationEndpoint.class);
-  private ReplicationEndpoint delegator;
+  private ReplicationEndpoint delegate;
   private VisibilityLabelService visibilityLabelsService;
 
   public VisibilityReplicationEndpoint(ReplicationEndpoint endpoint,
       VisibilityLabelService visibilityLabelsService) {
-    this.delegator = endpoint;
+    this.delegate = endpoint;
     this.visibilityLabelsService = visibilityLabelsService;
   }
 
   @Override
   public void init(Context context) throws IOException {
-    delegator.init(context);
+    delegate.init(context);
   }
 
   @Override
   public boolean replicate(ReplicateContext replicateContext) {
-    if (!delegator.canReplicateToSameCluster()) {
+    if (!delegate.canReplicateToSameCluster()) {
       // Only when the replication is inter cluster replication we need to covert the visibility tags to
       // string based tags.  But for intra cluster replication like region replicas it is not needed.
       List<Entry> entries = replicateContext.getEntries();
@@ -102,55 +104,75 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
         newEntries.add(new Entry(entry.getKey(), newEdit));
       }
       replicateContext.setEntries(newEntries);
-      return delegator.replicate(replicateContext);
+      return delegate.replicate(replicateContext);
     } else {
-      return delegator.replicate(replicateContext);
+      return delegate.replicate(replicateContext);
     }
   }
 
   @Override
   public synchronized UUID getPeerUUID() {
-    return delegator.getPeerUUID();
+    return delegate.getPeerUUID();
   }
 
   @Override
   public boolean canReplicateToSameCluster() {
-    return delegator.canReplicateToSameCluster();
+    return delegate.canReplicateToSameCluster();
   }
 
   @Override
   public WALEntryFilter getWALEntryfilter() {
-    return delegator.getWALEntryfilter();
+    return delegate.getWALEntryfilter();
   }
 
   @Override
   public boolean isRunning() {
-    return delegator.isRunning();
-  }
-
-  @Override
-  public ListenableFuture<State> start() {
-    return delegator.start();
-  }
-
-  @Override
-  public State startAndWait() {
-    return delegator.startAndWait();
+    return delegate.isRunning();
   }
 
   @Override
   public State state() {
-    return delegator.state();
+    return delegate.state();
   }
 
   @Override
-  public ListenableFuture<State> stop() {
-    return delegator.stop();
+  public Service startAsync() {
+    return delegate.startAsync();
   }
 
   @Override
-  public State stopAndWait() {
-    return delegator.stopAndWait();
+  public Service stopAsync() {
+    return delegate.stopAsync();
+  }
+
+  @Override
+  public void awaitRunning() {
+    delegate.awaitRunning();
+  }
+
+  @Override
+  public void awaitRunning(long timeout, TimeUnit unit) throws TimeoutException {
+    delegate.awaitRunning(timeout, unit);
+  }
+
+  @Override
+  public void awaitTerminated() {
+    delegate.awaitTerminated();
+  }
+
+  @Override
+  public void awaitTerminated(long timeout, TimeUnit unit) throws TimeoutException {
+    delegate.awaitTerminated(timeout, unit);
+  }
+
+  @Override
+  public Throwable failureCause() {
+    return delegate.failureCause();
+  }
+
+  @Override
+  public void addListener(Listener listener, Executor executor) {
+    delegate.addListener(listener, executor);
   }
 
   @Override

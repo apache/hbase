@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**

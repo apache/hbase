@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.Map;
-
-import com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -30,9 +28,11 @@ import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

@@ -25,7 +25,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoordinatedStateException;
@@ -51,8 +50,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Base class for performing operations against tables.

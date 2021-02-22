@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.hbase.chaos.monkies;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -34,6 +32,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
 import org.apache.hadoop.hbase.util.Pair;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Chaos monkey that given multiple policies will run actions against the cluster.

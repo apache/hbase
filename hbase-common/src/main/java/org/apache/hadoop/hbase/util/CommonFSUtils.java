@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.collect.Lists;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -30,7 +28,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -47,6 +44,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.RemoteException;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Utility methods for interacting with the underlying file system.

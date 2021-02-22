@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import static org.apache.hadoop.hbase.client.replication.ReplicationAdmin.REPLICATION_WALENTRYFILTER_CONFIG_KEY;
+
 import java.io.IOException;
 import java.util.ArrayList;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.AbstractService;
 
-import static org.apache.hadoop.hbase.client.replication.ReplicationAdmin.REPLICATION_WALENTRYFILTER_CONFIG_KEY;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.AbstractService;
 
 /**
  * A Base implementation for {@link ReplicationEndpoint}s. Users should consider extending this

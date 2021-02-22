@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
 import java.util.Map;
-
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
@@ -30,7 +29,6 @@ import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;

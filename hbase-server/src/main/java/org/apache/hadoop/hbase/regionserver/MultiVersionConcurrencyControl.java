@@ -18,18 +18,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.base.Objects;
-import com.google.common.base.Objects.ToStringHelper;
-
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 
 /**
  * Manages the read/write consistency. This provides an interface for readers to determine what
@@ -254,7 +251,7 @@ public class MultiVersionConcurrencyControl {
 
   @Override
   public String toString() {
-    ToStringHelper helper = Objects.toStringHelper(this).add("readPoint", readPoint)
+    MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this).add("readPoint", readPoint)
         .add("writePoint", writePoint);
     if (this.regionName != null) {
       helper.add("regionName", this.regionName);

@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.util.Comparator;
@@ -30,9 +33,9 @@ import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
@@ -83,10 +86,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import com.google.common.base.Stopwatch;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
 
 /**
  * Test client behavior w/o setting up a cluster.
@@ -746,14 +746,13 @@ public class TestClientNoCluster extends Configured implements Tool {
     TableName tableName = TableName.valueOf(BIG_USER_TABLE);
     if (get) {
       try (Table table = sharedConnection.getTable(tableName)){
-        Stopwatch stopWatch = new Stopwatch();
-        stopWatch.start();
+        Stopwatch stopWatch = Stopwatch.createStarted();
         for (int i = 0; i < namespaceSpan; i++) {
           byte [] b = format(rd.nextLong());
           Get g = new Get(b);
           table.get(g);
           if (i % printInterval == 0) {
-            LOG.info("Get " + printInterval + "/" + stopWatch.elapsedMillis());
+            LOG.info("Get " + printInterval + "/" + stopWatch.elapsed(TimeUnit.MILLISECONDS));
             stopWatch.reset();
             stopWatch.start();
           }
@@ -763,15 +762,14 @@ public class TestClientNoCluster extends Configured implements Tool {
       }
     } else {
       try (BufferedMutator mutator = sharedConnection.getBufferedMutator(tableName)) {
-        Stopwatch stopWatch = new Stopwatch();
-        stopWatch.start();
+        Stopwatch stopWatch = Stopwatch.createStarted();
         for (int i = 0; i < namespaceSpan; i++) {
           byte [] b = format(rd.nextLong());
           Put p = new Put(b);
           p.add(HConstants.CATALOG_FAMILY, b, b);
           mutator.mutate(p);
           if (i % printInterval == 0) {
-            LOG.info("Put " + printInterval + "/" + stopWatch.elapsedMillis());
+            LOG.info("Put " + printInterval + "/" + stopWatch.elapsed(TimeUnit.MILLISECONDS));
             stopWatch.reset();
             stopWatch.start();
           }

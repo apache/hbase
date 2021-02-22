@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.codec.prefixtree.row.data;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
@@ -29,7 +28,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class TestRowDataTrivial extends BaseTestRowData{
 

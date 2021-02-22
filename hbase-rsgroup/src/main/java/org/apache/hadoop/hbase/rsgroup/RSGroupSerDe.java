@@ -20,12 +20,9 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Lists;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -37,6 +34,8 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 //TODO do better encapsulation of SerDe logic from GroupInfoManager and GroupTracker
 public class RSGroupSerDe {

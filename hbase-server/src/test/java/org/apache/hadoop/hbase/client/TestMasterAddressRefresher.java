@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +34,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 
 @Category({ClientTests.class, SmallTests.class})
 public class TestMasterAddressRefresher {

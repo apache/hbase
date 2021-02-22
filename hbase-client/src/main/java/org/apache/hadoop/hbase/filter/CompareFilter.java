@@ -19,10 +19,10 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
+import java.util.ArrayList;
+import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -30,8 +30,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.util.ArrayList;
-import java.util.Objects;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * This is a generic filter to be used to filter by comparison.  It takes an
