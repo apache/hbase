@@ -103,7 +103,7 @@ hostname=$1
 filename="/tmp/$hostname"
 
 local=
-localhostname=`/bin/hostname`
+localhostname=`/bin/hostname -f`
 
 if [ "$localhostname" == "$hostname" ]; then
   local=true
@@ -201,4 +201,4 @@ else
 fi
 
 # Cleanup tmp files.
-trap "rm -f  "/tmp/$(basename $0).*.tmp" &> /dev/null" EXIT
+trap "rm -f  /tmp/$(basename $0).*.tmp &> /dev/null" EXIT
