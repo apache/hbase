@@ -73,7 +73,7 @@ public class TestSimpleRegionNormalizer {
     Map<byte[], Integer> regionSizes = new HashMap<>();
 
     setupMocksForNormalizer(regionSizes, hris);
-    List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(testTable);
     assertTrue(plans == null);
   }
 
@@ -92,7 +92,7 @@ public class TestSimpleRegionNormalizer {
     regionSizes.put(hri2.getRegionName(), 15);
 
     setupMocksForNormalizer(regionSizes, hris);
-    List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(testTable);
     assertTrue(plans == null);
   }
 
@@ -119,7 +119,7 @@ public class TestSimpleRegionNormalizer {
     regionSizes.put(hri4.getRegionName(), 10);
 
     setupMocksForNormalizer(regionSizes, hris);
-    List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(testTable);
     assertTrue(plans == null);
   }
 
@@ -150,7 +150,7 @@ public class TestSimpleRegionNormalizer {
     regionSizes.put(hri5.getRegionName(), 16);
 
     setupMocksForNormalizer(regionSizes, hris);
-    List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(testTable);
 
     NormalizationPlan plan = plans.get(0);
     assertTrue(plan instanceof MergeNormalizationPlan);
@@ -190,7 +190,7 @@ public class TestSimpleRegionNormalizer {
     regionSizes.put(hri6.getRegionName(), 2700);
 
     setupMocksForNormalizer(regionSizes, hris);
-    List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(testTable);
     NormalizationPlan plan = plans.get(0);
 
     assertTrue(plan instanceof MergeNormalizationPlan);
@@ -225,7 +225,7 @@ public class TestSimpleRegionNormalizer {
     regionSizes.put(hri5.getRegionName(), 5);
 
     setupMocksForNormalizer(regionSizes, hris);
-    List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(testTable);
 
     assertTrue(plans == null);
   }
@@ -253,7 +253,7 @@ public class TestSimpleRegionNormalizer {
     regionSizes.put(hri4.getRegionName(), 30);
 
     setupMocksForNormalizer(regionSizes, hris);
-    List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(testTable);
     NormalizationPlan plan = plans.get(0);
 
     assertTrue(plan instanceof SplitNormalizationPlan);
@@ -296,7 +296,7 @@ public class TestSimpleRegionNormalizer {
     when(
       masterServices.getTableDescriptors().get((TableName) any()).getNormalizerTargetRegionSize())
           .thenReturn(20L);
-    List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
     assertEquals(4, plans.size());
 
     for (NormalizationPlan plan : plans) {
@@ -307,7 +307,7 @@ public class TestSimpleRegionNormalizer {
     when(
       masterServices.getTableDescriptors().get((TableName) any()).getNormalizerTargetRegionSize())
           .thenReturn(200L);
-    plans = normalizer.computePlanForTable(tableName);
+    plans = normalizer.computePlansForTable(tableName);
     assertEquals(2, plans.size());
     NormalizationPlan plan = plans.get(0);
     assertTrue(plan instanceof MergeNormalizationPlan);
@@ -343,7 +343,7 @@ public class TestSimpleRegionNormalizer {
     when(
       masterServices.getTableDescriptors().get((TableName) any()).getNormalizerTargetRegionCount())
           .thenReturn(8);
-    List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
     assertEquals(2, plans.size());
 
     for (NormalizationPlan plan : plans) {
@@ -354,7 +354,7 @@ public class TestSimpleRegionNormalizer {
     when(
       masterServices.getTableDescriptors().get((TableName) any()).getNormalizerTargetRegionCount())
           .thenReturn(3);
-    plans = normalizer.computePlanForTable(tableName);
+    plans = normalizer.computePlansForTable(tableName);
     assertEquals(1, plans.size());
     NormalizationPlan plan = plans.get(0);
     assertTrue(plan instanceof MergeNormalizationPlan);
