@@ -46,13 +46,10 @@ public class ReplicationSourceLogQueue {
   private int queueSizePerGroup;
   // WARN threshold for the number of queued logs, defaults to 2
   private int logQueueWarnThreshold;
-  private ReplicationSource source;
 
-  public ReplicationSourceLogQueue(Configuration conf, MetricsSource metrics,
-      ReplicationSource source) {
+  public ReplicationSourceLogQueue(Configuration conf, MetricsSource metrics) {
     this.conf = conf;
     this.metrics = metrics;
-    this.source = source;
     this.queueSizePerGroup = this.conf.getInt("hbase.regionserver.maxlogs", 32);
     this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
   }

@@ -142,8 +142,7 @@ public class TestWALEntryStream {
 
   @Before
   public void setUp() throws Exception {
-    ReplicationSource source = mock(ReplicationSource.class);
-    logQueue = new ReplicationSourceLogQueue(conf, new MetricsSource("2"), source);
+    logQueue = new ReplicationSourceLogQueue(conf, new MetricsSource("2"));
     List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     pathWatcher = new PathWatcher();
     listeners.add(pathWatcher);
@@ -408,7 +407,7 @@ public class TestWALEntryStream {
 
     long position;
     ReplicationSourceLogQueue tempQueue = new ReplicationSourceLogQueue(conf,
-        getMockMetrics(), mock(ReplicationSource.class));
+        getMockMetrics());
     for (Path path : getQueue()) {
       tempQueue.enqueueLog(path, fakeWalGroupId);
     }
@@ -553,9 +552,8 @@ public class TestWALEntryStream {
   }
 
   private long getPosition(Path walPath) throws IOException {
-    ReplicationSource source = mock(ReplicationSource.class);
     ReplicationSourceLogQueue tempQueue =
-        new ReplicationSourceLogQueue(conf, getMockMetrics(), source);
+        new ReplicationSourceLogQueue(conf, getMockMetrics());
     String walPrefix = DefaultWALProvider.getWALPrefixFromWALName(walPath.getName());
     tempQueue.enqueueLog(walPath, walPrefix);
     WALEntryStream entryStream =
@@ -736,7 +734,7 @@ public class TestWALEntryStream {
     conf.setBoolean("replication.source.eof.autorecovery", true);
 
     ReplicationSourceLogQueue localLogQueue =
-        new ReplicationSourceLogQueue(conf, getMockMetrics(), source);
+        new ReplicationSourceLogQueue(conf, getMockMetrics());
     localLogQueue.enqueueLog(emptyLog, fakeWalGroupId);
     // Create a reader thread.
     ReplicationSourceWALReaderThread reader =

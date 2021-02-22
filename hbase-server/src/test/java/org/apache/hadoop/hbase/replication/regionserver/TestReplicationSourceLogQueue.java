@@ -46,8 +46,7 @@ public class TestReplicationSourceLogQueue {
 
       MetricsSource metrics = new MetricsSource("1");
       Configuration conf = HBaseConfiguration.create();
-      ReplicationSource source = mock(ReplicationSource.class);
-      ReplicationSourceLogQueue logQueue = new ReplicationSourceLogQueue(conf, metrics, source);
+      ReplicationSourceLogQueue logQueue = new ReplicationSourceLogQueue(conf, metrics);
       final Path log1 = new Path("log-walgroup-a.8");
       manualEdge.setValue(10);
       // Diff of current time (10) and  log-walgroup-a.8 timestamp will be 2.
