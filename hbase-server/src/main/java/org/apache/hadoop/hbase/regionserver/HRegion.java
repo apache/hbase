@@ -4159,18 +4159,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             if (retCodeDetails[i].getOperationStatusCode() == OperationStatusCode.SUCCESS) {
               Mutation m = getMutation(i);
               if (m instanceof Put) {
-                region.coprocessorHost.postPut((Put) m, walEdit, m.getDurability());
+                region.coprocessorHost.postPut((Put) m, walEdit);
               } else if (m instanceof Delete) {
-                region.coprocessorHost.postDelete((Delete) m, walEdit, m.getDurability());
+                region.coprocessorHost.postDelete((Delete) m, walEdit);
               } else if (m instanceof Increment) {
                 Result result = region.getCoprocessorHost().postIncrement((Increment) m,
-                  results[i]);
+                  results[i], walEdit);
                 if (result != results[i]) {
                   retCodeDetails[i] =
                     new OperationStatus(retCodeDetails[i].getOperationStatusCode(), result);
                 }
               } else if (m instanceof Append) {
-                Result result = region.getCoprocessorHost().postAppend((Append) m, results[i]);
+                Result result = region.getCoprocessorHost().postAppend((Append) m, results[i],
+                  walEdit);
                 if (result != results[i]) {
                   retCodeDetails[i] =
                     new OperationStatus(retCodeDetails[i].getOperationStatusCode(), result);
@@ -4232,7 +4233,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         throws IOException {
       Mutation m = getMutation(index);
       if (m instanceof Put) {
-        if (region.coprocessorHost.prePut((Put) m, walEdit, m.getDurability())) {
+        if (region.coprocessorHost.prePut((Put) m, walEdit)) {
           // pre hook says skip this Put
           // mark as success and skip in doMiniBatchMutation
           metrics[0]++;
@@ -4246,7 +4247,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // Can this be avoided?
           region.prepareDelete(curDel);
         }
-        if (region.coprocessorHost.preDelete(curDel, walEdit, m.getDurability())) {
+        if (region.coprocessorHost.preDelete(curDel, walEdit)) {
           // pre hook says skip this Delete
           // mark as success and skip in doMiniBatchMutation
           metrics[1]++;
@@ -4254,7 +4255,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } else if (m instanceof Increment) {
         Increment increment = (Increment) m;
-        Result result = region.coprocessorHost.preIncrement(increment);
+        Result result = region.coprocessorHost.preIncrement(increment, walEdit);
         if (result != null) {
           // pre hook says skip this Increment
           // mark as success and skip in doMiniBatchMutation
@@ -4263,7 +4264,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } else if (m instanceof Append) {
         Append append = (Append) m;
-        Result result = region.coprocessorHost.preAppend(append);
+        Result result = region.coprocessorHost.preAppend(append, walEdit);
         if (result != null) {
           // pre hook says skip this Append
           // mark as success and skip in doMiniBatchMutation
