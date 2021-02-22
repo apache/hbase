@@ -52,6 +52,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -69,6 +70,8 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceFactory;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceSource;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
@@ -76,7 +79,9 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -296,6 +301,15 @@ public class TestReplicationSource {
       endpoint.init(context);
       source.init(conf, FS, manager, queues, peers, mock(Stoppable.class),
               "testPeerClusterZnode", UUID.randomUUID(), endpoint, metrics);
+      return source;
+    }
+
+    ReplicationSource createReplicationSourceWithMocks(MetricsSource metrics,
+            ReplicationEndpoint endpoint) throws IOException {
+      final ReplicationSource source = new ReplicationSource();
+      endpoint.init(context);
+      source.init(conf, FS, manager, queues, peers, mock(Stoppable.class),
+        "testPeerClusterZnode", UUID.randomUUID(), endpoint, metrics);
       return source;
     }
 
@@ -648,5 +662,44 @@ public class TestReplicationSource {
     }
   }
 
-}
+  /*
+  Test age of oldest wal metric.
+  */
+  @Test
+  public void testAgeOfOldestWal() throws Exception {
+    try {
+      ManualEnvironmentEdge manualEdge = new ManualEnvironmentEdge();
+      EnvironmentEdgeManager.injectEdge(manualEdge);
 
+      String id = "1";
+      MetricsSource metrics = new MetricsSource(id);
+      Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+      conf.setInt("replication.source.maxretriesmultiplier", 1);
+      Mocks mocks = new Mocks();
+      ReplicationEndpoint endpoint = mock(ReplicationEndpoint.class);
+      ReplicationSource source = mocks.createReplicationSourceWithMocks(metrics, endpoint);
+
+      final Path log1 = new Path(logDir, "log-walgroup-a.8");
+      manualEdge.setValue(10);
+      // Diff of current time (10) and  log-walgroup-a.8 timestamp will be 2.
+      source.enqueueLog(log1);
+      MetricsReplicationSourceSource metricsSource1 = getSourceMetrics(id);
+      assertEquals(2, metricsSource1.getOldestWalAge());
+
+      final Path log2 = new Path(logDir, "log-walgroup-b.4");
+      // Diff of current time (10) and log-walgroup-b.4 will be 6 so oldestWalAge should be 6
+      source.enqueueLog(log2);
+      assertEquals(6, metricsSource1.getOldestWalAge());
+      // Clear all metrics.
+      metrics.clear();
+    } finally {
+      EnvironmentEdgeManager.reset();
+    }
+  }
+
+  private MetricsReplicationSourceSource getSourceMetrics(String sourceId) {
+    MetricsReplicationSourceFactory factory = CompatibilitySingletonFactory
+      .getInstance(MetricsReplicationSourceFactory.class);
+    return factory.getSource(sourceId);
+  }
+}

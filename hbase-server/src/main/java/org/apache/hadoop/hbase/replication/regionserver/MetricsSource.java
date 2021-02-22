@@ -395,6 +395,17 @@ public class MetricsSource implements BaseSource {
     globalSourceSource.updateHistogram(name, value);
   }
 
+  /*
+   Sets the age of oldest log file just for source.
+  */
+  public void setOldestWalAge(long age) {
+    singleSourceSource.setOldestWalAge(age);
+  }
+
+  public long getOldestWalAge() {
+    return singleSourceSource.getOldestWalAge();
+  }
+
   @Override
   public String getMetricsContext() {
     return globalSourceSource.getMetricsContext();
