@@ -628,7 +628,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
    * Multi-threaded call to run the eviction process.
    */
   private void runEviction() {
-    if (evictionThread == null) {
+    if (evictionThread == null || !evictionThread.isGo()) {
       evict();
     } else {
       evictionThread.evict();
@@ -942,6 +942,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
         }
         LruBlockCache cache = this.cache.get();
         if (cache == null) {
+          this.go = false;
           break;
         }
         cache.evict();
@@ -959,6 +960,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
     synchronized void shutdown() {
       this.go = false;
       this.notifyAll();
+    }
+
+    public boolean isGo() {
+      return go;
     }
 
     /**
