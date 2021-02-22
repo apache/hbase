@@ -174,7 +174,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
 
             // If the batch has data to max capacity or stream doesn't have anything
             // try to ship it
-            if (isBatchQueuedToBeShipped(entryStream, batch, hasNext, false)) {
+            if (updateBatchAndAddInShippingQueue(entryStream, batch, hasNext, false)) {
               sleepMultiplier = 1;
             }
           }
@@ -223,7 +223,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
    * @throws InterruptedException throws interrupted exception
    * @throws IOException throws io exception from stream
    */
-  private boolean isBatchQueuedToBeShipped(WALEntryStream entryStream, WALEntryBatch batch,
+  private boolean updateBatchAndAddInShippingQueue(WALEntryStream entryStream, WALEntryBatch batch,
       boolean hasMoreData, boolean isEOFException) throws InterruptedException, IOException {
     updateBatch(entryStream, batch, hasMoreData, isEOFException);
     boolean isDataQueued = false;
@@ -312,7 +312,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
           // After we removed the WAL from the queue, we should
           // try shipping the existing batch of entries, we do not want to reset
           // stream since entry stream doesn't have the correct data at this point
-          isBatchQueuedToBeShipped(entryStream, batch, hasMoreData, true);
+          updateBatchAndAddInShippingQueue(entryStream, batch, hasMoreData, true);
           return true;
         }
       } catch (IOException ioe) {

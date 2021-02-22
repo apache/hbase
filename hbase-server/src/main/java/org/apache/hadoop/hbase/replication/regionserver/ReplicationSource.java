@@ -237,6 +237,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
   }
 
+  @InterfaceAudience.Private
   public Map<String, PriorityBlockingQueue<Path>> getQueues() {
     return queues;
   }
@@ -844,7 +845,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
 
     // If this is a recovered queue, the queue is already full and the first log
     // normally has a position (unless the RS failed between 2 logs)
-    public long getRecoveredQueueStartPos(long startPosition) {
+    private long getRecoveredQueueStartPos(long startPosition) {
       try {
         startPosition =
             (replicationQueues.getLogPosition(peerClusterZnode, this.queue.peek().getName()));
