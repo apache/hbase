@@ -59,7 +59,8 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
   private Entry currentEntry;
   // position after reading current entry
   private long currentPosition = 0;
-  private PriorityBlockingQueue<Path> logQueue;
+  private final ReplicationSourceLogQueue logQueue;
+  private final String walGroupId;
   private FileSystem fs;
   private Configuration conf;
   private MetricsSource metrics;
@@ -70,10 +71,11 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
    * @param fs {@link FileSystem} to use to create {@link Reader} for this stream
    * @param conf {@link Configuration} to use to create {@link Reader} for this stream
    * @param metrics replication metrics
+   * @param walGroupId wal prefix
    */
-  public WALEntryStream(PriorityBlockingQueue<Path> logQueue, FileSystem fs, Configuration conf,
-      MetricsSource metrics) {
-    this(logQueue, fs, conf, 0, metrics);
+  public WALEntryStream(ReplicationSourceLogQueue logQueue, FileSystem fs, Configuration conf,
+      MetricsSource metrics, String walGroupId) {
+    this(logQueue, fs, conf, 0, metrics, walGroupId);
   }
 
   /**
@@ -83,14 +85,16 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
    * @param conf the {@link Configuration} to use to create {@link Reader} for this stream
    * @param startPosition the position in the first WAL to start reading at
    * @param metrics the replication metrics
+   * @param walGroupId wal prefix
    */
-  public WALEntryStream(PriorityBlockingQueue<Path> logQueue, FileSystem fs, Configuration conf,
-      long startPosition, MetricsSource metrics) {
+  public WALEntryStream(ReplicationSourceLogQueue logQueue, FileSystem fs, Configuration conf,
+      long startPosition, MetricsSource metrics, String walGroupId) {
     this.logQueue = logQueue;
     this.fs = fs;
     this.conf = conf;
     this.currentPosition = startPosition;
     this.metrics = metrics;
+    this.walGroupId = walGroupId;
   }
 
   /**
@@ -196,7 +200,7 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
     if (checkReader()) {
       readNextEntryAndSetPosition();
       if (currentEntry == null) { // no more entries in this log file - see if log was rolled
-        if (logQueue.size() > 1) { // log was rolled
+        if (logQueue.getQueue(walGroupId).size() > 1) { // log was rolled
           // Before dequeueing, we should always get one more attempt at reading.
           // This is in case more entries came in after we opened the reader,
           // and a new log was enqueued while we were reading. See HBASE-6758
@@ -264,7 +268,7 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
       LOG.debug("Reached the end of log " + currentPath);
     }
     closeReader();
-    logQueue.remove();
+    logQueue.remove(walGroupId);
     setCurrentPath(null);
     setPosition(0);
     metrics.decrSizeOfLogQueue();
@@ -298,7 +302,8 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
 
   // open a reader on the next log in queue
   private boolean openNextLog() throws IOException {
-    Path nextPath = logQueue.peek();
+    PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
+    Path nextPath = queue.peek();
     if (nextPath != null) {
       openReader(nextPath);
       if (reader != null) {

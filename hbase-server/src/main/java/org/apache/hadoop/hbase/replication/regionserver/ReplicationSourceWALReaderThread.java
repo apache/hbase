@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.wal.WALKey;
 public class ReplicationSourceWALReaderThread extends Thread {
   private static final Log LOG = LogFactory.getLog(ReplicationSourceWALReaderThread.class);
 
-  private PriorityBlockingQueue<Path> logQueue;
+  private ReplicationSourceLogQueue logQueue;
   private FileSystem fs;
   private Configuration conf;
   private BlockingQueue<WALEntryBatch> entryBatchQueue;
@@ -80,6 +80,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
 
   private AtomicLong totalBufferUsed;
   private long totalBufferQuota;
+  private final String walGroupId;
 
   private ReplicationSource source;
   private ReplicationSourceManager manager;
@@ -97,12 +98,13 @@ public class ReplicationSourceWALReaderThread extends Thread {
    * @param metrics replication metrics
    */
   public ReplicationSourceWALReaderThread(ReplicationSourceManager manager,
-      ReplicationQueueInfo replicationQueueInfo, PriorityBlockingQueue<Path> logQueue,
+      ReplicationQueueInfo replicationQueueInfo, ReplicationSourceLogQueue logQueue,
       long startPosition, FileSystem fs, Configuration conf, WALEntryFilter filter,
-      MetricsSource metrics, ReplicationSource source) {
+      MetricsSource metrics, ReplicationSource source, String walGroupId) {
     this.replicationQueueInfo = replicationQueueInfo;
     this.logQueue = logQueue;
-    this.lastReadPath = logQueue.peek();
+    this.walGroupId = walGroupId;
+    this.lastReadPath = logQueue.getQueue(walGroupId).peek();
     this.lastReadPosition = startPosition;
     this.fs = fs;
     this.conf = conf;
@@ -136,11 +138,12 @@ public class ReplicationSourceWALReaderThread extends Thread {
     int sleepMultiplier = 1;
     WALEntryBatch batch = null;
     WALEntryStream entryStream =
-      new WALEntryStream(logQueue, fs, conf, lastReadPosition, metrics);
+      new WALEntryStream(logQueue, fs, conf, lastReadPosition, metrics, walGroupId);
     try {
       while (isReaderRunning()) { // we only loop back here if something fatal happens to stream
         try {
-          entryStream = new WALEntryStream(logQueue, fs, conf, lastReadPosition, metrics);
+          entryStream = new WALEntryStream(logQueue, fs, conf,
+            lastReadPosition, metrics, walGroupId);
           while (isReaderRunning()) { // loop here to keep reusing stream while we can
             if (!source.isPeerEnabled()) {
               Threads.sleep(sleepForRetries);
@@ -174,7 +177,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
 
             // If the batch has data to max capacity or stream doesn't have anything
             // try to ship it
-            if (updateBatchAndAddInShippingQueue(entryStream, batch, hasNext, false)) {
+            if (updateBatchAndShippingQueue(entryStream, batch, hasNext, false)) {
               sleepMultiplier = 1;
             }
           }
@@ -223,7 +226,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
    * @throws InterruptedException throws interrupted exception
    * @throws IOException throws io exception from stream
    */
-  private boolean updateBatchAndAddInShippingQueue(WALEntryStream entryStream, WALEntryBatch batch,
+  private boolean updateBatchAndShippingQueue(WALEntryStream entryStream, WALEntryBatch batch,
       boolean hasMoreData, boolean isEOFException) throws InterruptedException, IOException {
     updateBatch(entryStream, batch, hasMoreData, isEOFException);
     boolean isDataQueued = false;
@@ -232,6 +235,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
       entryBatchQueue.put(batch);
       if (!batch.hasMoreEntries()) {
         // we're done with queue recovery, shut ourselves down
+        LOG.debug("Stopping the reader after recovering the queue");
         setReaderRunning(false);
       }
     } else {
@@ -296,27 +300,29 @@ public class ReplicationSourceWALReaderThread extends Thread {
   private boolean handleEofException(Exception e, WALEntryStream entryStream,
       WALEntryBatch batch) throws InterruptedException {
     boolean isRecoveredSource = manager.getOldSources().contains(source);
+    PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
     // Dump the log even if logQueue size is 1 if the source is from recovered Source since we don't
     // add current log to recovered source queue so it is safe to remove.
-    if (e.getCause() instanceof EOFException && (isRecoveredSource || logQueue.size() > 1)
+    if (e.getCause() instanceof EOFException && (isRecoveredSource || queue.size() > 1)
         && conf.getBoolean("replication.source.eof.autorecovery", false)) {
       try {
-        if (fs.getFileStatus(logQueue.peek()).getLen() == 0) {
-          LOG.warn("Forcing removal of 0 length log in queue: " + logQueue.peek());
-          lastReadPath = logQueue.remove();
+        if (fs.getFileStatus(queue.peek()).getLen() == 0) {
+          LOG.warn("Forcing removal of 0 length log in queue: " + queue.peek());
+          lastReadPath = queue.peek();
+          logQueue.remove(walGroupId);
           lastReadPosition = 0;
 
           // If it was on last log in the recovered queue,
           // the stream doesn't have more data, we should stop the reader
-          boolean hasMoreData = !logQueue.isEmpty();
+          boolean hasMoreData = !queue.isEmpty();
           // After we removed the WAL from the queue, we should
           // try shipping the existing batch of entries, we do not want to reset
           // stream since entry stream doesn't have the correct data at this point
-          updateBatchAndAddInShippingQueue(entryStream, batch, hasMoreData, true);
+          updateBatchAndShippingQueue(entryStream, batch, hasMoreData, true);
           return true;
         }
       } catch (IOException ioe) {
-        LOG.warn("Couldn't get file length information about log " + logQueue.peek());
+        LOG.warn("Couldn't get file length information about log " + queue.peek());
       }
     }
 
@@ -324,7 +330,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
   }
 
   public Path getCurrentPath() {
-    return logQueue.peek();
+    return logQueue.getQueue(walGroupId).peek();
   }
 
   //returns false if we've already exceeded the global quota
@@ -587,6 +593,12 @@ public class ReplicationSourceWALReaderThread extends Thread {
       return walEntriesWithSize.isEmpty();
     }
 
+    /**
+     * Update the wal entry batch with latest wal and position which will be used by
+     * shipper to update the log position in ZK node
+     * @param currentPath the path of WAL
+     * @param currentPosition the position of the WAL
+     */
     public void updatePosition(Path currentPath, long currentPosition) {
       lastWalPath = currentPath;
       lastWalPosition = currentPosition;

@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -90,10 +89,7 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 public class ReplicationSource extends Thread implements ReplicationSourceInterface {
 
   private static final Log LOG = LogFactory.getLog(ReplicationSource.class);
-  // Queues of logs to process, entry in format of walGroupId->queue,
-  // each presents a queue for one wal group
-  private Map<String, PriorityBlockingQueue<Path>> queues =
-      new HashMap<String, PriorityBlockingQueue<Path>>();
+  protected ReplicationSourceLogQueue logQueue;
   // per group queue size, keep no more than this number of logs in each wal group
   private int queueSizePerGroup;
   private ReplicationQueues replicationQueues;
@@ -126,8 +122,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   private volatile boolean sourceRunning = false;
   // Metrics for this source
   private MetricsSource metrics;
-  //WARN threshold for the number of queued logs, defaults to 2
-  private int logQueueWarnThreshold;
   // ReplicationEndpoint which will handle the actual replication
   private ReplicationEndpoint replicationEndpoint;
   // A filter (or a chain of filters) for the WAL entries.
@@ -176,6 +170,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     this.maxRetriesMultiplier =
         this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
     this.queueSizePerGroup = this.conf.getInt("hbase.regionserver.maxlogs", 32);
+    this.logQueue = new ReplicationSourceLogQueue(conf, metrics);
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
     this.manager = manager;
@@ -187,7 +182,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     this.replicationQueueInfo = new ReplicationQueueInfo(peerClusterZnode);
     // ReplicationQueueInfo parses the peerId out of the znode for us
     this.peerId = this.replicationQueueInfo.getPeerId();
-    this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
     this.replicationEndpoint = replicationEndpoint;
 
     defaultBandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
@@ -208,16 +202,14 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   @Override
   public void enqueueLog(Path log) {
     String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(log.getName());
-    PriorityBlockingQueue<Path> queue = queues.get(logPrefix);
-    if (queue == null) {
-      queue = new PriorityBlockingQueue<Path>(queueSizePerGroup, new LogsComparator());
-      queues.put(logPrefix, queue);
+    boolean queueExists = logQueue.enqueueLog(log, logPrefix);
+    if (!queueExists) {
       if (this.sourceRunning) {
         // new wal group observed after source startup, start a new worker thread to track it
         // notice: it's possible that log enqueued when this.running is set but worker thread
         // still not launched, so it's necessary to check workerThreads before start the worker
         final ReplicationSourceShipperThread worker =
-            new ReplicationSourceShipperThread(logPrefix, queue, replicationQueueInfo, this);
+            new ReplicationSourceShipperThread(logPrefix, logQueue, replicationQueueInfo, this);
         ReplicationSourceShipperThread extant = workerThreads.putIfAbsent(logPrefix, worker);
         if (extant != null) {
           LOG.debug("Someone has beat us to start a worker thread for wal group " + logPrefix);
@@ -227,19 +219,11 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         }
       }
     }
-    queue.put(log);
-    this.metrics.incrSizeOfLogQueue();
-    // This will log a warning for each new log that gets created above the warn threshold
-    int queueSize = queue.size();
-    if (queueSize > this.logQueueWarnThreshold) {
-      LOG.warn("WAL group " + logPrefix + " queue size: " + queueSize
-          + " exceeds value of replication.source.log.queue.warn: " + logQueueWarnThreshold);
-    }
   }
 
   @InterfaceAudience.Private
   public Map<String, PriorityBlockingQueue<Path>> getQueues() {
-    return queues;
+    return logQueue.getQueues();
   }
 
   @Override
@@ -331,11 +315,11 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
     LOG.info("Replicating " + clusterId + " -> " + peerClusterId);
     // start workers
-    for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : queues.entrySet()) {
+    for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : logQueue.getQueues().entrySet()) {
       String walGroupId = entry.getKey();
       PriorityBlockingQueue<Path> queue = entry.getValue();
       final ReplicationSourceShipperThread worker =
-          new ReplicationSourceShipperThread(walGroupId, queue, replicationQueueInfo, this);
+          new ReplicationSourceShipperThread(walGroupId, logQueue, replicationQueueInfo, this);
       ReplicationSourceShipperThread extant = workerThreads.putIfAbsent(walGroupId, worker);
       if (extant != null) {
         LOG.debug("Someone has beat us to start a worker thread for wal group " + walGroupId);
@@ -488,7 +472,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
      * @param p path to split
      * @return start time
      */
-    private static long getTS(Path p) {
+    public static long getTS(Path p) {
       int tsIndex = p.getName().lastIndexOf('.') + 1;
       return Long.parseLong(p.getName().substring(tsIndex));
     }
@@ -535,7 +519,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       String walGroupId = worker.getWalGroupId();
       lastTimeStamp = metrics.getLastTimeStampOfWalGroup(walGroupId);
       ageOfLastShippedOp = metrics.getAgeOfLastShippedOp(walGroupId);
-      int queueSize = queues.get(walGroupId).size();
+      int queueSize = logQueue.getQueueSize(walGroupId);
       replicationDelay =
           ReplicationLoad.calculateReplicationDelay(ageOfLastShippedOp, lastTimeStamp, queueSize);
       Path currentPath = worker.getLastLoggedPath();
@@ -571,7 +555,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   public class ReplicationSourceShipperThread extends Thread {
     ReplicationSourceInterface source;
     String walGroupId;
-    PriorityBlockingQueue<Path> queue;
+    ReplicationSourceLogQueue logQueue;
     ReplicationQueueInfo replicationQueueInfo;
     // Last position in the log that we sent to ZooKeeper
     private long lastLoggedPosition = -1;
@@ -582,10 +566,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     ReplicationSourceWALReaderThread entryReader;
 
     public ReplicationSourceShipperThread(String walGroupId,
-        PriorityBlockingQueue<Path> queue, ReplicationQueueInfo replicationQueueInfo,
+        ReplicationSourceLogQueue logQueue, ReplicationQueueInfo replicationQueueInfo,
         ReplicationSourceInterface source) {
       this.walGroupId = walGroupId;
-      this.queue = queue;
+      this.logQueue = logQueue;
       this.replicationQueueInfo = replicationQueueInfo;
       this.source = source;
     }
@@ -847,11 +831,11 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     // normally has a position (unless the RS failed between 2 logs)
     private long getRecoveredQueueStartPos(long startPosition) {
       try {
-        startPosition =
-            (replicationQueues.getLogPosition(peerClusterZnode, this.queue.peek().getName()));
+        startPosition = (replicationQueues.getLogPosition(peerClusterZnode,
+              this.logQueue.getQueue(walGroupId).peek().getName()));
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Recovered queue started with log " + this.queue.peek() + " at position "
-              + startPosition);
+          LOG.trace("Recovered queue started with log " +
+              this.logQueue.getQueue(walGroupId).peek() + " at position " + startPosition);
         }
       } catch (ReplicationException e) {
         terminate("Couldn't get the position of this recovered queue " + peerClusterZnode, e);
@@ -865,8 +849,9 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       ArrayList<WALEntryFilter> filters = Lists.newArrayList(walEntryFilter,
         new ClusterMarkingEntryFilter(clusterId, peerClusterId, replicationEndpoint));
       ChainWALEntryFilter readerFilter = new ChainWALEntryFilter(filters);
-      entryReader = new ReplicationSourceWALReaderThread(manager, replicationQueueInfo, queue,
-          startPosition, fs, conf, readerFilter, metrics, ReplicationSource.this);
+      entryReader = new ReplicationSourceWALReaderThread(manager, replicationQueueInfo, logQueue,
+          startPosition, fs, conf, readerFilter, metrics, ReplicationSource.this,
+          this.walGroupId);
       Threads.setDaemonThreadRunning(entryReader, threadName
           + ".replicationSource.replicationWALReaderThread." + walGroupId + "," + peerClusterZnode,
         handler);
@@ -878,6 +863,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       boolean hasPathChanged = false;
       PriorityBlockingQueue<Path> newPaths =
           new PriorityBlockingQueue<Path>(queueSizePerGroup, new LogsComparator());
+      PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
       pathsLoop: for (Path path : queue) {
         if (fs.exists(path)) { // still in same location, don't need to do anything
           newPaths.add(path);
@@ -927,9 +913,9 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         // put the correct locations in the queue
         // since this is a recovered queue with no new incoming logs,
         // there shouldn't be any concurrency issues
-        queue.clear();
+        logQueue.clear(walGroupId);
         for (Path path : newPaths) {
-          queue.add(path);
+          logQueue.enqueueLog(path, walGroupId);
         }
       }
     }
