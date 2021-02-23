@@ -221,6 +221,11 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
   }
 
+  @InterfaceAudience.Private
+  public Map<String, PriorityBlockingQueue<Path>> getQueues() {
+    return logQueue.getQueues();
+  }
+
   @Override
   public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
       throws ReplicationException {

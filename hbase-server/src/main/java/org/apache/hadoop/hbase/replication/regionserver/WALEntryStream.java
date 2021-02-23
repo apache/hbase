@@ -72,25 +72,23 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
    * @param conf {@link Configuration} to use to create {@link Reader} for this stream
    * @param metrics replication metrics
    * @param walGroupId wal prefix
-   * @throws IOException
    */
   public WALEntryStream(ReplicationSourceLogQueue logQueue, FileSystem fs, Configuration conf,
-      MetricsSource metrics, String walGroupId)
-      throws IOException {
+      MetricsSource metrics, String walGroupId) {
     this(logQueue, fs, conf, 0, metrics, walGroupId);
   }
 
   /**
    * Create an entry stream over the given queue at the given start position
    * @param logQueue the queue of WAL paths
+   * @param fs {@link FileSystem} to use to create {@link Reader} for this stream
    * @param conf the {@link Configuration} to use to create {@link Reader} for this stream
    * @param startPosition the position in the first WAL to start reading at
    * @param metrics the replication metrics
    * @param walGroupId wal prefix
-   * @throws IOException
    */
   public WALEntryStream(ReplicationSourceLogQueue logQueue, FileSystem fs, Configuration conf,
-      long startPosition, MetricsSource metrics, String walGroupId) throws IOException {
+      long startPosition, MetricsSource metrics, String walGroupId) {
     this.logQueue = logQueue;
     this.fs = fs;
     this.conf = conf;
@@ -122,7 +120,9 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
    */
   @Override
   public Entry next() {
-    if (!hasNext()) throw new NoSuchElementException();
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
     Entry save = currentEntry;
     currentEntry = null; // gets reloaded by hasNext()
     return save;
@@ -180,7 +180,7 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
   /**
    * Should be called if the stream is to be reused (i.e. used again after hasNext() has returned
    * false)
-   * @throws IOException
+   * @throws IOException io exception while resetting the reader
    */
   public void reset() throws IOException {
     if (reader != null && currentPath != null) {
@@ -306,7 +306,9 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
     Path nextPath = queue.peek();
     if (nextPath != null) {
       openReader(nextPath);
-      if (reader != null) return true;
+      if (reader != null) {
+        return true;
+      }
     }
     return false;
   }
@@ -349,7 +351,9 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
       handleFileNotFound(path, fnfe);
     }  catch (RemoteException re) {
       IOException ioe = re.unwrapRemoteException(FileNotFoundException.class);
-      if (!(ioe instanceof FileNotFoundException)) throw ioe;
+      if (!(ioe instanceof FileNotFoundException)) {
+        throw ioe;
+      }
       handleFileNotFound(path, (FileNotFoundException)ioe);
     } catch (LeaseNotRecoveredException lnre) {
       // HBASE-15019 the WAL was not closed due to some hiccup.
