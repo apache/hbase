@@ -174,7 +174,7 @@ public class Client {
    */
   public Client(Cluster cluster, String trustStorePath, Optional<String> trustStorePassword,
       Optional<String> trustStoreType) {
-    this(cluster, HBaseConfiguration.create(), trustStorePath, Optional.empty(), Optional.empty());
+    this(cluster, HBaseConfiguration.create(), trustStorePath, trustStorePassword, trustStoreType);
   }
 
   /**
