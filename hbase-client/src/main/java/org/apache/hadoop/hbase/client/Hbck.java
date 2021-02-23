@@ -129,6 +129,8 @@ public interface Hbck extends Abortable, Closeable {
 
   List<Long> scheduleServerCrashProcedures(List<ServerName> serverNames) throws IOException;
 
+  List<Long> scheduleServerCrashProceduresForUnknownServers() throws IOException;
+
   /**
    * Request HBCK chore to run at master side.
    *

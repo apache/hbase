@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpec
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProcedureResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProceduresForUnknownServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProceduresForUnknownServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignsResponse;
 
 /**
@@ -196,6 +198,20 @@ public class HBaseHbck implements Hbck {
         serverNames.stream().map(serverName -> ProtobufUtil.toServerName(serverName).toString())
             .collect(Collectors.toList())),
         se);
+      throw new IOException(se);
+    }
+  }
+
+  @Override
+  public List<Long> scheduleServerCrashProceduresForUnknownServers() throws IOException {
+    try {
+      ScheduleServerCrashProceduresForUnknownServersResponse response =
+        this.hbck.scheduleServerCrashProceduresForUnknownServers(
+          rpcControllerFactory.newController(),
+          ScheduleServerCrashProceduresForUnknownServersRequest.newBuilder().build());
+      return response.getPidList();
+    } catch (ServiceException se) {
+      LOG.debug("Failed to run ServerCrashProcedures for unknown servers", se);
       throw new IOException(se);
     }
   }
