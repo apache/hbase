@@ -77,7 +77,7 @@ public class TestZKSecretWatcher {
   // We subclass AuthenticationTokenSecretManager so that testKeyUpdate can receive
   // notification on the removal of keyId
   private static class AuthenticationTokenSecretManagerForTest
-  extends AuthenticationTokenSecretManager {
+          extends AuthenticationTokenSecretManager {
     private CountDownLatch latch = new CountDownLatch(1);
 
     public AuthenticationTokenSecretManagerForTest(Configuration conf,
@@ -141,7 +141,6 @@ public class TestZKSecretWatcher {
     // sanity check
     assertTrue(KEY_MASTER.isMaster());
     assertFalse(KEY_SLAVE.isMaster());
-    int maxKeyId = 0;
 
     KEY_MASTER.rollCurrentKey();
     AuthenticationKey key1 = KEY_MASTER.getCurrentKey();
@@ -186,11 +185,10 @@ public class TestZKSecretWatcher {
     // verify that the expired key has been removed
     Waiter.waitFor(TEST_UTIL.getConfiguration(), 30000,
       () -> {
-      AuthenticationKey k = KEY_SLAVE.getKey(key1.getKeyId());
-      LOG.info("AuthKey1={}", k);
-      return k == null;});
-    assertNull("key1=" + KEY_SLAVE.getKey(key1.getKeyId()),
-      KEY_SLAVE.getKey(key1.getKeyId()));
+        AuthenticationKey k = KEY_SLAVE.getKey(key1.getKeyId());
+        LOG.info("AuthKey1={}", k);
+        return k == null;});
+    assertNull("key1=" + KEY_SLAVE.getKey(key1.getKeyId()), KEY_SLAVE.getKey(key1.getKeyId()));
 
     // bring up a new slave
     Configuration conf = TEST_UTIL.getConfiguration();
