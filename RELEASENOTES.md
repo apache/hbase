@@ -10893,7 +10893,7 @@ MVCC methods cleaned up. Make a bit more sense now. Less of them.
 
 Simplifies our update of MemStore/WAL. Now we update memstore AFTER we add to WAL (but before we sync). This fixes possible dataloss when two edits came in with same coordinates; we could order the edits in memstore differently to how they arrived in the WAL.
 
-Marked as an incompatible change because it breaks Distributed Log Replay, a feature we'd determined already was unreliable and to be removed (See http://search-hadoop.com/m/YGbbhTJpoal8GD1).
+Marked as an incompatible change because it breaks Distributed Log Replay, a feature we'd determined already was unreliable and to be removed.
 
 
 ---
