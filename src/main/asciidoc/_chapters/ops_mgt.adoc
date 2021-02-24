@@ -3376,7 +3376,6 @@ Physical data size on disk is distinct from logical size of your data and is aff
   See <<regions.arch,regions.arch>>.
 
 * Decreased by <<compression,compression>> and data block encoding, depending on data.
-  See also link:http://search-hadoop.com/m/lL12B1PFVhp1[this thread].
   You might want to test what compression and encoding (if any) make sense for your data.
 * Increased by size of region server <<wal,wal>> (usually fixed and negligible - less than half of RS memory size, per RS).
 * Increased by HDFS replication - usually x3.
