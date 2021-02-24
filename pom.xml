@@ -112,7 +112,6 @@
       <archive>https://lists.apache.org/list.html?user@hbase.apache.org</archive>
       <otherArchives>
         <otherArchive>https://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
-        <otherArchive>https://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -123,7 +122,6 @@
       <archive>https://lists.apache.org/list.html?dev@hbase.apache.org</archive>
       <otherArchives>
         <otherArchive>https://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
-        <otherArchive>https://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
