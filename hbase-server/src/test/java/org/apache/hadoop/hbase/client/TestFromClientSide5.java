@@ -970,7 +970,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
           numRecords++;
         }
 
-        LOG.info("test data has " + numRecords + " records.");
+        LOG.info("test data has {} records.", numRecords);
 
         // by default, scan metrics collection is turned off
         assertNull(scanner.getScanMetrics());
@@ -983,8 +983,6 @@ public class TestFromClientSide5 extends FromClientSideBase {
       try (ResultScanner scanner = ht.getScanner(scan2)) {
         for (Result result : scanner.next(numRecords - 1)) {
         }
-        scanner.close();
-        // closing the scanner will set the metrics.
         assertNotNull(scanner.getScanMetrics());
       }
 
@@ -999,7 +997,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
         }
         ScanMetrics scanMetrics = scanner.getScanMetrics();
         assertEquals("Did not access all the regions in the table", numOfRegions,
-                scanMetrics.countOfRegions.get());
+          scanMetrics.countOfRegions.get());
       }
 
       // check byte counters
@@ -1008,15 +1006,14 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan2.setCaching(1);
       try (ResultScanner scanner = ht.getScanner(scan2)) {
         int numBytes = 0;
-        for (Result result : scanner.next(1)) {
+        for (Result result : scanner) {
           for (Cell cell : result.listCells()) {
             numBytes += PrivateCellUtil.estimatedSerializedSizeOf(cell);
           }
         }
-        scanner.close();
         ScanMetrics scanMetrics = scanner.getScanMetrics();
         assertEquals("Did not count the result bytes", numBytes,
-                scanMetrics.countOfBytesInResults.get());
+          scanMetrics.countOfBytesInResults.get());
       }
 
       // check byte counters on a small scan
@@ -1026,15 +1023,14 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan2.setSmall(true);
       try (ResultScanner scanner = ht.getScanner(scan2)) {
         int numBytes = 0;
-        for (Result result : scanner.next(1)) {
+        for (Result result : scanner) {
           for (Cell cell : result.listCells()) {
             numBytes += PrivateCellUtil.estimatedSerializedSizeOf(cell);
           }
         }
-        scanner.close();
         ScanMetrics scanMetrics = scanner.getScanMetrics();
         assertEquals("Did not count the result bytes", numBytes,
-                scanMetrics.countOfBytesInResults.get());
+          scanMetrics.countOfBytesInResults.get());
       }
 
       // now, test that the metrics are still collected even if you don't call close, but do
@@ -1064,8 +1060,10 @@ public class TestFromClientSide5 extends FromClientSideBase {
         scannerWithClose.close();
         ScanMetrics scanMetricsWithClose = scannerWithClose.getScanMetrics();
         assertEquals("Did not access all the regions in the table", numOfRegions,
-                scanMetricsWithClose.countOfRegions.get());
+          scanMetricsWithClose.countOfRegions.get());
       }
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
