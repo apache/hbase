@@ -3108,26 +3108,6 @@ To turn on the snapshot support just set the `hbase.snapshot.enabled`        pro
   </property>
 ----
 
-Optionally, snapshots can be configured to preserve the value of `hbase.hregion.max.filesize` property.
-This is mostly useful when exporting snapshots between different clusters. If the HBase cluster where
-the snapshot is originally taken has a much larger value set for `hbase.hregion.max.filesize` than
-one or more clusters where the snapshot is being exported to, a storm of region splits may occur when
-restoring the snapshot on destination clusters. Setting `hbase.snapshot.max.filesize.preserve`
-property to true will save `hbase.hregion.max.filesize` value into the table's `MAX_FILESIZE`
-decriptor at snapshot creation time. If the table already defines `MAX_FILESIZE` descriptor,
-`hbase.snapshot.max.filesize.preserve` would have no effect.
-
-[source,java]
-----
-
-  <property>
-    <name>hbase.snapshot.max.filesize.preserve</name>
-    <value>true</value>
-  </property>
-----
-
-The `hbase.snapshot.max.filesize.preserve` behaviour is *disabled* by default.
-
 [[ops.snapshots.takeasnapshot]]
 === Take a Snapshot
 
@@ -3187,6 +3167,21 @@ providing default TTL in sec for key: `hbase.master.snapshot.ttl`.
 Value 0 for this config indicates TTL: FOREVER
 
 
+.Take a snapshot with custom MAX_FILESIZE
+
+Optionally, snapshots can be created with a custom max file size configuration that will be
+used by cloned tables, instead of the global `hbase.hregion.max.filesize` configuration property.
+This is mostly useful when exporting snapshots between different clusters. If the HBase cluster where
+the snapshot is originally taken has a much larger value set for `hbase.hregion.max.filesize` than
+one or more clusters where the snapshot is being exported to, a storm of region splits may occur when
+restoring the snapshot on destination clusters. Specifying `MAX_FILESIZE` on properties passed to
+`snapshot` command will save informed value into the table's `MAX_FILESIZE`
+decriptor at snapshot creation time. If the table already defines `MAX_FILESIZE` descriptor,
+this property would be ignored and have no effect.
+
+----
+snapshot 'table01', 'snap01', {MAX_FILESIZE => 21474836480}
+----
 
 .Enable/Disable Snapshot Auto Cleanup on running cluster:
 

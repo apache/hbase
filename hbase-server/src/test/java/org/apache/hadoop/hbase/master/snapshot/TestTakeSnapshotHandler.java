@@ -38,6 +38,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Unfortunately, couldn't test TakeSnapshotHandler using mocks, because it relies on TableLock,
  * which is tightly coupled to LockManager and LockProcedure classes, which are both final and
@@ -56,18 +59,13 @@ public class TestTakeSnapshotHandler {
   @Rule
   public TestName name = new TestName();
 
-  private Configuration createConfig() {
-    Configuration config = UTIL.getConfiguration();
-    config.set(HConstants.HREGION_MAX_FILESIZE, "21474836480");
-    return config;
-  }
 
   @Before
   public void setup()  {
     UTIL = new HBaseTestingUtility();
   }
 
-  public TableDescriptor createTableInsertDataAndTakeSnapshot() throws Exception {
+  public TableDescriptor createTableInsertDataAndTakeSnapshot(Map<String, Object> snapshotProps) throws Exception {
     TableDescriptor descriptor =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
         .setColumnFamily(
@@ -78,7 +76,7 @@ public class TestTakeSnapshotHandler {
     put.addColumn(Bytes.toBytes("f"), Bytes.toBytes("1"), Bytes.toBytes("v1"));
     table.put(put);
     String snapName = "snap"+name.getMethodName();
-    UTIL.getAdmin().snapshot(snapName, descriptor.getTableName());
+    UTIL.getAdmin().snapshot(snapName, descriptor.getTableName(), snapshotProps);
     TableName cloned = TableName.valueOf(name.getMethodName() + "clone");
     UTIL.getAdmin().cloneSnapshot(snapName, cloned);
     return descriptor;
@@ -86,10 +84,10 @@ public class TestTakeSnapshotHandler {
 
   @Test
   public void testPreparePreserveMaxFileSizeEnabled() throws Exception {
-    Configuration config = createConfig();
-    config.set(SnapshotManager.SNAPSHOT_MAX_FILE_SIZE_PRESERVE, "true");
     UTIL.startMiniCluster();
-    TableDescriptor descriptor = createTableInsertDataAndTakeSnapshot();
+    Map<String, Object> snapshotProps = new HashMap<>();
+    snapshotProps.put(TableDescriptorBuilder.MAX_FILESIZE, Long.parseLong("21474836480"));
+    TableDescriptor descriptor = createTableInsertDataAndTakeSnapshot(snapshotProps);
     TableName cloned = TableName.valueOf(name.getMethodName() + "clone");
     assertEquals(-1,
       UTIL.getAdmin().getDescriptor(descriptor.getTableName()).getMaxFileSize());
@@ -99,7 +97,7 @@ public class TestTakeSnapshotHandler {
   @Test
   public void testPreparePreserveMaxFileSizeDisabled() throws Exception {
     UTIL.startMiniCluster();
-    TableDescriptor descriptor = createTableInsertDataAndTakeSnapshot();
+    TableDescriptor descriptor = createTableInsertDataAndTakeSnapshot(null);
     TableName cloned = TableName.valueOf(name.getMethodName() + "clone");
     assertEquals(-1,
       UTIL.getAdmin().getDescriptor(descriptor.getTableName()).getMaxFileSize());
