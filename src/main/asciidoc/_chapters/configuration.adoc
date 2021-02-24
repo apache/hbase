@@ -99,12 +99,12 @@ This section lists required services and some required system configuration.
 |JDK 8
 
 |1.1
-|link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
+|Not Supported
 |yes
 |Running with JDK 8 will work but is not well tested.
 
 |1.0
-|link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
+|Not Supported
 |yes
 |Running with JDK 8 will work but is not well tested.
 
@@ -306,8 +306,7 @@ HBase-0.94 can additionally work with Hadoop-0.23.x and 2.x, but you may have to
 
 As of Apache HBase 0.96.x, Apache Hadoop 1.0.x at least is required.
 Hadoop 2 is strongly encouraged (faster but also has fixes that help MTTR). We will no longer run properly on older Hadoops such as 0.20.205 or branch-0.20-append.
-Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop. See link:http://search-hadoop.com/m/7vFVx4EsUb2[HBase, mail # dev - DISCUSS:
-                Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?]
+Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop. See link:https://lists.apache.org/thread.html/5d5cdf7ccf7aea88398971a221ef3fc65d2b28712dfdfdd649079a35%401330716274%40%3Cdev.hbase.apache.org%3E[HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?]
 
 [[hadoop.older.versions]]
 ==== Hadoop versions 0.20.x - 1.x
@@ -909,8 +908,12 @@ If your working set it such that block cache does you no good, at least size the
 ==== link:http://en.wikipedia.org/wiki/Nagle's_algorithm[Nagle's] or the small package problem
 
 If a big 40ms or so occasional delay is seen in operations against HBase, try the Nagles' setting.
-For example, see the user mailing list thread, link:http://search-hadoop.com/m/pduLg2fydtE/Inconsistent+scan+performance+with+caching+set+&subj=Re+Inconsistent+scan+performance+with+caching+set+to+1[Inconsistent scan performance with caching set to 1] and the issue cited therein where setting `notcpdelay` improved scan speeds.
-You might also see the graphs on the tail of link:https://issues.apache.org/jira/browse/HBASE-7008[HBASE-7008 Set scanner caching to a better default] where our Lars Hofhansl tries various data sizes w/ Nagle's on and off measuring the effect.
+For example, see the user mailing list thread,
+link:https://lists.apache.org/thread.html/3d7ceb41c04a955b1b1c80480cdba95208ca3e97bf6895a40e0c1bbb%401346186127%40%3Cuser.hbase.apache.org%3E[Inconsistent scan performance with caching set to 1]
+and the issue cited therein where setting `notcpdelay` improved scan speeds. You might also see the
+graphs on the tail of
+link:https://issues.apache.org/jira/browse/HBASE-7008[HBASE-7008 Set scanner caching to a better default]
+where our Lars Hofhansl tries various data sizes w/ Nagle's on and off measuring the effect.
 
 [[mttr]]
 ==== Better Mean Time to Recover (MTTR)

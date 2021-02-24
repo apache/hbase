@@ -572,7 +572,6 @@ See <<precreate.regions>>, as well as <<perf.configurations>>
 == Reading from HBase
 
 The mailing list can help if you are having performance issues.
-For example, here is a good general thread on what to look at addressing read-time issues: link:http://search-hadoop.com/m/qOo2yyHtCC1[HBase Random Read latency > 100ms]
 
 [[perf.hbase.client.caching]]
 === Scan Caching
@@ -802,7 +801,7 @@ See the link:https://issues.apache.org/jira/browse/HDFS-1599[Umbrella Jira Ticke
 Since Hadoop 1.0.0 (also 0.22.1, 0.23.1, CDH3u3 and HDP 1.0) via link:https://issues.apache.org/jira/browse/HDFS-2246[HDFS-2246], it is possible for the DFSClient to take a "short circuit" and read directly from the disk instead of going through the DataNode when the data is local.
 What this means for HBase is that the RegionServers can read directly off their machine's disks instead of having to open a socket to talk to the DataNode, the former being generally much faster.
 See JD's link:http://files.meetup.com/1350427/hug_ebay_jdcryans.pdf[Performance Talk].
-Also see link:http://search-hadoop.com/m/zV6dKrLCVh1[HBase, mail # dev - read short circuit] thread for more discussion around short circuit reads.
+Also see link:https://lists.apache.org/thread.html/ce2ce3a3bbd20806d0c017b2e7528e78a46ccb87c063831db051949d%401347548325%40%3Cdev.hbase.apache.org%3E[HBase, mail # dev - read short circuit] thread for more discussion around short circuit reads.
 
 To enable "short circuit" reads, it will depend on your version of Hadoop.
 The original shortcircuit read patch was much improved upon in Hadoop 2 in link:https://issues.apache.org/jira/browse/HDFS-347[HDFS-347].

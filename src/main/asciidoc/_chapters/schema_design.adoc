@@ -190,7 +190,7 @@ If your rows and column names are large, especially compared to the size of the 
 One such is the case described by Marc Limotte at the tail of link:https://issues.apache.org/jira/browse/HBASE-3551?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&focusedCommentId=13005272#comment-13005272[HBASE-3551] (recommended!). Therein, the indices that are kept on HBase storefiles (<<hfile>>) to facilitate random access may end up occupying large chunks of the HBase allotted RAM because the cell value coordinates are large.
 Mark in the above cited comment suggests upping the block size so entries in the store file index happen at a larger interval or modify the table schema so it makes for smaller rows and column names.
 Compression will also make for larger indices.
-See the thread link:http://search-hadoop.com/m/hemBv1LiN4Q1/a+question+storefileIndexSize&subj=a+question+storefileIndexSize[a question storefileIndexSize] up on the user mailing list.
+See the thread link:https://lists.apache.org/thread.html/b158eae5d8888d3530be378298bca90c17f80982fdcdfa01d0844c3d%401306240189%40%3Cuser.hbase.apache.org%3E[a question storefileIndexSize] up on the user mailing list.
 
 Most of the time small inefficiencies don't matter all that much. Unfortunately, this is a case where they do.
 Whatever patterns are selected for ColumnFamilies, attributes, and rowkeys they could be repeated several billion times in your data.
@@ -581,7 +581,7 @@ However, HBase scales better at larger data volumes, so this is a feature trade-
 
 Pay attention to <<performance>> when implementing any of these approaches.
 
-Additionally, see the David Butler response in this dist-list thread link:http://search-hadoop.com/m/nvbiBp2TDP/Stargate%252Bhbase&subj=Stargate+hbase[HBase, mail # user - Stargate+hbase]
+Additionally, see the David Butler response in this dist-list thread link:https://lists.apache.org/thread.html/b0ca33407f010d5b1be67a20d1708e8d8bb1e147770f2cb7182a2e37%401300972712%40%3Cuser.hbase.apache.org%3E[HBase, mail # user - Stargate+hbase]
 
 [[secondary.indexes.filter]]
 ===  Filter Query
