@@ -1450,6 +1450,8 @@ public final class ProtobufUtil {
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation,
       final MutationProto.Builder builder, long nonce) throws IOException {
     getMutationBuilderAndSetCommonFields(type, mutation, builder);
+    if(mutation.getId()!=null){
+      builder.setMyTraceId(mutation.getId());}//changed by me
     builder.setAssociatedCellCount(mutation.size());
     if (mutation instanceof Increment) {
       setTimeRange(builder, ((Increment)mutation).getTimeRange());

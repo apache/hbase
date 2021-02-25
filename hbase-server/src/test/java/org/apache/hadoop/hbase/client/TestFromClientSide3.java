@@ -19,40 +19,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import static junit.framework.Assert.assertFalse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
-import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.coprocessor.*;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -65,13 +37,18 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.*;
+
+import static junit.framework.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 @Category(LargeTests.class)
 public class TestFromClientSide3 {
@@ -420,26 +397,43 @@ public class TestFromClientSide3 {
   @Test
   public void testHTableWithLargeBatch() throws Exception {
     Table table = TEST_UTIL.createTable(TableName.valueOf("testHTableWithLargeBatch"),
-        new byte[][] { FAMILY });
-    int sixtyFourK = 64 * 1024;
+            new byte[][] { FAMILY });
+    /*private static final Configuration conf = new Configuration();
+    ClusterConnection conn = new MyConnectionImpl(conf);
+    HTable ht = new HTable(conn, new BufferedMutatorParams(DUMMY_TABLE));
+    ht.multiAp = new MyAsyncProcess(conn, conf, false);*/
+    int sixtyFourK = 0;
+    List actions = new ArrayList();
+    Put put1,put2;
     try {
-      List actions = new ArrayList();
+
       Object[] results = new Object[(sixtyFourK + 1) * 2];
 
       for (int i = 0; i < sixtyFourK + 1; i ++) {
-        Put put1 = new Put(ROW);
+        put1 = new Put(ROW);
         put1.addColumn(FAMILY, QUALIFIER, VALUE);
+        Random random= new Random();
+
+        put1.setId(Integer.toString(random.nextInt()));
+        //System.out.println("in test "+put1.getId());
+
         actions.add(put1);
 
-        Put put2 = new Put(ANOTHERROW);
+        put2 = new Put(ANOTHERROW);
         put2.addColumn(FAMILY, QUALIFIER, VALUE);
+        put2.setId(Integer.toString(random.nextInt()));
+        //System.out.println("in test "+put2.getId());
         actions.add(put2);
+
       }
 
       table.batch(actions, results);
     } finally {
       table.close();
     }
+
+    //System.out.println("end");
+
   }
 
   @Test

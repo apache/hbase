@@ -18,37 +18,13 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
-import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-
+import com.google.protobuf.*;
 import io.netty.util.HashedWheelTimer;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.UnknownHostException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -69,6 +45,22 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.UnknownHostException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
+import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
 
 /**
  * Provides the basics for a RpcClient implementation like configuration and Logging.
@@ -568,6 +560,16 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     @Override
     public Message callBlockingMethod(Descriptors.MethodDescriptor md, RpcController controller,
         Message param, Message returnType) throws ServiceException {
+      /*if(param.getClass().getName()=="org.apache.hadoop.hbase.protobuf.generated.ClientProtos$MultiRequest") {
+        ClientProtos.MultiRequest var = (ClientProtos.MultiRequest) (param);
+        for(int jj=0;jj<var.getRegionActionList().size();jj++) {
+          for (int ii = 0; ii < var.getRegionActionList().get(jj).getActionList().size(); ii++) {
+            //System.out.println("multiservercallable.java get action list " + var.getRegionActionList().get(jj).getActionList().get(ii).getMutation());
+            if(var.getRegionActionList().get(jj).getActionList().get(ii).getMutation().hasMyTraceId())
+              System.out.println("in call blocking method " + var.getRegionActionList().get(jj).getActionList().get(ii).getMutation().getMyTraceId());
+          }
+        }
+      }*/
       return rpcClient.callBlockingMethod(md, configureRpcController(controller),
         param, returnType, ticket, addr);
     }

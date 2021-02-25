@@ -20,14 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
-import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -39,6 +31,13 @@ import org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
+import java.nio.ByteBuffer;
 
 /**
  * Utility to help ipc'ing.
@@ -74,6 +73,16 @@ class IPCUtil {
     // This allocates a buffer that is the size of the message internally.
     header.writeDelimitedTo(dos);
     if (param != null) {
+      /*if(param.getClass().getName()=="org.apache.hadoop.hbase.protobuf.generated.ClientProtos$MultiRequest") {
+        ClientProtos.MultiRequest var = (ClientProtos.MultiRequest) (param);
+        for (int jj = 0; jj < var.getRegionActionList().size(); jj++) {
+          for (int ii = 0; ii < var.getRegionActionList().get(jj).getActionList().size(); ii++) {
+            //System.out.println("multiservercallable.java get action list " + var.getRegionActionList().get(jj).getActionList().get(ii).getMutation());
+            System.out.println("in the end " + var.getRegionActionList().get(jj).getActionList().get(ii).getMutation().getMyTraceId());
+
+          }
+        }
+      }*/
       param.writeDelimitedTo(dos);
     }
     if (cellBlock != null) {
