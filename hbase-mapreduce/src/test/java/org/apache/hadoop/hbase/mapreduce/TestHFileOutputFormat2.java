@@ -1699,7 +1699,8 @@ public class TestHFileOutputFormat2  {
 
       assertTrue(job.waitForCompletion(true));
 
-      final List<Configuration> configs = ConfigurationCaptorConnection.getCapturedConfigarutions(key);
+      final List<Configuration> configs =
+        ConfigurationCaptorConnection.getCapturedConfigarutions(key);
 
       assertFalse(configs.isEmpty());
       for (Configuration config : configs) {
