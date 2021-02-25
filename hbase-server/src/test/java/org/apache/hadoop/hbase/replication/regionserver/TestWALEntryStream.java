@@ -27,9 +27,9 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -82,7 +83,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
-
 
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestWALEntryStream {
@@ -687,6 +687,7 @@ public class TestWALEntryStream {
     // Override the max retries multiplier to fail fast.
     conf.setInt("replication.source.maxretriesmultiplier", 1);
     conf.setBoolean("replication.source.eof.autorecovery", true);
+    conf.setInt("replication.source.nb.batches", 10);
     // Create a reader thread with source as recovered source.
     ReplicationSource source = mockReplicationSource(true, conf);
     when(source.isPeerEnabled()).thenReturn(true);
@@ -705,7 +706,64 @@ public class TestWALEntryStream {
     assertEquals(0, localLogQueue.getQueueSize(fakeWalGroupId));
   }
 
+  @Test
+  public void testEOFExceptionForRecoveredQueueWithMultipleLogs() throws Exception {
+    Configuration conf = new Configuration(CONF);
+    MetricsSource metrics = mock(MetricsSource.class);
+    ReplicationSource source = mockReplicationSource(true, conf);
+    ReplicationSourceLogQueue localLogQueue = new ReplicationSourceLogQueue(conf, metrics, source);
+    // Create a 0 length log.
+    Path emptyLog = new Path(fs.getHomeDirectory(),"log.2");
+    FSDataOutputStream fsdos = fs.create(emptyLog);
+    fsdos.close();
+    assertEquals(0, fs.getFileStatus(emptyLog).getLen());
+    localLogQueue.enqueueLog(emptyLog, fakeWalGroupId);
+
+    final Path log1 = new Path(fs.getHomeDirectory(), "log.1");
+    WALProvider.Writer writer1 = WALFactory.createWALWriter(fs, log1, TEST_UTIL.getConfiguration());
+    appendEntries(writer1, 3);
+    localLogQueue.enqueueLog(log1, fakeWalGroupId);
+
+    ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    // Make it look like the source is from recovered source.
+    when(mockSourceManager.getOldSources())
+      .thenReturn(new ArrayList<>(Arrays.asList((ReplicationSourceInterface)source)));
+    when(source.isPeerEnabled()).thenReturn(true);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
+    // Override the max retries multiplier to fail fast.
+    conf.setInt("replication.source.maxretriesmultiplier", 1);
+    conf.setBoolean("replication.source.eof.autorecovery", true);
+    conf.setInt("replication.source.nb.batches", 10);
+    // Create a reader thread.
+    ReplicationSourceWALReader reader =
+      new ReplicationSourceWALReader(fs, conf, localLogQueue, 0,
+        getDummyFilter(), source, fakeWalGroupId);
+    assertEquals("Initial log queue size is not correct",
+      2, localLogQueue.getQueueSize(fakeWalGroupId));
+    reader.run();
+
+    // remove empty log from logQueue.
+    assertEquals(0, localLogQueue.getQueueSize(fakeWalGroupId));
+    assertEquals("Log queue should be empty", 0, localLogQueue.getQueueSize(fakeWalGroupId));
+  }
+
   private PriorityBlockingQueue<Path> getQueue() {
     return logQueue.getQueue(fakeWalGroupId);
+  }
+
+  private void appendEntries(WALProvider.Writer writer, int numEntries) throws IOException {
+    for (int i = 0; i < numEntries; i++) {
+      byte[] b = Bytes.toBytes(Integer.toString(i));
+      KeyValue kv = new KeyValue(b,b,b);
+      WALEdit edit = new WALEdit();
+      edit.add(kv);
+      WALKeyImpl key = new WALKeyImpl(b, TableName.valueOf(b), 0, 0,
+        HConstants.DEFAULT_CLUSTER_ID);
+      NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+      scopes.put(b, HConstants.REPLICATION_SCOPE_GLOBAL);
+      writer.append(new WAL.Entry(key, edit));
+      writer.sync(false);
+    }
+    writer.close();
   }
 }
