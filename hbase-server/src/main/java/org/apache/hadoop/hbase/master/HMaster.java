@@ -125,6 +125,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
@@ -134,6 +135,7 @@ import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
@@ -782,6 +784,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // start up all service threads.
     status.setStatus("Initializing master service threads");
+    // after this procedure executor should be up and waiting
     startServiceThreads();
 
     // Wake up this server to check in
@@ -846,10 +849,37 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (isStopped()) return;
 
     status.setStatus("Submitting log splitting work for previously failed region servers");
+
+    // grab the list of procedures once. SCP fom pre-crash should all be loaded, and can't progress
+    // until AM joins the cluster any SCPs that got added after we get the log folder list should be
+    // for a different start code.
+    final Set<ServerName> alreadyHasSCP = new HashSet<>();
+    long scpCount = 0;
+    for (ProcedureInfo procInfo : this.procedureExecutor.listProcedures() ) {
+      final Procedure proc = this.procedureExecutor.getProcedure(procInfo.getProcId());
+      if (proc != null) {
+        if (proc instanceof ServerCrashProcedure && !(proc.isFinished() || proc.isSuccess())) {
+          scpCount++;
+          alreadyHasSCP.add(((ServerCrashProcedure)proc).getServerName());
+        }
+      }
+    }
+    LOG.info("Restored proceduces include " + scpCount + " SCP covering " + alreadyHasSCP.size() +
+        " ServerName.");
+    
+ 
+    LOG.info("Checking " + previouslyFailedServers.size() + " previously failed servers (seen via wals) for existing SCP.");
+    // AM should be in "not yet init" and these should all be queued
     // Master has recovered hbase:meta region server and we put
     // other failed region servers in a queue to be handled later by SSH
     for (ServerName tmpServer : previouslyFailedServers) {
-      this.serverManager.processDeadServer(tmpServer, true);
+      if (alreadyHasSCP.contains(tmpServer)) {
+        LOG.info("Skipping failed server in FS because it already has a queued SCP: " + tmpServer);
+        this.serverManager.getDeadServers().add(tmpServer);
+      } else {
+        LOG.info("Process failed server in FS that has no queued SCP: " + tmpServer);
+        this.serverManager.processDeadServer(tmpServer, true);
+      }
     }
 
     // Update meta with new PB serialization if required. i.e migrate all HRI to PB serialization
@@ -912,6 +942,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     Set<ServerName> EMPTY_SET = new HashSet<ServerName>();
     int numReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
            HConstants.DEFAULT_META_REPLICA_NUM);
+    // the first  meta replica will call enableCrashedServerProcessing
     for (int i = 1; i < numReplicas; i++) {
       assignMeta(status, EMPTY_SET, i);
     }

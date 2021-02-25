@@ -92,12 +92,18 @@ public class GeneralBulkAssigner extends BulkAssigner {
     int regionCount = regionSet.size();
     long startTime = System.currentTimeMillis();
     long rpcWaitTime = startTime + timeout;
+    final long TWICE_EXPECTED = TimeUnit.NANOSECONDS.convert(2*100, TimeUnit.MILLISECONDS);
     while (!server.isStopped() && !pool.isTerminated()
         && rpcWaitTime > System.currentTimeMillis()) {
+      long startLoop = System.nanoTime();
       if (failedPlans.isEmpty()) {
         pool.awaitTermination(100, TimeUnit.MILLISECONDS);
       } else {
         reassignFailedPlans();
+      }
+      long elapsedLoop = System.nanoTime() - startLoop;
+      if (elapsedLoop > TWICE_EXPECTED) {
+        LOG.debug("pause+spin loop iteration took " + TimeUnit.MILLISECONDS.convert(elapsedLoop, TimeUnit.NANOSECONDS) + " ms");
       }
     }
     if (!pool.isTerminated()) {
@@ -138,6 +144,7 @@ public class GeneralBulkAssigner extends BulkAssigner {
     Configuration conf = server.getConfiguration();
     long perRegionOpenTimeGuesstimate =
       conf.getLong("hbase.bulk.assignment.perregion.open.time", 1000);
+    LOG.debug("hbase.bulk.assignment.perregion.open.time = " + perRegionOpenTimeGuesstimate);
     int maxRegionsPerServer = 1;
     for (List<HRegionInfo> regionList : bulkPlan.values()) {
       int size = regionList.size();
@@ -145,10 +152,16 @@ public class GeneralBulkAssigner extends BulkAssigner {
         maxRegionsPerServer = size;
       }
     }
+    LOG.debug("maxRegionsPerServer = " + maxRegionsPerServer);
+    long rpcStartupWaittime = conf.getLong("hbase.regionserver.rpc.startup.waittime", 60000);
+    LOG.debug("hbase.regionserver.rpc.startup.waittime = " +rpcStartupWaittime);
+    long bulkPerRegionServerRpcWaittime = conf.getLong("hbase.bulk.assignment.perregionserver.rpc.waittime",
+        30000);
+    LOG.debug("hbase.bulk.assignment.perregionserver.rpc.waittime = " + bulkPerRegionServerRpcWaittime);
+    LOG.debug("bulkPlan.size() = " + bulkPlan.size());
     long timeout = perRegionOpenTimeGuesstimate * maxRegionsPerServer
-      + conf.getLong("hbase.regionserver.rpc.startup.waittime", 60000)
-      + conf.getLong("hbase.bulk.assignment.perregionserver.rpc.waittime",
-        30000) * bulkPlan.size();
+      + rpcStartupWaittime
+      + bulkPerRegionServerRpcWaittime * bulkPlan.size();
     LOG.debug("Timeout-on-RIT=" + timeout);
     return timeout;
   }

@@ -681,6 +681,7 @@ public class ServerManager {
     // the handler threads and meta table could not be re-assigned in case
     // the corresponding server is down. So we queue them up here instead.
     if (!services.getAssignmentManager().isFailoverCleanupDone()) {
+      LOG.debug("AssignmentManager isn't done cleaning up from failover. Requeue server " + serverName);
       requeuedDeadServers.put(serverName, shouldSplitWal);
       return;
     }

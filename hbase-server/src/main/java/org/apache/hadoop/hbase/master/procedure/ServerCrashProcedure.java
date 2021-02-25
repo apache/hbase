@@ -257,6 +257,18 @@ implements ServerProcedureInterface {
         break;
 
       case SERVER_CRASH_ASSIGN:
+        // If we're starting here after a procedure restore and we would have split logs
+        // on the prior master instance, then make sure this instance of the AM
+        // knows that the server has been processed
+        if (this.shouldSplitWal) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("In case we're resuming, mark as processed (either split or DLR r-i-c) " +
+              "logs for " + serverName + "; region count=" + size(this.regionsOnCrashedServer));
+          }
+          final AssignmentManager am = env.getMasterServices().getAssignmentManager();
+          am.getRegionStates().logSplit(this.serverName);
+        }
+
         List<HRegionInfo> regionsToAssign = calcRegionsToAssign(env);
 
         // Assign may not be idempotent. SSH used to requeue the SSH if we got an IOE assigning
@@ -426,6 +438,9 @@ implements ServerProcedureInterface {
     MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
     mfs.prepareLogReplay(this.serverName, regions);
+    // If the master doesn't fail, we'll set this again in SERVER_CRASH_ASSIGN
+    // can we skip doing it here? depends on how fast another observer
+    // needs to see that things were processed since we yield between now and then.
     am.getRegionStates().logSplit(this.serverName);
   }
 
@@ -441,6 +456,9 @@ implements ServerProcedureInterface {
     if (!carryingMeta) {
       mfs.archiveMetaLog(this.serverName);
     }
+    // If the master doesn't fail, we'll set this again in SERVER_CRASH_ASSIGN
+    // can we skip doing it here? depends on how fast another observer
+    // needs to see that things were processed since we yield between now and then.
     am.getRegionStates().logSplit(this.serverName);
   }
 
