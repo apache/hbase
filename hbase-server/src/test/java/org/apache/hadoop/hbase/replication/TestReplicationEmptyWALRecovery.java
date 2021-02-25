@@ -146,6 +146,7 @@ import org.junit.experimental.categories.Category;
     // if everything works, the source should've stopped reading from the empty wal, and start
     // replicating from the new wal
     runSimplePutDeleteTest();
+    rollWalsAndWaitForDeque(numRs);
   }
 
   /**
@@ -203,6 +204,7 @@ import org.junit.experimental.categories.Category;
     // if everything works, the source should've stopped reading from the empty wal, and start
     // replicating from the new wal
     runSimplePutDeleteTest();
+    rollWalsAndWaitForDeque(numRs);
   }
 
   /**
@@ -237,7 +239,10 @@ import org.junit.experimental.categories.Category;
 
     }
     injectEmptyWAL(numRs, emptyWalPaths);
-    wal.rollWriter();
+    // roll the WAL now
+    for (int i = 0; i < numRs; i++) {
+      wal.rollWriter();
+    }
     hbaseAdmin.enableReplicationPeer(PEER_ID2);
     // ReplicationSource should advance past the empty wal, or else the test will fail
     waitForLogAdvance(numRs);
@@ -256,6 +261,7 @@ import org.junit.experimental.categories.Category;
     // if everything works, the source should've stopped reading from the empty wal, and start
     // replicating from the new wal
     runSimplePutDeleteTest();
+    rollWalsAndWaitForDeque(numRs);
   }
 
   /**
@@ -291,8 +297,10 @@ import org.junit.experimental.categories.Category;
     injectEmptyWAL(numRs, emptyWalPaths);
 
     // roll the WAL again with some entries
-    appendEntriesToWal(numOfEntriesToReplicate, wal);
-    wal.rollWriter();
+    for (int i = 0; i < numRs; i++) {
+      appendEntriesToWal(numOfEntriesToReplicate, wal);
+      wal.rollWriter();
+    }
 
     hbaseAdmin.enableReplicationPeer(PEER_ID2);
     // ReplicationSource should advance past the empty wal, or else the test will fail
@@ -312,6 +320,7 @@ import org.junit.experimental.categories.Category;
     // if everything works, the source should've stopped reading from the empty wal, and start
     // replicating from the new wal
     runSimplePutDeleteTest();
+    rollWalsAndWaitForDeque(numRs);
   }
 
   // inject our empty wal into the replication queue, and then roll the original wal, which
@@ -333,6 +342,17 @@ import org.junit.experimental.categories.Category;
 
   protected WALKeyImpl getWalKeyImpl() {
     return new WALKeyImpl(info.getEncodedNameAsBytes(), tableName, 0, mvcc, scopes);
+  }
+
+  // Roll the WAL and wait for it to get deque from the log queue
+  private void rollWalsAndWaitForDeque(int numRs) throws IOException {
+    RegionInfo regionInfo =
+      UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
+    for (int i = 0; i < numRs; i++) {
+      WAL wal = UTIL1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
+      wal.rollWriter();
+    }
+    waitForLogAdvance(numRs);
   }
 
   private void appendEntriesToWal(int numEntries, WAL wal) throws IOException {

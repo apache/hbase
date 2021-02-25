@@ -289,16 +289,17 @@ class ReplicationSourceWALReader extends Thread {
     if ((e instanceof EOFException || e.getCause() instanceof EOFException)
       && (source.isRecovered() || queue.size() > 1)
       && this.eofAutoRecovery) {
+      Path head = queue.peek();
       try {
-        if (fs.getFileStatus(queue.peek()).getLen() == 0) {
-          Path logWithEOF = queue.peek();
-          LOG.warn("Forcing removal of 0 length log in queue: {}", logWithEOF);
+        if (fs.getFileStatus(head).getLen() == 0) {
+          // head of the queue is an empty log file
+          LOG.warn("Forcing removal of 0 length log in queue: {}", head);
           logQueue.remove(walGroupId);
           currentPosition = 0;
           // After we removed the WAL from the queue, we should
           // try shipping the existing batch of entries and set the wal position
           // and path to the wal just dequeued to correctly remove logs from the zk
-          batch.setLastWalPath(logWithEOF);
+          batch.setLastWalPath(head);
           batch.setLastWalPosition(currentPosition);
           addBatchToShippingQueue(batch);
           return true;
