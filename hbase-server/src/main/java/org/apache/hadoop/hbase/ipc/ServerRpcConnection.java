@@ -23,7 +23,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
-import io.opentelemetry.context.propagation.TextMapPropagator;
+import io.opentelemetry.context.propagation.TextMapGetter;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.DataOutputStream;
@@ -615,7 +615,7 @@ abstract class ServerRpcConnection implements Closeable {
     ProtobufUtil.mergeFrom(builder, cis, headerSize);
     RequestHeader header = (RequestHeader) builder.build();
     offset += headerSize;
-    TextMapPropagator.Getter<RPCTInfo> getter = new TextMapPropagator.Getter<RPCTInfo>() {
+    TextMapGetter<RPCTInfo> getter = new TextMapGetter<RPCTInfo>() {
 
       @Override
       public Iterable<String> keys(RPCTInfo carrier) {
