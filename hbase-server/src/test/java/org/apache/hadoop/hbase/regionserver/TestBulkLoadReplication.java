@@ -183,9 +183,9 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     UTIL2.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
     //adds cluster2 as a remote peer on cluster3
     UTIL3.getAdmin().addReplicationPeer(PEER_ID2, peer2Config);
-    setupCoprocessor(UTIL1, "cluster1");
-    setupCoprocessor(UTIL2, "cluster2");
-    setupCoprocessor(UTIL3, "cluster3");
+    setupCoprocessor(UTIL1);
+    setupCoprocessor(UTIL2);
+    setupCoprocessor(UTIL3);
     BULK_LOADS_COUNT = new AtomicInteger(0);
   }
 
@@ -194,7 +194,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
       .setClusterKey(util.getClusterKey()).setSerial(isSerialPeer()).build();
   }
 
-  private void setupCoprocessor(HBaseTestingUtility cluster, String name){
+  private void setupCoprocessor(HBaseTestingUtility cluster){
     cluster.getHBaseCluster().getRegions(tableName).forEach(r -> {
       try {
         TestBulkLoadReplication.BulkReplicationTestObserver cp = r.getCoprocessorHost().
