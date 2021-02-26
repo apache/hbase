@@ -26,7 +26,7 @@ pipeline {
   options {
     // this should roughly match how long we tell the flaky dashboard to look at
     buildDiscarder(logRotator(numToKeepStr: '30'))
-    timeout (time: 2, unit: 'HOURS')
+    timeout (time: 4, unit: 'HOURS')
     timestamps()
   }
   parameters {
