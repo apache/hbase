@@ -19,10 +19,11 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import java.util.List;
-
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
 
@@ -37,7 +38,8 @@ import org.apache.hadoop.hbase.master.MasterServices;
  * "split/merge storms".
  */
 @InterfaceAudience.Private
-public interface RegionNormalizer {
+@InterfaceStability.Evolving
+public interface RegionNormalizer extends Configurable {
   /**
    * Set the master service. Must be called before first call to
    * {@link #computePlansForTable(TableName)}.
@@ -57,6 +59,5 @@ public interface RegionNormalizer {
    * @param table table to normalize
    * @return normalization actions to perform. Null if no action to take
    */
-  List<NormalizationPlan> computePlansForTable(TableName table)
-      throws HBaseIOException;
+  List<NormalizationPlan> computePlansForTable(TableName table) throws HBaseIOException;
 }

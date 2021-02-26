@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -106,6 +107,8 @@ import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleanerChore;
 import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
 import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
+import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
+import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
@@ -121,9 +124,9 @@ import org.apache.hadoop.hbase.master.procedure.MasterDDLOperationHelper;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyNamespaceProcedure;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
@@ -133,9 +136,6 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
-import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -333,6 +333,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private final double maxRitPercent;
 
   LoadBalancer balancer;
+  // a lock to prevent concurrent normalization actions.
+  private final ReentrantLock normalizationInProgressLock = new ReentrantLock();
   private RegionNormalizer normalizer;
   private BalancerChore balancerChore;
   private RegionNormalizerChore normalizerChore;
@@ -1564,19 +1566,19 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       // Only allow one balance run at at time.
       if (this.assignmentManager.getRegionStates().isRegionsInTransition()) {
         Set<RegionState> regionsInTransition =
-          this.assignmentManager.getRegionStates().getRegionsInTransition();
+            this.assignmentManager.getRegionStates().getRegionsInTransition();
         // if hbase:meta region is in transition, result of assignment cannot be recorded
         // ignore the force flag in that case
         boolean metaInTransition = assignmentManager.getRegionStates().isMetaRegionInTransition();
         String prefix = force && !metaInTransition ? "R" : "Not r";
-        LOG.debug(prefix + "unning balancer because " + regionsInTransition.size() +
-          " region(s) in transition: " + org.apache.commons.lang.StringUtils.
-            abbreviate(regionsInTransition.toString(), 256));
+        LOG.debug(prefix + "running balancer because " + regionsInTransition.size()
+            + " region(s) in transition: "
+            + org.apache.commons.lang.StringUtils.abbreviate(regionsInTransition.toString(), 256));
         if (!force || metaInTransition) return false;
       }
       if (this.serverManager.areDeadServersInProgress()) {
-        LOG.debug("Not running balancer because processing dead regionserver(s): " +
-          this.serverManager.getDeadServers());
+        LOG.debug("Not running balancer because processing dead regionserver(s): "
+            + this.serverManager.getDeadServers());
         return false;
       }
 
@@ -1593,11 +1595,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
 
       Map<TableName, Map<ServerName, List<HRegionInfo>>> assignmentsByTable =
-        this.assignmentManager.getRegionStates().getAssignmentsByTable();
+          this.assignmentManager.getRegionStates().getAssignmentsByTable();
 
       List<RegionPlan> plans = new ArrayList<RegionPlan>();
 
-      //Give the balancer the current cluster state.
+      // Give the balancer the current cluster state.
       this.balancer.setClusterStatus(getClusterStatusWithoutCoprocessor());
       for (Entry<TableName, Map<ServerName, List<HRegionInfo>>> e : assignmentsByTable.entrySet()) {
         List<RegionPlan> partialPlans = this.balancer.balanceCluster(e.getKey(), e.getValue());
@@ -1605,17 +1607,17 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
 
       long balanceStartTime = System.currentTimeMillis();
-      long cutoffTime = balanceStartTime +  this.maxBalancingTime;
-      int rpCount = 0;  // number of RegionPlans balanced so far
+      long cutoffTime = balanceStartTime + this.maxBalancingTime;
+      int rpCount = 0; // number of RegionPlans balanced so far
       if (plans != null && !plans.isEmpty()) {
-        int balanceInterval =  this.maxBalancingTime / plans.size();
-        LOG.info("Balancer plans size is " + plans.size() + ", the balance interval is "
-            + balanceInterval + " ms, and the max number regions in transition is "
-            + maxRegionsInTransition);
+        int balanceInterval = this.maxBalancingTime / plans.size();
+        LOG.info(
+          "Balancer plans size is " + plans.size() + ", the balance interval is " + balanceInterval
+              + " ms, and the max number regions in transition is " + maxRegionsInTransition);
 
-        for (RegionPlan plan: plans) {
+        for (RegionPlan plan : plans) {
           LOG.info("balance " + plan);
-          //TODO: bulk assign
+          // TODO: bulk assign
           this.assignmentManager.balance(plan);
           rpCount++;
 
@@ -1626,8 +1628,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           if (rpCount < plans.size() && System.currentTimeMillis() > cutoffTime) {
             // TODO: After balance, there should not be a cutoff time (keeping it as a security net
             // for now)
-            LOG.debug("No more balancing till next balance run; maxBalanceTime="
-                +  this.maxBalancingTime);
+            LOG.debug(
+              "No more balancing till next balance run; maxBalanceTime=" + this.maxBalancingTime);
             break;
           }
         }
@@ -1670,8 +1672,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @return true if normalization step was performed successfully, false otherwise
    *   (specifically, if HMaster hasn't been initialized properly or normalization
    *   is globally disabled)
-   * @throws IOException
-   * @throws CoordinatedStateException
+   * @throws IOException exception
+   * @throws CoordinatedStateException exception
    */
   public boolean normalizeRegions() throws IOException, CoordinatedStateException {
     if (skipRegionManagementAction("normalizer")) {
@@ -1683,20 +1685,19 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       return false;
     }
 
-    synchronized (this.normalizer) {
+    if (!normalizationInProgressLock.tryLock()) {
       // Don't run the normalizer concurrently
-      final List<TableName> allEnabledTables = new ArrayList<>(
-        this.assignmentManager.getTableStateManager().getTablesInStates(
-          TableState.State.ENABLED));
+      LOG.info("Normalization already in progress. Skipping request.");
+      return true;
+    }
+
+    try {
+      final List<TableName> allEnabledTables = new ArrayList<>(this.assignmentManager
+          .getTableStateManager().getTablesInStates(TableState.State.ENABLED));
 
       Collections.shuffle(allEnabledTables);
 
       for (TableName table : allEnabledTables) {
-        final NamespaceAuditor namespaceQuotaManager = quotaManager.getNamespaceQuotaManager();
-        if (namespaceQuotaManager != null && namespaceQuotaManager.getState(table.getNamespaceAsString()) != null) {
-          LOG.debug("Skipping normalizing " + table + " since its namespace has quota");
-          continue;
-        }
         if (table.isSystemTable()) {
           continue;
         }
@@ -1727,6 +1728,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           }
         }
       }
+    } finally {
+      normalizationInProgressLock.unlock();
     }
     // If Region did not generate any plans, it means the cluster is already balanced.
     // Return true indicating a success.
