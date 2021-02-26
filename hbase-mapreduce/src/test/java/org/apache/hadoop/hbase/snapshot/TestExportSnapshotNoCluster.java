@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -42,6 +43,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test Export Snapshot Tool
  */
+@Ignore
 @Category({MapReduceTests.class, MediumTests.class})
 public class TestExportSnapshotNoCluster {
 

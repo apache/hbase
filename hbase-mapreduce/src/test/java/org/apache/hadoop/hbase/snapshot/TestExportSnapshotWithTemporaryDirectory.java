@@ -28,8 +28,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
+@Ignore
 @Category({MediumTests.class})
 public class TestExportSnapshotWithTemporaryDirectory extends TestExportSnapshot {
 
