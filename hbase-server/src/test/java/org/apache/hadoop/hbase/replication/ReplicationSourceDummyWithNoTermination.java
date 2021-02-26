@@ -16,13 +16,11 @@
 package org.apache.hadoop.hbase.replication;
 
 public class ReplicationSourceDummyWithNoTermination extends ReplicationSourceDummy {
-  boolean firstTime = true;
-  boolean isTerminateInvoked = false;
+  volatile boolean firstTime = true;
   @Override
   public void terminate(String reason) {
     // This is to block the zk listener to close the queues
     // to simulate the znodes getting deleted without zk listener getting invoked
-    isTerminateInvoked = true;
     if (firstTime) {
       firstTime = false;
       throw new RuntimeException(fakeExceptionMessage);
