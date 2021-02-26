@@ -275,9 +275,6 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
         }
       }
       bc = new BufferChain(responseBufs);
-      if (connection.useWrap) {
-        bc = wrapWithSasl(bc);
-      }
     } catch (IOException e) {
       RpcServer.LOG.warn("Exception while creating response " + e);
     }
@@ -540,6 +537,20 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
 
   @Override
   public synchronized BufferChain getResponse() {
-    return response;
+    if (connection.useWrap) {
+      /*
+       * wrapping result with SASL as the last step just before sending it out, so
+       * every message must have the right increasing sequence number
+       */
+      try {
+        return wrapWithSasl(response);
+      } catch (IOException e) {
+        /* it is exactly the same what setResponse() does */
+        RpcServer.LOG.warn("Exception while creating response " + e);
+        return null;
+      }
+    } else {
+      return response;
+    }
   }
 }
