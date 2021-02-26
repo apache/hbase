@@ -564,7 +564,7 @@ public class TestReplicationSource {
       }
     };
 
-    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint, false);
+    final ReplicationSource source = mocks.createReplicationSourceAndManagerWithMocks(endpoint);
     source.run();
     source.enqueueLog(log1);
 

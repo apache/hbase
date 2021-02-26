@@ -253,7 +253,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @return logs with the given prefix
    */
   public SortedSet<String> getLogsWithPrefix(String walGroupId, String logPrefix) {
-    return Collections.unmodifiableSortedSet(walsById.get(walGroupId).get(logPrefix));
+    return walsById.get(walGroupId).get(logPrefix);
   }
 
   /**
