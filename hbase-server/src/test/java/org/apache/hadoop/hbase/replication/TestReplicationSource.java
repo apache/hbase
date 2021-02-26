@@ -29,25 +29,26 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
-
+import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -283,27 +284,30 @@ public class TestReplicationSource {
     }
 
     ReplicationSource createReplicationSourceAndManagerWithMocks(ReplicationEndpoint endpoint)
-      throws IOException, ReplicationSourceWithoutPeerException {
+        throws Exception {
       ReplicationTracker tracker = mock(ReplicationTracker.class);
       Server server = mock(Server.class);
       FileSystem fs = mock(FileSystem.class);
       UUID clusterId = UUID.randomUUID();
+      String peerId = "testPeerClusterZnode";
 
       manager = Mockito.spy(new ReplicationSourceManager(
         queues, peers, tracker, conf, server, fs, logDir, oldLogDir, clusterId));
 
       doCallRealMethod().when(manager).removePeer(Mockito.anyString());
       // Mock the failure during cleaning log with node already deleted
-      doThrow(new ReplicationSourceWithoutPeerException("Peer Removed")).when(manager)
-        .cleanOldLogs(anyString(), anyString(), anyBoolean());
+      doThrow(new ReplicationSourceWithoutPeerException("Peer Removed")).when(queues)
+        .removeLog(anyString(), anyString());
       doCallRealMethod().when(manager)
         .logPositionAndCleanOldLogs(Mockito.<Path>anyObject(), Mockito.anyString(),
           Mockito.anyLong(), Mockito.anyBoolean(), Mockito.anyBoolean());
       final ReplicationSource source = new ReplicationSource();
       endpoint.init(context);
       source.init(conf, FS, manager, queues, peers, mock(Stoppable.class),
-        "testPeerClusterZnode", clusterId, endpoint, metrics);
+        peerId, clusterId, endpoint, metrics);
       manager.getSources().add(source);
+      SortedSet<String> walsWithPrefix = Sets.newTreeSet(Collections.singletonList("fake"));
+      doReturn(walsWithPrefix).when(manager).getLogsWithPrefix(anyString(), anyString());
       return source;
     }
 
