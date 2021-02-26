@@ -183,7 +183,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * position. It will also clean old logs from the queue.
    * @param log Path to the log currently being replicated from
    *            replication status in zookeeper. It will also delete older entries.
-   * @param id id of the peer cluster
+   * @param id id of the replication queue
    * @param position current location in the log
    * @param queueRecovered indicates if this queue comes from another region server
    * @param holdLogInZK if true then the log is retained in ZK

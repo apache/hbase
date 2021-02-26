@@ -31,8 +31,6 @@
 NOTE: Codecs mentioned in this section are for encoding and decoding data blocks or row keys.
 For information about replication codecs, see <<cluster.replication.preserving.tags,cluster.replication.preserving.tags>>.
 
-Some of the information in this section is pulled from a link:http://search-hadoop.com/m/lL12B1PFVhp1/v=threaded[discussion] on the HBase Development mailing list.
-
 HBase supports several different compression algorithms which can be enabled on a ColumnFamily.
 Data block encoding attempts to limit duplication of information in keys, taking advantage of some of the fundamental designs and patterns of HBase, such as sorted row keys and the schema of a given table.
 Compressors reduce the size of large, opaque byte arrays in cells, and can significantly reduce the storage space needed to store uncompressed data.
@@ -129,7 +127,7 @@ Come and write the dev list if you are interesting in carrying-on this encoding.
 
 The compression or codec type to use depends on the characteristics of your data. Choosing the wrong type could cause your data to take more space rather than less, and can have performance implications.
 
-In general, you need to weigh your options between smaller size and faster compression/decompression. Following are some general guidelines, expanded from a discussion at link:http://search-hadoop.com/m/lL12B1PFVhp1[Documenting Guidance on compression and codecs].
+In general, you need to weigh your options between smaller size and faster compression/decompression. Following are some general guidelines, expanded from a discussion at link:https://lists.apache.org/thread.html/481e67a61163efaaf4345510447a9244871a8d428244868345a155ff%401378926618%40%3Cdev.hbase.apache.org%3E[Documenting Guidance on compression and codecs].
 
 * If you have long keys (compared to the values) or many columns, use a prefix encoder.
   FAST_DIFF is recommended, as more testing is needed for Prefix Tree encoding.

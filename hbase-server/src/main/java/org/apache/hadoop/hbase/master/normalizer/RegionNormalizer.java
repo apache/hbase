@@ -40,14 +40,14 @@ import org.apache.hadoop.hbase.master.MasterServices;
 public interface RegionNormalizer {
   /**
    * Set the master service. Must be called before first call to
-   * {@link #computePlanForTable(TableName)}.
+   * {@link #computePlansForTable(TableName)}.
    * @param masterServices master services to use
    */
   void setMasterServices(MasterServices masterServices);
 
   /**
    * Set the master RPC service. Must be called before first call to
-   * {@link #computePlanForTable(TableName)}.
+   * {@link #computePlansForTable(TableName)}.
    * @param masterRpcServices master RPC services to use
    */
   void setMasterRpcServices(MasterRpcServices masterRpcServices);
@@ -57,6 +57,6 @@ public interface RegionNormalizer {
    * @param table table to normalize
    * @return normalization actions to perform. Null if no action to take
    */
-  List<NormalizationPlan> computePlanForTable(TableName table)
+  List<NormalizationPlan> computePlansForTable(TableName table)
       throws HBaseIOException;
 }

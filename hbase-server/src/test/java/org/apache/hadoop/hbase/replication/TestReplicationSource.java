@@ -35,6 +35,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.Collections;
@@ -52,8 +53,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -72,18 +75,24 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceFactory;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceSource;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALProvider;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -123,6 +132,7 @@ public class TestReplicationSource {
     if (FS.exists(logDir)) {
       FS.delete(logDir, true);
     }
+    conf.setBoolean("replication.source.eof.autorecovery", true);
   }
 
   @Before
@@ -311,12 +321,25 @@ public class TestReplicationSource {
       return source;
     }
 
-    ReplicationSource createReplicationSourceWithMocks(ReplicationEndpoint endpoint)
-            throws IOException {
+    ReplicationSource createReplicationSourceWithMocks(ReplicationEndpoint endpoint,
+      boolean isRecovered) throws IOException {
       final ReplicationSource source = new ReplicationSource();
       endpoint.init(context);
       source.init(conf, FS, manager, queues, peers, mock(Stoppable.class),
-              "testPeerClusterZnode", UUID.randomUUID(), endpoint, metrics);
+        "testPeerClusterZnode", UUID.randomUUID(), endpoint, metrics);
+      if (isRecovered) {
+        when(manager.getOldSources())
+          .thenReturn(Lists.<ReplicationSourceInterface>newArrayList(source));
+      }
+      return source;
+    }
+
+    ReplicationSource createReplicationSourceWithMocks(MetricsSource metrics,
+            ReplicationEndpoint endpoint) throws IOException {
+      final ReplicationSource source = new ReplicationSource();
+      endpoint.init(context);
+      source.init(conf, FS, manager, queues, peers, mock(Stoppable.class),
+        "testPeerClusterZnode", UUID.randomUUID(), endpoint, metrics);
       return source;
     }
 
@@ -328,48 +351,54 @@ public class TestReplicationSource {
   @Test
   public void testSetLogPositionForWALCurrentlyReadingWhenLogsRolled() throws Exception {
     final int numWALEntries = 5;
-    conf.setInt("replication.source.nb.capacity", numWALEntries);
+    int nbCapacity = conf.getInt("replication.source.nb.capacity", 25000);
+    try {
+      conf.setInt("replication.source.nb.capacity", numWALEntries);
 
-    Mocks mocks = new Mocks();
-    final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest() {
-      @Override
-      public WALEntryFilter getWALEntryfilter() {
-        return null;
-      }
-    };
-    WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), null, "test");
-    final Path log1 = new Path(logDir, "log.1");
-    final Path log2 = new Path(logDir, "log.2");
+      Mocks mocks = new Mocks();
+      final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest() {
+        @Override public WALEntryFilter getWALEntryfilter() {
+          return null;
+        }
+      };
+      WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), null, "test");
+      final Path log1 = new Path(logDir, "log.1");
+      final Path log2 = new Path(logDir, "log.2");
 
-    WALProvider.Writer writer1 = WALFactory.createWALWriter(FS, log1, TEST_UTIL.getConfiguration());
-    WALProvider.Writer writer2 = WALFactory.createWALWriter(FS, log2, TEST_UTIL.getConfiguration());
+      WALProvider.Writer writer1
+        = WALFactory.createWALWriter(FS, log1, TEST_UTIL.getConfiguration());
+      WALProvider.Writer writer2
+        = WALFactory.createWALWriter(FS, log2, TEST_UTIL.getConfiguration());
 
-    appendEntries(writer1, 3);
-    appendEntries(writer2, 2);
+      appendEntries(writer1, 3);
+      appendEntries(writer2, 2);
 
-    long pos = getPosition(wals, log2, 2);
+      long pos = getPosition(wals, log2, 2);
 
-    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint);
-    source.run();
+      final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint, false);
+      source.run();
 
-    source.enqueueLog(log1);
-    // log rolled
-    source.enqueueLog(log2);
+      source.enqueueLog(log1);
+      // log rolled
+      source.enqueueLog(log2);
 
-    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
-        return endpoint.replicateCount.get() > 0;
-      }
-    });
+      Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+        @Override public boolean evaluate() {
+          return endpoint.replicateCount.get() > 0;
+        }
+      });
 
-    ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
-    ArgumentCaptor<Long> positionCaptor = ArgumentCaptor.forClass(Long.class);
-    verify(mocks.manager, times(1))
+      ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
+      ArgumentCaptor<Long> positionCaptor = ArgumentCaptor.forClass(Long.class);
+      verify(mocks.manager, times(1))
         .logPositionAndCleanOldLogs(pathCaptor.capture(), anyString(), positionCaptor.capture(),
-              anyBoolean(), anyBoolean());
-    assertTrue(endpoint.lastEntries.size() == 5);
-    assertThat(pathCaptor.getValue(), is(log2));
-    assertThat(positionCaptor.getValue(), is(pos));
+          anyBoolean(), anyBoolean());
+      assertTrue(endpoint.lastEntries.size() == 5);
+      assertThat(pathCaptor.getValue(), is(log2));
+      assertThat(positionCaptor.getValue(), is(pos));
+    } finally {
+      conf.setInt("replication.source.nb.capacity", nbCapacity);
+    }
   }
 
   @Test
@@ -412,7 +441,7 @@ public class TestReplicationSource {
     writer.close();
 
     Mocks mocks = new Mocks();
-    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint);
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint, false);
     source.run();
 
     source.enqueueLog(log);
@@ -430,7 +459,7 @@ public class TestReplicationSource {
     Mocks mocks = new Mocks();
 
     final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest();
-    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint);
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint, false);
     WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), null, "test");
 
     final Path log1 = new Path(logDir, "log.1");
@@ -482,7 +511,7 @@ public class TestReplicationSource {
     final long pos = getPosition(wals, log2, 2);
 
     final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest();
-    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint);
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint, false);
     source.enqueueLog(log1);
     source.enqueueLog(log2);
     source.run();
@@ -535,7 +564,7 @@ public class TestReplicationSource {
       }
     };
 
-    final ReplicationSource source = mocks.createReplicationSourceAndManagerWithMocks(endpoint);
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint, false);
     source.run();
     source.enqueueLog(log1);
 
@@ -557,6 +586,173 @@ public class TestReplicationSource {
     Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
       @Override public boolean evaluate() {
         return !source.isSourceActive();
+      }
+    });
+  }
+
+  @Test
+  public void testReplicationOnEmptyLogAtTheEndOfQueueWithMultipleLogs() throws Exception {
+    final String logPrefix = "logPrefix";
+    Mocks mocks = new Mocks();
+    // set table cfs to filter all cells out
+    final TableName replicatedTable = TableName.valueOf("replicated_table");
+    final Map<TableName, List<String>> cfs =
+      Collections.singletonMap(replicatedTable, Collections.<String>emptyList());
+    when(mocks.peer.getTableCFs()).thenReturn(cfs);
+
+    // Append 3 entries in a log
+    final Path log1 = new Path(logDir, logPrefix + ".1");
+    WALProvider.Writer writer1 = WALFactory.createWALWriter(FS, log1, TEST_UTIL.getConfiguration());
+    appendEntries(writer1, 3);
+
+    // Create a 0 length log.
+    Path emptyLog = new Path(logDir, logPrefix + ".2");
+    FSDataOutputStream fsdos = FS.create(emptyLog);
+    fsdos.close();
+    assertEquals(0, FS.getFileStatus(emptyLog).getLen());
+
+    // Replication end point with no filter
+    final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest() {
+      @Override
+      public WALEntryFilter getWALEntryfilter() {
+        return null;
+      }
+    };
+
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint, true);
+    source.run();
+    source.enqueueLog(log1);
+    source.enqueueLog(emptyLog);
+
+    // Wait for source to replicate
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return endpoint.replicateCount.get() == 1;
+      }
+    });
+
+    // Wait and verify if all the entries get replicated for non empty logs
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return endpoint.lastEntries.size() == 3;
+      }
+    });
+
+    // Wait and verify if log queue has been drained fully
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return source.getQueues().get(logPrefix).isEmpty();
+      }
+    });
+  }
+
+  @Test
+  public void testReplicationOnEmptyLogAtTheEndOfQueueWithSingleLog() throws Exception {
+    final String logPrefix = "logPrefix";
+    Mocks mocks = new Mocks();
+    // set table cfs to filter all cells out
+    final TableName replicatedTable = TableName.valueOf("replicated_table");
+    final Map<TableName, List<String>> cfs =
+      Collections.singletonMap(replicatedTable, Collections.<String>emptyList());
+    when(mocks.peer.getTableCFs()).thenReturn(cfs);
+
+    // Create a 0 length log.
+    Path emptyLog = new Path(logDir, logPrefix + ".1");
+    FSDataOutputStream fsdos = FS.create(emptyLog);
+    fsdos.close();
+    assertEquals(0, FS.getFileStatus(emptyLog).getLen());
+
+    // Replication end point with no filter
+    final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest() {
+      @Override
+      public WALEntryFilter getWALEntryfilter() {
+        return null;
+      }
+    };
+
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint, true);
+    source.run();
+    source.enqueueLog(emptyLog);
+
+    // Wait and verify if no entry got replicated
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return endpoint.lastEntries == null;
+      }
+    });
+
+    // Wait and verify get is queue is empty
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return source.getQueues().get(logPrefix).isEmpty();
+      }
+    });
+  }
+
+  @Test
+  public void testReplicationOnEmptyLogBetweenTheNonEmptyLogsInLogQueue() throws Exception {
+    final String logPrefix = "logPrefix";
+    Mocks mocks = new Mocks();
+    // set table cfs to filter all cells out
+    final TableName replicatedTable = TableName.valueOf("replicated_table");
+    final Map<TableName, List<String>> cfs =
+      Collections.singletonMap(replicatedTable, Collections.<String>emptyList());
+    when(mocks.peer.getTableCFs()).thenReturn(cfs);
+
+    // Append 3 entries in a log
+    final Path log1 = new Path(logDir, logPrefix + ".11");
+    WALProvider.Writer writer1 = WALFactory.createWALWriter(FS, log1, TEST_UTIL.getConfiguration());
+    appendEntries(writer1, 3);
+
+    // Create a 0 length log.
+    Path emptyLog = new Path(logDir, logPrefix + ".12");
+    FSDataOutputStream fsdos = FS.create(emptyLog);
+    fsdos.close();
+    assertEquals(0, FS.getFileStatus(emptyLog).getLen());
+
+    // Append 5 entries in a log
+    final Path log3 = new Path(logDir, logPrefix + ".13");
+    WALProvider.Writer writer3 = WALFactory.createWALWriter(FS, log3, TEST_UTIL.getConfiguration());
+    appendEntries(writer3, 5);
+
+    // Append 10 entries in a log
+    final Path log4 = new Path(logDir, logPrefix + ".14");
+    WALProvider.Writer writer4 = WALFactory.createWALWriter(FS, log4, TEST_UTIL.getConfiguration());
+    appendEntries(writer4, 10);
+
+    // Replication end point with no filter
+    final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest() {
+      @Override
+      public WALEntryFilter getWALEntryfilter() {
+        return null;
+      }
+    };
+
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint, true);
+    source.run();
+    source.enqueueLog(log1);
+    source.enqueueLog(emptyLog);
+    source.enqueueLog(log3);
+    source.enqueueLog(log4);
+
+    // Wait for source to replicate
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return endpoint.replicateCount.get() == 2;
+      }
+    });
+
+    // Wait and verify the last replicated entries
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return endpoint.lastEntries.size() == 15;
+      }
+    });
+
+    // Wait and verify only one log is there in queue
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return source.getQueues().get(logPrefix).size() == 1;
       }
     });
   }
@@ -667,5 +863,44 @@ public class TestReplicationSource {
     }
   }
 
-}
+  /*
+  Test age of oldest wal metric.
+  */
+  @Test
+  public void testAgeOfOldestWal() throws Exception {
+    try {
+      ManualEnvironmentEdge manualEdge = new ManualEnvironmentEdge();
+      EnvironmentEdgeManager.injectEdge(manualEdge);
 
+      String id = "1";
+      MetricsSource metrics = new MetricsSource(id);
+      Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+      conf.setInt("replication.source.maxretriesmultiplier", 1);
+      Mocks mocks = new Mocks();
+      ReplicationEndpoint endpoint = mock(ReplicationEndpoint.class);
+      ReplicationSource source = mocks.createReplicationSourceWithMocks(metrics, endpoint);
+
+      final Path log1 = new Path(logDir, "log-walgroup-a.8");
+      manualEdge.setValue(10);
+      // Diff of current time (10) and  log-walgroup-a.8 timestamp will be 2.
+      source.enqueueLog(log1);
+      MetricsReplicationSourceSource metricsSource1 = getSourceMetrics(id);
+      assertEquals(2, metricsSource1.getOldestWalAge());
+
+      final Path log2 = new Path(logDir, "log-walgroup-b.4");
+      // Diff of current time (10) and log-walgroup-b.4 will be 6 so oldestWalAge should be 6
+      source.enqueueLog(log2);
+      assertEquals(6, metricsSource1.getOldestWalAge());
+      // Clear all metrics.
+      metrics.clear();
+    } finally {
+      EnvironmentEdgeManager.reset();
+    }
+  }
+
+  private MetricsReplicationSourceSource getSourceMetrics(String sourceId) {
+    MetricsReplicationSourceFactory factory = CompatibilitySingletonFactory
+      .getInstance(MetricsReplicationSourceFactory.class);
+    return factory.getSource(sourceId);
+  }
+}

@@ -59,7 +59,8 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
   private Entry currentEntry;
   // position after reading current entry
   private long currentPosition = 0;
-  private PriorityBlockingQueue<Path> logQueue;
+  private final ReplicationSourceLogQueue logQueue;
+  private final String walGroupId;
   private FileSystem fs;
   private Configuration conf;
   private MetricsSource metrics;
@@ -70,31 +71,30 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
    * @param fs {@link FileSystem} to use to create {@link Reader} for this stream
    * @param conf {@link Configuration} to use to create {@link Reader} for this stream
    * @param metrics replication metrics
-   * @throws IOException
+   * @param walGroupId wal prefix
    */
-  public WALEntryStream(PriorityBlockingQueue<Path> logQueue, FileSystem fs, Configuration conf,
-      MetricsSource metrics)
-      throws IOException {
-    this(logQueue, fs, conf, 0, metrics);
+  public WALEntryStream(ReplicationSourceLogQueue logQueue, FileSystem fs, Configuration conf,
+      MetricsSource metrics, String walGroupId) {
+    this(logQueue, fs, conf, 0, metrics, walGroupId);
   }
 
   /**
    * Create an entry stream over the given queue at the given start position
    * @param logQueue the queue of WAL paths
+   * @param fs {@link FileSystem} to use to create {@link Reader} for this stream
    * @param conf the {@link Configuration} to use to create {@link Reader} for this stream
    * @param startPosition the position in the first WAL to start reading at
-   * @param walFileLengthProvider provides the length of the WAL file
-   * @param serverName the server name which all WALs belong to
    * @param metrics the replication metrics
-   * @throws IOException
+   * @param walGroupId wal prefix
    */
-  public WALEntryStream(PriorityBlockingQueue<Path> logQueue, FileSystem fs, Configuration conf,
-      long startPosition, MetricsSource metrics) throws IOException {
+  public WALEntryStream(ReplicationSourceLogQueue logQueue, FileSystem fs, Configuration conf,
+      long startPosition, MetricsSource metrics, String walGroupId) {
     this.logQueue = logQueue;
     this.fs = fs;
     this.conf = conf;
     this.currentPosition = startPosition;
     this.metrics = metrics;
+    this.walGroupId = walGroupId;
   }
 
   /**
@@ -120,7 +120,9 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
    */
   @Override
   public Entry next() {
-    if (!hasNext()) throw new NoSuchElementException();
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
     Entry save = currentEntry;
     currentEntry = null; // gets reloaded by hasNext()
     return save;
@@ -178,7 +180,7 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
   /**
    * Should be called if the stream is to be reused (i.e. used again after hasNext() has returned
    * false)
-   * @throws IOException
+   * @throws IOException io exception while resetting the reader
    */
   public void reset() throws IOException {
     if (reader != null && currentPath != null) {
@@ -198,7 +200,7 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
     if (checkReader()) {
       readNextEntryAndSetPosition();
       if (currentEntry == null) { // no more entries in this log file - see if log was rolled
-        if (logQueue.size() > 1) { // log was rolled
+        if (logQueue.getQueue(walGroupId).size() > 1) { // log was rolled
           // Before dequeueing, we should always get one more attempt at reading.
           // This is in case more entries came in after we opened the reader,
           // and a new log was enqueued while we were reading. See HBASE-6758
@@ -266,7 +268,7 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
       LOG.debug("Reached the end of log " + currentPath);
     }
     closeReader();
-    logQueue.remove();
+    logQueue.remove(walGroupId);
     setCurrentPath(null);
     setPosition(0);
     metrics.decrSizeOfLogQueue();
@@ -300,10 +302,13 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
 
   // open a reader on the next log in queue
   private boolean openNextLog() throws IOException {
-    Path nextPath = logQueue.peek();
+    PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
+    Path nextPath = queue.peek();
     if (nextPath != null) {
       openReader(nextPath);
-      if (reader != null) return true;
+      if (reader != null) {
+        return true;
+      }
     }
     return false;
   }
@@ -346,7 +351,9 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
       handleFileNotFound(path, fnfe);
     }  catch (RemoteException re) {
       IOException ioe = re.unwrapRemoteException(FileNotFoundException.class);
-      if (!(ioe instanceof FileNotFoundException)) throw ioe;
+      if (!(ioe instanceof FileNotFoundException)) {
+        throw ioe;
+      }
       handleFileNotFound(path, (FileNotFoundException)ioe);
     } catch (LeaseNotRecoveredException lnre) {
       // HBASE-15019 the WAL was not closed due to some hiccup.

@@ -135,6 +135,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
+import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -327,7 +328,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     new ProcedureEvent("server crash processing");
 
   // Maximum time we should run balancer for
-  private final int maxBlancingTime;
+  private final int maxBalancingTime;
   // Maximum percent of regions in transition when balancing
   private final double maxRitPercent;
 
@@ -493,7 +494,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // preload table descriptor at startup
     this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
 
-    this.maxBlancingTime = getMaxBalancingTime();
+    this.maxBalancingTime = getMaxBalancingTime();
     this.maxRitPercent = conf.getDouble(HConstants.HBASE_MASTER_BALANCER_MAX_RIT_PERCENT,
       HConstants.DEFAULT_HBASE_MASTER_BALANCER_MAX_RIT_PERCENT);
 
@@ -1552,13 +1553,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   public boolean balance(boolean force) throws IOException {
     // if master not initialized, don't run balancer.
-    if (!isInitialized()) {
-      LOG.debug("Master has not been initialized, don't run balancer.");
-      return false;
-    }
-
-    if (isInMaintenanceMode()) {
-      LOG.info("Master is in maintenanceMode mode, don't run balancer.");
+    if (skipRegionManagementAction("balancer")) {
       return false;
     }
 
@@ -1610,10 +1605,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
 
       long balanceStartTime = System.currentTimeMillis();
-      long cutoffTime = balanceStartTime +  this.maxBlancingTime;
+      long cutoffTime = balanceStartTime +  this.maxBalancingTime;
       int rpCount = 0;  // number of RegionPlans balanced so far
       if (plans != null && !plans.isEmpty()) {
-        int balanceInterval =  this.maxBlancingTime / plans.size();
+        int balanceInterval =  this.maxBalancingTime / plans.size();
         LOG.info("Balancer plans size is " + plans.size() + ", the balance interval is "
             + balanceInterval + " ms, and the max number regions in transition is "
             + maxRegionsInTransition);
@@ -1632,7 +1627,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
             // TODO: After balance, there should not be a cutoff time (keeping it as a security net
             // for now)
             LOG.debug("No more balancing till next balance run; maxBalanceTime="
-                +  this.maxBlancingTime);
+                +  this.maxBalancingTime);
             break;
           }
         }
@@ -1652,6 +1647,23 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return true;
   }
 
+  private boolean skipRegionManagementAction(String action) throws IOException {
+    if (!isInitialized()) {
+      LOG.debug("Master has not been initialized, don't run " + action);
+      return true;
+    }
+
+    if (this.getServerManager().isClusterShutdown()) {
+      LOG.info("CLuster is shutting down, don't run " + action);
+    }
+
+    if (isInMaintenanceMode()) {
+      LOG.info("Master is in maintenanceMode mode, don't run " + action);
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Perform normalization of cluster (invoked by {@link RegionNormalizerChore}).
    *
@@ -1662,50 +1674,55 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @throws CoordinatedStateException
    */
   public boolean normalizeRegions() throws IOException, CoordinatedStateException {
-    if (!isInitialized()) {
-      LOG.debug("Master has not been initialized, don't run region normalizer.");
+    if (skipRegionManagementAction("normalizer")) {
       return false;
     }
 
-    if (isInMaintenanceMode()) {
-      LOG.info("Master is in maintenance mode, don't run region normalizer.");
-      return false;
-    }
-
-    if (!this.regionNormalizerTracker.isNormalizerOn()) {
+    if (isNormalizerOn()) {
       LOG.debug("Region normalization is disabled, don't run region normalizer.");
       return false;
     }
 
     synchronized (this.normalizer) {
       // Don't run the normalizer concurrently
-      List<TableName> allEnabledTables = new ArrayList<>(
+      final List<TableName> allEnabledTables = new ArrayList<>(
         this.assignmentManager.getTableStateManager().getTablesInStates(
           TableState.State.ENABLED));
 
       Collections.shuffle(allEnabledTables);
 
       for (TableName table : allEnabledTables) {
-        if (isInMaintenanceMode()) {
-          LOG.debug("Master is in maintenance mode, stop running region normalizer.");
+        final NamespaceAuditor namespaceQuotaManager = quotaManager.getNamespaceQuotaManager();
+        if(namespaceQuotaManager == null) {
+          LOG.debug("Skipping normalizing since namespace quota is null");
           return false;
         }
-
-        if (quotaManager.getNamespaceQuotaManager() != null &&
-            quotaManager.getNamespaceQuotaManager().getState(table.getNamespaceAsString()) != null){
+        if (namespaceQuotaManager.getState(table.getNamespaceAsString()) != null) {
           LOG.debug("Skipping normalizing " + table + " since its namespace has quota");
           continue;
         }
-        if (table.isSystemTable() || (getTableDescriptors().get(table) != null &&
-            !getTableDescriptors().get(table).isNormalizationEnabled())) {
-          LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
-              + " table or doesn't have auto normalization turned on");
+        if (table.isSystemTable()) {
           continue;
         }
-        List<NormalizationPlan> plans = this.normalizer.computePlanForTable(table);
-        if (plans != null) {
+
+        HTableDescriptor tableDescriptor = getTableDescriptors().get(table);
+        if (tableDescriptor != null && !tableDescriptor.isNormalizationEnabled()) {
+          LOG.debug("Skipping normalization for table: " + table
+              + ", as it doesn't have auto normalization turned on");
+          continue;
+        }
+        // make one last check that the cluster isn't shutting down before proceeding.
+        if (skipRegionManagementAction("region normalizer")) {
+          return false;
+        }
+
+        List<NormalizationPlan> plans = this.normalizer.computePlansForTable(table);
+        if (plans == null || plans.isEmpty()) {
+          return true;
+        }
+        try (Admin admin = clusterConnection.getAdmin()) {
           for (NormalizationPlan plan : plans) {
-            plan.execute(clusterConnection.getAdmin());
+            plan.execute(admin);
             if (plan.getType() == PlanType.SPLIT) {
               splitPlanCount++;
             } else if (plan.getType() == PlanType.MERGE) {

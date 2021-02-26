@@ -103,24 +103,15 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
    * @return normalization plan to execute
    */
   @Override
-  public List<NormalizationPlan> computePlanForTable(TableName table) throws HBaseIOException {
+  public List<NormalizationPlan> computePlansForTable(TableName table) throws HBaseIOException {
     if (table == null || table.isSystemTable()) {
       LOG.debug("Normalization of system table " + table + " isn't allowed");
       return null;
     }
     boolean splitEnabled = true, mergeEnabled = true;
-    try {
-      splitEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
-        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.SPLIT)).getEnabled();
-    } catch (ServiceException se) {
-      LOG.debug("Unable to determine whether split is enabled", se);
-    }
-    try {
-      mergeEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
-        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
-    } catch (ServiceException se) {
-      LOG.debug("Unable to determine whether merge is enabled", se);
-    }
+    splitEnabled = isSplitEnabled();
+    mergeEnabled = isMergeEnabled();
+
     if (!splitEnabled && !mergeEnabled) {
       LOG.debug("Both split and merge are disabled for table: " + table);
       return null;
@@ -142,13 +133,13 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       ", number of regions: " + tableRegions.size());
 
     long totalSizeMb = 0;
-    int acutalRegionCnt = 0;
+    int actualRegionCnt = 0;
 
     for (int i = 0; i < tableRegions.size(); i++) {
       HRegionInfo hri = tableRegions.get(i);
       long regionSize = getRegionSize(hri);
       if (regionSize > 0) {
-        acutalRegionCnt++;
+        actualRegionCnt++;
         totalSizeMb += regionSize;
       }
     }
@@ -176,16 +167,15 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     } else if (targetRegionCount > 0) {
       avgRegionSize = totalSizeMb / (double) targetRegionCount;
     } else {
-      avgRegionSize = acutalRegionCnt == 0 ? 0 : totalSizeMb / (double) acutalRegionCnt;
+      avgRegionSize = actualRegionCnt == 0 ? 0 : totalSizeMb / (double) actualRegionCnt;
     }
 
     LOG.debug("Table " + table + ", total aggregated regions size: " + totalSizeMb);
     LOG.debug("Table " + table + ", average region size: " + avgRegionSize);
 
-    int candidateIdx = 0;
     int splitCount = 0;
     int mergeCount = 0;
-    while (candidateIdx < tableRegions.size()) {
+    for (int candidateIdx = 0; candidateIdx < tableRegions.size(); candidateIdx++) {
       HRegionInfo hri = tableRegions.get(candidateIdx);
       long regionSize = getRegionSize(hri);
       // if the region is > 2 times larger than average, we split it, split
@@ -214,7 +204,6 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
           }
         }
       }
-      candidateIdx++;
     }
     if (plans.isEmpty()) {
       LOG.debug("No normalization needed, regions look good for table: " + table);
@@ -227,7 +216,38 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     }
     return plans;
   }
+  /**
+   * Return configured value for MasterSwitchType.SPLIT.
+   */
+  private boolean isSplitEnabled() {
+    boolean splitEnabled = true;
+    try {
+      splitEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
+        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.SPLIT)).getEnabled();
+    } catch (ServiceException se) {
+      LOG.debug("Unable to determine whether split is enabled", se);
+    }
+    return splitEnabled;
+  }
 
+  /**
+   * Return configured value for MasterSwitchType.MERGE.
+   */
+  private boolean isMergeEnabled() {
+    boolean mergeEnabled = true;
+    try {
+      mergeEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
+        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
+    } catch (ServiceException se) {
+      LOG.debug("Unable to determine whether merge is enabled", se);
+    }
+    return mergeEnabled;
+  }
+
+  /**
+   * @param hri used to calculate region size
+   * @return region size in MB
+   */
   private long getRegionSize(HRegionInfo hri) {
     ServerName sn =
         masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);
