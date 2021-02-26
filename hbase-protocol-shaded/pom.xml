@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
     /**
      * Licensed to the Apache Software Foundation (ASF) under one
@@ -23,7 +23,7 @@
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>2.0.0-alpha4-SNAPSHOT</version>
+    <version>2.5.0-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-protocol-shaded</artifactId>
@@ -33,24 +33,16 @@
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <!--Version of protobuf that hbase uses internally (we shade our pb)
          Must match what is out in hbase-thirdparty include.
-         (Note, there may only be a 3.3.0 protoc... no 3.3.1 protoc
            -->
-    <internal.protobuf.version>3.3.0</internal.protobuf.version>
+    <internal.protobuf.version>3.11.4</internal.protobuf.version>
   </properties>
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
       <!-- Make a jar and put the sources in the jar -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-		  </plugin> 
+		  </plugin>
       <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
@@ -86,7 +78,6 @@
             </goals>
             <configuration>
               <protocArtifact>com.google.protobuf:protoc:${internal.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-              <attachProtoSources>false</attachProtoSources>
               <checkStaleness>true</checkStaleness>
             </configuration>
           </execution>
@@ -100,30 +91,42 @@
            we run mvn install. There is probably a better way of avoiding the
            double interpolation but this is it for now.
         -->
-      <plugin> 
-        <groupId>com.google.code.maven-replacer-plugin</groupId> 
-        <artifactId>replacer</artifactId> 
-        <version>1.5.3</version> 
-        <executions> 
-          <execution> 
-            <phase>generate-sources</phase>
-            <goals> 
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.3</version>
+        <executions>
+          <execution>
+            <phase>process-sources</phase>
+            <goals>
               <goal>replace</goal>
-            </goals> 
-          </execution> 
-        </executions> 
-        <configuration> 
-          <basedir>${basedir}/target/generated-sources/</basedir>  
-            <includes>  
-                <include>**/*.java</include>  
-            </includes>  
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <basedir>${basedir}/target/generated-sources/</basedir>
+            <includes>
+                <include>**/*.java</include>
+            </includes>
+            <!-- Ignore errors when missing files, because it means this build
+                 was run with -Dprotoc.skip and there is no -Dreplacer.skip -->
+            <ignoreErrors>true</ignoreErrors>
             <replacements>
               <replacement>
-                <token>([^\.])com.google.protobuf</token> 
-                <value>$1org.apache.hadoop.hbase.shaded.com.google.protobuf</value> 
+                <token>([^\.])com.google.protobuf</token>
+                <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
+              </replacement>
+              <replacement>
+                <token>(public)(\W+static)?(\W+final)?(\W+class)</token>
+                <value>@javax.annotation.Generated("proto") $1$2$3$4</value>
+              </replacement>
+              <!-- replacer doesn't support anchoring or negative lookbehind -->
+              <replacement>
+                <token>(@javax.annotation.Generated\("proto"\) ){2}</token>
+                <value>$1</value>
               </replacement>
             </replacements>
-        </configuration> 
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -148,73 +151,41 @@
               </relocations>
               <artifactSet>
                 <excludes>
+                  <!-- exclude J2EE modules that come in for JDK11+ or modules that come in for
+                  JDK8+ but need not be included -->
+                  <exclude>javax.annotation:javax.annotation-api</exclude>
                   <!--Exclude protobuf itself. We get a patched version from hbase-thirdparty.
                     -->
                   <exclude>org.apache.hbase.thirdparty:*</exclude>
                   <exclude>com.google.protobuf:protobuf-java</exclude>
                   <exclude>com.google.code.findbugs:*</exclude>
-                  <exclude>com.google.errorprone:error_prone_annotations</exclude>
                   <exclude>com.google.j2objc:j2objc-annotations</exclude>
-                  <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
                   <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
                   <exclude>junit:junit</exclude>
                   <exclude>log4j:log4j</exclude>
                   <exclude>commons-logging:commons-logging</exclude>
+                  <exclude>org.slf4j:slf4j-api</exclude>
                   <exclude>org.apache.yetus:audience-annotations</exclude>
                   <exclude>com.github.stephenc.fingbugs:*</exclude>
-                  <exclude></exclude>
+                  <exclude>com.github.spotbugs:*</exclude>
                 </excludes>
               </artifactSet>
             </configuration>
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
     </plugins>
-    <pluginManagement>
-      <plugins>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-        <plugin>
-          <groupId>org.eclipse.m2e</groupId>
-          <artifactId>lifecycle-mapping</artifactId>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.hadoop</groupId>
-                    <artifactId>hadoop-maven-plugins</artifactId>
-                    <versionRange>[2.0.5-alpha,)</versionRange>
-                    <goals>
-                      <goal>protoc</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore/>
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>
-                      com.google.code.maven-replacer-plugin
-                    </groupId>
-                    <artifactId>replacer</artifactId>
-                    <versionRange>[1.5.3,)</versionRange>
-                    <goals>
-                      <goal>replace</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <execute>
-                     <runOnIncremental>false</runOnIncremental>
-                    </execute>
-                  </action>
-                </pluginExecution>
-              </pluginExecutions>
-            </lifecycleMappingMetadata>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
   </build>
   <dependencies>
     <!--BE CAREFUL! Any dependency added here needs to be
@@ -230,6 +201,10 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-core4</artifactId>
+    </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->
@@ -244,6 +219,73 @@
         <surefire.skipFirstPart>true</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
+    </profile>
+    <profile>
+      <id>build-with-jdk11</id>
+      <activation>
+        <jdk>[1.11,)</jdk>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>javax.annotation</groupId>
+          <artifactId>javax.annotation-api</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>eclipse-specific</id>
+      <activation>
+        <property>
+          <name>m2e.version</name>
+        </property>
+      </activation>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+            <plugin>
+              <groupId>org.eclipse.m2e</groupId>
+              <artifactId>lifecycle-mapping</artifactId>
+              <configuration>
+                <lifecycleMappingMetadata>
+                  <pluginExecutions>
+                    <pluginExecution>
+                      <pluginExecutionFilter>
+                        <groupId>org.apache.hadoop</groupId>
+                        <artifactId>hadoop-maven-plugins</artifactId>
+                        <versionRange>[2.0.5-alpha,)</versionRange>
+                        <goals>
+                          <goal>protoc</goal>
+                        </goals>
+                      </pluginExecutionFilter>
+                      <action>
+                        <ignore/>
+                      </action>
+                    </pluginExecution>
+                    <pluginExecution>
+                      <pluginExecutionFilter>
+                        <groupId>
+                          com.google.code.maven-replacer-plugin
+                        </groupId>
+                        <artifactId>replacer</artifactId>
+                        <versionRange>[1.5.3,)</versionRange>
+                        <goals>
+                          <goal>replace</goal>
+                        </goals>
+                      </pluginExecutionFilter>
+                      <action>
+                        <execute>
+                         <runOnIncremental>false</runOnIncremental>
+                        </execute>
+                      </action>
+                    </pluginExecution>
+                  </pluginExecutions>
+                </lifecycleMappingMetadata>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
     </profile>
   </profiles>
 </project>

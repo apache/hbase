@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,24 +17,30 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.List;
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.util.List;
+import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterFailoverBalancerPersistence {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMasterFailoverBalancerPersistence.class);
 
   /**
    * Test that if the master fails, the load balancer maintains its
@@ -43,28 +48,27 @@ public class TestMasterFailoverBalancerPersistence {
    *
    * @throws Exception
    */
-  @Test(timeout = 240000)
+  @Test
   public void testMasterFailoverBalancerPersistence() throws Exception {
-    final int NUM_MASTERS = 3;
-    final int NUM_RS = 1;
-
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(3).build();
+    TEST_UTIL.startMiniCluster(option);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
     assertTrue(cluster.waitForActiveAndReadyMaster());
     HMaster active = cluster.getMaster();
     // check that the balancer is on by default for the active master
-    ClusterStatus clusterStatus = active.getClusterStatus();
-    assertTrue(clusterStatus.isBalancerOn());
+    ClusterMetrics clusterStatus = active.getClusterMetrics();
+    assertTrue(clusterStatus.getBalancerOn());
 
     active = killActiveAndWaitForNewActive(cluster);
 
     // ensure the load balancer is still running on new master
-    clusterStatus = active.getClusterStatus();
-    assertTrue(clusterStatus.isBalancerOn());
+    clusterStatus = active.getClusterMetrics();
+    assertTrue(clusterStatus.getBalancerOn());
 
     // turn off the load balancer
     active.balanceSwitch(false);
@@ -73,8 +77,8 @@ public class TestMasterFailoverBalancerPersistence {
     active = killActiveAndWaitForNewActive(cluster);
 
     // ensure the load balancer is not running on the new master
-    clusterStatus = active.getClusterStatus();
-    assertFalse(clusterStatus.isBalancerOn());
+    clusterStatus = active.getClusterMetrics();
+    assertFalse(clusterStatus.getBalancerOn());
 
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();

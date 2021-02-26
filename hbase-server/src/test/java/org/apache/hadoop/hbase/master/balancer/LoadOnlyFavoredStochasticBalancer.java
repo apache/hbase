@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.List;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Used for FavoredNode unit tests

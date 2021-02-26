@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -27,17 +25,17 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -47,10 +45,13 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -59,14 +60,17 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FilterAllFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.NoLimitScannerContext;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
@@ -74,27 +78,42 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Category({ CoprocessorTests.class, LargeTests.class })
 public class TestRegionObserverInterface {
-  private static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionObserverInterface.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionObserverInterface.class);
 
   public static final TableName TEST_TABLE = TableName.valueOf("TestTable");
+  public static final byte[] FAMILY = Bytes.toBytes("f");
   public final static byte[] A = Bytes.toBytes("a");
   public final static byte[] B = Bytes.toBytes("b");
   public final static byte[] C = Bytes.toBytes("c");
@@ -123,7 +142,7 @@ public class TestRegionObserverInterface {
     util.shutdownMiniCluster();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRegionObserver() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     // recreate table every time in order to reset the status of the
@@ -183,7 +202,7 @@ public class TestRegionObserverInterface {
       tableName, new Integer[] { 1, 1, 1, 1 });
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRowMutation() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -215,7 +234,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testIncrementHook() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -224,21 +243,23 @@ public class TestRegionObserverInterface {
       inc.addColumn(A, A, 1);
 
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreIncrement", "hadPostIncrement", "hadPreIncrementAfterRowLock" },
-        tableName, new Boolean[] { false, false, false });
+        new String[] { "hadPreIncrement", "hadPostIncrement", "hadPreIncrementAfterRowLock",
+          "hadPreBatchMutate", "hadPostBatchMutate", "hadPostBatchMutateIndispensably" },
+        tableName, new Boolean[] { false, false, false, false, false, false });
 
       table.increment(inc);
 
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreIncrement", "hadPostIncrement", "hadPreIncrementAfterRowLock" },
-        tableName, new Boolean[] { true, true, true });
+        new String[] { "hadPreIncrement", "hadPostIncrement", "hadPreIncrementAfterRowLock",
+          "hadPreBatchMutate", "hadPostBatchMutate", "hadPostBatchMutateIndispensably" },
+        tableName, new Boolean[] { true, true, true, true, true, true });
     } finally {
       util.deleteTable(tableName);
       table.close();
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCheckAndPutHooks() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     try (Table table = util.createTable(tableName, new byte[][] { A, B, C })) {
@@ -248,18 +269,35 @@ public class TestRegionObserverInterface {
       p = new Put(Bytes.toBytes(0));
       p.addColumn(A, A, A);
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut" },
-        tableName, new Boolean[] { false, false, false });
-      table.checkAndPut(Bytes.toBytes(0), A, A, A, p);
+        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
+          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
+          "getPostCheckAndPutWithFilter", "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+
+      table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenPut(p);
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut" },
-        tableName, new Boolean[] { true, true, true });
+        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
+          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
+          "getPostCheckAndPutWithFilter", "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 1, 1, 1, 0, 0, 0, 1, 1, 1 });
+
+      table.checkAndMutate(Bytes.toBytes(0),
+          new SingleColumnValueFilter(A, A, CompareOperator.EQUAL, A))
+        .thenPut(p);
+      verifyMethodResult(SimpleRegionObserver.class,
+        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
+          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
+          "getPostCheckAndPutWithFilter", "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 1, 1, 1, 1, 1, 1, 2, 2, 2 });
     } finally {
       util.deleteTable(tableName);
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCheckAndDeleteHooks() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -270,21 +308,148 @@ public class TestRegionObserverInterface {
       Delete d = new Delete(Bytes.toBytes(0));
       table.delete(d);
       verifyMethodResult(
-        SimpleRegionObserver.class, new String[] { "hadPreCheckAndDelete",
-            "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete" },
-        tableName, new Boolean[] { false, false, false });
-      table.checkAndDelete(Bytes.toBytes(0), A, A, A, d);
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
+          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
+          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
+          "getPostCheckAndDeleteWithFilter", "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+
+      table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenDelete(d);
       verifyMethodResult(
-        SimpleRegionObserver.class, new String[] { "hadPreCheckAndDelete",
-            "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete" },
-        tableName, new Boolean[] { true, true, true });
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
+          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
+          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
+          "getPostCheckAndDeleteWithFilter", "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 1, 1, 1, 0, 0, 0, 1, 1, 1 });
+
+      table.checkAndMutate(Bytes.toBytes(0),
+          new SingleColumnValueFilter(A, A, CompareOperator.EQUAL, A))
+        .thenDelete(d);
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
+          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
+          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
+          "getPostCheckAndDeleteWithFilter", "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 1, 1, 1, 1, 1, 1, 2, 2, 2 });
     } finally {
       util.deleteTable(tableName);
       table.close();
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
+  public void testCheckAndIncrementHooks() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." +
+      name.getMethodName());
+    Table table = util.createTable(tableName, new byte[][] { A, B, C });
+    try {
+      byte[] row = Bytes.toBytes(0);
+
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 0, 0, 0 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(row)
+        .ifNotExists(A, A)
+        .build(new Increment(row).addColumn(A, A, 1)));
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 1, 1, 1 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(row)
+        .ifEquals(A, A, Bytes.toBytes(1L))
+        .build(new Increment(row).addColumn(A, A, 1)));
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 2, 2, 2 });
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
+  }
+
+  @Test
+  public void testCheckAndAppendHooks() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." +
+      name.getMethodName());
+    Table table = util.createTable(tableName, new byte[][] { A, B, C });
+    try {
+      byte[] row = Bytes.toBytes(0);
+
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 0, 0, 0 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(row)
+        .ifNotExists(A, A)
+        .build(new Append(row).addColumn(A, A, A)));
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 1, 1, 1 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(row)
+        .ifEquals(A, A, A)
+        .build(new Append(row).addColumn(A, A, A)));
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 2, 2, 2 });
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
+  }
+
+  @Test
+  public void testCheckAndRowMutationsHooks() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." +
+      name.getMethodName());
+    Table table = util.createTable(tableName, new byte[][] { A, B, C });
+    try {
+      byte[] row = Bytes.toBytes(0);
+
+      Put p = new Put(row).addColumn(A, A, A);
+      table.put(p);
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 0, 0, 0 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(row)
+        .ifEquals(A, A, A)
+        .build(new RowMutations(row)
+          .add((Mutation) new Put(row).addColumn(B, B, B))
+          .add((Mutation) new Delete(row))));
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 1, 1, 1 });
+
+      Object[] result = new Object[2];
+      table.batch(Arrays.asList(p, CheckAndMutate.newBuilder(row)
+        .ifEquals(A, A, A)
+        .build(new RowMutations(row)
+          .add((Mutation) new Put(row).addColumn(B, B, B))
+          .add((Mutation) new Delete(row)))), result);
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
+        tableName, new Integer[] { 2, 2, 2 });
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
+  }
+
+  @Test
   public void testAppendHook() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -293,21 +458,25 @@ public class TestRegionObserverInterface {
       app.addColumn(A, A, A);
 
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock" }, tableName,
-        new Boolean[] { false, false, false });
+        new String[] { "hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock",
+          "hadPreBatchMutate", "hadPostBatchMutate", "hadPostBatchMutateIndispensably" },
+        tableName,
+        new Boolean[] { false, false, false, false, false, false });
 
       table.append(app);
 
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock" }, tableName,
-        new Boolean[] { true, true, true });
+        new String[] { "hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock",
+          "hadPreBatchMutate", "hadPostBatchMutate", "hadPostBatchMutateIndispensably" },
+        tableName,
+        new Boolean[] { true, true, true, true, true, true });
     } finally {
       util.deleteTable(tableName);
       table.close();
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   // HBase-3583
   public void testHBase3583() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -350,7 +519,7 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testHBASE14489() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A });
@@ -374,7 +543,7 @@ public class TestRegionObserverInterface {
 
   }
 
-  @Test(timeout = 300000)
+  @Test
   // HBase-3758
   public void testHBase3758() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -427,10 +596,6 @@ public class TestRegionObserverInterface {
         InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
         CompactionRequest request) {
       return new InternalScanner() {
-        @Override
-        public boolean next(List<Cell> results) throws IOException {
-          return next(results, NoLimitScannerContext.getInstance());
-        }
 
         @Override
         public boolean next(List<Cell> results, ScannerContext scannerContext) throws IOException {
@@ -469,7 +634,8 @@ public class TestRegionObserverInterface {
     }
 
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) {
+    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+        FlushLifeCycleTracker tracker) {
       lastFlush = EnvironmentEdgeManager.currentTime();
     }
   }
@@ -478,7 +644,7 @@ public class TestRegionObserverInterface {
    * Tests overriding compaction handling via coprocessor hooks
    * @throws Exception
    */
-  @Test(timeout = 300000)
+  @Test
   public void testCompactionOverride() throws Exception {
     final TableName compactTable = TableName.valueOf(name.getMethodName());
     Admin admin = util.getAdmin();
@@ -548,7 +714,7 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void bulkLoadHFileTest() throws Exception {
     final String testName = TestRegionObserverInterface.class.getName() + "." + name.getMethodName();
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
@@ -577,7 +743,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRecovery() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() + "." + name.getMethodName());
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
@@ -588,7 +754,7 @@ public class TestRegionObserverInterface {
       ServerName sn2 = rs1.getRegionServer().getServerName();
       String regEN = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
 
-      util.getAdmin().move(regEN.getBytes(), sn2.getServerName().getBytes());
+      util.getAdmin().move(Bytes.toBytes(regEN), sn2);
       while (!sn2.equals(locator.getAllRegionLocations().get(0).getServerName())) {
         Thread.sleep(100);
       }
@@ -627,7 +793,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testPreWALRestoreSkip() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() + "." + name.getMethodName());
     TableName tableName = TableName.valueOf(SimpleRegionObserver.TABLE_SKIPPED);
@@ -638,7 +804,7 @@ public class TestRegionObserverInterface {
       ServerName sn2 = rs1.getRegionServer().getServerName();
       String regEN = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
 
-      util.getAdmin().move(regEN.getBytes(), sn2.getServerName().getBytes());
+      util.getAdmin().move(Bytes.toBytes(regEN), sn2);
       while (!sn2.equals(locator.getAllRegionLocations().get(0).getServerName())) {
         Thread.sleep(100);
       }
@@ -660,6 +826,97 @@ public class TestRegionObserverInterface {
 
     util.deleteTable(tableName);
     table.close();
+  }
+
+  //called from testPreWALAppendIsWrittenToWAL
+  private void testPreWALAppendHook(Table table, TableName tableName) throws IOException {
+    int expectedCalls = 0;
+    String [] methodArray = new String[1];
+    methodArray[0] = "getCtPreWALAppend";
+    Object[] resultArray = new Object[1];
+
+    Put p = new Put(ROW);
+    p.addColumn(A, A, A);
+    table.put(p);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+
+    Append a = new Append(ROW);
+    a.addColumn(B, B, B);
+    table.append(a);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+
+    Increment i = new Increment(ROW);
+    i.addColumn(C, C, 1);
+    table.increment(i);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+
+    Delete d = new Delete(ROW);
+    table.delete(d);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+  }
+
+  @Test
+  public void testPreWALAppend() throws Exception {
+    SimpleRegionObserver sro = new SimpleRegionObserver();
+    ObserverContext ctx = Mockito.mock(ObserverContext.class);
+    WALKey key = new WALKeyImpl(Bytes.toBytes("region"), TEST_TABLE,
+        EnvironmentEdgeManager.currentTime());
+    WALEdit edit = new WALEdit();
+    sro.preWALAppend(ctx, key, edit);
+    Assert.assertEquals(1, key.getExtendedAttributes().size());
+    Assert.assertArrayEquals(SimpleRegionObserver.WAL_EXTENDED_ATTRIBUTE_BYTES,
+        key.getExtendedAttribute(Integer.toString(sro.getCtPreWALAppend())));
+  }
+
+  @Test
+  public void testPreWALAppendIsWrittenToWAL() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() +
+        "." + name.getMethodName());
+    Table table = util.createTable(tableName, new byte[][] { A, B, C });
+
+    PreWALAppendWALActionsListener listener = new PreWALAppendWALActionsListener();
+    List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    //should be only one region
+    HRegion region = regions.get(0);
+    region.getWAL().registerWALActionsListener(listener);
+    testPreWALAppendHook(table, tableName);
+    boolean[] expectedResults = {true, true, true, true};
+    Assert.assertArrayEquals(expectedResults, listener.getWalKeysCorrectArray());
+
+  }
+
+  @Test
+  public void testPreWALAppendNotCalledOnMetaEdit() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() +
+        "." + name.getMethodName());
+    TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
+    ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+    tdBuilder.setColumnFamily(cfBuilder.build());
+    tdBuilder.setCoprocessor(SimpleRegionObserver.class.getName());
+    TableDescriptor td = tdBuilder.build();
+    Table table = util.createTable(td, new byte[][] { A, B, C });
+
+    PreWALAppendWALActionsListener listener = new PreWALAppendWALActionsListener();
+    List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    //should be only one region
+    HRegion region = regions.get(0);
+
+    region.getWAL().registerWALActionsListener(listener);
+    //flushing should write to the WAL
+    region.flush(true);
+    //so should compaction
+    region.compact(false);
+    //and so should closing the region
+    region.close();
+
+    //but we still shouldn't have triggered preWALAppend because no user data was written
+    String[] methods = new String[] {"getCtPreWALAppend"};
+    Object[] expectedResult = new Integer[]{0};
+    verifyMethodResult(SimpleRegionObserver.class, methods, tableName, expectedResult);
   }
 
   // check each region whether the coprocessor upcalls are called or not.
@@ -708,6 +965,25 @@ public class TestRegionObserverInterface {
       }
     } finally {
       writer.close();
+    }
+  }
+
+  private static class PreWALAppendWALActionsListener implements WALActionsListener {
+    boolean[] walKeysCorrect = {false, false, false, false};
+
+    @Override
+    public void postAppend(long entryLen, long elapsedTimeMillis,
+                           WALKey logKey, WALEdit logEdit) throws IOException {
+      for (int k = 0; k < 4; k++) {
+        if (!walKeysCorrect[k]) {
+          walKeysCorrect[k] = Arrays.equals(SimpleRegionObserver.WAL_EXTENDED_ATTRIBUTE_BYTES,
+              logKey.getExtendedAttribute(Integer.toString(k + 1)));
+        }
+      }
+    }
+
+    boolean[] getWalKeysCorrectArray() {
+      return walKeysCorrect;
     }
   }
 }

@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.client.example;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
-
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncConnection;
@@ -38,13 +37,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple example shows how to use asynchronous client.
  */
+@InterfaceAudience.Private
 public class AsyncClientExample extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(AsyncClientExample.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncClientExample.class);
 
   /**
    * The size for thread pool.
@@ -77,7 +81,7 @@ public class AsyncClientExample extends Configured implements Tool {
     for (;;) {
       if (future.compareAndSet(null, new CompletableFuture<>())) {
         CompletableFuture<AsyncConnection> toComplete = future.get();
-        ConnectionFactory.createAsyncConnection(getConf()).whenComplete((conn, error) -> {
+        addListener(ConnectionFactory.createAsyncConnection(getConf()),(conn, error) -> {
           if (error != null) {
             toComplete.completeExceptionally(error);
             // we need to reset the future holder so we will get a chance to recreate an async
@@ -97,17 +101,17 @@ public class AsyncClientExample extends Configured implements Tool {
     }
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NONNULL_PARAM_VIOLATION",
-      justification="it is valid to pass NULL to CompletableFuture#completedFuture")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NONNULL_PARAM_VIOLATION",
+      justification = "it is valid to pass NULL to CompletableFuture#completedFuture")
   private CompletableFuture<Void> closeConn() {
     CompletableFuture<AsyncConnection> f = future.get();
     if (f == null) {
       return CompletableFuture.completedFuture(null);
     }
     CompletableFuture<Void> closeFuture = new CompletableFuture<>();
-    f.whenComplete((conn, error) -> {
+    addListener(f, (conn, error) -> {
       if (error == null) {
-        IOUtils.closeQuietly(conn);
+        IOUtils.closeQuietly(conn, e -> LOG.warn("failed to close conn", e));
       }
       closeFuture.complete(null);
     });
@@ -127,7 +131,8 @@ public class AsyncClientExample extends Configured implements Tool {
     TableName tableName = TableName.valueOf(args[0]);
     int numOps = args.length > 1 ? Integer.parseInt(args[1]) : DEFAULT_NUM_OPS;
     ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE,
-      Threads.newDaemonThreadFactory("AsyncClientExample"));
+      new ThreadFactoryBuilder().setNameFormat("AsyncClientExample-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     // We use AsyncTable here so we need to provide a separated thread pool. RawAsyncTable does not
     // need a thread pool and may have a better performance if you use it correctly as it can save
     // some context switches. But if you use RawAsyncTable incorrectly, you may have a very bad
@@ -135,44 +140,44 @@ public class AsyncClientExample extends Configured implements Tool {
     CountDownLatch latch = new CountDownLatch(numOps);
     IntStream.range(0, numOps).forEach(i -> {
       CompletableFuture<AsyncConnection> future = getConn();
-      future.whenComplete((conn, error) -> {
+      addListener(future, (conn, error) -> {
         if (error != null) {
           LOG.warn("failed to get async connection for " + i, error);
           latch.countDown();
           return;
         }
-        AsyncTable table = conn.getTable(tableName, threadPool);
-        table.put(new Put(getKey(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(i)))
-            .whenComplete((putResp, putErr) -> {
-              if (putErr != null) {
-                LOG.warn("put failed for " + i, putErr);
+        AsyncTable<?> table = conn.getTable(tableName, threadPool);
+        addListener(table.put(new Put(getKey(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(i))),
+          (putResp, putErr) -> {
+            if (putErr != null) {
+              LOG.warn("put failed for " + i, putErr);
+              latch.countDown();
+              return;
+            }
+            LOG.info("put for " + i + " succeeded, try getting");
+            addListener(table.get(new Get(getKey(i))), (result, getErr) -> {
+              if (getErr != null) {
+                LOG.warn("get failed for " + i);
                 latch.countDown();
                 return;
               }
-              LOG.info("put for " + i + " succeeded, try getting");
-              table.get(new Get(getKey(i))).whenComplete((result, getErr) -> {
-                if (getErr != null) {
-                  LOG.warn("get failed for " + i);
-                  latch.countDown();
-                  return;
-                }
-                if (result.isEmpty()) {
-                  LOG.warn("get failed for " + i + ", server returns empty result");
-                } else if (!result.containsColumn(FAMILY, QUAL)) {
-                  LOG.warn("get failed for " + i + ", the result does not contain " +
-                      Bytes.toString(FAMILY) + ":" + Bytes.toString(QUAL));
+              if (result.isEmpty()) {
+                LOG.warn("get failed for " + i + ", server returns empty result");
+              } else if (!result.containsColumn(FAMILY, QUAL)) {
+                LOG.warn("get failed for " + i + ", the result does not contain " +
+                  Bytes.toString(FAMILY) + ":" + Bytes.toString(QUAL));
+              } else {
+                int v = Bytes.toInt(result.getValue(FAMILY, QUAL));
+                if (v != i) {
+                  LOG.warn("get failed for " + i + ", the value of " + Bytes.toString(FAMILY) +
+                    ":" + Bytes.toString(QUAL) + " is " + v + ", exected " + i);
                 } else {
-                  int v = Bytes.toInt(result.getValue(FAMILY, QUAL));
-                  if (v != i) {
-                    LOG.warn("get failed for " + i + ", the value of " + Bytes.toString(FAMILY) +
-                        ":" + Bytes.toString(QUAL) + " is " + v + ", exected " + i);
-                  } else {
-                    LOG.info("get for " + i + " succeeded");
-                  }
+                  LOG.info("get for " + i + " succeeded");
                 }
-                latch.countDown();
-              });
+              }
+              latch.countDown();
             });
+          });
       });
     });
     latch.await();

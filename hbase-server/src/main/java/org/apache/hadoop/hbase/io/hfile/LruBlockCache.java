@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static java.util.Objects.requireNonNull;
+
 import java.lang.ref.WeakReference;
 import java.util.EnumMap;
 import java.util.Iterator;
@@ -33,25 +34,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Objects;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.base.Objects;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A block cache implementation that is memory-aware using {@link HeapSize},
@@ -96,10 +90,9 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
  * to the relative sizes and usage.
  */
 @InterfaceAudience.Private
-@JsonIgnoreProperties({"encodingCountsForTest"})
-public class LruBlockCache implements ResizableBlockCache, HeapSize {
+public class LruBlockCache implements FirstLevelBlockCache {
 
-  private static final Log LOG = LogFactory.getLog(LruBlockCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LruBlockCache.class);
 
   /**
    * Percentage of total size that eviction will evict until; e.g. if set to .8, then we will keep
@@ -157,22 +150,30 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   private static final String LRU_MAX_BLOCK_SIZE = "hbase.lru.max.block.size";
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
 
-  /** Concurrent map (the cache) */
-  private final Map<BlockCacheKey, LruCachedBlock> map;
+  /**
+   * Defined the cache map as {@link ConcurrentHashMap} here, because in
+   * {@link LruBlockCache#getBlock}, we need to guarantee the atomicity of map#computeIfPresent
+   * (key, func). Besides, the func method must execute exactly once only when the key is present
+   * and under the lock context, otherwise the reference count will be messed up. Notice that the
+   * {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that.
+   */
+  private transient final ConcurrentHashMap<BlockCacheKey, LruCachedBlock> map;
 
   /** Eviction lock (locked when eviction in process) */
-  private final ReentrantLock evictionLock = new ReentrantLock(true);
+  private transient final ReentrantLock evictionLock = new ReentrantLock(true);
+
   private final long maxBlockSize;
 
   /** Volatile boolean to track if we are in an eviction process or not */
   private volatile boolean evictionInProgress = false;
 
   /** Eviction thread */
-  private final EvictionThread evictionThread;
+  private transient final EvictionThread evictionThread;
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private final ScheduledExecutorService scheduleThreadPool = Executors.newScheduledThreadPool(1,
-    new ThreadFactoryBuilder().setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
+  private transient final ScheduledExecutorService scheduleThreadPool =
+    Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
+      .setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
 
   /** Current size of cache */
   private final AtomicLong size;
@@ -222,8 +223,12 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   /** Whether in-memory hfile's data block has higher priority when evicting */
   private boolean forceInMemory;
 
-  /** Where to send victims (blocks evicted/missing from the cache) */
-  private BlockCache victimHandler = null;
+  /**
+   * Where to send victims (blocks evicted/missing from the cache). This is used only when we use an
+   * external cache as L2.
+   * Note: See org.apache.hadoop.hbase.io.hfile.MemcachedBlockCache
+   */
+  private transient BlockCache victimHandler = null;
 
   /**
    * Default constructor.  Specify maximum size and expected average block
@@ -252,8 +257,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
         DEFAULT_MEMORY_FACTOR,
         DEFAULT_HARD_CAPACITY_LIMIT_FACTOR,
         false,
-        DEFAULT_MAX_BLOCK_SIZE
-        );
+        DEFAULT_MAX_BLOCK_SIZE);
   }
 
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
@@ -269,8 +273,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
         conf.getFloat(LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME,
                       DEFAULT_HARD_CAPACITY_LIMIT_FACTOR),
         conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE),
-        conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE)
-    );
+        conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE));
   }
 
   public LruBlockCache(long maxSize, long blockSize, Configuration conf) {
@@ -339,11 +342,45 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
+  public void setVictimCache(BlockCache victimCache) {
+    if (victimHandler != null) {
+      throw new IllegalArgumentException("The victim cache has already been set");
+    }
+    victimHandler = requireNonNull(victimCache);
+  }
+
+  @Override
   public void setMaxSize(long maxSize) {
     this.maxSize = maxSize;
     if (this.size.get() > acceptableSize() && !evictionInProgress) {
       runEviction();
     }
+  }
+
+  /**
+   * The block cached in LRUBlockCache will always be an heap block: on the one side, the heap
+   * access will be more faster then off-heap, the small index block or meta block cached in
+   * CombinedBlockCache will benefit a lot. on other side, the LRUBlockCache size is always
+   * calculated based on the total heap size, if caching an off-heap block in LRUBlockCache, the
+   * heap size will be messed up. Here we will clone the block into an heap block if it's an
+   * off-heap block, otherwise just use the original block. The key point is maintain the refCnt of
+   * the block (HBASE-22127): <br>
+   * 1. if cache the cloned heap block, its refCnt is an totally new one, it's easy to handle; <br>
+   * 2. if cache the original heap block, we're sure that it won't be tracked in ByteBuffAllocator's
+   * reservoir, if both RPC and LRUBlockCache release the block, then it can be garbage collected by
+   * JVM, so need a retain here.
+   * @param buf the original block
+   * @return an block with an heap memory backend.
+   */
+  private Cacheable asReferencedHeapBlock(Cacheable buf) {
+    if (buf instanceof HFileBlock) {
+      HFileBlock blk = ((HFileBlock) buf);
+      if (blk.isSharedMem()) {
+        return HFileBlock.deepCloneOnHeap(blk);
+      }
+    }
+    // The block will be referenced by this LRUBlockCache, so should increase its refCnt here.
+    return buf.retain();
   }
 
   // BlockCache implementation
@@ -359,9 +396,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * @param inMemory if block is in-memory
    */
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
-      final boolean cacheDataInL1) {
-
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
     if (buf.heapSize() > maxBlockSize) {
       // If there are a lot of blocks that are too
       // big this can make the logs way too noisy.
@@ -377,15 +412,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     }
 
     LruCachedBlock cb = map.get(cacheKey);
-    if (cb != null) {
-      // compare the contents, if they are not equal, we are in big trouble
-      if (BlockCacheUtil.compareCacheBlock(buf, cb.getBuffer()) != 0) {
-        throw new RuntimeException("Cached block contents differ, which should not have happened."
-          + "cacheKey:" + cacheKey);
-      }
-      String msg = "Cached an already cached block: " + cacheKey + " cb:" + cb.getCacheKey();
-      msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
-      LOG.warn(msg);
+    if (cb != null && !BlockCacheUtil.shouldReplaceExistingCacheBlock(this, cacheKey, buf)) {
       return;
     }
     long currentSize = size.get();
@@ -404,12 +431,14 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       }
       return;
     }
+    // Ensure that the block is an heap one.
+    buf = asReferencedHeapBlock(buf);
     cb = new LruCachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);
     map.put(cacheKey, cb);
     long val = elements.incrementAndGet();
     if (buf.getBlockType().isData()) {
-       dataBlockElements.increment();
+      dataBlockElements.increment();
     }
     if (LOG.isTraceEnabled()) {
       long size = map.size();
@@ -442,12 +471,16 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   /**
    * Cache the block with the specified name and buffer.
    * <p>
-   *
+   * TODO after HBASE-22005, we may cache an block which allocated from off-heap, but our LRU cache
+   * sizing is based on heap size, so we should handle this in HBASE-22127. It will introduce an
+   * switch whether make the LRU on-heap or not, if so we may need copy the memory to on-heap,
+   * otherwise the caching size is based on off-heap.
    * @param cacheKey block's cache key
-   * @param buf      block buffer
+   * @param buf block buffer
    */
+  @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
-    cacheBlock(cacheKey, buf, false, false);
+    cacheBlock(cacheKey, buf, false);
   }
 
   /**
@@ -462,7 +495,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       heapsize *= -1;
     }
     if (bt != null && bt.isData()) {
-       dataBlockSize.add(heapsize);
+      dataBlockSize.add(heapsize);
     }
     return size.addAndGet(heapsize);
   }
@@ -482,7 +515,14 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
       boolean updateCacheMetrics) {
-    LruCachedBlock cb = map.get(cacheKey);
+    LruCachedBlock cb = map.computeIfPresent(cacheKey, (key, val) -> {
+      // It will be referenced by RPC path, so increase here. NOTICE: Must do the retain inside
+      // this block. because if retain outside the map#computeIfPresent, the evictBlock may remove
+      // the block and release, then we're retaining a block with refCnt=0 which is disallowed.
+      // see HBASE-22422.
+      val.getBuffer().retain();
+      return val;
+    });
     if (cb == null) {
       if (!repeat && updateCacheMetrics) {
         stats.miss(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
@@ -491,20 +531,21 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       // However if this is a retry ( second time in double checked locking )
       // And it's already a miss then the l2 will also be a miss.
       if (victimHandler != null && !repeat) {
+        // The handler will increase result's refCnt for RPC, so need no extra retain.
         Cacheable result = victimHandler.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
-
         // Promote this to L1.
-        if (result != null && caching) {
-          if (result instanceof HFileBlock && ((HFileBlock) result).usesSharedMemory()) {
-            result = ((HFileBlock) result).deepClone();
+        if (result != null) {
+          if (caching) {
+            cacheBlock(cacheKey, result, /* inMemory = */ false);
           }
-          cacheBlock(cacheKey, result, /* inMemory = */ false, /* cacheData = */ true);
         }
         return result;
       }
       return null;
     }
-    if (updateCacheMetrics) stats.hit(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
+    if (updateCacheMetrics) {
+      stats.hit(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
+    }
     cb.access(count.incrementAndGet());
     return cb.getBuffer();
   }
@@ -514,6 +555,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    *
    * @return true if contains the block
    */
+  @Override
   public boolean containsBlock(BlockCacheKey cacheKey) {
     return map.containsKey(cacheKey);
   }
@@ -539,8 +581,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     int numEvicted = 0;
     for (BlockCacheKey key : map.keySet()) {
       if (key.getHfileName().equals(hfileName)) {
-        if (evictBlock(key))
+        if (evictBlock(key)) {
           ++numEvicted;
+        }
       }
     }
     if (victimHandler != null) {
@@ -558,8 +601,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * @return the heap size of evicted block
    */
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
-    boolean found = map.remove(block.getCacheKey()) != null;
-    if (!found) {
+    LruCachedBlock previous = map.remove(block.getCacheKey());
+    if (previous == null) {
       return 0;
     }
     updateSizeMetrics(block, true);
@@ -569,23 +612,20 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       assertCounterSanity(size, val);
     }
     if (block.getBuffer().getBlockType().isData()) {
-       dataBlockElements.decrement();
+      dataBlockElements.decrement();
     }
     if (evictedByEvictionProcess) {
       // When the eviction of the block happened because of invalidation of HFiles, no need to
       // update the stats counter.
       stats.evicted(block.getCachedTime(), block.getCacheKey().isPrimary());
       if (victimHandler != null) {
-        if (victimHandler instanceof BucketCache) {
-          boolean wait = getCurrentSize() < acceptableSize();
-          boolean inMemory = block.getPriority() == BlockPriority.MEMORY;
-          ((BucketCache) victimHandler).cacheBlockWithWait(block.getCacheKey(), block.getBuffer(),
-              inMemory, true, wait);
-        } else {
-          victimHandler.cacheBlock(block.getCacheKey(), block.getBuffer());
-        }
+        victimHandler.cacheBlock(block.getCacheKey(), block.getBuffer());
       }
     }
+    // Decrease the block's reference count, and if refCount is 0, then it'll auto-deallocate. DO
+    // NOT move this up because if do that then the victimHandler may access the buffer with
+    // refCnt = 0 which is disallowed.
+    previous.getBuffer().release();
     return block.heapSize();
   }
 
@@ -600,12 +640,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     }
   }
 
-  @VisibleForTesting
   boolean isEvictionInProgress() {
     return evictionInProgress;
   }
 
-  @VisibleForTesting
   long getOverhead() {
     return overhead;
   }
@@ -616,7 +654,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   void evict() {
 
     // Ensure only one eviction at a time
-    if(!evictionLock.tryLock()) return;
+    if (!evictionLock.tryLock()) {
+      return;
+    }
 
     try {
       evictionInProgress = true;
@@ -629,7 +669,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
           StringUtils.byteDesc(currentSize));
       }
 
-      if (bytesToFree <= 0) return;
+      if (bytesToFree <= 0) {
+        return;
+      }
 
       // Instantiate priority buckets
       BlockBucket bucketSingle = new BlockBucket("single", bytesToFree, blockSize, singleSize());
@@ -700,7 +742,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
         bucketQueue.add(bucketMulti);
         bucketQueue.add(bucketMemory);
 
-        int remainingBuckets = 3;
+        int remainingBuckets = bucketQueue.size();
 
         BlockBucket bucket;
         while ((bucket = bucketQueue.poll()) != null) {
@@ -735,15 +777,15 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   public String toString() {
     return MoreObjects.toStringHelper(this)
       .add("blockCount", getBlockCount())
-      .add("currentSize", getCurrentSize())
-      .add("freeSize", getFreeSize())
-      .add("maxSize", getMaxSize())
-      .add("heapSize", heapSize())
-      .add("minSize", minSize())
+      .add("currentSize", StringUtils.byteDesc(getCurrentSize()))
+      .add("freeSize", StringUtils.byteDesc(getFreeSize()))
+      .add("maxSize", StringUtils.byteDesc(getMaxSize()))
+      .add("heapSize", StringUtils.byteDesc(heapSize()))
+      .add("minSize", StringUtils.byteDesc(minSize()))
       .add("minFactor", minFactor)
-      .add("multiSize", multiSize())
+      .add("multiSize", StringUtils.byteDesc(multiSize()))
       .add("multiFactor", multiFactor)
-      .add("singleSize", singleSize())
+      .add("singleSize", StringUtils.byteDesc(singleSize()))
       .add("singleFactor", singleFactor)
       .toString();
   }
@@ -799,6 +841,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       return totalSize;
     }
 
+    @Override
     public int compareTo(BlockBucket that) {
       return Long.compare(this.overflow(), that.overflow());
     }
@@ -877,7 +920,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    *
    * Thread is triggered into action by {@link LruBlockCache#runEviction()}
    */
-  static class EvictionThread extends HasThread {
+  static class EvictionThread extends Thread {
 
     private WeakReference<LruBlockCache> cache;
     private volatile boolean go = true;
@@ -903,7 +946,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
           }
         }
         LruBlockCache cache = this.cache.get();
-        if (cache == null) break;
+        if (cache == null) {
+          break;
+        }
         cache.evict();
       }
     }
@@ -975,14 +1020,13 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * <p>Includes: total accesses, hits, misses, evicted blocks, and runs
    * of the eviction processes.
    */
+  @Override
   public CacheStats getStats() {
     return this.stats;
   }
 
-  public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
-      (4 * Bytes.SIZEOF_LONG) + (11 * ClassSize.REFERENCE) +
-      (6 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN)
-      + ClassSize.OBJECT);
+  public final static long CACHE_FIXED_OVERHEAD =
+      ClassSize.estimateBase(LruBlockCache.class, false);
 
   @Override
   public long heapSize() {
@@ -1050,9 +1094,13 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
           @Override
           public int compareTo(CachedBlock other) {
             int diff = this.getFilename().compareTo(other.getFilename());
-            if (diff != 0) return diff;
+            if (diff != 0) {
+              return diff;
+            }
             diff = Long.compare(this.getOffset(), other.getOffset());
-            if (diff != 0) return diff;
+            if (diff != 0) {
+              return diff;
+            }
             if (other.getCachedTime() < 0 || this.getCachedTime() < 0) {
               throw new IllegalStateException(this.getCachedTime() + ", " + other.getCachedTime());
             }
@@ -1101,6 +1149,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     return (long) Math.floor(this.maxSize * this.memoryFactor * this.minFactor);
   }
 
+  @Override
   public void shutdown() {
     if (victimHandler != null) {
       victimHandler.shutdown();
@@ -1126,7 +1175,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   /** Clears the cache. Used in tests. */
-  @VisibleForTesting
   public void clearCache() {
     this.map.clear();
     this.elements.set(0);
@@ -1137,7 +1185,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    *
    * @return the set of cached file names
    */
-  @VisibleForTesting
   SortedSet<String> getCachedFileNamesForTest() {
     SortedSet<String> fileNames = new TreeSet<>();
     for (BlockCacheKey cacheKey : map.keySet()) {
@@ -1146,18 +1193,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     return fileNames;
   }
 
-  @VisibleForTesting
-  Map<BlockType, Integer> getBlockTypeCountsForTest() {
-    Map<BlockType, Integer> counts = new EnumMap<>(BlockType.class);
-    for (LruCachedBlock cb : map.values()) {
-      BlockType blockType = cb.getBuffer().getBlockType();
-      Integer count = counts.get(blockType);
-      counts.put(blockType, (count == null ? 0 : count) + 1);
-    }
-    return counts;
-  }
-
-  @VisibleForTesting
   public Map<DataBlockEncoding, Integer> getEncodingCountsForTest() {
     Map<DataBlockEncoding, Integer> counts = new EnumMap<>(DataBlockEncoding.class);
     for (LruCachedBlock block : map.values()) {
@@ -1168,37 +1203,15 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     return counts;
   }
 
-  public void setVictimCache(BlockCache handler) {
-    assert victimHandler == null;
-    victimHandler = handler;
-  }
-
-  @VisibleForTesting
   Map<BlockCacheKey, LruCachedBlock> getMapForTests() {
     return map;
   }
 
-  BlockCache getVictimHandler() {
-    return this.victimHandler;
-  }
-
   @Override
-  @JsonIgnore
   public BlockCache[] getBlockCaches() {
-    if (victimHandler != null)
-      return new BlockCache[] {this, this.victimHandler};
-    return null;
-  }
-
-  @Override
-  public void returnBlock(BlockCacheKey cacheKey, Cacheable block) {
-    // There is no SHARED type here in L1. But the block might have been served from the Victim
-    // handler L2 cache. (when the Combined mode = false). So just try return this block to
-    // L2 victim handler cache.
-    // Note : In case of CombinedBlockCache, we will have this victimHandler configured for L1
-    // cache. But CombinedBlockCache will only call returnBlock on L2 cache.
-    if (this.victimHandler != null) {
-      this.victimHandler.returnBlock(cacheKey, block);
+    if (victimHandler != null) {
+      return new BlockCache[] { this, this.victimHandler };
     }
+    return null;
   }
 }

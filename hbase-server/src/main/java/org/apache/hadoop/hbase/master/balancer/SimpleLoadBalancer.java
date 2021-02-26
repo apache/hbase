@@ -28,10 +28,7 @@ import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -39,8 +36,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.MinMaxPriorityQueue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -57,13 +55,13 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.MinMaxPriorityQu
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SimpleLoadBalancer extends BaseLoadBalancer {
-  private static final Log LOG = LogFactory.getLog(SimpleLoadBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SimpleLoadBalancer.class);
   private static final Random RANDOM = new Random(System.currentTimeMillis());
 
   private RegionInfoComparator riComparator = new RegionInfoComparator();
   private RegionPlan.RegionPlanComparator rpComparator = new RegionPlan.RegionPlanComparator();
   private float avgLoadOverall;
-  private List<ServerAndLoad> serverLoadList;
+  private List<ServerAndLoad> serverLoadList = new ArrayList<>();
 
   /**
    * Stores additional per-server information about the regions added/removed
@@ -107,16 +105,27 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
 
   }
 
-  public void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad){
-    serverLoadList = new ArrayList<>();
+  /**
+   * Pass RegionStates and allow balancer to set the current cluster load.
+   */
+  void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad) {
+    serverLoadList.clear();
+    Map<ServerName, Integer> server2LoadMap = new HashMap<>();
     float sum = 0;
-    for(Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> clusterEntry : clusterLoad.entrySet()){
-      for(Map.Entry<ServerName, List<RegionInfo>> entry : clusterEntry.getValue().entrySet()){
-        if(entry.getKey().equals(masterServerName)) continue; // we shouldn't include master as potential assignee
-        serverLoadList.add(new ServerAndLoad(entry.getKey(), entry.getValue().size()));
-        sum += entry.getValue().size();
+    for (Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> clusterEntry : clusterLoad
+        .entrySet()) {
+      for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterEntry.getValue().entrySet()) {
+        if (entry.getKey().equals(masterServerName)) {
+          continue; // we shouldn't include master as potential assignee
+        }
+        int regionNum = entry.getValue().size();
+        server2LoadMap.compute(entry.getKey(), (k, v) -> v == null ? regionNum : regionNum + v);
+        sum += regionNum;
       }
     }
+    server2LoadMap.forEach((k, v) -> {
+      serverLoadList.add(new ServerAndLoad(k, v));
+    });
     avgLoadOverall = sum / serverLoadList.size();
   }
 
@@ -125,9 +134,9 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     float originSlop = slop;
     float originOverallSlop = overallSlop;
     super.setConf(conf);
-    LOG.info("Update configuration of SimpleLoadBalancer, previous slop is "
-            + originSlop + ", current slop is " + slop + "previous overallSlop is" +
-            originOverallSlop + ", current overallSlop is " + originOverallSlop);
+    LOG.info("Update configuration of SimpleLoadBalancer, previous slop is {},"
+      + " current slop is {}, previous overallSlop is {}, current overallSlop is {}",
+      originSlop, slop, originOverallSlop, overallSlop);
   }
 
   private void setLoad(List<ServerAndLoad> slList, int i, int loadChange){
@@ -238,34 +247,35 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    *       Does this mean we need HeapSize on HMaster?  Or just careful monitor?
    *       (current thinking is we will hold all assignments in memory)
    *
-   * @param clusterMap Map of regionservers and their load/region information to
+   * @param loadOfOneTable Map of regionservers and their load/region information to
    *                   a list of their most loaded regions
    * @return a list of regions to be moved, including source and destination,
    *         or null if cluster is already balanced
    */
   @Override
-  public List<RegionPlan> balanceCluster(
-      Map<ServerName, List<RegionInfo>> clusterMap) {
-    List<RegionPlan> regionsToReturn = balanceMasterRegions(clusterMap);
-    if (regionsToReturn != null || clusterMap == null || clusterMap.size() <= 1) {
+  public List<RegionPlan> balanceTable(TableName tableName,
+      Map<ServerName, List<RegionInfo>> loadOfOneTable) {
+    List<RegionPlan> regionsToReturn = balanceMasterRegions(loadOfOneTable);
+    if (regionsToReturn != null || loadOfOneTable == null || loadOfOneTable.size() <= 1) {
       return regionsToReturn;
     }
-    if (masterServerName != null && clusterMap.containsKey(masterServerName)) {
-      if (clusterMap.size() <= 2) {
+    if (masterServerName != null && loadOfOneTable.containsKey(masterServerName)) {
+      if (loadOfOneTable.size() <= 2) {
         return null;
       }
-      clusterMap = new HashMap<>(clusterMap);
-      clusterMap.remove(masterServerName);
+      loadOfOneTable = new HashMap<>(loadOfOneTable);
+      loadOfOneTable.remove(masterServerName);
     }
 
     long startTime = System.currentTimeMillis();
 
     // construct a Cluster object with clusterMap and rest of the
     // argument as defaults
-    Cluster c = new Cluster(clusterMap, null, this.regionFinder, this.rackManager);
-    if (!this.needsBalance(c) && !this.overallNeedsBalance()) return null;
-
-    ClusterLoadState cs = new ClusterLoadState(clusterMap);
+    Cluster c = new Cluster(loadOfOneTable, null, this.regionFinder, this.rackManager);
+    if (!this.needsBalance(tableName, c) && !this.overallNeedsBalance()) {
+      return null;
+    }
+    ClusterLoadState cs = new ClusterLoadState(loadOfOneTable);
     int numServers = cs.getNumServers();
     NavigableMap<ServerAndLoad, List<RegionInfo>> serversByLoad = cs.getServersByLoad();
     int numRegions = cs.getNumRegions();
@@ -419,6 +429,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         addRegionPlan(regionsToMove, fetchFromTail,
           server.getKey().getServerName(), regionsToReturn);
         numTaken++;
+        balanceInfo.setNumRegionsAdded(balanceInfo.getNumRegionsAdded() + 1);
       }
     }
 
@@ -434,7 +445,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         ", numServers=" + numServers + ", serversOverloaded=" + serversOverloaded +
         ", serversUnderloaded=" + serversUnderloaded);
       StringBuilder sb = new StringBuilder();
-      for (Map.Entry<ServerName, List<RegionInfo>> e: clusterMap.entrySet()) {
+      for (Map.Entry<ServerName, List<RegionInfo>> e: loadOfOneTable.entrySet()) {
         if (sb.length() > 0) sb.append(", ");
         sb.append(e.getKey().toString());
         sb.append(" ");
@@ -479,6 +490,9 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     for (int i = 0; i < serverLoadList.size(); i++) {
       ServerAndLoad serverload = serverLoadList.get(i);
       BalanceInfo balanceInfo = serverBalanceInfo.get(serverload.getServerName());
+      if (balanceInfo == null) {
+        continue;
+      }
       setLoad(serverLoadList, i, balanceInfo.getNumRegionsAdded());
       if (balanceInfo.getHriList().size() + balanceInfo.getNumRegionsAdded() == max) {
         RegionInfo hriToPlan;
@@ -585,10 +599,14 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     regionsToReturn.add(rp);
   }
 
+  /**
+   * Override to invoke {@link #setClusterLoad} before balance, We need clusterLoad of all regions
+   * on every server to achieve overall balanced
+   */
   @Override
-  public List<RegionPlan> balanceCluster(TableName tableName,
-      Map<ServerName, List<RegionInfo>> clusterState) throws HBaseIOException {
-    LOG.debug("Start Generate Balance plan for table: " + tableName);
-    return balanceCluster(clusterState);
+  public synchronized List<RegionPlan>
+      balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+    setClusterLoad(loadOfAllTable);
+    return super.balanceCluster(loadOfAllTable);
   }
 }

@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 public interface MetricsReplicationSourceFactory {
   public MetricsReplicationSinkSource getSink();
   public MetricsReplicationSourceSource getSource(String id);
-  public MetricsReplicationSourceSource getGlobalSource();
+  public MetricsReplicationTableSource getTableSource(String tableName);
+  public MetricsReplicationGlobalSourceSource getGlobalSource();
 }

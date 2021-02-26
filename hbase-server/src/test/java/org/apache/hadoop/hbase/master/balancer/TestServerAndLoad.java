@@ -20,24 +20,30 @@ package org.apache.hadoop.hbase.master.balancer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestServerAndLoad {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestServerAndLoad.class);
+
   @Test
   public void test() {
     ServerName server = ServerName.valueOf("host", 12345, 112244);
     int startcode = 12;
-    
+
     ServerAndLoad sal = new ServerAndLoad(server, startcode);
     assertEquals(sal.hashCode(), new ServerAndLoad(server, startcode).hashCode());
     assertEquals(sal, new ServerAndLoad(server, startcode));
-    
+
     assertNotEquals(sal.hashCode(), new ServerAndLoad(server, startcode + 1).hashCode());
     assertNotEquals(sal, new ServerAndLoad(server, startcode + 1));
 

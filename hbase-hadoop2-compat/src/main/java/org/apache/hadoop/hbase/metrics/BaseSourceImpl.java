@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.metrics;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.impl.GlobalMetricRegistriesAdapter;
 import org.apache.hadoop.hbase.metrics.impl.HBaseMetrics2HadoopMetricsAdapter;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServerSourceImpl;
@@ -31,6 +30,7 @@ import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Hadoop 2 implementation of BaseSource (using metrics2 framework).  It handles registration to
@@ -46,7 +46,10 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
     private boolean inited = false;
 
     synchronized void init(String name) {
-      if (inited) return;
+      if (inited) {
+        return;
+      }
+
       inited = true;
       DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
       JvmMetrics.initSingleton(name, "");
@@ -60,9 +63,10 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   /**
    * @deprecated Use hbase-metrics/hbase-metrics-api module interfaces for new metrics.
-   * Defining BaseSources for new metric groups (WAL, RPC, etc) is not needed anymore, however,
-   * for existing BaseSource implemetnations, please use the field named "registry" which is a
-   * MetricRegistry instance together with the HBaseMetrics2HadoopMetricsAdapter.
+   *             Defining BaseSources for new metric groups (WAL, RPC, etc) is not needed anymore,
+   *             however, for existing {@link BaseSource} implementations, please use the field
+   *             named "registry" which is a {@link MetricRegistry} instance together with the
+   *             {@link HBaseMetrics2HadoopMetricsAdapter}.
    */
   @Deprecated
   protected final DynamicMetricsRegistry metricsRegistry;
@@ -144,7 +148,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
    * @param delta     The amount to increment the gauge by.
    */
   public void incGauge(String gaugeName, long delta) {
-    MutableGaugeLong gaugeInt = metricsRegistry.getGauge(gaugeName, 0l);
+    MutableGaugeLong gaugeInt = metricsRegistry.getGauge(gaugeName, 0L);
     gaugeInt.incr(delta);
   }
 
@@ -155,7 +159,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
    * @param delta     the ammount to subtract from a gauge value.
    */
   public void decGauge(String gaugeName, long delta) {
-    MutableGaugeLong gaugeInt = metricsRegistry.getGauge(gaugeName, 0l);
+    MutableGaugeLong gaugeInt = metricsRegistry.getGauge(gaugeName, 0L);
     gaugeInt.decr(delta);
   }
 
@@ -166,7 +170,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
    * @param delta the ammount to increment
    */
   public void incCounters(String key, long delta) {
-    MutableFastCounter counter = metricsRegistry.getCounter(key, 0l);
+    MutableFastCounter counter = metricsRegistry.getCounter(key, 0L);
     counter.incr(delta);
 
   }
@@ -180,7 +184,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
   /**
    * Remove a named gauge.
    *
-   * @param key
+   * @param key the key of the gauge to remove
    */
   public void removeMetric(String key) {
     metricsRegistry.removeMetric(key);

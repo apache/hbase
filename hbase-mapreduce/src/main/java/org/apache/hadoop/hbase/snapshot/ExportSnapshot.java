@@ -29,18 +29,17 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.function.BiConsumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -54,6 +53,7 @@ import org.apache.hadoop.hbase.io.hadoopbackport.ThrottledInputStream;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -73,6 +73,11 @@ import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
@@ -93,7 +98,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   /** Configuration prefix for overrides for the destination filesystem */
   public static final String CONF_DEST_PREFIX = NAME + ".to.";
 
-  private static final Log LOG = LogFactory.getLog(ExportSnapshot.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshot.class);
 
   private static final String MR_NUM_MAPS = "mapreduce.job.maps";
   private static final String CONF_NUM_SPLITS = "snapshot.export.format.splits";
@@ -108,7 +113,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   private static final String CONF_BUFFER_SIZE = "snapshot.export.buffer.size";
   private static final String CONF_MAP_GROUP = "snapshot.export.default.map.group";
   private static final String CONF_BANDWIDTH_MB = "snapshot.export.map.bandwidth.mb";
+  private static final String CONF_MR_JOB_NAME = "mapreduce.job.name";
   protected static final String CONF_SKIP_TMP = "snapshot.export.skip.tmp";
+  private static final String CONF_COPY_MANIFEST_THREADS =
+      "snapshot.export.copy.references.threads";
+  private static final int DEFAULT_COPY_MANIFEST_THREADS =
+      Runtime.getRuntime().availableProcessors();
 
   static class Testing {
     static final String CONF_TEST_FAILURE = "test.snapshot.export.failure";
@@ -152,7 +162,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
   private static class ExportMapper extends Mapper<BytesWritable, NullWritable,
                                                    NullWritable, NullWritable> {
-    private static final Log LOG = LogFactory.getLog(ExportMapper.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ExportMapper.class);
     final static int REPORT_SIZE = 1 * 1024 * 1024;
     final static int BUFFER_SIZE = 64 * 1024;
 
@@ -247,7 +257,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
           TableName table =HFileLink.getReferencedTableName(inputPath.getName());
           String region = HFileLink.getReferencedRegionName(inputPath.getName());
           String hfile = HFileLink.getReferencedHFileName(inputPath.getName());
-          path = new Path(FSUtils.getTableDir(new Path("./"), table),
+          path = new Path(CommonFSUtils.getTableDir(new Path("./"), table),
               new Path(region, new Path(family, hfile)));
           break;
         case WAL:
@@ -259,9 +269,10 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       return new Path(outputArchive, path);
     }
 
+    @SuppressWarnings("checkstyle:linelength")
     /**
      * Used by TestExportSnapshot to test for retries when failures happen.
-     * Failure is injected in {@link #copyFile(Context, SnapshotFileInfo, Path)}.
+     * Failure is injected in {@link #copyFile(Mapper.Context, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo, Path)}.
      */
     private void injectTestFailure(final Context context, final SnapshotFileInfo inputInfo)
         throws IOException {
@@ -807,8 +818,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     conf.set(CONF_SNAPSHOT_NAME, snapshotName);
     conf.set(CONF_SNAPSHOT_DIR, snapshotDir.toString());
 
+    String jobname = conf.get(CONF_MR_JOB_NAME, "ExportSnapshot-" + snapshotName);
     Job job = new Job(conf);
-    job.setJobName("ExportSnapshot-" + snapshotName);
+    job.setJobName(jobname);
     job.setJarByClass(ExportSnapshot.class);
     TableMapReduceUtil.addDependencyJars(job);
     job.setMapperClass(ExportMapper.class);
@@ -835,41 +847,58 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       final FileSystem fs, final Path rootDir, final Path snapshotDir) throws IOException {
     // Update the conf with the current root dir, since may be a different cluster
     Configuration conf = new Configuration(baseConf);
-    FSUtils.setRootDir(conf, rootDir);
-    FSUtils.setFsDefault(conf, FSUtils.getRootDir(conf));
+    CommonFSUtils.setRootDir(conf, rootDir);
+    CommonFSUtils.setFsDefault(conf, CommonFSUtils.getRootDir(conf));
     SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     SnapshotReferenceUtil.verifySnapshot(conf, fs, snapshotDir, snapshotDesc);
   }
 
-  /**
-   * Set path ownership.
-   */
-  private void setOwner(final FileSystem fs, final Path path, final String user,
-      final String group, final boolean recursive) throws IOException {
-    if (user != null || group != null) {
-      if (recursive && fs.isDirectory(path)) {
-        for (FileStatus child : fs.listStatus(path)) {
-          setOwner(fs, child.getPath(), user, group, recursive);
-        }
+  private void setConfigParallel(FileSystem outputFs, List<Path> traversedPath,
+      BiConsumer<FileSystem, Path> task, Configuration conf) throws IOException {
+    ExecutorService pool = Executors
+        .newFixedThreadPool(conf.getInt(CONF_COPY_MANIFEST_THREADS, DEFAULT_COPY_MANIFEST_THREADS));
+    List<Future<Void>> futures = new ArrayList<>();
+    for (Path dstPath : traversedPath) {
+      Future<Void> future = (Future<Void>) pool.submit(() -> task.accept(outputFs, dstPath));
+      futures.add(future);
+    }
+    try {
+      for (Future<Void> future : futures) {
+        future.get();
       }
-      fs.setOwner(path, user, group);
+    } catch (InterruptedException | ExecutionException e) {
+      throw new IOException(e);
+    } finally {
+      pool.shutdownNow();
     }
   }
 
-  /**
-   * Set path permission.
-   */
-  private void setPermission(final FileSystem fs, final Path path, final short filesMode,
-      final boolean recursive) throws IOException {
-    if (filesMode > 0) {
-      FsPermission perm = new FsPermission(filesMode);
-      if (recursive && fs.isDirectory(path)) {
-        for (FileStatus child : fs.listStatus(path)) {
-          setPermission(fs, child.getPath(), filesMode, recursive);
-        }
+  private void setOwnerParallel(FileSystem outputFs, String filesUser, String filesGroup,
+      Configuration conf, List<Path> traversedPath) throws IOException {
+    setConfigParallel(outputFs, traversedPath, (fs, path) -> {
+      try {
+        fs.setOwner(path, filesUser, filesGroup);
+      } catch (IOException e) {
+        throw new RuntimeException(
+            "set owner for file " + path + " to " + filesUser + ":" + filesGroup + " failed", e);
       }
-      fs.setPermission(path, perm);
+    }, conf);
+  }
+
+  private void setPermissionParallel(final FileSystem outputFs, final short filesMode,
+      final List<Path> traversedPath, final Configuration conf) throws IOException {
+    if (filesMode <= 0) {
+      return;
     }
+    FsPermission perm = new FsPermission(filesMode);
+    setConfigParallel(outputFs, traversedPath, (fs, path) -> {
+      try {
+        fs.setPermission(path, perm);
+      } catch (IOException e) {
+        throw new RuntimeException(
+            "set permission for file " + path + " to " + filesMode + " failed", e);
+      }
+    }, conf);
   }
 
   private boolean verifyTarget = true;
@@ -932,26 +961,27 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       targetName = snapshotName;
     }
     if (inputRoot == null) {
-      inputRoot = FSUtils.getRootDir(conf);
+      inputRoot = CommonFSUtils.getRootDir(conf);
     } else {
-      FSUtils.setRootDir(conf, inputRoot);
+      CommonFSUtils.setRootDir(conf, inputRoot);
     }
 
     Configuration srcConf = HBaseConfiguration.createClusterConf(conf, null, CONF_SOURCE_PREFIX);
     srcConf.setBoolean("fs." + inputRoot.toUri().getScheme() + ".impl.disable.cache", true);
     FileSystem inputFs = FileSystem.get(inputRoot.toUri(), srcConf);
-    LOG.debug("inputFs=" + inputFs.getUri().toString() + " inputRoot=" + inputRoot);
     Configuration destConf = HBaseConfiguration.createClusterConf(conf, null, CONF_DEST_PREFIX);
     destConf.setBoolean("fs." + outputRoot.toUri().getScheme() + ".impl.disable.cache", true);
     FileSystem outputFs = FileSystem.get(outputRoot.toUri(), destConf);
-    LOG.debug("outputFs=" + outputFs.getUri().toString() + " outputRoot=" + outputRoot.toString());
-
-    boolean skipTmp = conf.getBoolean(CONF_SKIP_TMP, false);
-
+    boolean skipTmp = conf.getBoolean(CONF_SKIP_TMP, false) ||
+        conf.get(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR) != null;
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, inputRoot);
-    Path snapshotTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(targetName, outputRoot);
+    Path snapshotTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(targetName, outputRoot,
+        destConf);
     Path outputSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(targetName, outputRoot);
     Path initialOutputSnapshotDir = skipTmp ? outputSnapshotDir : snapshotTmpDir;
+    LOG.debug("inputFs={}, inputRoot={}", inputFs.getUri().toString(), inputRoot);
+    LOG.debug("outputFs={}, outputRoot={}, skipTmp={}, initialOutputSnapshotDir={}",
+      outputFs, outputRoot.toString(), skipTmp, initialOutputSnapshotDir);
 
     // Find the necessary directory which need to change owner and group
     Path needSetOwnerDir = SnapshotDescriptionUtils.getSnapshotRootDir(outputRoot);
@@ -959,7 +989,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       if (skipTmp) {
         needSetOwnerDir = outputSnapshotDir;
       } else {
-        needSetOwnerDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(outputRoot);
+        needSetOwnerDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(outputRoot, destConf);
         if (outputFs.exists(needSetOwnerDir)) {
           needSetOwnerDir = snapshotTmpDir;
         }
@@ -1000,23 +1030,30 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     // Step 1 - Copy fs1:/.snapshot/<snapshot> to  fs2:/.snapshot/.tmp/<snapshot>
     // The snapshot references must be copied before the hfiles otherwise the cleaner
     // will remove them because they are unreferenced.
+    List<Path> travesedPaths = new ArrayList<>();
+    boolean copySucceeded = false;
     try {
-      LOG.info("Copy Snapshot Manifest");
-      FileUtil.copy(inputFs, snapshotDir, outputFs, initialOutputSnapshotDir, false, false, conf);
+      LOG.info("Copy Snapshot Manifest from " + snapshotDir + " to " + initialOutputSnapshotDir);
+      travesedPaths =
+          FSUtils.copyFilesParallel(inputFs, snapshotDir, outputFs, initialOutputSnapshotDir, conf,
+              conf.getInt(CONF_COPY_MANIFEST_THREADS, DEFAULT_COPY_MANIFEST_THREADS));
+      copySucceeded = true;
     } catch (IOException e) {
       throw new ExportSnapshotException("Failed to copy the snapshot directory: from=" +
         snapshotDir + " to=" + initialOutputSnapshotDir, e);
     } finally {
-      if (filesUser != null || filesGroup != null) {
-        LOG.warn((filesUser == null ? "" : "Change the owner of " + needSetOwnerDir + " to "
-            + filesUser)
-            + (filesGroup == null ? "" : ", Change the group of " + needSetOwnerDir + " to "
-            + filesGroup));
-        setOwner(outputFs, needSetOwnerDir, filesUser, filesGroup, true);
-      }
-      if (filesMode > 0) {
-        LOG.warn("Change the permission of " + needSetOwnerDir + " to " + filesMode);
-        setPermission(outputFs, needSetOwnerDir, (short)filesMode, true);
+      if (copySucceeded) {
+        if (filesUser != null || filesGroup != null) {
+          LOG.warn((filesUser == null ? "" : "Change the owner of " + needSetOwnerDir + " to "
+              + filesUser)
+              + (filesGroup == null ? "" : ", Change the group of " + needSetOwnerDir + " to "
+                  + filesGroup));
+          setOwnerParallel(outputFs, filesUser, filesGroup, conf, travesedPaths);
+        }
+        if (filesMode > 0) {
+          LOG.warn("Change the permission of " + needSetOwnerDir + " to " + filesMode);
+          setPermissionParallel(outputFs, (short)filesMode, travesedPaths, conf);
+        }
       }
     }
 

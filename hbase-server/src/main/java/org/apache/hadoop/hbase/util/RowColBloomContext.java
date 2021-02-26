@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -41,9 +42,9 @@ public class RowColBloomContext extends BloomContext {
   @Override
   public void addLastBloomKey(Writer writer) throws IOException {
     if (this.getLastCell() != null) {
-      Cell firstOnRow = CellUtil.createFirstOnRowCol(this.getLastCell());
+      Cell firstOnRow = PrivateCellUtil.createFirstOnRowCol(this.getLastCell());
       // This copy happens only once when the writer is closed
-      byte[] key = CellUtil.getCellKeySerializedAsKeyValueKey(firstOnRow);
+      byte[] key = PrivateCellUtil.getCellKeySerializedAsKeyValueKey(firstOnRow);
       writer.appendFileInfo(LAST_BLOOM_KEY, key);
     }
   }

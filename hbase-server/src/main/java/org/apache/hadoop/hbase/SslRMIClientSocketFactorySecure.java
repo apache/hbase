@@ -13,14 +13,15 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
-
 import javax.net.ssl.SSLSocket;
 import javax.rmi.ssl.SslRMIClientSocketFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Avoid SSL V3.0 "Poodle" Vulnerability - CVE-2014-3566
  */
 @SuppressWarnings("serial")
+@InterfaceAudience.Private
 public class SslRMIClientSocketFactorySecure extends SslRMIClientSocketFactory {
   @Override
   public Socket createSocket(String host, int port) throws IOException {

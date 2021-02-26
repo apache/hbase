@@ -23,8 +23,7 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
-
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.security.User;
@@ -32,17 +31,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityLabels {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestVisibilityLabelsWithCustomVisLabService.class);
+
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
@@ -58,6 +61,7 @@ public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityL
   }
 
   // Extending this test from super as we don't verify predefined labels in ExpAsStringVisibilityLabelServiceImpl
+  @Override
   @Test
   public void testVisibilityLabelsInPutsThatDoesNotMatchAnyDefinedLabels() throws Exception {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
@@ -65,6 +69,7 @@ public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityL
     createTableAndWriteDataWithLabels(tableName, "SAMPLE_LABEL", "TEST");
   }
 
+  @Override
   protected List<String> extractAuths(String user, List<Result> results) {
     List<String> auths = new ArrayList<>();
     for (Result result : results) {

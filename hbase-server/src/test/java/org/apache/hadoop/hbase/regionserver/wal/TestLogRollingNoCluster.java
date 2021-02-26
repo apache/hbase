@@ -18,43 +18,48 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertFalse;
+
 import java.io.IOException;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
-import org.junit.Rule;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test many concurrent appenders to an WAL while rolling the log.
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestLogRollingNoCluster {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-      withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestLogRollingNoCluster.class);
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte [] EMPTY_1K_ARRAY = new byte[1024];
   private static final int NUM_THREADS = 100; // Spin up this many threads
@@ -63,9 +68,9 @@ public class TestLogRollingNoCluster {
   /** ProtobufLogWriter that simulates higher latencies in sync() call */
   public static class HighLatencySyncWriter extends  ProtobufLogWriter {
     @Override
-    public void sync() throws IOException {
+    public void sync(boolean forceSync) throws IOException {
       Threads.sleep(ThreadLocalRandom.current().nextInt(10));
-      super.sync();
+      super.sync(forceSync);
       Threads.sleep(ThreadLocalRandom.current().nextInt(10));
     }
   }
@@ -85,11 +90,14 @@ public class TestLogRollingNoCluster {
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, NUM_THREADS);
     final Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(WALFactory.WAL_PROVIDER, "filesystem");
-    FSUtils.setRootDir(conf, dir);
+    CommonFSUtils.setRootDir(conf, dir);
+    FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(TEST_UTIL.getConfiguration());
+    FSTableDescriptors.tryUpdateMetaTableDescriptor(TEST_UTIL.getConfiguration());
+    TableDescriptor metaTableDescriptor = fsTableDescriptors.get(TableName.META_TABLE_NAME);
     conf.set("hbase.regionserver.hlog.writer.impl", HighLatencySyncWriter.class.getName());
-    final WALFactory wals = new WALFactory(conf, null, TestLogRollingNoCluster.class.getName());
-    final WAL wal = wals.getWAL(new byte[]{}, null);
-    
+    final WALFactory wals = new WALFactory(conf, TestLogRollingNoCluster.class.getName());
+    final WAL wal = wals.getWAL(null);
+
     Appender [] appenders = null;
 
     final int numThreads = NUM_THREADS;
@@ -97,7 +105,7 @@ public class TestLogRollingNoCluster {
     try {
       for (int i = 0; i < numThreads; i++) {
         // Have each appending thread write 'count' entries
-        appenders[i] = new Appender(wal, i, NUM_ENTRIES);
+        appenders[i] = new Appender(metaTableDescriptor, wal, i, NUM_ENTRIES);
       }
       for (int i = 0; i < numThreads; i++) {
         appenders[i].start();
@@ -110,7 +118,7 @@ public class TestLogRollingNoCluster {
       wals.close();
     }
     for (int i = 0; i < numThreads; i++) {
-      assertFalse(appenders[i].isException());
+      assertFalse("Error: " + appenders[i].getException(), appenders[i].isException());
     }
     TEST_UTIL.shutdownMiniDFSCluster();
   }
@@ -119,16 +127,18 @@ public class TestLogRollingNoCluster {
    * Appender thread.  Appends to passed wal file.
    */
   static class Appender extends Thread {
-    private final Log log;
+    private final Logger log;
     private final WAL wal;
     private final int count;
     private Exception e = null;
+    private final TableDescriptor metaTableDescriptor;
 
-    Appender(final WAL wal, final int index, final int count) {
+    Appender(TableDescriptor metaTableDescriptor, final WAL wal, final int index, final int count) {
       super("" + index);
       this.wal = wal;
       this.count = count;
-      this.log = LogFactory.getLog("Appender:" + getName());
+      this.metaTableDescriptor = metaTableDescriptor;
+      this.log = LoggerFactory.getLogger("Appender:" + getName());
     }
 
     /**
@@ -156,14 +166,13 @@ public class TestLogRollingNoCluster {
           WALEdit edit = new WALEdit();
           byte[] bytes = Bytes.toBytes(i);
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
-          final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
-          final HTableDescriptor htd = TEST_UTIL.getMetaTableDescriptor();
+          RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
           NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-          for(byte[] fam : htd.getFamiliesKeys()) {
+          for(byte[] fam: this.metaTableDescriptor.getColumnFamilyNames()) {
             scopes.put(fam, 0);
           }
-          final long txid = wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(),
-              TableName.META_TABLE_NAME, now, mvcc, scopes), edit, true);
+          final long txid = wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
+            TableName.META_TABLE_NAME, now, mvcc, scopes), edit);
           Threads.sleep(ThreadLocalRandom.current().nextInt(5));
           wal.sync(txid);
         }

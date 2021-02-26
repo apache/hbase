@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +18,25 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import java.io.IOException;
+import java.util.Random;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-
-import java.util.Random;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DecreaseMaxHFileSizeAction extends Action {
+  private static final Logger LOG = LoggerFactory.getLogger(DecreaseMaxHFileSizeAction.class);
 
-  private static final long minFileSize = 1 *  1024 * 1024 * 1024L;
+  private static final long minFileSize = 1024 * 1024 * 1024L;
 
   private final long sleepTime;
   private final TableName tableName;
   private final Random random;
+  private Admin admin;
 
   public DecreaseMaxHFileSizeAction(long sleepTime, TableName tableName) {
     this.sleepTime = sleepTime;
@@ -40,14 +44,22 @@ public class DecreaseMaxHFileSizeAction extends Action {
     this.random = new Random();
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
+  @Override
+  public void init(ActionContext context) throws IOException {
+    super.init(context);
+    this.admin = context.getHBaseIntegrationTestingUtility().getAdmin();
+  }
+
   @Override
   public void perform() throws Exception {
-    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    Admin admin = util.getAdmin();
-    HTableDescriptor htd = admin.getTableDescriptor(tableName);
+    TableDescriptor td = admin.getDescriptor(tableName);
 
     // Try and get the current value.
-    long currentValue = htd.getMaxFileSize();
+    long currentValue = td.getMaxFileSize();
 
     // If the current value is not set use the default for the cluster.
     // If configs are really weird this might not work.
@@ -66,7 +78,8 @@ public class DecreaseMaxHFileSizeAction extends Action {
     newValue = Math.max(minFileSize, newValue) - (512 - random.nextInt(1024));
 
     // Change the table descriptor.
-    htd.setMaxFileSize(newValue);
+    TableDescriptor modifiedTable =
+        TableDescriptorBuilder.newBuilder(td).setMaxFileSize(newValue).build();
 
     // Don't try the modify if we're stopping
     if (context.isStopping()) {
@@ -74,7 +87,7 @@ public class DecreaseMaxHFileSizeAction extends Action {
     }
 
     // modify the table.
-    admin.modifyTable(tableName, htd);
+    admin.modifyTable(modifiedTable);
 
     // Sleep some time.
     if (sleepTime > 0) {

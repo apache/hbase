@@ -22,8 +22,6 @@ include Java
 
 module Hbase
   class SecurityAdmin
-    include HBaseConstants
-
     def initialize(admin)
       @admin = admin
       @connection = @admin.getConnection
@@ -142,21 +140,25 @@ module Hbase
       res = {}
       count = 0
       all_perms.each do |value|
-        user_name = String.from_java_bytes(value.getUser)
+        user_name = value.getUser
+        permission = value.getPermission
+        table = ''
+        family = ''
+        qualifier = ''
         if !table_regex.nil? && isNamespace?(table_regex)
-          namespace = value.getNamespace
-        else
-          namespace = !value.getTableName.nil? ? value.getTableName.getNamespaceAsString : value.getNamespace
+          nsPerm = permission.to_java(org.apache.hadoop.hbase.security.access.NamespacePermission)
+          namespace = nsPerm.getNamespace
+        elsif !table_regex.nil? && isTablePermission?(permission)
+          tblPerm = permission.to_java(org.apache.hadoop.hbase.security.access.TablePermission)
+          namespace = tblPerm.getNamespace
+          table = !tblPerm.getTableName.nil? ? tblPerm.getTableName.getNameAsString : ''
+          family = !tblPerm.getFamily.nil? ?
+                    org.apache.hadoop.hbase.util.Bytes.toStringBinary(tblPerm.getFamily) : ''
+          qualifier = !tblPerm.getQualifier.nil? ?
+                       org.apache.hadoop.hbase.util.Bytes.toStringBinary(tblPerm.getQualifier) : ''
         end
-        table = !value.getTableName.nil? ? value.getTableName.getNameAsString : ''
-        family = !value.getFamily.nil? ?
-          org.apache.hadoop.hbase.util.Bytes.toStringBinary(value.getFamily) :
-          ''
-        qualifier = !value.getQualifier.nil? ?
-          org.apache.hadoop.hbase.util.Bytes.toStringBinary(value.getQualifier) :
-          ''
 
-        action = org.apache.hadoop.hbase.security.access.Permission.new value.getActions
+        action = org.apache.hadoop.hbase.security.access.Permission.new permission.getActions
 
         if block_given?
           yield(user_name, "#{namespace},#{table},#{family},#{qualifier}: #{action}")
@@ -179,6 +181,10 @@ module Hbase
       table_name.start_with?('@')
     end
 
+    def isTablePermission?(permission)
+      permission.java_kind_of?(org.apache.hadoop.hbase.security.access.TablePermission)
+    end
+
     # Does Namespace exist
     def namespace_exists?(namespace_name)
       return !@admin.getNamespaceDescriptor(namespace_name).nil?
@@ -198,7 +204,7 @@ module Hbase
         # If we are unable to use getSecurityCapabilities, fall back with a check for
         # deployment of the ACL table
         raise(ArgumentError, 'DISABLED: Security features are not available') unless \
-          exists?(org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
+          exists?(org.apache.hadoop.hbase.security.access.PermissionStorage::ACL_TABLE_NAME.getNameAsString)
         return
       end
       raise(ArgumentError, 'DISABLED: Security features are not available') unless \

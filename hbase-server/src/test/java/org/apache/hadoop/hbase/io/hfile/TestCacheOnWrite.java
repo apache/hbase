@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
@@ -33,20 +31,20 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -55,34 +53,42 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests {@link HFile} cache-on-write functionality for the following block
  * types: data blocks, non-root index blocks, and Bloom filter blocks.
  */
 @RunWith(Parameterized.class)
-@Category({IOTests.class, MediumTests.class})
+@Category({IOTests.class, LargeTests.class})
 public class TestCacheOnWrite {
 
-  private static final Log LOG = LogFactory.getLog(TestCacheOnWrite.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCacheOnWrite.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWrite.class);
 
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private Configuration conf;
@@ -104,11 +110,32 @@ public class TestCacheOnWrite {
   private static final BloomType BLOOM_TYPE = BloomType.ROWCOL;
   private static final int CKBYTES = 512;
 
+
+  private static final Set<BlockType> INDEX_BLOCK_TYPES = ImmutableSet.of(
+    BlockType.INDEX_V1,
+    BlockType.INTERMEDIATE_INDEX,
+    BlockType.ROOT_INDEX,
+    BlockType.LEAF_INDEX
+  );
+  private static final Set<BlockType> BLOOM_BLOCK_TYPES = ImmutableSet.of(
+    BlockType.BLOOM_CHUNK,
+    BlockType.GENERAL_BLOOM_META,
+    BlockType.DELETE_FAMILY_BLOOM_META
+  );
+  private static final Set<BlockType> DATA_BLOCK_TYPES = ImmutableSet.of(
+    BlockType.ENCODED_DATA,
+    BlockType.DATA
+  );
+
+  // All test cases are supposed to generate files for compaction within this range
+  private static final long CACHE_COMPACTION_LOW_THRESHOLD = 10L;
+  private static final long CACHE_COMPACTION_HIGH_THRESHOLD = 1 * 1024 * 1024 * 1024L;
+
   /** The number of valid key types possible in a store file */
   private static final int NUM_VALID_KEY_TYPES =
       KeyValue.Type.values().length - 2;
 
-  private static enum CacheOnWriteType {
+  private enum CacheOnWriteType {
     DATA_BLOCKS(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY,
         BlockType.DATA, BlockType.ENCODED_DATA),
     BLOOM_BLOCKS(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
@@ -120,12 +147,11 @@ public class TestCacheOnWrite {
     private final BlockType blockType1;
     private final BlockType blockType2;
 
-    private CacheOnWriteType(String confKey, BlockType blockType) {
+    CacheOnWriteType(String confKey, BlockType blockType) {
       this(confKey, blockType, blockType);
     }
 
-    private CacheOnWriteType(String confKey, BlockType blockType1,
-        BlockType blockType2) {
+    CacheOnWriteType(String confKey, BlockType blockType1, BlockType blockType2) {
       this.blockType1 = blockType1;
       this.blockType2 = blockType2;
       this.confKey = confKey;
@@ -157,7 +183,7 @@ public class TestCacheOnWrite {
     Configuration conf = TEST_UTIL.getConfiguration();
     List<BlockCache> blockcaches = new ArrayList<>();
     // default
-    blockcaches.add(new CacheConfig(conf).getBlockCache());
+    blockcaches.add(BlockCacheFactory.createBlockCache(conf));
 
     //set LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME to 2.0f due to HBASE-16287
     TEST_UTIL.getConfiguration().setFloat(LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME, 2.0f);
@@ -220,17 +246,16 @@ public class TestCacheOnWrite {
     conf = TEST_UTIL.getConfiguration();
     this.conf.set("dfs.datanode.data.dir.perm", "700");
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, INDEX_BLOCK_SIZE);
-    conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
-        BLOOM_BLOCK_SIZE);
+    conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE, BLOOM_BLOCK_SIZE);
     conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, cacheCompressedData);
     cowType.modifyConf(conf);
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, cowType.shouldBeCached(BlockType.DATA));
+    conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
+        cowType.shouldBeCached(BlockType.LEAF_INDEX));
+    conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
+        cowType.shouldBeCached(BlockType.BLOOM_CHUNK));
+    cacheConf = new CacheConfig(conf, blockCache);
     fs = HFileSystem.get(conf);
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = blockCache;
-    cacheConf =
-        new CacheConfig(blockCache, true, true, cowType.shouldBeCached(BlockType.DATA),
-        cowType.shouldBeCached(BlockType.LEAF_INDEX),
-        cowType.shouldBeCached(BlockType.BLOOM_CHUNK), false, cacheCompressedData,
-            false, false, false);
   }
 
   @After
@@ -266,18 +291,17 @@ public class TestCacheOnWrite {
 
     DataBlockEncoding encodingInCache = NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding();
     List<Long> cachedBlocksOffset = new ArrayList<>();
-    Map<Long, HFileBlock> cachedBlocks = new HashMap<>();
+    Map<Long, Pair<HFileBlock, HFileBlock>> cachedBlocks = new HashMap<>();
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       // Flags: don't cache the block, use pread, this is not a compaction.
       // Also, pass null for expected block type to avoid checking it.
       HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null,
           encodingInCache);
-      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
-          offset);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
       HFileBlock fromCache = (HFileBlock) blockCache.getBlock(blockCacheKey, true, false, true);
       boolean isCached = fromCache != null;
       cachedBlocksOffset.add(offset);
-      cachedBlocks.put(offset, fromCache);
+      cachedBlocks.put(offset, fromCache == null ? null : Pair.newPair(block, fromCache));
       boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
       assertTrue("shouldBeCached: " + shouldBeCached+ "\n" +
           "isCached: " + isCached + "\n" +
@@ -298,7 +322,7 @@ public class TestCacheOnWrite {
         // block we cached at write-time and block read from file should be identical
         assertEquals(block.getChecksumType(), fromCache.getChecksumType());
         assertEquals(block.getBlockType(), fromCache.getBlockType());
-        assertNotEquals(block.getBlockType(), BlockType.ENCODED_DATA);
+        assertNotEquals(BlockType.ENCODED_DATA, block.getBlockType());
         assertEquals(block.getOnDiskSizeWithHeader(), fromCache.getOnDiskSizeWithHeader());
         assertEquals(block.getOnDiskSizeWithoutHeader(), fromCache.getOnDiskSizeWithoutHeader());
         assertEquals(
@@ -329,19 +353,20 @@ public class TestCacheOnWrite {
       Long entry = iterator.next();
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
           entry);
-      HFileBlock hFileBlock = cachedBlocks.get(entry);
-      if (hFileBlock != null) {
-        // call return twice because for the isCache cased the counter would have got incremented
-        // twice
-        blockCache.returnBlock(blockCacheKey, hFileBlock);
-        if(cacheCompressedData) {
+      Pair<HFileBlock, HFileBlock> blockPair = cachedBlocks.get(entry);
+      if (blockPair != null) {
+        // Call return twice because for the isCache cased the counter would have got incremented
+        // twice. Notice that here we need to returnBlock with different blocks. see comments in
+        // BucketCache#returnBlock.
+        blockPair.getSecond().release();
+        if (cacheCompressedData) {
           if (this.compress == Compression.Algorithm.NONE
               || cowType == CacheOnWriteType.INDEX_BLOCKS
               || cowType == CacheOnWriteType.BLOOM_BLOCKS) {
-            blockCache.returnBlock(blockCacheKey, hFileBlock);
+            blockPair.getFirst().release();
           }
         } else {
-          blockCache.returnBlock(blockCacheKey, hFileBlock);
+          blockPair.getFirst().release();
         }
       }
     }
@@ -372,7 +397,7 @@ public class TestCacheOnWrite {
         .withDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
         .withIncludesTags(useTags).build();
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
-        .withOutputDir(storeFileParentDir).withComparator(CellComparator.COMPARATOR)
+        .withOutputDir(storeFileParentDir)
         .withFileContext(meta)
         .withBloomType(BLOOM_TYPE).withMaxKeyCount(NUM_KV).build();
     byte[] cf = Bytes.toBytes("fam");
@@ -389,11 +414,11 @@ public class TestCacheOnWrite {
         tags[0] = t;
         kv =
             new KeyValue(row, 0, row.length, cf, 0, cf.length, qualifier, 0, qualifier.length,
-                rand.nextLong(), generateKeyType(rand), value, 0, value.length, tagList);
+                Math.abs(rand.nextLong()), generateKeyType(rand), value, 0, value.length, tagList);
       } else {
         kv =
             new KeyValue(row, 0, row.length, cf, 0, cf.length, qualifier, 0, qualifier.length,
-                rand.nextLong(), generateKeyType(rand), value, 0, value.length);
+                Math.abs(rand.nextLong()), generateKeyType(rand), value, 0, value.length);
       }
       sfw.append(kv);
     }
@@ -402,61 +427,147 @@ public class TestCacheOnWrite {
     storeFilePath = sfw.getPath();
   }
 
-  private void testNotCachingDataBlocksDuringCompactionInternals(boolean useTags)
-      throws IOException, InterruptedException {
-    // TODO: need to change this test if we add a cache size threshold for
-    // compactions, or if we implement some other kind of intelligent logic for
-    // deciding what blocks to cache-on-write on compaction.
-    final String table = "CompactionCacheOnWrite";
-    final String cf = "myCF";
-    final byte[] cfBytes = Bytes.toBytes(cf);
-    final int maxVersions = 3;
-    Region region = TEST_UTIL.createTestRegion(table, 
-        new HColumnDescriptor(cf)
-            .setCompressionType(compress)
-            .setBloomFilterType(BLOOM_TYPE)
-            .setMaxVersions(maxVersions)
-            .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
-    );
-    int rowIdx = 0;
-    long ts = EnvironmentEdgeManager.currentTime();
-    for (int iFile = 0; iFile < 5; ++iFile) {
-      for (int iRow = 0; iRow < 500; ++iRow) {
-        String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" + 
-            iRow;
-        Put p = new Put(Bytes.toBytes(rowStr));
-        ++rowIdx;
-        for (int iCol = 0; iCol < 10; ++iCol) {
-          String qualStr = "col" + iCol;
-          String valueStr = "value_" + rowStr + "_" + qualStr;
-          for (int iTS = 0; iTS < 5; ++iTS) {
-            if (useTags) {
-              Tag t = new ArrayBackedTag((byte) 1, "visibility");
-              Tag[] tags = new Tag[1];
-              tags[0] = t;
-              KeyValue kv = new KeyValue(Bytes.toBytes(rowStr), cfBytes, Bytes.toBytes(qualStr),
-                  HConstants.LATEST_TIMESTAMP, Bytes.toBytes(valueStr), tags);
-              p.add(kv);
-            } else {
-              p.addColumn(cfBytes, Bytes.toBytes(qualStr), ts++, Bytes.toBytes(valueStr));
+  private void testCachingDataBlocksDuringCompactionInternals(boolean useTags,
+    boolean cacheBlocksOnCompaction, long cacheBlocksOnCompactionThreshold)
+    throws IOException, InterruptedException {
+    // create a localConf
+    boolean localValue = conf.getBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, false);
+    long localCacheCompactedBlocksThreshold = conf
+      .getLong(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY,
+        CacheConfig.DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD);
+    boolean localCacheBloomBlocksValue = conf
+      .getBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
+        CacheConfig.DEFAULT_CACHE_BLOOMS_ON_WRITE);
+    boolean localCacheIndexBlocksValue = conf
+      .getBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
+        CacheConfig.DEFAULT_CACHE_INDEXES_ON_WRITE);
+
+    try {
+      // Set the conf if testing caching compacted blocks on write
+      conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
+        cacheBlocksOnCompaction);
+
+      // set size threshold if testing compaction size threshold
+      if (cacheBlocksOnCompactionThreshold > 0) {
+        conf.setLong(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY,
+          cacheBlocksOnCompactionThreshold);
+      }
+
+      // TODO: need to change this test if we add a cache size threshold for
+      // compactions, or if we implement some other kind of intelligent logic for
+      // deciding what blocks to cache-on-write on compaction.
+      final String table = "CompactionCacheOnWrite";
+      final String cf = "myCF";
+      final byte[] cfBytes = Bytes.toBytes(cf);
+      final int maxVersions = 3;
+      ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder
+        .newBuilder(cfBytes)
+        .setCompressionType(compress)
+        .setBloomFilterType(BLOOM_TYPE)
+        .setMaxVersions(maxVersions)
+        .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
+        .build();
+      HRegion region = TEST_UTIL.createTestRegion(table, cfd, blockCache);
+      int rowIdx = 0;
+      long ts = EnvironmentEdgeManager.currentTime();
+      for (int iFile = 0; iFile < 5; ++iFile) {
+        for (int iRow = 0; iRow < 500; ++iRow) {
+          String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" + iRow;
+          Put p = new Put(Bytes.toBytes(rowStr));
+          ++rowIdx;
+          for (int iCol = 0; iCol < 10; ++iCol) {
+            String qualStr = "col" + iCol;
+            String valueStr = "value_" + rowStr + "_" + qualStr;
+            for (int iTS = 0; iTS < 5; ++iTS) {
+              if (useTags) {
+                Tag t = new ArrayBackedTag((byte) 1, "visibility");
+                Tag[] tags = new Tag[1];
+                tags[0] = t;
+                KeyValue kv = new KeyValue(Bytes.toBytes(rowStr), cfBytes, Bytes.toBytes(qualStr),
+                    HConstants.LATEST_TIMESTAMP, Bytes.toBytes(valueStr), tags);
+                p.add(kv);
+              } else {
+                KeyValue kv = new KeyValue(Bytes.toBytes(rowStr), cfBytes, Bytes.toBytes(qualStr),
+                  ts++, Bytes.toBytes(valueStr));
+                p.add(kv);
+              }
             }
           }
+          p.setDurability(Durability.ASYNC_WAL);
+          region.put(p);
         }
-        p.setDurability(Durability.ASYNC_WAL);
-        region.put(p);
+        region.flush(true);
       }
-      region.flush(true);
-    }
-    clearBlockCache(blockCache);
-    assertEquals(0, blockCache.getBlockCount());
-    region.compact(false);
-    LOG.debug("compactStores() returned");
 
-    for (CachedBlock block: blockCache) {
-      assertNotEquals(BlockType.ENCODED_DATA, block.getBlockType());
-      assertNotEquals(BlockType.DATA, block.getBlockType());
+      clearBlockCache(blockCache);
+      assertEquals(0, blockCache.getBlockCount());
+
+      region.compact(false);
+      LOG.debug("compactStores() returned");
+
+      boolean dataBlockCached = false;
+      boolean bloomBlockCached = false;
+      boolean indexBlockCached = false;
+
+      for (CachedBlock block : blockCache) {
+        if (DATA_BLOCK_TYPES.contains(block.getBlockType())) {
+          dataBlockCached = true;
+        } else if (BLOOM_BLOCK_TYPES.contains(block.getBlockType())) {
+          bloomBlockCached = true;
+        } else if (INDEX_BLOCK_TYPES.contains(block.getBlockType())) {
+          indexBlockCached = true;
+        }
+      }
+
+      // Data blocks should be cached in instances where we are caching blocks on write. In the case
+      // of testing
+      // BucketCache, we cannot verify block type as it is not stored in the cache.
+      boolean cacheOnCompactAndNonBucketCache = cacheBlocksOnCompaction
+        && !(blockCache instanceof BucketCache);
+
+      String assertErrorMessage = "\nTest description: " + testDescription +
+        "\ncacheBlocksOnCompaction: "
+        + cacheBlocksOnCompaction + "\n";
+
+      if (cacheOnCompactAndNonBucketCache && cacheBlocksOnCompactionThreshold > 0) {
+        if (cacheBlocksOnCompactionThreshold == CACHE_COMPACTION_HIGH_THRESHOLD) {
+          assertTrue(assertErrorMessage, dataBlockCached);
+          assertTrue(assertErrorMessage, bloomBlockCached);
+          assertTrue(assertErrorMessage, indexBlockCached);
+        } else {
+          assertFalse(assertErrorMessage, dataBlockCached);
+
+          if (localCacheBloomBlocksValue) {
+            assertTrue(assertErrorMessage, bloomBlockCached);
+          } else {
+            assertFalse(assertErrorMessage, bloomBlockCached);
+          }
+
+          if (localCacheIndexBlocksValue) {
+            assertTrue(assertErrorMessage, indexBlockCached);
+          } else {
+            assertFalse(assertErrorMessage, indexBlockCached);
+          }
+        }
+      } else {
+        assertEquals(assertErrorMessage, cacheOnCompactAndNonBucketCache, dataBlockCached);
+
+        if (cacheOnCompactAndNonBucketCache) {
+          assertTrue(assertErrorMessage, bloomBlockCached);
+          assertTrue(assertErrorMessage, indexBlockCached);
+        }
+      }
+
+
+      region.close();
+    } finally {
+      // reset back
+      conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, localValue);
+      conf.setLong(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY,
+        localCacheCompactedBlocksThreshold);
+      conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, localCacheBloomBlocksValue);
+      conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, localCacheIndexBlocksValue);
     }
-    ((HRegion)region).close();
   }
 
   @Test
@@ -466,8 +577,16 @@ public class TestCacheOnWrite {
   }
 
   @Test
-  public void testNotCachingDataBlocksDuringCompaction() throws IOException, InterruptedException {
-    testNotCachingDataBlocksDuringCompactionInternals(false);
-    testNotCachingDataBlocksDuringCompactionInternals(true);
+  public void testCachingDataBlocksDuringCompaction() throws IOException, InterruptedException {
+    testCachingDataBlocksDuringCompactionInternals(false, false, -1);
+    testCachingDataBlocksDuringCompactionInternals(true, true, -1);
   }
+
+  @Test
+  public void testCachingDataBlocksThresholdDuringCompaction()
+    throws IOException, InterruptedException {
+    testCachingDataBlocksDuringCompactionInternals(false, true, CACHE_COMPACTION_HIGH_THRESHOLD);
+    testCachingDataBlocksDuringCompactionInternals(false, true, CACHE_COMPACTION_LOW_THRESHOLD);
+  }
+
 }

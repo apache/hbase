@@ -17,21 +17,24 @@
  */
 package org.apache.hadoop.hbase.net;
 
+import java.net.InetSocketAddress;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.net.HostAndPort;
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 
 /**
  * An immutable type to hold a hostname and port combo, like an Endpoint
  * or java.net.InetSocketAddress (but without danger of our calling
  * resolve -- we do NOT want a resolve happening every time we want
- * to hold a hostname and port combo). This class is also <<Comparable>>.
+ * to hold a hostname and port combo). This class is also {@link Comparable}
  * <p>In implementation this class is a facade over Guava's {@link HostAndPort}.
  * We cannot have Guava classes in our API hence this Type.
  */
 @InterfaceAudience.Public
 public class Address implements Comparable<Address> {
-  private HostAndPort hostAndPort;
+  private final HostAndPort hostAndPort;
 
   private Address(HostAndPort hostAndPort) {
     this.hostAndPort = hostAndPort;
@@ -45,6 +48,33 @@ public class Address implements Comparable<Address> {
     return new Address(HostAndPort.fromString(hostnameAndPort));
   }
 
+  public static Address fromSocketAddress(InetSocketAddress addr) {
+    return Address.fromParts(addr.getHostString(), addr.getPort());
+  }
+
+  public static InetSocketAddress toSocketAddress(Address addr) {
+    return new InetSocketAddress(addr.getHostName(), addr.getPort());
+  }
+
+  public static InetSocketAddress[] toSocketAddress(Address[] addrs) {
+    if (addrs == null) {
+      return null;
+    }
+    InetSocketAddress[] result = new InetSocketAddress[addrs.length];
+    for (int i = 0; i < addrs.length; i++) {
+      result[i] = toSocketAddress(addrs[i]);
+    }
+    return result;
+  }
+
+  public String getHostName() {
+    return this.hostAndPort.getHost();
+  }
+
+  /**
+   * @deprecated Use {@link #getHostName()} instead
+   */
+  @Deprecated
   public String getHostname() {
     return this.hostAndPort.getHost();
   }
@@ -58,6 +88,24 @@ public class Address implements Comparable<Address> {
     return this.hostAndPort.toString();
   }
 
+  /**
+   * If hostname is a.b.c and the port is 123, return a:123 instead of a.b.c:123.
+   * @return if host looks like it is resolved -- not an IP -- then strip the domain portion
+   *    otherwise returns same as {@link #toString()}}
+   */
+  public String toStringWithoutDomain() {
+    String hostname = getHostName();
+    String [] parts = hostname.split("\\.");
+    if (parts.length > 1) {
+      for (String part: parts) {
+        if (!StringUtils.isNumeric(part)) {
+          return Address.fromParts(parts[0], getPort()).toString();
+        }
+      }
+    }
+    return toString();
+  }
+
   @Override
   // Don't use HostAndPort equals... It is wonky including
   // ipv6 brackets
@@ -67,7 +115,7 @@ public class Address implements Comparable<Address> {
     }
     if (other instanceof Address) {
       Address that = (Address)other;
-      return this.getHostname().equals(that.getHostname()) &&
+      return this.getHostName().equals(that.getHostName()) &&
           this.getPort() == that.getPort();
     }
     return false;
@@ -75,13 +123,16 @@ public class Address implements Comparable<Address> {
 
   @Override
   public int hashCode() {
-    return this.getHostname().hashCode() ^ getPort();
+    return this.getHostName().hashCode() ^ getPort();
   }
 
   @Override
   public int compareTo(Address that) {
-    int compare = this.getHostname().compareTo(that.getHostname());
-    if (compare != 0) return compare;
+    int compare = this.getHostName().compareTo(that.getHostName());
+    if (compare != 0) {
+      return compare;
+    }
+
     return this.getPort() - that.getPort();
   }
 }

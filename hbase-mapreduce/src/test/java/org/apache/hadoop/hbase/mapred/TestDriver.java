@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,24 +17,30 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.util.ProgramDriver;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-
 @Category({MapReduceTests.class, SmallTests.class})
 public class TestDriver {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDriver.class);
 
   @Test
   public void testDriverMainMethod() throws Throwable {
     ProgramDriver programDriverMock = mock(ProgramDriver.class);
     Driver.setProgramDriver(programDriverMock);
     Driver.main(new String[]{});
-    verify(programDriverMock).driver(Mockito.any(String[].class));
+    verify(programDriverMock).driver(Mockito.any());
   }
 }

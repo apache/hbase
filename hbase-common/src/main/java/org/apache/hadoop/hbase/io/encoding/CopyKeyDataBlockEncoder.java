@@ -20,13 +20,11 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Just copy data, do not do any kind of compression. Use for comparison and
@@ -48,7 +46,8 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
           + "encoding context.");
     }
 
-    HFileBlockDefaultEncodingContext encodingCtx = (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+    HFileBlockDefaultEncodingContext encodingCtx =
+      (HFileBlockDefaultEncodingContext) blkEncodingCtx;
     encodingCtx.prepareEncoding(out);
 
     NoneEncoder encoder = new NoneEncoder(out, encodingCtx);
@@ -81,37 +80,8 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public EncodedSeeker createSeeker(CellComparator comparator,
-      final HFileBlockDecodingContext decodingCtx) {
-    return new BufferedEncodedSeeker<SeekerState>(comparator, decodingCtx) {
-      @Override
-      protected void decodeNext() {
-        current.keyLength = currentBuffer.getInt();
-        current.valueLength = currentBuffer.getInt();
-        current.ensureSpaceForKey();
-        currentBuffer.get(current.keyBuffer, 0, current.keyLength);
-        current.valueOffset = currentBuffer.position();
-        currentBuffer.skip(current.valueLength);
-        if (includesTags()) {
-          // Read short as unsigned, high byte first
-          current.tagsLength = ((currentBuffer.get() & 0xff) << 8) ^ (currentBuffer.get() & 0xff);
-          currentBuffer.skip(current.tagsLength);
-        }
-        if (includesMvcc()) {
-          current.memstoreTS = ByteBuff.readVLong(currentBuffer);
-        } else {
-          current.memstoreTS = 0;
-        }
-        current.nextKvOffset = currentBuffer.position();
-      }
-
-      @Override
-      protected void decodeFirst() {
-        currentBuffer.skip(Bytes.SIZEOF_INT);
-        current.lastCommonPrefix = 0;
-        decodeNext();
-      }
-    };
+  public EncodedSeeker createSeeker(final HFileBlockDecodingContext decodingCtx) {
+    return new SeekerStateBufferedEncodedSeeker(decodingCtx);
   }
 
   @Override
@@ -125,4 +95,41 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
 
     return buffer;
   }
+
+  private static class SeekerStateBufferedEncodedSeeker
+      extends BufferedEncodedSeeker<SeekerState> {
+
+    private SeekerStateBufferedEncodedSeeker(HFileBlockDecodingContext decodingCtx) {
+      super(decodingCtx);
+    }
+
+    @Override
+    protected void decodeNext() {
+      current.keyLength = currentBuffer.getInt();
+      current.valueLength = currentBuffer.getInt();
+      current.ensureSpaceForKey();
+      currentBuffer.get(current.keyBuffer, 0, current.keyLength);
+      current.valueOffset = currentBuffer.position();
+      currentBuffer.skip(current.valueLength);
+      if (includesTags()) {
+        // Read short as unsigned, high byte first
+        current.tagsLength = ((currentBuffer.get() & 0xff) << 8) ^ (currentBuffer.get() & 0xff);
+        currentBuffer.skip(current.tagsLength);
+      }
+      if (includesMvcc()) {
+        current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
+      } else {
+        current.memstoreTS = 0;
+      }
+      current.nextKvOffset = currentBuffer.position();
+    }
+
+    @Override
+    protected void decodeFirst() {
+      currentBuffer.skip(Bytes.SIZEOF_INT);
+      current.lastCommonPrefix = 0;
+      decodeNext();
+    }
+  }
+
 }

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,19 +26,17 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import javax.crypto.spec.SecretKeySpec;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -53,14 +51,22 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestEncryptionKeyRotation {
-  private static final Log LOG = LogFactory.getLog(TestEncryptionKeyRotation.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestEncryptionKeyRotation.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestEncryptionKeyRotation.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
   private static final Key initialCFKey;
@@ -128,27 +134,14 @@ public class TestEncryptionKeyRotation {
 
     // And major compact
     TEST_UTIL.getAdmin().majorCompact(htd.getTableName());
-    final List<Path> updatePaths = findCompactedStorefilePaths(htd.getTableName());
-    TEST_UTIL.waitFor(30000, 1000, true, new Predicate<Exception>() {
+    // waiting for the major compaction to complete
+    TEST_UTIL.waitFor(30000, new Waiter.Predicate<IOException>() {
       @Override
-      public boolean evaluate() throws Exception {
-        // When compaction has finished, all of the original files will be
-        // gone
-        boolean found = false;
-        for (Path path: updatePaths) {
-          found = TEST_UTIL.getTestFileSystem().exists(path);
-          if (found) {
-            LOG.info("Found " + path);
-            break;
-          }
-        }
-        return !found;
+      public boolean evaluate() throws IOException {
+        return TEST_UTIL.getAdmin().getCompactionState(htd.getTableName()) ==
+            CompactionState.NONE;
       }
     });
-
-    // Verify we have store file(s) with only the new key
-    Thread.sleep(1000);
-    waitForCompaction(htd.getTableName());
     List<Path> pathsAfterCompaction = findStorefilePaths(htd.getTableName());
     assertTrue(pathsAfterCompaction.size() > 0);
     for (Path path: pathsAfterCompaction) {
@@ -193,7 +186,7 @@ public class TestEncryptionKeyRotation {
     conf.set(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY, "hbase");
 
     // Start the cluster back up
-    TEST_UTIL.startMiniHBaseCluster(1, 1);
+    TEST_UTIL.startMiniHBaseCluster();
     // Verify the table can still be loaded
     TEST_UTIL.waitTableAvailable(htd.getTableName(), 5000);
     // Double check that the store file keys can be unwrapped
@@ -202,33 +195,6 @@ public class TestEncryptionKeyRotation {
     for (Path path: storeFilePaths) {
       assertTrue("Store file " + path + " has incorrect key",
         Bytes.equals(initialCFKey.getEncoded(), extractHFileKey(path)));
-    }
-  }
-
-  private static void waitForCompaction(TableName tableName)
-      throws IOException, InterruptedException {
-    boolean compacted = false;
-    for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
-        .getRegions(tableName)) {
-      for (HStore store : ((HRegion) region).getStores()) {
-        compacted = false;
-        while (!compacted) {
-          if (store.getStorefiles() != null) {
-            while (store.getStorefilesCount() != 1) {
-              Thread.sleep(100);
-            }
-            for (HStoreFile storefile : store.getStorefiles()) {
-              if (!storefile.isCompactedAway()) {
-                compacted = true;
-                break;
-              }
-              Thread.sleep(100);
-            }
-          } else {
-            break;
-          }
-        }
-      }
     }
   }
 
@@ -282,7 +248,6 @@ public class TestEncryptionKeyRotation {
     HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(), path,
       new CacheConfig(conf), true, conf);
     try {
-      reader.loadFileInfo();
       Encryption.Context cryptoContext = reader.getFileContext().getEncryptionContext();
       assertNotNull("Reader has a null crypto context", cryptoContext);
       Key key = cryptoContext.getKey();

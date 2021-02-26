@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,13 +20,13 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -49,11 +48,12 @@ import org.apache.hadoop.hbase.mob.MobTestUtil;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -61,6 +61,10 @@ import org.junit.rules.TestName;
 
 @Category(MediumTests.class)
 public class TestMobStoreScanner {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMobStoreScanner.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte [] row1 = Bytes.toBytes("row1");
@@ -126,7 +130,6 @@ public class TestMobStoreScanner {
    *
    * @param reversed if true, scan will be backward order
    * @param mobScanRaw if true, scan will get the mob reference
-   * @return this
    */
   public void setScan(Scan scan, boolean reversed, boolean mobScanRaw) {
     scan.setReversed(reversed);
@@ -154,7 +157,7 @@ public class TestMobStoreScanner {
     testGetFromArchive(true);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testGetMassive() throws Exception {
     setUp(defaultThreshold, TableName.valueOf(name.getMethodName()));
 
@@ -405,8 +408,8 @@ public class TestMobStoreScanner {
     FileStatus[] files = fs.listStatus(mobFamilyPath);
 
     // Get the archive path
-    Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
-    Path tableDir = FSUtils.getTableDir(rootDir, tn);
+    Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, tn);
     RegionInfo regionInfo = MobUtils.getMobRegionInfo(tn);
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(TEST_UTIL.getConfiguration(),
         regionInfo, tableDir, family);

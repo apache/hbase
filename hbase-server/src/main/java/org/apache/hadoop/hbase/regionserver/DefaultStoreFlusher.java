@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -36,7 +36,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 public class DefaultStoreFlusher extends StoreFlusher {
-  private static final Log LOG = LogFactory.getLog(DefaultStoreFlusher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultStoreFlusher.class);
   private final Object flushLock = new Object();
 
   public DefaultStoreFlusher(Configuration conf, HStore store) {
@@ -45,18 +45,14 @@ public class DefaultStoreFlusher extends StoreFlusher {
 
   @Override
   public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
-      MonitoredTask status, ThroughputController throughputController) throws IOException {
+      MonitoredTask status, ThroughputController throughputController,
+      FlushLifeCycleTracker tracker) throws IOException {
     ArrayList<Path> result = new ArrayList<>();
     int cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
     // Use a store scanner to find which rows to flush.
-    long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint);
-    if (scanner == null) {
-      return result; // NULL scanner returned from coprocessor hooks means skip normal processing
-    }
-
+    InternalScanner scanner = createScanner(snapshot.getScanners(), tracker);
     StoreFileWriter writer;
     try {
       // TODO:  We can fail in the below block before we complete adding this flush to
@@ -64,14 +60,12 @@ public class DefaultStoreFlusher extends StoreFlusher {
       synchronized (flushLock) {
         status.setStatus("Flushing " + store + ": creating writer");
         // Write the map out to the disk
-        writer = store.createWriterInTmp(cellsCount, store.getColumnFamilyDescriptor().getCompressionType(),
-            /* isCompaction = */ false,
-            /* includeMVCCReadpoint = */ true,
-            /* includesTags = */ snapshot.isTagsPresent(),
-            /* shouldDropBehind = */ false);
+        writer = store.createWriterInTmp(cellsCount,
+            store.getColumnFamilyDescriptor().getCompressionType(), false, true,
+            snapshot.isTagsPresent(), false);
         IOException e = null;
         try {
-          performFlush(scanner, writer, smallestReadPoint, throughputController);
+          performFlush(scanner, writer, throughputController);
         } catch (IOException ioe) {
           e = ioe;
           // throw the exception out
@@ -87,10 +81,9 @@ public class DefaultStoreFlusher extends StoreFlusher {
     } finally {
       scanner.close();
     }
-    LOG.info("Flushed, sequenceid=" + cacheFlushId +", memsize="
-        + StringUtils.TraditionalBinaryPrefix.long2String(snapshot.getDataSize(), "", 1) +
-        ", hasBloomFilter=" + writer.hasGeneralBloom() +
-        ", into tmp file " + writer.getPath());
+    LOG.info("Flushed memstore data size={} at sequenceid={} (bloomFilter={}), to={}",
+        StringUtils.byteDesc(snapshot.getDataSize()), cacheFlushId, writer.hasGeneralBloom(),
+        writer.getPath());
     result.add(writer.getPath());
     return result;
   }

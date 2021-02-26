@@ -21,22 +21,31 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecureAsyncProtobufLogWriter extends AsyncProtobufLogWriter {
 
   private Encryptor encryptor = null;
 
-  public SecureAsyncProtobufLogWriter(EventLoop eventLoop, Class<? extends Channel> channelClass) {
-    super(eventLoop, channelClass);
+  public SecureAsyncProtobufLogWriter(EventLoopGroup eventLoopGroup,
+      Class<? extends Channel> channelClass) {
+    super(eventLoopGroup, channelClass);
   }
 
+  /*
+   * @return class name which is recognized by hbase-1.x to avoid ProtobufLogReader throwing error:
+   *   IOException: Got unknown writer class: SecureAsyncProtobufLogWriter
+   */
+  @Override
+  protected String getWriterClassName() {
+    return "SecureProtobufLogWriter";
+  }
   @Override
   protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)
       throws IOException {

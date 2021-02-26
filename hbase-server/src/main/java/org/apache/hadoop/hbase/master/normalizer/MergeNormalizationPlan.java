@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,27 +18,35 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.client.Admin;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * Normalization plan to merge regions (smallest region in the table with its smallest neighbor).
+ * Normalization plan to merge adjacent regions. As with any call to
+ * {@link MasterServices#mergeRegions(RegionInfo[], boolean, long, long)}
+ * with {@code forcible=false}, Region order and adjacency are important. It's the caller's
+ * responsibility to ensure the provided parameters are ordered according to the
+ * {code mergeRegions} method requirements.
  */
 @InterfaceAudience.Private
-public class MergeNormalizationPlan implements NormalizationPlan {
-  private static final Log LOG = LogFactory.getLog(MergeNormalizationPlan.class.getName());
+final class MergeNormalizationPlan implements NormalizationPlan {
 
-  private final RegionInfo firstRegion;
-  private final RegionInfo secondRegion;
+  private final List<NormalizationTarget> normalizationTargets;
 
-  public MergeNormalizationPlan(RegionInfo firstRegion, RegionInfo secondRegion) {
-    this.firstRegion = firstRegion;
-    this.secondRegion = secondRegion;
+  private MergeNormalizationPlan(List<NormalizationTarget> normalizationTargets) {
+    Preconditions.checkNotNull(normalizationTargets);
+    Preconditions.checkState(normalizationTargets.size() >= 2,
+      "normalizationTargets.size() must be >= 2 but was %s", normalizationTargets.size());
+    this.normalizationTargets = Collections.unmodifiableList(normalizationTargets);
   }
 
   @Override
@@ -46,33 +54,61 @@ public class MergeNormalizationPlan implements NormalizationPlan {
     return PlanType.MERGE;
   }
 
-  RegionInfo getFirstRegion() {
-    return firstRegion;
-  }
-
-  RegionInfo getSecondRegion() {
-    return secondRegion;
+  public List<NormalizationTarget> getNormalizationTargets() {
+    return normalizationTargets;
   }
 
   @Override
   public String toString() {
-    return "MergeNormalizationPlan{" +
-      "firstRegion=" + firstRegion +
-      ", secondRegion=" + secondRegion +
-      '}';
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .append("normalizationTargets", normalizationTargets)
+      .toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    MergeNormalizationPlan that = (MergeNormalizationPlan) o;
+
+    return new EqualsBuilder()
+      .append(normalizationTargets, that.normalizationTargets)
+      .isEquals();
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder(17, 37)
+      .append(normalizationTargets)
+      .toHashCode();
   }
 
   /**
-   * {@inheritDoc}
+   * A helper for constructing instances of {@link MergeNormalizationPlan}.
    */
-  @Override
-  public void execute(Admin admin) {
-    LOG.info("Executing merging normalization plan: " + this);
-    try {
-      admin.mergeRegionsAsync(firstRegion.getEncodedNameAsBytes(),
-        secondRegion.getEncodedNameAsBytes(), true);
-    } catch (IOException ex) {
-      LOG.error("Error during region merge: ", ex);
+  static class Builder {
+
+    private final List<NormalizationTarget> normalizationTargets = new LinkedList<>();
+
+    public Builder setTargets(final List<NormalizationTarget> targets) {
+      normalizationTargets.clear();
+      normalizationTargets.addAll(targets);
+      return this;
+    }
+
+    public Builder addTarget(final RegionInfo regionInfo, final long regionSizeMb) {
+      normalizationTargets.add(new NormalizationTarget(regionInfo, regionSizeMb));
+      return this;
+    }
+
+    public MergeNormalizationPlan build() {
+      return new MergeNormalizationPlan(normalizationTargets);
     }
   }
 }

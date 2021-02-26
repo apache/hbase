@@ -22,7 +22,7 @@ module Shell
   module Commands
     class RemovePeerNamespaces < Command
       def help
-        <<-EOF
+        <<~EOF
   Remove some namespaces from the namespaces config for the specified peer.
 
   Examples:

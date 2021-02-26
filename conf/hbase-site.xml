@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <!--
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,4 +20,35 @@
  */
 -->
 <configuration>
+  <!--
+    The following properties are set for running HBase as a single process on a
+    developer workstation. With this configuration, HBase is running in
+    "stand-alone" mode and without a distributed file system. In this mode, and
+    without further configuration, HBase and ZooKeeper data are stored on the
+    local filesystem, in a path under the value configured for `hbase.tmp.dir`.
+    This value is overridden from its default value of `/tmp` because many
+    systems clean `/tmp` on a regular basis. Instead, it points to a path within
+    this HBase installation directory.
+
+    Running against the `LocalFileSystem`, as opposed to a distributed
+    filesystem, runs the risk of data integrity issues and data loss. Normally
+    HBase will refuse to run in such an environment. Setting
+    `hbase.unsafe.stream.capability.enforce` to `false` overrides this behavior,
+    permitting operation. This configuration is for the developer workstation
+    only and __should not be used in production!__
+
+    See also https://hbase.apache.org/book.html#standalone_dist
+  -->
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>hbase.tmp.dir</name>
+    <value>./tmp</value>
+  </property>
+  <property>
+    <name>hbase.unsafe.stream.capability.enforce</name>
+    <value>false</value>
+  </property>
 </configuration>

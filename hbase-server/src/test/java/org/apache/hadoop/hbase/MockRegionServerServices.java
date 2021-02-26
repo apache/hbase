@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,71 +17,76 @@
  */
 package org.apache.hadoop.hbase;
 
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
+import org.apache.hadoop.hbase.quotas.RegionSizeStore;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
-import org.apache.hadoop.hbase.regionserver.Leases;
+import org.apache.hadoop.hbase.regionserver.LeaseManager;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-
-import com.google.protobuf.Service;
 
 /**
  * Basic mock region server services.  Should only be instantiated by HBaseTestingUtility.b
  */
 public class MockRegionServerServices implements RegionServerServices {
-  protected static final Log LOG = LogFactory.getLog(MockRegionServerServices.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(MockRegionServerServices.class);
   private final Map<String, Region> regions = new HashMap<>();
   private final ConcurrentSkipListMap<byte[], Boolean> rit =
     new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
   private final Configuration conf;
-  private ZooKeeperWatcher zkw = null;
+  private ZKWatcher zkw = null;
   private ServerName serverName = null;
   private RpcServerInterface rpcServer = null;
   private volatile boolean abortRequested;
   private volatile boolean stopping = false;
   private final AtomicBoolean running = new AtomicBoolean(true);
 
-  MockRegionServerServices(ZooKeeperWatcher zkw) {
+  MockRegionServerServices(ZKWatcher zkw) {
     this(zkw, null);
   }
 
-  MockRegionServerServices(ZooKeeperWatcher zkw, ServerName serverName) {
+  MockRegionServerServices(ZKWatcher zkw, ServerName serverName) {
     this.zkw = zkw;
     this.serverName = serverName;
     this.conf = (zkw == null ? new Configuration() : zkw.getConfiguration());
@@ -96,7 +101,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public boolean removeRegion(Region r, ServerName destination) {
+  public boolean removeRegion(HRegion r, ServerName destination) {
     return this.regions.remove(r.getRegionInfo().getEncodedName()) != null;
   }
 
@@ -111,28 +116,17 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Set<TableName> getOnlineTables() {
-    return null;
-  }
-
-  @Override
   public List<Region> getRegions() {
     return null;
   }
 
   @Override
-  public void addRegion(Region r) {
+  public void addRegion(HRegion r) {
     this.regions.put(r.getRegionInfo().getEncodedName(), r);
   }
 
   @Override
-  public void postOpenDeployTasks(Region r) throws KeeperException, IOException {
-    addRegion(r);
-  }
-
-  @Override
-  public void postOpenDeployTasks(PostOpenDeployContext context) throws KeeperException,
-      IOException {
+  public void postOpenDeployTasks(PostOpenDeployContext context) throws IOException {
     addRegion(context.getRegion());
   }
 
@@ -161,17 +155,17 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
+  public CompactionRequester getCompactionRequestor() {
+    return null;
+  }
+
+  @Override
   public ClusterConnection getConnection() {
     return null;
   }
 
   @Override
-  public MetaTableLocator getMetaTableLocator() {
-    return null;
-  }
-
-  @Override
-  public ZooKeeperWatcher getZooKeeper() {
+  public ZKWatcher getZooKeeper() {
     return zkw;
   }
 
@@ -234,7 +228,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Leases getLeases() {
+  public LeaseManager getLeaseManager() {
     return null;
   }
 
@@ -269,27 +263,9 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Map<String, Region> getRecoveringRegions() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
   public ServerNonceManager getNonceManager() {
     // TODO Auto-generated method stub
     return null;
-  }
-
-  @Override
-  public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum,
-      RegionInfo... hris) {
-    return false;
-  }
-
-  @Override
-  public boolean reportRegionStateTransition(TransitionCode code,
-      RegionInfo... hris) {
-    return false;
   }
 
   @Override
@@ -351,5 +327,51 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public RegionServerSpaceQuotaManager getRegionServerSpaceQuotaManager() {
     return null;
+  }
+
+  @Override
+  public Connection createConnection(Configuration conf) throws IOException {
+    return null;
+  }
+
+  @Override
+  public boolean isClusterUp() {
+    return true;
+  }
+
+  @Override
+  public TableDescriptors getTableDescriptors() {
+    return null;
+  }
+
+  @Override
+  public Optional<BlockCache> getBlockCache() {
+    return Optional.empty();
+  }
+
+  @Override
+  public Optional<MobFileCache> getMobFileCache() {
+    return Optional.empty();
+  }
+
+  @Override
+  public AccessChecker getAccessChecker() {
+    return null;
+  }
+
+  @Override
+  public ZKPermissionWatcher getZKPermissionWatcher() {
+    return null;
+  }
+
+  @Override
+  public boolean reportRegionSizesForQuotas(RegionSizeStore sizeStore) {
+    return true;
+  }
+
+  @Override
+  public boolean reportFileArchivalForQuotas(
+      TableName tableName, Collection<Entry<String,Long>> archivedFiles) {
+    return true;
   }
 }

@@ -17,18 +17,21 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelPipeline;
-import org.apache.hadoop.hbase.shaded.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 import java.io.IOException;
+import java.net.InetAddress;
 
 import javax.security.sasl.Sasl;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implement SASL logic for netty rpc client.
@@ -36,19 +39,17 @@ import org.apache.hadoop.security.token.TokenIdentifier;
  */
 @InterfaceAudience.Private
 public class NettyHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
-  private static final Log LOG = LogFactory.getLog(NettyHBaseSaslRpcClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NettyHBaseSaslRpcClient.class);
 
-  public NettyHBaseSaslRpcClient(AuthMethod method, Token<? extends TokenIdentifier> token,
-      String serverPrincipal, boolean fallbackAllowed, String rpcProtection) throws IOException {
-    super(method, token, serverPrincipal, fallbackAllowed, rpcProtection);
+  public NettyHBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
+      Token<? extends TokenIdentifier> token, InetAddress serverAddr, SecurityInfo securityInfo,
+      boolean fallbackAllowed, String rpcProtection) throws IOException {
+    super(conf, provider, token, serverAddr, securityInfo, fallbackAllowed, rpcProtection);
   }
 
   public void setupSaslHandler(ChannelPipeline p) {
     String qop = (String) saslClient.getNegotiatedProperty(Sasl.QOP);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("SASL client context established. Negotiated QoP: " + qop);
-    }
-
+    LOG.trace("SASL client context established. Negotiated QoP {}", qop);
     if (qop == null || "auth".equalsIgnoreCase(qop)) {
       return;
     }

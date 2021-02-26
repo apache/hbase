@@ -32,6 +32,10 @@ import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
+  /**
+   * @deprecated since 1.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-12028">HBASE-12028</a>
+   */
   @Override
   @Deprecated
   public RpcScheduler create(Configuration conf, PriorityFunction priority) {
@@ -49,6 +53,8 @@ public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
         HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT),
       conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
           HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
+        conf.getInt(HConstants.MASTER_META_TRANSITION_HANDLER_COUNT,
+            HConstants.MASTER__META_TRANSITION_HANDLER_COUNT_DEFAULT),
       priority,
       server,
       HConstants.QOS_THRESHOLD);

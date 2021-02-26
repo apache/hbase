@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
@@ -31,23 +29,24 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -56,11 +55,14 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing writing a version 3 {@link HFile}.
@@ -69,7 +71,11 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({IOTests.class, SmallTests.class})
 public class TestHFileWriterV3 {
 
-  private static final Log LOG = LogFactory.getLog(TestHFileWriterV3.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHFileWriterV3.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileWriterV3.class);
 
   private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
@@ -119,14 +125,15 @@ public class TestHFileWriterV3 {
   private void writeDataAndReadFromHFile(Path hfilePath,
       Algorithm compressAlgo, int entryCount, boolean findMidKey, boolean useTags) throws IOException {
     HFileContext context = new HFileContextBuilder()
-                           .withBlockSize(4096)
-                           .withIncludesTags(useTags)
-                           .withCompression(compressAlgo).build();
-    HFile.Writer writer = new HFile.WriterFactory(conf, new CacheConfig(conf))
-            .withPath(fs, hfilePath)
-            .withFileContext(context)
-            .withComparator(CellComparator.COMPARATOR)
-            .create();
+      .withBlockSize(4096)
+      .withIncludesTags(useTags)
+      .withDataBlockEncoding(DataBlockEncoding.NONE)
+      .withCompression(compressAlgo).build();
+    CacheConfig cacheConfig = new CacheConfig(conf);
+    HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig)
+      .withPath(fs, hfilePath)
+      .withFileContext(context)
+      .create();
 
     Random rand = new Random(9713312); // Just a fixed seed.
     List<KeyValue> keyValues = new ArrayList<>(entryCount);
@@ -172,12 +179,18 @@ public class TestHFileWriterV3 {
     assertEquals(3, trailer.getMajorVersion());
     assertEquals(entryCount, trailer.getEntryCount());
     HFileContext meta = new HFileContextBuilder()
-                        .withCompression(compressAlgo)
-                        .withIncludesMvcc(false)
-                        .withIncludesTags(useTags)
-                        .withHBaseCheckSum(true).build();
+      .withCompression(compressAlgo)
+      .withIncludesMvcc(false)
+      .withIncludesTags(useTags)
+      .withDataBlockEncoding(DataBlockEncoding.NONE)
+      .withHBaseCheckSum(true).build();
+    ReaderContext readerContext = new ReaderContextBuilder()
+      .withInputStreamWrapper(new FSDataInputStreamWrapper(fsdis))
+      .withFilePath(hfilePath)
+      .withFileSystem(fs)
+      .withFileSize(fileSize).build();
     HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderImpl(fsdis, fileSize, meta);
+        new HFileBlock.FSReaderImpl(readerContext, meta, ByteBuffAllocator.HEAP);
     // Comparator class name is stored in the trailer in version 3.
     CellComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
@@ -194,8 +207,18 @@ public class TestHFileWriterV3 {
     dataBlockIndexReader.readMultiLevelIndexRoot(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
 
+    FSDataInputStreamWrapper wrapper = new FSDataInputStreamWrapper(fs, hfilePath);
+    readerContext = new ReaderContextBuilder()
+        .withFilePath(hfilePath)
+        .withFileSize(fileSize)
+        .withFileSystem(wrapper.getHfs())
+        .withInputStreamWrapper(wrapper)
+        .build();
+    HFileInfo hfile = new HFileInfo(readerContext, conf);
+    HFile.Reader reader = new HFilePreadReader(readerContext, hfile, cacheConfig, conf);
+    hfile.initMetaAndIndex(reader);
     if (findMidKey) {
-      Cell midkey = dataBlockIndexReader.midkey();
+      Cell midkey = dataBlockIndexReader.midkey(reader);
       assertNotNull("Midkey should not be null", midkey);
     }
 
@@ -204,7 +227,7 @@ public class TestHFileWriterV3 {
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX)
           .getByteStream(), trailer.getMetaIndexCount());
     // File info
-    FileInfo fileInfo = new FileInfo();
+    HFileInfo fileInfo = new HFileInfo();
     fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
     byte [] keyValueFormatVersion = fileInfo.get(HFileWriterImpl.KEY_VALUE_VERSION);
     boolean includeMemstoreTS = keyValueFormatVersion != null &&
@@ -219,8 +242,8 @@ public class TestHFileWriterV3 {
     fsdis.seek(0);
     long curBlockPos = 0;
     while (curBlockPos <= trailer.getLastDataBlockOffset()) {
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, false, false)
-        .unpack(context, blockReader);
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, false, false, true)
+          .unpack(context, blockReader);
       assertEquals(BlockType.DATA, block.getBlockType());
       ByteBuff buf = block.getBufferWithoutHeader();
       int keyLen = -1;
@@ -280,8 +303,8 @@ public class TestHFileWriterV3 {
     while (fsdis.getPos() < trailer.getLoadOnOpenDataOffset()) {
       LOG.info("Current offset: " + fsdis.getPos() + ", scanning until " +
           trailer.getLoadOnOpenDataOffset());
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, false, false)
-        .unpack(context, blockReader);
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, false, false, true)
+          .unpack(context, blockReader);
       assertEquals(BlockType.META, block.getBlockType());
       Text t = new Text();
       ByteBuff buf = block.getBufferWithoutHeader();
@@ -299,6 +322,7 @@ public class TestHFileWriterV3 {
     }
 
     fsdis.close();
+    reader.close();
   }
 }
 

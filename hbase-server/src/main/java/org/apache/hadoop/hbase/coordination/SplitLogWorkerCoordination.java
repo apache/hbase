@@ -1,5 +1,4 @@
- /**
-  *
+ /*
   * Licensed to the Apache Software Foundation (ASF) under one
   * or more contributor license agreements.  See the NOTICE file
   * distributed with this work for additional information
@@ -17,23 +16,18 @@
   * limitations under the License.
   */
 package org.apache.hadoop.hbase.coordination;
-import java.io.IOException;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.SplitLogTask;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Coordinated operations for {@link SplitLogWorker} and 
+ * Coordinated operations for {@link SplitLogWorker} and
  * {@link org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler} Important
  * methods for SplitLogWorker: <BR>
  * {@link #isReady()} called from {@link SplitLogWorker#run()} to check whether the coordination is
@@ -46,12 +40,12 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  * <p>
  * Important methods for WALSplitterHandler: <BR>
  * splitting task has completed.
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *   distributed WAL splitter, see SplitWALManager
  */
+@Deprecated
 @InterfaceAudience.Private
 public interface SplitLogWorkerCoordination {
-
-/* SplitLogWorker part */
-  public static final int DEFAULT_MAX_SPLITTERS = 2;
 
   /**
    * Initialize internal values. This method should be used when corresponding SplitLogWorker
@@ -99,7 +93,6 @@ public interface SplitLogWorkerCoordination {
    * Used by unit tests to check how many tasks were processed
    * @return number of tasks
    */
-  @VisibleForTesting
   int getTaskReadySeq();
 
   /**
@@ -127,15 +120,11 @@ public interface SplitLogWorkerCoordination {
    * Interface for log-split tasks Used to carry implementation details in encapsulated way through
    * Handlers to the coordination API.
    */
-  static interface SplitTaskDetails {
+  interface SplitTaskDetails {
 
     /**
      * @return full file path in HDFS for the WAL file to be split.
      */
     String getWALFile();
   }
-
-  RegionStoreSequenceIds getRegionFlushedSequenceId(String failedServerName, String key)
-      throws IOException;
-
 }

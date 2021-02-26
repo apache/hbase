@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Map;
+
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Interface of class that will wrap an HRegion and export numbers so they can be
  * used in MetricsRegionSource
  */
+@InterfaceAudience.Private
 public interface MetricsRegionWrapper {
 
   /**
@@ -99,6 +104,8 @@ public interface MetricsRegionWrapper {
    */
   long getWriteRequestCount();
 
+  long getTotalRequestCount();
+
   long getNumFilesCompacted();
 
   long getNumBytesCompacted();
@@ -147,4 +154,26 @@ public interface MetricsRegionWrapper {
    * Get the replica id of this region.
    */
   int getReplicaId();
+
+  /**
+   * @return the number of references active on the store
+   */
+  long getStoreRefCount();
+
+  /**
+   * @return the max number of references active on any store file among
+   *   all compacted store files that belong to this region
+   */
+  long getMaxCompactedStoreFileRefCount();
+
+  /**
+   * @return the number of row reads completely on memstore per store
+   */
+  Map<String, Long> getMemstoreOnlyRowReadsCount();
+
+  /**
+   * @return the number of row reads on memstore and file per store
+   */
+  Map<String, Long> getMixedRowReadsCount();
+
 }

@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,15 +19,16 @@
 package org.apache.hadoop.hbase.testclassification;
 
 /**
- * Tag a test as 'large', meaning that the test class has the following
- * characteristics:
- *  - executed in an isolated JVM. Tests can however be executed in different
- *    JVM on the same machine simultaneously.
- *  - will not have to be executed by the developer before submitting a bug
- *  - ideally, last less than 2 minutes to help parallelization
- *
- *  It the worst case compared to small or medium, use it only for tests that
- *    you cannot put in the other categories
+ * Tagging a test as 'large', means that the test class has the following characteristics:
+ * <ul>
+ *  <li>it can executed in an isolated JVM (Tests can however be executed in different JVM on the
+ *  same  machine simultaneously so be careful two concurrent tests end up fighting over ports
+ *  or other singular resources).</li>
+ *  <li>ideally, the whole large test-suite/class, no matter how many or how few test methods it
+ *  has, will run in last less than three minutes</li>
+ *  <li>No large test can take longer than ten minutes; it will be killed. See 'Integeration Tests'
+ *  if you need to run tests longer than this.</li>
+ * </ul>
  *
  * @see SmallTests
  * @see MediumTests

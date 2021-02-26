@@ -32,9 +32,10 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell.Type;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -49,9 +50,11 @@ import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.FavoredNodes;
@@ -65,7 +68,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.FavoredNode
  */
 @InterfaceAudience.Private
 public class FavoredNodeAssignmentHelper {
-  private static final Log LOG = LogFactory.getLog(FavoredNodeAssignmentHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FavoredNodeAssignmentHelper.class);
   private RackManager rackManager;
   private Map<String, List<ServerName>> rackToRegionServerMap;
   private List<String> uniqueRackList;
@@ -164,22 +167,26 @@ public class FavoredNodeAssignmentHelper {
   }
 
   /**
-   * Generates and returns a Put containing the region info for the catalog table
-   * and the servers
-   * @param regionInfo
-   * @param favoredNodeList
+   * Generates and returns a Put containing the region info for the catalog table and the servers
    * @return Put object
    */
-  static Put makePutFromRegionInfo(RegionInfo regionInfo, List<ServerName>favoredNodeList)
-  throws IOException {
+  private static Put makePutFromRegionInfo(RegionInfo regionInfo, List<ServerName> favoredNodeList)
+      throws IOException {
     Put put = null;
     if (favoredNodeList != null) {
-      put = MetaTableAccessor.makePutFromRegionInfo(regionInfo);
+      long time = EnvironmentEdgeManager.currentTime();
+      put = MetaTableAccessor.makePutFromRegionInfo(regionInfo, time);
       byte[] favoredNodes = getFavoredNodes(favoredNodeList);
-      put.addImmutable(HConstants.CATALOG_FAMILY, FAVOREDNODES_QUALIFIER,
-          EnvironmentEdgeManager.currentTime(), favoredNodes);
-      LOG.debug("Create the region " + regionInfo.getRegionNameAsString() +
-                 " with favored nodes " + favoredNodeList);
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+          .setRow(put.getRow())
+          .setFamily(HConstants.CATALOG_FAMILY)
+          .setQualifier(FAVOREDNODES_QUALIFIER)
+          .setTimestamp(time)
+          .setType(Type.Put)
+          .setValue(favoredNodes)
+          .build());
+      LOG.debug("Create the region {} with favored nodes {}", regionInfo.getRegionNameAsString(),
+        favoredNodeList);
     }
     return put;
   }
@@ -388,8 +395,7 @@ public class FavoredNodeAssignmentHelper {
     rackSkipSet.add(primaryRack);
     String secondaryRack = getOneRandomRack(rackSkipSet);
     List<ServerName> serverList = getServersFromRack(secondaryRack);
-    Set<ServerName> serverSet = new HashSet<>();
-    serverSet.addAll(serverList);
+    Set<ServerName> serverSet = new HashSet<>(serverList);
     ServerName[] favoredNodes;
     if (serverList.size() >= 2) {
       // Randomly pick up two servers from this secondary rack
@@ -426,8 +432,7 @@ public class FavoredNodeAssignmentHelper {
         }
         secondaryRack = getOneRandomRack(rackSkipSet);
         serverList = getServersFromRack(secondaryRack);
-        serverSet = new HashSet<>();
-        serverSet.addAll(serverList);
+        serverSet = new HashSet<>(serverList);
       }
 
       // Place the secondary RS
@@ -621,7 +626,7 @@ public class FavoredNodeAssignmentHelper {
   }
 
   public static String getFavoredNodesAsString(List<ServerName> nodes) {
-    StringBuffer strBuf = new StringBuffer();
+    StringBuilder strBuf = new StringBuilder();
     int i = 0;
     for (ServerName node : nodes) {
       strBuf.append(node.getHostAndPort());

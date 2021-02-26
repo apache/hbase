@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,19 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
-import java.util.Iterator;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
+import java.util.Iterator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestCellSetModel extends TestModelBase<CellSetModel> {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCellSetModel.class);
 
   private static final byte[] ROW1 = Bytes.toBytes("testrow1");
   private static final byte[] COLUMN1 = Bytes.toBytes("testcolumn1");
@@ -81,6 +87,7 @@ public class TestCellSetModel extends TestModelBase<CellSetModel> {
       "\"timestamp\":1245393318192,\"$\":\"dGVzdHZhbHVlMw==\"}]}]}";
   }
 
+  @Override
   protected CellSetModel buildTestModel() {
     CellSetModel model = new CellSetModel();
     RowModel row;
@@ -96,6 +103,7 @@ public class TestCellSetModel extends TestModelBase<CellSetModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(CellSetModel model) {
     Iterator<RowModel> rows = model.getRows().iterator();
     RowModel row = rows.next();
@@ -105,7 +113,7 @@ public class TestCellSetModel extends TestModelBase<CellSetModel> {
     assertTrue(Bytes.equals(COLUMN1, cell.getColumn()));
     assertTrue(Bytes.equals(VALUE1, cell.getValue()));
     assertTrue(cell.hasUserTimestamp());
-    assertEquals(cell.getTimestamp(), TIMESTAMP1);
+    assertEquals(TIMESTAMP1, cell.getTimestamp());
     assertFalse(cells.hasNext());
     row = rows.next();
     assertTrue(Bytes.equals(ROW2, row.getKey()));
@@ -114,23 +122,26 @@ public class TestCellSetModel extends TestModelBase<CellSetModel> {
     assertTrue(Bytes.equals(COLUMN2, cell.getColumn()));
     assertTrue(Bytes.equals(VALUE2, cell.getValue()));
     assertTrue(cell.hasUserTimestamp());
-    assertEquals(cell.getTimestamp(), TIMESTAMP2);
+    assertEquals(TIMESTAMP2, cell.getTimestamp());
     cell = cells.next();
     assertTrue(Bytes.equals(COLUMN3, cell.getColumn()));
     assertTrue(Bytes.equals(VALUE3, cell.getValue()));
     assertTrue(cell.hasUserTimestamp());
-    assertEquals(cell.getTimestamp(), TIMESTAMP3);
+    assertEquals(TIMESTAMP3, cell.getTimestamp());
     assertFalse(cells.hasNext());
   }
 
+  @Override
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
+  @Override
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
+  @Override
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }

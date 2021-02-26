@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A {@link Filter} that checks a single column value, but does not emit the
@@ -156,6 +156,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
   }
 
   // We cleaned result row in FilterRow to be consistent with scanning process.
+  @Override
   public boolean hasFilterRow() {
    return true;
   }
@@ -190,6 +191,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.SingleColumnValueExcludeFilter.Builder builder =
       FilterProtos.SingleColumnValueExcludeFilter.newBuilder();
@@ -232,10 +234,21 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof SingleColumnValueExcludeFilter)) return false;
 
     return super.areSerializedFieldsEqual(o);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 }

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
+import java.io.Closeable;
 import java.util.List;
 /**
  * Holds details of the snapshot taken on a MemStore. Details include the snapshot's identifier,
@@ -26,11 +27,10 @@ import java.util.List;
  * all the cells and a scanner to read all cells in it.
  */
 @InterfaceAudience.Private
-public class MemStoreSnapshot {
+public class MemStoreSnapshot implements Closeable {
   private final long id;
   private final int cellsCount;
-  private final long dataSize;
-  private final long heapSize;
+  private final MemStoreSize memStoreSize;
   private final TimeRangeTracker timeRangeTracker;
   private final List<KeyValueScanner> scanners;
   private final boolean tagsPresent;
@@ -38,10 +38,9 @@ public class MemStoreSnapshot {
   public MemStoreSnapshot(long id, ImmutableSegment snapshot) {
     this.id = id;
     this.cellsCount = snapshot.getCellsCount();
-    this.dataSize = snapshot.keySize();
-    this.heapSize = snapshot.heapSize();
+    this.memStoreSize = snapshot.getMemStoreSize();
     this.timeRangeTracker = snapshot.getTimeRangeTracker();
-    this.scanners = snapshot.getScanners(Long.MAX_VALUE, Long.MAX_VALUE);
+    this.scanners = snapshot.getSnapshotScanners();
     this.tagsPresent = snapshot.isTagsPresent();
   }
 
@@ -59,15 +58,12 @@ public class MemStoreSnapshot {
     return cellsCount;
   }
 
-  /**
-   * @return Total memory size occupied by this snapshot.
-   */
   public long getDataSize() {
-    return dataSize;
+    return memStoreSize.getDataSize();
   }
 
-  public long getHeapSize() {
-    return heapSize;
+  public MemStoreSize getMemStoreSize() {
+    return memStoreSize;
   }
 
   /**
@@ -89,5 +85,14 @@ public class MemStoreSnapshot {
    */
   public boolean isTagsPresent() {
     return this.tagsPresent;
+  }
+
+  @Override
+  public void close() {
+    if (this.scanners != null) {
+      for (KeyValueScanner scanner : scanners) {
+        scanner.close();
+      }
+    }
   }
 }

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -37,47 +32,23 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.M
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MoveRegionStateData;
 
 /**
- * Procedure that implements a RegionPlan.
- * It first runs an unassign subprocedure followed
- * by an assign subprocedure. It takes a lock on the region being moved.
- * It holds the lock for the life of the procedure.
+ * Leave here only for checking if we can successfully start the master.
+ * @deprecated Do not use any more.
+ * @see TransitRegionStateProcedure
  */
+@Deprecated
 @InterfaceAudience.Private
 public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<MoveRegionState> {
-  private static final Log LOG = LogFactory.getLog(MoveRegionProcedure.class);
   private RegionPlan plan;
 
   public MoveRegionProcedure() {
-    // Required by the Procedure framework to create the procedure on replay
     super();
-  }
-
-  public MoveRegionProcedure(final MasterProcedureEnv env, final RegionPlan plan) {
-    super(env, plan.getRegionInfo());
-    this.plan = plan;
   }
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final MoveRegionState state)
       throws InterruptedException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
-    switch (state) {
-      case MOVE_REGION_UNASSIGN:
-        addChildProcedure(new UnassignProcedure(plan.getRegionInfo(), plan.getSource(), true));
-        setNextState(MoveRegionState.MOVE_REGION_ASSIGN);
-        break;
-      case MOVE_REGION_ASSIGN:
-        AssignProcedure assignProcedure = plan.getDestination() == null ?
-            new AssignProcedure(plan.getRegionInfo(), true) :
-            new AssignProcedure(plan.getRegionInfo(), plan.getDestination());
-        addChildProcedure(assignProcedure);
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException("unhandled state=" + state);
-    }
-    return Flow.HAS_MORE_STATE;
+    return Flow.NO_MORE_STATE;
   }
 
   @Override
@@ -110,7 +81,7 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
 
   @Override
   protected MoveRegionState getState(final int stateId) {
-    return MoveRegionState.valueOf(stateId);
+    return MoveRegionState.forNumber(stateId);
   }
 
   @Override

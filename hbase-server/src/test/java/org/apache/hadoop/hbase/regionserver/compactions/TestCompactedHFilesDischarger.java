@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,9 +28,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -52,11 +51,18 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 @Category({ MediumTests.class, RegionServerTests.class })
 public class TestCompactedHFilesDischarger {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompactedHFilesDischarger.class);
+
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private HRegion region;
   private final static byte[] fam = Bytes.toBytes("cf_1");
@@ -76,9 +82,9 @@ public class TestCompactedHFilesDischarger {
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
     region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(), htd);
     rss = mock(RegionServerServices.class);
-    List<Region> regions = new ArrayList<>(1);
+    List<HRegion> regions = new ArrayList<>(1);
     regions.add(region);
-    when(rss.getRegions()).thenReturn(regions);
+    Mockito.doReturn(regions).when(rss).getRegions();
   }
 
   @After
@@ -153,7 +159,7 @@ public class TestCompactedHFilesDischarger {
     }
     compactedfiles = ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
     assertTrue(compactedfiles.isEmpty());
-    
+
   }
 
   @Test
@@ -334,6 +340,49 @@ public class TestCompactedHFilesDischarger {
     assertTrue(compactedfiles.isEmpty());
   }
 
+  @Test
+  public void testStoreFileMissing() throws Exception {
+    // Write 3 records and create 3 store files.
+    write("row1");
+    region.flush(true);
+    write("row2");
+    region.flush(true);
+    write("row3");
+    region.flush(true);
+
+    Scan scan = new Scan();
+    scan.setCaching(1);
+    RegionScanner scanner = region.getScanner(scan);
+    List<Cell> res = new ArrayList<Cell>();
+    // Read first item
+    scanner.next(res);
+    assertEquals("row1", Bytes.toString(CellUtil.cloneRow(res.get(0))));
+    res.clear();
+    // Create a new file in between scan nexts
+    write("row4");
+    region.flush(true);
+
+    // Compact the table
+    region.compact(true);
+
+    // Create the cleaner object
+    CompactedHFilesDischarger cleaner =
+        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
+    cleaner.chore();
+    // This issues scan next
+    scanner.next(res);
+    assertEquals("row2", Bytes.toString(CellUtil.cloneRow(res.get(0))));
+
+    scanner.close();
+  }
+
+  private void write(String row1) throws IOException {
+    byte[] row = Bytes.toBytes(row1);
+    Put put = new Put(row);
+    put.addColumn(fam, qual1, row);
+    region.put(put);
+  }
+
   protected void countDown() {
     // count down 3 times
     latch.countDown();
@@ -367,7 +416,7 @@ public class TestCompactedHFilesDischarger {
       try {
         initiateScan(region);
       } catch (IOException e) {
-        // do nothing
+        e.printStackTrace();
       }
     }
 
@@ -384,8 +433,8 @@ public class TestCompactedHFilesDischarger {
           latch.await();
         } catch (InterruptedException e) {
         }
-        while (!next) {
-          resScanner.next(results);
+        while (next) {
+          next = resScanner.next(results);
         }
       } finally {
         scanCompletedCounter.incrementAndGet();

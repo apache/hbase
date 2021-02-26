@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -31,13 +29,15 @@ import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class for schema change procedures
  */
 @InterfaceAudience.Private
 public final class MasterDDLOperationHelper {
-  private static final Log LOG = LogFactory.getLog(MasterDDLOperationHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterDDLOperationHelper.class);
 
   private MasterDDLOperationHelper() {}
 

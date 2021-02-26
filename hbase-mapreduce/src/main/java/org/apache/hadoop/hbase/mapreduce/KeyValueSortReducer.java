@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.util.TreeSet;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -42,7 +42,7 @@ public class KeyValueSortReducer
   protected void reduce(ImmutableBytesWritable row, Iterable<KeyValue> kvs,
       Reducer<ImmutableBytesWritable, KeyValue, ImmutableBytesWritable, KeyValue>.Context context)
   throws java.io.IOException, InterruptedException {
-    TreeSet<KeyValue> map = new TreeSet<>(CellComparator.COMPARATOR);
+    TreeSet<KeyValue> map = new TreeSet<>(CellComparatorImpl.COMPARATOR);
     for (KeyValue kv: kvs) {
       try {
         map.add(kv.clone());

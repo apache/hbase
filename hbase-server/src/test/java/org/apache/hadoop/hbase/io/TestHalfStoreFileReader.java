@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import static org.junit.Assert.assertEquals;
@@ -27,13 +25,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -41,17 +39,26 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestHalfStoreFileReader {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHalfStoreFileReader.class);
+
   private static HBaseTestingUtility TEST_UTIL;
 
   @BeforeClass
@@ -95,7 +102,6 @@ public class TestHalfStoreFileReader {
     w.close();
 
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, true, conf);
-    r.loadFileInfo();
     Cell midKV = r.midKey().get();
     byte[] midkey = CellUtil.cloneRow(midKV);
 
@@ -112,8 +118,11 @@ public class TestHalfStoreFileReader {
 
   private void doTestOfScanAndReseek(Path p, FileSystem fs, Reference bottom, CacheConfig cacheConf)
       throws IOException {
-    final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p, cacheConf, bottom, true,
-        new AtomicInteger(0), true, TEST_UTIL.getConfiguration());
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, p).build();
+    HFileInfo fileInfo = new HFileInfo(context, TEST_UTIL.getConfiguration());
+    final HalfStoreFileReader halfreader = new HalfStoreFileReader(context, fileInfo, cacheConf,
+        bottom, new AtomicInteger(0), TEST_UTIL.getConfiguration());
+    fileInfo.initMetaAndIndex(halfreader.getHFileReader());
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
 
@@ -154,7 +163,6 @@ public class TestHalfStoreFileReader {
     w.close();
 
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, true, conf);
-    r.loadFileInfo();
     Cell midKV = r.midKey().get();
     byte[] midkey = CellUtil.cloneRow(midKV);
 
@@ -164,7 +172,7 @@ public class TestHalfStoreFileReader {
     // Ugly code to get the item before the midkey
     KeyValue beforeMidKey = null;
     for (KeyValue item : items) {
-      if (CellComparator.COMPARATOR.compare(item, midKV) >= 0) {
+      if (CellComparatorImpl.COMPARATOR.compare(item, midKV) >= 0) {
         break;
       }
       beforeMidKey = item;
@@ -206,8 +214,11 @@ public class TestHalfStoreFileReader {
 
   private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, Cell seekBefore,
       CacheConfig cacheConfig) throws IOException {
-    final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p, cacheConfig, bottom, true,
-        new AtomicInteger(0), true, TEST_UTIL.getConfiguration());
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, p).build();
+    HFileInfo fileInfo = new HFileInfo(context, TEST_UTIL.getConfiguration());
+    final HalfStoreFileReader halfreader = new HalfStoreFileReader(context, fileInfo, cacheConfig,
+        bottom, new AtomicInteger(0), TEST_UTIL.getConfiguration());
+    fileInfo.initMetaAndIndex(halfreader.getHFileReader());
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
     scanner.seekBefore(seekBefore);

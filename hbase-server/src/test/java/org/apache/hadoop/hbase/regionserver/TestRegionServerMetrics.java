@@ -18,18 +18,16 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -61,8 +59,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -73,21 +69,20 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestRegionServerMetrics {
-  private static final Log LOG = LogFactory.getLog(TestRegionServerMetrics.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionServerMetrics.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerMetrics.class);
 
   @Rule
   public TestName testName = new TestName();
-
-  @ClassRule
-  public static TestRule timeout = CategoryBasedTimeout.forClass(TestRegionServerMetrics.class);
-
-  static {
-    Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
-  }
 
   private static MetricsAssertHelper metricsHelper;
   private static MiniHBaseCluster cluster;
@@ -118,9 +113,10 @@ public class TestRegionServerMetrics {
     // testMobMetrics creates few hfiles and manages compaction manually.
     conf.setInt("hbase.hstore.compactionThreshold", 100);
     conf.setInt("hbase.hstore.compaction.max", 100);
+    conf.setInt("hbase.regionserver.periodicmemstoreflusher.rangeofdelayseconds", 4*60);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
 
-    TEST_UTIL.startMiniCluster(1, 1);
+    TEST_UTIL.startMiniCluster();
     cluster = TEST_UTIL.getHBaseCluster();
     cluster.waitForActiveAndReadyMaster();
     admin = TEST_UTIL.getAdmin();
@@ -128,11 +124,11 @@ public class TestRegionServerMetrics {
 
     while (cluster.getLiveRegionServerThreads().isEmpty() &&
         cluster.getRegionServer(0) == null &&
-        rs.getRegionServerMetrics() == null) {
+        rs.getMetrics() == null) {
       Threads.sleep(100);
     }
     rs = cluster.getRegionServer(0);
-    metricsRegionServer = rs.getRegionServerMetrics();
+    metricsRegionServer = rs.getMetrics();
     serverSource = metricsRegionServer.getMetricsSource();
   }
 
@@ -237,8 +233,8 @@ public class TestRegionServerMetrics {
     ResultScanner scanner = table.getScanner(scan);
     for (int i = 0; i < n; i++) {
       Result res = scanner.next();
-      LOG.debug(
-        "Result row: " + Bytes.toString(res.getRow()) + ", value: " + res.getValue(cf, qualifier));
+      LOG.debug("Result row: " + Bytes.toString(res.getRow()) + ", value: " +
+          Bytes.toString(res.getValue(cf, qualifier)));
     }
   }
 
@@ -349,12 +345,12 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testStoreCount() throws Exception {
-    //Force a hfile.
+    // Force a hfile.
     doNPuts(1, false);
     TEST_UTIL.getAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertGauge("storeCount", TABLES_ON_MASTER? 1: 7);
+    assertGauge("storeCount", TABLES_ON_MASTER ? 1 : 5);
     assertGauge("storeFileCount", 1);
   }
 
@@ -382,11 +378,11 @@ public class TestRegionServerMetrics {
 
     Put pTwo = new Put(row);
     pTwo.addColumn(cf, qualifier, valTwo);
-    table.checkAndPut(row, cf, qualifier, valOne, pTwo);
+    table.checkAndMutate(row, cf).qualifier(qualifier).ifEquals(valOne).thenPut(pTwo);
 
     Put pThree = new Put(row);
     pThree.addColumn(cf, qualifier, valThree);
-    table.checkAndPut(row, cf, qualifier, valOne, pThree);
+    table.checkAndMutate(row, cf).qualifier(qualifier).ifEquals(valOne).thenPut(pThree);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertCounter("checkMutateFailedCount", 1);
@@ -496,7 +492,7 @@ public class TestRegionServerMetrics {
     byte[] val = Bytes.toBytes("mobdata");
     try {
       Table table = TEST_UTIL.createTable(htd, new byte[0][0], conf);
-      Region region = rs.getRegions(tableName).get(0);
+      HRegion region = rs.getRegions(tableName).get(0);
       for (int insertCount = 0; insertCount < numHfiles; insertCount++) {
         Put p = new Put(Bytes.toBytes(insertCount));
         p.addColumn(cf, qualifier, val);
@@ -515,7 +511,7 @@ public class TestRegionServerMetrics {
 
       setMobThreshold(region, cf, 100);
       // metrics are reset by the region initialization
-      ((HRegion) region).initialize();
+      region.initialize();
       region.compact(true);
       metricsRegionServer.getRegionServerWrapper().forceRecompute();
       assertCounter("cellsCountCompactedFromMob", numHfiles);
@@ -536,10 +532,10 @@ public class TestRegionServerMetrics {
       setMobThreshold(region, cf, 0);
 
       // closing the region forces the compaction.discharger to archive the compacted hfiles
-      ((HRegion) region).close();
+      region.close();
 
       // metrics are reset by the region initialization
-      ((HRegion) region).initialize();
+      region.initialize();
       region.compact(true);
       metricsRegionServer.getRegionServerWrapper().forceRecompute();
       // metrics are reset by the region initialization
@@ -559,7 +555,7 @@ public class TestRegionServerMetrics {
     TableDescriptor td = TableDescriptorBuilder
             .newBuilder(region.getTableDescriptor())
             .removeColumnFamily(cfName)
-            .addColumnFamily(cfd)
+            .setColumnFamily(cfd)
             .build();
     ((HRegion)region).setTableDescriptor(td);
     return region;
@@ -626,5 +622,23 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertTrue(metricsHelper.getGaugeDouble("averageRegionSize", serverSource) > 0.0);
+  }
+
+  @Test
+  public void testReadBytes() throws Exception {
+    // Do a first put to be sure that the connection is established, meta is there and so on.
+    doNPuts(1, false);
+    doNGets(10, false);
+    TEST_UTIL.getAdmin().flush(tableName);
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+
+    assertTrue("Total read bytes should be larger than 0",
+        metricsRegionServer.getRegionServerWrapper().getTotalBytesRead() > 0);
+    assertTrue("Total local read bytes should be larger than 0",
+        metricsRegionServer.getRegionServerWrapper().getLocalBytesRead() > 0);
+    assertEquals("Total short circuit read bytes should be equal to 0", 0,
+        metricsRegionServer.getRegionServerWrapper().getShortCircuitBytesRead());
+    assertEquals("Total zero-byte read bytes should be equal to 0", 0,
+        metricsRegionServer.getRegionServerWrapper().getZeroCopyBytesRead());
   }
 }

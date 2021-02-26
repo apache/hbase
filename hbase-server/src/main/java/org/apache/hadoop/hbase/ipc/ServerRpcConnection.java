@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.security.GeneralSecurityException;
+import java.util.Objects;
 import java.util.Properties;
 
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
@@ -45,19 +46,21 @@ import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
-import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteInput;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProvider;
+import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProviders;
+import org.apache.hadoop.hbase.security.provider.SimpleSaslServerAuthenticationProvider;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteInput;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
@@ -76,8 +79,6 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.htrace.TraceInfo;
 
 /** Reads calls from a connection and queues them for handling. */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
@@ -109,7 +110,7 @@ abstract class ServerRpcConnection implements Closeable {
   protected CompressionCodec compressionCodec;
   protected BlockingService service;
 
-  protected AuthMethod authMethod;
+  protected SaslServerAuthenticationProvider provider;
   protected boolean saslContextEstablished;
   protected boolean skipInitialSaslHandshake;
   private ByteBuffer unwrappedData;
@@ -128,10 +129,12 @@ abstract class ServerRpcConnection implements Closeable {
 
   protected User user = null;
   protected UserGroupInformation ugi = null;
+  protected SaslServerAuthenticationProviders saslProviders = null;
 
   public ServerRpcConnection(RpcServer rpcServer) {
     this.rpcServer = rpcServer;
     this.callCleanup = null;
+    this.saslProviders = SaslServerAuthenticationProviders.getInstance(rpcServer.getConf());
   }
 
   @Override
@@ -160,27 +163,10 @@ abstract class ServerRpcConnection implements Closeable {
 
   private String getFatalConnectionString(final int version, final byte authByte) {
     return "serverVersion=" + RpcServer.CURRENT_VERSION +
-    ", clientVersion=" + version + ", authMethod=" + authByte +
-    ", authSupported=" + (authMethod != null) + " from " + toString();
-  }
-
-  private UserGroupInformation getAuthorizedUgi(String authorizedId)
-      throws IOException {
-    UserGroupInformation authorizedUgi;
-    if (authMethod == AuthMethod.DIGEST) {
-      TokenIdentifier tokenId = HBaseSaslRpcServer.getIdentifier(authorizedId,
-          this.rpcServer.secretManager);
-      authorizedUgi = tokenId.getUser();
-      if (authorizedUgi == null) {
-        throw new AccessDeniedException(
-            "Can't retrieve username from tokenIdentifier.");
-      }
-      authorizedUgi.addTokenIdentifier(tokenId);
-    } else {
-      authorizedUgi = UserGroupInformation.createRemoteUser(authorizedId);
-    }
-    authorizedUgi.setAuthenticationMethod(authMethod.authenticationMethod.getAuthMethod());
-    return authorizedUgi;
+        ", clientVersion=" + version + ", authMethod=" + authByte +
+        // The provider may be null if we failed to parse the header of the request
+        ", authName=" + (provider == null ? "unknown" : provider.getSaslAuthMethod().getName()) +
+        " from " + toString();
   }
 
   /**
@@ -194,14 +180,15 @@ abstract class ServerRpcConnection implements Closeable {
     String className = header.getCellBlockCodecClass();
     if (className == null || className.length() == 0) return;
     try {
-      this.codec = (Codec)Class.forName(className).newInstance();
+      this.codec = (Codec)Class.forName(className).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new UnsupportedCellCodecException(className, e);
     }
     if (!header.hasCellBlockCompressorClass()) return;
     className = header.getCellBlockCompressorClass();
     try {
-      this.compressionCodec = (CompressionCodec)Class.forName(className).newInstance();
+      this.compressionCodec =
+          (CompressionCodec)Class.forName(className).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new UnsupportedCompressionCodecException(className, e);
     }
@@ -342,10 +329,8 @@ abstract class ServerRpcConnection implements Closeable {
   public void saslReadAndProcess(ByteBuff saslToken) throws IOException,
       InterruptedException {
     if (saslContextEstablished) {
-      if (RpcServer.LOG.isTraceEnabled())
-        RpcServer.LOG.trace("Have read input token of size " + saslToken.limit()
-            + " for processing by saslServer.unwrap()");
-
+      RpcServer.LOG.trace("Read input token of size={} for processing by saslServer.unwrap()",
+        saslToken.limit());
       if (!useWrap) {
         processOneRpc(saslToken);
       } else {
@@ -363,19 +348,21 @@ abstract class ServerRpcConnection implements Closeable {
       byte[] replyToken;
       try {
         if (saslServer == null) {
-          saslServer =
-              new HBaseSaslRpcServer(authMethod, rpcServer.saslProps, rpcServer.secretManager);
-          if (RpcServer.LOG.isDebugEnabled()) {
-            RpcServer.LOG
-                .debug("Created SASL server with mechanism = " + authMethod.getMechanismName());
+          try {
+            saslServer =
+              new HBaseSaslRpcServer(provider, rpcServer.saslProps, rpcServer.secretManager);
+          } catch (Exception e){
+            RpcServer.LOG.error("Error when trying to create instance of HBaseSaslRpcServer "
+              + "with sasl provider: " + provider, e);
+            throw e;
           }
+          RpcServer.LOG.debug("Created SASL server with mechanism={}",
+              provider.getSaslAuthMethod().getAuthMethod());
         }
-        if (RpcServer.LOG.isDebugEnabled()) {
-          RpcServer.LOG.debug("Have read input token of size " + saslToken.limit()
-              + " for processing by saslServer.evaluateResponse()");
-        }
-        replyToken = saslServer
-            .evaluateResponse(saslToken.hasArray() ? saslToken.array() : saslToken.toBytes());
+        RpcServer.LOG.debug("Read input token of size={} for processing by saslServer." +
+            "evaluateResponse()", saslToken.limit());
+        replyToken = saslServer.evaluateResponse(saslToken.hasArray()?
+            saslToken.array() : saslToken.toBytes());
       } catch (IOException e) {
         IOException sendToClient = e;
         Throwable cause = e;
@@ -392,7 +379,7 @@ abstract class ServerRpcConnection implements Closeable {
         String clientIP = this.toString();
         // attempting user could be null
         RpcServer.AUDITLOG
-            .warn(RpcServer.AUTH_FAILED_FOR + clientIP + ":" + saslServer.getAttemptingUser());
+            .warn("{} {}: {}", RpcServer.AUTH_FAILED_FOR, clientIP, saslServer.getAttemptingUser());
         throw e;
       }
       if (replyToken != null) {
@@ -406,11 +393,11 @@ abstract class ServerRpcConnection implements Closeable {
       if (saslServer.isComplete()) {
         String qop = saslServer.getNegotiatedQop();
         useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
-        ugi = getAuthorizedUgi(saslServer.getAuthorizationID());
-        if (RpcServer.LOG.isDebugEnabled()) {
-          RpcServer.LOG.debug("SASL server context established. Authenticated client: " + ugi +
-              ". Negotiated QoP is " + qop);
-        }
+        ugi = provider.getAuthorizedUgi(saslServer.getAuthorizationID(),
+            this.rpcServer.secretManager);
+        RpcServer.LOG.debug(
+            "SASL server context established. Authenticated client: {}. Negotiated QoP is {}",
+            ugi, qop);
         this.rpcServer.metrics.authenticationSuccess();
         RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
         saslContextEstablished = true;
@@ -462,7 +449,7 @@ abstract class ServerRpcConnection implements Closeable {
     } else {
       processConnectionHeader(buf);
       this.connectionHeaderRead = true;
-      if (!authorizeConnection()) {
+      if (rpcServer.needAuthorization() && !authorizeConnection()) {
         // Throw FatalConnectionException wrapping ACE so client does right thing and closes
         // down the connection instead of trying to read non-existent retun.
         throw new AccessDeniedException("Connection from " + this + " for service " +
@@ -479,7 +466,7 @@ abstract class ServerRpcConnection implements Closeable {
       // authorize real user. doAs is allowed only for simple or kerberos
       // authentication
       if (ugi != null && ugi.getRealUser() != null
-          && (authMethod != AuthMethod.DIGEST)) {
+          && provider.supportsProtocolAuthentication()) {
         ProxyUsers.authorize(ugi, this.getHostAddress(), this.rpcServer.conf);
       }
       this.rpcServer.authorize(ugi, connectionHeader, getHostInetAddress());
@@ -500,8 +487,8 @@ abstract class ServerRpcConnection implements Closeable {
     if (buf.hasArray()) {
       this.connectionHeader = ConnectionHeader.parseFrom(buf.array());
     } else {
-      CodedInputStream cis = UnsafeByteOperations
-          .unsafeWrap(new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
+      CodedInputStream cis = UnsafeByteOperations.unsafeWrap(
+          new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
       cis.enableAliasing(true);
       this.connectionHeader = ConnectionHeader.parseFrom(cis);
     }
@@ -518,23 +505,22 @@ abstract class ServerRpcConnection implements Closeable {
     if (!useSasl) {
       ugi = protocolUser;
       if (ugi != null) {
-        ugi.setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
+        ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
       }
       // audit logging for SASL authenticated users happens in saslReadAndProcess()
       if (authenticatedWithFallback) {
-        RpcServer.LOG.warn("Allowed fallback to SIMPLE auth for " + ugi
-            + " connecting from " + getHostAddress());
+        RpcServer.LOG.warn("Allowed fallback to SIMPLE auth for {} connecting from {}",
+            ugi, getHostAddress());
       }
-      RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
     } else {
       // user is authenticated
-      ugi.setAuthenticationMethod(authMethod.authenticationMethod);
+      ugi.setAuthenticationMethod(provider.getSaslAuthMethod().getAuthMethod());
       //Now we check if this is a proxy user case. If the protocol user is
       //different from the 'user', it is a proxy user scenario. However,
       //this is not allowed if user authenticated with DIGEST.
       if ((protocolUser != null)
           && (!protocolUser.getUserName().equals(ugi.getUserName()))) {
-        if (authMethod == AuthMethod.DIGEST) {
+        if (!provider.supportsProtocolAuthentication()) {
           // Not allowed to doAs if token authentication is used
           throw new AccessDeniedException("Authenticated user (" + ugi
               + ") doesn't match what the client claims to be ("
@@ -551,17 +537,17 @@ abstract class ServerRpcConnection implements Closeable {
         }
       }
     }
-    if (connectionHeader.hasVersionInfo()) {
+    String version;
+    if (this.connectionHeader.hasVersionInfo()) {
       // see if this connection will support RetryImmediatelyException
-      retryImmediatelySupported = VersionInfoUtil.hasMinimumVersion(getVersionInfo(), 1, 2);
-
-      RpcServer.AUDITLOG.info("Connection from " + this.hostAddress + " port: " + this.remotePort
-          + " with version info: "
-          + TextFormat.shortDebugString(connectionHeader.getVersionInfo()));
+      this.retryImmediatelySupported =
+          VersionInfoUtil.hasMinimumVersion(getVersionInfo(), 1, 2);
+      version = this.connectionHeader.getVersionInfo().getVersion();
     } else {
-      RpcServer.AUDITLOG.info("Connection from " + this.hostAddress + " port: " + this.remotePort
-          + " with unknown version info");
+      version = "UNKNOWN";
     }
+    RpcServer.AUDITLOG.info("Connection from {}:{}, version={}, sasl={}, ugi={}, service={}",
+        this.hostAddress, this.remotePort, version, this.useSasl, this.ugi, serviceName);
   }
 
   /**
@@ -632,7 +618,7 @@ abstract class ServerRpcConnection implements Closeable {
     if ((totalRequestSize +
         this.rpcServer.callQueueSizeInBytes.sum()) > this.rpcServer.maxQueueSizeInBytes) {
       final ServerCall<?> callTooBig = createCall(id, this.service, null, null, null, null,
-        totalRequestSize, null, null, 0, this.callCleanup);
+        totalRequestSize, null, 0, this.callCleanup);
       this.rpcServer.metrics.exception(RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION);
       callTooBig.setResponse(null, null,  RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION,
         "Call queue is full on " + this.rpcServer.server.getServerName() +
@@ -694,21 +680,18 @@ abstract class ServerRpcConnection implements Closeable {
       }
 
       ServerCall<?> readParamsFailedCall = createCall(id, this.service, null, null, null, null,
-        totalRequestSize, null, null, 0, this.callCleanup);
+        totalRequestSize, null, 0, this.callCleanup);
       readParamsFailedCall.setResponse(null, null, t, msg + "; " + t.getMessage());
       readParamsFailedCall.sendResponseIfReady();
       return;
     }
 
-    TraceInfo traceInfo = header.hasTraceInfo() ? new TraceInfo(header
-        .getTraceInfo().getTraceId(), header.getTraceInfo().getParentId())
-        : null;
     int timeout = 0;
     if (header.hasTimeout() && header.getTimeout() > 0) {
       timeout = Math.max(this.rpcServer.minClientRequestTimeout, header.getTimeout());
     }
     ServerCall<?> call = createCall(id, this.service, md, header, param, cellScanner, totalRequestSize,
-      traceInfo, this.addr, timeout, this.callCleanup);
+      this.addr, timeout, this.callCleanup);
 
     if (!this.rpcServer.scheduler.dispatch(new CallRunner(this.rpcServer, call))) {
       this.rpcServer.callQueueSizeInBytes.add(-1 * call.getSize());
@@ -751,18 +734,20 @@ abstract class ServerRpcConnection implements Closeable {
     }
     int version = preambleBuffer.get() & 0xFF;
     byte authbyte = preambleBuffer.get();
-    this.authMethod = AuthMethod.valueOf(authbyte);
+
     if (version != SimpleRpcServer.CURRENT_VERSION) {
       String msg = getFatalConnectionString(version, authbyte);
       doBadPreambleHandling(msg, new WrongVersionException(msg));
       return false;
     }
-    if (authMethod == null) {
+    this.provider = this.saslProviders.selectProvider(authbyte);
+    if (this.provider == null) {
       String msg = getFatalConnectionString(version, authbyte);
       doBadPreambleHandling(msg, new BadAuthException(msg));
       return false;
     }
-    if (this.rpcServer.isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
+    // TODO this is a wart while simple auth'n doesn't go through sasl.
+    if (this.rpcServer.isSecurityEnabled && isSimpleAuthentication()) {
       if (this.rpcServer.allowFallbackToSimpleAuth) {
         this.rpcServer.metrics.authenticationFallback();
         authenticatedWithFallback = true;
@@ -772,25 +757,27 @@ abstract class ServerRpcConnection implements Closeable {
         return false;
       }
     }
-    if (!this.rpcServer.isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
+    if (!this.rpcServer.isSecurityEnabled && !isSimpleAuthentication()) {
       doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(SaslUtil.SWITCH_TO_SIMPLE_AUTH), null,
         null);
-      authMethod = AuthMethod.SIMPLE;
+      provider = saslProviders.getSimpleProvider();
       // client has already sent the initial Sasl message and we
       // should ignore it. Both client and server should fall back
       // to simple auth from now on.
       skipInitialSaslHandshake = true;
     }
-    if (authMethod != AuthMethod.SIMPLE) {
-      useSasl = true;
-    }
+    useSasl = !(provider instanceof SimpleSaslServerAuthenticationProvider);
     return true;
+  }
+
+  boolean isSimpleAuthentication() {
+    return Objects.requireNonNull(provider) instanceof SimpleSaslServerAuthenticationProvider;
   }
 
   public abstract boolean isConnectionOpen();
 
   public abstract ServerCall<?> createCall(int id, BlockingService service, MethodDescriptor md,
-      RequestHeader header, Message param, CellScanner cellScanner, long size, TraceInfo tinfo,
+      RequestHeader header, Message param, CellScanner cellScanner, long size,
       InetAddress remoteAddress, int timeout, CallCleanup reqCleanup);
 
   private static class ByteBuffByteInput extends ByteInput {

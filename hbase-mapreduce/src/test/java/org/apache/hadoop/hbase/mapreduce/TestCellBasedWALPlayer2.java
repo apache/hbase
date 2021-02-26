@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -28,12 +28,12 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -46,20 +46,21 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer.WALCellMapper;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
-import org.apache.hadoop.hbase.util.MapReduceCell;
+import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -72,6 +73,11 @@ import org.mockito.stubbing.Answer;
  */
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestCellBasedWALPlayer2 {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCellBasedWALPlayer2.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
   private static Path rootDir;
@@ -88,8 +94,8 @@ public class TestCellBasedWALPlayer2 {
     conf= TEST_UTIL.getConfiguration();
     rootDir = TEST_UTIL.createRootDir();
     walRootDir = TEST_UTIL.createWALRootDir();
-    fs = FSUtils.getRootDirFileSystem(conf);
-    logFs = FSUtils.getWALFileSystem(conf);
+    fs = CommonFSUtils.getRootDirFileSystem(conf);
+    logFs = CommonFSUtils.getWALFileSystem(conf);
     cluster = TEST_UTIL.startMiniCluster();
   }
 
@@ -167,7 +173,7 @@ public class TestCellBasedWALPlayer2 {
     configuration.set(tableConfigKey, "table");
     WALCellMapper mapper = new WALCellMapper();
     WALKey key = mock(WALKey.class);
-    when(key.getTablename()).thenReturn(TableName.valueOf("table"));
+    when(key.getTableName()).thenReturn(TableName.valueOf("table"));
     @SuppressWarnings("unchecked")
     Mapper<WALKey, WALEdit, ImmutableBytesWritable, Cell>.Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(configuration);
@@ -185,12 +191,12 @@ public class TestCellBasedWALPlayer2 {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
-        MapReduceCell key = (MapReduceCell) invocation.getArguments()[1];
+        MapReduceExtendedCell key = (MapReduceExtendedCell) invocation.getArguments()[1];
         assertEquals("row", Bytes.toString(writer.get()));
         assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
-    }).when(context).write(any(ImmutableBytesWritable.class), any(MapReduceCell.class));
+    }).when(context).write(any(ImmutableBytesWritable.class), any(MapReduceExtendedCell.class));
 
     mapper.map(key, value, context);
 
@@ -217,8 +223,8 @@ public class TestCellBasedWALPlayer2 {
       } catch (SecurityException e) {
         assertEquals(-1, newSecurityManager.getExitCode());
         assertTrue(data.toString().contains("ERROR: Wrong number of arguments:"));
-        assertTrue(data.toString().contains("Usage: WALPlayer [options] <wal inputdir>" +
-            " <tables> [<tableMappings>]"));
+        assertTrue(data.toString().contains("Usage: WALPlayer [options] <WAL inputdir>" +
+            " [<tables> <tableMappings>]"));
         assertTrue(data.toString().contains("-Dwal.bulk.output=/path/for/output"));
       }
 

@@ -61,6 +61,11 @@ client = THBaseService.Client(protocol)
 
 transport.open()
 
+# Check Thrift Server Type
+serverType = client.getThriftServerType()
+if serverType != TThriftServerType.TWO:
+  raise Exception("Mismatch between client and server, server type is %s" % serverType)
+
 table = "example"
 
 put = TPut(row="row1", columnValues=[TColumnValue(family="family1",qualifier="qualifier1",value="value1")])

@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 public interface MetricsHBaseServerWrapper {
   long getTotalQueueSize();
 
@@ -28,9 +31,19 @@ public interface MetricsHBaseServerWrapper {
 
   int getPriorityQueueLength();
 
+  int getMetaPriorityQueueLength();
+
   int getNumOpenConnections();
 
   int getActiveRpcHandlerCount();
+
+  int getActiveGeneralRpcHandlerCount();
+
+  int getActivePriorityRpcHandlerCount();
+
+  int getActiveReplicationRpcHandlerCount();
+
+  int getActiveMetaPriorityRpcHandlerCount();
 
   long getNumGeneralCallsDropped();
 
@@ -47,4 +60,6 @@ public interface MetricsHBaseServerWrapper {
   int getActiveReadRpcHandlerCount();
 
   int getActiveScanRpcHandlerCount();
+
+  long getNettyDmUsage();
 }

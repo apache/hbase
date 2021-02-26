@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
@@ -24,10 +23,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.StateMachineProcedureData;
 
 /**
@@ -45,14 +45,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.StateMa
 @InterfaceStability.Evolving
 public abstract class StateMachineProcedure<TEnvironment, TState>
     extends Procedure<TEnvironment> {
-  private static final Log LOG = LogFactory.getLog(StateMachineProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StateMachineProcedure.class);
 
   private static final int EOF_STATE = Integer.MIN_VALUE;
 
   private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   private Flow stateFlow = Flow.HAS_MORE_STATE;
-  private int stateCount = 0;
+  protected int stateCount = 0;
   private int[] states = null;
 
   private List<Procedure<TEnvironment>> subProcList = null;
@@ -71,7 +71,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    */
   private int previousState;
 
-  protected enum Flow {
+  public enum Flow {
     HAS_MORE_STATE,
     NO_MORE_STATE,
   }
@@ -83,7 +83,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    *         Flow.HAS_MORE_STATE if there is another step.
    */
   protected abstract Flow executeFromState(TEnvironment env, TState state)
-  throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException;
+          throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException;
 
   /**
    * called to perform the rollback of the specified state
@@ -138,28 +138,39 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    * Add a child procedure to execute
    * @param subProcedure the child procedure
    */
-  protected void addChildProcedure(Procedure<TEnvironment>... subProcedure) {
-    if (subProcedure == null) return;
+  protected <T extends Procedure<TEnvironment>> void addChildProcedure(
+      @SuppressWarnings("unchecked") T... subProcedure) {
+    if (subProcedure == null) {
+      return;
+    }
     final int len = subProcedure.length;
-    if (len == 0) return;
+    if (len == 0) {
+      return;
+    }
     if (subProcList == null) {
       subProcList = new ArrayList<>(len);
     }
     for (int i = 0; i < len; ++i) {
       Procedure<TEnvironment> proc = subProcedure[i];
-      if (!proc.hasOwner()) proc.setOwner(getOwner());
+      if (!proc.hasOwner()) {
+        proc.setOwner(getOwner());
+      }
+
       subProcList.add(proc);
     }
   }
 
   @Override
   protected Procedure[] execute(final TEnvironment env)
-  throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+          throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     updateTimestamp();
     try {
       failIfAborted();
 
-      if (!hasMoreState() || isFailed()) return null;
+      if (!hasMoreState() || isFailed()) {
+        return null;
+      }
+
       TState state = getCurrentState();
       if (stateCount == 0) {
         setNextState(getStateId(state));
@@ -176,8 +187,12 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
         this.cycles++;
       }
 
+      LOG.trace("{}", this);
       stateFlow = executeFromState(env, state);
-      if (!hasMoreState()) setNextState(EOF_STATE);
+      if (!hasMoreState()) {
+        setNextState(EOF_STATE);
+      }
+
       if (subProcList != null && !subProcList.isEmpty()) {
         Procedure[] subProcedures = subProcList.toArray(new Procedure[subProcList.size()]);
         subProcList = null;
@@ -192,35 +207,36 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   @Override
   protected void rollback(final TEnvironment env)
       throws IOException, InterruptedException {
-    if (isEofState()) stateCount--;
+    if (isEofState()) {
+      stateCount--;
+    }
+
     try {
       updateTimestamp();
       rollbackState(env, getCurrentState());
-      stateCount--;
     } finally {
+      stateCount--;
       updateTimestamp();
     }
   }
 
-  private boolean isEofState() {
+  protected boolean isEofState() {
     return stateCount > 0 && states[stateCount-1] == EOF_STATE;
   }
 
   @Override
   protected boolean abort(final TEnvironment env) {
-    final boolean isDebugEnabled = LOG.isDebugEnabled();
-    final TState state = getCurrentState();
-    if (isDebugEnabled) {
-      LOG.debug("abort requested for " + this + " state=" + state);
+    LOG.debug("Abort requested for {}", this);
+    if (!hasMoreState()) {
+      LOG.warn("Ignore abort request on {} because it has already been finished", this);
+      return false;
     }
-
-    if (hasMoreState()) {
-      aborted.set(true);
-      return true;
-    } else if (isDebugEnabled) {
-      LOG.debug("ignoring abort request on state=" + state + " for " + this);
+    if (!isRollbackSupported(getCurrentState())) {
+      LOG.warn("Ignore abort request on {} because it does not support rollback", this);
+      return false;
     }
-    return false;
+    aborted.set(true);
+    return true;
   }
 
   /**
@@ -256,6 +272,15 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
 
   protected TState getCurrentState() {
     return stateCount > 0 ? getState(states[stateCount-1]) : getInitialState();
+  }
+
+  /**
+   * This method is used from test code as it cannot be assumed that state transition will happen
+   * sequentially. Some procedures may skip steps/ states, some may add intermediate steps in
+   * future.
+   */
+  public int getCurrentStateId() {
+    return getStateId(getCurrentState());
   }
 
   /**

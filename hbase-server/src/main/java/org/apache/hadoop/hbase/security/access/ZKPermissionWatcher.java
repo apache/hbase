@@ -18,18 +18,6 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
@@ -40,7 +28,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Handles synchronization of access control list entries and updates
@@ -49,27 +50,28 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@code /hbase/acl/tablename}, with the znode data containing a serialized
  * list of the permissions granted for the table.  The {@code AccessController}
  * instances on all other cluster hosts watch the znodes for updates, which
- * trigger updates in the {@link TableAuthManager} permission cache.
+ * trigger updates in the {@link AuthManager} permission cache.
  */
 @InterfaceAudience.Private
-public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable {
-  private static final Log LOG = LogFactory.getLog(ZKPermissionWatcher.class);
+public class ZKPermissionWatcher extends ZKListener implements Closeable {
+  private static final Logger LOG = LoggerFactory.getLogger(ZKPermissionWatcher.class);
   // parent node for permissions lists
   static final String ACL_NODE = "acl";
-  private final TableAuthManager authManager;
+  private final AuthManager authManager;
   private final String aclZNode;
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final ExecutorService executor;
   private Future<?> childrenChangedFuture;
 
-  public ZKPermissionWatcher(ZooKeeperWatcher watcher,
-      TableAuthManager authManager, Configuration conf) {
+  public ZKPermissionWatcher(ZKWatcher watcher,
+      AuthManager authManager, Configuration conf) {
     super(watcher);
     this.authManager = authManager;
     String aclZnodeParent = conf.get("zookeeper.znode.acl.parent", ACL_NODE);
-    this.aclZNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, aclZnodeParent);
+    this.aclZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, aclZnodeParent);
     executor = Executors.newSingleThreadExecutor(
-      new DaemonThreadFactory("zk-permission-watcher"));
+      new ThreadFactoryBuilder().setNameFormat("zk-permission-watcher-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   public void start() throws KeeperException {
@@ -146,7 +148,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
         @Override
         public void run() {
           String table = ZKUtil.getNodeName(path);
-          if(AccessControlLists.isNamespaceEntry(table)) {
+          if (PermissionStorage.isNamespaceEntry(table)) {
             authManager.removeNamespace(Bytes.toBytes(table));
           } else {
             authManager.removeTable(TableName.valueOf(table));
@@ -185,25 +187,28 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
   public void nodeChildrenChanged(final String path) {
     waitUntilStarted();
     if (path.equals(aclZNode)) {
-      try {
-        final List<ZKUtil.NodeAndData> nodeList =
-            ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
-        // preempt any existing nodeChildrenChanged event processing
-        if (childrenChangedFuture != null && !childrenChangedFuture.isDone()) {
-          boolean cancelled = childrenChangedFuture.cancel(true);
-          if (!cancelled) {
-            // task may have finished between our check and attempted cancel, this is fine.
-            if (! childrenChangedFuture.isDone()) {
-              LOG.warn("Could not cancel processing node children changed event, " +
-                  "please file a JIRA and attach logs if possible.");
-            }
+      // preempt any existing nodeChildrenChanged event processing
+      if (childrenChangedFuture != null && !childrenChangedFuture.isDone()) {
+        boolean cancelled = childrenChangedFuture.cancel(true);
+        if (!cancelled) {
+          // task may have finished between our check and attempted cancel, this is fine.
+          if (!childrenChangedFuture.isDone()) {
+            LOG.warn("Could not cancel processing node children changed event, "
+              + "please file a JIRA and attach logs if possible.");
           }
         }
-        childrenChangedFuture = asyncProcessNodeUpdate(() -> refreshNodes(nodeList));
-      } catch (KeeperException ke) {
-        LOG.error("Error reading data from zookeeper for path "+path, ke);
-        watcher.abort("ZooKeeper error get node children for path "+path, ke);
       }
+      childrenChangedFuture = asyncProcessNodeUpdate(() -> {
+        try {
+          final List<ZKUtil.NodeAndData> nodeList =
+            ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode, false);
+          refreshNodes(nodeList);
+        } catch (KeeperException ke) {
+          String msg = "ZooKeeper error while reading node children data for path " + path;
+          LOG.error(msg, ke);
+          watcher.abort(msg, ke);
+        }
+      });
     }
   }
 
@@ -242,12 +247,12 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
 
   private void refreshAuthManager(String entry, byte[] nodeData) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Updating permissions cache from node "+entry+" with data: "+
+      LOG.debug("Updating permissions cache from {} with data {}", entry,
           Bytes.toStringBinary(nodeData));
     }
-    if(AccessControlLists.isNamespaceEntry(entry)) {
-      authManager.refreshNamespaceCacheFromWritable(
-          AccessControlLists.fromNamespaceEntry(entry), nodeData);
+    if (PermissionStorage.isNamespaceEntry(entry)) {
+      authManager.refreshNamespaceCacheFromWritable(PermissionStorage.fromNamespaceEntry(entry),
+        nodeData);
     } else {
       authManager.refreshTableCacheFromWritable(TableName.valueOf(entry), nodeData);
     }
@@ -260,8 +265,8 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
    */
   public void writeToZookeeper(byte[] entry, byte[] permsData) {
     String entryName = Bytes.toString(entry);
-    String zkNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
-    zkNode = ZKUtil.joinZNode(zkNode, entryName);
+    String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);
+    zkNode = ZNodePaths.joinZNode(zkNode, entryName);
 
     try {
       ZKUtil.createWithParents(watcher, zkNode);
@@ -278,8 +283,8 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
    * @param tableName
    */
   public void deleteTableACLNode(final TableName tableName) {
-    String zkNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
-    zkNode = ZKUtil.joinZNode(zkNode, tableName.getNameAsString());
+    String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);
+    zkNode = ZNodePaths.joinZNode(zkNode, tableName.getNameAsString());
 
     try {
       ZKUtil.deleteNode(watcher, zkNode);
@@ -295,8 +300,8 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
    * Delete the acl notify node of namespace
    */
   public void deleteNamespaceACLNode(final String namespace) {
-    String zkNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
-    zkNode = ZKUtil.joinZNode(zkNode, AccessControlLists.NAMESPACE_PREFIX + namespace);
+    String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);
+    zkNode = ZNodePaths.joinZNode(zkNode, PermissionStorage.NAMESPACE_PREFIX + namespace);
 
     try {
       ZKUtil.deleteNode(watcher, zkNode);

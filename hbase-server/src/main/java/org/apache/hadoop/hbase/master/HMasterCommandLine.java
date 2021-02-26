@@ -22,20 +22,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -47,10 +40,17 @@ import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 
 @InterfaceAudience.Private
 public class HMasterCommandLine extends ServerCommandLine {
-  private static final Log LOG = LogFactory.getLog(HMasterCommandLine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HMasterCommandLine.class);
 
   private static final String USAGE =
     "Usage: Master [opts] start|stop|clear\n" +
@@ -62,7 +62,9 @@ public class HMasterCommandLine extends ServerCommandLine {
     "   --localRegionServers=<servers> " +
       "RegionServers to start in master process when in standalone mode.\n" +
     "   --masters=<servers>            Masters to start in this process.\n" +
-    "   --backup                       Master should start in backup mode";
+    "   --backup                       Master should start in backup mode\n" +
+    "   --shutDownCluster                    " +
+      "Start Cluster shutdown; Master signals RegionServer shutdown";
 
   private final Class<? extends HMaster> masterClass;
 
@@ -70,18 +72,21 @@ public class HMasterCommandLine extends ServerCommandLine {
     this.masterClass = masterClass;
   }
 
+  @Override
   protected String getUsage() {
     return USAGE;
   }
 
-
+  @Override
   public int run(String args[]) throws Exception {
+    boolean shutDownCluster = false;
     Options opt = new Options();
     opt.addOption("localRegionServers", true,
       "RegionServers to start in master process when running standalone");
     opt.addOption("masters", true, "Masters to start in this process");
     opt.addOption("minRegionServers", true, "Minimum RegionServers needed to host user tables");
     opt.addOption("backup", false, "Do not try to become HMaster until the primary fails");
+    opt.addOption("shutDownCluster", false, "`hbase master stop --shutDownCluster` shuts down cluster");
 
     CommandLine cmd;
     try {
@@ -126,6 +131,11 @@ public class HMasterCommandLine extends ServerCommandLine {
       LOG.debug("masters set to " + val);
     }
 
+    // Checking whether to shut down cluster or not
+    if (cmd.hasOption("shutDownCluster")) {
+      shutDownCluster = true;
+    }
+
     @SuppressWarnings("unchecked")
     List<String> remainingArgs = cmd.getArgList();
     if (remainingArgs.size() != 1) {
@@ -138,7 +148,15 @@ public class HMasterCommandLine extends ServerCommandLine {
     if ("start".equals(command)) {
       return startMaster();
     } else if ("stop".equals(command)) {
-      return stopMaster();
+      if (shutDownCluster) {
+        return stopMaster();
+      }
+      System.err.println(
+        "To shutdown the master run " +
+        "hbase-daemon.sh stop master or send a kill signal to " +
+        "the HMaster pid, " +
+        "and to stop HBase Cluster run \"stop-hbase.sh\" or \"hbase master stop --shutDownCluster\"");
+      return 1;
     } else if ("clear".equals(command)) {
       return (ZNodeClearer.clear(getConf()) ? 0 : 1);
     } else {
@@ -149,6 +167,8 @@ public class HMasterCommandLine extends ServerCommandLine {
 
   private int startMaster() {
     Configuration conf = getConf();
+    TraceUtil.initTracer(conf);
+
     try {
       // If 'local', defer to LocalHBaseCluster instance.  Starts master
       // and regionserver both in the one JVM.
@@ -230,9 +250,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         waitOnMasterThreads(cluster);
       } else {
         logProcessInfo(getConf());
-        CoordinatedStateManager csm =
-          CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
-        HMaster master = HMaster.constructMaster(masterClass, conf, csm);
+        HMaster master = HMaster.constructMaster(masterClass, conf);
         if (master.isStopped()) {
           LOG.info("Won't bring the Master up as a shutdown is requested");
           return 1;
@@ -302,9 +320,9 @@ public class HMasterCommandLine extends ServerCommandLine {
   public static class LocalHMaster extends HMaster {
     private MiniZooKeeperCluster zkcluster = null;
 
-    public LocalHMaster(Configuration conf, CoordinatedStateManager csm)
+    public LocalHMaster(Configuration conf)
     throws IOException, KeeperException, InterruptedException {
-      super(conf, csm);
+      super(conf);
     }
 
     @Override

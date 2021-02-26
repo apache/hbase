@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.commons.lang3.reflect.ConstructorUtils;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A factory class for instantiating replication objects that deal with replication state.
@@ -31,36 +29,12 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 @InterfaceAudience.Private
 public class ReplicationFactory {
 
-  public static final Class defaultReplicationQueueClass = ReplicationQueuesZKImpl.class;
-
-  public static ReplicationQueues getReplicationQueues(ReplicationQueuesArguments args)
-      throws Exception {
-    Class<?> classToBuild = args.getConf().getClass("hbase.region.replica." +
-        "replication.replicationQueues.class", defaultReplicationQueueClass);
-    return (ReplicationQueues) ConstructorUtils.invokeConstructor(classToBuild, args);
+  public static ReplicationPeers getReplicationPeers(ZKWatcher zk, Configuration conf) {
+    return new ReplicationPeers(zk, conf);
   }
 
-  public static ReplicationQueuesClient getReplicationQueuesClient(
-      ReplicationQueuesClientArguments args) throws Exception {
-    Class<?> classToBuild = args.getConf().getClass(
-      "hbase.region.replica.replication.replicationQueuesClient.class",
-      ReplicationQueuesClientZKImpl.class);
-    return (ReplicationQueuesClient) ConstructorUtils.invokeConstructor(classToBuild, args);
-  }
-
-  public static ReplicationPeers getReplicationPeers(final ZooKeeperWatcher zk, Configuration conf,
-      Abortable abortable) {
-    return getReplicationPeers(zk, conf, null, abortable);
-  }
-
-  public static ReplicationPeers getReplicationPeers(final ZooKeeperWatcher zk, Configuration conf,
-      final ReplicationQueuesClient queuesClient, Abortable abortable) {
-    return new ReplicationPeersZKImpl(zk, conf, queuesClient, abortable);
-  }
-
-  public static ReplicationTracker getReplicationTracker(ZooKeeperWatcher zookeeper,
-      final ReplicationPeers replicationPeers, Configuration conf, Abortable abortable,
+  public static ReplicationTracker getReplicationTracker(ZKWatcher zookeeper, Abortable abortable,
       Stoppable stopper) {
-    return new ReplicationTrackerZKImpl(zookeeper, replicationPeers, conf, abortable, stopper);
+    return new ReplicationTrackerZKImpl(zookeeper, abortable, stopper);
   }
 }

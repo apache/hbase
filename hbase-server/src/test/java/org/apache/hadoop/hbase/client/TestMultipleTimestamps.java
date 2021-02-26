@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,16 +17,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -35,10 +35,13 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Run tests related to {@link org.apache.hadoop.hbase.filter.TimestampsFilter} using HBase client APIs.
@@ -47,7 +50,12 @@ import org.junit.rules.TestName;
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestMultipleTimestamps {
-  private static final Log LOG = LogFactory.getLog(TestMultipleTimestamps.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultipleTimestamps.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultipleTimestamps.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule
@@ -110,7 +118,7 @@ public class TestMultipleTimestamps {
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
 
-    Cell [] kvs;
+    Cell[] kvs;
 
     kvs = scanner.next().rawCells();
     assertEquals(2, kvs.length);
@@ -180,7 +188,7 @@ public class TestMultipleTimestamps {
 
     Integer[] scanRows = new Integer[] {5, 7};
     Integer[] scanColumns = new Integer[] {3, 4, 5};
-    Long[] scanTimestamps = new Long[] {2l, 3L};
+    Long[] scanTimestamps = new Long[] { 2L, 3L};
     int scanMaxVersions = 2;
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
@@ -241,7 +249,7 @@ public class TestMultipleTimestamps {
 
     Integer[] scanRows = new Integer[] {3, 5, 7};
     Integer[] scanColumns = new Integer[] {3, 4, 5};
-    Long[] scanTimestamps = new Long[] {2l, 4L};
+    Long[] scanTimestamps = new Long[] { 2L, 4L};
     int scanMaxVersions = 5;
 
     put(ht, FAMILY, putRows1, putColumns1, putTimestamps1);
@@ -443,7 +451,6 @@ public class TestMultipleTimestamps {
       Integer[] rowIndexes, Integer[] columnIndexes,
       Long[] versions, int maxVersions)
   throws IOException {
-    Arrays.asList(rowIndexes);
     byte startRow[] = Bytes.toBytes("row:" +
         Collections.min( Arrays.asList(rowIndexes)));
     byte endRow[] = Bytes.toBytes("row:" +

@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,8 +41,6 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * TableSnapshotInputFormat allows a MapReduce job to run over a table snapshot. The job
@@ -137,21 +134,23 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     public RegionInfo getRegion() {
       return delegate.getRegionInfo();
     }
+
+    TableSnapshotInputFormatImpl.InputSplit getDelegate() {
+      return this.delegate;
+    }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class TableSnapshotRegionRecordReader extends
       RecordReader<ImmutableBytesWritable, Result> {
     private TableSnapshotInputFormatImpl.RecordReader delegate =
       new TableSnapshotInputFormatImpl.RecordReader();
     private TaskAttemptContext context;
-    private Method getCounter;
 
     @Override
     public void initialize(InputSplit split, TaskAttemptContext context) throws IOException,
         InterruptedException {
       this.context = context;
-      getCounter = TableRecordReaderImpl.retrieveGetCounterWithStringsParams(context);
       delegate.initialize(
         ((TableSnapshotRegionSplit) split).delegate,
         context.getConfiguration());
@@ -163,7 +162,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       if (result) {
         ScanMetrics scanMetrics = delegate.getScanner().getScanMetrics();
         if (scanMetrics != null && context != null) {
-          TableRecordReaderImpl.updateCounters(scanMetrics, 0, getCounter, context, 0);
+          TableRecordReaderImpl.updateCounters(scanMetrics, 0, context, 0);
         }
       }
       return result;

@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.codehaus.jackson.map.SerializationConfig.Feature.SORT_PROPERTIES_ALPHABETICALLY;
-
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.UniformReservoir;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
@@ -31,31 +31,29 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -64,15 +62,16 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RawAsyncTable;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -85,10 +84,16 @@ import org.apache.hadoop.hbase.io.hfile.RandomDistribution;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
-import org.apache.hadoop.hbase.regionserver.TestHRegionFileSystem;
 import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
-import org.apache.hadoop.hbase.util.*;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.ByteArrayHashKey;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.GsonUtil;
+import org.apache.hadoop.hbase.util.Hash;
+import org.apache.hadoop.hbase.util.MurmurHash;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.YammerHistogramUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -98,16 +103,16 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.apache.htrace.Sampler;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
-import org.apache.htrace.impl.ProbabilitySampler;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.htrace.core.ProbabilitySampler;
+import org.apache.htrace.core.Sampler;
+import org.apache.htrace.core.TraceScope;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.UniformReservoir;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
@@ -130,16 +135,14 @@ import com.codahale.metrics.UniformReservoir;
 public class PerformanceEvaluation extends Configured implements Tool {
   static final String RANDOM_SEEK_SCAN = "randomSeekScan";
   static final String RANDOM_READ = "randomRead";
-  private static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-  static {
-    MAPPER.configure(SORT_PROPERTIES_ALPHABETICALLY, true);
-  }
+  static final String PE_COMMAND_SHORTNAME = "pe";
+  private static final Logger LOG = LoggerFactory.getLogger(PerformanceEvaluation.class.getName());
+  private static final Gson GSON = GsonUtil.createGson().create();
 
   public static final String TABLE_NAME = "TestTable";
-  public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
-  public static final byte [] COLUMN_ZERO = Bytes.toBytes("" + 0);
-  public static final byte [] QUALIFIER_NAME = COLUMN_ZERO;
+  public static final String FAMILY_NAME_BASE = "info";
+  public static final byte[] FAMILY_ZERO = Bytes.toBytes("info0");
+  public static final byte[] COLUMN_ZERO = Bytes.toBytes("" + 0);
   public static final int DEFAULT_VALUE_LENGTH = 1000;
   public static final int ROW_LENGTH = 26;
 
@@ -158,17 +161,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   static {
     addCommandDescriptor(AsyncRandomReadTest.class, "asyncRandomRead",
-        "Run async random read test");
+      "Run async random read test");
     addCommandDescriptor(AsyncRandomWriteTest.class, "asyncRandomWrite",
-        "Run async random write test");
+      "Run async random write test");
     addCommandDescriptor(AsyncSequentialReadTest.class, "asyncSequentialRead",
-        "Run async sequential read test");
+      "Run async sequential read test");
     addCommandDescriptor(AsyncSequentialWriteTest.class, "asyncSequentialWrite",
-        "Run async sequential write test");
+      "Run async sequential write test");
     addCommandDescriptor(AsyncScanTest.class, "asyncScan",
-        "Run async scan test (read every row)");
-    addCommandDescriptor(RandomReadTest.class, RANDOM_READ,
-      "Run random read test");
+      "Run async scan test (read every row)");
+    addCommandDescriptor(RandomReadTest.class, RANDOM_READ, "Run random read test");
+    addCommandDescriptor(MetaRandomReadTest.class, "metaRandomRead",
+      "Run getRegionLocation test");
     addCommandDescriptor(RandomSeekScanTest.class, RANDOM_SEEK_SCAN,
       "Run random seek and scan 100 test");
     addCommandDescriptor(RandomScanWithRange10Test.class, "scanRange10",
@@ -185,11 +189,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       "Run sequential read test");
     addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite",
       "Run sequential write test");
-    addCommandDescriptor(ScanTest.class, "scan",
-      "Run scan test (read every row)");
+    addCommandDescriptor(MetaWriteTest.class, "metaWrite",
+      "Populate meta table;used with 1 thread; to be cleaned up by cleanMeta");
+    addCommandDescriptor(ScanTest.class, "scan", "Run scan test (read every row)");
     addCommandDescriptor(FilteredScanTest.class, "filterScan",
       "Run scan test using a filter to find a specific row based on it's value " +
-      "(make sure to use --rows=20)");
+        "(make sure to use --rows=20)");
     addCommandDescriptor(IncrementTest.class, "increment",
       "Increment on each row; clients overlap on keyspace so some concurrent operations");
     addCommandDescriptor(AppendTest.class, "append",
@@ -200,6 +205,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       "CheckAndPut on each row; clients overlap on keyspace so some concurrent operations");
     addCommandDescriptor(CheckAndDeleteTest.class, "checkAndDelete",
       "CheckAndDelete on each row; clients overlap on keyspace so some concurrent operations");
+    addCommandDescriptor(CleanMetaTest.class, "cleanMeta",
+      "Remove fake region entries on meta table inserted by metaWrite; used with 1 thread");
   }
 
   /**
@@ -217,10 +224,22 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public RunResult(long duration, Histogram hist) {
       this.duration = duration;
       this.hist = hist;
+      numbOfReplyOverThreshold = 0;
+      numOfReplyFromReplica = 0;
+    }
+
+    public RunResult(long duration, long numbOfReplyOverThreshold, long numOfReplyFromReplica,
+      Histogram hist) {
+      this.duration = duration;
+      this.hist = hist;
+      this.numbOfReplyOverThreshold = numbOfReplyOverThreshold;
+      this.numOfReplyFromReplica = numOfReplyFromReplica;
     }
 
     public final long duration;
     public final Histogram hist;
+    public final long numbOfReplyOverThreshold;
+    public final long numOfReplyFromReplica;
 
     @Override
     public String toString() {
@@ -305,8 +324,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         }
       };
 
-      ObjectMapper mapper = new ObjectMapper();
-      TestOptions opts = mapper.readValue(value.toString(), TestOptions.class);
+      TestOptions opts = GSON.fromJson(value.toString(), TestOptions.class);
       Configuration conf = HBaseConfiguration.create(context.getConfiguration());
       final Connection con = ConnectionFactory.createConnection(conf);
       AsyncConnection asyncCon = null;
@@ -346,11 +364,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
     byte[][] splits = getSplits(opts);
 
     // recreate the table when user has requested presplit or when existing
-    // {RegionSplitPolicy,replica count} does not match requested.
+    // {RegionSplitPolicy,replica count} does not match requested, or when the
+    // number of column families does not match requested.
     if ((exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions)
       || (!isReadCmd && desc != null &&
           !StringUtils.equals(desc.getRegionSplitPolicyClassName(), opts.splitPolicy))
-      || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)) {
+      || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)
+      || (desc != null && desc.getColumnFamilyCount() != opts.families)) {
       needsDelete = true;
       // wait, why did it delete my table?!?
       LOG.debug(MoreObjects.toStringHelper("needsDelete")
@@ -360,7 +380,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         .add("desc", desc)
         .add("presplit", opts.presplitRegions)
         .add("splitPolicy", opts.splitPolicy)
-        .add("replicas", opts.replicas));
+        .add("replicas", opts.replicas)
+        .add("families", opts.families)
+        .toString());
     }
 
     // remove an existing table
@@ -391,24 +413,27 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * Create an HTableDescriptor from provided TestOptions.
    */
   protected static HTableDescriptor getTableDescriptor(TestOptions opts) {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(opts.tableName));
-    HColumnDescriptor family = new HColumnDescriptor(FAMILY_NAME);
-    family.setDataBlockEncoding(opts.blockEncoding);
-    family.setCompressionType(opts.compression);
-    family.setBloomFilterType(opts.bloomType);
-    family.setBlocksize(opts.blockSize);
-    if (opts.inMemoryCF) {
-      family.setInMemory(true);
+    HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(opts.tableName));
+    for (int family = 0; family < opts.families; family++) {
+      byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+      HColumnDescriptor familyDesc = new HColumnDescriptor(familyName);
+      familyDesc.setDataBlockEncoding(opts.blockEncoding);
+      familyDesc.setCompressionType(opts.compression);
+      familyDesc.setBloomFilterType(opts.bloomType);
+      familyDesc.setBlocksize(opts.blockSize);
+      if (opts.inMemoryCF) {
+        familyDesc.setInMemory(true);
+      }
+      familyDesc.setInMemoryCompaction(opts.inMemoryCompaction);
+      tableDesc.addFamily(familyDesc);
     }
-    family.setInMemoryCompaction(opts.inMemoryCompaction);
-    desc.addFamily(family);
     if (opts.replicas != DEFAULT_OPTS.replicas) {
-      desc.setRegionReplication(opts.replicas);
+      tableDesc.setRegionReplication(opts.replicas);
     }
-    if (opts.splitPolicy != DEFAULT_OPTS.splitPolicy) {
-      desc.setRegionSplitPolicyClassName(opts.splitPolicy);
+    if (opts.splitPolicy != null && !opts.splitPolicy.equals(DEFAULT_OPTS.splitPolicy)) {
+      tableDesc.setRegionSplitPolicyClassName(opts.splitPolicy);
     }
-    return desc;
+    return tableDesc;
   }
 
   /**
@@ -428,6 +453,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return splits;
   }
 
+  static void setupConnectionCount(final TestOptions opts) {
+    if (opts.oneCon) {
+      opts.connCount = 1;
+    } else {
+      if (opts.connCount == -1) {
+        // set to thread number if connCount is not set
+        opts.connCount = opts.numClientThreads;
+      }
+    }
+  }
+
   /*
    * Run all clients in this vm each to its own thread.
    */
@@ -440,14 +476,23 @@ public class PerformanceEvaluation extends Configured implements Tool {
     RunResult[] results = new RunResult[opts.numClientThreads];
     ExecutorService pool = Executors.newFixedThreadPool(opts.numClientThreads,
       new ThreadFactoryBuilder().setNameFormat("TestClient-%s").build());
-    final Connection con = ConnectionFactory.createConnection(conf);
-    final AsyncConnection asyncCon = ConnectionFactory.createAsyncConnection(conf).get();
+    setupConnectionCount(opts);
+    final Connection[] cons = new Connection[opts.connCount];
+    final AsyncConnection[] asyncCons = new AsyncConnection[opts.connCount];
+    for (int i = 0; i < opts.connCount; i++) {
+      cons[i] = ConnectionFactory.createConnection(conf);
+      asyncCons[i] = ConnectionFactory.createAsyncConnection(conf).get();
+    }
+    LOG.info("Created " + opts.connCount + " connections for " +
+        opts.numClientThreads + " threads");
     for (int i = 0; i < threads.length; i++) {
       final int index = i;
       threads[i] = pool.submit(new Callable<RunResult>() {
         @Override
         public RunResult call() throws Exception {
           TestOptions threadOpts = new TestOptions(opts);
+          final Connection con = cons[index % cons.length];
+          final AsyncConnection asyncCon = asyncCons[index % asyncCons.length];
           if (threadOpts.startRow == 0) threadOpts.startRow = index * threadOpts.perClientRunRows;
           RunResult run = runOneClient(cmd, conf, con, asyncCon, threadOpts, new Status() {
             @Override
@@ -457,6 +502,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
           });
           LOG.info("Finished " + Thread.currentThread().getName() + " in " + run.duration +
             "ms over " + threadOpts.perClientRunRows + " rows");
+          if (opts.latencyThreshold > 0) {
+            LOG.info("Number of replies over latency threshold " + opts.latencyThreshold +
+              "(ms) is " + run.numbOfReplyOverThreshold);
+          }
           return run;
         }
       });
@@ -475,16 +524,31 @@ public class PerformanceEvaluation extends Configured implements Tool {
              + Arrays.toString(results));
     Arrays.sort(results);
     long total = 0;
+    float avgLatency = 0 ;
+    float avgTPS = 0;
+    long replicaWins = 0;
     for (RunResult result : results) {
       total += result.duration;
+      avgLatency += result.hist.getSnapshot().getMean();
+      avgTPS += opts.perClientRunRows * 1.0f / result.duration;
+      replicaWins += result.numOfReplyFromReplica;
     }
-    LOG.info("[" + test + "]"
+    avgTPS *= 1000; // ms to second
+    avgLatency = avgLatency / results.length;
+    LOG.info("[" + test + " duration ]"
       + "\tMin: " + results[0] + "ms"
       + "\tMax: " + results[results.length - 1] + "ms"
       + "\tAvg: " + (total / results.length) + "ms");
+    LOG.info("[ Avg latency (us)]\t" + Math.round(avgLatency));
+    LOG.info("[ Avg TPS/QPS]\t" + Math.round(avgTPS) + "\t row per second");
+    if (opts.replicas > 1) {
+      LOG.info("[results from replica regions] " + replicaWins);
+    }
 
-    con.close();
-    asyncCon.close();
+    for (int i = 0; i < opts.connCount; i++) {
+      cons[i].close();
+      asyncCons[i].close();
+    }
 
     return results;
   }
@@ -526,7 +590,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
       Histogram.class,     // yammer metrics
-      ObjectMapper.class); // jackson-mapper-asl
+      Gson.class,  // gson
+      FilterAllFilter.class // hbase-server tests jar
+      );
 
     TableMapReduceUtil.initCredentials(job);
 
@@ -570,7 +636,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         TestOptions next = new TestOptions(opts);
         next.startRow = j * perClientRows;
         next.perClientRunRows = perClientRows;
-        String s = MAPPER.writeValueAsString(next);
+        String s = GSON.toJson(next);
         LOG.info("Client=" + j + ", input=" + s);
         byte[] b = Bytes.toBytes(s);
         int hash = h.hash(new ByteArrayHashKey(b, 0, b.length), -1);
@@ -636,10 +702,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
     boolean writeToWAL = true;
     boolean autoFlush = false;
     boolean oneCon = false;
+    int connCount = -1; //wil decide the actual num later
     boolean useTags = false;
     int noOfTags = 1;
     boolean reportLatency = false;
     int multiGet = 0;
+    int multiPut = 0;
     int randomSleep = 0;
     boolean inMemoryCF = false;
     int presplitRegions = 0;
@@ -655,7 +723,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int period = (this.perClientRunRows / 10) == 0? perClientRunRows: perClientRunRows / 10;
     int cycles = 1;
     int columns = 1;
+    int families = 1;
     int caching = 30;
+    int latencyThreshold = 0; // in millsecond
     boolean addColumns = true;
     MemoryCompactionPolicy inMemoryCompaction =
         MemoryCompactionPolicy.valueOf(
@@ -663,6 +733,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     boolean asyncPrefetch = false;
     boolean cacheBlocks = true;
     Scan.ReadType scanReadType = Scan.ReadType.DEFAULT;
+    long bufferSize = 2l * 1024l * 1024l;
 
     public TestOptions() {}
 
@@ -686,10 +757,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.writeToWAL = that.writeToWAL;
       this.autoFlush = that.autoFlush;
       this.oneCon = that.oneCon;
+      this.connCount = that.connCount;
       this.useTags = that.useTags;
       this.noOfTags = that.noOfTags;
       this.reportLatency = that.reportLatency;
+      this.latencyThreshold = that.latencyThreshold;
       this.multiGet = that.multiGet;
+      this.multiPut = that.multiPut;
       this.inMemoryCF = that.inMemoryCF;
       this.presplitRegions = that.presplitRegions;
       this.replicas = that.replicas;
@@ -707,11 +781,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.measureAfter = that.measureAfter;
       this.addColumns = that.addColumns;
       this.columns = that.columns;
+      this.families = that.families;
       this.caching = that.caching;
       this.inMemoryCompaction = that.inMemoryCompaction;
       this.asyncPrefetch = that.asyncPrefetch;
       this.cacheBlocks = that.cacheBlocks;
       this.scanReadType = that.scanReadType;
+      this.bufferSize = that.bufferSize;
     }
 
     public int getCaching() {
@@ -728,6 +804,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public void setColumns(final int columns) {
       this.columns = columns;
+    }
+
+    public int getFamilies() {
+      return this.families;
+    }
+
+    public void setFamilies(final int families) {
+      this.families = families;
     }
 
     public int getCycles() {
@@ -834,6 +918,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.oneCon = oneCon;
     }
 
+    public int getConnCount() {
+      return connCount;
+    }
+
+    public void setConnCount(int connCount) {
+      this.connCount = connCount;
+    }
+
     public void setUseTags(boolean useTags) {
       this.useTags = useTags;
     }
@@ -848,6 +940,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public void setMultiGet(int multiGet) {
       this.multiGet = multiGet;
+    }
+
+    public void setMultiPut(int multiPut) {
+      this.multiPut = multiPut;
     }
 
     public void setInMemoryCF(boolean inMemoryCF) {
@@ -880,6 +976,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public void setValueSize(int valueSize) {
       this.valueSize = valueSize;
+    }
+
+    public void setBufferSize(long bufferSize) {
+      this.bufferSize = bufferSize;
     }
 
     public void setPeriod(int period) {
@@ -954,6 +1054,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return multiGet;
     }
 
+    public int getMultiPut() {
+      return multiPut;
+    }
+
     public boolean isInMemoryCF() {
       return inMemoryCF;
     }
@@ -1017,6 +1121,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public MemoryCompactionPolicy getInMemoryCompaction() {
       return this.inMemoryCompaction;
     }
+
+    public long getBufferSize() {
+      return this.bufferSize;
+    }
   }
 
   /*
@@ -1038,13 +1146,22 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected final TestOptions opts;
 
     private final Status status;
-    private final Sampler<?> traceSampler;
+    private final Sampler traceSampler;
     private final SpanReceiverHost receiverHost;
 
     private String testName;
     private Histogram latencyHistogram;
+    private Histogram replicaLatencyHistogram;
     private Histogram valueSizeHistogram;
+    private Histogram rpcCallsHistogram;
+    private Histogram remoteRpcCallsHistogram;
+    private Histogram millisBetweenNextHistogram;
+    private Histogram regionsScannedHistogram;
+    private Histogram bytesInResultsHistogram;
+    private Histogram bytesInRemoteResultsHistogram;
     private RandomDistribution.Zipf zipf;
+    private long numOfReplyOverLatencyThreshold = 0;
+    private long numOfReplyFromReplica = 0;
 
     /**
      * Note that all subclasses of this class must provide a public constructor
@@ -1072,19 +1189,38 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     int getValueLength(final Random r) {
-      if (this.opts.isValueRandom()) return Math.abs(r.nextInt() % opts.valueSize);
-      else if (this.opts.isValueZipf()) return Math.abs(this.zipf.nextInt());
-      else return opts.valueSize;
+      if (this.opts.isValueRandom()) {
+        return r.nextInt(opts.valueSize);
+      } else if (this.opts.isValueZipf()) {
+        return Math.abs(this.zipf.nextInt());
+      } else {
+        return opts.valueSize;
+      }
     }
 
     void updateValueSize(final Result [] rs) throws IOException {
-      if (rs == null || !isRandomValueSize()) return;
-      for (Result r: rs) updateValueSize(r);
+      updateValueSize(rs, 0);
+    }
+
+    void updateValueSize(final Result [] rs, final long latency) throws IOException {
+      if (rs == null || (latency == 0)) return;
+      for (Result r: rs) updateValueSize(r, latency);
     }
 
     void updateValueSize(final Result r) throws IOException {
-      if (r == null || !isRandomValueSize()) return;
+      updateValueSize(r, 0);
+    }
+
+    void updateValueSize(final Result r, final long latency) throws IOException {
+      if (r == null || (latency == 0)) return;
       int size = 0;
+      // update replicaHistogram
+      if (r.isStale()) {
+        replicaLatencyHistogram.update(latency / 1000);
+        numOfReplyFromReplica ++;
+      }
+      if (!isRandomValueSize()) return;
+
       for (CellScanner scanner = r.cellScanner(); scanner.advance();) {
         size += scanner.current().getValueLength();
       }
@@ -1094,6 +1230,35 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void updateValueSize(final int valueSize) {
       if (!isRandomValueSize()) return;
       this.valueSizeHistogram.update(valueSize);
+    }
+
+    void updateScanMetrics(final ScanMetrics metrics) {
+      if (metrics == null) return;
+      Map<String,Long> metricsMap = metrics.getMetricsMap();
+      Long rpcCalls = metricsMap.get(ScanMetrics.RPC_CALLS_METRIC_NAME);
+      if (rpcCalls != null) {
+        this.rpcCallsHistogram.update(rpcCalls.longValue());
+      }
+      Long remoteRpcCalls = metricsMap.get(ScanMetrics.REMOTE_RPC_CALLS_METRIC_NAME);
+      if (remoteRpcCalls != null) {
+        this.remoteRpcCallsHistogram.update(remoteRpcCalls.longValue());
+      }
+      Long millisBetweenNext = metricsMap.get(ScanMetrics.MILLIS_BETWEEN_NEXTS_METRIC_NAME);
+      if (millisBetweenNext != null) {
+        this.millisBetweenNextHistogram.update(millisBetweenNext.longValue());
+      }
+      Long regionsScanned = metricsMap.get(ScanMetrics.REGIONS_SCANNED_METRIC_NAME);
+      if (regionsScanned != null) {
+        this.regionsScannedHistogram.update(regionsScanned.longValue());
+      }
+      Long bytesInResults = metricsMap.get(ScanMetrics.BYTES_IN_RESULTS_METRIC_NAME);
+      if (bytesInResults != null && bytesInResults.longValue() > 0) {
+        this.bytesInResultsHistogram.update(bytesInResults.longValue());
+      }
+      Long bytesInRemoteResults = metricsMap.get(ScanMetrics.BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
+      if (bytesInRemoteResults != null && bytesInRemoteResults.longValue() > 0) {
+        this.bytesInRemoteResultsHistogram.update(bytesInRemoteResults.longValue());
+      }
     }
 
     String generateStatus(final int sr, final int i, final int lr) {
@@ -1117,13 +1282,23 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     void testSetup() throws IOException {
-      createConnection();
-      onStartup();
+      // test metrics
       latencyHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
+      // If it is a replica test, set up histogram for replica.
+      if (opts.replicas > 1) {
+        replicaLatencyHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
+      }
       valueSizeHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
-    }
+      // scan metrics
+      rpcCallsHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
+      remoteRpcCallsHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
+      millisBetweenNextHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
+      regionsScannedHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
+      bytesInResultsHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
+      bytesInRemoteResultsHistogram = YammerHistogramUtils.newHistogram(new UniformReservoir(1024 * 500));
 
-    abstract void createConnection() throws IOException;
+      onStartup();
+    }
 
     abstract void onStartup() throws IOException;
 
@@ -1136,20 +1311,50 @@ public class PerformanceEvaluation extends Configured implements Tool {
         status.setStatus("Test : " + testName + ", Thread : " + Thread.currentThread().getName());
         status.setStatus("Latency (us) : " + YammerHistogramUtils.getHistogramReport(
             latencyHistogram));
+        if (opts.replicas > 1) {
+          status.setStatus("Latency (us) from Replica Regions: " +
+            YammerHistogramUtils.getHistogramReport(replicaLatencyHistogram));
+        }
         status.setStatus("Num measures (latency) : " + latencyHistogram.getCount());
         status.setStatus(YammerHistogramUtils.getPrettyHistogramReport(latencyHistogram));
-        status.setStatus("ValueSize (bytes) : "
-            + YammerHistogramUtils.getHistogramReport(valueSizeHistogram));
-        status.setStatus("Num measures (ValueSize): " + valueSizeHistogram.getCount());
-        status.setStatus(YammerHistogramUtils.getPrettyHistogramReport(valueSizeHistogram));
+        if (valueSizeHistogram.getCount() > 0) {
+          status.setStatus("ValueSize (bytes) : "
+              + YammerHistogramUtils.getHistogramReport(valueSizeHistogram));
+          status.setStatus("Num measures (ValueSize): " + valueSizeHistogram.getCount());
+          status.setStatus(YammerHistogramUtils.getPrettyHistogramReport(valueSizeHistogram));
+        } else {
+          status.setStatus("No valueSize statistics available");
+        }
+        if (rpcCallsHistogram.getCount() > 0) {
+          status.setStatus("rpcCalls (count): " +
+              YammerHistogramUtils.getHistogramReport(rpcCallsHistogram));
+        }
+        if (remoteRpcCallsHistogram.getCount() > 0) {
+          status.setStatus("remoteRpcCalls (count): " +
+              YammerHistogramUtils.getHistogramReport(remoteRpcCallsHistogram));
+        }
+        if (millisBetweenNextHistogram.getCount() > 0) {
+          status.setStatus("millisBetweenNext (latency): " +
+              YammerHistogramUtils.getHistogramReport(millisBetweenNextHistogram));
+        }
+        if (regionsScannedHistogram.getCount() > 0) {
+          status.setStatus("regionsScanned (count): " +
+              YammerHistogramUtils.getHistogramReport(regionsScannedHistogram));
+        }
+        if (bytesInResultsHistogram.getCount() > 0) {
+          status.setStatus("bytesInResults (size): " +
+              YammerHistogramUtils.getHistogramReport(bytesInResultsHistogram));
+        }
+        if (bytesInRemoteResultsHistogram.getCount() > 0) {
+          status.setStatus("bytesInRemoteResults (size): " +
+              YammerHistogramUtils.getHistogramReport(bytesInRemoteResultsHistogram));
+        }
       }
-      closeConnection();
       receiverHost.closeReceivers();
     }
 
     abstract void onTakedown() throws IOException;
 
-    abstract void closeConnection() throws IOException;
 
     /*
      * Run test
@@ -1182,24 +1387,28 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testTimed() throws IOException, InterruptedException {
       int startRow = getStartRow();
       int lastRow = getLastRow();
+      TraceUtil.addSampler(traceSampler);
       // Report on completion of 1/10th of total.
       for (int ii = 0; ii < opts.cycles; ii++) {
         if (opts.cycles > 1) LOG.info("Cycle=" + ii + " of " + opts.cycles);
         for (int i = startRow; i < lastRow; i++) {
           if (i % everyN != 0) continue;
           long startTime = System.nanoTime();
-          TraceScope scope = Trace.startSpan("test row", traceSampler);
-          try {
-            testRow(i);
-          } finally {
-            scope.close();
+          boolean requestSent = false;
+          try (TraceScope scope = TraceUtil.createTrace("test row");){
+            requestSent = testRow(i, startTime);
           }
           if ( (i - startRow) > opts.measureAfter) {
-            // If multiget is enabled, say set to 10, testRow() returns immediately first 9 times
-            // and sends the actual get request in the 10th iteration. We should only set latency
-            // when actual request is sent because otherwise it turns out to be 0.
-            if (opts.multiGet == 0 || (i - startRow + 1) % opts.multiGet == 0) {
-              latencyHistogram.update((System.nanoTime() - startTime) / 1000);
+            // If multiget or multiput is enabled, say set to 10, testRow() returns immediately
+            // first 9 times and sends the actual get request in the 10th iteration.
+            // We should only set latency when actual request is sent because otherwise
+            // it turns out to be 0.
+            if (requestSent) {
+              long latency = (System.nanoTime() - startTime) / 1000;
+              latencyHistogram.update(latency);
+              if ((opts.latencyThreshold > 0) && (latency / 1000 >= opts.latencyThreshold)) {
+                numOfReplyOverLatencyThreshold ++;
+              }
             }
             if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
               status.setStatus(generateStatus(startRow, i, lastRow));
@@ -1223,11 +1432,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return YammerHistogramUtils.getShortHistogramReport(this.valueSizeHistogram);
     }
 
-    /*
-    * Test for individual row.
-    * @param i Row index.
-    */
-    abstract void testRow(final int i) throws IOException, InterruptedException;
+
+    /**
+     * Test for individual row.
+     * @param i Row index.
+     * @return true if the row was sent to server and need to record metrics.
+     *         False if not, multiGet and multiPut e.g., the rows are sent
+     *         to server only if enough gets/puts are gathered.
+     */
+    abstract boolean testRow(final int i, final long startTime) throws IOException, InterruptedException;
   }
 
   static abstract class Test extends TestBase {
@@ -1237,20 +1450,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
       super(con == null ? HBaseConfiguration.create() : con.getConfiguration(), options, status);
       this.connection = con;
     }
-
-    @Override
-    void createConnection() throws IOException {
-      if (!opts.isOneCon()) {
-        this.connection = ConnectionFactory.createConnection(conf);
-      }
-    }
-
-    @Override
-    void closeConnection() throws IOException {
-      if (!opts.isOneCon()) {
-        this.connection.close();
-      }
-    }
   }
 
   static abstract class AsyncTest extends TestBase {
@@ -1259,24 +1458,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     AsyncTest(final AsyncConnection con, final TestOptions options, final Status status) {
       super(con == null ? HBaseConfiguration.create() : con.getConfiguration(), options, status);
       this.connection = con;
-    }
-
-    @Override
-    void createConnection() {
-      if (!opts.isOneCon()) {
-        try {
-          this.connection = ConnectionFactory.createAsyncConnection(conf).get();
-        } catch (InterruptedException | ExecutionException e) {
-          LOG.error("Failed to create async connection", e);
-        }
-      }
-    }
-
-    @Override
-    void closeConnection() throws IOException {
-      if (!opts.isOneCon()) {
-        this.connection.close();
-      }
     }
   }
 
@@ -1298,8 +1479,33 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
+  /*
+  Parent class for all meta tests: MetaWriteTest, MetaRandomReadTest and CleanMetaTest
+   */
+  static abstract class MetaTest extends TableTest {
+    protected int keyLength;
+
+    MetaTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+      keyLength = Integer.toString(opts.perClientRunRows).length();
+    }
+
+    @Override
+    void onTakedown() throws IOException {
+      // No clean up
+    }
+
+    /*
+    Generates Lexicographically ascending strings
+     */
+    protected byte[] getSplitKey(final int i) {
+      return Bytes.toBytes(String.format("%0" + keyLength + "d", i));
+    }
+
+  }
+
   static abstract class AsyncTableTest extends AsyncTest {
-    protected RawAsyncTable table;
+    protected AsyncTable<?> table;
 
     AsyncTableTest(AsyncConnection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -1307,7 +1513,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void onStartup() throws IOException {
-      this.table = connection.getRawTable(TableName.valueOf(opts.tableName));
+      this.table = connection.getTable(TableName.valueOf(opts.tableName));
     }
 
     @Override
@@ -1330,15 +1536,21 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException, InterruptedException {
+    boolean testRow(final int i, final long startTime) throws IOException, InterruptedException {
       if (opts.randomSleep > 0) {
         Thread.sleep(rd.nextInt(opts.randomSleep));
       }
       Get get = new Get(getRandomRow(this.rand, opts.totalRows));
-      if (opts.addColumns) {
-        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      } else {
-        get.addFamily(FAMILY_NAME);
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        if (opts.addColumns) {
+          for (int column = 0; column < opts.columns; column++) {
+            byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+            get.addColumn(familyName, qualifier);
+          }
+        } else {
+          get.addFamily(familyName);
+        }
       }
       if (opts.filterAll) {
         get.setFilter(new FilterAllFilter());
@@ -1353,6 +1565,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
                 this.table.get(this.gets).stream().map(f -> propagate(f::get)).toArray(Result[]::new);
             updateValueSize(rs);
             this.gets.clear();
+          } else {
+            return false;
           }
         } else {
           updateValueSize(this.table.get(get).get());
@@ -1360,6 +1574,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       } catch (ExecutionException e) {
         throw new IOException(e);
       }
+      return true;
     }
 
     public static RuntimeException runtime(Throwable e) {
@@ -1393,46 +1608,21 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  static class AsyncRandomWriteTest extends AsyncTableTest {
+  static class AsyncRandomWriteTest extends AsyncSequentialWriteTest {
+
     AsyncRandomWriteTest(AsyncConnection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
     @Override
-    void testRow(final int i) throws IOException, InterruptedException {
-      byte[] row = getRandomRow(this.rand, opts.totalRows);
-      Put put = new Put(row);
-      for (int column = 0; column < opts.columns; column++) {
-        byte[] qualifier = column == 0 ? COLUMN_ZERO : Bytes.toBytes("" + column);
-        byte[] value = generateData(this.rand, getValueLength(this.rand));
-        if (opts.useTags) {
-          byte[] tag = generateData(this.rand, TAG_LENGTH);
-          Tag[] tags = new Tag[opts.noOfTags];
-          for (int n = 0; n < opts.noOfTags; n++) {
-            Tag t = new ArrayBackedTag((byte) n, tag);
-            tags[n] = t;
-          }
-          KeyValue kv =
-              new KeyValue(row, FAMILY_NAME, qualifier, HConstants.LATEST_TIMESTAMP, value, tags);
-          put.add(kv);
-          updateValueSize(kv.getValueLength());
-        } else {
-          put.addColumn(FAMILY_NAME, qualifier, value);
-          updateValueSize(value.length);
-        }
-      }
-      put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      try {
-        table.put(put).get();
-      } catch (ExecutionException e) {
-        throw new IOException(e);
-      }
+    protected byte[] generateRow(final int i) {
+      return getRandomRow(this.rand, opts.totalRows);
     }
   }
 
   static class AsyncScanTest extends AsyncTableTest {
     private ResultScanner testScanner;
-    private AsyncTable asyncTable;
+    private AsyncTable<?> asyncTable;
 
     AsyncScanTest(AsyncConnection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -1448,22 +1638,29 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testTakedown() throws IOException {
       if (this.testScanner != null) {
+        updateScanMetrics(this.testScanner.getScanMetrics());
         this.testScanner.close();
       }
       super.testTakedown();
     }
 
     @Override
-    void testRow(final int i) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
       if (this.testScanner == null) {
         Scan scan =
             new Scan().withStartRow(format(opts.startRow)).setCaching(opts.caching)
                 .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
-                .setReadType(opts.scanReadType);
-        if (opts.addColumns) {
-          scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-        } else {
-          scan.addFamily(FAMILY_NAME);
+                .setReadType(opts.scanReadType).setScanMetricsEnabled(true);
+        for (int family = 0; family < opts.families; family++) {
+          byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+          if (opts.addColumns) {
+            for (int column = 0; column < opts.columns; column++) {
+              byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+              scan.addColumn(familyName, qualifier);
+            }
+          } else {
+            scan.addFamily(familyName);
+          }
         }
         if (opts.filterAll) {
           scan.setFilter(new FilterAllFilter());
@@ -1472,6 +1669,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       Result r = testScanner.next();
       updateValueSize(r);
+      return true;
     }
   }
 
@@ -1481,10 +1679,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException, InterruptedException {
+    boolean testRow(final int i, final long startTime) throws IOException, InterruptedException {
       Get get = new Get(format(i));
-      if (opts.addColumns) {
-        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        if (opts.addColumns) {
+          for (int column = 0; column < opts.columns; column++) {
+            byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+            get.addColumn(familyName, qualifier);
+          }
+        } else {
+          get.addFamily(familyName);
+        }
       }
       if (opts.filterAll) {
         get.setFilter(new FilterAllFilter());
@@ -1494,43 +1700,70 @@ public class PerformanceEvaluation extends Configured implements Tool {
       } catch (ExecutionException e) {
         throw new IOException(e);
       }
+      return true;
     }
   }
 
   static class AsyncSequentialWriteTest extends AsyncTableTest {
+    private ArrayList<Put> puts;
+
     AsyncSequentialWriteTest(AsyncConnection con, TestOptions options, Status status) {
       super(con, options, status);
+      if (opts.multiPut > 0) {
+        LOG.info("MultiPut enabled. Sending PUTs in batches of " + opts.multiPut + ".");
+        this.puts = new ArrayList<>(opts.multiPut);
+      }
+    }
+
+    protected byte[] generateRow(final int i) {
+      return format(i);
     }
 
     @Override
-    void testRow(final int i) throws IOException, InterruptedException {
-      byte[] row = format(i);
+    @SuppressWarnings("ReturnValueIgnored")
+    boolean testRow(final int i, final long startTime) throws IOException, InterruptedException {
+      byte[] row = generateRow(i);
       Put put = new Put(row);
-      for (int column = 0; column < opts.columns; column++) {
-        byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
-        byte[] value = generateData(this.rand, getValueLength(this.rand));
-        if (opts.useTags) {
-          byte[] tag = generateData(this.rand, TAG_LENGTH);
-          Tag[] tags = new Tag[opts.noOfTags];
-          for (int n = 0; n < opts.noOfTags; n++) {
-            Tag t = new ArrayBackedTag((byte) n, tag);
-            tags[n] = t;
-          }
-          KeyValue kv = new KeyValue(row, FAMILY_NAME, qualifier, HConstants.LATEST_TIMESTAMP,
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        for (int column = 0; column < opts.columns; column++) {
+          byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+          byte[] value = generateData(this.rand, getValueLength(this.rand));
+          if (opts.useTags) {
+            byte[] tag = generateData(this.rand, TAG_LENGTH);
+            Tag[] tags = new Tag[opts.noOfTags];
+            for (int n = 0; n < opts.noOfTags; n++) {
+              Tag t = new ArrayBackedTag((byte) n, tag);
+              tags[n] = t;
+            }
+            KeyValue kv = new KeyValue(row, familyName, qualifier, HConstants.LATEST_TIMESTAMP,
               value, tags);
-          put.add(kv);
-          updateValueSize(kv.getValueLength());
-        } else {
-          put.addColumn(FAMILY_NAME, qualifier, value);
-          updateValueSize(value.length);
+            put.add(kv);
+            updateValueSize(kv.getValueLength());
+          } else {
+            put.addColumn(familyName, qualifier, value);
+            updateValueSize(value.length);
+          }
         }
       }
       put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       try {
         table.put(put).get();
+        if (opts.multiPut > 0) {
+          this.puts.add(put);
+          if (this.puts.size() == opts.multiPut) {
+            this.table.put(puts).stream().map(f -> AsyncRandomReadTest.propagate(f::get));
+            this.puts.clear();
+          } else {
+            return false;
+          }
+        } else {
+          table.put(put).get();
+        }
       } catch (ExecutionException e) {
         throw new IOException(e);
       }
+      return true;
     }
   }
 
@@ -1544,7 +1777,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void onStartup() throws IOException {
-      this.mutator = connection.getBufferedMutator(TableName.valueOf(opts.tableName));
+      BufferedMutatorParams p = new BufferedMutatorParams(TableName.valueOf(opts.tableName));
+      p.writeBufferSize(opts.bufferSize);
+      this.mutator = connection.getBufferedMutator(p);
       this.table = connection.getTable(TableName.valueOf(opts.tableName));
     }
 
@@ -1561,15 +1796,22 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
       Scan scan = new Scan().withStartRow(getRandomRow(this.rand, opts.totalRows))
           .setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
-          .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType);
+          .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType)
+          .setScanMetricsEnabled(true);
       FilterList list = new FilterList();
-      if (opts.addColumns) {
-        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      } else {
-        scan.addFamily(FAMILY_NAME);
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        if (opts.addColumns) {
+          for (int column = 0; column < opts.columns; column++) {
+            byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+            scan.addColumn(familyName, qualifier);
+          }
+        } else {
+          scan.addFamily(familyName);
+        }
       }
       if (opts.filterAll) {
         list.addFilter(new FilterAllFilter());
@@ -1577,10 +1819,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
       list.addFilter(new WhileMatchFilter(new PageFilter(120)));
       scan.setFilter(list);
       ResultScanner s = this.table.getScanner(scan);
-      for (Result rr; (rr = s.next()) != null;) {
-        updateValueSize(rr);
+      try {
+        for (Result rr; (rr = s.next()) != null;) {
+          updateValueSize(rr);
+        }
+      } finally {
+        updateScanMetrics(s.getScanMetrics());
+        s.close();
       }
-      s.close();
+      return true;
     }
 
     @Override
@@ -1597,34 +1844,44 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
       Pair<byte[], byte[]> startAndStopRow = getStartAndStopRow();
       Scan scan = new Scan().withStartRow(startAndStopRow.getFirst())
           .withStopRow(startAndStopRow.getSecond()).setCaching(opts.caching)
           .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
-          .setReadType(opts.scanReadType);
+          .setReadType(opts.scanReadType).setScanMetricsEnabled(true);
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        if (opts.addColumns) {
+          for (int column = 0; column < opts.columns; column++) {
+            byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+            scan.addColumn(familyName, qualifier);
+          }
+        } else {
+          scan.addFamily(familyName);
+        }
+      }
       if (opts.filterAll) {
         scan.setFilter(new FilterAllFilter());
-      }
-      if (opts.addColumns) {
-        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      } else {
-        scan.addFamily(FAMILY_NAME);
       }
       Result r = null;
       int count = 0;
       ResultScanner s = this.table.getScanner(scan);
-      for (; (r = s.next()) != null;) {
-        updateValueSize(r);
-        count++;
-      }
-      if (i % 100 == 0) {
-        LOG.info(String.format("Scan for key range %s - %s returned %s rows",
+      try {
+        for (; (r = s.next()) != null;) {
+          updateValueSize(r);
+          count++;
+        }
+        if (i % 100 == 0) {
+          LOG.info(String.format("Scan for key range %s - %s returned %s rows",
             Bytes.toString(startAndStopRow.getFirst()),
             Bytes.toString(startAndStopRow.getSecond()), count));
+        }
+      } finally {
+        updateScanMetrics(s.getScanMetrics());
+        s.close();
       }
-
-      s.close();
+      return true;
     }
 
     protected abstract Pair<byte[],byte[]> getStartAndStopRow();
@@ -1690,6 +1947,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private final Consistency consistency;
     private ArrayList<Get> gets;
     private Random rd = new Random();
+    private long numOfReplyFromReplica = 0;
 
     RandomReadTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -1701,15 +1959,21 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException, InterruptedException {
+    boolean testRow(final int i, final long startTime) throws IOException, InterruptedException {
       if (opts.randomSleep > 0) {
         Thread.sleep(rd.nextInt(opts.randomSleep));
       }
       Get get = new Get(getRandomRow(this.rand, opts.totalRows));
-      if (opts.addColumns) {
-        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      } else {
-        get.addFamily(FAMILY_NAME);
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        if (opts.addColumns) {
+          for (int column = 0; column < opts.columns; column++) {
+            byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+            get.addColumn(familyName, qualifier);
+          }
+        } else {
+          get.addFamily(familyName);
+        }
       }
       if (opts.filterAll) {
         get.setFilter(new FilterAllFilter());
@@ -1720,12 +1984,26 @@ public class PerformanceEvaluation extends Configured implements Tool {
         this.gets.add(get);
         if (this.gets.size() == opts.multiGet) {
           Result [] rs = this.table.get(this.gets);
-          updateValueSize(rs);
+          if (opts.replicas > 1) {
+            long latency = System.nanoTime() - startTime;
+            updateValueSize(rs, latency);
+          } else {
+            updateValueSize(rs);
+          }
           this.gets.clear();
+        } else {
+          return false;
         }
       } else {
-        updateValueSize(this.table.get(get));
+        if (opts.replicas > 1) {
+          Result r = this.table.get(get);
+          long latency = System.nanoTime() - startTime;
+          updateValueSize(r, latency);
+        } else {
+          updateValueSize(this.table.get(get));
+        }
       }
+      return true;
     }
 
     @Override
@@ -1744,41 +2022,58 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  static class RandomWriteTest extends BufferedMutatorTest {
+  /*
+  Send random reads against fake regions inserted by MetaWriteTest
+   */
+  static class MetaRandomReadTest extends MetaTest {
+    private Random rd = new Random();
+    private RegionLocator regionLocator;
+
+    MetaRandomReadTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+      LOG.info("call getRegionLocation");
+    }
+
+    @Override
+    void onStartup() throws IOException {
+      super.onStartup();
+      this.regionLocator = connection.getRegionLocator(table.getName());
+    }
+
+    @Override
+    boolean testRow(final int i, final long startTime) throws IOException, InterruptedException {
+      if (opts.randomSleep > 0) {
+        Thread.sleep(rd.nextInt(opts.randomSleep));
+      }
+      HRegionLocation hRegionLocation = regionLocator.getRegionLocation(
+        getSplitKey(rd.nextInt(opts.perClientRunRows)), true);
+      LOG.debug("get location for region: " + hRegionLocation);
+      return true;
+    }
+
+    @Override
+    protected int getReportingPeriod() {
+      int period = opts.perClientRunRows / 10;
+      return period == 0 ? opts.perClientRunRows : period;
+    }
+
+    @Override
+    protected void testTakedown() throws IOException {
+      super.testTakedown();
+    }
+  }
+
+  static class RandomWriteTest extends SequentialWriteTest {
     RandomWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
     @Override
-    void testRow(final int i) throws IOException {
-      byte[] row = getRandomRow(this.rand, opts.totalRows);
-      Put put = new Put(row);
-      for (int column = 0; column < opts.columns; column++) {
-        byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
-        byte[] value = generateData(this.rand, getValueLength(this.rand));
-        if (opts.useTags) {
-          byte[] tag = generateData(this.rand, TAG_LENGTH);
-          Tag[] tags = new Tag[opts.noOfTags];
-          for (int n = 0; n < opts.noOfTags; n++) {
-            Tag t = new ArrayBackedTag((byte) n, tag);
-            tags[n] = t;
-          }
-          KeyValue kv = new KeyValue(row, FAMILY_NAME, qualifier, HConstants.LATEST_TIMESTAMP,
-              value, tags);
-          put.add(kv);
-          updateValueSize(kv.getValueLength());
-        } else {
-          put.addColumn(FAMILY_NAME, qualifier, value);
-          updateValueSize(value.length);
-        }
-      }
-      put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      if (opts.autoFlush) {
-        table.put(put);
-      } else {
-        mutator.mutate(put);
-      }
+    protected byte[] generateRow(final int i) {
+      return getRandomRow(this.rand, opts.totalRows);
     }
+
+
   }
 
   static class ScanTest extends TableTest {
@@ -1798,15 +2093,21 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
 
     @Override
-    void testRow(final int i) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
       if (this.testScanner == null) {
         Scan scan = new Scan().withStartRow(format(opts.startRow)).setCaching(opts.caching)
             .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
-            .setReadType(opts.scanReadType);
-        if (opts.addColumns) {
-          scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-        } else {
-          scan.addFamily(FAMILY_NAME);
+            .setReadType(opts.scanReadType).setScanMetricsEnabled(true);
+        for (int family = 0; family < opts.families; family++) {
+          byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+          if (opts.addColumns) {
+            for (int column = 0; column < opts.columns; column++) {
+              byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+              scan.addColumn(familyName, qualifier);
+            }
+          } else {
+            scan.addFamily(familyName);
+          }
         }
         if (opts.filterAll) {
           scan.setFilter(new FilterAllFilter());
@@ -1815,6 +2116,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       Result r = testScanner.next();
       updateValueSize(r);
+      return true;
     }
   }
 
@@ -1854,10 +2156,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
       Increment increment = new Increment(format(i));
-      increment.addColumn(FAMILY_NAME, getQualifier(), 1l);
+      // unlike checkAndXXX tests, which make most sense to do on a single value,
+      // if multiple families are specified for an increment test we assume it is
+      // meant to raise the work factor
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        increment.addColumn(familyName, getQualifier(), 1l);
+      }
       updateValueSize(this.table.increment(increment));
+      return true;
     }
   }
 
@@ -1867,11 +2176,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
       byte [] bytes = format(i);
       Append append = new Append(bytes);
-      append.addColumn(FAMILY_NAME, getQualifier(), bytes);
+      // unlike checkAndXXX tests, which make most sense to do on a single value,
+      // if multiple families are specified for an append test we assume it is
+      // meant to raise the work factor
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        append.addColumn(familyName, getQualifier(), bytes);
+      }
       updateValueSize(this.table.append(append));
+      return true;
     }
   }
 
@@ -1881,16 +2197,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException {
-      byte [] bytes = format(i);
+    boolean testRow(final int i, final long startTime) throws IOException {
+      final byte [] bytes = format(i);
+      // checkAndXXX tests operate on only a single value
       // Put a known value so when we go to check it, it is there.
       Put put = new Put(bytes);
-      put.addColumn(FAMILY_NAME, getQualifier(), bytes);
+      put.addColumn(FAMILY_ZERO, getQualifier(), bytes);
       this.table.put(put);
       RowMutations mutations = new RowMutations(bytes);
       mutations.add(put);
-      this.table.checkAndMutate(bytes, FAMILY_NAME, getQualifier(), CompareOperator.EQUAL, bytes,
-          mutations);
+      this.table.checkAndMutate(bytes, FAMILY_ZERO).qualifier(getQualifier())
+          .ifEquals(bytes).thenMutate(mutations);
+      return true;
     }
   }
 
@@ -1900,13 +2218,16 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException {
-      byte [] bytes = format(i);
+    boolean testRow(final int i, final long startTime) throws IOException {
+      final byte [] bytes = format(i);
+      // checkAndXXX tests operate on only a single value
       // Put a known value so when we go to check it, it is there.
       Put put = new Put(bytes);
-      put.addColumn(FAMILY_NAME, getQualifier(), bytes);
+      put.addColumn(FAMILY_ZERO, getQualifier(), bytes);
       this.table.put(put);
-      this.table.checkAndPut(bytes, FAMILY_NAME, getQualifier(), CompareOperator.EQUAL, bytes, put);
+      this.table.checkAndMutate(bytes, FAMILY_ZERO).qualifier(getQualifier())
+          .ifEquals(bytes).thenPut(put);
+      return true;
     }
   }
 
@@ -1916,16 +2237,46 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException {
-      byte [] bytes = format(i);
+    boolean testRow(final int i, final long startTime) throws IOException {
+      final byte [] bytes = format(i);
+      // checkAndXXX tests operate on only a single value
       // Put a known value so when we go to check it, it is there.
       Put put = new Put(bytes);
-      put.addColumn(FAMILY_NAME, getQualifier(), bytes);
+      put.addColumn(FAMILY_ZERO, getQualifier(), bytes);
       this.table.put(put);
       Delete delete = new Delete(put.getRow());
-      delete.addColumn(FAMILY_NAME, getQualifier());
-      this.table.checkAndDelete(bytes, FAMILY_NAME, getQualifier(),
-        CompareOperator.EQUAL, bytes, delete);
+      delete.addColumn(FAMILY_ZERO, getQualifier());
+      this.table.checkAndMutate(bytes, FAMILY_ZERO).qualifier(getQualifier())
+          .ifEquals(bytes).thenDelete(delete);
+      return true;
+    }
+  }
+
+  /*
+  Delete all fake regions inserted to meta table by MetaWriteTest.
+   */
+  static class CleanMetaTest extends MetaTest {
+    CleanMetaTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    boolean testRow(final int i, final long startTime) throws IOException {
+      try {
+        RegionInfo regionInfo = connection.getRegionLocator(table.getName())
+          .getRegionLocation(getSplitKey(i), false).getRegion();
+        LOG.debug("deleting region from meta: " + regionInfo);
+
+        Delete delete = MetaTableAccessor
+          .makeDeleteFromRegionInfo(regionInfo, HConstants.LATEST_TIMESTAMP);
+        try (Table t = MetaTableAccessor.getMetaHTable(connection)) {
+          t.delete(delete);
+        }
+      } catch (IOException ie) {
+        // Log and continue
+        LOG.error("cannot find region with start key: " + i);
+      }
+      return true;
     }
   }
 
@@ -1935,64 +2286,128 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testRow(final int i) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
       Get get = new Get(format(i));
-      if (opts.addColumns) {
-        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        if (opts.addColumns) {
+          for (int column = 0; column < opts.columns; column++) {
+            byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+            get.addColumn(familyName, qualifier);
+          }
+        } else {
+          get.addFamily(familyName);
+        }
       }
       if (opts.filterAll) {
         get.setFilter(new FilterAllFilter());
       }
       updateValueSize(table.get(get));
+      return true;
     }
   }
 
   static class SequentialWriteTest extends BufferedMutatorTest {
+    private ArrayList<Put> puts;
+
+
     SequentialWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
+      if (opts.multiPut > 0) {
+        LOG.info("MultiPut enabled. Sending PUTs in batches of " + opts.multiPut + ".");
+        this.puts = new ArrayList<>(opts.multiPut);
+      }
+    }
+
+    protected byte[] generateRow(final int i) {
+      return format(i);
     }
 
     @Override
-    void testRow(final int i) throws IOException {
-      byte[] row = format(i);
+    boolean testRow(final int i, final long startTime) throws IOException {
+      byte[] row = generateRow(i);
       Put put = new Put(row);
-      for (int column = 0; column < opts.columns; column++) {
-        byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
-        byte[] value = generateData(this.rand, getValueLength(this.rand));
-        if (opts.useTags) {
-          byte[] tag = generateData(this.rand, TAG_LENGTH);
-          Tag[] tags = new Tag[opts.noOfTags];
-          for (int n = 0; n < opts.noOfTags; n++) {
-            Tag t = new ArrayBackedTag((byte) n, tag);
-            tags[n] = t;
-          }
-          KeyValue kv = new KeyValue(row, FAMILY_NAME, qualifier, HConstants.LATEST_TIMESTAMP,
+      for (int family = 0; family < opts.families; family++) {
+        byte familyName[] = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        for (int column = 0; column < opts.columns; column++) {
+          byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+          byte[] value = generateData(this.rand, getValueLength(this.rand));
+          if (opts.useTags) {
+            byte[] tag = generateData(this.rand, TAG_LENGTH);
+            Tag[] tags = new Tag[opts.noOfTags];
+            for (int n = 0; n < opts.noOfTags; n++) {
+              Tag t = new ArrayBackedTag((byte) n, tag);
+              tags[n] = t;
+            }
+            KeyValue kv = new KeyValue(row, familyName, qualifier, HConstants.LATEST_TIMESTAMP,
               value, tags);
-          put.add(kv);
-          updateValueSize(kv.getValueLength());
-        } else {
-          put.addColumn(FAMILY_NAME, qualifier, value);
-          updateValueSize(value.length);
+            put.add(kv);
+            updateValueSize(kv.getValueLength());
+          } else {
+            put.addColumn(familyName, qualifier, value);
+            updateValueSize(value.length);
+          }
         }
       }
       put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       if (opts.autoFlush) {
-        table.put(put);
+        if (opts.multiPut > 0) {
+          this.puts.add(put);
+          if (this.puts.size() == opts.multiPut) {
+            table.put(this.puts);
+            this.puts.clear();
+          } else {
+            return false;
+          }
+        } else {
+          table.put(put);
+        }
       } else {
         mutator.mutate(put);
       }
+      return true;
     }
   }
 
-  static class FilteredScanTest extends TableTest {
-    protected static final Log LOG = LogFactory.getLog(FilteredScanTest.class.getName());
+  /*
+  Insert fake regions into meta table with contiguous split keys.
+   */
+  static class MetaWriteTest extends MetaTest {
 
-    FilteredScanTest(Connection con, TestOptions options, Status status) {
+    MetaWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
     @Override
-    void testRow(int i) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
+      List<RegionInfo> regionInfos = new ArrayList<RegionInfo>();
+      RegionInfo regionInfo = (RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE_NAME))
+        .setStartKey(getSplitKey(i))
+        .setEndKey(getSplitKey(i + 1))
+        .build());
+      regionInfos.add(regionInfo);
+      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 1);
+
+      // write the serverName columns
+      MetaTableAccessor.updateRegionLocation(connection,
+        regionInfo, ServerName.valueOf("localhost", 60010, rand.nextLong()), i,
+        System.currentTimeMillis());
+      return true;
+    }
+  }
+  static class FilteredScanTest extends TableTest {
+    protected static final Logger LOG = LoggerFactory.getLogger(FilteredScanTest.class.getName());
+
+    FilteredScanTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+      if (opts.perClientRunRows == DEFAULT_ROWS_PER_GB) {
+        LOG.warn("Option \"rows\" unspecified. Using default value " + DEFAULT_ROWS_PER_GB +
+                ". This could take a very long time.");
+      }
+    }
+
+    @Override
+    boolean testRow(int i, final long startTime) throws IOException {
       byte[] value = generateData(this.rand, getValueLength(this.rand));
       Scan scan = constructScan(value);
       ResultScanner scanner = null;
@@ -2002,26 +2417,32 @@ public class PerformanceEvaluation extends Configured implements Tool {
           updateValueSize(r);
         }
       } finally {
-        if (scanner != null) scanner.close();
+        if (scanner != null) {
+          updateScanMetrics(scanner.getScanMetrics());
+          scanner.close();
+        }
       }
+      return true;
     }
 
     protected Scan constructScan(byte[] valuePrefix) throws IOException {
       FilterList list = new FilterList();
-      Filter filter = new SingleColumnValueFilter(
-          FAMILY_NAME, COLUMN_ZERO, CompareOperator.EQUAL,
-          new BinaryComparator(valuePrefix)
-      );
+      Filter filter = new SingleColumnValueFilter(FAMILY_ZERO, COLUMN_ZERO,
+        CompareOperator.EQUAL, new BinaryComparator(valuePrefix));
       list.addFilter(filter);
-      if(opts.filterAll) {
+      if (opts.filterAll) {
         list.addFilter(new FilterAllFilter());
       }
       Scan scan = new Scan().setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
-          .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType);
+          .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType)
+          .setScanMetricsEnabled(true);
       if (opts.addColumns) {
-        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        for (int column = 0; column < opts.columns; column++) {
+          byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+          scan.addColumn(FAMILY_ZERO, qualifier);
+        }
       } else {
-        scan.addFamily(FAMILY_NAME);
+        scan.addFamily(FAMILY_ZERO);
       }
       scan.setFilter(list);
       return scan;
@@ -2034,9 +2455,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * @param timeMs Time taken in milliseconds.
    * @return String value with label, ie '123.76 MB/s'
    */
-  private static String calculateMbps(int rows, long timeMs, final int valueSize, int columns) {
+  private static String calculateMbps(int rows, long timeMs, final int valueSize, int families, int columns) {
     BigDecimal rowSize = BigDecimal.valueOf(ROW_LENGTH +
-      ((valueSize + FAMILY_NAME.length + COLUMN_ZERO.length) * columns));
+      ((valueSize + (FAMILY_NAME_BASE.length()+1) + COLUMN_ZERO.length) * columns) * families);
     BigDecimal mbps = BigDecimal.valueOf(rows).multiply(rowSize, CXT)
       .divide(BigDecimal.valueOf(timeMs), CXT).multiply(MS_PER_SEC, CXT)
       .divide(BYTES_PER_MB, CXT);
@@ -2128,9 +2549,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     status.setStatus("Finished " + cmd + " in " + totalElapsedTime +
       "ms at offset " + opts.startRow + " for " + opts.perClientRunRows + " rows" +
       " (" + calculateMbps((int)(opts.perClientRunRows * opts.sampleRate), totalElapsedTime,
-          getAverageValueLength(opts), opts.columns) + ")");
+          getAverageValueLength(opts), opts.families, opts.columns) + ")");
 
-    return new RunResult(totalElapsedTime, t.getLatencyHistogram());
+    return new RunResult(totalElapsedTime, t.numOfReplyOverLatencyThreshold,
+      t.numOfReplyFromReplica, t.getLatencyHistogram());
   }
 
   private static int getAverageValueLength(final TestOptions opts) {
@@ -2141,7 +2563,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       InterruptedException, ClassNotFoundException, ExecutionException {
     // Log the configuration we're going to run with. Uses JSON mapper because lazy. It'll do
     // the TestOptions introspection for us and dump the output in a readable format.
-    LOG.info(cmd.getSimpleName() + " test run options=" + MAPPER.writeValueAsString(opts));
+    LOG.info(cmd.getSimpleName() + " test run options=" + GSON.toJson(opts));
     Admin admin = null;
     Connection connection = null;
     try {
@@ -2160,11 +2582,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   protected void printUsage() {
-    printUsage(this.getClass().getName(), null);
+    printUsage(PE_COMMAND_SHORTNAME, null);
   }
 
   protected static void printUsage(final String message) {
-    printUsage(PerformanceEvaluation.class.getName(), message);
+    printUsage(PE_COMMAND_SHORTNAME, message);
   }
 
   protected static void printUsageAndExit(final String message, final int exitCode) {
@@ -2172,17 +2594,22 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.exit(exitCode);
   }
 
-  protected static void printUsage(final String className, final String message) {
+  protected static void printUsage(final String shortName, final String message) {
     if (message != null && message.length() > 0) {
       System.err.println(message);
     }
-    System.err.println("Usage: java " + className + " \\");
+    System.err.print("Usage: hbase " + shortName);
     System.err.println("  <OPTIONS> [-D<property=value>]* <command> <nclients>");
     System.err.println();
     System.err.println("General Options:");
     System.err.println(" nomapred        Run multiple clients using threads " +
       "(rather than use mapreduce)");
     System.err.println(" oneCon          all the threads share the same connection. Default: False");
+    System.err.println(" connCount          connections all threads share. "
+        + "For example, if set to 2, then all thread share 2 connection. "
+        + "Default: depend on oneCon parameter. if oneCon set to true, then connCount=1, "
+        + "if not, connCount=thread number");
+
     System.err.println(" sampleRate      Execute test on a sample of total " +
       "rows. Only supported by randomRead. Default: 1.0");
     System.err.println(" period          Report every 'period' rows: " +
@@ -2191,6 +2618,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" traceRate       Enable HTrace spans. Initiate tracing every N rows. " +
       "Default: 0");
     System.err.println(" latency         Set to report operation latencies. Default: False");
+    System.err.println(" latencyThreshold  Set to report number of operations with latency " +
+      "over lantencyThreshold, unit in millisecond, default 0");
     System.err.println(" measureAfter    Start to measure the latency once 'measureAfter'" +
         " rows have been treated. Default: 0");
     System.err.println(" valueSize       Pass value size to use: Default: "
@@ -2219,6 +2648,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
         "'valueSize' in zipf form: Default: Not set.");
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println(" autoFlush       Set autoFlush on htable. Default: False");
+    System.err.println(" multiPut        Batch puts together into groups of N. Only supported " +
+        "by write. If multiPut is bigger than 0, autoFlush need to set to true. Default: 0");
     System.err.println(" presplit        Create presplit table. If a table with same name exists,"
         + " it'll be deleted and recreated (instead of verifying count of its existing regions). "
         + "Recommended for accurate perf analysis (see guide). Default: disabled");
@@ -2228,6 +2659,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
        "This works only if usetags is true. Default: " + DEFAULT_OPTS.noOfTags);
     System.err.println(" splitPolicy     Specify a custom RegionSplitPolicy for the table.");
     System.err.println(" columns         Columns to write per row. Default: 1");
+    System.err.println(" families        Specify number of column families for the table. Default: 1");
     System.err.println();
     System.err.println("Read Tests:");
     System.err.println(" filterAll       Helps to filter out all the rows on the server side"
@@ -2250,6 +2682,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" asyncPrefetch   Enable asyncPrefetch for scan");
     System.err.println(" cacheBlocks     Set the cacheBlocks option for scan. Default: true");
     System.err.println(" scanReadType    Set the readType option for scan, stream/pread/default. Default: default");
+    System.err.println(" bufferSize      Set the value of client side buffering. Default: 2MB");
     System.err.println();
     System.err.println(" Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");
@@ -2266,9 +2699,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         + "(and HRegionServers) running. 1 <= value <= 500");
     System.err.println("Examples:");
     System.err.println(" To run a single client doing the default 1M sequentialWrites:");
-    System.err.println(" $ hbase " + className + " sequentialWrite 1");
+    System.err.println(" $ hbase " + shortName + " sequentialWrite 1");
     System.err.println(" To run 10 clients doing increments over ten rows:");
-    System.err.println(" $ hbase " + className + " --rows=10 --nomapred increment 10");
+    System.err.println(" $ hbase " + shortName + " --rows=10 --nomapred increment 10");
   }
 
   /**
@@ -2378,6 +2811,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
+      final String connCount = "--connCount=";
+      if (cmd.startsWith(connCount)) {
+        opts.connCount = Integer.parseInt(cmd.substring(connCount.length()));
+        continue;
+      }
+
+      final String latencyThreshold = "--latencyThreshold=";
+      if (cmd.startsWith(latencyThreshold)) {
+        opts.latencyThreshold = Integer.parseInt(cmd.substring(latencyThreshold.length()));
+        continue;
+      }
+
       final String latency = "--latency";
       if (cmd.startsWith(latency)) {
         opts.reportLatency = true;
@@ -2387,6 +2832,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String multiGet = "--multiGet=";
       if (cmd.startsWith(multiGet)) {
         opts.multiGet = Integer.parseInt(cmd.substring(multiGet.length()));
+        continue;
+      }
+
+      final String multiPut = "--multiPut=";
+      if (cmd.startsWith(multiPut)) {
+        opts.multiPut = Integer.parseInt(cmd.substring(multiPut.length()));
         continue;
       }
 
@@ -2448,6 +2899,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String blockSize = "--blockSize=";
       if(cmd.startsWith(blockSize) ) {
         opts.blockSize = Integer.parseInt(cmd.substring(blockSize.length()));
+        continue;
       }
 
       final String valueSize = "--valueSize=";
@@ -2459,18 +2911,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String valueRandom = "--valueRandom";
       if (cmd.startsWith(valueRandom)) {
         opts.valueRandom = true;
-        if (opts.valueZipf) {
-          throw new IllegalStateException("Either valueZipf or valueRandom but not both");
-        }
         continue;
       }
 
       final String valueZipf = "--valueZipf";
       if (cmd.startsWith(valueZipf)) {
         opts.valueZipf = true;
-        if (opts.valueRandom) {
-          throw new IllegalStateException("Either valueZipf or valueRandom but not both");
-        }
         continue;
       }
 
@@ -2499,6 +2945,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
+      final String families = "--families=";
+      if (cmd.startsWith(families)) {
+        opts.families = Integer.parseInt(cmd.substring(families.length()));
+        continue;
+      }
+
       final String caching = "--caching=";
       if (cmd.startsWith(caching)) {
         opts.caching = Integer.parseInt(cmd.substring(caching.length()));
@@ -2523,6 +2975,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
             Scan.ReadType.valueOf(cmd.substring(scanReadType.length()).toUpperCase());
         continue;
       }
+
+      final String bufferSize = "--bufferSize=";
+      if (cmd.startsWith(bufferSize)) {
+        opts.bufferSize = Long.parseLong(cmd.substring(bufferSize.length()));
+        continue;
+      }
+
+      validateParsedOpts(opts);
+
       if (isCommandClass(cmd)) {
         opts.cmdName = cmd;
         try {
@@ -2544,6 +3005,25 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return opts;
   }
 
+  /**
+  * Validates opts after all the opts are parsed, so that caller need not to maintain order of opts
+  */
+  private static void validateParsedOpts(TestOptions opts)  {
+
+    if (!opts.autoFlush && opts.multiPut > 0) {
+      throw new IllegalArgumentException("autoFlush must be true when multiPut is more than 0");
+    }
+
+    if (opts.oneCon && opts.connCount > 1) {
+      throw new IllegalArgumentException("oneCon is set to true, "
+          + "connCount should not bigger than 1");
+    }
+
+    if (opts.valueZipf && opts.valueRandom) {
+      throw new IllegalStateException("Either valueZipf or valueRandom but not both");
+    }
+  }
+
   static TestOptions calculateRowsAndSize(final TestOptions opts) {
     int rowsPerGB = getRowsPerGB(opts);
     if ((opts.getCmdName() != null
@@ -2563,7 +3043,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static int getRowsPerGB(final TestOptions opts) {
-    return ONE_GB / ((opts.valueRandom? opts.valueSize/2: opts.valueSize) * opts.getColumns());
+    return ONE_GB / ((opts.valueRandom? opts.valueSize/2: opts.valueSize) * opts.getFamilies() *
+        opts.getColumns());
   }
 
   @Override

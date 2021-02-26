@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,15 +17,17 @@
  */
 package org.apache.hadoop.hbase.tool;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -41,6 +41,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ MiscTests.class, LargeTests.class })
 public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSecureLoadIncrementalHFiles.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -58,7 +62,7 @@ public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
     util.startMiniCluster();
 
     // Wait for the ACL table to become available
-    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
+    util.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
 
     setupNamespace();
   }

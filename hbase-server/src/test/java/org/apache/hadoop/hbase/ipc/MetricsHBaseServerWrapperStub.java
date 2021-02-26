@@ -50,6 +50,21 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
   }
 
   @Override
+  public int getActiveGeneralRpcHandlerCount() {
+    return 201;
+  }
+
+  @Override
+  public int getActivePriorityRpcHandlerCount() {
+    return 202;
+  }
+
+  @Override
+  public int getActiveReplicationRpcHandlerCount() {
+    return 203;
+  }
+
+  @Override
   public long getNumGeneralCallsDropped() {
     return 3;
   }
@@ -87,5 +102,20 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
   @Override
   public int getActiveScanRpcHandlerCount() {
     return 6;
+  }
+
+  @Override
+  public long getNettyDmUsage() {
+    return 100L;
+  }
+
+  @Override
+  public int getMetaPriorityQueueLength() {
+    return 1;
+  }
+
+  @Override
+  public int getActiveMetaPriorityRpcHandlerCount() {
+    return 1;
   }
 }

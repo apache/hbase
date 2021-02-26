@@ -20,15 +20,19 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Properties;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestIntegrationTestBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestIntegrationTestBase.class);
 
   @Test
   public void testMonkeyPropertiesParsing() {

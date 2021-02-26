@@ -1,26 +1,34 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,24 +49,23 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
-
-import static org.junit.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests changing data block encoding settings of a column family.
  */
 @Category({IOTests.class, LargeTests.class})
 public class TestChangingEncoding {
-  private static final Log LOG = LogFactory.getLog(TestChangingEncoding.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestChangingEncoding.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestChangingEncoding.class);
   static final String CF = "EncodingTestCF";
   static final byte[] CF_BYTES = Bytes.toBytes(CF);
 
@@ -100,6 +107,10 @@ public class TestChangingEncoding {
   public static void setUpBeforeClass() throws Exception {
     // Use a small flush size to create more HFiles.
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
+    // Disabling split to make sure split does not cause modify column to wait which timesout test
+    // sometime
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+        "org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy");
     // ((Log4JLogger)RpcServerImplementation.LOG).getLogger().setLevel(Level.TRACE);
     // ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.TRACE);
     TEST_UTIL.startMiniCluster();
@@ -191,7 +202,7 @@ public class TestChangingEncoding {
     TEST_UTIL.waitUntilNoRegionsInTransition(TIMEOUT_MS);
   }
 
-  @Test(timeout=TIMEOUT_MS)
+  @Test
   public void testChangingEncoding() throws Exception {
     prepareTest("ChangingEncoding");
     for (boolean onlineChange : new boolean[]{false, true}) {
@@ -203,7 +214,7 @@ public class TestChangingEncoding {
     }
   }
 
-  @Test(timeout=TIMEOUT_MS)
+  @Test
   public void testChangingEncodingWithCompaction() throws Exception {
     prepareTest("ChangingEncodingWithCompaction");
     for (boolean onlineChange : new boolean[]{false, true}) {

@@ -24,9 +24,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class CodecPerformance {
   /** @deprecated LOG variable would be made private. since 1.2, remove in 3.0 */
   @Deprecated
-  public static final Log LOG = LogFactory.getLog(CodecPerformance.class);
+  public static final Logger LOG = LoggerFactory.getLogger(CodecPerformance.class);
 
   static Cell [] getCells(final int howMany) {
     Cell [] cells = new Cell[howMany];

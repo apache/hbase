@@ -1,5 +1,5 @@
 Apache HBase
-Copyright 2007-2017 The Apache Software Foundation
+Copyright 2007-2020 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
@@ -39,10 +39,12 @@ Licensed under the Apache License v2.0 as a part of the Bootstrap project.
 
 --
 This product includes portions of the Guava project v14 and v21, specifically
-'hbase-common/src/main/java/org/apache/hadoop/hbase/io/LimitInputStream.java'
 'hbase-common/src/main/java/org/apache/hadoop/hbase/util/Bytes.java'
 'hbase-common/src/main/java/org/apache/hadoop/hbase/util/ByteBufferUtils.java'
 
 Copyright (C) 2007 The Guava Authors
 
 Licensed under the Apache License, Version 2.0
+--
+This product includes portions of Jetty project, specially
+'hbase-shaded-hbase-shaded-testing-util/src/main/resources/org/apache/hadoop/hbase/shaded/org/mortbay/jetty/webapp/webdefault.xml'

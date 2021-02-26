@@ -18,21 +18,33 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.junit.ClassRule;
+import org.junit.experimental.categories.Category;
 
-public class TestVisibilityLabelsOnNewVersionBehaviorTable extends TestVisibilityLabelsWithDeletes {
 
-  protected Table createTable(HColumnDescriptor fam) throws IOException {
-    fam.setNewVersionBehavior(true);
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    HTableDescriptor table = new HTableDescriptor(tableName);
-    table.addFamily(fam);
-    TEST_UTIL.getHBaseAdmin().createTable(table);
+@Category({ SecurityTests.class, MediumTests.class })
+public class TestVisibilityLabelsOnNewVersionBehaviorTable
+    extends VisibilityLabelsWithDeletesTestBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestVisibilityLabelsOnNewVersionBehaviorTable.class);
+
+  @Override
+  protected Table createTable(byte[] fam) throws IOException {
+    TableName tableName = TableName.valueOf(testName.getMethodName());
+    TEST_UTIL.getAdmin()
+        .createTable(TableDescriptorBuilder.newBuilder(tableName)
+            .setColumnFamily(
+              ColumnFamilyDescriptorBuilder.newBuilder(fam).setNewVersionBehavior(true).build())
+            .build());
     return TEST_UTIL.getConnection().getTable(tableName);
   }
-
 }

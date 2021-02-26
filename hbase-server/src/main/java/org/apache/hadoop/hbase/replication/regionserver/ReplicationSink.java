@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,10 +30,7 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -40,23 +38,27 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * <p>
@@ -76,7 +78,7 @@ import org.apache.hadoop.hbase.util.Pair;
 @InterfaceAudience.Private
 public class ReplicationSink {
 
-  private static final Log LOG = LogFactory.getLog(ReplicationSink.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSink.class);
   private final Configuration conf;
   // Volatile because of note in here -- look for double-checked locking:
   // http://www.oracle.com/technetwork/articles/javase/bloch-effective-08-qa-140880.html
@@ -87,31 +89,53 @@ public class ReplicationSink {
   // Number of hfiles that we successfully replicated
   private long hfilesReplicated = 0;
   private SourceFSConfigurationProvider provider;
+  private WALEntrySinkFilter walEntrySinkFilter;
+
+  /**
+   * Row size threshold for multi requests above which a warning is logged
+   */
+  private final int rowSizeWarnThreshold;
 
   /**
    * Create a sink for replication
-   *
-   * @param conf                conf object
-   * @param stopper             boolean to tell this thread to stop
+   * @param conf conf object
    * @throws IOException thrown when HDFS goes bad or bad file name
    */
-  public ReplicationSink(Configuration conf, Stoppable stopper)
+  public ReplicationSink(Configuration conf)
       throws IOException {
     this.conf = HBaseConfiguration.create(conf);
+    rowSizeWarnThreshold = conf.getInt(
+      HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     decorateConf();
     this.metrics = new MetricsSink();
-
+    this.walEntrySinkFilter = setupWALEntrySinkFilter();
     String className =
         conf.get("hbase.replication.source.fs.conf.provider",
           DefaultSourceFSConfigurationProvider.class.getCanonicalName());
     try {
       @SuppressWarnings("rawtypes")
       Class c = Class.forName(className);
-      this.provider = (SourceFSConfigurationProvider) c.newInstance();
+      this.provider = (SourceFSConfigurationProvider) c.getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new IllegalArgumentException("Configured source fs configuration provider class "
           + className + " throws error.", e);
     }
+  }
+
+  private WALEntrySinkFilter setupWALEntrySinkFilter() throws IOException {
+    Class<?> walEntryFilterClass =
+        this.conf.getClass(WALEntrySinkFilter.WAL_ENTRY_FILTER_KEY, null);
+    WALEntrySinkFilter filter = null;
+    try {
+      filter = walEntryFilterClass == null? null:
+          (WALEntrySinkFilter)walEntryFilterClass.getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
+      LOG.warn("Failed to instantiate " + walEntryFilterClass);
+    }
+    if (filter != null) {
+      filter.init(getConnection());
+    }
+    return filter;
   }
 
   /**
@@ -127,13 +151,15 @@ public class ReplicationSink {
     if (StringUtils.isNotEmpty(replicationCodec)) {
       this.conf.set(HConstants.RPC_CODEC_CONF_KEY, replicationCodec);
     }
+    // use server ZK cluster for replication, so we unset the client ZK related properties if any
+    if (this.conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
+      this.conf.unset(HConstants.CLIENT_ZOOKEEPER_QUORUM);
+    }
    }
 
   /**
    * Replicate this array of entries directly into the local cluster using the native client. Only
    * operates against raw protobuf type saving on a conversion from pb to pojo.
-   * @param entries
-   * @param cells
    * @param replicationClusterId Id which will uniquely identify source cluster FS client
    *          configurations in the replication configuration directory
    * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
@@ -145,7 +171,6 @@ public class ReplicationSink {
       String replicationClusterId, String sourceBaseNamespaceDirPath,
       String sourceHFileArchiveDirPath) throws IOException {
     if (entries.isEmpty()) return;
-    if (cells == null) throw new NullPointerException("TODO: Add handling of null CellScanner");
     // Very simple optimization where we batch sequences of rows going
     // to the same table.
     try {
@@ -154,14 +179,25 @@ public class ReplicationSink {
       // invocation of this method per table and cluster id.
       Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
 
-      // Map of table name Vs list of pair of family and list of hfile paths from its namespace
-      Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = null;
-
+      Map<List<String>, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
       for (WALEntry entry : entries) {
         TableName table =
             TableName.valueOf(entry.getKey().getTableName().toByteArray());
+        if (this.walEntrySinkFilter != null) {
+          if (this.walEntrySinkFilter.filter(table, entry.getKey().getWriteTime())) {
+            // Skip Cells in CellScanner associated with this entry.
+            int count = entry.getAssociatedCellCount();
+            for (int i = 0; i < count; i++) {
+              // Throw index out of bounds if our cell count is off
+              if (!cells.advance()) {
+                throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
+              }
+            }
+            continue;
+          }
+        }
         Cell previousCell = null;
-        Mutation m = null;
+        Mutation mutation = null;
         int count = entry.getAssociatedCellCount();
         for (int i = 0; i < count; i++) {
           // Throw index out of bounds if our cell count is off
@@ -171,15 +207,22 @@ public class ReplicationSink {
           Cell cell = cells.current();
           // Handle bulk load hfiles replication
           if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
-            if (bulkLoadHFileMap == null) {
-              bulkLoadHFileMap = new HashMap<>();
+            BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
+            if(bld.getReplicate()) {
+              if (bulkLoadsPerClusters == null) {
+                bulkLoadsPerClusters = new HashMap<>();
+              }
+              // Map of table name Vs list of pair of family and list of
+              // hfile paths from its namespace
+              Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
+                bulkLoadsPerClusters.computeIfAbsent(bld.getClusterIdsList(), k -> new HashMap<>());
+              buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
             }
-            buildBulkLoadHFileMap(bulkLoadHFileMap, table, cell);
           } else {
             // Handle wal replication
             if (isNewRowOrType(previousCell, cell)) {
               // Create new mutation
-              m =
+              mutation =
                   CellUtil.isDelete(cell) ? new Delete(cell.getRowArray(), cell.getRowOffset(),
                       cell.getRowLength()) : new Put(cell.getRowArray(), cell.getRowOffset(),
                       cell.getRowLength());
@@ -187,13 +230,13 @@ public class ReplicationSink {
               for (HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()) {
                 clusterIds.add(toUUID(clusterId));
               }
-              m.setClusterIds(clusterIds);
-              addToHashMultiMap(rowMap, table, clusterIds, m);
+              mutation.setClusterIds(clusterIds);
+              addToHashMultiMap(rowMap, table, clusterIds, mutation);
             }
             if (CellUtil.isDelete(cell)) {
-              ((Delete) m).add(cell);
+              ((Delete) mutation).add(cell);
             } else {
-              ((Put) m).add(cell);
+              ((Put) mutation).add(cell);
             }
             previousCell = cell;
           }
@@ -205,19 +248,26 @@ public class ReplicationSink {
       if (!rowMap.isEmpty()) {
         LOG.debug("Started replicating mutations.");
         for (Entry<TableName, Map<List<UUID>, List<Row>>> entry : rowMap.entrySet()) {
-          batch(entry.getKey(), entry.getValue().values());
+          batch(entry.getKey(), entry.getValue().values(), rowSizeWarnThreshold);
         }
         LOG.debug("Finished replicating mutations.");
       }
 
-      if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
-        LOG.debug("Started replicating bulk loaded data.");
-        HFileReplicator hFileReplicator =
-            new HFileReplicator(this.provider.getConf(this.conf, replicationClusterId),
+      if(bulkLoadsPerClusters != null) {
+        for (Entry<List<String>, Map<String, List<Pair<byte[],
+          List<String>>>>> entry : bulkLoadsPerClusters.entrySet()) {
+          Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
+          if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
+            LOG.debug("Replicating {} bulk loaded data", entry.getKey().toString());
+            Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
+            try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
                 sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-                getConnection());
-        hFileReplicator.replicate();
-        LOG.debug("Finished replicating bulk loaded data.");
+                getConnection(), entry.getKey())) {
+              hFileReplicator.replicate();
+              LOG.debug("Finished replicating {} bulk loaded data", entry.getKey().toString());
+            }
+          }
+        }
       }
 
       int size = entries.size();
@@ -232,8 +282,7 @@ public class ReplicationSink {
 
   private void buildBulkLoadHFileMap(
       final Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap, TableName table,
-      Cell cell) throws IOException {
-    BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
+      BulkLoadDescriptor bld) throws IOException {
     List<StoreDescriptor> storesList = bld.getStoresList();
     int storesSize = storesList.size();
     for (int j = 0; j < storesSize; j++) {
@@ -246,13 +295,11 @@ public class ReplicationSink {
 
         // Build hfile relative path from its namespace
         String pathToHfileFromNS = getHFilePath(table, bld, storeFileList.get(k), family);
-
         String tableName = table.getNameWithNamespaceInclAsString();
-        if (bulkLoadHFileMap.containsKey(tableName)) {
-          List<Pair<byte[], List<String>>> familyHFilePathsList = bulkLoadHFileMap.get(tableName);
+        List<Pair<byte[], List<String>>> familyHFilePathsList = bulkLoadHFileMap.get(tableName);
+        if (familyHFilePathsList != null) {
           boolean foundFamily = false;
-          for (int i = 0; i < familyHFilePathsList.size(); i++) {
-            Pair<byte[], List<String>> familyHFilePathsPair = familyHFilePathsList.get(i);
+          for (Pair<byte[], List<String>> familyHFilePathsPair :  familyHFilePathsList) {
             if (Bytes.equals(familyHFilePathsPair.getFirst(), family)) {
               // Found family already present, just add the path to the existing list
               familyHFilePathsPair.getSecond().add(pathToHfileFromNS);
@@ -305,7 +352,7 @@ public class ReplicationSink {
    */
   private boolean isNewRowOrType(final Cell previousCell, final Cell cell) {
     return previousCell == null || previousCell.getTypeByte() != cell.getTypeByte() ||
-        !CellUtil.matchingRow(previousCell, cell);
+        !CellUtil.matchingRows(previousCell, cell);
   }
 
   private java.util.UUID toUUID(final HBaseProtos.UUID uuid) {
@@ -321,17 +368,10 @@ public class ReplicationSink {
    * @param value
    * @return the list of values corresponding to key1 and key2
    */
-  private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2,List<V>>> map, K1 key1, K2 key2, V value) {
-    Map<K2,List<V>> innerMap = map.get(key1);
-    if (innerMap == null) {
-      innerMap = new HashMap<>();
-      map.put(key1, innerMap);
-    }
-    List<V> values = innerMap.get(key2);
-    if (values == null) {
-      values = new ArrayList<>();
-      innerMap.put(key2, values);
-    }
+  private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2, List<V>>> map, K1 key1, K2 key2,
+      V value) {
+    Map<K2, List<V>> innerMap = map.computeIfAbsent(key1, k -> new HashMap<>());
+    List<V> values = innerMap.computeIfAbsent(key2, k -> new ArrayList<>());
     values.add(value);
     return values;
   }
@@ -359,9 +399,10 @@ public class ReplicationSink {
    * Do the changes and handle the pool
    * @param tableName table to insert into
    * @param allRows list of actions
-   * @throws IOException
+   * @param batchRowSizeThreshold rowSize threshold for batch mutation
    */
-  protected void batch(TableName tableName, Collection<List<Row>> allRows) throws IOException {
+  private void batch(TableName tableName, Collection<List<Row>> allRows, int batchRowSizeThreshold)
+      throws IOException {
     if (allRows.isEmpty()) {
       return;
     }
@@ -370,8 +411,23 @@ public class ReplicationSink {
       Connection connection = getConnection();
       table = connection.getTable(tableName);
       for (List<Row> rows : allRows) {
-        table.batch(rows, null);
+        List<List<Row>> batchRows;
+        if (rows.size() > batchRowSizeThreshold) {
+          batchRows = Lists.partition(rows, batchRowSizeThreshold);
+        } else {
+          batchRows = Collections.singletonList(rows);
+        }
+        for(List<Row> rowList:batchRows){
+          table.batch(rowList, null);
+        }
       }
+    } catch (RetriesExhaustedWithDetailsException rewde) {
+      for (Throwable ex : rewde.getCauses()) {
+        if (ex instanceof TableNotFoundException) {
+          throw new TableNotFoundException("'" + tableName + "'");
+        }
+      }
+      throw rewde;
     } catch (InterruptedException ix) {
       throw (InterruptedIOException) new InterruptedIOException().initCause(ix);
     } finally {

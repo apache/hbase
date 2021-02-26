@@ -35,13 +35,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -88,8 +87,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of {@link MobCompactor} that compacts the mob files in partitions.
@@ -97,7 +96,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceAudience.Private
 public class PartitionedMobCompactor extends MobCompactor {
 
-  private static final Log LOG = LogFactory.getLog(PartitionedMobCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PartitionedMobCompactor.class);
   protected long mergeableSize;
   protected int delFileMaxCount;
   /** The number of files compacted in a batch */
@@ -305,9 +304,9 @@ public class PartitionedMobCompactor extends MobCompactor {
       // all the files are selected
       request.setCompactionType(CompactionType.ALL_FILES);
     }
-    LOG.info("The compaction type is " + request.getCompactionType() + ", the request has "
-      + totalDelFiles + " del files, " + selectedFileCount + " selected files, and "
-      + irrelevantFileCount + " irrelevant files");
+    LOG.info("The compaction type is {}, the request has {} del files, {} selected files, and {} " +
+        "irrelevant files table '{}' and column '{}'", request.getCompactionType(), totalDelFiles,
+        selectedFileCount, irrelevantFileCount, tableName, column.getNameAsString());
     return request;
   }
 
@@ -347,10 +346,12 @@ public class PartitionedMobCompactor extends MobCompactor {
           totalDelFileCount++;
         }
       }
-      LOG.info("After merging, there are " + totalDelFileCount + " del files");
+      LOG.info("After merging, there are {} del files. table='{}' column='{}'", totalDelFileCount,
+          tableName, column.getNameAsString());
       // compact the mob files by partitions.
       paths = compactMobFiles(request);
-      LOG.info("After compaction, there are " + paths.size() + " mob files");
+      LOG.info("After compaction, there are {} mob files. table='{}' column='{}'", paths.size(),
+          tableName, column.getNameAsString());
     } finally {
       for (CompactionDelPartition delPartition : request.getDelPartitions()) {
         closeStoreFileReaders(delPartition.getStoreFiles());
@@ -359,15 +360,17 @@ public class PartitionedMobCompactor extends MobCompactor {
 
     // archive the del files if all the mob files are selected.
     if (request.type == CompactionType.ALL_FILES && !request.getDelPartitions().isEmpty()) {
-      LOG.info(
-          "After a mob compaction with all files selected, archiving the del files ");
+      LOG.info("After a mob compaction with all files selected, archiving the del files for " +
+          "table='{}' and column='{}'", tableName, column.getNameAsString());
       for (CompactionDelPartition delPartition : request.getDelPartitions()) {
-        LOG.info(delPartition.listDelFiles());
+        LOG.info(Objects.toString(delPartition.listDelFiles()));
         try {
           MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(),
             delPartition.getStoreFiles());
         } catch (IOException e) {
-          LOG.error("Failed to archive the del files " + delPartition.getStoreFiles(), e);
+          LOG.error("Failed to archive the del files {} for partition {} table='{}' and " +
+              "column='{}'", delPartition.getStoreFiles(), delPartition.getId(), tableName,
+              column.getNameAsString(), e);
         }
       }
     }
@@ -400,7 +403,6 @@ public class PartitionedMobCompactor extends MobCompactor {
     }
   }
 
-  @VisibleForTesting
   List<HStoreFile> getListOfDelFilesForPartition(final CompactionPartition partition,
       final List<CompactionDelPartition> delPartitions) {
     // Binary search for startKey and endKey
@@ -461,7 +463,8 @@ public class PartitionedMobCompactor extends MobCompactor {
       throws IOException {
     Collection<CompactionPartition> partitions = request.compactionPartitions;
     if (partitions == null || partitions.isEmpty()) {
-      LOG.info("No partitions of mob files");
+      LOG.info("No partitions of mob files in table='{}' and column='{}'", tableName,
+          column.getNameAsString());
       return Collections.emptyList();
     }
     List<Path> paths = new ArrayList<>();
@@ -483,7 +486,8 @@ public class PartitionedMobCompactor extends MobCompactor {
         results.put(partition.getPartitionId(), pool.submit(new Callable<List<Path>>() {
           @Override
           public List<Path> call() throws Exception {
-            LOG.info("Compacting mob files for partition " + partition.getPartitionId());
+            LOG.info("Compacting mob files for partition {} for table='{}' and column='{}'",
+                partition.getPartitionId(), tableName, column.getNameAsString());
             return compactMobFilePartition(request, partition, delFiles, c, table);
           }
         }));
@@ -495,13 +499,15 @@ public class PartitionedMobCompactor extends MobCompactor {
           paths.addAll(result.getValue().get());
         } catch (Exception e) {
           // just log the error
-          LOG.error("Failed to compact the partition " + result.getKey(), e);
+          LOG.error("Failed to compact the partition {} for table='{}' and column='{}'",
+              result.getKey(), tableName, column.getNameAsString(), e);
           failedPartitions.add(result.getKey());
         }
       }
       if (!failedPartitions.isEmpty()) {
         // if any partition fails in the compaction, directly throw an exception.
-        throw new IOException("Failed to compact the partitions " + failedPartitions);
+        throw new IOException("Failed to compact the partitions " + failedPartitions +
+            " for table='" + tableName + "' column='" + column.getNameAsString() + "'");
       }
     } finally {
       try {
@@ -567,8 +573,9 @@ public class PartitionedMobCompactor extends MobCompactor {
       // move to the next batch.
       offset += batch;
     }
-    LOG.info("Compaction is finished. The number of mob files is changed from " + files.size()
-      + " to " + newFiles.size());
+    LOG.info("Compaction is finished. The number of mob files is changed from {} to {} for " +
+        "partition={} for table='{}' and column='{}'", files.size(), newFiles.size(),
+        partition.getPartitionId(), tableName, column.getNameAsString());
     return newFiles;
   }
 
@@ -675,8 +682,12 @@ public class PartitionedMobCompactor extends MobCompactor {
         cleanupTmpMobFile = false;
         cleanupCommittedMobFile = true;
         // bulkload the ref file
+        LOG.info("start MOB ref bulkload for partition {} table='{}' column='{}'",
+            partition.getPartitionId(), tableName, column.getNameAsString());
         bulkloadRefFile(connection, table, bulkloadPathOfPartition, filePath.getName());
         cleanupCommittedMobFile = false;
+        LOG.info("end MOB ref bulkload for partition {} table='{}' column='{}'",
+            partition.getPartitionId(), tableName, column.getNameAsString());
         newFiles.add(new Path(mobFamilyDir, filePath.getName()));
       }
 
@@ -703,7 +714,11 @@ public class PartitionedMobCompactor extends MobCompactor {
       }
 
       if (cleanupCommittedMobFile) {
-        deletePath(new Path(mobFamilyDir, filePath.getName()));
+        LOG.error("failed MOB ref bulkload for partition {} table='{}' column='{}'",
+            partition.getPartitionId(), tableName, column.getNameAsString());
+        MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(),
+            Collections.singletonList(new HStoreFile(fs, new Path(mobFamilyDir, filePath.getName()),
+            conf, compactionCacheConfig, BloomType.NONE, true)));
       }
     }
   }
@@ -812,7 +827,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(filesToCompact,
       false, true, false, false, HConstants.LATEST_TIMESTAMP);
     long ttl = HStore.determineTTLFromFamily(column);
-    ScanInfo scanInfo = new ScanInfo(conf, column, ttl, 0, CellComparator.COMPARATOR);
+    ScanInfo scanInfo = new ScanInfo(conf, column, ttl, 0, CellComparator.getInstance());
     return new StoreScanner(scanInfo, scanType, scanners);
   }
 
@@ -831,6 +846,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     // bulkload the ref file
     try {
       LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
+      bulkload.disableReplication();
       bulkload.doBulkLoad(bulkloadDirectory, connection.getAdmin(), table,
           connection.getRegionLocator(table.getName()));
     } catch (Exception e) {
@@ -904,6 +920,7 @@ public class PartitionedMobCompactor extends MobCompactor {
    * @param path The path of the file to be deleted.
    */
   private void deletePath(Path path) {
+    LOG.debug("Cleanup, delete path '{}'", path);
     try {
       if (path != null) {
         fs.delete(path, true);

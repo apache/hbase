@@ -32,8 +32,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -47,6 +45,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Used internally for reading meta and constructing datastructures that are
@@ -56,7 +56,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class SnapshotOfRegionAssignmentFromMeta {
-  private static final Log LOG = LogFactory.getLog(SnapshotOfRegionAssignmentFromMeta.class
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotOfRegionAssignmentFromMeta.class
       .getName());
 
   private final Connection connection;

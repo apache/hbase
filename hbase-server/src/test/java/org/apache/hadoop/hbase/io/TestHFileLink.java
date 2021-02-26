@@ -15,26 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.regex.Matcher;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import java.util.regex.Matcher;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test that FileLink switches between alternate locations
@@ -42,6 +42,11 @@ import static org.junit.Assert.assertTrue;
  */
 @Category({IOTests.class, SmallTests.class})
 public class TestHFileLink {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHFileLink.class);
+
   @Rule
   public TestName name = new TestName();
 
@@ -98,7 +103,7 @@ public class TestHFileLink {
         TableName.valueOf("ns", name.getMethodName())};
 
     for(TableName refTable : refTables) {
-      Path refTableDir = FSUtils.getTableDir(archiveDir, refTable);
+      Path refTableDir = CommonFSUtils.getTableDir(archiveDir, refTable);
       Path refRegionDir = HRegion.getRegionDir(refTableDir, encodedRegion);
       Path refDir = new Path(refRegionDir, cf);
       Path refLinkDir = new Path(refDir, linkDir);
@@ -110,22 +115,22 @@ public class TestHFileLink {
               TableName.valueOf(name.getMethodName()+ ":" +name.getMethodName())};
 
       for( TableName tableName : tableNames) {
-        Path tableDir = FSUtils.getTableDir(rootDir, tableName);
+        Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
         Path regionDir = HRegion.getRegionDir(tableDir, encodedRegion);
         Path cfDir = new Path(regionDir, cf);
 
-        //Verify back reference creation
-        assertEquals(encodedRegion+"."+
-            tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='),
-            HFileLink.createBackReferenceName(FSUtils.getTableName(tableDir).getNameAsString(),
-                encodedRegion));
+        // Verify back reference creation
+        assertEquals(
+          encodedRegion + "." + tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='),
+          HFileLink.createBackReferenceName(CommonFSUtils.getTableName(tableDir).getNameAsString(),
+            encodedRegion));
 
         //verify parsing back reference
         Pair<TableName, String> parsedRef =
             HFileLink.parseBackReferenceName(encodedRegion+"."+
                 tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='));
         assertEquals(parsedRef.getFirst(), tableName);
-        assertEquals(parsedRef.getSecond(), encodedRegion);
+        assertEquals(encodedRegion, parsedRef.getSecond());
 
         //verify resolving back reference
         Path storeFileDir =  new Path(refLinkDir, encodedRegion+"."+

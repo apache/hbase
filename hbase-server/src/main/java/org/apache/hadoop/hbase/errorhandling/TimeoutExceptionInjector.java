@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.errorhandling;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.Private
 public class TimeoutExceptionInjector {
 
-  private static final Log LOG = LogFactory.getLog(TimeoutExceptionInjector.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TimeoutExceptionInjector.class);
 
   private final long maxTime;
   private volatile boolean complete;

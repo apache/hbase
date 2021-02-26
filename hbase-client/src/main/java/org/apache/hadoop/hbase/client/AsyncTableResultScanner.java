@@ -23,13 +23,11 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
+import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The {@link ResultScanner} implementation for {@link AsyncTable}. It will fetch data automatically
@@ -37,11 +35,11 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
  * {@code 2 * scan.getMaxResultSize()}.
  */
 @InterfaceAudience.Private
-class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
+class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsumer {
 
-  private static final Log LOG = LogFactory.getLog(AsyncTableResultScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncTableResultScanner.class);
 
-  private final RawAsyncTable rawTable;
+  private final AsyncTable<AdvancedScanResultConsumer> rawTable;
 
   private final long maxCacheSize;
 
@@ -59,7 +57,8 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
 
   private ScanResumer resumer;
 
-  public AsyncTableResultScanner(RawAsyncTable table, Scan scan, long maxCacheSize) {
+  public AsyncTableResultScanner(AsyncTable<AdvancedScanResultConsumer> table, Scan scan,
+      long maxCacheSize) {
     this.rawTable = table;
     this.maxCacheSize = maxCacheSize;
     this.scan = scan;
@@ -74,8 +73,8 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
   private void stopPrefetch(ScanController controller) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("0x%x", System.identityHashCode(this)) +
-          " stop prefetching when scanning " + rawTable.getName() + " as the cache size " +
-          cacheSize + " is greater than the maxCacheSize " + maxCacheSize);
+        " stop prefetching when scanning " + rawTable.getName() + " as the cache size " +
+        cacheSize + " is greater than the maxCacheSize " + maxCacheSize);
     }
     resumer = controller.suspend();
   }
@@ -139,8 +138,7 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
         return null;
       }
       if (error != null) {
-        Throwables.propagateIfPossible(error, IOException.class);
-        throw new IOException(error);
+        FutureUtils.rethrow(error);
       }
       try {
         wait();
@@ -177,7 +175,6 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
   }
 
   // used in tests to test whether the scanner has been suspended
-  @VisibleForTesting
   synchronized boolean isSuspended() {
     return resumer != null;
   }

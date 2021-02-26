@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RowTooBigException;
@@ -29,10 +34,9 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
 
 /**
  * Test case to check HRS throws {@link org.apache.hadoop.hbase.client.RowTooBigException}
@@ -40,6 +44,11 @@ import java.io.IOException;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRowTooBig {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRowTooBig.class);
+
   private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
   private static Path rootRegionDir;
   private static final HTableDescriptor TEST_HTD =
@@ -85,7 +94,7 @@ public class TestRowTooBig {
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    Region region =
+    HRegion region =
         HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
     try {
       // Add 5 cells to memstore
@@ -132,7 +141,7 @@ public class TestRowTooBig {
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    Region region =
+    HRegion region =
         HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
     try {
       // Add to memstore

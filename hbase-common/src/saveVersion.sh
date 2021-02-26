@@ -18,6 +18,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
+
 unset LANG
 unset LC_CTYPE
 
@@ -27,34 +29,34 @@ outputDirectory=$2
 pushd .
 cd ..
 
-user=`whoami | sed -n -e 's/\\\/\\\\\\\\/p'`
+user=$(whoami | sed -n -e "s/\\\/\\\\\\\\/p")
 if [ "$user" == "" ]
 then
-  user=`whoami`
+  user=$(whoami)
 fi
-date=`date`
-cwd=`pwd`
+date=$(date)
+cwd=$(pwd)
 if [ -d .svn ]; then
-  revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
-  url=`svn info | sed -n -e 's/^URL: \(.*\)/\1/p'`
+  revision=$( (svn info | sed -n -e "s/Last Changed Rev: \(.*\)/\1/p") || true)
+  url=$( (svn info | sed -n -e 's/^URL: \(.*\)/\1/p') || true)
 elif [ -d .git ]; then
-  revision=`git log -1 --pretty=format:"%H"`
-  hostname=`hostname`
+  revision=$(git log -1 --no-show-signature --pretty=format:"%H" || true)
+  hostname=$(hostname)
   url="git://${hostname}${cwd}"
-else
+fi
+if [ -z "${revision}" ]; then
+  echo "[WARN] revision info is empty! either we're not in VCS or VCS commands failed." >&2
   revision="Unknown"
   url="file://$cwd"
 fi
-which md5sum > /dev/null
-if [ "$?" != "0" ] ; then
-  which md5 > /dev/null
-  if [ "$?" != "0" ] ; then
+if ! [ -x "$(command -v openssl)" ]; then
+  if ! [ -x "$(command -v gpg)" ]; then
     srcChecksum="Unknown"
   else
-    srcChecksum=`find hbase-*/src/main/ | grep -e "\.java" -e "\.proto" | LC_ALL=C sort | xargs md5 | md5 | cut -d ' ' -f 1`
+    srcChecksum=$(find hbase-*/src/main/ | grep -e "\.java" -e "\.proto" | LC_ALL=C sort | xargs gpg --print-md sha512 | gpg --print-md sha512 | tr '\n' ' ' | sed 's/[[:space:]]*//g')
   fi
 else
-  srcChecksum=`find hbase-*/src/main/ | grep -e "\.java" -e "\.proto" | LC_ALL=C sort | xargs md5sum | md5sum | cut -d ' ' -f 1`
+  srcChecksum=$(find hbase-*/src/main/ | grep -e "\.java" -e "\.proto" | LC_ALL=C sort | xargs openssl dgst -sha512 | openssl dgst -sha512 | sed 's/^.* //')
 fi
 popd
 
@@ -68,8 +70,10 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DM_STRING_CTOR",
+  justification="Intentional; to be modified in test")
 public class Version {
-  public static final String version = "$version";
+  public static final String version = new String("$version");
   public static final String revision = "$revision";
   public static final String user = "$user";
   public static final String date = "$date";

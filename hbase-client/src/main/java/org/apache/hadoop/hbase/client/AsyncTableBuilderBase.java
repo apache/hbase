@@ -28,7 +28,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Base class for all asynchronous table builders.
  */
 @InterfaceAudience.Private
-abstract class AsyncTableBuilderBase<T extends AsyncTableBase> implements AsyncTableBuilder<T> {
+abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
+    implements AsyncTableBuilder<C> {
 
   protected TableName tableName;
 
@@ -44,6 +45,8 @@ abstract class AsyncTableBuilderBase<T extends AsyncTableBase> implements AsyncT
 
   protected long pauseNs;
 
+  protected long pauseForCQTBENs;
+
   protected int maxAttempts;
 
   protected int startLogErrorsCnt;
@@ -51,60 +54,67 @@ abstract class AsyncTableBuilderBase<T extends AsyncTableBase> implements AsyncT
   AsyncTableBuilderBase(TableName tableName, AsyncConnectionConfiguration connConf) {
     this.tableName = tableName;
     this.operationTimeoutNs = tableName.isSystemTable() ? connConf.getMetaOperationTimeoutNs()
-        : connConf.getOperationTimeoutNs();
+      : connConf.getOperationTimeoutNs();
     this.scanTimeoutNs = connConf.getScanTimeoutNs();
     this.rpcTimeoutNs = connConf.getRpcTimeoutNs();
     this.readRpcTimeoutNs = connConf.getReadRpcTimeoutNs();
     this.writeRpcTimeoutNs = connConf.getWriteRpcTimeoutNs();
     this.pauseNs = connConf.getPauseNs();
+    this.pauseForCQTBENs = connConf.getPauseForCQTBENs();
     this.maxAttempts = retries2Attempts(connConf.getMaxRetries());
     this.startLogErrorsCnt = connConf.getStartLogErrorsCnt();
   }
 
   @Override
-  public AsyncTableBuilderBase<T> setOperationTimeout(long timeout, TimeUnit unit) {
+  public AsyncTableBuilderBase<C> setOperationTimeout(long timeout, TimeUnit unit) {
     this.operationTimeoutNs = unit.toNanos(timeout);
     return this;
   }
 
   @Override
-  public AsyncTableBuilderBase<T> setScanTimeout(long timeout, TimeUnit unit) {
+  public AsyncTableBuilderBase<C> setScanTimeout(long timeout, TimeUnit unit) {
     this.scanTimeoutNs = unit.toNanos(timeout);
     return this;
   }
 
   @Override
-  public AsyncTableBuilderBase<T> setRpcTimeout(long timeout, TimeUnit unit) {
+  public AsyncTableBuilderBase<C> setRpcTimeout(long timeout, TimeUnit unit) {
     this.rpcTimeoutNs = unit.toNanos(timeout);
     return this;
   }
 
   @Override
-  public AsyncTableBuilderBase<T> setReadRpcTimeout(long timeout, TimeUnit unit) {
+  public AsyncTableBuilderBase<C> setReadRpcTimeout(long timeout, TimeUnit unit) {
     this.readRpcTimeoutNs = unit.toNanos(timeout);
     return this;
   }
 
   @Override
-  public AsyncTableBuilderBase<T> setWriteRpcTimeout(long timeout, TimeUnit unit) {
+  public AsyncTableBuilderBase<C> setWriteRpcTimeout(long timeout, TimeUnit unit) {
     this.writeRpcTimeoutNs = unit.toNanos(timeout);
     return this;
   }
 
   @Override
-  public AsyncTableBuilderBase<T> setRetryPause(long pause, TimeUnit unit) {
+  public AsyncTableBuilderBase<C> setRetryPause(long pause, TimeUnit unit) {
     this.pauseNs = unit.toNanos(pause);
     return this;
   }
 
   @Override
-  public AsyncTableBuilderBase<T> setMaxAttempts(int maxAttempts) {
+  public AsyncTableBuilderBase<C> setRetryPauseForCQTBE(long pause, TimeUnit unit) {
+    this.pauseForCQTBENs = unit.toNanos(pause);
+    return this;
+  }
+
+  @Override
+  public AsyncTableBuilderBase<C> setMaxAttempts(int maxAttempts) {
     this.maxAttempts = maxAttempts;
     return this;
   }
 
   @Override
-  public AsyncTableBuilderBase<T> setStartLogErrorsCnt(int startLogErrorsCnt) {
+  public AsyncTableBuilderBase<C> setStartLogErrorsCnt(int startLogErrorsCnt) {
     this.startLogErrorsCnt = startLogErrorsCnt;
     return this;
   }

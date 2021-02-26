@@ -17,11 +17,17 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -35,35 +41,34 @@ import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-import static org.junit.Assert.assertEquals;
-
-/**
- */
-@Category({ FilterTests.class, MediumTests.class })
+@Category({ FilterTests.class, LargeTests.class })
 public class TestFuzzyRowFilterEndToEnd {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFuzzyRowFilterEndToEnd.class);
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte fuzzyValue = (byte) 63;
-  private static final Log LOG = LogFactory.getLog(TestFuzzyRowFilterEndToEnd.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFuzzyRowFilterEndToEnd.class);
 
   private static int firstPartCardinality = 50;
   private static int secondPartCardinality = 50;
@@ -86,7 +91,7 @@ public class TestFuzzyRowFilterEndToEnd {
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
     // set no splits
-    conf.setLong(HConstants.HREGION_MAX_FILESIZE, ((long) 1024) * 1024 * 1024 * 10);
+    conf.setLong(HConstants.HREGION_MAX_FILESIZE, (1024L) * 1024 * 1024 * 10);
 
     TEST_UTIL.startMiniCluster();
   }
@@ -173,26 +178,26 @@ public class TestFuzzyRowFilterEndToEnd {
     Table ht =
         TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf), Integer.MAX_VALUE);
     // Load data
-    String[] rows = new String[]{
-        "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00",
-        "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00", 
-        "\\x9C\\x00\\x044\\x00\\x01\\x00\\x00",
-        "\\x9C\\x00\\x044\\x00\\x00\\x01\\x00",
-        "\\x9C\\x00\\x044\\x00\\x01\\x00\\x01", 
-        "\\x9B\\x00\\x044e\\xBB\\xB2\\xBB", 
+    String[] rows = new String[] {
+      "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00",
+      "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00",
+      "\\x9C\\x00\\x044\\x00\\x01\\x00\\x00",
+      "\\x9C\\x00\\x044\\x00\\x00\\x01\\x00",
+      "\\x9C\\x00\\x044\\x00\\x01\\x00\\x01",
+      "\\x9B\\x00\\x044e\\xBB\\xB2\\xBB",
     };
-    
+
     String badRow = "\\x9C\\x00\\x03\\xE9e\\xBB{X\\x1Fwts\\x1F\\x15vRX";
-    
+
     for(int i=0; i < rows.length; i++){
       Put p = new Put(Bytes.toBytesBinary(rows[i]));
       p.addColumn(cf.getBytes(), cq.getBytes(), "value".getBytes());
-      ht.put(p);            
+      ht.put(p);
     }
-    
+
     Put p = new Put(Bytes.toBytesBinary(badRow));
     p.addColumn(cf.getBytes(), cq.getBytes(), "value".getBytes());
-    ht.put(p);            
+    ht.put(p);
 
     TEST_UTIL.flush();
 
@@ -201,19 +206,19 @@ public class TestFuzzyRowFilterEndToEnd {
     byte[] mask = new byte[] { 1,0,0,0};
     data.add(new Pair<>(fuzzyKey, mask));
     FuzzyRowFilter filter = new FuzzyRowFilter(data);
-    
+
     Scan scan = new Scan();
     scan.setFilter(filter);
-    
+
     ResultScanner scanner = ht.getScanner(scan);
     int total = 0;
     while(scanner.next() != null){
       total++;
-    }    
+    }
     assertEquals(rows.length, total);
     TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
   }
-  
+
   @Test
   public void testEndToEnd() throws Exception {
     String cf = "f";

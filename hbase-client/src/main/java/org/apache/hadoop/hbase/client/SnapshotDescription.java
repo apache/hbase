@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,8 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Map;
+
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 /**
  * The POJO equivalent of HBaseProtos.SnapshotDescription
@@ -30,14 +35,18 @@ public class SnapshotDescription {
   private final SnapshotType snapShotType;
   private final String owner;
   private final long creationTime;
+  private final long ttl;
   private final int version;
 
   public SnapshotDescription(String name) {
-    this(name, (TableName)null);
+    this(name, (TableName) null);
   }
 
   /**
-   * @deprecated Use the version with the TableName instance instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
+   *   instance instead.
+   * @see #SnapshotDescription(String, TableName)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
    */
   @Deprecated
   public SnapshotDescription(String name, String table) {
@@ -45,11 +54,14 @@ public class SnapshotDescription {
   }
 
   public SnapshotDescription(String name, TableName table) {
-    this(name, table, SnapshotType.DISABLED, null);
+    this(name, table, SnapshotType.DISABLED, null, -1, -1, null);
   }
 
   /**
-   * @deprecated Use the version with the TableName instance instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
+   *   instance instead.
+   * @see #SnapshotDescription(String, TableName, SnapshotType)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
    */
   @Deprecated
   public SnapshotDescription(String name, String table, SnapshotType type) {
@@ -57,11 +69,14 @@ public class SnapshotDescription {
   }
 
   public SnapshotDescription(String name, TableName table, SnapshotType type) {
-    this(name, table, type, null);
+    this(name, table, type, null, -1, -1, null);
   }
 
   /**
-   * @deprecated Use the version with the TableName instance instead
+   * @see #SnapshotDescription(String, TableName, SnapshotType, String)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
+   *   instance instead.
    */
   @Deprecated
   public SnapshotDescription(String name, String table, SnapshotType type, String owner) {
@@ -69,26 +84,76 @@ public class SnapshotDescription {
   }
 
   public SnapshotDescription(String name, TableName table, SnapshotType type, String owner) {
-    this(name, table, type, owner, -1, -1);
+    this(name, table, type, owner, -1, -1, null);
   }
 
   /**
-   * @deprecated Use the version with the TableName instance instead
+   * @see #SnapshotDescription(String, TableName, SnapshotType, String, long, int, Map)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
+   *   instance instead.
    */
   @Deprecated
   public SnapshotDescription(String name, String table, SnapshotType type, String owner,
       long creationTime, int version) {
-    this(name, TableName.valueOf(table), type, owner, creationTime, version);
+    this(name, TableName.valueOf(table), type, owner, creationTime, version, null);
   }
 
+  /**
+   * SnapshotDescription Parameterized Constructor
+   *
+   * @param name Name of the snapshot
+   * @param table TableName associated with the snapshot
+   * @param type Type of the snapshot - enum SnapshotType
+   * @param owner Snapshot Owner
+   * @param creationTime Creation time for Snapshot
+   * @param version Snapshot Version
+   * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
+   *   {@link #SnapshotDescription(String, TableName, SnapshotType, String, long, int, Map)}
+   */
+  @Deprecated
   public SnapshotDescription(String name, TableName table, SnapshotType type, String owner,
       long creationTime, int version) {
+    this(name, table, type, owner, creationTime, version, null);
+  }
+
+  /**
+   * SnapshotDescription Parameterized Constructor
+   *
+   * @param name          Name of the snapshot
+   * @param table         TableName associated with the snapshot
+   * @param type          Type of the snapshot - enum SnapshotType
+   * @param owner         Snapshot Owner
+   * @param creationTime  Creation time for Snapshot
+   * @param version       Snapshot Version
+   * @param snapshotProps Additional properties for snapshot e.g. TTL
+   */
+  public SnapshotDescription(String name, TableName table, SnapshotType type, String owner,
+      long creationTime, int version, Map<String, Object> snapshotProps) {
     this.name = name;
     this.table = table;
     this.snapShotType = type;
     this.owner = owner;
     this.creationTime = creationTime;
+    this.ttl = getTtlFromSnapshotProps(snapshotProps);
     this.version = version;
+  }
+
+  private long getTtlFromSnapshotProps(Map<String, Object> snapshotProps) {
+    return MapUtils.getLongValue(snapshotProps, "TTL", -1);
+  }
+
+  /**
+   * SnapshotDescription Parameterized Constructor
+   *
+   * @param snapshotName  Name of the snapshot
+   * @param tableName     TableName associated with the snapshot
+   * @param type          Type of the snapshot - enum SnapshotType
+   * @param snapshotProps Additional properties for snapshot e.g. TTL
+   */
+  public SnapshotDescription(String snapshotName, TableName tableName, SnapshotType type,
+                             Map<String, Object> snapshotProps) {
+    this(snapshotName, tableName, type, null, -1, -1, snapshotProps);
   }
 
   public String getName() {
@@ -96,7 +161,11 @@ public class SnapshotDescription {
   }
 
   /**
-   * @deprecated Use getTableName() or getTableNameAsString() instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #getTableName()} or
+   *   {@link #getTableNameAsString()} instead.
+   * @see #getTableName()
+   * @see #getTableNameAsString()
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
    */
   @Deprecated
   public String getTable() {
@@ -123,15 +192,25 @@ public class SnapshotDescription {
     return this.creationTime;
   }
 
+  // get snapshot ttl in sec
+  public long getTtl() {
+    return ttl;
+  }
+
   public int getVersion() {
     return this.version;
   }
 
   @Override
   public String toString() {
-    return "SnapshotDescription: name = " + ((name != null) ? name : null) + "/table = "
-        + ((table != null) ? table : null) + " /owner = " + ((owner != null) ? owner : null)
-        + (creationTime != -1 ? ("/creationtime = " + creationTime) : "")
-        + (version != -1 ? ("/version = " + version) : "");
+    return new ToStringBuilder(this)
+      .append("name", name)
+      .append("table", table)
+      .append("snapShotType", snapShotType)
+      .append("owner", owner)
+      .append("creationTime", creationTime)
+      .append("ttl", ttl)
+      .append("version", version)
+      .toString();
   }
 }

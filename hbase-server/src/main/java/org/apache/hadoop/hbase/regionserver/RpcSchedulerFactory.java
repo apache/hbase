@@ -36,6 +36,10 @@ public interface RpcSchedulerFactory {
    */
   RpcScheduler create(Configuration conf, PriorityFunction priority, Abortable server);
 
+  /**
+   * @deprecated since 1.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-12028">HBASE-12028</a>
+   */
   @Deprecated
   RpcScheduler create(Configuration conf, PriorityFunction priority);
 }

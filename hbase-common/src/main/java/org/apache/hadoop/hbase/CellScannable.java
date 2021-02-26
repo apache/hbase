@@ -25,7 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * CellScanner rather than say Iterator&lt;Cell&gt;.  See CellScanner class comment for why we go
  * dumber than java.util.Iterator.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public interface CellScannable {
   /**
    * @return A CellScanner over the contained {@link Cell}s

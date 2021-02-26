@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -31,20 +28,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter;
@@ -52,26 +48,33 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests writing Bloom filter blocks in the same part of the file as data
  * blocks.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestCompoundBloomFilter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompoundBloomFilter.class);
 
   private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestCompoundBloomFilter.class);
 
   private static final int NUM_TESTS = 9;
@@ -119,13 +122,14 @@ public class TestCompoundBloomFilter {
   private static Configuration conf;
   private static CacheConfig cacheConf;
   private FileSystem fs;
-  private BlockCache blockCache;
 
-  /** A message of the form "in test#<number>:" to include in logging. */
+  /** A message of the form "in test#&lt;number>:" to include in logging. */
   private String testIdMsg;
 
   private static final int GENERATION_SEED = 2319;
   private static final int EVALUATION_SEED = 135;
+
+  private BlockCache blockCache;
 
   @Before
   public void setUp() throws IOException {
@@ -135,17 +139,15 @@ public class TestCompoundBloomFilter {
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
 
     fs = FileSystem.get(conf);
-
-    cacheConf = new CacheConfig(conf);
-    blockCache = cacheConf.getBlockCache();
-    assertNotNull(blockCache);
+    blockCache = BlockCacheFactory.createBlockCache(conf);
+    cacheConf = new CacheConfig(conf, blockCache);
   }
 
   private List<KeyValue> createSortedKeyValues(Random rand, int n) {
     List<KeyValue> kvList = new ArrayList<>(n);
     for (int i = 0; i < n; ++i)
       kvList.add(RandomKeyValueUtil.randomKeyValue(rand));
-    Collections.sort(kvList, CellComparator.COMPARATOR);
+    Collections.sort(kvList, CellComparatorImpl.COMPARATOR);
     return kvList;
   }
 
@@ -222,7 +224,9 @@ public class TestCompoundBloomFilter {
     // Test for false positives (some percentage allowed). We test in two modes:
     // "fake lookup" which ignores the key distribution, and production mode.
     for (boolean fakeLookupEnabled : new boolean[] { true, false }) {
-      BloomFilterUtil.setFakeLookupMode(fakeLookupEnabled);
+      if (fakeLookupEnabled) {
+        BloomFilterUtil.setRandomGeneratorForTest(new Random(283742987L));
+      }
       try {
         String fakeLookupModeStr = ", fake lookup is " + (fakeLookupEnabled ?
             "enabled" : "disabled");
@@ -272,7 +276,7 @@ public class TestCompoundBloomFilter {
         validateFalsePosRate(falsePosRate, nTrials, -2.58, cbf,
             fakeLookupModeStr);
       } finally {
-        BloomFilterUtil.setFakeLookupMode(false);
+        BloomFilterUtil.setRandomGeneratorForTest(null);
       }
     }
 
@@ -299,7 +303,7 @@ public class TestCompoundBloomFilter {
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
         BLOOM_BLOCK_SIZES[t]);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
-    cacheConf = new CacheConfig(conf);
+    cacheConf = new CacheConfig(conf, blockCache);
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCK_SIZES[t]).build();
     StoreFileWriter w = new StoreFileWriter.Builder(conf, cacheConf, fs)
             .withOutputDir(TEST_UTIL.getDataTestDir())
@@ -367,7 +371,5 @@ public class TestCompoundBloomFilter {
       rowColKV.getRowLength()));
     assertEquals(0, rowKV.getQualifierLength());
   }
-
-
 }
 

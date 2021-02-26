@@ -19,16 +19,19 @@
 
 package org.apache.hadoop.hbase;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.base.Objects;
+import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 
 /**
  * Status information on the HBase cluster.
@@ -47,7 +50,7 @@ import com.google.common.base.Objects;
  * <li>Regions in transition at master</li>
  * <li>The unique cluster ID</li>
  * </ul>
- * <tt>{@link Option}</tt> provides a way to get desired ClusterStatus information.
+ * <tt>{@link ClusterMetrics.Option}</tt> provides a way to get desired ClusterStatus information.
  * The following codes will get all the cluster information.
  * <pre>
  * {@code
@@ -66,27 +69,20 @@ import com.google.common.base.Objects;
  * ClusterStatus status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
  * }
  * </pre>
+ * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+ *             Use {@link ClusterMetrics} instead.
  */
 @InterfaceAudience.Public
-public class ClusterStatus {
+@Deprecated
+public class ClusterStatus implements ClusterMetrics {
 
   // TODO: remove this in 3.0
   private static final byte VERSION = 2;
 
-  private String hbaseVersion;
-  private Map<ServerName, ServerLoad> liveServers;
-  private Collection<ServerName> deadServers;
-  private ServerName master;
-  private Collection<ServerName> backupMasters;
-  private List<RegionState> intransition;
-  private String clusterId;
-  private String[] masterCoprocessors;
-  private Boolean balancerOn;
+  private final ClusterMetrics metrics;
 
   /**
-   * Use {@link ClusterStatus.Builder} to construct a ClusterStatus instead.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-15511">HBASE-15511</a>).
    */
   @Deprecated
   public ClusterStatus(final String hbaseVersion, final String clusterid,
@@ -96,41 +92,55 @@ public class ClusterStatus {
       final Collection<ServerName> backupMasters,
       final List<RegionState> rit,
       final String[] masterCoprocessors,
-      final Boolean balancerOn) {
+      final Boolean balancerOn,
+      final int masterInfoPort) {
     // TODO: make this constructor private
-    this.hbaseVersion = hbaseVersion;
-    this.liveServers = servers;
-    this.deadServers = deadServers;
-    this.master = master;
-    this.backupMasters = backupMasters;
-    this.intransition = rit;
-    this.clusterId = clusterid;
-    this.masterCoprocessors = masterCoprocessors;
-    this.balancerOn = balancerOn;
+    this(ClusterMetricsBuilder.newBuilder().setHBaseVersion(hbaseVersion)
+      .setDeadServerNames(new ArrayList<>(deadServers))
+      .setLiveServerMetrics(servers.entrySet().stream()
+      .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue())))
+      .setBackerMasterNames(new ArrayList<>(backupMasters)).setBalancerOn(balancerOn)
+      .setClusterId(clusterid)
+      .setMasterCoprocessorNames(Arrays.asList(masterCoprocessors))
+      .setMasterName(master)
+      .setMasterInfoPort(masterInfoPort)
+      .setRegionsInTransition(rit)
+      .build());
+  }
+
+  @InterfaceAudience.Private
+  public ClusterStatus(ClusterMetrics metrics) {
+    this.metrics = metrics;
   }
 
   /**
    * @return the names of region servers on the dead list
    */
-  public Collection<ServerName> getDeadServerNames() {
-    if (deadServers == null) {
-      return Collections.<ServerName>emptyList();
-    }
-    return Collections.unmodifiableCollection(deadServers);
+  @Override
+  public List<ServerName> getDeadServerNames() {
+    return metrics.getDeadServerNames();
+  }
+
+  @Override
+  public Map<ServerName, ServerMetrics> getLiveServerMetrics() {
+    return metrics.getLiveServerMetrics();
   }
 
   /**
-   * @return the number of region servers in the cluster
-   */
+  * @return the number of region servers in the cluster
+  * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+  *             Use {@link #getLiveServerMetrics()}.
+  */
+  @Deprecated
   public int getServersSize() {
-    return liveServers != null ? liveServers.size() : 0;
+    return metrics.getLiveServerMetrics().size();
   }
 
   /**
    * @return the number of dead region servers in the cluster
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *             (<a href="https://issues.apache.org/jira/browse/HBASE-13656">HBASE-13656</a>).
-   *             Use {@link #getDeadServersSize()}.
+   *             Use {@link #getDeadServerNames()}.
    */
   @Deprecated
   public int getDeadServers() {
@@ -139,57 +149,63 @@ public class ClusterStatus {
 
   /**
    * @return the number of dead region servers in the cluster
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getDeadServerNames()}.
    */
+  @Deprecated
   public int getDeadServersSize() {
-    return deadServers != null ? deadServers.size() : 0;
-  }
-
-
-  /**
-   * @return the average cluster load
-   */
-  public double getAverageLoad() {
-    int load = getRegionsCount();
-    int serverSize = getServersSize();
-    return serverSize != 0 ? (double)load / (double)serverSize : 0.0;
+    return metrics.getDeadServerNames().size();
   }
 
   /**
    * @return the number of regions deployed on the cluster
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getRegionCount()}.
    */
+  @Deprecated
   public int getRegionsCount() {
-    int count = 0;
-    if (liveServers != null && !liveServers.isEmpty()) {
-      for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
-        count += e.getValue().getNumberOfRegions();
-      }
-    }
-    return count;
+    return getRegionCount();
   }
 
   /**
    * @return the number of requests since last report
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getRequestCount()} instead.
    */
+  @Deprecated
   public int getRequestsCount() {
-    int count = 0;
-    if (liveServers != null && !liveServers.isEmpty()) {
-      for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
-        count += e.getValue().getNumberOfRequests();
-      }
-    }
-    return count;
+    return (int) getRequestCount();
+  }
+
+  @Nullable
+  @Override
+  public ServerName getMasterName() {
+    return metrics.getMasterName();
+  }
+
+  @Override
+  public List<ServerName> getBackupMasterNames() {
+    return metrics.getBackupMasterNames();
+  }
+
+  @Override
+  public List<RegionState> getRegionStatesInTransition() {
+    return metrics.getRegionStatesInTransition();
   }
 
   /**
    * @return the HBase version string as reported by the HMaster
    */
   public String getHBaseVersion() {
-    return hbaseVersion;
+    return metrics.getHBaseVersion();
   }
 
-  /**
-   * @see java.lang.Object#equals(java.lang.Object)
-   */
+  private Map<ServerName, ServerLoad> getLiveServerLoads() {
+    return metrics.getLiveServerMetrics().entrySet().stream()
+      .collect(Collectors.toMap(e -> e.getKey(), e -> new ServerLoad(e.getValue())));
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -198,25 +214,22 @@ public class ClusterStatus {
       return false;
     }
     ClusterStatus other = (ClusterStatus) o;
-    //TODO Override the equals() methods in ServerLoad.
     return Objects.equal(getHBaseVersion(), other.getHBaseVersion()) &&
-      Objects.equal(this.liveServers, other.liveServers) &&
+      Objects.equal(getLiveServerLoads(), other.getLiveServerLoads()) &&
       getDeadServerNames().containsAll(other.getDeadServerNames()) &&
       Arrays.equals(getMasterCoprocessors(), other.getMasterCoprocessors()) &&
       Objects.equal(getMaster(), other.getMaster()) &&
-      getBackupMasters().containsAll(other.getBackupMasters());
+      getBackupMasters().containsAll(other.getBackupMasters()) &&
+      Objects.equal(getClusterId(), other.getClusterId()) &&
+      getMasterInfoPort() == other.getMasterInfoPort();
   }
 
-  /**
-   * @see java.lang.Object#hashCode()
-   */
+  @Override
   public int hashCode() {
-    return Objects.hashCode(hbaseVersion, liveServers, deadServers,
-      master, backupMasters);
+    return metrics.hashCode();
   }
 
   /**
-   *
    * @return the object version number
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    */
@@ -225,222 +238,170 @@ public class ClusterStatus {
     return VERSION;
   }
 
-  //
-  // Getters
-  //
-
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getLiveServerMetrics()} instead.
+   */
+  @Deprecated
   public Collection<ServerName> getServers() {
-    if (liveServers == null) {
-      return Collections.<ServerName>emptyList();
-    }
-    return Collections.unmodifiableCollection(this.liveServers.keySet());
+    return metrics.getLiveServerMetrics().keySet();
   }
 
   /**
    * Returns detailed information about the current master {@link ServerName}.
    * @return current master information if it exists
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getMasterName} instead.
    */
+  @Deprecated
   public ServerName getMaster() {
-    return this.master;
+    return metrics.getMasterName();
   }
 
   /**
    * @return the number of backup masters in the cluster
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getBackupMasterNames} instead.
    */
+  @Deprecated
   public int getBackupMastersSize() {
-    return backupMasters != null ? backupMasters.size() : 0;
+    return metrics.getBackupMasterNames().size();
   }
 
   /**
    * @return the names of backup masters
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getBackupMasterNames} instead.
    */
-  public Collection<ServerName> getBackupMasters() {
-    if (backupMasters == null) {
-      return Collections.<ServerName>emptyList();
-    }
-    return Collections.unmodifiableCollection(this.backupMasters);
+  @Deprecated
+  public List<ServerName> getBackupMasters() {
+    return metrics.getBackupMasterNames();
   }
 
   /**
    * @param sn
    * @return Server's load or null if not found.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getLiveServerMetrics} instead.
    */
+  @Deprecated
   public ServerLoad getLoad(final ServerName sn) {
-    return liveServers != null ? liveServers.get(sn) : null;
-  }
-
-  @InterfaceAudience.Private
-  public List<RegionState> getRegionsInTransition() {
-    return this.intransition;
+    ServerMetrics serverMetrics = metrics.getLiveServerMetrics().get(sn);
+    return serverMetrics == null ? null : new ServerLoad(serverMetrics);
   }
 
   public String getClusterId() {
-    return clusterId;
+    return metrics.getClusterId();
   }
 
+  @Override
+  public List<String> getMasterCoprocessorNames() {
+    return metrics.getMasterCoprocessorNames();
+  }
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getMasterCoprocessorNames} instead.
+   */
+  @Deprecated
   public String[] getMasterCoprocessors() {
-    return masterCoprocessors;
+    List<String> rval = metrics.getMasterCoprocessorNames();
+    return rval.toArray(new String[rval.size()]);
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getLastMajorCompactionTimestamp(TableName)} instead.
+   */
+  @Deprecated
   public long getLastMajorCompactionTsForTable(TableName table) {
-    long result = Long.MAX_VALUE;
-    for (ServerName server : getServers()) {
-      ServerLoad load = getLoad(server);
-      for (RegionLoad rl : load.getRegionsLoad().values()) {
-        if (table.equals(HRegionInfo.getTable(rl.getName()))) {
-          result = Math.min(result, rl.getLastMajorCompactionTs());
-        }
-      }
-    }
-    return result == Long.MAX_VALUE ? 0 : result;
+    return metrics.getLastMajorCompactionTimestamp(table);
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getLastMajorCompactionTimestamp(byte[])} instead.
+   */
+  @Deprecated
   public long getLastMajorCompactionTsForRegion(final byte[] region) {
-    for (ServerName server : getServers()) {
-      ServerLoad load = getLoad(server);
-      RegionLoad rl = load.getRegionsLoad().get(region);
-      if (rl != null) {
-        return rl.getLastMajorCompactionTs();
-      }
-    }
-    return 0;
+    return metrics.getLastMajorCompactionTimestamp(region);
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             No flag in 2.0
+   */
+  @Deprecated
   public boolean isBalancerOn() {
-    return balancerOn != null && balancerOn;
+    return metrics.getBalancerOn() != null && metrics.getBalancerOn();
   }
 
+  @Override
   public Boolean getBalancerOn() {
-    return balancerOn;
+    return metrics.getBalancerOn();
   }
 
+  @Override
+  public int getMasterInfoPort() {
+    return metrics.getMasterInfoPort();
+  }
+
+  @Override
+  public List<ServerName> getServersName() {
+    return metrics.getServersName();
+  }
+
+  @Override
+  public Map<TableName, RegionStatesCount> getTableRegionStatesCount() {
+    return metrics.getTableRegionStatesCount();
+  }
+
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(1024);
-    sb.append("Master: " + master);
+    sb.append("Master: " + metrics.getMasterName());
 
     int backupMastersSize = getBackupMastersSize();
     sb.append("\nNumber of backup masters: " + backupMastersSize);
     if (backupMastersSize > 0) {
-      for (ServerName serverName: backupMasters) {
+      for (ServerName serverName: metrics.getBackupMasterNames()) {
         sb.append("\n  " + serverName);
       }
     }
 
     int serversSize = getServersSize();
-    sb.append("\nNumber of live region servers: " + serversSize);
+    int serversNameSize = getServersName().size();
+    sb.append("\nNumber of live region servers: "
+        + (serversSize > 0 ? serversSize : serversNameSize));
     if (serversSize > 0) {
-      for (ServerName serverName: liveServers.keySet()) {
+      for (ServerName serverName : metrics.getLiveServerMetrics().keySet()) {
+        sb.append("\n  " + serverName.getServerName());
+      }
+    } else if (serversNameSize > 0) {
+      for (ServerName serverName : getServersName()) {
         sb.append("\n  " + serverName.getServerName());
       }
     }
 
-    int deadServerSize = getDeadServersSize();
+    int deadServerSize = metrics.getDeadServerNames().size();
     sb.append("\nNumber of dead region servers: " + deadServerSize);
     if (deadServerSize > 0) {
-      for (ServerName serverName: deadServers) {
+      for (ServerName serverName : metrics.getDeadServerNames()) {
         sb.append("\n  " + serverName);
       }
     }
 
     sb.append("\nAverage load: " + getAverageLoad());
-    sb.append("\nNumber of requests: " + getRequestsCount());
+    sb.append("\nNumber of requests: " + getRequestCount());
     sb.append("\nNumber of regions: " + getRegionsCount());
 
-    int ritSize = (intransition != null) ? intransition.size() : 0;
+    int ritSize = metrics.getRegionStatesInTransition().size();
     sb.append("\nNumber of regions in transition: " + ritSize);
     if (ritSize > 0) {
-      for (RegionState state: intransition) {
+      for (RegionState state: metrics.getRegionStatesInTransition()) {
         sb.append("\n  " + state.toDescriptiveString());
       }
     }
     return sb.toString();
-  }
-
-  public static Builder newBuilder() {
-    return new Builder();
-  }
-
-  /**
-   * Builder for construct a ClusterStatus.
-   */
-  @InterfaceAudience.Private
-  public static class Builder {
-    private String hbaseVersion = null;
-    private Map<ServerName, ServerLoad> liveServers = null;
-    private Collection<ServerName> deadServers = null;
-    private ServerName master = null;
-    private Collection<ServerName> backupMasters = null;
-    private List<RegionState> intransition = null;
-    private String clusterId = null;
-    private String[] masterCoprocessors = null;
-    private Boolean balancerOn = null;
-
-    private Builder() {}
-
-    public Builder setHBaseVersion(String hbaseVersion) {
-      this.hbaseVersion = hbaseVersion;
-      return this;
-    }
-
-    public Builder setLiveServers(Map<ServerName, ServerLoad> liveServers) {
-      this.liveServers = liveServers;
-      return this;
-    }
-
-    public Builder setDeadServers(Collection<ServerName> deadServers) {
-      this.deadServers = deadServers;
-      return this;
-    }
-
-    public Builder setMaster(ServerName master) {
-      this.master = master;
-      return this;
-    }
-
-    public Builder setBackupMasters(Collection<ServerName> backupMasters) {
-      this.backupMasters = backupMasters;
-      return this;
-    }
-
-    public Builder setRegionState(List<RegionState> intransition) {
-      this.intransition = intransition;
-      return this;
-    }
-
-    public Builder setClusterId(String clusterId) {
-      this.clusterId = clusterId;
-      return this;
-    }
-
-    public Builder setMasterCoprocessors(String[] masterCoprocessors) {
-      this.masterCoprocessors = masterCoprocessors;
-      return this;
-    }
-
-    public Builder setBalancerOn(Boolean balancerOn) {
-      this.balancerOn = balancerOn;
-      return this;
-    }
-
-    public ClusterStatus build() {
-      return new ClusterStatus(hbaseVersion, clusterId, liveServers,
-          deadServers, master, backupMasters, intransition, masterCoprocessors,
-          balancerOn);
-    }
-  }
-
-  /**
-   * Kinds of ClusterStatus
-   */
-  public enum Option {
-    HBASE_VERSION, /** status about hbase version */
-    CLUSTER_ID, /** status about cluster id */
-    BALANCER_ON, /** status about balancer is on or not */
-    LIVE_SERVERS, /** status about live region servers */
-    DEAD_SERVERS, /** status about dead region servers */
-    MASTER, /** status about master */
-    BACKUP_MASTERS, /** status about backup masters */
-    MASTER_COPROCESSORS, /** status about master coprocessors */
-    REGIONS_IN_TRANSITION; /** status about regions in transition */
   }
 }

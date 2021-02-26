@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -33,19 +34,19 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -53,7 +54,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.TokenUtil;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -70,7 +70,7 @@ import com.codahale.metrics.MetricRegistry;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 @InterfaceAudience.Public
 public class TableMapReduceUtil {
-  private static final Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableMapReduceUtil.class);
 
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
@@ -345,22 +345,20 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Sets up the job for reading from a table snapshot. It bypasses hbase servers
-   * and read directly from snapshot files.
-   *
+   * Sets up the job for reading from a table snapshot. It bypasses hbase servers and read directly
+   * from snapshot files.
    * @param snapshotName The name of the snapshot (of a table) to read from.
-   * @param scan  The scan instance with the columns, time range etc.
-   * @param mapper  The mapper class to use.
-   * @param outputKeyClass  The class of the output key.
-   * @param outputValueClass  The class of the output value.
-   * @param job  The current job to adjust.  Make sure the passed job is
-   * carrying all necessary HBase configuration.
-   * @param addDependencyJars upload HBase jars and jars for any of the configured
-   *           job classes via the distributed cache (tmpjars).
-   *
+   * @param scan The scan instance with the columns, time range etc.
+   * @param mapper The mapper class to use.
+   * @param outputKeyClass The class of the output key.
+   * @param outputValueClass The class of the output value.
+   * @param job The current job to adjust. Make sure the passed job is carrying all necessary HBase
+   *          configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
+   *          the distributed cache (tmpjars).
    * @param tmpRestoreDir a temporary directory to copy the snapshot files into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * After the job is finished, restore directory can be deleted.
+   *          have write permissions to this directory, and this should not be a subdirectory of
+   *          rootdir. After the job is finished, restore directory can be deleted.
    * @throws IOException When setting up the details fails.
    * @see TableSnapshotInputFormat
    */
@@ -369,10 +367,10 @@ public class TableMapReduceUtil {
       Class<?> outputKeyClass,
       Class<?> outputValueClass, Job job,
       boolean addDependencyJars, Path tmpRestoreDir)
-  throws IOException {
+      throws IOException {
     TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
-    initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
-        outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
+    initTableMapperJob(snapshotName, scan, mapper, outputKeyClass, outputValueClass, job,
+      addDependencyJars, false, TableSnapshotInputFormat.class);
     resetCacheConfig(job.getConfiguration());
   }
 
@@ -554,7 +552,10 @@ public class TableMapReduceUtil {
    * @param job The job that requires the permission.
    * @param quorumAddress string that contains the 3 required configuratins
    * @throws IOException When the authentication token cannot be obtained.
-   * @deprecated Since 1.2.0, use {@link #initCredentialsForCluster(Job, Configuration)} instead.
+   * @deprecated Since 1.2.0 and will be removed in 3.0.0. Use
+   *   {@link #initCredentialsForCluster(Job, Configuration)} instead.
+   * @see #initCredentialsForCluster(Job, Configuration)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-14886">HBASE-14886</a>
    */
   @Deprecated
   public static void initCredentialsForCluster(Job job, String quorumAddress)
@@ -599,7 +600,7 @@ public class TableMapReduceUtil {
    */
   public static String convertScanToString(Scan scan) throws IOException {
     ClientProtos.Scan proto = ProtobufUtil.toScan(scan);
-    return Base64.encodeBytes(proto.toByteArray());
+    return Bytes.toString(Base64.getEncoder().encode(proto.toByteArray()));
   }
 
   /**
@@ -610,7 +611,7 @@ public class TableMapReduceUtil {
    * @throws IOException When reading the scan instance fails.
    */
   public static Scan convertStringToScan(String base64) throws IOException {
-    byte [] decoded = Base64.decode(base64);
+    byte [] decoded = Base64.getDecoder().decode(base64);
     return ProtobufUtil.toScan(ClientProtos.Scan.parseFrom(decoded));
   }
 
@@ -730,7 +731,7 @@ public class TableMapReduceUtil {
     job.setOutputValueClass(Writable.class);
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
-      int regions = MetaTableAccessor.getRegionCount(conf, TableName.valueOf(table));
+      int regions = getRegionCount(conf, TableName.valueOf(table));
       if (job.getNumReduceTasks() > regions) {
         job.setNumReduceTasks(regions);
       }
@@ -753,12 +754,11 @@ public class TableMapReduceUtil {
    * @param job  The current job to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public static void limitNumReduceTasks(String table, Job job)
-  throws IOException {
-    int regions =
-      MetaTableAccessor.getRegionCount(job.getConfiguration(), TableName.valueOf(table));
-    if (job.getNumReduceTasks() > regions)
+  public static void limitNumReduceTasks(String table, Job job) throws IOException {
+    int regions = getRegionCount(job.getConfiguration(), TableName.valueOf(table));
+    if (job.getNumReduceTasks() > regions) {
       job.setNumReduceTasks(regions);
+    }
   }
 
   /**
@@ -769,10 +769,8 @@ public class TableMapReduceUtil {
    * @param job  The current job to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public static void setNumReduceTasks(String table, Job job)
-  throws IOException {
-    job.setNumReduceTasks(MetaTableAccessor.getRegionCount(job.getConfiguration(),
-       TableName.valueOf(table)));
+  public static void setNumReduceTasks(String table, Job job) throws IOException {
+    job.setNumReduceTasks(getRegionCount(job.getConfiguration(), TableName.valueOf(table)));
   }
 
   /**
@@ -801,21 +799,6 @@ public class TableMapReduceUtil {
    * @see <a href="https://issues.apache.org/jira/browse/PIG-3285">PIG-3285</a>
    */
   public static void addHBaseDependencyJars(Configuration conf) throws IOException {
-
-    // PrefixTreeCodec is part of the hbase-prefix-tree module. If not included in MR jobs jar
-    // dependencies, MR jobs that write encoded hfiles will fail.
-    // We used reflection here so to prevent a circular module dependency.
-    // TODO - if we extract the MR into a module, make it depend on hbase-prefix-tree.
-    Class prefixTreeCodecClass = null;
-    try {
-      prefixTreeCodecClass =
-          Class.forName("org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec");
-    } catch (ClassNotFoundException e) {
-      // this will show up in unit tests but should not show in real deployments
-      LOG.warn("The hbase-prefix-tree module jar containing PrefixTreeCodec is not present." +
-          "  Continuing without it.");
-    }
-
     addDependencyJarsForClasses(conf,
       // explicitly pull a class from each module
       org.apache.hadoop.hbase.HConstants.class,                      // hbase-common
@@ -828,16 +811,19 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-mapreduce
       org.apache.hadoop.hbase.metrics.impl.FastLongHistogram.class,  // hbase-metrics
       org.apache.hadoop.hbase.metrics.Snapshot.class,                // hbase-metrics-api
-      prefixTreeCodecClass, //  hbase-prefix-tree (if null will be skipped)
-      // pull necessary dependencies
-      org.apache.zookeeper.ZooKeeper.class,
-      org.apache.hadoop.hbase.shaded.io.netty.channel.Channel.class,
-      com.google.protobuf.Message.class,
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.class,
-      org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists.class,
-      org.apache.htrace.Trace.class,
-      com.codahale.metrics.MetricRegistry.class,
-      org.apache.commons.lang3.ArrayUtils.class);
+      org.apache.hadoop.hbase.replication.ReplicationUtils.class,    // hbase-replication
+      org.apache.hadoop.hbase.http.HttpServer.class,                 // hbase-http
+      org.apache.hadoop.hbase.procedure2.Procedure.class,            // hbase-procedure
+      org.apache.hadoop.hbase.zookeeper.ZKWatcher.class,             // hbase-zookeeper
+      org.apache.hbase.thirdparty.com.google.common.collect.Lists.class, // hb-shaded-miscellaneous
+      org.apache.hbase.thirdparty.com.google.gson.GsonBuilder.class, // hbase-shaded-gson
+      org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.class, // hb-sh-protobuf
+      org.apache.hbase.thirdparty.io.netty.channel.Channel.class,    // hbase-shaded-netty
+      org.apache.zookeeper.ZooKeeper.class,                          // zookeeper
+      com.google.protobuf.Message.class,                             // protobuf
+      org.apache.htrace.core.Tracer.class,                           // htrace
+      com.codahale.metrics.MetricRegistry.class,                     // metrics-core
+      org.apache.commons.lang3.ArrayUtils.class);                    // commons-lang
   }
 
   /**
@@ -891,7 +877,10 @@ public class TableMapReduceUtil {
    * Add the jars containing the given classes to the job's configuration
    * such that JobClient will ship them to the cluster and add them to
    * the DistributedCache.
-   * @deprecated rely on {@link #addDependencyJars(Job)} instead.
+   * @deprecated since 1.3.0 and will be removed in 3.0.0. Use {@link #addDependencyJars(Job)}
+   *   instead.
+   * @see #addDependencyJars(Job)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-8386">HBASE-8386</a>
    */
   @Deprecated
   public static void addDependencyJars(Configuration conf,
@@ -978,7 +967,7 @@ public class TableMapReduceUtil {
     }
 
     LOG.debug(String.format("For class %s, using jar %s", my_class.getName(), jar));
-    return new Path(jar).makeQualified(fs);
+    return new Path(jar).makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
   /**
@@ -1064,5 +1053,12 @@ public class TableMapReduceUtil {
     }
 
     return ret;
+  }
+
+  private static int getRegionCount(Configuration conf, TableName tableName) throws IOException {
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+      RegionLocator locator = conn.getRegionLocator(tableName)) {
+      return locator.getAllRegionLocations().size();
+    }
   }
 }

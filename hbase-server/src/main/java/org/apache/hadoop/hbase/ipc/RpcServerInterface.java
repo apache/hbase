@@ -21,24 +21,21 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface RpcServerInterface {
   void start();
   boolean isStarted();
@@ -87,10 +84,23 @@ public interface RpcServerInterface {
    * Refresh authentication manager policy.
    * @param pp
    */
-  @VisibleForTesting
-  void refreshAuthManager(PolicyProvider pp);
+  void refreshAuthManager(Configuration conf, PolicyProvider pp);
 
   RpcScheduler getScheduler();
 
+  /**
+   * Allocator to allocate/free the ByteBuffers, those ByteBuffers can be on-heap or off-heap.
+   * @return byte buffer allocator
+   */
+  ByteBuffAllocator getByteBuffAllocator();
+
   void setRsRpcServices(RSRpcServices rsRpcServices);
+
+  /**
+   * Set Online SlowLog Provider
+   *
+   * @param namedQueueRecorder instance of {@link NamedQueueRecorder}
+   */
+  void setNamedQueueRecorder(final NamedQueueRecorder namedQueueRecorder);
+
 }

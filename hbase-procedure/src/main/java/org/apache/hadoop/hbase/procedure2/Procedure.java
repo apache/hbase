@@ -15,80 +15,100 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Histogram;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
- * Base Procedure class responsible for Procedure Metadata;
- * e.g. state, submittedTime, lastUpdate, stack-indexes, etc.
- *
- * <p>Procedures are run by a {@link ProcedureExecutor} instance. They are submitted and then
- * the ProcedureExecutor keeps calling {@link #execute(Object)} until the Procedure is done.
- * Execute may be called multiple times in the case of failure or a restart, so code must be
- * idempotent. The return from an execute call is either: null to indicate we are done;
- * ourself if there is more to do; or, a set of sub-procedures that need to
- * be run to completion before the framework resumes our execution.
- *
- * <p>The ProcedureExecutor keeps its
- * notion of Procedure State in the Procedure itself; e.g. it stamps the Procedure as INITIALIZING,
- * RUNNABLE, SUCCESS, etc. Here are some of the States defined in the ProcedureState enum from
- * protos:
- *<ul>
- * <li>{@link #isFailed()} A procedure has executed at least once and has failed. The procedure
- * may or may not have rolled back yet. Any procedure in FAILED state will be eventually moved
- * to ROLLEDBACK state.</li>
- *
+ * Base Procedure class responsible for Procedure Metadata; e.g. state, submittedTime, lastUpdate,
+ * stack-indexes, etc.
+ * <p/>
+ * Procedures are run by a {@link ProcedureExecutor} instance. They are submitted and then the
+ * ProcedureExecutor keeps calling {@link #execute(Object)} until the Procedure is done. Execute may
+ * be called multiple times in the case of failure or a restart, so code must be idempotent. The
+ * return from an execute call is either: null to indicate we are done; ourself if there is more to
+ * do; or, a set of sub-procedures that need to be run to completion before the framework resumes
+ * our execution.
+ * <p/>
+ * The ProcedureExecutor keeps its notion of Procedure State in the Procedure itself; e.g. it stamps
+ * the Procedure as INITIALIZING, RUNNABLE, SUCCESS, etc. Here are some of the States defined in the
+ * ProcedureState enum from protos:
+ * <ul>
+ * <li>{@link #isFailed()} A procedure has executed at least once and has failed. The procedure may
+ * or may not have rolled back yet. Any procedure in FAILED state will be eventually moved to
+ * ROLLEDBACK state.</li>
  * <li>{@link #isSuccess()} A procedure is completed successfully without exception.</li>
- *
  * <li>{@link #isFinished()} As a procedure in FAILED state will be tried forever for rollback, only
  * condition when scheduler/ executor will drop procedure from further processing is when procedure
  * state is ROLLEDBACK or isSuccess() returns true. This is a terminal state of the procedure.</li>
- *
  * <li>{@link #isWaiting()} - Procedure is in one of the two waiting states
  * ({@link ProcedureState#WAITING}, {@link ProcedureState#WAITING_TIMEOUT}).</li>
- *</ul>
- * NOTE: These states are of the ProcedureExecutor. Procedure implementations in turn can keep
- * their own state. This can lead to confusion. Try to keep the two distinct.
- *
- * <p>rollback() is called when the procedure or one of the sub-procedures
- * has failed. The rollback step is supposed to cleanup the resources created
- * during the execute() step. In case of failure and restart, rollback() may be
- * called multiple times, so again the code must be idempotent.
- *
- * <p>Procedure can be made respect a locking regime. It has acqure/release methods as
- * well as an {@link #hasLock(Object)}. The lock implementation is up to the implementor.
- * If an entity needs to be locked for the life of a procedure -- not just the calls to
- * execute -- then implementations should say so with the {@link #holdLock(Object)}
- * method.
- *
- * <p>There are hooks for collecting metrics on submit of the procedure and on finish.
- * See {@link #updateMetricsOnSubmit(Object)} and
- * {@link #updateMetricsOnFinish(Object, long, boolean)}.
+ * </ul>
+ * NOTE: These states are of the ProcedureExecutor. Procedure implementations in turn can keep their
+ * own state. This can lead to confusion. Try to keep the two distinct.
+ * <p/>
+ * rollback() is called when the procedure or one of the sub-procedures has failed. The rollback
+ * step is supposed to cleanup the resources created during the execute() step. In case of failure
+ * and restart, rollback() may be called multiple times, so again the code must be idempotent.
+ * <p/>
+ * Procedure can be made respect a locking regime. It has acquire/release methods as well as an
+ * {@link #hasLock()}. The lock implementation is up to the implementor. If an entity needs to be
+ * locked for the life of a procedure -- not just the calls to execute -- then implementations
+ * should say so with the {@link #holdLock(Object)} method.
+ * <p/>
+ * And since we need to restore the lock when restarting to keep the logic correct(HBASE-20846), the
+ * implementation is a bit tricky so we add some comments hrre about it.
+ * <ul>
+ * <li>Make {@link #hasLock()} method final, and add a {@link #locked} field in Procedure to record
+ * whether we have the lock. We will set it to {@code true} in
+ * {@link #doAcquireLock(Object, ProcedureStore)} and to {@code false} in
+ * {@link #doReleaseLock(Object, ProcedureStore)}. The sub classes do not need to manage it any
+ * more.</li>
+ * <li>Also added a locked field in the proto message. When storing, the field will be set according
+ * to the return value of {@link #hasLock()}. And when loading, there is a new field in Procedure
+ * called {@link #lockedWhenLoading}. We will set it to {@code true} if the locked field in proto
+ * message is {@code true}.</li>
+ * <li>The reason why we can not set the {@link #locked} field directly to {@code true} by calling
+ * {@link #doAcquireLock(Object, ProcedureStore)} is that, during initialization, most procedures
+ * need to wait until master is initialized. So the solution here is that, we introduced a new
+ * method called {@link #waitInitialized(Object)} in Procedure, and move the wait master initialized
+ * related code from {@link #acquireLock(Object)} to this method. And we added a restoreLock method
+ * to Procedure, if {@link #lockedWhenLoading} is {@code true}, we will call the
+ * {@link #acquireLock(Object)} to get the lock, but do not set {@link #locked} to true. And later
+ * when we call {@link #doAcquireLock(Object, ProcedureStore)} and pass the
+ * {@link #waitInitialized(Object)} check, we will test {@link #lockedWhenLoading}, if it is
+ * {@code true}, when we just set the {@link #locked} field to true and return, without actually
+ * calling the {@link #acquireLock(Object)} method since we have already called it once.</li>
+ * </ul>
+ * <p/>
+ * Procedures can be suspended or put in wait state with a callback that gets executed on
+ * Procedure-specified timeout. See {@link #setTimeout(int)}}, and
+ * {@link #setTimeoutFailure(Object)}. See TestProcedureEvents and the TestTimeoutEventProcedure
+ * class for an example usage.
+ * </p>
+ * <p/>
+ * There are hooks for collecting metrics on submit of the procedure and on finish. See
+ * {@link #updateMetricsOnSubmit(Object)} and {@link #updateMetricsOnFinish(Object, long, boolean)}.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TEnvironment>> {
-  private static final Log LOG = LogFactory.getLog(Procedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Procedure.class);
   public static final long NO_PROC_ID = -1;
   protected static final int NO_TIMEOUT = -1;
 
@@ -117,17 +137,81 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
 
   private volatile byte[] result = null;
 
+  private volatile boolean locked = false;
+
+  private boolean lockedWhenLoading = false;
+
+  /**
+   * Used for override complete of the procedure without actually doing any logic in the procedure.
+   * If bypass is set to true, when executing it will return null when
+   * {@link #doExecute(Object)} is called to finish the procedure and release any locks
+   * it may currently hold. The bypass does cleanup around the Procedure as far as the
+   * Procedure framework is concerned. It does not clean any internal state that the
+   * Procedure's themselves may have set. That is for the Procedures to do themselves
+   * when bypass is called. They should override bypass and do their cleanup in the
+   * overridden bypass method (be sure to call the parent bypass to ensure proper
+   * processing).
+   * <p></p>Bypassing a procedure is not like aborting. Aborting a procedure will trigger
+   * a rollback. And since the {@link #abort(Object)} method is overrideable
+   * Some procedures may have chosen to ignore the aborting.
+   */
+  private volatile boolean bypass = false;
+
+  /**
+   * Indicate whether we need to persist the procedure to ProcedureStore after execution. Default to
+   * true, and the implementation can all {@link #skipPersistence()} to let the framework skip the
+   * persistence of the procedure.
+   * <p/>
+   * This is useful when the procedure is in error and you want to retry later. The retry interval
+   * and the number of retries are usually not critical so skip the persistence can save some
+   * resources, and also speed up the restart processing.
+   * <p/>
+   * Notice that this value will be reset to true every time before execution. And when rolling back
+   * we do not test this value.
+   */
+  private boolean persist = true;
+
+  public boolean isBypass() {
+    return bypass;
+  }
+
+  /**
+   * Set the bypass to true.
+   * Only called in {@link ProcedureExecutor#bypassProcedure(long, long, boolean, boolean)} for now.
+   * DO NOT use this method alone, since we can't just bypass one single procedure. We need to
+   * bypass its ancestor too. If your Procedure has set state, it needs to undo it in here.
+   * @param env Current environment. May be null because of context; e.g. pretty-printing
+   *            procedure WALs where there is no 'environment' (and where Procedures that require
+   *            an 'environment' won't be run.
+   */
+  protected void bypass(TEnvironment env) {
+    this.bypass = true;
+  }
+
+  boolean needPersistence() {
+    return persist;
+  }
+
+  void resetPersistence() {
+    persist = true;
+  }
+
+  protected final void skipPersistence() {
+    persist = false;
+  }
+
   /**
    * The main code of the procedure. It must be idempotent since execute()
    * may be called multiple times in case of machine failure in the middle
    * of the execution.
    * @param env the environment passed to the ProcedureExecutor
    * @return a set of sub-procedures to run or ourselves if there is more work to do or null if the
-   * procedure is done.
-   * @throws ProcedureYieldException the procedure will be added back to the queue and retried later.
+   *         procedure is done.
+   * @throws ProcedureYieldException the procedure will be added back to the queue and retried
+   *         later.
    * @throws InterruptedException the procedure will be added back to the queue and retried later.
-   * @throws ProcedureSuspendedException Signal to the executor that Procedure has suspended itself and
-   * has set itself up waiting for an external event to wake it back up again.
+   * @throws ProcedureSuspendedException Signal to the executor that Procedure has suspended itself
+   *         and has set itself up waiting for an external event to wake it back up again.
    */
   protected abstract Procedure<TEnvironment>[] execute(TEnvironment env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException;
@@ -165,7 +249,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * be able to resume on failure.
    * @param serializer stores the serializable state
    */
-  protected abstract void serializeStateData(final ProcedureStateSerializer serializer)
+  protected abstract void serializeStateData(ProcedureStateSerializer serializer)
     throws IOException;
 
   /**
@@ -173,52 +257,65 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * state.
    * @param serializer contains the serialized state
    */
-  protected abstract void deserializeStateData(final ProcedureStateSerializer serializer)
+  protected abstract void deserializeStateData(ProcedureStateSerializer serializer)
     throws IOException;
 
   /**
-   * The user should override this method if they need a lock on an Entity.
-   * A lock can be anything, and it is up to the implementor. The Procedure
-   * Framework will call this method just before it invokes {@link #execute(Object)}.
-   * It calls {@link #releaseLock(Object)} after the call to execute.
-   *
-   * <p>If you need to hold the lock for the life of the Procedure -- i.e. you do not
-   * want any other Procedure interfering while this Procedure is running, see
-   * {@link #holdLock(Object)}.
-   *
-   * <p>Example: in our Master we can execute request in parallel for different tables.
-   * We can create t1 and create t2 and these creates can be executed at the same time.
-   * Anything else on t1/t2 is queued waiting that specific table create to happen.
-   *
-   * <p>There are 3 LockState:
-   * <ul><li>LOCK_ACQUIRED should be returned when the proc has the lock and the proc is
-   * ready to execute.</li>
-   * <li>LOCK_YIELD_WAIT should be returned when the proc has not the lock and the framework
-   * should take care of readding the procedure back to the runnable set for retry</li>
-   * <li>LOCK_EVENT_WAIT should be returned when the proc has not the lock and someone will
-   * take care of readding the procedure back to the runnable set when the lock is available.
-   * </li></ul>
+   * The {@link #doAcquireLock(Object, ProcedureStore)} will be split into two steps, first, it will
+   * call us to determine whether we need to wait for initialization, second, it will call
+   * {@link #acquireLock(Object)} to actually handle the lock for this procedure.
+   * <p/>
+   * This is because that when master restarts, we need to restore the lock state for all the
+   * procedures to not break the semantic if {@link #holdLock(Object)} is true. But the
+   * {@link ProcedureExecutor} will be started before the master finish initialization(as it is part
+   * of the initialization!), so we need to split the code into two steps, and when restore, we just
+   * restore the lock part and ignore the waitInitialized part. Otherwise there will be dead lock.
+   * @return true means we need to wait until the environment has been initialized, otherwise true.
+   */
+  protected boolean waitInitialized(TEnvironment env) {
+    return false;
+  }
+
+  /**
+   * The user should override this method if they need a lock on an Entity. A lock can be anything,
+   * and it is up to the implementor. The Procedure Framework will call this method just before it
+   * invokes {@link #execute(Object)}. It calls {@link #releaseLock(Object)} after the call to
+   * execute.
+   * <p/>
+   * If you need to hold the lock for the life of the Procedure -- i.e. you do not want any other
+   * Procedure interfering while this Procedure is running, see {@link #holdLock(Object)}.
+   * <p/>
+   * Example: in our Master we can execute request in parallel for different tables. We can create
+   * t1 and create t2 and these creates can be executed at the same time. Anything else on t1/t2 is
+   * queued waiting that specific table create to happen.
+   * <p/>
+   * There are 3 LockState:
+   * <ul>
+   * <li>LOCK_ACQUIRED should be returned when the proc has the lock and the proc is ready to
+   * execute.</li>
+   * <li>LOCK_YIELD_WAIT should be returned when the proc has not the lock and the framework should
+   * take care of readding the procedure back to the runnable set for retry</li>
+   * <li>LOCK_EVENT_WAIT should be returned when the proc has not the lock and someone will take
+   * care of readding the procedure back to the runnable set when the lock is available.</li>
+   * </ul>
    * @return the lock state as described above.
    */
-  protected LockState acquireLock(final TEnvironment env) {
+  protected LockState acquireLock(TEnvironment env) {
     return LockState.LOCK_ACQUIRED;
   }
 
   /**
    * The user should override this method, and release lock if necessary.
    */
-  protected void releaseLock(final TEnvironment env) {
+  protected void releaseLock(TEnvironment env) {
     // no-op
   }
 
   /**
    * Used to keep the procedure lock even when the procedure is yielding or suspended.
-   * Must implement {@link #hasLock(Object)} if you want to hold the lock for life
-   * of the Procedure.
-   * @see #hasLock(Object)
    * @return true if the procedure should hold on the lock until completionCleanup()
    */
-  protected boolean holdLock(final TEnvironment env) {
+  protected boolean holdLock(TEnvironment env) {
     return false;
   }
 
@@ -230,8 +327,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * @see #holdLock(Object)
    * @return true if the procedure has the lock, false otherwise.
    */
-  protected boolean hasLock(final TEnvironment env) {
-    return false;
+  public final boolean hasLock() {
+    return locked;
   }
 
   /**
@@ -240,7 +337,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * operation before replay.
    * e.g. failing the procedure if the state on replay may be unknown.
    */
-  protected void beforeReplay(final TEnvironment env) {
+  protected void beforeReplay(TEnvironment env) {
     // no-op
   }
 
@@ -248,7 +345,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * Called when the procedure is ready to be added to the queue after
    * the loading/replay operation.
    */
-  protected void afterReplay(final TEnvironment env) {
+  protected void afterReplay(TEnvironment env) {
     // no-op
   }
 
@@ -258,7 +355,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * This operation will not be retried on failure. If a procedure took a lock,
    * it will have been released when this method runs.
    */
-  protected void completionCleanup(final TEnvironment env) {
+  protected void completionCleanup(TEnvironment env) {
     // no-op
   }
 
@@ -270,7 +367,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * @return Return true if the executor should yield on completion of an execution step.
    *         Defaults to return false.
    */
-  protected boolean isYieldAfterExecutionStep(final TEnvironment env) {
+  protected boolean isYieldAfterExecutionStep(TEnvironment env) {
     return false;
   }
 
@@ -283,7 +380,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * @return true if the executor should wait the client ack for the result.
    *         Defaults to return true.
    */
-  protected boolean shouldWaitClientAck(final TEnvironment env) {
+  protected boolean shouldWaitClientAck(TEnvironment env) {
     return true;
   }
 
@@ -293,7 +390,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * @param env The environment passed to the procedure executor
    * @return Container object for procedure related metric
    */
-  protected ProcedureMetrics getProcedureMetrics(final TEnvironment env) {
+  protected ProcedureMetrics getProcedureMetrics(TEnvironment env) {
     return null;
   }
 
@@ -303,7 +400,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * updates submitted counter if {@link #getProcedureMetrics(Object)} returns non-null
    * {@link ProcedureMetrics}.
    */
-  protected void updateMetricsOnSubmit(final TEnvironment env) {
+  protected void updateMetricsOnSubmit(TEnvironment env) {
     ProcedureMetrics metrics = getProcedureMetrics(env);
     if (metrics == null) {
       return;
@@ -317,21 +414,19 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
 
   /**
    * This function will be called just after procedure execution is finished. Override this method
-   * to update metrics at the end of the procedure. If {@link #getProcedureMetrics(Object)}
-   * returns non-null {@link ProcedureMetrics}, the default implementation adds runtime of a
-   * procedure to a time histogram for successfully completed procedures. Increments failed
-   * counter for failed procedures.
-   *
-   * TODO: As any of the sub-procedures on failure rolls back all procedures in the stack,
-   * including successfully finished siblings, this function may get called twice in certain
-   * cases for certain procedures. Explore further if this can be called once.
-   *
+   * to update metrics at the end of the procedure. If {@link #getProcedureMetrics(Object)} returns
+   * non-null {@link ProcedureMetrics}, the default implementation adds runtime of a procedure to a
+   * time histogram for successfully completed procedures. Increments failed counter for failed
+   * procedures.
+   * <p/>
+   * TODO: As any of the sub-procedures on failure rolls back all procedures in the stack, including
+   * successfully finished siblings, this function may get called twice in certain cases for certain
+   * procedures. Explore further if this can be called once.
    * @param env The environment passed to the procedure executor
    * @param runtime Runtime of the procedure in milliseconds
    * @param success true if procedure is completed successfully
    */
-  protected void updateMetricsOnFinish(final TEnvironment env, final long runtime,
-                                       boolean success) {
+  protected void updateMetricsOnFinish(TEnvironment env, long runtime, boolean success) {
     ProcedureMetrics metrics = getProcedureMetrics(env);
     if (metrics == null) {
       return;
@@ -357,8 +452,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   }
 
   /**
-   * Build the StringBuilder for the simple form of
-   * procedure string.
+   * Build the StringBuilder for the simple form of procedure string.
    * @return the StringBuilder
    */
   protected StringBuilder toStringSimpleSB() {
@@ -372,7 +466,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
       sb.append(getParentProcId());
     }
 
-    /**
+    /*
      * TODO
      * Enable later when this is being used.
      * Currently owner not used.
@@ -383,6 +477,15 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
 
     sb.append(", state="); // pState for Procedure State as opposed to any other kind.
     toStringState(sb);
+
+    // Only print out locked if actually locked. Most of the time it is not.
+    if (this.locked) {
+      sb.append(", locked=").append(locked);
+    }
+
+    if (bypass) {
+      sb.append(", bypass=").append(bypass);
+    }
 
     if (hasException()) {
       sb.append(", exception=" + getException());
@@ -395,8 +498,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   }
 
   /**
-   * Extend the toString() information with more procedure
-   * details
+   * Extend the toString() information with more procedure details
    */
   public String toStringDetails() {
     final StringBuilder sb = toStringSimpleSB();
@@ -424,8 +526,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   }
 
   /**
-   * Called from {@link #toString()} when interpolating {@link Procedure} State.
-   * Allows decorating generic Procedure State with Procedure particulars.
+   * Called from {@link #toString()} when interpolating {@link Procedure} State. Allows decorating
+   * generic Procedure State with Procedure particulars.
    * @param builder Append current {@link ProcedureState}
    */
   protected void toStringState(StringBuilder builder) {
@@ -487,9 +589,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Called by the ProcedureExecutor to assign the ID to the newly created procedure.
    */
-  @VisibleForTesting
-  @InterfaceAudience.Private
-  protected void setProcId(final long procId) {
+  protected void setProcId(long procId) {
     this.procId = procId;
     this.submittedTime = EnvironmentEdgeManager.currentTime();
     setState(ProcedureState.RUNNABLE);
@@ -498,32 +598,26 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Called by the ProcedureExecutor to assign the parent to the newly created procedure.
    */
-  @InterfaceAudience.Private
-  protected void setParentProcId(final long parentProcId) {
+  protected void setParentProcId(long parentProcId) {
     this.parentProcId = parentProcId;
   }
 
-  @InterfaceAudience.Private
-  protected void setRootProcId(final long rootProcId) {
+  protected void setRootProcId(long rootProcId) {
     this.rootProcId = rootProcId;
   }
 
   /**
    * Called by the ProcedureExecutor to set the value to the newly created procedure.
    */
-  @VisibleForTesting
-  @InterfaceAudience.Private
-  protected void setNonceKey(final NonceKey nonceKey) {
+  protected void setNonceKey(NonceKey nonceKey) {
     this.nonceKey = nonceKey;
   }
 
-  @VisibleForTesting
-  @InterfaceAudience.Private
-  public void setOwner(final String owner) {
+  public void setOwner(String owner) {
     this.owner = StringUtils.isEmpty(owner) ? null : owner;
   }
 
-  public void setOwner(final User owner) {
+  public void setOwner(User owner) {
     assert owner != null : "expected owner to be not null";
     setOwner(owner.getShortName());
   }
@@ -532,8 +626,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * Called on store load to initialize the Procedure internals after
    * the creation/deserialization.
    */
-  @InterfaceAudience.Private
-  protected void setSubmittedTime(final long submittedTime) {
+  protected void setSubmittedTime(long submittedTime) {
     this.submittedTime = submittedTime;
   }
 
@@ -543,7 +636,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * @param timeout timeout interval in msec
    */
-  protected void setTimeout(final int timeout) {
+  protected void setTimeout(int timeout) {
     this.timeout = timeout;
   }
 
@@ -562,15 +655,13 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * Called on store load to initialize the Procedure internals after
    * the creation/deserialization.
    */
-  @InterfaceAudience.Private
-  protected void setLastUpdate(final long lastUpdate) {
+  protected void setLastUpdate(long lastUpdate) {
     this.lastUpdate = lastUpdate;
   }
 
   /**
    * Called by ProcedureExecutor after each time a procedure step is executed.
    */
-  @InterfaceAudience.Private
   protected void updateTimestamp() {
     this.lastUpdate = EnvironmentEdgeManager.currentTime();
   }
@@ -585,7 +676,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * the procedure is in the waiting queue.
    * @return the timestamp of the next timeout.
    */
-  @InterfaceAudience.Private
   protected long getTimeoutTimestamp() {
     return getLastUpdate() + getTimeout();
   }
@@ -611,8 +701,29 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * The procedure may leave a "result" on completion.
    * @param result the serialized result that will be passed to the client
    */
-  protected void setResult(final byte[] result) {
+  protected void setResult(byte[] result) {
     this.result = result;
+  }
+
+  /**
+   * Will only be called when loading procedures from procedure store, where we need to record
+   * whether the procedure has already held a lock. Later we will call
+   * {@link #restoreLock(Object)} to actually acquire the lock.
+   */
+  final void lockedWhenLoading() {
+    this.lockedWhenLoading = true;
+  }
+
+  /**
+   * Can only be called when restarting, before the procedure actually being executed, as after we
+   * actually call the {@link #doAcquireLock(Object, ProcedureStore)} method, we will reset
+   * {@link #lockedWhenLoading} to false.
+   * <p/>
+   * Now it is only used in the ProcedureScheduler to determine whether we should put a Procedure in
+   * front of a queue.
+   */
+  public boolean isLockedWhenLoading() {
+    return lockedWhenLoading;
   }
 
   // ==============================================================================================
@@ -651,7 +762,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
 
   /**
    * @return true if the procedure is finished. The Procedure may be completed successfully or
-   * rolledback.
+   *         rolledback.
    */
   public synchronized boolean isFinished() {
     return isSuccess() || state == ProcedureState.ROLLEDBACK;
@@ -671,14 +782,11 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     return false;
   }
 
-  @VisibleForTesting
-  @InterfaceAudience.Private
   protected synchronized void setState(final ProcedureState state) {
     this.state = state;
     updateTimestamp();
   }
 
-  @InterfaceAudience.Private
   public synchronized ProcedureState getState() {
     return state;
   }
@@ -700,14 +808,21 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
 
   /**
    * Called by the ProcedureExecutor when the timeout set by setTimeout() is expired.
-   * @return true to let the framework handle the timeout as abort,
-   *         false in case the procedure handled the timeout itself.
+   * <p/>
+   * Another usage for this method is to implement retrying. A procedure can set the state to
+   * {@code WAITING_TIMEOUT} by calling {@code setState} method, and throw a
+   * {@link ProcedureSuspendedException} to halt the execution of the procedure, and do not forget a
+   * call {@link #setTimeout(int)} method to set the timeout. And you should also override this
+   * method to wake up the procedure, and also return false to tell the ProcedureExecutor that the
+   * timeout event has been handled.
+   * @return true to let the framework handle the timeout as abort, false in case the procedure
+   *         handled the timeout itself.
    */
-  protected synchronized boolean setTimeoutFailure(final TEnvironment env) {
+  protected synchronized boolean setTimeoutFailure(TEnvironment env) {
     if (state == ProcedureState.WAITING_TIMEOUT) {
       long timeDiff = EnvironmentEdgeManager.currentTime() - lastUpdate;
-      setFailure("ProcedureExecutor", new TimeoutIOException(
-        "Operation timed out after " + StringUtils.humanTimeDiff(timeDiff)));
+      setFailure("ProcedureExecutor",
+        new TimeoutIOException("Operation timed out after " + StringUtils.humanTimeDiff(timeDiff)));
       return true;
     }
     return false;
@@ -724,8 +839,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Called by the ProcedureExecutor on procedure-load to restore the latch state
    */
-  @InterfaceAudience.Private
-  protected synchronized void setChildrenLatch(final int numChildren) {
+  protected synchronized void setChildrenLatch(int numChildren) {
     this.childrenLatch = numChildren;
     if (LOG.isTraceEnabled()) {
       LOG.trace("CHILD LATCH INCREMENT SET " +
@@ -736,7 +850,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Called by the ProcedureExecutor on procedure-load to restore the latch state
    */
-  @InterfaceAudience.Private
   protected synchronized void incChildrenLatch() {
     // TODO: can this be inferred from the stack? I think so...
     this.childrenLatch++;
@@ -748,7 +861,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Called by the ProcedureExecutor to notify that one of the sub-procedures has completed.
    */
-  @InterfaceAudience.Private
   private synchronized boolean childrenCountDown() {
     assert childrenLatch > 0: this;
     boolean b = --childrenLatch == 0;
@@ -765,17 +877,18 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    */
   synchronized boolean tryRunnable() {
     // Don't use isWaiting in the below; it returns true for WAITING and WAITING_TIMEOUT
-    boolean b = getState() == ProcedureState.WAITING && childrenCountDown();
-    if (b) setState(ProcedureState.RUNNABLE);
-    return b;
+    if (getState() == ProcedureState.WAITING && childrenCountDown()) {
+      setState(ProcedureState.RUNNABLE);
+      return true;
+    } else {
+      return false;
+    }
   }
 
-  @InterfaceAudience.Private
   protected synchronized boolean hasChildren() {
     return childrenLatch > 0;
   }
 
-  @InterfaceAudience.Private
   protected synchronized int getChildrenLatch() {
     return childrenLatch;
   }
@@ -784,7 +897,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * Called by the RootProcedureState on procedure execution.
    * Each procedure store its stack-index positions.
    */
-  @InterfaceAudience.Private
   protected synchronized void addStackIndex(final int index) {
     if (stackIndexes == null) {
       stackIndexes = new int[] { index };
@@ -795,7 +907,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     }
   }
 
-  @InterfaceAudience.Private
   protected synchronized boolean removeStackIndex() {
     if (stackIndexes != null && stackIndexes.length > 1) {
       stackIndexes = Arrays.copyOf(stackIndexes, stackIndexes.length - 1);
@@ -810,7 +921,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * Called on store load to initialize the Procedure internals after
    * the creation/deserialization.
    */
-  @InterfaceAudience.Private
   protected synchronized void setStackIndexes(final List<Integer> stackIndexes) {
     this.stackIndexes = new int[stackIndexes.size()];
     for (int i = 0; i < this.stackIndexes.length; ++i) {
@@ -818,12 +928,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     }
   }
 
-  @InterfaceAudience.Private
   protected synchronized boolean wasExecuted() {
     return stackIndexes != null;
   }
 
-  @InterfaceAudience.Private
   protected synchronized int[] getStackIndexes() {
     return stackIndexes;
   }
@@ -835,13 +943,16 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Internal method called by the ProcedureExecutor that starts the user-level code execute().
    * @throws ProcedureSuspendedException This is used when procedure wants to halt processing and
-   * skip out without changing states or releasing any locks held.
+   *           skip out without changing states or releasing any locks held.
    */
-  @InterfaceAudience.Private
-  protected Procedure<TEnvironment>[] doExecute(final TEnvironment env)
+  protected Procedure<TEnvironment>[] doExecute(TEnvironment env)
       throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     try {
       updateTimestamp();
+      if (bypass) {
+        LOG.info("{} bypassed, returning null to finish it", this);
+        return null;
+      }
       return execute(env);
     } finally {
       updateTimestamp();
@@ -851,30 +962,90 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Internal method called by the ProcedureExecutor that starts the user-level code rollback().
    */
-  @InterfaceAudience.Private
-  protected void doRollback(final TEnvironment env)
+  protected void doRollback(TEnvironment env)
       throws IOException, InterruptedException {
     try {
       updateTimestamp();
+      if (bypass) {
+        LOG.info("{} bypassed, skipping rollback", this);
+        return;
+      }
       rollback(env);
     } finally {
       updateTimestamp();
     }
   }
 
+  final void restoreLock(TEnvironment env) {
+    if (!lockedWhenLoading) {
+      LOG.debug("{} didn't hold the lock before restarting, skip acquiring lock.", this);
+      return;
+    }
+
+    if (isFinished()) {
+      LOG.debug("{} is already finished, skip acquiring lock.", this);
+      return;
+    }
+
+    if (isBypass()) {
+      LOG.debug("{} is already bypassed, skip acquiring lock.", this);
+      return;
+    }
+    // this can happen if the parent stores the sub procedures but before it can
+    // release its lock, the master restarts
+    if (getState() == ProcedureState.WAITING && !holdLock(env)) {
+      LOG.debug("{} is in WAITING STATE, and holdLock=false, skip acquiring lock.", this);
+      lockedWhenLoading = false;
+      return;
+    }
+    LOG.debug("{} held the lock before restarting, call acquireLock to restore it.", this);
+    LockState state = acquireLock(env);
+    assert state == LockState.LOCK_ACQUIRED;
+  }
+
   /**
    * Internal method called by the ProcedureExecutor that starts the user-level code acquireLock().
    */
-  @InterfaceAudience.Private
-  protected LockState doAcquireLock(final TEnvironment env) {
-    return acquireLock(env);
+  final LockState doAcquireLock(TEnvironment env, ProcedureStore store) {
+    if (waitInitialized(env)) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    if (lockedWhenLoading) {
+      // reset it so we will not consider it anymore
+      lockedWhenLoading = false;
+      locked = true;
+      // Here we return without persist the locked state, as lockedWhenLoading is true means
+      // that the locked field of the procedure stored in procedure store is true, so we do not need
+      // to store it again.
+      return LockState.LOCK_ACQUIRED;
+    }
+    LockState state = acquireLock(env);
+    if (state == LockState.LOCK_ACQUIRED) {
+      locked = true;
+      // persist that we have held the lock. This must be done before we actually execute the
+      // procedure, otherwise when restarting, we may consider the procedure does not have a lock,
+      // but it may have already done some changes as we have already executed it, and if another
+      // procedure gets the lock, then the semantic will be broken if the holdLock is true, as we do
+      // not expect that another procedure can be executed in the middle.
+      store.update(this);
+    }
+    return state;
   }
 
   /**
    * Internal method called by the ProcedureExecutor that starts the user-level code releaseLock().
    */
-  @InterfaceAudience.Private
-  protected void doReleaseLock(final TEnvironment env) {
+  final void doReleaseLock(TEnvironment env, ProcedureStore store) {
+    locked = false;
+    // persist that we have released the lock. This must be done before we actually release the
+    // lock. Another procedure may take this lock immediately after we release the lock, and if we
+    // crash before persist the information that we have already released the lock, then when
+    // restarting there will be two procedures which both have the lock and cause problems.
+    if (getState() != ProcedureState.ROLLEDBACK) {
+      // If the state is ROLLEDBACK, it means that we have already deleted the procedure from
+      // procedure store, so do not need to log the release operation any more.
+      store.update(this);
+    }
     releaseLock(env);
   }
 
@@ -891,7 +1062,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * Get an hashcode for the specified Procedure ID
    * @return the hashcode for the specified procId
    */
-  public static long getProcIdHashCode(final long procId) {
+  public static long getProcIdHashCode(long procId) {
     long h = procId;
     h ^= h >> 16;
     h *= 0x85ebca6b;
@@ -901,15 +1072,16 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     return h;
   }
 
-  /*
+  /**
    * Helper to lookup the root Procedure ID given a specified procedure.
    */
-  @InterfaceAudience.Private
-  protected static Long getRootProcedureId(final Map<Long, Procedure> procedures,
-      Procedure<?> proc) {
+  protected static <T> Long getRootProcedureId(Map<Long, Procedure<T>> procedures,
+      Procedure<T> proc) {
     while (proc.hasParent()) {
       proc = procedures.get(proc.getParentProcId());
-      if (proc == null) return null;
+      if (proc == null) {
+        return null;
+      }
     }
     return proc.getProcId();
   }
@@ -919,7 +1091,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * @param b the second procedure to be compared.
    * @return true if the two procedures have the same parent
    */
-  public static boolean haveSameParent(final Procedure<?> a, final Procedure<?> b) {
+  public static boolean haveSameParent(Procedure<?> a, Procedure<?> b) {
     return a.hasParent() && b.hasParent() && (a.getParentProcId() == b.getParentProcId());
   }
 }

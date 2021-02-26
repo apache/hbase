@@ -39,7 +39,7 @@ public class InstrumentedLogWriter extends ProtobufLogWriter {
     public void append(Entry entry) throws IOException {
       super.append(entry);
       if (activateFailure &&
-          Bytes.equals(entry.getKey().getEncodedRegionName(), "break".getBytes())) {
+          Bytes.equals(entry.getKey().getEncodedRegionName(), Bytes.toBytes("break"))) {
         System.out.println(getClass().getName() + ": I will throw an exception now...");
         throw(new IOException("This exception is instrumented and should only be thrown for testing"
             ));

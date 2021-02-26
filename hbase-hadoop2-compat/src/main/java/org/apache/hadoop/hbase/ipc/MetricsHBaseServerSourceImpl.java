@@ -19,20 +19,17 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
     implements MetricsHBaseServerSource {
-
-
   private final MetricsHBaseServerWrapper wrapper;
   private final MutableFastCounter authorizationSuccesses;
   private final MutableFastCounter authorizationFailures;
@@ -119,10 +116,14 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   }
 
   @Override
-  public void sentResponse(long count) { this.responseSize.add(count); }
+  public void sentResponse(long count) {
+    this.responseSize.add(count);
+  }
 
   @Override
-  public void receivedRequest(long count) { this.requestSize.add(count); }
+  public void receivedRequest(long count) {
+    this.requestSize.add(count);
+  }
 
   @Override
   public void dequeuedCall(int qTime) {
@@ -151,10 +152,20 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
               REPLICATION_QUEUE_DESC), wrapper.getReplicationQueueLength())
           .addGauge(Interns.info(PRIORITY_QUEUE_NAME, PRIORITY_QUEUE_DESC),
               wrapper.getPriorityQueueLength())
+          .addGauge(Interns.info(METAPRIORITY_QUEUE_NAME, METAPRIORITY_QUEUE_DESC),
+              wrapper.getMetaPriorityQueueLength())
           .addGauge(Interns.info(NUM_OPEN_CONNECTIONS_NAME,
               NUM_OPEN_CONNECTIONS_DESC), wrapper.getNumOpenConnections())
           .addGauge(Interns.info(NUM_ACTIVE_HANDLER_NAME,
               NUM_ACTIVE_HANDLER_DESC), wrapper.getActiveRpcHandlerCount())
+          .addGauge(Interns.info(NUM_ACTIVE_GENERAL_HANDLER_NAME, NUM_ACTIVE_GENERAL_HANDLER_DESC),
+            wrapper.getActiveGeneralRpcHandlerCount())
+          .addGauge(
+            Interns.info(NUM_ACTIVE_PRIORITY_HANDLER_NAME, NUM_ACTIVE_PRIORITY_HANDLER_DESC),
+            wrapper.getActivePriorityRpcHandlerCount())
+          .addGauge(
+            Interns.info(NUM_ACTIVE_REPLICATION_HANDLER_NAME, NUM_ACTIVE_REPLICATION_HANDLER_DESC),
+            wrapper.getActiveReplicationRpcHandlerCount())
           .addCounter(Interns.info(NUM_GENERAL_CALLS_DROPPED_NAME,
               NUM_GENERAL_CALLS_DROPPED_DESC), wrapper.getNumGeneralCallsDropped())
           .addCounter(Interns.info(NUM_LIFO_MODE_SWITCHES_NAME,
@@ -170,7 +181,9 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
           .addGauge(Interns.info(NUM_ACTIVE_READ_HANDLER_NAME, NUM_ACTIVE_READ_HANDLER_DESC),
             wrapper.getActiveReadRpcHandlerCount())
           .addGauge(Interns.info(NUM_ACTIVE_SCAN_HANDLER_NAME, NUM_ACTIVE_SCAN_HANDLER_DESC),
-            wrapper.getActiveScanRpcHandlerCount());
+            wrapper.getActiveScanRpcHandlerCount())
+          .addGauge(Interns.info(NETTY_DM_USAGE_NAME, NETTY_DM_USAGE_DESC),
+            wrapper.getNettyDmUsage());
     }
 
     metricsRegistry.snapshot(mrb, all);

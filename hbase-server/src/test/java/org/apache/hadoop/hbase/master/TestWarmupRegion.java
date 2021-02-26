@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,10 +21,8 @@ import static org.apache.hadoop.hbase.regionserver.HRegion.warmupHRegion;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -44,18 +41,26 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Run tests that use the HBase clients; {@link org.apache.hadoop.hbase.client.HTable}.
+ * Run tests that use the HBase clients; {@link org.apache.hadoop.hbase.client.TableBuilder}.
  * Sets up the HBase mini cluster once at start and runs through all client tests.
  * Each creates a table named for the method and does its stuff against that.
  */
 @Category({MasterTests.class, LargeTests.class})
 @SuppressWarnings ("deprecation")
 public class TestWarmupRegion {
-  private static final Log LOG = LogFactory.getLog(TestWarmupRegion.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWarmupRegion.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestWarmupRegion.class);
   protected TableName TABLENAME = TableName.valueOf("testPurgeFutureDeletes");
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] ROW = Bytes.toBytes("testRow");

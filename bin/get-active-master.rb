@@ -20,7 +20,7 @@
 include Java
 java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.ServerName
-java_import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher
+java_import org.apache.hadoop.hbase.zookeeper.ZKWatcher
 java_import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker
 
 # disable debug/info logging on this script for clarity
@@ -30,7 +30,7 @@ org.apache.log4j.Logger.getLogger('org.apache.zookeeper').setLevel(log_level)
 
 config = HBaseConfiguration.create
 
-zk = ZooKeeperWatcher.new(config, 'get-active-master', nil)
+zk = ZKWatcher.new(config, 'get-active-master', nil)
 begin
   puts MasterAddressTracker.getMasterAddress(zk).getHostname
 ensure

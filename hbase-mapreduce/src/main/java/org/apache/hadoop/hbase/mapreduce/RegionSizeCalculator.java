@@ -23,18 +23,19 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Computes size of each region for given table and given column families.
@@ -43,7 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class RegionSizeCalculator {
 
-  private static final Log LOG = LogFactory.getLog(RegionSizeCalculator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionSizeCalculator.class);
 
   /**
    * Maps each region to its size in bytes.
@@ -78,12 +79,13 @@ public class RegionSizeCalculator {
     Set<ServerName> tableServers = getRegionServersOfTable(regionLocator);
 
     for (ServerName tableServerName : tableServers) {
-      Map<byte[], RegionLoad> regionLoads =
-          admin.getRegionLoad(tableServerName, regionLocator.getName());
-      for (RegionLoad regionLoad : regionLoads.values()) {
+      for (RegionMetrics regionLoad : admin.getRegionMetrics(
+        tableServerName,regionLocator.getName())) {
 
-        byte[] regionId = regionLoad.getName();
-        long regionSizeBytes = regionLoad.getStorefileSizeMB() * MEGABYTE;
+        byte[] regionId = regionLoad.getRegionName();
+        long regionSizeBytes
+          = ((long) regionLoad.getStoreFileSize().get(Size.Unit.MEGABYTE)) * MEGABYTE;
+
         sizeMap.put(regionId, regionSizeBytes);
 
         if (LOG.isDebugEnabled()) {

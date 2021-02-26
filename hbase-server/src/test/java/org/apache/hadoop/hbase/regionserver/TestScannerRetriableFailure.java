@@ -15,56 +15,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.TestTableName;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestScannerRetriableFailure {
-  private static final Log LOG = LogFactory.getLog(TestScannerRetriableFailure.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestScannerRetriableFailure.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestScannerRetriableFailure.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final String FAMILY_NAME_STR = "f";
   private static final byte[] FAMILY_NAME = Bytes.toBytes(FAMILY_NAME_STR);
 
-  @Rule public TestTableName TEST_TABLE = new TestTableName();
+  @Rule public TableNameTestRule testTable = new TableNameTestRule();
 
   public static class FaultyScannerObserver implements RegionCoprocessor, RegionObserver {
     private int faults = 0;
@@ -110,9 +114,9 @@ public class TestScannerRetriableFailure {
     }
   }
 
-  @Test(timeout=180000)
+  @Test
   public void testFaultyScanner() throws Exception {
-    TableName tableName = TEST_TABLE.getTableName();
+    TableName tableName = testTable.getTableName();
     Table table = UTIL.createTable(tableName, FAMILY_NAME);
     try {
       final int NUM_ROWS = 100;

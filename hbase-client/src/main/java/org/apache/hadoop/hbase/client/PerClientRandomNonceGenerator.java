@@ -41,10 +41,12 @@ public final class PerClientRandomNonceGenerator implements NonceGenerator {
     this.clientId = (((long) Arrays.hashCode(clientIdBase)) << 32) + rdm.nextInt();
   }
 
+  @Override
   public long getNonceGroup() {
     return this.clientId;
   }
 
+  @Override
   public long newNonce() {
     long result = HConstants.NO_NONCE;
     do {

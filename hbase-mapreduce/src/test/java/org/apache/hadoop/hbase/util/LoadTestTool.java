@@ -28,9 +28,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -39,7 +36,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.ZooKeeper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
@@ -59,6 +62,14 @@ import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
 import org.apache.hadoop.util.ToolRunner;
 
+import org.apache.hbase.thirdparty.org.apache.commons.cli.AlreadySelectedException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.MissingOptionException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
+
 /**
  * A command-line utility that reads, writes, and verifies data. Unlike
  * {@link org.apache.hadoop.hbase.PerformanceEvaluation}, this tool validates the data written,
@@ -67,7 +78,7 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class LoadTestTool extends AbstractHBaseTool {
 
-  private static final Log LOG = LogFactory.getLog(LoadTestTool.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LoadTestTool.class);
   private static final String COLON = ":";
 
   /** Table name for the test */
@@ -105,7 +116,10 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_USAGE_COMPRESSION = "Compression type, " +
       "one of " + Arrays.toString(Compression.Algorithm.values());
 
+  protected static final String OPT_VERBOSE = "verbose";
+
   public static final String OPT_BLOOM = "bloom";
+  public static final String OPT_BLOOM_PARAM = "bloom_param";
   public static final String OPT_COMPRESSION = "compression";
   public static final String OPT_DEFERRED_LOG_FLUSH = "deferredlogflush";
   public static final String OPT_DEFERRED_LOG_FLUSH_USAGE = "Enable deferred log flush.";
@@ -142,7 +156,6 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_SKIP_INIT = "skip_init";
   protected static final String OPT_INIT_ONLY = "init_only";
   protected static final String NUM_TABLES = "num_tables";
-  protected static final String OPT_REGIONS_PER_SERVER = "regions_per_server";
   protected static final String OPT_BATCHUPDATE = "batchupdate";
   protected static final String OPT_UPDATE = "update";
 
@@ -179,7 +192,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   protected long startKey, endKey;
 
-  protected boolean isWrite, isRead, isUpdate;
+  protected boolean isVerbose, isWrite, isRead, isUpdate;
   protected boolean deferredLogFlush;
 
   // Column family options
@@ -307,6 +320,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   @Override
   protected void addOptions() {
+    addOptNoArg("v", OPT_VERBOSE, "Will display a full readout of logs, including ZooKeeper");
     addOptWithArg(OPT_ZK_QUORUM, "ZK quorum as comma-separated host names " +
         "without port numbers");
     addOptWithArg(OPT_ZK_PARENT_NODE, "name of parent znode in zookeeper");
@@ -317,6 +331,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_UPDATE, OPT_USAGE_UPDATE);
     addOptNoArg(OPT_INIT_ONLY, "Initialize the test table only, don't do any loading");
     addOptWithArg(OPT_BLOOM, OPT_USAGE_BLOOM);
+    addOptWithArg(OPT_BLOOM_PARAM, "the parameter of bloom filter type");
     addOptWithArg(OPT_COMPRESSION, OPT_USAGE_COMPRESSION);
     addOptWithArg(HFileTestUtil.OPT_DATA_BLOCK_ENCODING, HFileTestUtil.OPT_DATA_BLOCK_ENCODING_USAGE);
     addOptWithArg(OPT_MAX_READ_ERRORS, "The maximum number of read errors " +
@@ -350,16 +365,46 @@ public class LoadTestTool extends AbstractHBaseTool {
           + "tool  will load n table parallely. -tn parameter value becomes "
           + "table name prefix. Each table name is in format <tn>_1...<tn>_n");
 
-    addOptWithArg(OPT_REGIONS_PER_SERVER,
-      "A positive integer number. When a number n is specified, load test "
-          + "tool will create the test table with n regions per server");
-
     addOptWithArg(OPT_ENCRYPTION, OPT_ENCRYPTION_USAGE);
     addOptNoArg(OPT_DEFERRED_LOG_FLUSH, OPT_DEFERRED_LOG_FLUSH_USAGE);
     addOptWithArg(OPT_NUM_REGIONS_PER_SERVER, OPT_NUM_REGIONS_PER_SERVER_USAGE);
     addOptWithArg(OPT_REGION_REPLICATION, OPT_REGION_REPLICATION_USAGE);
     addOptWithArg(OPT_REGION_REPLICA_ID, OPT_REGION_REPLICA_ID_USAGE);
     addOptWithArg(OPT_MOB_THRESHOLD, OPT_MOB_THRESHOLD_USAGE);
+  }
+
+  @Override
+  protected CommandLineParser newParser() {
+    // Commons-CLI lacks the capability to handle combinations of options, so we do it ourselves
+    // Validate in parse() to get helpful error messages instead of exploding in processOptions()
+    return new DefaultParser() {
+      @Override
+      public CommandLine parse(Options opts, String[] args, Properties props, boolean stop)
+          throws ParseException {
+        CommandLine cl = super.parse(opts, args, props, stop);
+
+        boolean isReadWriteUpdate = cmd.hasOption(OPT_READ)
+            || cmd.hasOption(OPT_WRITE)
+            || cmd.hasOption(OPT_UPDATE);
+        boolean isInitOnly = cmd.hasOption(OPT_INIT_ONLY);
+
+        if (!isInitOnly && !isReadWriteUpdate) {
+          throw new MissingOptionException("Must specify either -" + OPT_INIT_ONLY
+              + " or at least one of -" + OPT_READ + ", -" + OPT_WRITE + ", -" + OPT_UPDATE);
+        }
+
+        if (isInitOnly && isReadWriteUpdate) {
+          throw new AlreadySelectedException(OPT_INIT_ONLY + " cannot be specified with any of -"
+              + OPT_READ + ", -" + OPT_WRITE + ", -" + OPT_UPDATE);
+        }
+
+        if (isReadWriteUpdate && !cmd.hasOption(OPT_NUM_KEYS)) {
+          throw new MissingOptionException(OPT_NUM_KEYS + " must be specified in read/write mode.");
+        }
+
+        return cl;
+      }
+    };
   }
 
   @Override
@@ -379,27 +424,14 @@ public class LoadTestTool extends AbstractHBaseTool {
       families = HFileTestUtil.DEFAULT_COLUMN_FAMILIES;
     }
 
+    isVerbose = cmd.hasOption(OPT_VERBOSE);
     isWrite = cmd.hasOption(OPT_WRITE);
     isRead = cmd.hasOption(OPT_READ);
     isUpdate = cmd.hasOption(OPT_UPDATE);
     isInitOnly = cmd.hasOption(OPT_INIT_ONLY);
     deferredLogFlush = cmd.hasOption(OPT_DEFERRED_LOG_FLUSH);
 
-    if (!isWrite && !isRead && !isUpdate && !isInitOnly) {
-      throw new IllegalArgumentException("Either -" + OPT_WRITE + " or " +
-        "-" + OPT_UPDATE + " or -" + OPT_READ + " has to be specified");
-    }
-
-    if (isInitOnly && (isRead || isWrite || isUpdate)) {
-      throw new IllegalArgumentException(OPT_INIT_ONLY + " cannot be specified with"
-          + " either -" + OPT_WRITE + " or -" + OPT_UPDATE + " or -" + OPT_READ);
-    }
-
     if (!isInitOnly) {
-      if (!cmd.hasOption(OPT_NUM_KEYS)) {
-        throw new IllegalArgumentException(OPT_NUM_KEYS + " must be specified in "
-            + "read or write mode");
-      }
       startKey = parseLong(cmd.getOptionValue(OPT_START_KEY,
           String.valueOf(DEFAULT_START_KEY)), 0, Long.MAX_VALUE);
       long numKeys = parseLong(cmd.getOptionValue(OPT_NUM_KEYS), 1,
@@ -521,6 +553,14 @@ public class LoadTestTool extends AbstractHBaseTool {
     bloomType = bloomStr == null ? BloomType.ROW :
         BloomType.valueOf(bloomStr);
 
+    if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+      if (!cmd.hasOption(OPT_BLOOM_PARAM)) {
+        LOG.error("the parameter of bloom filter {} is not specified", bloomType.name());
+      } else {
+        conf.set(BloomFilterUtil.PREFIX_LENGTH_KEY, cmd.getOptionValue(OPT_BLOOM_PARAM));
+      }
+    }
+
     inMemoryCF = cmd.hasOption(OPT_INMEMORY);
     if (cmd.hasOption(OPT_ENCRYPTION)) {
       cipher = Encryption.getCipher(conf, cmd.getOptionValue(OPT_ENCRYPTION));
@@ -542,6 +582,9 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   @Override
   protected int doWork() throws IOException {
+    if (!isVerbose) {
+        LogManager.getLogger(ZooKeeper.class.getName()).setLevel(Level.WARN);
+    }
     if (numTables > 1) {
       return parallelLoadTables();
     } else {
@@ -584,7 +627,7 @@ public class LoadTestTool extends AbstractHBaseTool {
           try {
             addAuthInfoToConf(authConfig, conf, superUser, userNames);
           } catch (IOException exp) {
-            LOG.error(exp);
+            LOG.error(exp.toString(), exp);
             return EXIT_FAILURE;
           }
           userOwner = User.create(HBaseKerberosUtils.loginAndReturnUGI(conf, superUser));
@@ -614,7 +657,8 @@ public class LoadTestTool extends AbstractHBaseTool {
         AccessControlClient.grant(ConnectionFactory.createConnection(conf),
             tableName, userOwner.getShortName(), null, null, actions);
       } catch (Throwable e) {
-        LOG.fatal("Error in granting permission for the user " + userOwner.getShortName(), e);
+        LOG.error(HBaseMarkers.FATAL, "Error in granting permission for the user " +
+            userOwner.getShortName(), e);
         return EXIT_FAILURE;
       }
     }
@@ -796,10 +840,10 @@ public class LoadTestTool extends AbstractHBaseTool {
   /**
    * When NUM_TABLES is specified, the function starts multiple worker threads
    * which individually start a LoadTestTool instance to load a table. Each
-   * table name is in format <tn>_<index>. For example, "-tn test -num_tables 2"
+   * table name is in format &lt;tn>_&lt;index>. For example, "-tn test -num_tables 2"
    * , table names will be "test_1", "test_2"
    *
-   * @throws IOException
+   * @throws IOException if one of the load tasks is unable to complete
    */
   private int parallelLoadTables()
       throws IOException {

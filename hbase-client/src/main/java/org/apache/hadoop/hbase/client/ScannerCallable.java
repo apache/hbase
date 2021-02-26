@@ -26,9 +26,6 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.updateServerSideMet
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -39,11 +36,14 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
@@ -62,7 +62,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   public static final String LOG_SCANNER_ACTIVITY = "hbase.client.log.scanner.activity";
 
   // Keeping LOG public as it is being used in TestScannerHeartbeatMessages
-  public static final Log LOG = LogFactory.getLog(ScannerCallable.class);
+  public static final Logger LOG = LoggerFactory.getLogger(ScannerCallable.class);
   protected long scannerId = -1L;
   protected boolean instantiated = false;
   protected boolean closed = false;
@@ -104,18 +104,6 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
    *        {@link com.google.protobuf.RpcController}
    */
   public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-      ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory) {
-    this(connection, tableName, scan, scanMetrics, rpcControllerFactory, 0);
-  }
-  /**
-   *
-   * @param connection
-   * @param tableName
-   * @param scan
-   * @param scanMetrics
-   * @param id the replicaId
-   */
-  public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
     super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController(), scan.getPriority());
     this.id = id;
@@ -127,23 +115,33 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     this.rpcControllerFactory = rpcControllerFactory;
   }
 
+  protected final HRegionLocation getLocationForReplica(RegionLocations locs)
+    throws HBaseIOException {
+    HRegionLocation loc = id < locs.size() ? locs.getRegionLocation(id) : null;
+    if (loc == null || loc.getServerName() == null) {
+      // With this exception, there will be a retry. The location can be null for a replica
+      // when the table is created or after a split.
+      throw new HBaseIOException("There is no location for replica id #" + id);
+    }
+    return loc;
+  }
+
+  protected final RegionLocations getRegionLocations(boolean reload, byte[] row)
+    throws IOException {
+    return RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload, id, getConnection(),
+      getTableName(), row);
+  }
+
   /**
    * @param reload force reload of server location
-   * @throws IOException
    */
   @Override
   public void prepare(boolean reload) throws IOException {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
-    RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload,
-        id, getConnection(), getTableName(), getRow());
-    location = id < rl.size() ? rl.getRegionLocation(id) : null;
-    if (location == null || location.getServerName() == null) {
-      // With this exception, there will be a retry. The location can be null for a replica
-      //  when the table is created or after a split.
-      throw new HBaseIOException("There is no location for replica id #" + id);
-    }
+    RegionLocations rl = getRegionLocations(reload, getRow());
+    location = getLocationForReplica(rl);
     ServerName dest = location.getServerName();
     setStub(super.getConnection().getClient(dest));
     if (!instantiated || reload) {

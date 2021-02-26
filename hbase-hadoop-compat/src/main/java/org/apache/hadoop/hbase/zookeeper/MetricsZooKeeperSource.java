@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface of the source that will export metrics about the ZooKeeper.
  */
+@InterfaceAudience.Private
 public interface MetricsZooKeeperSource extends BaseSource {
 
   /**

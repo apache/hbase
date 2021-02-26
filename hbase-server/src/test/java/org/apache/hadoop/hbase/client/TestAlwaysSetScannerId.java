@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,28 +21,34 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 
 /**
  * Testcase to make sure that we always set scanner id in ScanResponse. See HBASE-18000.
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestAlwaysSetScannerId {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAlwaysSetScannerId.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -54,7 +60,7 @@ public class TestAlwaysSetScannerId {
 
   private static final int COUNT = 10;
 
-  private static HRegionInfo HRI;
+  private static RegionInfo HRI;
 
   private static ClientProtos.ClientService.BlockingInterface STUB;
 
@@ -65,8 +71,8 @@ public class TestAlwaysSetScannerId {
       for (int i = 0; i < COUNT; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
+      HRI = table.getRegionLocator().getAllRegionLocations().get(0).getRegion();
     }
-    HRI = UTIL.getAdmin().getTableRegions(TABLE_NAME).get(0);
     STUB = ((ConnectionImplementation) UTIL.getConnection())
         .getClient(UTIL.getHBaseCluster().getRegionServer(0).getServerName());
   }

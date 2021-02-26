@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -33,6 +32,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Example map/reduce job to construct index tables that can be used to quickly
@@ -52,7 +52,8 @@ import org.apache.hadoop.util.ToolRunner;
  * Modify ${HADOOP_HOME}/conf/hadoop-env.sh to include the hbase jar, the
  * zookeeper jar (can be found in lib/ directory under HBase root, the examples output directory,
  * and the hbase conf directory in HADOOP_CLASSPATH, and then run
- * <tt><strong>bin/hadoop org.apache.hadoop.hbase.mapreduce.IndexBuilder TABLE_NAME COLUMN_FAMILY ATTR [ATTR ...]</strong></tt>
+ * <tt><strong>bin/hadoop org.apache.hadoop.hbase.mapreduce.IndexBuilder
+ *  TABLE_NAME COLUMN_FAMILY ATTR [ATTR ...]</strong></tt>
  * </p>
  *
  * <p>
@@ -64,6 +65,7 @@ import org.apache.hadoop.util.ToolRunner;
  * This code was written against HBase 0.21 trunk.
  * </p>
  */
+@InterfaceAudience.Private
 public class IndexBuilder extends Configured implements Tool {
   /** the column family containing the indexed row key */
   public static final byte[] INDEX_COLUMN = Bytes.toBytes("INDEX");
@@ -116,8 +118,7 @@ public class IndexBuilder extends Configured implements Tool {
   /**
    * Job configuration.
    */
-  public static Job configureJob(Configuration conf, String [] args)
-  throws IOException {
+  public static Job configureJob(Configuration conf, String [] args) throws IOException {
     String tableName = args[0];
     String columnFamily = args[1];
     System.out.println("****" + tableName);

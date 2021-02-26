@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 package hbase.pb;
 
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
@@ -63,7 +64,7 @@ message WALKey {
   optional uint64 nonceGroup = 9;
   optional uint64 nonce = 10;
   optional uint64 orig_sequence_number = 11;
-
+  repeated Attribute extended_attributes = 12;
 /*
   optional CustomEntryType custom_entry_type = 9;
 
@@ -72,11 +73,14 @@ message WALKey {
   }
 */
 }
+message Attribute {
+  required string key = 1;
+  required bytes value = 2;
+}
 
 enum ScopeType {
   REPLICATION_SCOPE_LOCAL = 0;
   REPLICATION_SCOPE_GLOBAL = 1;
-  REPLICATION_SCOPE_SERIAL = 2;
 }
 
 message FamilyScope {

@@ -22,14 +22,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.ByteBufferKeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Codec that does KeyValue version 1 serialization with serializing tags also.
@@ -75,9 +75,10 @@ public class KeyValueCodecWithTags implements Codec {
       super(in);
     }
 
+    @Override
     protected Cell parseCell() throws IOException {
       // create KeyValue with tags
-      return KeyValueUtil.iscreate(in, true);
+      return KeyValueUtil.createKeyValueFromInputStream(in, true);
     }
   }
 

@@ -18,10 +18,8 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
@@ -29,7 +27,10 @@ import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test clone/restore snapshots from the client
@@ -39,7 +40,12 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ClientTests.class,LargeTests.class})
 public class TestMobRestoreFlushSnapshotFromClient extends TestRestoreFlushSnapshotFromClient {
-  final Log LOG = LogFactory.getLog(getClass());
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMobRestoreFlushSnapshotFromClient.class);
+
+  final Logger LOG = LoggerFactory.getLogger(getClass());
 
   @BeforeClass
   public static void setupCluster() throws Exception {

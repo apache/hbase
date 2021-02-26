@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
@@ -24,17 +23,13 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -44,6 +39,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
@@ -58,17 +54,22 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestSplitTableRegionProcedure {
-  private static final Log LOG = LogFactory.getLog(TestSplitTableRegionProcedure.class);
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSplitTableRegionProcedure.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSplitTableRegionProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -119,7 +120,7 @@ public class TestSplitTableRegionProcedure {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
-    UTIL.getAdmin().setBalancerRunning(false, true);
+    UTIL.getAdmin().balancerSwitch(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
     am = UTIL.getHBaseCluster().getMaster().getAssignmentManager();
@@ -131,12 +132,12 @@ public class TestSplitTableRegionProcedure {
   @After
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    for (HTableDescriptor htd: UTIL.getAdmin().listTables()) {
+    for (TableDescriptor htd : UTIL.getAdmin().listTableDescriptors()) {
       UTIL.deleteTable(htd.getTableName());
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSplitTableRegion() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -347,7 +348,7 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     insertData(tableName);
     int splitRowNum = startRowNum + rowCount / 2;
@@ -367,15 +368,17 @@ public class TestSplitTableRegionProcedure {
 
     // Failing before SPLIT_TABLE_REGION_UPDATE_META we should trigger the
     // rollback
-    // NOTE: the 3 (number before SPLIT_TABLE_REGION_UPDATE_META step) is
+    // NOTE: the 7 (number of SPLIT_TABLE_REGION_UPDATE_META step) is
     // hardcoded, so you have to look at this test at least once when you add a new step.
-    int numberOfSteps = 3;
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    int lastStep = 7;
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep,
+        true);
     // check that we have only 1 region
-    assertEquals(1, UTIL.getHBaseAdmin().getTableRegions(tableName).size());
-    List<HRegion> daughters = UTIL.getMiniHBaseCluster().getRegions(tableName);
-    assertEquals(1, daughters.size());
-    verifyData(daughters.get(0), startRowNum, rowCount,
+    assertEquals(1, UTIL.getAdmin().getRegions(tableName).size());
+    UTIL.waitUntilAllRegionsAssigned(tableName);
+    List<HRegion> newRegions = UTIL.getMiniHBaseCluster().getRegions(tableName);
+    assertEquals(1, newRegions.size());
+    verifyData(newRegions.get(0), startRowNum, rowCount,
     Bytes.toBytes(ColumnFamilyName1), Bytes.toBytes(ColumnFamilyName2));
 
     assertEquals(splitSubmittedCount + 1, splitProcMetrics.getSubmittedCounter().getCount());
@@ -396,6 +399,7 @@ public class TestSplitTableRegionProcedure {
     assertTrue("not able to find a splittable region", regions != null);
     assertTrue("not able to find a splittable region", regions.length == 1);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+    ProcedureTestingUtility.setKillIfHasParent(procExec, false);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // collect AM metrics before test
@@ -501,8 +505,8 @@ public class TestSplitTableRegionProcedure {
         daughters.get(i),
         startRow,
         numRows,
-        ColumnFamilyName1.getBytes(),
-        ColumnFamilyName2.getBytes());
+        Bytes.toBytes(ColumnFamilyName1),
+        Bytes.toBytes(ColumnFamilyName2));
     }
   }
 
@@ -519,7 +523,7 @@ public class TestSplitTableRegionProcedure {
       Cell[] raw = result.rawCells();
       assertEquals(families.length, result.size());
       for (int j = 0; j < families.length; j++) {
-        assertTrue(CellUtil.matchingRow(raw[j], row));
+        assertTrue(CellUtil.matchingRows(raw[j], row));
         assertTrue(CellUtil.matchingFamily(raw[j], families[j]));
       }
     }

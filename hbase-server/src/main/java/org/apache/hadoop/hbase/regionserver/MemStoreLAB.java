@@ -52,6 +52,8 @@ public interface MemStoreLAB {
 
   String CHUNK_SIZE_KEY = "hbase.hregion.memstore.mslab.chunksize";
   int CHUNK_SIZE_DEFAULT = 2048 * 1024;
+  String INDEX_CHUNK_SIZE_PERCENTAGE_KEY = "hbase.hregion.memstore.mslab.indexchunksize.percent";
+  float INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT = 0.1f;
   String MAX_ALLOC_KEY = "hbase.hregion.memstore.mslab.max.allocation";
   int MAX_ALLOC_DEFAULT = 256 * 1024; // allocs bigger than this don't go through
                                                    // allocator
@@ -69,6 +71,17 @@ public interface MemStoreLAB {
   Cell copyCellInto(Cell cell);
 
   /**
+   * Allocates slice in this LAB and copy the passed Cell into this area. Returns new Cell instance
+   * over the copied the data. When this MemStoreLAB can not copy this Cell, it returns null.
+   *
+   * Since the process of flattening to CellChunkMap assumes all cells are allocated on MSLAB,
+   * and since copyCellInto does not copy big cells (for whom size > maxAlloc) into MSLAB,
+   * this method is called while the process of flattening to CellChunkMap is running,
+   * for forcing the allocation of big cells on this MSLAB.
+   */
+  Cell forceCopyOfBigCellInto(Cell cell);
+
+  /**
    * Close instance since it won't be used any more, try to put the chunks back to pool
    */
   void close();
@@ -83,13 +96,21 @@ public interface MemStoreLAB {
    */
   void decScannerCount();
 
-  /**
-   * Return a new empty chunk without considering this chunk as current
-   * The space on this chunk will be allocated externally
-   */
-  Chunk getNewExternalChunk();
+  /* Returning a new pool chunk, without replacing current chunk,
+  ** meaning MSLABImpl does not make the returned chunk as CurChunk.
+  ** The space on this chunk will be allocated externally.
+  ** The interface is only for external callers.
+  */
+  Chunk getNewExternalChunk(ChunkCreator.ChunkType chunkType);
 
-  public static MemStoreLAB newInstance(Configuration conf) {
+  /* Returning a new chunk, without replacing current chunk,
+  ** meaning MSLABImpl does not make the returned chunk as CurChunk.
+  ** The space on this chunk will be allocated externally.
+  ** The interface is only for external callers.
+  */
+  Chunk getNewExternalChunk(int size);
+
+  static MemStoreLAB newInstance(Configuration conf) {
     MemStoreLAB memStoreLAB = null;
     if (isEnabled(conf)) {
       String className = conf.get(MSLAB_CLASS_NAME, MemStoreLABImpl.class.getName());
@@ -99,7 +120,11 @@ public interface MemStoreLAB {
     return memStoreLAB;
   }
 
-  public static boolean isEnabled(Configuration conf) {
+  static boolean isEnabled(Configuration conf) {
     return conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT);
   }
+
+  boolean isOnHeap();
+
+  boolean isOffHeap();
 }

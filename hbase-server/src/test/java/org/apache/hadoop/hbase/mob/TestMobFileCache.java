@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.util.Date;
-
-import junit.framework.TestCase;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -35,21 +33,33 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(SmallTests.class)
-public class TestMobFileCache extends TestCase {
-  static final Log LOG = LogFactory.getLog(TestMobFileCache.class);
+public class TestMobFileCache {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMobFileCache.class);
+
+  static final Logger LOG = LoggerFactory.getLogger(TestMobFileCache.class);
   private HBaseTestingUtility UTIL;
   private HRegion region;
   private Configuration conf;
-  private MobCacheConfig mobCacheConf;
   private MobFileCache mobFileCache;
   private Date currentDate = new Date();
   private static final String TEST_CACHE_SIZE = "2";
@@ -73,10 +83,11 @@ public class TestMobFileCache extends TestCase {
   private static final byte[] QF2 = Bytes.toBytes("qf2");
   private static final byte[] QF3 = Bytes.toBytes("qf3");
 
-  @Override
+  @Before
   public void setUp() throws Exception {
     UTIL = HBaseTestingUtility.createLocalHTU();
     conf = UTIL.getConfiguration();
+    conf.set(MobConstants.MOB_FILE_CACHE_SIZE_KEY, TEST_CACHE_SIZE);
     HTableDescriptor htd = UTIL.createTableDescriptor("testMobFileCache");
     HColumnDescriptor hcd1 = new HColumnDescriptor(FAMILY1);
     hcd1.setMobEnabled(true);
@@ -90,11 +101,14 @@ public class TestMobFileCache extends TestCase {
     htd.addFamily(hcd1);
     htd.addFamily(hcd2);
     htd.addFamily(hcd3);
-    region = UTIL.createLocalHRegion(htd, null, null);
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
+    mobFileCache = new MobFileCache(conf);
+    region = HBaseTestingUtility
+        .createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, htd, mobFileCache);
   }
 
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     region.close();
     region.getFilesystem().delete(UTIL.getDataTestDir(), true);
   }
@@ -113,7 +127,6 @@ public class TestMobFileCache extends TestCase {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMaxVersions(4);
     hcd.setMobEnabled(true);
-    mobCacheConf = new MobCacheConfig(conf, hcd);
     return createMobStoreFile(hcd);
   }
 
@@ -150,17 +163,16 @@ public class TestMobFileCache extends TestCase {
   @Test
   public void testMobFileCache() throws Exception {
     FileSystem fs = FileSystem.get(conf);
-    conf.set(MobConstants.MOB_FILE_CACHE_SIZE_KEY, TEST_CACHE_SIZE);
-    mobFileCache = new MobFileCache(conf);
     Path file1Path = createMobStoreFile(FAMILY1);
     Path file2Path = createMobStoreFile(FAMILY2);
     Path file3Path = createMobStoreFile(FAMILY3);
 
+    CacheConfig cacheConf = new CacheConfig(conf);
     // Before open one file by the MobFileCache
     assertEquals(EXPECTED_CACHE_SIZE_ZERO, mobFileCache.getCacheSize());
     // Open one file by the MobFileCache
     CachedMobFile cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(
-        fs, file1Path, mobCacheConf);
+        fs, file1Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_ONE, mobFileCache.getCacheSize());
     assertNotNull(cachedMobFile1);
     assertEquals(EXPECTED_REFERENCE_TWO, cachedMobFile1.getReferenceCount());
@@ -180,13 +192,13 @@ public class TestMobFileCache extends TestCase {
 
     // Reopen three cached file
     cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(
-        fs, file1Path, mobCacheConf);
+        fs, file1Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_ONE, mobFileCache.getCacheSize());
     CachedMobFile cachedMobFile2 = (CachedMobFile) mobFileCache.openFile(
-        fs, file2Path, mobCacheConf);
+        fs, file2Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_TWO, mobFileCache.getCacheSize());
     CachedMobFile cachedMobFile3 = (CachedMobFile) mobFileCache.openFile(
-        fs, file3Path, mobCacheConf);
+        fs, file3Path, cacheConf);
     // Before the evict
     // Evict the cache, should close the first file 1
     assertEquals(EXPECTED_CACHE_SIZE_THREE, mobFileCache.getCacheSize());

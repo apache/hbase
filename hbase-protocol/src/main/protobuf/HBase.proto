@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 
 // This file contains protocol buffers that are shared throughout HBase
 package hbase.pb;
@@ -177,6 +178,7 @@ message SnapshotDescription {
   optional Type type = 4 [default = FLUSH];
   optional int32 version = 5;
   optional string owner = 6;
+  optional int64 ttl = 7 [default = 0];
 }
 
 /**

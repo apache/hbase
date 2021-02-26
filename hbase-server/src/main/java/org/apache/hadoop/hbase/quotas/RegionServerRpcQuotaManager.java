@@ -20,21 +20,22 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
  * Region Server Quota Manager.
@@ -47,14 +48,19 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RegionServerRpcQuotaManager {
-  private static final Log LOG = LogFactory.getLog(RegionServerRpcQuotaManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionServerRpcQuotaManager.class);
 
   private final RegionServerServices rsServices;
 
   private QuotaCache quotaCache = null;
+  private volatile boolean rpcThrottleEnabled;
+  // Storage for quota rpc throttle
+  private RpcThrottleStorage rpcThrottleStorage;
 
   public RegionServerRpcQuotaManager(final RegionServerServices rsServices) {
     this.rsServices = rsServices;
+    rpcThrottleStorage =
+        new RpcThrottleStorage(rsServices.getZooKeeper(), rsServices.getConfiguration());
   }
 
   public void start(final RpcScheduler rpcScheduler) throws IOException {
@@ -68,6 +74,8 @@ public class RegionServerRpcQuotaManager {
     // Initialize quota cache
     quotaCache = new QuotaCache(rsServices);
     quotaCache.start();
+    rpcThrottleEnabled = rpcThrottleStorage.isRpcThrottleEnabled();
+    LOG.info("Start rpc quota manager and rpc throttle enabled is {}", rpcThrottleEnabled);
   }
 
   public void stop() {
@@ -76,11 +84,30 @@ public class RegionServerRpcQuotaManager {
     }
   }
 
-  public boolean isQuotaEnabled() {
+  protected boolean isRpcThrottleEnabled() {
+    return rpcThrottleEnabled;
+  }
+
+  private boolean isQuotaEnabled() {
     return quotaCache != null;
   }
 
-  @VisibleForTesting
+  public void switchRpcThrottle(boolean enable) throws IOException {
+    if (isQuotaEnabled()) {
+      if (rpcThrottleEnabled != enable) {
+        boolean previousEnabled = rpcThrottleEnabled;
+        rpcThrottleEnabled = rpcThrottleStorage.isRpcThrottleEnabled();
+        LOG.info("Switch rpc throttle from {} to {}", previousEnabled, rpcThrottleEnabled);
+      } else {
+        LOG.warn(
+          "Skip switch rpc throttle because previous value {} is the same as current value {}",
+          rpcThrottleEnabled, enable);
+      }
+    } else {
+      LOG.warn("Skip switch rpc throttle to {} because rpc quota is disabled", enable);
+    }
+  }
+
   QuotaCache getQuotaCache() {
     return quotaCache;
   }
@@ -93,7 +120,7 @@ public class RegionServerRpcQuotaManager {
    * @return the OperationQuota
    */
   public OperationQuota getQuota(final UserGroupInformation ugi, final TableName table) {
-    if (isQuotaEnabled() && !table.isSystemTable()) {
+    if (isQuotaEnabled() && !table.isSystemTable() && isRpcThrottleEnabled()) {
       UserQuotaState userQuotaState = quotaCache.getUserQuotaState(ugi);
       QuotaLimiter userLimiter = userQuotaState.getTableLimiter(table);
       boolean useNoop = userLimiter.isBypass();
@@ -102,18 +129,28 @@ public class RegionServerRpcQuotaManager {
           LOG.trace("get quota for ugi=" + ugi + " table=" + table + " userLimiter=" + userLimiter);
         }
         if (!useNoop) {
-          return new DefaultOperationQuota(userLimiter);
+          return new DefaultOperationQuota(this.rsServices.getConfiguration(), userLimiter);
         }
       } else {
         QuotaLimiter nsLimiter = quotaCache.getNamespaceLimiter(table.getNamespaceAsString());
         QuotaLimiter tableLimiter = quotaCache.getTableLimiter(table);
-        useNoop &= tableLimiter.isBypass() && nsLimiter.isBypass();
+        QuotaLimiter rsLimiter = quotaCache
+            .getRegionServerQuotaLimiter(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY);
+        useNoop &= tableLimiter.isBypass() && nsLimiter.isBypass() && rsLimiter.isBypass();
+        boolean exceedThrottleQuotaEnabled = quotaCache.isExceedThrottleQuotaEnabled();
         if (LOG.isTraceEnabled()) {
-          LOG.trace("get quota for ugi=" + ugi + " table=" + table + " userLimiter=" +
-                    userLimiter + " tableLimiter=" + tableLimiter + " nsLimiter=" + nsLimiter);
+          LOG.trace("get quota for ugi=" + ugi + " table=" + table + " userLimiter=" + userLimiter
+              + " tableLimiter=" + tableLimiter + " nsLimiter=" + nsLimiter + " rsLimiter="
+              + rsLimiter + " exceedThrottleQuotaEnabled=" + exceedThrottleQuotaEnabled);
         }
         if (!useNoop) {
-          return new DefaultOperationQuota(userLimiter, tableLimiter, nsLimiter);
+          if (exceedThrottleQuotaEnabled) {
+            return new ExceedOperationQuota(this.rsServices.getConfiguration(), rsLimiter,
+                userLimiter, tableLimiter, nsLimiter);
+          } else {
+            return new DefaultOperationQuota(this.rsServices.getConfiguration(), userLimiter,
+                tableLimiter, nsLimiter, rsLimiter);
+          }
         }
       }
     }
@@ -127,10 +164,10 @@ public class RegionServerRpcQuotaManager {
    * @param region the region where the operation will be performed
    * @param type the operation type
    * @return the OperationQuota
-   * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
+   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   public OperationQuota checkQuota(final Region region,
-      final OperationQuota.OperationType type) throws IOException, ThrottlingException {
+      final OperationQuota.OperationType type) throws IOException, RpcThrottlingException {
     switch (type) {
       case SCAN:   return checkQuota(region, 0, 0, 1);
       case GET:    return checkQuota(region, 0, 1, 0);
@@ -146,10 +183,10 @@ public class RegionServerRpcQuotaManager {
    * @param region the region where the operation will be performed
    * @param actions the "multi" actions to perform
    * @return the OperationQuota
-   * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
+   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   public OperationQuota checkQuota(final Region region,
-      final List<ClientProtos.Action> actions) throws IOException, ThrottlingException {
+      final List<ClientProtos.Action> actions) throws IOException, RpcThrottlingException {
     int numWrites = 0;
     int numReads = 0;
     for (final ClientProtos.Action action: actions) {
@@ -171,18 +208,24 @@ public class RegionServerRpcQuotaManager {
    * @param numReads number of short-reads to perform
    * @param numScans number of scan to perform
    * @return the OperationQuota
-   * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
+   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   private OperationQuota checkQuota(final Region region,
       final int numWrites, final int numReads, final int numScans)
-      throws IOException, ThrottlingException {
-    UserGroupInformation ugi = RpcServer.getRequestUser().orElse(User.getCurrent()).getUGI();
+      throws IOException, RpcThrottlingException {
+    Optional<User> user = RpcServer.getRequestUser();
+    UserGroupInformation ugi;
+    if (user.isPresent()) {
+      ugi = user.get().getUGI();
+    } else {
+      ugi = User.getCurrent().getUGI();
+    }
     TableName table = region.getTableDescriptor().getTableName();
 
     OperationQuota quota = getQuota(ugi, table);
     try {
       quota.checkQuota(numWrites, numReads, numScans);
-    } catch (ThrottlingException e) {
+    } catch (RpcThrottlingException e) {
       LOG.debug("Throttling exception for user=" + ugi.getUserName() +
                 " table=" + table + " numWrites=" + numWrites +
                 " numReads=" + numReads + " numScans=" + numScans +

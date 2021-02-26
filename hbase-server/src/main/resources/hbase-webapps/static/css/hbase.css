@@ -39,4 +39,34 @@ section { margin-bottom: 3em; }
     margin-top: 1.2em;
 }
 
+table#tab_Procedures td:nth-child(-n+7) {
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
 /* Region Server page styling */
+
+/* striped tables styling */
+table.table-striped td {
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+/* sortable tables styling */
+table.tablesorter thead tr .tablesorter-header {
+    background-image: url(bg.gif);
+    background-repeat: no-repeat;
+    background-position: center right;
+    cursor: pointer;
+    padding-right: 30px;
+}
+table.tablesorter thead tr .tablesorter-headerAsc {
+    background-image: url(asc.gif);
+}
+table.tablesorter thead tr .tablesorter-headerDesc {
+    background-image: url(desc.gif);
+}
+
+table.nowrap th, table.nowrap td {
+    white-space: nowrap;
+}

@@ -20,38 +20,42 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown if a table should be online/offline but is partially open
+ * Thrown if a table should be online/offline, but is partially open.
  */
 @InterfaceAudience.Public
 public class TablePartiallyOpenException extends IOException {
   private static final long serialVersionUID = 3571982660065058361L;
 
+  /**
+   * Constructs an {@code TablePartiallyOpenException} with {@code null} as its error detail
+   * message.
+   */
   public TablePartiallyOpenException() {
     super();
   }
 
   /**
-   * @param s message
+   * @param message the message describing the exception
    */
-  public TablePartiallyOpenException(String s) {
-    super(s);
+  public TablePartiallyOpenException(String message) {
+    super(message);
   }
 
   /**
-   * @param tableName Name of table that is partial open
+   * @param tableName the name of the table that is partially open
    */
   public TablePartiallyOpenException(TableName tableName) {
     this(tableName.getNameAsString());
   }
 
   /**
-    * @param tableName Name of table that is partial open
-    */
-   public TablePartiallyOpenException(byte[] tableName) {
-     this(Bytes.toString(tableName));
-   }
+   * @param tableName the name of the table that is partially open
+   */
+  public TablePartiallyOpenException(byte[] tableName) {
+    this(Bytes.toString(tableName));
+  }
 }

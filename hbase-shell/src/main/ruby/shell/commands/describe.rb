@@ -32,6 +32,7 @@ Alternatively, you can use the abbreviated 'desc' for the same thing.
 EOF
       end
 
+      # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
       def command(table)
         column_families = admin.get_column_families(table)
 
@@ -40,9 +41,24 @@ EOF
         formatter.header(['COLUMN FAMILIES DESCRIPTION'])
         column_families.each do |column_family|
           formatter.row([column_family.to_s], true)
+          puts
         end
         formatter.footer
+        if admin.exists?(::HBaseQuotasConstants::QUOTA_TABLE_NAME.to_s)
+          if table.to_s != 'hbase:meta'
+            # No QUOTAS if hbase:meta table
+            puts
+            formatter.header(%w[QUOTAS])
+            count = quotas_admin.list_quotas(::HBaseConstants::TABLE => table.to_s) do |_, quota|
+              formatter.row([quota])
+            end
+            formatter.footer(count)
+          end
+        else
+          puts 'Quota is disabled'
+        end
       end
+      # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
     end
   end
 end

@@ -34,9 +34,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -45,28 +42,30 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables.
- * Each put will be sharded into different buffer queues based on its destination region server.
- * So each region server buffer queue will only have the puts which share the same destination.
- * And each queue will have a flush worker thread to flush the puts request to the region server.
- * If any queue is full, the HTableMultiplexer starts to drop the Put requests for that
- * particular queue.
- *
- * Also all the puts will be retried as a configuration number before dropping.
- * And the HTableMultiplexer can report the number of buffered requests and the number of the
- * failed (dropped) requests in total or on per region server basis.
- *
+ * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables. Each put
+ * will be sharded into different buffer queues based on its destination region server. So each
+ * region server buffer queue will only have the puts which share the same destination. And each
+ * queue will have a flush worker thread to flush the puts request to the region server. If any
+ * queue is full, the HTableMultiplexer starts to drop the Put requests for that particular queue.
+ * </p>
+ * Also all the puts will be retried as a configuration number before dropping. And the
+ * HTableMultiplexer can report the number of buffered requests and the number of the failed
+ * (dropped) requests in total or on per region server basis.
+ * <p/>
  * This class is thread safe.
+ * @deprecated since 2.2.0, will be removed in 3.0.0, without replacement. Please use
+ *             {@link BufferedMutator} for batching mutations.
  */
+@Deprecated
 @InterfaceAudience.Public
 public class HTableMultiplexer {
-  private static final Log LOG = LogFactory.getLog(HTableMultiplexer.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(HTableMultiplexer.class.getName());
 
   public static final String TABLE_MULTIPLEXER_FLUSH_PERIOD_MS =
       "hbase.tablemultiplexer.flush.period.ms";
@@ -129,7 +128,6 @@ public class HTableMultiplexer {
    * been closed.
    * @throws IOException If there is an error closing the connection.
    */
-  @SuppressWarnings("deprecation")
   public synchronized void close() throws IOException {
     if (!getConnection().isClosed()) {
       getConnection().close();
@@ -195,7 +193,7 @@ public class HTableMultiplexer {
     }
 
     try {
-      HTable.validatePut(put, maxKeyValueSize);
+      ConnectionUtils.validatePut(put, maxKeyValueSize);
       // Allow mocking to get at the connection, but don't expose the connection to users.
       ClusterConnection conn = (ClusterConnection) getConnection();
       // AsyncProcess in the FlushWorker should take care of refreshing the location cache
@@ -239,7 +237,7 @@ public class HTableMultiplexer {
     return new HTableMultiplexerStatus(serverToFlushWorkerMap);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   LinkedBlockingQueue<PutStatus> getQueue(HRegionLocation addr) {
     FlushWorker worker = serverToFlushWorkerMap.get(addr);
     if (worker == null) {
@@ -257,16 +255,19 @@ public class HTableMultiplexer {
     return worker.getQueue();
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   ClusterConnection getConnection() {
     return this.conn;
   }
 
   /**
-   * HTableMultiplexerStatus keeps track of the current status of the HTableMultiplexer.
-   * report the number of buffered requests and the number of the failed (dropped) requests
-   * in total or on per region server basis.
+   * HTableMultiplexerStatus keeps track of the current status of the HTableMultiplexer. report the
+   * number of buffered requests and the number of the failed (dropped) requests in total or on per
+   * region server basis.
+   * @deprecated since 2.2.0, will be removed in 3.0.0, without replacement. Please use
+   *             {@link BufferedMutator} for batching mutations.
    */
+  @Deprecated
   @InterfaceAudience.Public
   public static class HTableMultiplexerStatus {
     private long totalFailedPutCounter;
@@ -369,7 +370,7 @@ public class HTableMultiplexer {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class PutStatus {
     final RegionInfo regionInfo;
     final Put put;
@@ -422,7 +423,7 @@ public class HTableMultiplexer {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class FlushWorker implements Runnable {
     private final HRegionLocation addr;
     private final LinkedBlockingQueue<PutStatus> queue;
@@ -453,7 +454,7 @@ public class HTableMultiplexer {
               HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
       this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
           HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
-      this.ap = new AsyncProcess(conn, conf, rpcCallerFactory, false, rpcControllerFactory);
+      this.ap = new AsyncProcess(conn, conf, rpcCallerFactory, rpcControllerFactory);
       this.executor = executor;
       this.maxRetryInQueue = conf.getInt(TABLE_MULTIPLEXER_MAX_RETRIES_IN_QUEUE, 10000);
       this.pool = pool;
@@ -468,7 +469,7 @@ public class HTableMultiplexer {
     }
 
     public long getTotalBufferedCount() {
-      return queue.size() + currentProcessingCount.get();
+      return (long) queue.size() + currentProcessingCount.get();
     }
 
     public AtomicAverageCounter getAverageLatencyCounter() {
@@ -525,33 +526,33 @@ public class HTableMultiplexer {
       return true;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     long getNextDelay(int retryCount) {
       return ConnectionUtils.getPauseTime(multiplexer.flushPeriod,
           multiplexer.maxAttempts - retryCount - 1);
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     AtomicInteger getRetryInQueue() {
       return this.retryInQueue;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     int getMaxRetryInQueue() {
       return this.maxRetryInQueue;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     AtomicLong getTotalFailedPutCount() {
       return this.totalFailedPutCount;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     HTableMultiplexer getMultiplexer() {
       return this.multiplexer;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     ScheduledExecutorService getExecutor() {
       return this.executor;
     }

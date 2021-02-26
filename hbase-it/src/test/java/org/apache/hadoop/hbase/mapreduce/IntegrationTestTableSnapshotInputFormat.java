@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -34,6 +32,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An integration test to test {@link TableSnapshotInputFormat} which enables
@@ -68,8 +68,8 @@ import org.junit.experimental.categories.Category;
 @Category(IntegrationTests.class)
 // Not runnable as a unit test. See TestTableSnapshotInputFormat
 public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase {
-
-  private static final Log LOG = LogFactory.getLog(IntegrationTestTableSnapshotInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(IntegrationTestTableSnapshotInputFormat.class);
 
   private static final String TABLE_NAME_KEY = "IntegrationTestTableSnapshotInputFormat.table";
   private static final String DEFAULT_TABLE_NAME = "IntegrationTestTableSnapshotInputFormat";

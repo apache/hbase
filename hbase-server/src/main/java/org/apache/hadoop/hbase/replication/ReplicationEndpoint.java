@@ -53,6 +53,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
 
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
   class Context {
+    private final Configuration localConf;
     private final Configuration conf;
     private final FileSystem fs;
     private final TableDescriptors tableDescriptors;
@@ -64,6 +65,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
 
     @InterfaceAudience.Private
     public Context(
+        final Configuration localConf,
         final Configuration conf,
         final FileSystem fs,
         final String peerId,
@@ -72,6 +74,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
         final MetricsSource metrics,
         final TableDescriptors tableDescriptors,
         final Abortable abortable) {
+      this.localConf = localConf;
       this.conf = conf;
       this.fs = fs;
       this.clusterId = clusterId;
@@ -83,6 +86,9 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
     }
     public Configuration getConfiguration() {
       return conf;
+    }
+    public Configuration getLocalConfiguration() {
+      return localConf;
     }
     public FileSystem getFilesystem() {
       return fs;
@@ -111,7 +117,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
   /**
    * Initialize the replication endpoint with the given context.
    * @param context replication context
-   * @throws IOException
+   * @throws IOException error occur when initialize the endpoint.
    */
   void init(Context context) throws IOException;
 
@@ -142,6 +148,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
     List<Entry> entries;
     int size;
     String walGroupId;
+    int timeout;
     @InterfaceAudience.Private
     public ReplicateContext() {
     }
@@ -166,6 +173,12 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
     }
     public String getWalGroupId(){
       return walGroupId;
+    }
+    public void setTimeout(int timeout) {
+      this.timeout = timeout;
+    }
+    public int getTimeout() {
+      return this.timeout;
     }
   }
 

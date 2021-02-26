@@ -18,17 +18,20 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -40,7 +43,7 @@ import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,14 +54,21 @@ import org.apache.hadoop.hbase.util.TimeOffsetEnvironmentEdge;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestFIFOCompactionPolicy {
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFIFOCompactionPolicy.class);
 
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName());
 
@@ -66,13 +76,16 @@ public class TestFIFOCompactionPolicy {
 
   private final byte[] qualifier = Bytes.toBytes("q");
 
+  @Rule
+  public ExpectedException error = ExpectedException.none();
+
   private HStore getStoreWithName(TableName tableName) {
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
-      for (Region region : hrs.getRegions(tableName)) {
-        return ((HRegion) region).getStores().iterator().next();
+      for (HRegion region : hrs.getRegions(tableName)) {
+        return region.getStores().iterator().next();
       }
     }
     return null;
@@ -80,27 +93,21 @@ public class TestFIFOCompactionPolicy {
 
   private HStore prepareData() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
-    if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-    }
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
         .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
           FIFOCompactionPolicy.class.getName())
         .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
           DisabledRegionSplitPolicy.class.getName())
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
         .build();
-
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(tableName);
-    Random rand = new Random();
     TimeOffsetEnvironmentEdge edge =
         (TimeOffsetEnvironmentEdge) EnvironmentEdgeManager.getDelegate();
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[128 * 1024];
-        rand.nextBytes(value);
+        ThreadLocalRandom.current().nextBytes(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       admin.flush(tableName);
@@ -109,119 +116,138 @@ public class TestFIFOCompactionPolicy {
     return getStoreWithName(tableName);
   }
 
-  @BeforeClass   
-  public static void setEnvironmentEdge()
-  {
+  @BeforeClass
+  public static void setEnvironmentEdge() throws Exception {
     EnvironmentEdge ee = new TimeOffsetEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(ee);
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
+    // Expired store file deletion during compaction optimization interferes with the FIFO
+    // compaction policy. The race causes changes to in-flight-compaction files resulting in a
+    // non-deterministic number of files selected by compaction policy. Disables that optimization
+    // for this test run.
+    conf.setBoolean("hbase.store.delete.expired.storefile", false);
+    TEST_UTIL.startMiniCluster(1);
   }
-  
+
   @AfterClass
-  public static void resetEnvironmentEdge()
-  {
+  public static void resetEnvironmentEdge() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
     EnvironmentEdgeManager.reset();
   }
-  
+
   @Test
   public void testPurgeExpiredFiles() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
+    HStore store = prepareData();
+    assertEquals(10, store.getStorefilesCount());
+    TEST_UTIL.getAdmin().majorCompact(tableName);
+    TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
 
-    TEST_UTIL.startMiniCluster(1);
-    try {
-      HStore store = prepareData();
-      assertEquals(10, store.getStorefilesCount());
-      TEST_UTIL.getAdmin().majorCompact(tableName);
-      while (store.getStorefilesCount() > 1) {
-        Thread.sleep(100);
+      @Override
+      public boolean evaluate() throws Exception {
+        return store.getStorefilesCount() == 1;
       }
-      assertTrue(store.getStorefilesCount() == 1);
-    } finally {
-      TEST_UTIL.shutdownMiniCluster();
-    }
-  }
-  
-  @Test
-  public void testSanityCheckTTL() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
-    TEST_UTIL.startMiniCluster(1);
 
-    Admin admin = TEST_UTIL.getAdmin();
+      @Override
+      public String explainFailure() throws Exception {
+        return "The store file count " + store.getStorefilesCount() + " is still greater than 1";
+      }
+    });
+  }
+
+  @Test
+  public void testSanityCheckTTL() throws IOException {
+    error.expect(DoNotRetryIOException.class);
+    error.expectMessage("Default TTL is not supported");
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-TTL");
-    if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-    }
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
         .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
           FIFOCompactionPolicy.class.getName())
         .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
           DisabledRegionSplitPolicy.class.getName())
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
-    try {
-      admin.createTable(desc);
-      Assert.fail();
-    } catch (Exception e) {
-    } finally {
-      TEST_UTIL.shutdownMiniCluster();
-    }
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+    TEST_UTIL.getAdmin().createTable(desc);
   }
 
   @Test
-  public void testSanityCheckMinVersion() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
-    TEST_UTIL.startMiniCluster(1);
-
-    Admin admin = TEST_UTIL.getAdmin();
+  public void testSanityCheckMinVersion() throws IOException {
+    error.expect(DoNotRetryIOException.class);
+    error.expectMessage("MIN_VERSION > 0 is not supported for FIFO compaction");
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-MinVersion");
-    if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-    }
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
         .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
           FIFOCompactionPolicy.class.getName())
         .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
           DisabledRegionSplitPolicy.class.getName())
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1)
             .setMinVersions(1).build())
         .build();
-    try {
-      admin.createTable(desc);
-      Assert.fail();
-    } catch (Exception e) {
-    } finally {
-      TEST_UTIL.shutdownMiniCluster();
-    }
+    TEST_UTIL.getAdmin().createTable(desc);
   }
-  
-  @Test
-  public void testSanityCheckBlockingStoreFiles() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10);
-    TEST_UTIL.startMiniCluster(1);
 
-    Admin admin = TEST_UTIL.getAdmin();
+  @Test
+  public void testSanityCheckBlockingStoreFiles() throws IOException {
+    error.expect(DoNotRetryIOException.class);
+    error.expectMessage("Blocking file count 'hbase.hstore.blockingStoreFiles'");
+    error.expectMessage("is below recommended minimum of 1000 for column family");
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-BlockingStoreFiles");
-    if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-    }
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
         .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
           FIFOCompactionPolicy.class.getName())
         .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
           DisabledRegionSplitPolicy.class.getName())
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+        .setValue(HStore.BLOCKING_STOREFILES_KEY, "10")
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
         .build();
-    try {
-      admin.createTable(desc);
-      Assert.fail();
-    } catch (Exception e) {
-    } finally {
-      TEST_UTIL.shutdownMiniCluster();
-    }
+    TEST_UTIL.getAdmin().createTable(desc);
+  }
+
+  /**
+   * Unit test for HBASE-21504
+   */
+  @Test
+  public void testFIFOCompactionPolicyExpiredEmptyHFiles() throws Exception {
+    TableName tableName = TableName.valueOf("testFIFOCompactionPolicyExpiredEmptyHFiles");
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          FIFOCompactionPolicy.class.getName())
+        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+          DisabledRegionSplitPolicy.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+        .build();
+    Table table = TEST_UTIL.createTable(desc, null);
+    long ts = System.currentTimeMillis() - 10 * 1000;
+    Put put =
+        new Put(Bytes.toBytes("row1")).addColumn(family, qualifier, ts, Bytes.toBytes("value0"));
+    table.put(put);
+    TEST_UTIL.getAdmin().flush(tableName); // HFile-0
+    put = new Put(Bytes.toBytes("row2")).addColumn(family, qualifier, ts, Bytes.toBytes("value1"));
+    table.put(put);
+    final int testWaitTimeoutMs = 20000;
+    TEST_UTIL.getAdmin().flush(tableName); // HFile-1
+
+    HStore store = Preconditions.checkNotNull(getStoreWithName(tableName));
+    Assert.assertEquals(2, store.getStorefilesCount());
+
+    TEST_UTIL.getAdmin().majorCompact(tableName);
+    TEST_UTIL.waitFor(testWaitTimeoutMs,
+        (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
+
+    Assert.assertEquals(1, store.getStorefilesCount());
+    HStoreFile sf = Preconditions.checkNotNull(store.getStorefiles().iterator().next());
+    Assert.assertEquals(0, sf.getReader().getEntries());
+
+    put = new Put(Bytes.toBytes("row3")).addColumn(family, qualifier, ts, Bytes.toBytes("value1"));
+    table.put(put);
+    TEST_UTIL.getAdmin().flush(tableName); // HFile-2
+    Assert.assertEquals(2, store.getStorefilesCount());
+
+    TEST_UTIL.getAdmin().majorCompact(tableName);
+    TEST_UTIL.waitFor(testWaitTimeoutMs,
+        (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
+
+    Assert.assertEquals(1, store.getStorefilesCount());
+    sf = Preconditions.checkNotNull(store.getStorefiles().iterator().next());
+    Assert.assertEquals(0, sf.getReader().getEntries());
   }
 }

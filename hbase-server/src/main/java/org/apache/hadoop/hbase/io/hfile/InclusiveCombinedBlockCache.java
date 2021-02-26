@@ -19,13 +19,13 @@
 
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class InclusiveCombinedBlockCache extends CombinedBlockCache implements BlockCache {
-  public InclusiveCombinedBlockCache(LruBlockCache l1, BlockCache l2) {
+@InterfaceAudience.Private
+public class InclusiveCombinedBlockCache extends CombinedBlockCache {
+  public InclusiveCombinedBlockCache(FirstLevelBlockCache l1, BlockCache l2) {
     super(l1,l2);
+    l1.setVictimCache(l2);
   }
 
   @Override
@@ -34,7 +34,7 @@ public class InclusiveCombinedBlockCache extends CombinedBlockCache implements B
     // On all external cache set ups the lru should have the l2 cache set as the victimHandler
     // Because of that all requests that miss inside of the lru block cache will be
     // tried in the l2 block cache.
-    return lruCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+    return l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
 
   /**
@@ -43,16 +43,21 @@ public class InclusiveCombinedBlockCache extends CombinedBlockCache implements B
    * @param buf The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory. This parameter is only useful for
    *                 the L1 lru cache.
-   * @param cacheDataInL1 This is totally ignored.
    */
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
-                         final boolean cacheDataInL1) {
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
     // This is the inclusive part of the combined block cache.
     // Every block is placed into both block caches.
-    lruCache.cacheBlock(cacheKey, buf, inMemory, true);
+    l1Cache.cacheBlock(cacheKey, buf, inMemory);
 
     // This assumes that insertion into the L2 block cache is either async or very fast.
-    l2Cache.cacheBlock(cacheKey, buf, inMemory, true);
+    l2Cache.cacheBlock(cacheKey, buf, inMemory);
+  }
+
+  @Override
+  public boolean evictBlock(BlockCacheKey cacheKey) {
+    boolean l1Result = this.l1Cache.evictBlock(cacheKey);
+    boolean l2Result = this.l2Cache.evictBlock(cacheKey);
+    return l1Result || l2Result;
   }
 }

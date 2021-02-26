@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,9 +34,9 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class used to be the base of unit tests on load balancers. It gives helper
@@ -58,8 +60,7 @@ import org.junit.BeforeClass;
  *
  */
 public class BalancerTestBase {
-  private static final Log LOG = LogFactory.getLog(BalancerTestBase.class);
-  protected static Random rand = new Random();
+  private static final Logger LOG = LoggerFactory.getLogger(BalancerTestBase.class);
   static int regionId = 0;
   protected static Configuration conf;
   protected static StochasticLoadBalancer loadBalancer;
@@ -159,12 +160,9 @@ public class BalancerTestBase {
     public MockMapping(Configuration conf) {
     }
 
+    @Override
     public List<String> resolve(List<String> names) {
-      List<String> ret = new ArrayList<>(names.size());
-      for (String name : names) {
-        ret.add("rack");
-      }
-      return ret;
+      return Stream.generate(() -> "rack").limit(names.size()).collect(Collectors.toList());
     }
 
     // do not add @Override annotations here. It mighty break compilation with earlier Hadoops
@@ -203,9 +201,11 @@ public class BalancerTestBase {
     int max = numRegions % numServers == 0 ? min : min + 1;
 
     for (ServerAndLoad server : servers) {
-      assertTrue(server.getLoad() >= 0);
-      assertTrue(server.getLoad() <= max);
-      assertTrue(server.getLoad() >= min);
+      assertTrue("All servers should have a positive load. " + server, server.getLoad() >= 0);
+      assertTrue("All servers should have load no more than " + max + ". " + server,
+          server.getLoad() <= max);
+      assertTrue("All servers should have load no less than " + min + ". " + server,
+          server.getLoad() >= min);
     }
   }
 
@@ -236,8 +236,13 @@ public class BalancerTestBase {
     int max = numRegions % numServers == 0 ? min : min + 1;
 
     for (ServerAndLoad server : servers) {
-      if (server.getLoad() < 0 || server.getLoad() > max + tablenum/2 + 1  || server.getLoad() < min - tablenum/2 - 1)
+      // The '5' in below is arbitrary.
+      if (server.getLoad() < 0 || server.getLoad() > max + (tablenum/2 + 5)  ||
+          server.getLoad() < (min - tablenum/2 - 5)) {
+        LOG.warn("server={}, load={}, max={}, tablenum={}, min={}",
+          server.getServerName(), server.getLoad(), max, tablenum, min);
         return false;
+      }
     }
     return true;
   }
@@ -330,7 +335,7 @@ public class BalancerTestBase {
    *
    * @param list
    * @param plans
-   * @return
+   * @return a list of all added {@link ServerAndLoad} values.
    */
   protected List<ServerAndLoad> reconcile(List<ServerAndLoad> list,
                                           List<RegionPlan> plans,
@@ -433,10 +438,31 @@ public class BalancerTestBase {
     return randomRegions(numRegions, -1);
   }
 
+  protected List<RegionInfo> createRegions(int numRegions, TableName tableName) {
+    List<RegionInfo> regions = new ArrayList<>(numRegions);
+    byte[] start = new byte[16];
+    byte[] end = new byte[16];
+    Random rand = ThreadLocalRandom.current();
+    rand.nextBytes(start);
+    rand.nextBytes(end);
+    for (int i = 0; i < numRegions; i++) {
+      Bytes.putInt(start, 0, numRegions << 1);
+      Bytes.putInt(end, 0, (numRegions << 1) + 1);
+      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(start)
+        .setEndKey(end)
+        .setSplit(false)
+        .build();
+      regions.add(hri);
+    }
+    return regions;
+  }
+
   protected List<RegionInfo> randomRegions(int numRegions, int numTables) {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
     byte[] end = new byte[16];
+    Random rand = ThreadLocalRandom.current();
     rand.nextBytes(start);
     rand.nextBytes(end);
     for (int i = 0; i < numRegions; i++) {
@@ -463,6 +489,7 @@ public class BalancerTestBase {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
     byte[] end = new byte[16];
+    Random rand = ThreadLocalRandom.current();
     rand.nextBytes(start);
     rand.nextBytes(end);
     for (int i = 0; i < numRegions; i++) {
@@ -491,6 +518,7 @@ public class BalancerTestBase {
       ServerName sn = this.serverQueue.poll();
       return new ServerAndLoad(sn, numRegionsPerServer);
     }
+    Random rand = ThreadLocalRandom.current();
     String host = "srv" + rand.nextInt(Integer.MAX_VALUE);
     int port = rand.nextInt(60000);
     long startCode = rand.nextLong();
@@ -532,8 +560,10 @@ public class BalancerTestBase {
 
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
-    List<RegionPlan> plans = loadBalancer.balanceCluster(serverMap);
-    assertNotNull(plans);
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+        (Map) mockClusterServersWithTables(serverMap);
+    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+    assertNotNull("Initial cluster balance should produce plans.", plans);
 
     // Check to see that this actually got to a stable place.
     if (assertFullyBalanced || assertFullyBalancedForReplicas) {
@@ -545,8 +575,10 @@ public class BalancerTestBase {
 
       if (assertFullyBalanced) {
         assertClusterAsBalanced(balancedCluster);
-        List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(serverMap);
-        assertNull(secondPlans);
+        LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
+        List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
+        assertNull("Given a requirement to be fully balanced, second attempt at plans should " +
+            "produce none.", secondPlans);
       }
 
       if (assertFullyBalancedForReplicas) {

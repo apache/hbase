@@ -133,6 +133,9 @@ dummy-variables-rgx=_|dummy
 # you should avoid to define new builtins when possible.
 additional-builtins=
 
+# List of modules that can redefine builtins. (For python 2/3 compatibility)
+redefining-builtins-modules=builtins
+
 
 [TYPECHECK]
 

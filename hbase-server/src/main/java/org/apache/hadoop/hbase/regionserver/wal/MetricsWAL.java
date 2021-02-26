@@ -19,13 +19,12 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -36,8 +35,8 @@ import org.apache.hadoop.util.StringUtils;
  * single function call and turn it into multiple manipulations of the hadoop metrics system.
  */
 @InterfaceAudience.Private
-public class MetricsWAL extends WALActionsListener.Base {
-  private static final Log LOG = LogFactory.getLog(MetricsWAL.class);
+public class MetricsWAL implements WALActionsListener {
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsWAL.class);
 
   private final MetricsWALSource source;
 
@@ -45,7 +44,6 @@ public class MetricsWAL extends WALActionsListener.Base {
     this(CompatibilitySingletonFactory.getInstance(MetricsWALSource.class));
   }
 
-  @VisibleForTesting
   MetricsWAL(MetricsWALSource s) {
     this.source = s;
   }
@@ -58,9 +56,10 @@ public class MetricsWAL extends WALActionsListener.Base {
   @Override
   public void postAppend(final long size, final long time, final WALKey logkey,
       final WALEdit logEdit) throws IOException {
-    source.incrementAppendCount();
+    TableName tableName = logkey.getTableName();
+    source.incrementAppendCount(tableName);
     source.incrementAppendTime(time);
-    source.incrementAppendSize(size);
+    source.incrementAppendSize(tableName, size);
     source.incrementWrittenBytes(size);
 
     if (time > 1000) {
@@ -73,10 +72,23 @@ public class MetricsWAL extends WALActionsListener.Base {
   }
 
   @Override
-  public void logRollRequested(boolean underReplicated) {
+  public void logRollRequested(WALActionsListener.RollRequestReason reason) {
     source.incrementLogRollRequested();
-    if (underReplicated) {
-      source.incrementLowReplicationLogRoll();
+    switch (reason) {
+      case ERROR:
+        source.incrementErrorLogRoll();
+        break;
+      case LOW_REPLICATION:
+        source.incrementLowReplicationLogRoll();
+        break;
+      case SIZE:
+        source.incrementSizeLogRoll();
+        break;
+      case SLOW_SYNC:
+        source.incrementSlowSyncLogRoll();
+        break;
+      default:
+        break;
     }
   }
 }

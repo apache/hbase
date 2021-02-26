@@ -17,11 +17,21 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
@@ -32,28 +42,19 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.snapshot.FlushSnapshotSubprocedure;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.spy;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
  * Testing the region snapshot task on a cluster.
@@ -61,7 +62,12 @@ import static org.mockito.Mockito.spy;
  */
 @Category({MediumTests.class, RegionServerTests.class})
 public class TestRegionSnapshotTask {
-  private final Log LOG = LogFactory.getLog(getClass());
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionSnapshotTask.class);
+
+  private final Logger LOG = LoggerFactory.getLogger(getClass());
 
   private static HBaseTestingUtility TEST_UTIL;
   private static Configuration conf;
@@ -82,7 +88,7 @@ public class TestRegionSnapshotTask {
     TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
     TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
 
-    rootDir = FSUtils.getRootDir(conf);
+    rootDir = CommonFSUtils.getRootDir(conf);
     fs = TEST_UTIL.getTestFileSystem();
   }
 
@@ -100,7 +106,7 @@ public class TestRegionSnapshotTask {
    * not be moved around if a snapshot operation is in progress.
    * See HBASE-18398
    */
-  @Test(timeout = 30000)
+  @Test
   public void testAddRegionWithCompactions() throws Exception {
     final TableName tableName = TableName.valueOf("test_table");
     Table table = setupTable(tableName);
@@ -118,7 +124,7 @@ public class TestRegionSnapshotTask {
 
     final HRegion region = spy(hRegions.get(0));
 
-    Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
+    Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir, conf);
     final SnapshotManifest manifest =
         SnapshotManifest.create(conf, fs, workingDir, snapshot, monitor);
     manifest.addTableDescriptor(table.getTableDescriptor());
@@ -160,7 +166,7 @@ public class TestRegionSnapshotTask {
   private void addRegionToSnapshot(SnapshotProtos.SnapshotDescription snapshot,
       HRegion region, SnapshotManifest manifest) throws Exception {
     LOG.info("Adding region to snapshot: " + region.getRegionInfo().getRegionNameAsString());
-    Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
+    Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir, conf);
     SnapshotManifest.RegionVisitor visitor = createRegionVisitorWithDelay(snapshot, workingDir);
     manifest.addRegion(region, visitor);
     LOG.info("Added the region to snapshot: " + region.getRegionInfo().getRegionNameAsString());

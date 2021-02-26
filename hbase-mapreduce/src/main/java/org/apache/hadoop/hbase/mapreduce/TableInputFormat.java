@@ -23,13 +23,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -49,7 +49,7 @@ public class TableInputFormat extends TableInputFormatBase
 implements Configurable {
 
   @SuppressWarnings("hiding")
-  private static final Log LOG = LogFactory.getLog(TableInputFormat.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableInputFormat.class);
 
   /** Job parameter that specifies the input table. */
   public static final String INPUT_TABLE = "hbase.mapreduce.inputtable";
@@ -164,7 +164,7 @@ implements Configurable {
     }
 
     if (conf.get(SCAN_TIMESTAMP) != null) {
-      scan.setTimeStamp(Long.parseLong(conf.get(SCAN_TIMESTAMP)));
+      scan.setTimestamp(Long.parseLong(conf.get(SCAN_TIMESTAMP)));
     }
 
     if (conf.get(SCAN_TIMERANGE_START) != null && conf.get(SCAN_TIMERANGE_END) != null) {

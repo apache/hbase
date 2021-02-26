@@ -19,10 +19,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -42,6 +38,9 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert Map/Reduce output and write it to an HBase table. The KEY is ignored
@@ -52,7 +51,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation>
 implements Configurable {
 
-  private static final Log LOG = LogFactory.getLog(TableOutputFormat.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableOutputFormat.class);
 
   /** Job parameter that specifies the output table. */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
@@ -156,11 +155,11 @@ implements Configurable {
    * @param context  The current task context.
    * @return The newly created writer instance.
    * @throws IOException When creating the writer fails.
-   * @throws InterruptedException When the jobs is cancelled.
+   * @throws InterruptedException When the job is cancelled.
    */
   @Override
   public RecordWriter<KEY, Mutation> getRecordWriter(TaskAttemptContext context)
-  throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     return new TableRecordWriter();
   }
 
@@ -173,11 +172,15 @@ implements Configurable {
    * @see OutputFormat#checkOutputSpecs(JobContext)
    */
   @Override
-  public void checkOutputSpecs(JobContext context) throws IOException,
-      InterruptedException {
+  public void checkOutputSpecs(JobContext context) throws IOException, InterruptedException {
+    Configuration hConf = getConf();
+    if (hConf == null) {
+      hConf = context.getConfiguration();
+    }
 
-    try (Admin admin = ConnectionFactory.createConnection(getConf()).getAdmin()) {
-      TableName tableName = TableName.valueOf(this.conf.get(OUTPUT_TABLE));
+    try (Connection connection = ConnectionFactory.createConnection(hConf);
+      Admin admin = connection.getAdmin()) {
+      TableName tableName = TableName.valueOf(hConf.get(OUTPUT_TABLE));
       if (!admin.tableExists(tableName)) {
         throw new TableNotFoundException("Can't write, table does not exist:" +
             tableName.getNameAsString());
@@ -232,7 +235,7 @@ implements Configurable {
         this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }
     } catch(IOException e) {
-      LOG.error(e);
+      LOG.error(e.toString(), e);
       throw new RuntimeException(e);
     }
   }

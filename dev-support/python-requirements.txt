@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 requests
+future
 gitpython
 rbtools
 jinja2

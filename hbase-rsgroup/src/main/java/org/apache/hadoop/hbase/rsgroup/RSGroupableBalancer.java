@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Marker Interface. RSGroups feature will check for a LoadBalancer

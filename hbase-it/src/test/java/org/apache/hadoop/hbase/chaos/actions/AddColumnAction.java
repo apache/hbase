@@ -21,10 +21,14 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action the adds a column family to a table.
@@ -32,9 +36,14 @@ import org.apache.hadoop.hbase.client.Admin;
 public class AddColumnAction extends Action {
   private final TableName tableName;
   private Admin admin;
+  private static final Logger LOG = LoggerFactory.getLogger(AddColumnAction.class);
 
   public AddColumnAction(TableName tableName) {
     this.tableName = tableName;
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override
@@ -45,12 +54,12 @@ public class AddColumnAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
-    HColumnDescriptor columnDescriptor = null;
+    TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
+    ColumnFamilyDescriptor columnDescriptor = null;
 
-    while(columnDescriptor == null ||
-        tableDescriptor.getFamily(columnDescriptor.getName()) != null) {
-      columnDescriptor = new HColumnDescriptor(RandomStringUtils.randomAlphabetic(5));
+    while (columnDescriptor == null
+        || tableDescriptor.getColumnFamily(columnDescriptor.getName()) != null) {
+      columnDescriptor = ColumnFamilyDescriptorBuilder.of(RandomStringUtils.randomAlphabetic(5));
     }
 
     // Don't try the modify if we're stopping
@@ -58,9 +67,10 @@ public class AddColumnAction extends Action {
       return;
     }
 
-    LOG.debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
+    getLogger().debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
 
-    tableDescriptor.addFamily(columnDescriptor);
-    admin.modifyTable(tableName, tableDescriptor);
+    TableDescriptor modifiedTable = TableDescriptorBuilder.newBuilder(tableDescriptor)
+        .setColumnFamily(columnDescriptor).build();
+    admin.modifyTable(modifiedTable);
   }
 }

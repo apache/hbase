@@ -26,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used by {@link org.apache.hadoop.hbase.client.Admin#listReplicatedTableCFs()}.
- * The cfs is a map of <ColumnFamily, ReplicationScope>.
+ * The cfs is a map of &lt;ColumnFamily, ReplicationScope>.
  */
 @InterfaceAudience.Public
 public class TableCFs {

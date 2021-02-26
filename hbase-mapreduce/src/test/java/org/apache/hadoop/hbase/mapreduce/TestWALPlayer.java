@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,20 +20,20 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -46,19 +46,21 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer.WALKeyValueMapper;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.regionserver.TestRecoveredEdits;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -72,6 +74,10 @@ import org.mockito.stubbing.Answer;
 @Category({MapReduceTests.class, LargeTests.class})
 //TODO : Remove this in 3.0
 public class TestWALPlayer {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWALPlayer.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
   private static Path rootDir;
@@ -85,11 +91,11 @@ public class TestWALPlayer {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    conf= TEST_UTIL.getConfiguration();
+    conf = TEST_UTIL.getConfiguration();
     rootDir = TEST_UTIL.createRootDir();
     walRootDir = TEST_UTIL.createWALRootDir();
-    fs = FSUtils.getRootDirFileSystem(conf);
-    logFs = FSUtils.getWALFileSystem(conf);
+    fs = CommonFSUtils.getRootDirFileSystem(conf);
+    logFs = CommonFSUtils.getWALFileSystem(conf);
     cluster = TEST_UTIL.startMiniCluster();
   }
 
@@ -101,8 +107,31 @@ public class TestWALPlayer {
   }
 
   /**
+   * Test that WALPlayer can replay recovered.edits files.
+   */
+  @Test
+  public void testPlayingRecoveredEdit() throws Exception {
+    TableName tn = TableName.valueOf(TestRecoveredEdits.RECOVEREDEDITS_TABLENAME);
+    TEST_UTIL.createTable(tn, TestRecoveredEdits.RECOVEREDEDITS_COLUMNFAMILY);
+    // Copy testing recovered.edits file that is over under hbase-server test resources
+    // up into a dir in our little hdfs cluster here.
+    String hbaseServerTestResourcesEdits = System.getProperty("test.build.classes") +
+        "/../../../hbase-server/src/test/resources/" +
+      TestRecoveredEdits.RECOVEREDEDITS_PATH.getName();
+    assertTrue(new File(hbaseServerTestResourcesEdits).exists());
+    FileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
+    // Target dir.
+    Path targetDir = new Path("edits").makeQualified(dfs.getUri(), dfs.getHomeDirectory());
+    assertTrue(dfs.mkdirs(targetDir));
+    dfs.copyFromLocalFile(new Path(hbaseServerTestResourcesEdits), targetDir);
+    assertEquals(0,
+      ToolRunner.run(new WALPlayer(this.conf), new String [] {targetDir.toString()}));
+    // I don't know how many edits are in this file for this table... so just check more than 1.
+    assertTrue(TEST_UTIL.countRows(tn) > 0);
+  }
+
+  /**
    * Simple end-to-end test
-   * @throws Exception
    */
   @Test
   public void testWALPlayer() throws Exception {
@@ -167,7 +196,7 @@ public class TestWALPlayer {
     configuration.set(tableConfigKey, "table");
     WALKeyValueMapper mapper = new WALKeyValueMapper();
     WALKey key = mock(WALKey.class);
-    when(key.getTablename()).thenReturn(TableName.valueOf("table"));
+    when(key.getTableName()).thenReturn(TableName.valueOf("table"));
     @SuppressWarnings("unchecked")
     Mapper<WALKey, WALEdit, ImmutableBytesWritable, KeyValue>.Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(configuration);
@@ -184,13 +213,13 @@ public class TestWALPlayer {
 
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
-        KeyValue key = (KeyValue) invocation.getArguments()[1];
+        ImmutableBytesWritable writer = invocation.getArgument(0);
+        KeyValue key = invocation.getArgument(1);
         assertEquals("row", Bytes.toString(writer.get()));
         assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
-    }).when(context).write(any(ImmutableBytesWritable.class), any(KeyValue.class));
+    }).when(context).write(any(), any());
 
     mapper.map(key, value, context);
 
@@ -217,8 +246,8 @@ public class TestWALPlayer {
       } catch (SecurityException e) {
         assertEquals(-1, newSecurityManager.getExitCode());
         assertTrue(data.toString().contains("ERROR: Wrong number of arguments:"));
-        assertTrue(data.toString().contains("Usage: WALPlayer [options] <wal inputdir>" +
-            " <tables> [<tableMappings>]"));
+        assertTrue(data.toString().contains("Usage: WALPlayer [options] <WAL inputdir>" +
+            " [<tables> <tableMappings>]"));
         assertTrue(data.toString().contains("-Dwal.bulk.output=/path/for/output"));
       }
 

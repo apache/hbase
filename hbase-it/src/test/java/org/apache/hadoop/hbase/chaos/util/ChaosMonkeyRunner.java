@@ -21,10 +21,7 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.Set;
 
-import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,11 +31,13 @@ import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.ToolRunner;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 public class ChaosMonkeyRunner extends AbstractHBaseTool {
-  private static final Log LOG = LogFactory.getLog(ChaosMonkeyRunner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ChaosMonkeyRunner.class);
 
   public static final String MONKEY_LONG_OPT = "monkey";
   public static final String CHAOS_MONKEY_PROPS = "monkeyProps";
@@ -75,7 +74,7 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
           monkeyProps.load(this.getClass().getClassLoader()
               .getResourceAsStream(chaosMonkeyPropsFile));
         } catch (IOException e) {
-          LOG.warn(e);
+          LOG.warn(e.toString(), e);
           System.exit(EXIT_FAILURE);
         }
       }
@@ -121,7 +120,7 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
       util.createDistributedHBaseCluster();
       util.checkNodeCount(1);// make sure there's at least 1 alive rs
     } else {
-      throw new RuntimeException("ChaosMonkeyRunner must run againt a distributed cluster,"
+      throw new RuntimeException("ChaosMonkeyRunner must run against a distributed cluster,"
           + " please check and point to the right configuration dir");
     }
     this.setConf(util.getConfiguration());

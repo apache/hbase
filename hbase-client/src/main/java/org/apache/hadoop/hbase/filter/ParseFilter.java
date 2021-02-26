@@ -22,18 +22,20 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EmptyStackException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.Set;
 import java.util.Stack;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -48,7 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 public class ParseFilter {
-  private static final Log LOG = LogFactory.getLog(ParseFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ParseFilter.class);
 
   private static HashMap<ByteBuffer, Integer> operatorPrecedenceHashMap;
   private static HashMap<String, String> filterHashMap;
@@ -92,6 +94,8 @@ public class ParseFilter {
                       "SingleColumnValueExcludeFilter");
     filterHashMap.put("DependentColumnFilter", ParseConstants.FILTER_PACKAGE + "." +
                       "DependentColumnFilter");
+    filterHashMap.put("ColumnValueFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "ColumnValueFilter");
 
     // Creates the operatorPrecedenceHashMap
     operatorPrecedenceHashMap = new HashMap<>();
@@ -261,7 +265,7 @@ public class ParseFilter {
       e.printStackTrace();
     }
     throw new IllegalArgumentException("Incorrect filter string " +
-                                       new String(filterStringAsByteArray));
+        new String(filterStringAsByteArray, StandardCharsets.UTF_8));
   }
 
 /**
@@ -768,8 +772,6 @@ public class ParseFilter {
 
   /**
    * Takes a compareOperator symbol as a byte array and returns the corresponding CompareOperator
-   * @deprecated Since 2.0
-   * <p>
    * @param compareOpAsByteArray the comparatorOperator symbol as a byte array
    * @return the Compare Operator
    */
@@ -837,9 +839,12 @@ public class ParseFilter {
     else if (Bytes.equals(comparatorType, ParseConstants.binaryPrefixType))
       return new BinaryPrefixComparator(comparatorValue);
     else if (Bytes.equals(comparatorType, ParseConstants.regexStringType))
-      return new RegexStringComparator(new String(comparatorValue));
+      return new RegexStringComparator(new String(comparatorValue, StandardCharsets.UTF_8));
+    else if (Bytes.equals(comparatorType, ParseConstants.regexStringNoCaseType))
+      return new RegexStringComparator(new String(comparatorValue, StandardCharsets.UTF_8),
+                                       Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     else if (Bytes.equals(comparatorType, ParseConstants.substringType))
-      return new SubstringComparator(new String(comparatorValue));
+      return new SubstringComparator(new String(comparatorValue, StandardCharsets.UTF_8));
     else
       throw new IllegalArgumentException("Incorrect comparatorType");
   }

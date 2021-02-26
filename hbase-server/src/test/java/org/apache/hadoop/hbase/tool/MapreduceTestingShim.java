@@ -77,6 +77,7 @@ abstract public class MapreduceTestingShim {
   }
 
   private static class MapreduceV1Shim extends MapreduceTestingShim {
+    @Override
     public JobContext newJobContext(Configuration jobConf) throws IOException {
       // Implementing:
       // return new JobContext(jobConf, new JobID());
@@ -105,6 +106,7 @@ abstract public class MapreduceTestingShim {
       }
     }
 
+    @Override
     public JobConf obtainJobConf(MiniMRCluster cluster) {
       if (cluster == null) return null;
       try {
@@ -129,6 +131,7 @@ abstract public class MapreduceTestingShim {
   };
 
   private static class MapreduceV2Shim extends MapreduceTestingShim {
+    @Override
     public JobContext newJobContext(Configuration jobConf) {
       return newJob(jobConf);
     }
@@ -147,6 +150,7 @@ abstract public class MapreduceTestingShim {
       }
     }
 
+    @Override
     public JobConf obtainJobConf(MiniMRCluster cluster) {
       try {
         Method meth = MiniMRCluster.class.getMethod("getJobTrackerConf", emptyParam);

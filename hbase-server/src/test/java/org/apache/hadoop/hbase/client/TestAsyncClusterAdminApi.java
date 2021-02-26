@@ -17,51 +17,70 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
+import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 @RunWith(Parameterized.class)
-@Category({ ClientTests.class, MediumTests.class })
+@Category({ ClientTests.class, LargeTests.class })
 public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
 
-  private final Path cnfPath = FileSystems.getDefault().getPath("target/test-classes/hbase-site.xml");
-  private final Path cnf2Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site2.xml");
-  private final Path cnf3Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site3.xml");
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncClusterAdminApi.class);
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+
+    setUpConfigurationFiles(TEST_UTIL);
+    TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, 0);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
+    TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
+
+    TEST_UTIL.startMiniCluster(2);
+    ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    addResourceToRegionServerConfiguration(TEST_UTIL);
+  }
+
+  @Test
+  public void testGetMasterInfoPort() throws Exception {
+    assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getInfoServer().getPort(), (int) admin
+        .getMasterInfoPort().get());
+  }
 
   @Test
   public void testRegionServerOnlineConfigChange() throws Exception {
@@ -114,18 +133,6 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     restoreHBaseSiteXML();
   }
 
-  private void replaceHBaseSiteXML() throws IOException {
-    // make a backup of hbase-site.xml
-    Files.copy(cnfPath, cnf3Path, StandardCopyOption.REPLACE_EXISTING);
-    // update hbase-site.xml by overwriting it
-    Files.copy(cnf2Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
-  }
-
-  private void restoreHBaseSiteXML() throws IOException {
-    // restore hbase-site.xml
-    Files.copy(cnf3Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
-  }
-
   @Test
   public void testRollWALWALWriter() throws Exception {
     setUpforLogRolling();
@@ -140,7 +147,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
         + AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null)) + " log files");
 
     // flush all regions
-    for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+    for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
       r.flush(true);
     }
     admin.rollWALWriter(regionServer.getServerName()).join();
@@ -194,7 +201,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
 
   private HRegionServer startAndWriteData(TableName tableName, byte[] value) throws Exception {
     createTableWithDefaultConf(tableName);
-    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    AsyncTable<?> table = ASYNC_CONN.getTable(tableName);
     HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
@@ -215,7 +222,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   @Test
   public void testGetRegionLoads() throws Exception {
     // Turn off the balancer
-    admin.setBalancerOn(false).join();
+    admin.balancerSwitch(false).join();
     TableName[] tables =
         new TableName[] { TableName.valueOf(tableName.getNameAsString() + "1"),
             TableName.valueOf(tableName.getNameAsString() + "2"),
@@ -226,39 +233,45 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     // Check if regions match with the regionLoad from the server
     Collection<ServerName> servers = admin.getRegionServers().get();
     for (ServerName serverName : servers) {
-      List<RegionInfo> regions = admin.getOnlineRegions(serverName).get();
-      checkRegionsAndRegionLoads(regions, admin.getRegionLoads(serverName).get());
+      List<RegionInfo> regions = admin.getRegions(serverName).get();
+      checkRegionsAndRegionLoads(regions, admin.getRegionMetrics(serverName).get());
     }
 
     // Check if regionLoad matches the table's regions and nothing is missed
     for (TableName table : tables) {
-      List<RegionInfo> tableRegions = admin.getTableRegions(table).get();
-      List<RegionLoad> regionLoads = Lists.newArrayList();
+      List<RegionInfo> tableRegions = admin.getRegions(table).get();
+      List<RegionMetrics> regionLoads = Lists.newArrayList();
       for (ServerName serverName : servers) {
-        regionLoads.addAll(admin.getRegionLoads(serverName, Optional.of(table)).get());
+        regionLoads.addAll(admin.getRegionMetrics(serverName, table).get());
       }
       checkRegionsAndRegionLoads(tableRegions, regionLoads);
     }
 
     // Check RegionLoad matches the regionLoad from ClusterStatus
-    ClusterStatus clusterStatus = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).get();
-    for (ServerName serverName : clusterStatus.getServers()) {
-      ServerLoad serverLoad = clusterStatus.getLoad(serverName);
-      compareRegionLoads(serverLoad.getRegionsLoad().values(), admin.getRegionLoads(serverName)
-          .get());
+    ClusterMetrics clusterStatus = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get();
+    assertEquals(servers.size(), clusterStatus.getLiveServerMetrics().size());
+    for (Map.Entry<ServerName, ServerMetrics> entry :
+      clusterStatus.getLiveServerMetrics().entrySet()) {
+      ServerName sn = entry.getKey();
+      ServerMetrics sm = entry.getValue();
+      compareRegionLoads(sm.getRegionMetrics().values(), admin.getRegionMetrics(sn).get());
+    }
+    for (ServerName serverName : clusterStatus.getLiveServerMetrics().keySet()) {
+      ServerMetrics serverLoad = clusterStatus.getLiveServerMetrics().get(serverName);
+
     }
   }
 
-  private void compareRegionLoads(Collection<RegionLoad> regionLoadCluster,
-      Collection<RegionLoad> regionLoads) {
+  private void compareRegionLoads(Collection<RegionMetrics> regionLoadCluster,
+      Collection<RegionMetrics> regionLoads) {
 
     assertEquals("No of regionLoads from clusterStatus and regionloads from RS doesn't match",
       regionLoadCluster.size(), regionLoads.size());
 
-    for (RegionLoad loadCluster : regionLoadCluster) {
+    for (RegionMetrics loadCluster : regionLoadCluster) {
       boolean matched = false;
-      for (RegionLoad load : regionLoads) {
-        if (Bytes.equals(loadCluster.getName(), load.getName())) {
+      for (RegionMetrics load : regionLoads) {
+        if (Bytes.equals(loadCluster.getRegionName(), load.getRegionName())) {
           matched = true;
           continue;
         }
@@ -268,13 +281,13 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   }
 
   private void checkRegionsAndRegionLoads(Collection<RegionInfo> regions,
-      Collection<RegionLoad> regionLoads) {
+      Collection<RegionMetrics> regionLoads) {
 
     assertEquals("No of regions and regionloads doesn't match", regions.size(), regionLoads.size());
 
-    Map<byte[], RegionLoad> regionLoadMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
-    for (RegionLoad regionLoad : regionLoads) {
-      regionLoadMap.put(regionLoad.getName(), regionLoad);
+    Map<byte[], RegionMetrics> regionLoadMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
+    for (RegionMetrics regionLoad : regionLoads) {
+      regionLoadMap.put(regionLoad.getRegionName(), regionLoad);
     }
     for (RegionInfo info : regions) {
       assertTrue("Region not in regionLoadMap region:" + info.getRegionNameAsString()
@@ -285,9 +298,9 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   private void createAndLoadTable(TableName[] tables) {
     for (TableName table : tables) {
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(table);
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
       admin.createTable(builder.build(), Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), 16).join();
-      RawAsyncTable asyncTable = ASYNC_CONN.getRawTable(table);
+      AsyncTable<?> asyncTable = ASYNC_CONN.getTable(table);
       List<Put> puts = new ArrayList<>();
       for (byte[] row : HBaseTestingUtility.ROWS) {
         puts.add(new Put(row).addColumn(FAMILY, Bytes.toBytes("q"), Bytes.toBytes("v")));

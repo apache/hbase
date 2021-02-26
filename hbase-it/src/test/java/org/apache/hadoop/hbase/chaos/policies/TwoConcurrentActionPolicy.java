@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.hbase.chaos.policies;
 
-import org.apache.hadoop.hbase.DaemonThreadFactory;
-import org.apache.hadoop.hbase.chaos.actions.Action;
-import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
-import org.apache.hadoop.util.StringUtils;
-
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.apache.hadoop.hbase.chaos.actions.Action;
+import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.util.StringUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Chaos Monkey policy that will run two different actions at the same time.
@@ -42,7 +43,8 @@ public class TwoConcurrentActionPolicy extends PeriodicPolicy {
     this.actionsOne = actionsOne;
     this.actionsTwo = actionsTwo;
     executor = Executors.newFixedThreadPool(2,
-        new DaemonThreadFactory("TwoConcurrentAction-"));
+      new ThreadFactoryBuilder().setNameFormat("TwoConcurrentAction-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   @Override

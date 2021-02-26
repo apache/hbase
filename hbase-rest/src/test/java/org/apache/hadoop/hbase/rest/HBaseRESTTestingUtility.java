@@ -18,99 +18,47 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.util.HttpServerUtil;
 import org.apache.hadoop.util.StringUtils;
 
-import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-
-import org.glassfish.jersey.jackson1.Jackson1Feature;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-
-import javax.servlet.DispatcherType;
-import java.util.EnumSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HBaseRESTTestingUtility {
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseRESTTestingUtility.class);
 
-  private static final Log LOG = LogFactory.getLog(HBaseRESTTestingUtility.class);
-
-  private int testServletPort;
-  private Server server;
+  private RESTServer server;
 
   public int getServletPort() {
-    return testServletPort;
+    return server.getPort();
   }
 
   public void startServletContainer(Configuration conf) throws Exception {
     if (server != null) {
-      LOG.error("ServletContainer already running");
+      LOG.error("RESTServer already running");
       return;
     }
 
-    // Inject the conf for the test by being first to make singleton
-    RESTServlet.getInstance(conf, UserProvider.instantiate(conf));
+    conf.setInt("hbase.rest.port", 0);
+    conf.setInt("hbase.rest.info.port", -1);
+    conf.setBoolean(RESTServer.SKIP_LOGIN_KEY, true);
 
-    // set up the Jersey servlet container for Jetty
-    ResourceConfig app = new ResourceConfig().
-        packages("org.apache.hadoop.hbase.rest").register(Jackson1Feature.class);
-    ServletHolder sh = new ServletHolder(new ServletContainer(app));
+    server = new RESTServer(conf);
+    server.run();
 
-    // set up Jetty and run the embedded server
-    server = new Server(0);
-    LOG.info("configured " + ServletContainer.class.getName());
-
-    HttpConfiguration httpConfig = new HttpConfiguration();
-    httpConfig.setSendDateHeader(false);
-    httpConfig.setSendServerVersion(false);
-    ServerConnector serverConnector = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
-    serverConnector.setPort(testServletPort);
-
-    server.addConnector(serverConnector);
-
-    // set up context
-    ServletContextHandler ctxHandler = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
-    ctxHandler.addServlet(sh, "/*");
-    // Load filters specified from configuration.
-    String[] filterClasses = conf.getStrings(Constants.FILTER_CLASSES,
-        ArrayUtils.EMPTY_STRING_ARRAY);
-    for (String filter : filterClasses) {
-      filter = filter.trim();
-      ctxHandler.addFilter(filter, "/*", EnumSet.of(DispatcherType.REQUEST));
-    }
-    LOG.info("Loaded filter classes :" + filterClasses);
-
-    conf.set(RESTServer.REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY, ".*");
-    RESTServer.addCSRFFilter(ctxHandler, conf);
-
-    HttpServerUtil.constrainHttpMethods(ctxHandler);
-
-    // start the server
-    server.start();
-    // get the port
-    testServletPort = ((ServerConnector)server.getConnectors()[0]).getLocalPort();
-
-    LOG.info("started " + server.getClass().getName() + " on port " + 
-      testServletPort);
+    LOG.info("started " + server.getClass().getName() + " on port " +
+      server.getPort());
   }
 
   public void shutdownServletContainer() {
-    if (server != null) try {
-      server.stop();
-      server = null;
-      RESTServlet.stop();
-    } catch (Exception e) {
-      LOG.warn(StringUtils.stringifyException(e));
+    if (server != null) {
+      try {
+        server.stop();
+        server = null;
+        RESTServlet.stop();
+      } catch (Exception e) {
+        LOG.warn(StringUtils.stringifyException(e));
+      }
     }
   }
 }

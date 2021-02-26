@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,22 +17,16 @@
  */
 package org.apache.hadoop.hbase;
 
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -48,6 +41,8 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.security.ssl.SSLFactory;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -55,13 +50,23 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test our testing utility class
  */
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseTestingUtility {
-  private static final Log LOG = LogFactory.getLog(TestHBaseTestingUtility.class);
+  private static final int NUMTABLES = 1;
+  private static final int NUMROWS = 100;
+  private static final int NUMREGIONS = 10;
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHBaseTestingUtility.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseTestingUtility.class);
 
   @Rule
   public TestName name = new TestName();
@@ -70,9 +75,9 @@ public class TestHBaseTestingUtility {
    * Basic sanity test that spins up multiple HDFS and HBase clusters that share
    * the same ZK ensemble. We then create the same table in both and make sure
    * that what we insert in one place doesn't end up in the other.
-   * @throws Exception
+   * @throws Exception on error
    */
-  @Test (timeout=180000)
+  @Test
   public void testMultiClusters() throws Exception {
     // Create three clusters
 
@@ -172,8 +177,8 @@ public class TestHBaseTestingUtility {
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, hbt.getConfiguration(), false);
 
     hbt.getConfiguration().set("hbase.ssl.enabled", "true");
-    hbt.getConfiguration().addResource("ssl-server.xml");
-    hbt.getConfiguration().addResource("ssl-client.xml");
+    hbt.getConfiguration().addResource(hbt.getConfiguration().get(SSLFactory.SSL_CLIENT_CONF_KEY));
+    hbt.getConfiguration().addResource(hbt.getConfiguration().get(SSLFactory.SSL_SERVER_CONF_KEY));
 
     MiniHBaseCluster cluster = hbt.startMiniCluster();
     try {
@@ -193,13 +198,13 @@ public class TestHBaseTestingUtility {
 
     htu1.startMiniCluster();
     htu1.getDFSCluster().getFileSystem().create(foo);
-    assertTrue( htu1.getDFSCluster().getFileSystem().exists(foo));
+    assertTrue(htu1.getDFSCluster().getFileSystem().exists(foo));
     htu1.shutdownMiniCluster();
 
     htu1.startMiniCluster();
-    assertFalse( htu1.getDFSCluster().getFileSystem().exists(foo));
+    assertFalse(htu1.getDFSCluster().getFileSystem().exists(foo));
     htu1.getDFSCluster().getFileSystem().create(foo);
-    assertTrue( htu1.getDFSCluster().getFileSystem().exists(foo));
+    assertTrue(htu1.getDFSCluster().getFileSystem().exists(foo));
     htu1.shutdownMiniCluster();
   }
 
@@ -270,7 +275,9 @@ public class TestHBaseTestingUtility {
       List<Integer> clientPortListInCluster = cluster1.getClientPortList();
 
       for (i = 0; i < clientPortListInCluster.size(); i++) {
-        assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList1[i]);
+        // cannot assert the specific port due to the port conflict in which situation
+        // it always chooses a bigger port by +1. The below is the same.
+        assertTrue(clientPortListInCluster.get(i).intValue() >= clientPortList1[i]);
       }
     } finally {
       hbt.shutdownMiniZKCluster();
@@ -287,11 +294,11 @@ public class TestHBaseTestingUtility {
 
       for (i = 0, j = 0; i < clientPortListInCluster.size(); i++) {
         if (i < clientPortList2.length) {
-          assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList2[i]);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= clientPortList2[i]);
         } else {
           // servers with no specified client port will use defaultClientPort or some other ports
           // based on defaultClientPort
-          assertEquals(clientPortListInCluster.get(i).intValue(), defaultClientPort + j);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= defaultClientPort + j);
           j++;
         }
       }
@@ -312,9 +319,9 @@ public class TestHBaseTestingUtility {
         // Servers will only use valid client ports; if ports are not specified or invalid,
         // the default port or a port based on default port will be used.
         if (i < clientPortList3.length && clientPortList3[i] > 0) {
-          assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList3[i]);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= clientPortList3[i]);
         } else {
-          assertEquals(clientPortListInCluster.get(i).intValue(), defaultClientPort + j);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= defaultClientPort + j);
           j++;
         }
       }
@@ -338,9 +345,9 @@ public class TestHBaseTestingUtility {
         // Servers will only use valid client ports; if ports are not specified or invalid,
         // the default port or a port based on default port will be used.
         if (i < clientPortList4.length && clientPortList4[i] > 0) {
-          assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList4[i]);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= clientPortList4[i]);
         } else {
-          assertEquals(clientPortListInCluster.get(i).intValue(), defaultClientPort + j);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= defaultClientPort + j);
           j +=2;
         }
       }
@@ -402,8 +409,8 @@ public class TestHBaseTestingUtility {
 
   @Test public void testResolvePortConflict() throws Exception {
     // raises port conflict between 1st call and 2nd call of randomPort() by mocking Random object
-    Random random = Mockito.mock(Random.class);
-    Mockito.when(random.nextInt(Mockito.any(Integer.class)))
+    Random random = mock(Random.class);
+    when(random.nextInt(anyInt()))
       .thenAnswer(new Answer<Integer>() {
         int[] numbers = { 1, 1, 2 };
         int count = 0;
@@ -417,8 +424,8 @@ public class TestHBaseTestingUtility {
       });
 
     HBaseTestingUtility.PortAllocator.AvailablePortChecker portChecker =
-      Mockito.mock(HBaseTestingUtility.PortAllocator.AvailablePortChecker.class);
-    Mockito.when(portChecker.available(Mockito.any(Integer.class))).thenReturn(true);
+      mock(HBaseTestingUtility.PortAllocator.AvailablePortChecker.class);
+    when(portChecker.available(anyInt())).thenReturn(true);
 
     HBaseTestingUtility.PortAllocator portAllocator =
       new HBaseTestingUtility.PortAllocator(random, portChecker);
@@ -426,62 +433,79 @@ public class TestHBaseTestingUtility {
     int port1 = portAllocator.randomFreePort();
     int port2 = portAllocator.randomFreePort();
     assertNotEquals(port1, port2);
-    Mockito.verify(random, Mockito.times(3)).nextInt(Mockito.any(Integer.class));
+    Mockito.verify(random, Mockito.times(3)).nextInt(anyInt());
   }
 
   @Test
-  public void testOverridingOfDefaultPorts() {
+  public void testOverridingOfDefaultPorts() throws Exception {
 
-    // confirm that default port properties being overridden to "-1"
+    // confirm that default port properties being overridden to random
     Configuration defaultConfig = HBaseConfiguration.create();
     defaultConfig.setInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);
-    defaultConfig.setInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT);
+    defaultConfig.setInt(HConstants.REGIONSERVER_INFO_PORT,
+        HConstants.DEFAULT_REGIONSERVER_INFOPORT);
     HBaseTestingUtility htu = new HBaseTestingUtility(defaultConfig);
-    assertEquals(-1, htu.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
-    assertEquals(-1, htu.getConfiguration().getInt(HConstants.REGIONSERVER_PORT, 0));
+    try {
+      MiniHBaseCluster defaultCluster = htu.startMiniCluster();
+      final String masterHostPort =
+          defaultCluster.getMaster().getServerName().getAddress().toString();
+      assertNotEquals(HConstants.DEFAULT_MASTER_INFOPORT,
+          defaultCluster.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
+      assertNotEquals(HConstants.DEFAULT_REGIONSERVER_INFOPORT,
+          defaultCluster.getConfiguration().getInt(HConstants.REGIONSERVER_INFO_PORT, 0));
+      assertEquals(masterHostPort,
+          defaultCluster.getConfiguration().get(HConstants.MASTER_ADDRS_KEY));
+    } finally {
+      htu.shutdownMiniCluster();
+    }
 
     // confirm that nonDefault (custom) port settings are NOT overridden
     Configuration altConfig = HBaseConfiguration.create();
     final int nonDefaultMasterInfoPort = 3333;
     final int nonDefaultRegionServerPort = 4444;
     altConfig.setInt(HConstants.MASTER_INFO_PORT, nonDefaultMasterInfoPort);
-    altConfig.setInt(HConstants.REGIONSERVER_PORT, nonDefaultRegionServerPort);
+    altConfig.setInt(HConstants.REGIONSERVER_INFO_PORT, nonDefaultRegionServerPort);
     htu = new HBaseTestingUtility(altConfig);
-    assertEquals(nonDefaultMasterInfoPort,
-            htu.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
-    assertEquals(nonDefaultRegionServerPort
-            , htu.getConfiguration().getInt(HConstants.REGIONSERVER_PORT, 0));
+    try {
+      MiniHBaseCluster customCluster = htu.startMiniCluster();
+      final String masterHostPort =
+          customCluster.getMaster().getServerName().getAddress().toString();
+      assertEquals(nonDefaultMasterInfoPort,
+          customCluster.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
+      assertEquals(nonDefaultRegionServerPort,
+          customCluster.getConfiguration().getInt(HConstants.REGIONSERVER_INFO_PORT, 0));
+      assertEquals(masterHostPort,
+          customCluster.getConfiguration().get(HConstants.MASTER_ADDRS_KEY));
+    } finally {
+      htu.shutdownMiniCluster();
+    }
   }
-  
-  @Test public void testMRYarnConfigsPopulation() throws IOException {
-    Map<String, String> dummyProps = new HashMap<>();
-    dummyProps.put("mapreduce.jobtracker.address", "dummyhost:11234");
-    dummyProps.put("yarn.resourcemanager.address", "dummyhost:11235");
-    dummyProps.put("mapreduce.jobhistory.address", "dummyhost:11236");
-    dummyProps.put("yarn.resourcemanager.scheduler.address", "dummyhost:11237");
-    dummyProps.put("mapreduce.jobhistory.webapp.address", "dummyhost:11238");
-    dummyProps.put("yarn.resourcemanager.webapp.address", "dummyhost:11239");
-  
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
-    
-    // populate the mr props to the Configuration instance
-    for (Entry<String, String> entry : dummyProps.entrySet()) {
-      hbt.getConfiguration().set(entry.getKey(), entry.getValue());
-    }
-    
-    for (Entry<String,String> entry : dummyProps.entrySet()) {
-      assertTrue("The Configuration for key " + entry.getKey() +" and value: " + entry.getValue() +
-                 " is not populated correctly", hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()));
-    }
 
-    hbt.startMiniMapReduceCluster();
-    
-    // Confirm that MiniMapReduceCluster overwrites the mr properties and updates the Configuration 
-    for (Entry<String,String> entry : dummyProps.entrySet()) {
-      assertFalse("The MR prop: " + entry.getValue() + " is not overwritten when map reduce mini"+
-                  "cluster is started", hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()));
+  // This test demonstrates how long killHBTU takes vs. shutdownHBTU takes
+  // for realistic results, adjust NUMROWS, NUMTABLES to much larger number.
+  @Test
+  public void testKillMiniHBaseCluster() throws Exception {
+
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    htu.startMiniZKCluster();
+
+    try {
+      htu.startMiniHBaseCluster();
+
+      TableName tableName;
+      byte[] FAM_NAME;
+
+      for(int i = 0; i < NUMTABLES; i++) {
+        tableName = TableName.valueOf(name.getMethodName() + i);
+        FAM_NAME = Bytes.toBytes("fam" + i);
+
+        try (Table table = htu.createMultiRegionTable(tableName, FAM_NAME, NUMREGIONS)) {
+          htu.loadRandomRows(table, FAM_NAME, 100, NUMROWS);
+        }
+      }
+    } finally {
+      htu.killMiniHBaseCluster();
+      htu.shutdownMiniZKCluster();
     }
-    
-    hbt.shutdownMiniMapReduceCluster();
   }
 }

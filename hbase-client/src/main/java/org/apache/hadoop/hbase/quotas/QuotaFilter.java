@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Strings;
 
 /**
  * Filter to use to filter the QuotaRetriever results.
@@ -33,6 +33,7 @@ public class QuotaFilter {
   private String namespaceRegex;
   private String tableRegex;
   private String userRegex;
+  private String regionServerRegex;
 
   public QuotaFilter() {
   }
@@ -44,7 +45,7 @@ public class QuotaFilter {
    */
   public QuotaFilter setUserFilter(final String regex) {
     this.userRegex = regex;
-    hasFilters |= !Strings.isEmpty(regex);
+    hasFilters |= StringUtils.isNotEmpty(regex);
     return this;
   }
 
@@ -55,7 +56,7 @@ public class QuotaFilter {
    */
   public QuotaFilter setTableFilter(final String regex) {
     this.tableRegex = regex;
-    hasFilters |= !Strings.isEmpty(regex);
+    hasFilters |= StringUtils.isNotEmpty(regex);
     return this;
   }
 
@@ -66,7 +67,18 @@ public class QuotaFilter {
    */
   public QuotaFilter setNamespaceFilter(final String regex) {
     this.namespaceRegex = regex;
-    hasFilters |= !Strings.isEmpty(regex);
+    hasFilters |= StringUtils.isNotEmpty(regex);
+    return this;
+  }
+
+  /**
+   * Set the region server filter regex
+   * @param regex the region server filter
+   * @return the quota filter object
+   */
+  public QuotaFilter setRegionServerFilter(final String regex) {
+    this.regionServerRegex = regex;
+    hasFilters |= StringUtils.isNotEmpty(regex);
     return this;
   }
 
@@ -104,5 +116,10 @@ public class QuotaFilter {
   /** @return the User filter regex */
   public String getUserFilter() {
     return userRegex;
+  }
+
+  /** @return the RegionServer filter regex */
+  public String getRegionServerFilter() {
+    return regionServerRegex;
   }
 }

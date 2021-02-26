@@ -19,7 +19,7 @@
  */
 ////
 
-= Apache HBase (TM) Reference Guide 
+= Apache HBase (TM) Reference Guide
 :Author: Apache HBase Team
 :Email: <hbase-dev@lists.apache.org>
 :doctype: book
@@ -38,13 +38,16 @@
 :experimental:
 :source-language: java
 :leveloffset: 0
+:stem:
 
 // Logo for HTML -- doesn't render in PDF
+ifdef::backend-html5[]
 ++++
 <div>
-  <a href="http://hbase.apache.org"><img src="images/hbase_logo_with_orca.png" alt="Apache HBase Logo" /></a>
+  <a href="https://hbase.apache.org"><img src="images/hbase_logo_with_orca.png" alt="Apache HBase Logo" /></a>
 </div>
 ++++
+endif::[]
 
 // The directory is called _chapters because asciidoctor skips direct
 // processing of files found in directories starting with an _. This
@@ -62,26 +65,32 @@ include::_chapters/mapreduce.adoc[]
 include::_chapters/security.adoc[]
 include::_chapters/architecture.adoc[]
 include::_chapters/hbase_mob.adoc[]
+include::_chapters/snapshot_scanner.adoc[]
+include::_chapters/inmemory_compaction.adoc[]
+include::_chapters/offheap_read_write.adoc[]
 include::_chapters/hbase_apis.adoc[]
 include::_chapters/external_apis.adoc[]
 include::_chapters/thrift_filter_language.adoc[]
 include::_chapters/spark.adoc[]
 include::_chapters/cp.adoc[]
 include::_chapters/performance.adoc[]
+include::_chapters/profiler.adoc[]
 include::_chapters/troubleshooting.adoc[]
 include::_chapters/case_studies.adoc[]
 include::_chapters/ops_mgt.adoc[]
 include::_chapters/developer.adoc[]
 include::_chapters/unit_testing.adoc[]
 include::_chapters/protobuf.adoc[]
+include::_chapters/pv2.adoc[]
+include::_chapters/amv2.adoc[]
 include::_chapters/zookeeper.adoc[]
 include::_chapters/community.adoc[]
+include::_chapters/hbtop.adoc[]
 
 = Appendix
 
 include::_chapters/appendix_contributing_to_documentation.adoc[]
 include::_chapters/faq.adoc[]
-include::_chapters/hbck_in_depth.adoc[]
 include::_chapters/appendix_acl_matrix.adoc[]
 include::_chapters/compression.adoc[]
 include::_chapters/sql.adoc[]
@@ -91,7 +100,5 @@ include::_chapters/other_info.adoc[]
 include::_chapters/hbase_history.adoc[]
 include::_chapters/asf.adoc[]
 include::_chapters/orca.adoc[]
-include::_chapters/tracing.adoc[]
 include::_chapters/rpc.adoc[]
-
-
+include::_chapters/appendix_hbase_incompatibilities.adoc[]

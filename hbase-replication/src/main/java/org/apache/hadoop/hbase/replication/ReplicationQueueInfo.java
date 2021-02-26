@@ -23,37 +23,35 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ServerName;
 
 /**
- * This class is responsible for the parsing logic for a znode representing a queue.
+ * This class is responsible for the parsing logic for a queue id representing a queue.
  * It will extract the peerId if it's recovered as well as the dead region servers
  * that were part of the queue's history.
  */
 @InterfaceAudience.Private
 public class ReplicationQueueInfo {
-  private static final Log LOG = LogFactory.getLog(ReplicationQueueInfo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationQueueInfo.class);
 
   private final String peerId;
-  private final String peerClusterZnode;
+  private final String queueId;
   private boolean queueRecovered;
   // List of all the dead region servers that had this queue (if recovered)
-  private List<String> deadRegionServers = new ArrayList<>();
+  private List<ServerName> deadRegionServers = new ArrayList<>();
 
   /**
-   * The passed znode will be either the id of the peer cluster or
-   * the handling story of that queue in the form of id-servername-*
+   * The passed queueId will be either the id of the peer or the handling story of that queue
+   * in the form of id-servername-*
    */
-  public ReplicationQueueInfo(String znode) {
-    this.peerClusterZnode = znode;
-    String[] parts = znode.split("-", 2);
+  public ReplicationQueueInfo(String queueId) {
+    this.queueId = queueId;
+    String[] parts = queueId.split("-", 2);
     this.queueRecovered = parts.length != 1;
-    this.peerId = this.queueRecovered ?
-        parts[0] : peerClusterZnode;
+    this.peerId = this.queueRecovered ? parts[0] : queueId;
     if (parts.length >= 2) {
       // extract dead servers
       extractDeadServersFromZNodeString(parts[1], this.deadRegionServers);
@@ -61,12 +59,12 @@ public class ReplicationQueueInfo {
   }
 
   /**
-   * Parse dead server names from znode string servername can contain "-" such as
+   * Parse dead server names from queue id. servername can contain "-" such as
    * "ip-10-46-221-101.ec2.internal", so we need skip some "-" during parsing for the following
    * cases: 2-ip-10-46-221-101.ec2.internal,52170,1364333181125-&lt;server name>-...
    */
   private static void
-      extractDeadServersFromZNodeString(String deadServerListStr, List<String> result) {
+      extractDeadServersFromZNodeString(String deadServerListStr, List<ServerName> result) {
 
     if(deadServerListStr == null || result == null || deadServerListStr.isEmpty()) return;
 
@@ -85,7 +83,7 @@ public class ReplicationQueueInfo {
           if (i > startIndex) {
             String serverName = deadServerListStr.substring(startIndex, i);
             if(ServerName.isFullServerName(serverName)){
-              result.add(serverName);
+              result.add(ServerName.valueOf(serverName));
             } else {
               LOG.error("Found invalid server name:" + serverName);
             }
@@ -103,7 +101,7 @@ public class ReplicationQueueInfo {
     if(startIndex < len - 1){
       String serverName = deadServerListStr.substring(startIndex, len);
       if(ServerName.isFullServerName(serverName)){
-        result.add(serverName);
+        result.add(ServerName.valueOf(serverName));
       } else {
         LOG.error("Found invalid server name at the end:" + serverName);
       }
@@ -112,7 +110,7 @@ public class ReplicationQueueInfo {
     LOG.debug("Found dead servers:" + result);
   }
 
-  public List<String> getDeadRegionServers() {
+  public List<ServerName> getDeadRegionServers() {
     return Collections.unmodifiableList(this.deadRegionServers);
   }
 
@@ -120,8 +118,8 @@ public class ReplicationQueueInfo {
     return this.peerId;
   }
 
-  public String getPeerClusterZnode() {
-    return this.peerClusterZnode;
+  public String getQueueId() {
+    return this.queueId;
   }
 
   public boolean isQueueRecovered() {

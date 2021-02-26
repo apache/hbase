@@ -37,10 +37,8 @@ class SpaceLimitSettings extends QuotaSettings {
   private final SpaceLimitRequest proto;
 
   SpaceLimitSettings(TableName tableName, long sizeLimit, SpaceViolationPolicy violationPolicy) {
-    super(null, Objects.requireNonNull(tableName), null);
-    if (sizeLimit < 0L) {
-      throw new IllegalArgumentException("Size limit must be a non-negative value.");
-    }
+    super(null, Objects.requireNonNull(tableName), null, null);
+    validateSizeLimit(sizeLimit);
     proto = buildProtoAddQuota(sizeLimit, Objects.requireNonNull(violationPolicy));
   }
 
@@ -48,15 +46,13 @@ class SpaceLimitSettings extends QuotaSettings {
    * Constructs a {@code SpaceLimitSettings} to remove a space quota on the given {@code tableName}.
    */
   SpaceLimitSettings(TableName tableName) {
-    super(null, Objects.requireNonNull(tableName), null);
+    super(null, Objects.requireNonNull(tableName), null, null);
     proto = buildProtoRemoveQuota();
   }
 
   SpaceLimitSettings(String namespace, long sizeLimit, SpaceViolationPolicy violationPolicy) {
-    super(null, null, Objects.requireNonNull(namespace));
-    if (sizeLimit < 0L) {
-      throw new IllegalArgumentException("Size limit must be a non-negative value.");
-    }
+    super(null, null, Objects.requireNonNull(namespace), null);
+    validateSizeLimit(sizeLimit);
     proto = buildProtoAddQuota(sizeLimit, Objects.requireNonNull(violationPolicy));
   }
 
@@ -64,12 +60,12 @@ class SpaceLimitSettings extends QuotaSettings {
    * Constructs a {@code SpaceLimitSettings} to remove a space quota on the given {@code namespace}.
    */
   SpaceLimitSettings(String namespace) {
-    super(null, null, Objects.requireNonNull(namespace));
+    super(null, null, Objects.requireNonNull(namespace), null);
     proto = buildProtoRemoveQuota();
   }
 
   SpaceLimitSettings(TableName tableName, String namespace, SpaceLimitRequest req) {
-    super(null, tableName, namespace);
+    super(null, tableName, namespace, null);
     proto = req;
   }
 
@@ -205,7 +201,7 @@ class SpaceLimitSettings extends QuotaSettings {
     if (proto.getQuota().getRemove()) {
       sb.append(", REMOVE => ").append(proto.getQuota().getRemove());
     } else {
-      sb.append(", LIMIT => ").append(proto.getQuota().getSoftLimit());
+      sb.append(", LIMIT => ").append(sizeToString(proto.getQuota().getSoftLimit()));
       sb.append(", VIOLATION_POLICY => ").append(proto.getQuota().getViolationPolicy());
     }
     return sb.toString();
@@ -239,5 +235,12 @@ class SpaceLimitSettings extends QuotaSettings {
       // else, we don't know what to do, so return the original object
     }
     return this;
+  }
+
+  // Helper function to validate sizeLimit
+  private void validateSizeLimit(long sizeLimit) {
+    if (sizeLimit < 0L) {
+      throw new IllegalArgumentException("Size limit must be a non-negative value.");
+    }
   }
 }

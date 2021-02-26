@@ -24,16 +24,15 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to perform Increment operations on a single row.
@@ -47,9 +46,9 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * {@link #addColumn(byte[], byte[], long)} method.
  */
 @InterfaceAudience.Public
-public class Increment extends Mutation implements Comparable<Row> {
-  private static final long HEAP_OVERHEAD =  ClassSize.REFERENCE + ClassSize.TIMERANGE;
-  private TimeRange tr = new TimeRange();
+public class Increment extends Mutation {
+  private static final int HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
+  private TimeRange tr = TimeRange.allTime();
 
   /**
    * Create a Increment operation for the specified row.
@@ -73,17 +72,23 @@ public class Increment extends Mutation implements Comparable<Row> {
   }
   /**
    * Copy constructor
-   * @param i
+   * @param incrementToCopy increment to copy
    */
-  public Increment(Increment i) {
-    this.row = i.getRow();
-    this.ts = i.getTimeStamp();
-    this.tr = i.getTimeRange();
-    this.familyMap.putAll(i.getFamilyCellMap());
-    for (Map.Entry<String, byte[]> entry : i.getAttributesMap().entrySet()) {
-      this.setAttribute(entry.getKey(), entry.getValue());
-    }
-    super.setPriority(i.getPriority());
+  public Increment(Increment incrementToCopy) {
+    super(incrementToCopy);
+    this.tr = incrementToCopy.getTimeRange();
+  }
+
+  /**
+   * Construct the Increment with user defined data. NOTED:
+   * 1) all cells in the familyMap must have the Type.Put
+   * 2) the row of each cell must be same with passed row.
+   * @param row row. CAN'T be null
+   * @param ts timestamp
+   * @param familyMap the map to collect all cells internally. CAN'T be null
+   */
+  public Increment(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+    super(row, ts, familyMap);
   }
 
   /**
@@ -93,14 +98,7 @@ public class Increment extends Mutation implements Comparable<Row> {
    * @throws java.io.IOException e
    */
   public Increment add(Cell cell) throws IOException{
-    byte [] family = CellUtil.cloneFamily(cell);
-    List<Cell> list = getCellList(family);
-    //Checking that the row of the kv is the same as the put
-    if (!CellUtil.matchingRow(cell, this.row)) {
-      throw new WrongRowIOException("The row in " + cell +
-        " doesn't match the original one " +  Bytes.toStringBinary(this.row));
-    }
-    list.add(cell);
+    super.add(cell);
     return this;
   }
 
@@ -139,6 +137,8 @@ public class Increment extends Mutation implements Comparable<Row> {
    * periods of time (ie. counters that are partitioned by time).  By setting
    * the range of valid times for this increment, you can potentially gain
    * some performance with a more optimal Get operation.
+   * Be careful adding the time range to this class as you will update the old cell if the
+   * time range doesn't include the latest cells.
    * <p>
    * This range is used as [minStamp, maxStamp).
    * @param minStamp minimum timestamp value, inclusive
@@ -151,12 +151,19 @@ public class Increment extends Mutation implements Comparable<Row> {
     tr = new TimeRange(minStamp, maxStamp);
     return this;
   }
-  
+
+  @Override
+  public Increment setTimestamp(long timestamp) {
+    super.setTimestamp(timestamp);
+    return this;
+  }
+
   /**
    * @param returnResults True (default) if the increment operation should return the results. A
    *          client that is not interested in the result can save network bandwidth setting this
    *          to false.
    */
+  @Override
   public Increment setReturnResults(boolean returnResults) {
     super.setReturnResults(returnResults);
     return this;
@@ -166,6 +173,7 @@ public class Increment extends Mutation implements Comparable<Row> {
    * @return current setting for returnResults
    */
   // This method makes public the superclasses's protected method.
+  @Override
   public boolean isReturnResults() {
     return super.isReturnResults();
   }
@@ -254,12 +262,11 @@ public class Increment extends Mutation implements Comparable<Row> {
     return sb.toString();
   }
 
-  @Override
-  public int compareTo(Row i) {
-    // TODO: This is wrong.  Can't have two the same just because on same row.
-    return Bytes.compareTo(this.getRow(), i.getRow());
-  }
-
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             No replacement.
+   */
+  @Deprecated
   @Override
   public int hashCode() {
     // TODO: This is wrong.  Can't have two gets the same just because on same row.  But it
@@ -267,6 +274,11 @@ public class Increment extends Mutation implements Comparable<Row> {
     return Bytes.hashCode(this.getRow());
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Row#COMPARATOR} instead
+   */
+  @Deprecated
   @Override
   public boolean equals(Object obj) {
     // TODO: This is wrong.  Can't have two the same just because on same row.
@@ -300,6 +312,12 @@ public class Increment extends Mutation implements Comparable<Row> {
     return (Increment) super.setDurability(d);
   }
 
+  /**
+   * Method for setting the Increment's familyMap
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Increment#Increment(byte[], long, NavigableMap)} instead
+   */
+  @Deprecated
   @Override
   public Increment setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Increment) super.setFamilyCellMap(map);

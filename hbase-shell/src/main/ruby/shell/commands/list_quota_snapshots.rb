@@ -65,7 +65,7 @@ EOF
       def get_policy(status)
         # Unwrap the violation policy if it exists
         if status.isInViolation
-          status.getPolicy.name
+          status.getPolicy.get.name
         else
           'None'
         end

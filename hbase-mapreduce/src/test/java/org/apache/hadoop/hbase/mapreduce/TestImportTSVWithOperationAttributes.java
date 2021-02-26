@@ -25,27 +25,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -53,25 +45,35 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithOperationAttributes implements Configurable {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
-  private static final Log LOG = LogFactory.getLog(TestImportTSVWithOperationAttributes.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestImportTSVWithOperationAttributes.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestImportTSVWithOperationAttributes.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -95,10 +97,12 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
   @Rule
   public TestName name = new TestName();
 
+  @Override
   public Configuration getConf() {
     return util.getConfiguration();
   }
 
+  @Override
   public void setConf(Configuration conf) {
     throw new IllegalArgumentException("setConf not supported");
   }
@@ -118,7 +122,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
   @Test
   public void testMROnTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -134,7 +138,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
   @Test
   public void testMROnTableWithInvalidOperationAttr() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -218,8 +222,8 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
             LOG.debug("Getting results " + res.size());
             assertTrue(res.size() == 2);
             List<Cell> kvs = res.listCells();
-            assertTrue(CellUtil.matchingRow(kvs.get(0), Bytes.toBytes("KEY")));
-            assertTrue(CellUtil.matchingRow(kvs.get(1), Bytes.toBytes("KEY")));
+            assertTrue(CellUtil.matchingRows(kvs.get(0), Bytes.toBytes("KEY")));
+            assertTrue(CellUtil.matchingRows(kvs.get(1), Bytes.toBytes("KEY")));
             assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
             assertTrue(CellUtil.matchingValue(kvs.get(1),
                 Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
@@ -261,7 +265,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
         Durability durability) throws IOException {
       Region region = e.getEnvironment().getRegion();
-      if (!region.getRegionInfo().isMetaTable()
+      if (!region.getRegionInfo().isMetaRegion()
           && !region.getRegionInfo().getTable().isSystemTable()) {
         if (put.getAttribute(TEST_ATR_KEY) != null) {
           LOG.debug("allow any put to happen " + region.getRegionInfo().getRegionNameAsString());

@@ -1,18 +1,19 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile;
 
@@ -26,20 +27,23 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.RedundantKVGenerator;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -47,8 +51,13 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-@Category({IOTests.class, SmallTests.class})
+@Category({IOTests.class, MediumTests.class})
 public class TestHFileDataBlockEncoder {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHFileDataBlockEncoder.class);
+
   private HFileDataBlockEncoder blockEncoder;
   private RedundantKVGenerator generator = new RedundantKVGenerator();
   private boolean includesMemstoreTS;
@@ -124,9 +133,8 @@ public class TestHFileDataBlockEncoder {
                         .withBlockSize(0)
                         .withChecksumType(ChecksumType.NULL)
                         .build();
-    HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, 0,
-        0, -1, hfileContext);
+    HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
+        HFileBlock.FILL_HEADER, 0, 0, -1, hfileContext, ByteBuffAllocator.HEAP);
     HFileBlock cacheBlock = createBlockOnDisk(kvs, block, useTags);
     assertEquals(headerSize, cacheBlock.getDummyHeaderForVersion().length);
   }
@@ -149,10 +157,6 @@ public class TestHFileDataBlockEncoder {
   @Test
   public void testEncodingWithOffheapKeyValue() throws IOException {
     // usually we have just block without headers, but don't complicate that
-    if(blockEncoder.getDataBlockEncoding() == DataBlockEncoding.PREFIX_TREE) {
-      // This is a TODO: Only after PrefixTree is fixed we can remove this check
-      return;
-    }
     try {
       List<Cell> kvs = generator.generateTestExtendedOffheapKeyValues(60, true);
       HFileContext meta = new HFileContextBuilder().withIncludesMvcc(includesMemstoreTS)
@@ -195,9 +199,8 @@ public class TestHFileDataBlockEncoder {
                         .withBlockSize(0)
                         .withChecksumType(ChecksumType.NULL)
                         .build();
-    HFileBlock b = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, 0, 
-         0, -1, meta);
+    HFileBlock b = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
+        HFileBlock.FILL_HEADER, 0, 0, -1, meta, ByteBuffAllocator.HEAP);
     return b;
   }
 
@@ -218,9 +221,9 @@ public class TestHFileDataBlockEncoder {
     blockEncoder.endBlockEncoding(context, dos, baos.getBuffer(), BlockType.DATA);
     byte[] encodedBytes = baos.toByteArray();
     size = encodedBytes.length - block.getDummyHeaderForVersion().length;
-    return new HFileBlock(context.getBlockType(), size, size, -1, ByteBuffer.wrap(encodedBytes),
-        HFileBlock.FILL_HEADER, 0, block.getOnDiskDataSizeWithHeader(), -1,
-        block.getHFileContext());
+    return new HFileBlock(context.getBlockType(), size, size, -1,
+        ByteBuff.wrap(ByteBuffer.wrap(encodedBytes)), HFileBlock.FILL_HEADER, 0,
+        block.getOnDiskDataSizeWithHeader(), -1, block.getHFileContext(), ByteBuffAllocator.HEAP);
   }
 
   private void writeBlock(List<Cell> kvs, HFileContext fileContext, boolean useTags)
@@ -247,7 +250,7 @@ public class TestHFileDataBlockEncoder {
 
     for (DataBlockEncoding diskAlgo : DataBlockEncoding.values()) {
       for (boolean includesMemstoreTS : new boolean[] { false, true }) {
-        HFileDataBlockEncoder dbe = (diskAlgo == DataBlockEncoding.NONE) ? 
+        HFileDataBlockEncoder dbe = (diskAlgo == DataBlockEncoding.NONE) ?
             NoOpDataBlockEncoder.INSTANCE : new HFileDataBlockEncoderImpl(diskAlgo);
         configurations.add(new Object[] { dbe, new Boolean(includesMemstoreTS) });
       }

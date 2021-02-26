@@ -1,20 +1,19 @@
 /**
- * Copyright The Apache Software Foundation
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
 
@@ -28,13 +27,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -61,19 +58,27 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Test cases against ReversibleKeyValueScanner
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestReversibleScanners {
-  private static final Log LOG = LogFactory.getLog(TestReversibleScanners.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReversibleScanners.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestReversibleScanners.class);
   HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static byte[] FAMILYNAME = Bytes.toBytes("testCf");
@@ -94,7 +99,8 @@ public class TestReversibleScanners {
 
   @BeforeClass
   public static void setUp() {
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
   @Test
   public void testReversibleStoreFileScanner() throws IOException {
@@ -265,7 +271,7 @@ public class TestReversibleScanners {
 
     ScanInfo scanInfo =
         new ScanInfo(TEST_UTIL.getConfiguration(), FAMILYNAME, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
-            KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.COMPARATOR, false);
+            KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparatorImpl.COMPARATOR, false);
 
     // Case 1.Test a full reversed scan
     Scan scan = new Scan();
@@ -321,7 +327,7 @@ public class TestReversibleScanners {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()))
         .addFamily(new HColumnDescriptor(FAMILYNAME))
         .addFamily(new HColumnDescriptor(FAMILYNAME2));
-    Region region = TEST_UTIL.createLocalHRegion(htd, null, null);
+    HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
     loadDataToRegion(region, FAMILYNAME2);
 
     // verify row count with forward scan
@@ -486,7 +492,7 @@ public class TestReversibleScanners {
   private ReversedKeyValueHeap getReversibleKeyValueHeap(MemStore memstore, HStoreFile sf1,
       HStoreFile sf2, byte[] startRow, int readPoint) throws IOException {
     List<KeyValueScanner> scanners = getScanners(memstore, sf1, sf2, startRow, true, readPoint);
-    ReversedKeyValueHeap kvHeap = new ReversedKeyValueHeap(scanners, CellComparator.COMPARATOR);
+    ReversedKeyValueHeap kvHeap = new ReversedKeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
     return kvHeap;
   }
 
@@ -641,7 +647,7 @@ public class TestReversibleScanners {
     return nextReadableNum;
   }
 
-  private static void loadDataToRegion(Region region, byte[] additionalFamily)
+  private static void loadDataToRegion(HRegion region, byte[] additionalFamily)
       throws IOException {
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);

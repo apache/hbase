@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hbase.coprocessor.example;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -35,10 +37,7 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Sample coprocessor endpoint exposing a Service interface for counting rows and key values.
@@ -48,6 +47,7 @@ import com.google.protobuf.Service;
  * hbase-examples/src/main/protobuf/Examples.proto.
  * </p>
  */
+@InterfaceAudience.Private
 public class RowCountEndpoint extends ExampleProtos.RowCountService implements RegionCoprocessor {
   private RegionCoprocessorEnvironment env;
 

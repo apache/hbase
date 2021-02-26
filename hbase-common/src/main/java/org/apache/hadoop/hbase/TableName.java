@@ -24,8 +24,8 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Immutable POJO class for representing a table name.
@@ -141,7 +141,7 @@ public final class TableName implements Comparable<TableName> {
     }
 
     int namespaceDelimIndex =
-      org.apache.hadoop.hbase.shaded.com.google.common.primitives.Bytes.lastIndexOf(tableName,
+      org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.lastIndexOf(tableName,
         (byte) NAMESPACE_DELIM);
     if (namespaceDelimIndex < 0){
       isLegalTableQualifierName(tableName);
@@ -185,16 +185,14 @@ public final class TableName implements Comparable<TableName> {
     if(end - start < 1) {
       throw new IllegalArgumentException(isSnapshot ? "Snapshot" : "Table" + " qualifier must not be empty");
     }
+    String qualifierString = Bytes.toString(qualifierName, start, end - start);
     if (qualifierName[start] == '.' || qualifierName[start] == '-') {
       throw new IllegalArgumentException("Illegal first character <" + qualifierName[start] +
                                          "> at 0. " + (isSnapshot ? "Snapshot" : "User-space table") +
                                          " qualifiers can only start with 'alphanumeric " +
                                          "characters' from any language: " +
-                                         Bytes.toString(qualifierName, start, end));
+                                         qualifierString);
     }
-    // Treat the bytes as UTF-8
-    String qualifierString = new String(
-        qualifierName, start, (end - start), StandardCharsets.UTF_8);
     if (qualifierString.equals(DISALLOWED_TABLE_NAME)) {
       // Per https://zookeeper.apache.org/doc/r3.4.10/zookeeperProgrammers.html#ch_zkDataModel
       // A znode named "zookeeper" is disallowed by zookeeper.
@@ -286,6 +284,9 @@ public final class TableName implements Comparable<TableName> {
     return qualifierAsString;
   }
 
+  /**
+   * @return A pointer to TableName as String bytes.
+   */
   public byte[] toBytes() {
     return name;
   }
@@ -436,7 +437,7 @@ public final class TableName implements Comparable<TableName> {
     }
 
     int namespaceDelimIndex =
-      org.apache.hadoop.hbase.shaded.com.google.common.primitives.Bytes.lastIndexOf(fullName,
+      org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.lastIndexOf(fullName,
         (byte) NAMESPACE_DELIM);
 
     if (namespaceDelimIndex < 0) {

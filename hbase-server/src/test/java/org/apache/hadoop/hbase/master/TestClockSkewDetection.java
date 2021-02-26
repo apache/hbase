@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,30 +22,31 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.InetAddress;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestClockSkewDetection {
-  private static final Log LOG =
-    LogFactory.getLog(TestClockSkewDetection.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestClockSkewDetection.class);
+
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestClockSkewDetection.class);
 
   @Test
   public void testClockSkewDetection() throws Exception {
@@ -58,7 +58,7 @@ public class TestClockSkewDetection {
         when(conn.getRpcControllerFactory()).thenReturn(mock(RpcControllerFactory.class));
         return conn;
       }
-    }, true);
+    });
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();
@@ -66,7 +66,7 @@ public class TestClockSkewDetection {
     request.setPort(1234);
     request.setServerStartCode(-1);
     request.setServerCurrentTime(System.currentTimeMillis());
-    sm.regionServerStartup(request.build(), ia1);
+    sm.regionServerStartup(request.build(), 0, "0.0.0", ia1);
 
     final Configuration c = HBaseConfiguration.create();
     long maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
@@ -81,7 +81,7 @@ public class TestClockSkewDetection {
       request.setPort(1235);
       request.setServerStartCode(-1);
       request.setServerCurrentTime(System.currentTimeMillis() - maxSkew * 2);
-      sm.regionServerStartup(request.build(), ia2);
+      sm.regionServerStartup(request.build(), 0, "0.0.0", ia2);
       fail("HMaster should have thrown a ClockOutOfSyncException but didn't.");
     } catch(ClockOutOfSyncException e) {
       //we want an exception
@@ -97,7 +97,7 @@ public class TestClockSkewDetection {
       request.setPort(1236);
       request.setServerStartCode(-1);
       request.setServerCurrentTime(System.currentTimeMillis() + maxSkew * 2);
-      sm.regionServerStartup(request.build(), ia3);
+      sm.regionServerStartup(request.build(), 0, "0.0.0", ia3);
       fail("HMaster should have thrown a ClockOutOfSyncException but didn't.");
     } catch (ClockOutOfSyncException e) {
       // we want an exception
@@ -111,7 +111,7 @@ public class TestClockSkewDetection {
     request.setPort(1237);
     request.setServerStartCode(-1);
     request.setServerCurrentTime(System.currentTimeMillis() - warningSkew * 2);
-    sm.regionServerStartup(request.build(), ia4);
+    sm.regionServerStartup(request.build(), 0, "0.0.0", ia4);
 
     // make sure values above warning threshold but below max threshold don't kill
     LOG.debug("regionServerStartup 5");
@@ -120,9 +120,6 @@ public class TestClockSkewDetection {
     request.setPort(1238);
     request.setServerStartCode(-1);
     request.setServerCurrentTime(System.currentTimeMillis() + warningSkew * 2);
-    sm.regionServerStartup(request.build(), ia5);
-
+    sm.regionServerStartup(request.build(), 0, "0.0.0", ia5);
   }
-
 }
-

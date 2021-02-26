@@ -81,6 +81,12 @@ message Get {
   // the existence.
   optional bool existence_only = 10 [default = false];
 
+  // If the row to get doesn't exist, return the
+  // closest row before. Deprecated. No longer used!
+  // Since hbase-2.0.0 but left in place so can test
+  // for Gets with this set and throw Exception.
+  optional bool closest_row_before = 11 [default = false];
+
   optional Consistency consistency = 12 [default = STRONG];
   repeated ColumnFamilyTimeRange cf_time_range = 13;
   optional bool load_column_families_on_demand = 14; /* DO NOT add defaults to load_column_families_on_demand. */
@@ -133,10 +139,12 @@ message GetResponse {
  */
 message Condition {
   required bytes row = 1;
-  required bytes family = 2;
-  required bytes qualifier = 3;
-  required CompareType compare_type = 4;
-  required Comparator comparator = 5;
+  optional bytes family = 2;
+  optional bytes qualifier = 3;
+  optional CompareType compare_type = 4;
+  optional Comparator comparator = 5;
+  optional TimeRange time_range = 6;
+  optional Filter filter = 7;
 }
 
 
@@ -371,6 +379,8 @@ message BulkLoadHFileRequest {
   optional DelegationToken fs_token = 4;
   optional string bulk_token = 5;
   optional bool copy_file = 6 [default = false];
+  repeated string cluster_ids = 7;
+  optional bool replicate = 8 [default = true];
 
   message FamilyPath {
     required bytes family = 1;
@@ -445,6 +455,7 @@ message RegionAction {
   // When set, run mutations as atomic unit.
   optional bool atomic = 2;
   repeated Action action = 3;
+  optional Condition condition = 4;
 }
 
 /*
@@ -489,6 +500,7 @@ message RegionActionResult {
   repeated ResultOrException resultOrException = 1;
   // If the operation failed globally for this region, this exception is set
   optional NameBytesPair exception = 2;
+  optional bool processed = 3;
 }
 
 /**
@@ -501,13 +513,16 @@ message RegionActionResult {
 message MultiRequest {
   repeated RegionAction regionAction = 1;
   optional uint64 nonceGroup = 2;
-  optional Condition condition = 3;
+  // Moved this to RegionAction in HBASE-8458. Keep it for backward compatibility. Need to remove
+  // it in the future.
+  optional Condition condition = 3 [deprecated=true];
 }
 
 message MultiResponse {
   repeated RegionActionResult regionActionResult = 1;
-  // used for mutate to indicate processed only
-  optional bool processed = 2;
+  // Moved this to RegionActionResult in HBASE-8458. Keep it for backward compatibility. Need to
+  // remove it in the future.
+  optional bool processed = 2 [deprecated=true];
   optional MultiRegionLoadStats regionStatistics = 3;
 }
 

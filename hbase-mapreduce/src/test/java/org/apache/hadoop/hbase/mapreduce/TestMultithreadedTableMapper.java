@@ -25,15 +25,13 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -48,8 +46,11 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
@@ -58,7 +59,12 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestMultithreadedTableMapper {
-  private static final Log LOG = LogFactory.getLog(TestMultithreadedTableMapper.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultithreadedTableMapper.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultithreadedTableMapper.class);
   private static final HBaseTestingUtility UTIL =
       new HBaseTestingUtility();
   static final TableName MULTI_REGION_TABLE_NAME = TableName.valueOf("mrtest");

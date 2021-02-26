@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.EnumMap;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,12 +37,12 @@ public class CompressionContext {
   static final String ENABLE_WAL_TAGS_COMPRESSION =
       "hbase.regionserver.wal.tags.enablecompression";
 
-  // visible only for WALKey, until we move everything into o.a.h.h.wal
-  public final Dictionary regionDict;
-  public final Dictionary tableDict;
-  public final Dictionary familyDict;
-  final Dictionary qualifierDict;
-  final Dictionary rowDict;
+  public enum DictionaryIndex {
+    REGION, TABLE, FAMILY, QUALIFIER, ROW
+  }
+
+  private final Map<DictionaryIndex, Dictionary> dictionaries =
+      new EnumMap<>(DictionaryIndex.class);
   // Context used for compressing tags
   TagCompressionContext tagCompressionContext = null;
 
@@ -49,33 +51,35 @@ public class CompressionContext {
       InstantiationException, IllegalAccessException, InvocationTargetException {
     Constructor<? extends Dictionary> dictConstructor =
         dictType.getConstructor();
-    regionDict = dictConstructor.newInstance();
-    tableDict = dictConstructor.newInstance();
-    familyDict = dictConstructor.newInstance();
-    qualifierDict = dictConstructor.newInstance();
-    rowDict = dictConstructor.newInstance();
-    if (recoveredEdits) {
-      // This will never change
-      regionDict.init(1);
-      tableDict.init(1);
-    } else {
-      regionDict.init(Short.MAX_VALUE);
-      tableDict.init(Short.MAX_VALUE);
+    for (DictionaryIndex dictionaryIndex : DictionaryIndex.values()) {
+      Dictionary newDictionary = dictConstructor.newInstance();
+      dictionaries.put(dictionaryIndex, newDictionary);
     }
-    rowDict.init(Short.MAX_VALUE);
-    familyDict.init(Byte.MAX_VALUE);
-    qualifierDict.init(Byte.MAX_VALUE);
+    if(recoveredEdits) {
+      getDictionary(DictionaryIndex.REGION).init(1);
+      getDictionary(DictionaryIndex.TABLE).init(1);
+    } else {
+      getDictionary(DictionaryIndex.REGION).init(Short.MAX_VALUE);
+      getDictionary(DictionaryIndex.TABLE).init(Short.MAX_VALUE);
+    }
+
+    getDictionary(DictionaryIndex.ROW).init(Short.MAX_VALUE);
+    getDictionary(DictionaryIndex.FAMILY).init(Byte.MAX_VALUE);
+    getDictionary(DictionaryIndex.QUALIFIER).init(Byte.MAX_VALUE);
+
     if (hasTagCompression) {
       tagCompressionContext = new TagCompressionContext(dictType, Short.MAX_VALUE);
     }
   }
 
+  public Dictionary getDictionary(Enum dictIndex) {
+    return dictionaries.get(dictIndex);
+  }
+
   void clear() {
-    regionDict.clear();
-    tableDict.clear();
-    familyDict.clear();
-    qualifierDict.clear();
-    rowDict.clear();
+    for(Dictionary dictionary : dictionaries.values()){
+      dictionary.clear();
+    }
     if (tagCompressionContext != null) {
       tagCompressionContext.clear();
     }

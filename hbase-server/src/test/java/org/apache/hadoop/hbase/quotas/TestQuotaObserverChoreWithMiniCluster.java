@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,10 +32,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
@@ -43,25 +42,35 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore.TablesWithQuotas;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 
 /**
  * Test class for {@link QuotaObserverChore} that uses a live HBase cluster.
  */
 @Category(LargeTests.class)
 public class TestQuotaObserverChoreWithMiniCluster {
-  private static final Log LOG = LogFactory.getLog(TestQuotaObserverChoreWithMiniCluster.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestQuotaObserverChoreWithMiniCluster.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestQuotaObserverChoreWithMiniCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final AtomicLong COUNTER = new AtomicLong(0);
   private static final long DEFAULT_WAIT_MILLIS = 500;
@@ -145,14 +154,15 @@ public class TestQuotaObserverChoreWithMiniCluster {
       }
     }
 
-    Entry<TableName,SpaceQuotaSnapshot> entry = Iterables.getOnlyElement(quotaSnapshots.entrySet());
+    Entry<TableName, SpaceQuotaSnapshot> entry =
+      Iterables.getOnlyElement(quotaSnapshots.entrySet());
     assertEquals(tn, entry.getKey());
     final SpaceQuotaSnapshot snapshot = entry.getValue();
-    assertEquals("Snapshot was " + snapshot, violationPolicy, snapshot.getQuotaStatus().getPolicy());
+    assertEquals("Snapshot was " + snapshot, violationPolicy,
+      snapshot.getQuotaStatus().getPolicy().get());
     assertEquals(sizeLimit, snapshot.getLimit());
-    assertTrue(
-        "The usage should be greater than the limit, but were " + snapshot.getUsage() + " and "
-        + snapshot.getLimit() + ", respectively", snapshot.getUsage() > snapshot.getLimit());
+    assertTrue("The usage should be greater than the limit, but were " + snapshot.getUsage() +
+      " and " + snapshot.getLimit() + ", respectively", snapshot.getUsage() > snapshot.getLimit());
   }
 
   @Test
@@ -226,13 +236,13 @@ public class TestQuotaObserverChoreWithMiniCluster {
 
     SpaceQuotaSnapshot snapshot1 = snapshots.remove(tn1);
     assertNotNull("tn1 should be in violation", snapshot1);
-    assertEquals(violationPolicy, snapshot1.getQuotaStatus().getPolicy());
+    assertEquals(violationPolicy, snapshot1.getQuotaStatus().getPolicy().get());
     SpaceQuotaSnapshot snapshot2 = snapshots.remove(tn2);
     assertNotNull("tn2 should be in violation", snapshot2);
-    assertEquals(violationPolicy, snapshot2.getQuotaStatus().getPolicy());
+    assertEquals(violationPolicy, snapshot2.getQuotaStatus().getPolicy().get());
     SpaceQuotaSnapshot snapshot3 = snapshots.remove(tn3);
     assertNotNull("tn3 should be in violation", snapshot3);
-    assertEquals(violationPolicy, snapshot3.getQuotaStatus().getPolicy());
+    assertEquals(violationPolicy, snapshot3.getQuotaStatus().getPolicy().get());
     assertTrue("Unexpected additional quota violations: " + snapshots, snapshots.isEmpty());
   }
 
@@ -289,10 +299,10 @@ public class TestQuotaObserverChoreWithMiniCluster {
 
     SpaceQuotaSnapshot actualPolicyTN1 = snapshots.get(tn1);
     assertNotNull("Expected to see violation policy for tn1", actualPolicyTN1);
-    assertEquals(namespaceViolationPolicy, actualPolicyTN1.getQuotaStatus().getPolicy());
+    assertEquals(namespaceViolationPolicy, actualPolicyTN1.getQuotaStatus().getPolicy().get());
     SpaceQuotaSnapshot actualPolicyTN2 = snapshots.get(tn2);
     assertNotNull("Expected to see violation policy for tn2", actualPolicyTN2);
-    assertEquals(namespaceViolationPolicy, actualPolicyTN2.getQuotaStatus().getPolicy());
+    assertEquals(namespaceViolationPolicy, actualPolicyTN2.getQuotaStatus().getPolicy().get());
 
     // Override the namespace quota with a table quota
     final long tableSizeLimit = SpaceQuotaHelperForTests.ONE_MEGABYTE;
@@ -306,7 +316,7 @@ public class TestQuotaObserverChoreWithMiniCluster {
       snapshots = snapshotNotifier.copySnapshots();
       SpaceQuotaSnapshot actualTableSnapshot = snapshots.get(tn1);
       assertNotNull("Violation policy should never be null", actualTableSnapshot);
-      if (tableViolationPolicy != actualTableSnapshot.getQuotaStatus().getPolicy()) {
+      if (tableViolationPolicy != actualTableSnapshot.getQuotaStatus().getPolicy().orElse(null)) {
         LOG.debug("Saw unexpected table violation policy, waiting and re-checking.");
         try {
           Thread.sleep(DEFAULT_WAIT_MILLIS);
@@ -316,14 +326,14 @@ public class TestQuotaObserverChoreWithMiniCluster {
         }
         continue;
       }
-      assertEquals(tableViolationPolicy, actualTableSnapshot.getQuotaStatus().getPolicy());
+      assertEquals(tableViolationPolicy, actualTableSnapshot.getQuotaStatus().getPolicy().get());
       break;
     }
 
     // This should not change with the introduction of the table quota for tn1
     actualPolicyTN2 = snapshots.get(tn2);
     assertNotNull("Expected to see violation policy for tn2", actualPolicyTN2);
-    assertEquals(namespaceViolationPolicy, actualPolicyTN2.getQuotaStatus().getPolicy());
+    assertEquals(namespaceViolationPolicy, actualPolicyTN2.getQuotaStatus().getPolicy().get());
   }
 
   @Test

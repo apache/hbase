@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -39,8 +38,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 
 /**
  * Trivial test to confirm that we can get last flushed sequence id by encodedRegionName. See
@@ -48,6 +50,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestGetLastFlushedSequenceId {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestGetLastFlushedSequenceId.class);
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
@@ -60,7 +66,7 @@ public class TestGetLastFlushedSequenceId {
   @Before
   public void setUp() throws Exception {
     testUtil.getConfiguration().setInt("hbase.regionserver.msginterval", 1000);
-    testUtil.startMiniCluster(1, 1);
+    testUtil.startMiniCluster();
   }
 
   @After

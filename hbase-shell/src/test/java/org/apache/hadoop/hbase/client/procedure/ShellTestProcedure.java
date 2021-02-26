@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.StringValue;
+import org.apache.hbase.thirdparty.com.google.protobuf.StringValue;
 
 public class ShellTestProcedure extends Procedure<Object> implements TableProcedureInterface {
   private String tableNameString;

@@ -16,14 +16,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
+
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,19 +36,16 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.namespace.QName;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableSchemaMessage.TableSchema;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.annotate.JsonAnyGetter;
-import org.codehaus.jackson.annotate.JsonAnySetter;
-import org.codehaus.jackson.annotate.JsonIgnore;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A representation of HBase table descriptors.
@@ -88,12 +88,11 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    */
   public TableSchemaModel(HTableDescriptor htd) {
     setName(htd.getTableName().getNameAsString());
-    for (Map.Entry<Bytes, Bytes> e:
-        htd.getValues().entrySet()) {
+    for (Map.Entry<Bytes, Bytes> e : htd.getValues().entrySet()) {
       addAttribute(Bytes.toString(e.getKey().get()),
         Bytes.toString(e.getValue().get()));
     }
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
       ColumnSchemaModel columnModel = new ColumnSchemaModel();
       columnModel.setName(hcd.getNameAsString());
       for (Map.Entry<Bytes, Bytes> e:
@@ -191,7 +190,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     sb.append("{ NAME=> '");
     sb.append(name);
     sb.append('\'');
-    for (Map.Entry<QName,Object> e: attrs.entrySet()) {
+    for (Map.Entry<QName,Object> e : attrs.entrySet()) {
       sb.append(", ");
       sb.append(e.getKey().getLocalPart());
       sb.append(" => '");
@@ -222,7 +221,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    */
   public boolean __getIsMeta() {
     Object o = attrs.get(IS_META);
-    return o != null ? Boolean.parseBoolean(o.toString()) : false;
+    return o != null && Boolean.parseBoolean(o.toString());
   }
 
   /**
@@ -230,7 +229,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    */
   public boolean __getIsRoot() {
     Object o = attrs.get(IS_ROOT);
-    return o != null ? Boolean.parseBoolean(o.toString()) : false;
+    return o != null && Boolean.parseBoolean(o.toString());
   }
 
   /**
@@ -266,18 +265,18 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   public byte[] createProtobufOutput() {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.setName(name);
-    for (Map.Entry<QName, Object> e: attrs.entrySet()) {
+    for (Map.Entry<QName, Object> e : attrs.entrySet()) {
       TableSchema.Attribute.Builder attrBuilder =
         TableSchema.Attribute.newBuilder();
       attrBuilder.setName(e.getKey().getLocalPart());
       attrBuilder.setValue(e.getValue().toString());
       builder.addAttrs(attrBuilder);
     }
-    for (ColumnSchemaModel family: columns) {
+    for (ColumnSchemaModel family : columns) {
       Map<QName, Object> familyAttrs = family.getAny();
       ColumnSchema.Builder familyBuilder = ColumnSchema.newBuilder();
       familyBuilder.setName(family.getName());
-      for (Map.Entry<QName, Object> e: familyAttrs.entrySet()) {
+      for (Map.Entry<QName, Object> e : familyAttrs.entrySet()) {
         ColumnSchema.Attribute.Builder attrBuilder =
           ColumnSchema.Attribute.newBuilder();
         attrBuilder.setName(e.getKey().getLocalPart());
@@ -307,16 +306,16 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     TableSchema.Builder builder = TableSchema.newBuilder();
     ProtobufUtil.mergeFrom(builder, message);
     this.setName(builder.getName());
-    for (TableSchema.Attribute attr: builder.getAttrsList()) {
+    for (TableSchema.Attribute attr : builder.getAttrsList()) {
       this.addAttribute(attr.getName(), attr.getValue());
     }
     if (builder.hasReadOnly()) {
       this.addAttribute(HTableDescriptor.READONLY, builder.getReadOnly());
     }
-    for (ColumnSchema family: builder.getColumnsList()) {
+    for (ColumnSchema family : builder.getColumnsList()) {
       ColumnSchemaModel familyModel = new ColumnSchemaModel();
       familyModel.setName(family.getName());
-      for (ColumnSchema.Attribute attr: family.getAttrsList()) {
+      for (ColumnSchema.Attribute attr : family.getAttrsList()) {
         familyModel.addAttribute(attr.getName(), attr.getValue());
       }
       if (family.hasTtl()) {
@@ -341,17 +340,16 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   @JsonIgnore
   public HTableDescriptor getTableDescriptor() {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(getName()));
-    for (Map.Entry<QName, Object> e: getAny().entrySet()) {
+    for (Map.Entry<QName, Object> e : getAny().entrySet()) {
       htd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
     }
     for (ColumnSchemaModel column: getColumns()) {
       HColumnDescriptor hcd = new HColumnDescriptor(column.getName());
-      for (Map.Entry<QName, Object> e: column.getAny().entrySet()) {
+      for (Map.Entry<QName, Object> e : column.getAny().entrySet()) {
         hcd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
       }
       htd.addFamily(hcd);
     }
     return htd;
   }
-
 }

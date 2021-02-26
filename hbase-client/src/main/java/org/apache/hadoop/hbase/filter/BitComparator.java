@@ -26,13 +26,14 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A bit comparator which performs the specified bitwise operation on each of the bytes
  * with the specified byte array. Then returns whether the result is non-zero.
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class BitComparator extends ByteArrayComparable {
 
   /** Bit operators. */
@@ -67,6 +68,7 @@ public class BitComparator extends ByteArrayComparable {
   /**
    * @return The comparator serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     ComparatorProtos.BitComparator.Builder builder =
       ComparatorProtos.BitComparator.newBuilder();
@@ -100,6 +102,7 @@ public class BitComparator extends ByteArrayComparable {
    * @return true if and only if the fields of the comparator that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
     if (other == this) return true;
     if (!(other instanceof BitComparator)) return false;

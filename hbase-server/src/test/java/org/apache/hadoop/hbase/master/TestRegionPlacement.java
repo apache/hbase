@@ -33,10 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,6 +55,7 @@ import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -66,13 +65,21 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestRegionPlacement {
-  private static final Log LOG = LogFactory.getLog(TestRegionPlacement.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionPlacement.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static int SLAVES = 10;
   private static Connection CONNECTION;
@@ -191,10 +198,10 @@ public class TestRegionPlacement {
       // kill a random non-meta server carrying at least one region
       killIndex = random.nextInt(SLAVES);
       serverToKill = TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getServerName();
-      Collection<Region> regs =
+      Collection<HRegion> regs =
           TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getOnlineRegionsLocalContext();
       isNamespaceServer = false;
-      for (Region r : regs) {
+      for (HRegion r : regs) {
         if (r.getRegionInfo().getTable().getNamespaceAsString()
             .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
           isNamespaceServer = true;
@@ -294,7 +301,7 @@ public class TestRegionPlacement {
    * @param plan The assignment plan
    * @param p1 The first switch position
    * @param p2 The second switch position
-   * @return
+   * @return the shuffled assignment plan
    */
   private FavoredNodesPlan shuffleAssignmentPlan(FavoredNodesPlan plan,
       FavoredNodesPlan.Position p1, FavoredNodesPlan.Position p2) throws IOException {
@@ -351,8 +358,8 @@ public class TestRegionPlacement {
 
   /**
    * Verify the meta has updated to the latest assignment plan
-   * @param plan
-   * @throws IOException
+   * @param expectedPlan the region assignment plan
+   * @throws IOException if an IO problem is encountered
    */
   private void verifyMETAUpdated(FavoredNodesPlan expectedPlan)
   throws IOException {
@@ -388,14 +395,13 @@ public class TestRegionPlacement {
     lastRegionOpenedCount = currentRegionOpened;
 
     assertEquals("There are only " + regionMovement + " instead of "
-          + expected + " region movement for " + attempt + " attempts",
-          regionMovement, expected);
+          + expected + " region movement for " + attempt + " attempts", expected, regionMovement);
   }
 
   /**
    * Verify the number of user regions is assigned to the primary
    * region server based on the plan is expected
-   * @param expectedNum.
+   * @param expectedNum the expected number of assigned regions
    * @throws IOException
    */
   private void verifyRegionOnPrimaryRS(int expectedNum)
@@ -420,7 +426,8 @@ public class TestRegionPlacement {
       for (Region region: rs.getRegions(TableName.valueOf("testRegionAssignment"))) {
         InetSocketAddress[] favoredSocketAddress = rs.getFavoredNodesForRegion(
             region.getRegionInfo().getEncodedName());
-        List<ServerName> favoredServerList = plan.getAssignmentMap().get(region.getRegionInfo());
+        String regionName = region.getRegionInfo().getRegionNameAsString();
+        List<ServerName> favoredServerList = plan.getAssignmentMap().get(regionName);
 
         // All regions are supposed to have favored nodes,
         // except for hbase:meta and ROOT
@@ -467,6 +474,7 @@ public class TestRegionPlacement {
     final AtomicInteger totalRegionNum = new AtomicInteger(0);
     LOG.info("The start of region placement verification");
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+      @Override
       public boolean visit(Result result) throws IOException {
         try {
           @SuppressWarnings("deprecation")
@@ -528,9 +536,8 @@ public class TestRegionPlacement {
 
   /**
    * Create a table with specified table name and region number.
-   * @param tablename
-   * @param regionNum
-   * @return
+   * @param tableName the name of the table to be created
+   * @param regionNum number of regions to create
    * @throws IOException
    */
   private static void createTable(TableName tableName, int regionNum)

@@ -51,15 +51,20 @@ public class FaultyFSLog extends FSHLog {
 
   @Override
   public void sync(long txid) throws IOException {
-    if (this.ft == FailureType.SYNC) {
-      throw new IOException("sync");
-    }
-    super.sync(txid);
+    sync(txid, false);
   }
 
   @Override
-  public long append(RegionInfo info, WALKey key,
-      WALEdit edits, boolean inMemstore) throws IOException {
+  public void sync(long txid, boolean forceSync) throws IOException {
+    if (this.ft == FailureType.SYNC) {
+      throw new IOException("sync");
+    }
+    super.sync(txid, forceSync);
+  }
+
+  @Override
+  protected long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
+      throws IOException {
     if (this.ft == FailureType.APPEND) {
       throw new IOException("append");
     }

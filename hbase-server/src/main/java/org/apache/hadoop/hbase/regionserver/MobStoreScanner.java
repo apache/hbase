@@ -19,13 +19,17 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.mob.MobCell;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Scanner scans both the memstore and the MOB Store. Coalesce KeyValue stream into
@@ -34,10 +38,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MobStoreScanner extends StoreScanner {
 
+  private static final Logger LOG = LoggerFactory.getLogger(MobStoreScanner.class);
+
   private boolean cacheMobBlocks = false;
   private boolean rawMobScan = false;
   private boolean readEmptyValueOnMobCellMiss = false;
   private final HMobStore mobStore;
+  private final List<MobCell> referencedMobCells;
 
   public MobStoreScanner(HStore store, ScanInfo scanInfo, Scan scan,
       final NavigableSet<byte[]> columns, long readPt) throws IOException {
@@ -49,6 +56,7 @@ public class MobStoreScanner extends StoreScanner {
       throw new IllegalArgumentException("The store " + store + " is not a HMobStore");
     }
     mobStore = (HMobStore) store;
+    this.referencedMobCells = new ArrayList<>();
   }
 
   /**
@@ -69,16 +77,41 @@ public class MobStoreScanner extends StoreScanner {
       for (int i = 0; i < outResult.size(); i++) {
         Cell cell = outResult.get(i);
         if (MobUtils.isMobReferenceCell(cell)) {
-          Cell mobCell = mobStore
-            .resolve(cell, cacheMobBlocks, readPt, readEmptyValueOnMobCellMiss);
+          MobCell mobCell =
+              mobStore.resolve(cell, cacheMobBlocks, readPt, readEmptyValueOnMobCellMiss);
           mobKVCount++;
-          mobKVSize += mobCell.getValueLength();
-          outResult.set(i, mobCell);
+          mobKVSize += mobCell.getCell().getValueLength();
+          outResult.set(i, mobCell.getCell());
+          // Keep the MobCell here unless we shipped the RPC or close the scanner.
+          referencedMobCells.add(mobCell);
         }
       }
       mobStore.updateMobScanCellsCount(mobKVCount);
       mobStore.updateMobScanCellsSize(mobKVSize);
     }
     return result;
+  }
+
+  private void freeAllReferencedMobCells() throws IOException {
+    for (MobCell cell : referencedMobCells) {
+      cell.close();
+    }
+    referencedMobCells.clear();
+  }
+
+  @Override
+  public void shipped() throws IOException {
+    super.shipped();
+    this.freeAllReferencedMobCells();
+  }
+
+  @Override
+  public void close() {
+    super.close();
+    try {
+      this.freeAllReferencedMobCells();
+    } catch (IOException e) {
+      LOG.warn("Failed to free referenced mob cells: ", e);
+    }
   }
 }

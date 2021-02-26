@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import static org.junit.Assert.assertEquals;
@@ -24,9 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
@@ -35,12 +32,19 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureSuspended {
-  private static final Log LOG = LogFactory.getLog(TestProcedureSuspended.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedureSuspended.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureSuspended.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
   private static final Procedure NULL_PROC = null;
@@ -55,9 +59,9 @@ public class TestProcedureSuspended {
     htu = new HBaseCommonTestingUtility();
 
     procStore = new NoopProcedureStore();
-    procExecutor = new ProcedureExecutor(htu.getConfiguration(), new TestProcEnv(), procStore);
+    procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), new TestProcEnv(), procStore);
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
   @After
@@ -66,7 +70,7 @@ public class TestProcedureSuspended {
     procStore.stop(false);
   }
 
-  @Test(timeout=10000)
+  @Test
   public void testSuspendWhileHoldingLocks() {
     final AtomicBoolean lockA = new AtomicBoolean(false);
     final AtomicBoolean lockB = new AtomicBoolean(false);
@@ -120,7 +124,7 @@ public class TestProcedureSuspended {
     assertEquals(false, lockB.get());
   }
 
-  @Test(timeout=10000)
+  @Test
   public void testYieldWhileHoldingLocks() {
     final AtomicBoolean lock = new AtomicBoolean(false);
 
@@ -131,7 +135,10 @@ public class TestProcedureSuspended {
     procExecutor.submitProcedure(p2);
 
     // try to execute a bunch of yield on p1, p2 should be blocked
-    while (p1.getTimestamps().size() < 100) Threads.sleep(10);
+    while (p1.getTimestamps().size() < 100) {
+      Threads.sleep(10);
+    }
+
     assertEquals(0, p2.getTimestamps().size());
 
     // wait until p1 is completed
@@ -139,7 +146,10 @@ public class TestProcedureSuspended {
     ProcedureTestingUtility.waitProcedure(procExecutor, p1);
 
     // try to execute a bunch of yield on p2
-    while (p2.getTimestamps().size() < 100) Threads.sleep(10);
+    while (p2.getTimestamps().size() < 100) {
+      Threads.sleep(10);
+    }
+
     assertEquals(p1.getTimestamps().get(p1.getTimestamps().size() - 1).longValue() + 1,
       p2.getTimestamps().get(0).longValue());
 
@@ -150,7 +160,10 @@ public class TestProcedureSuspended {
 
   private void waitAndAssertTimestamp(TestLockProcedure proc, int size, int lastTs) {
     final ArrayList<Long> timestamps = proc.getTimestamps();
-    while (timestamps.size() < size) Threads.sleep(10);
+    while (timestamps.size() < size) {
+      Threads.sleep(10);
+    }
+
     LOG.info(proc + " -> " + timestamps);
     assertEquals(size, timestamps.size());
     if (size > 0) {
@@ -211,7 +224,8 @@ public class TestProcedureSuspended {
 
     @Override
     protected LockState acquireLock(final TestProcEnv env) {
-      if ((hasLock = lock.compareAndSet(false, true))) {
+      hasLock = lock.compareAndSet(false, true);
+      if (hasLock) {
         LOG.info("ACQUIRE LOCK " + this + " " + (hasLock));
         return LockState.LOCK_ACQUIRED;
       }
@@ -222,17 +236,11 @@ public class TestProcedureSuspended {
     protected void releaseLock(final TestProcEnv env) {
       LOG.info("RELEASE LOCK " + this + " " + hasLock);
       lock.set(false);
-      hasLock = false;
     }
 
     @Override
     protected boolean holdLock(final TestProcEnv env) {
       return true;
-    }
-
-    @Override
-    protected boolean hasLock(final TestProcEnv env) {
-      return hasLock;
     }
 
     public ArrayList<Long> getTimestamps() {
@@ -246,7 +254,9 @@ public class TestProcedureSuspended {
     }
 
     @Override
-    protected boolean abort(TestProcEnv env) { return false; }
+    protected boolean abort(TestProcEnv env) {
+      return false;
+    }
 
     @Override
     protected void serializeStateData(ProcedureStateSerializer serializer)

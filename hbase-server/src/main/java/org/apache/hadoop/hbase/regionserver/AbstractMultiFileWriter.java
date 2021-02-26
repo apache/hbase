@@ -20,13 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.CellSink;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for cell sink that separates the provided cells into multiple files.
@@ -34,7 +33,7 @@ import org.apache.hadoop.hbase.regionserver.CellSink;
 @InterfaceAudience.Private
 public abstract class AbstractMultiFileWriter implements CellSink, ShipperListener {
 
-  private static final Log LOG = LogFactory.getLog(AbstractMultiFileWriter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractMultiFileWriter.class);
 
   /** Factory that is used to produce single StoreFile.Writer-s */
   protected WriterFactory writerFactory;
@@ -44,6 +43,10 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
 
   public interface WriterFactory {
     public StoreFileWriter createWriter() throws IOException;
+    default StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
+        throws IOException {
+      return createWriter();
+    };
   }
 
   /**
@@ -64,18 +67,24 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
    * comments in HBASE-15400 for more details.
    */
   public List<Path> commitWriters(long maxSeqId, boolean majorCompaction) throws IOException {
+    return commitWriters(maxSeqId, majorCompaction, Collections.EMPTY_SET);
+  }
+
+  public List<Path> commitWriters(long maxSeqId, boolean majorCompaction,
+      Collection<HStoreFile> storeFiles) throws IOException {
     preCommitWriters();
     Collection<StoreFileWriter> writers = this.writers();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Commit " + writers.size() + " writers, maxSeqId=" + maxSeqId
-          + ", majorCompaction=" + majorCompaction);
+      LOG.debug(
+          "Commit " + writers.size() + " writers, maxSeqId=" + maxSeqId + ", majorCompaction=" +
+              majorCompaction);
     }
     List<Path> paths = new ArrayList<>();
     for (StoreFileWriter writer : writers) {
       if (writer == null) {
         continue;
       }
-      writer.appendMetadata(maxSeqId, majorCompaction);
+      writer.appendMetadata(maxSeqId, majorCompaction, storeFiles);
       preCloseWriter(writer);
       paths.add(writer.getPath());
       writer.close();
@@ -119,9 +128,12 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
 
   @Override
   public void beforeShipped() throws IOException {
-    if (this.writers() != null) {
-      for (StoreFileWriter writer : writers()) {
-        writer.beforeShipped();
+    Collection<StoreFileWriter> writers = writers();
+    if (writers != null) {
+      for (StoreFileWriter writer : writers) {
+        if (writer != null) {
+          writer.beforeShipped();
+        }
       }
     }
   }

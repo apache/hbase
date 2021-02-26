@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,25 +28,22 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import javax.crypto.spec.SecretKeySpec;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -89,7 +85,6 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -97,17 +92,26 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestMobCompactor {
-  private static final Log LOG = LogFactory.getLog(TestMobCompactor.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMobCompactor.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMobCompactor.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = null;
   private TableName tableName;
@@ -274,7 +278,7 @@ public class TestMobCompactor {
     LOG.info("alter status finished");
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testMinorCompaction() throws Exception {
     resetConf();
     int mergeSize = 5000;
@@ -424,7 +428,7 @@ public class TestMobCompactor {
         new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCompactionWithHFileLink() throws IOException, InterruptedException {
     resetConf();
     String tableNameAsString = "testCompactionWithHFileLink";
@@ -513,7 +517,7 @@ public class TestMobCompactor {
     assertRefFileNameEqual(family1);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testMajorCompactionFromAdmin() throws Exception {
     resetConf();
     int mergeSize = 5000;
@@ -588,7 +592,7 @@ public class TestMobCompactor {
     table.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testScannerOnBulkLoadRefHFiles() throws Exception {
     resetConf();
     setUp("testScannerOnBulkLoadRefHFiles");
@@ -648,7 +652,7 @@ public class TestMobCompactor {
    * is compacted with some other normal hfiles. This is to make sure the mvcc is included
    * after compaction for mob enabled store files.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testGetAfterCompaction() throws Exception {
     resetConf();
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 0);
@@ -715,6 +719,9 @@ public class TestMobCompactor {
     while (fileList.length != num) {
       Thread.sleep(50);
       fileList = fs.listStatus(path);
+      for (FileStatus fileStatus: fileList) {
+        LOG.info(Objects.toString(fileStatus));
+      }
     }
   }
 
@@ -731,8 +738,7 @@ public class TestMobCompactor {
 
     @Override
     public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker,
-        CompactionRequest request)
+        List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
         throws IOException {
       int count = candidates.size();
       if (count >= 2) {
@@ -1025,21 +1031,19 @@ public class TestMobCompactor {
     int maxThreads = 10;
     long keepAliveTime = 60;
     final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
-    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads,
-        keepAliveTime, TimeUnit.SECONDS, queue,
-        Threads.newDaemonThreadFactory("MobFileCompactionChore"),
-        new RejectedExecutionHandler() {
-          @Override
-          public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-            try {
-              // waiting for a thread to pick up instead of throwing exceptions.
-              queue.put(r);
-            } catch (InterruptedException e) {
-              throw new RejectedExecutionException(e);
-            }
+    ThreadPoolExecutor pool =
+      new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS, queue,
+        new ThreadFactoryBuilder().setNameFormat("MobFileCompactionChore-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+        (r, executor) -> {
+          try {
+            // waiting for a thread to pick up instead of throwing exceptions.
+            queue.put(r);
+          } catch (InterruptedException e) {
+            throw new RejectedExecutionException(e);
           }
         });
-    ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
+    pool.allowCoreThreadTimeOut(true);
     return pool;
   }
 

@@ -49,7 +49,7 @@ public final class ThroughputControlUtil {
         break;
       }
     }
-    return store.getRegionInfo().getRegionNameAsString() + NAME_DELIMITER +
+    return store.getRegionInfo().getEncodedName() + NAME_DELIMITER +
         store.getColumnFamilyDescriptor().getNameAsString() + NAME_DELIMITER + opName +
         NAME_DELIMITER + counter;
   }

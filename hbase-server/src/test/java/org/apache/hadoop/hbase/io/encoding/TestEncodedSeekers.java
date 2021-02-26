@@ -1,18 +1,19 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
@@ -24,27 +25,30 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
+import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
+import org.apache.hadoop.hbase.util.Strings;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -54,9 +58,13 @@ import org.junit.runners.Parameterized.Parameters;
 /**
  * Tests encoded seekers by loading and reading values.
  */
-@Category({IOTests.class, MediumTests.class})
+@Category({IOTests.class, LargeTests.class})
 @RunWith(Parameterized.class)
 public class TestEncodedSeekers {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestEncodedSeekers.class);
 
   private static final String TABLE_NAME = "encodedSeekersTable";
   private static final String CF_NAME = "encodedSeekersCF";
@@ -105,16 +113,17 @@ public class TestEncodedSeekers {
     if(includeTags) {
       testUtil.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 3);
     }
+
     LruBlockCache cache =
-      (LruBlockCache)new CacheConfig(testUtil.getConfiguration()).getBlockCache();
-    cache.clearCache();
+        (LruBlockCache) BlockCacheFactory.createBlockCache(testUtil.getConfiguration());
     // Need to disable default row bloom filter for this test to pass.
-    HColumnDescriptor hcd = (new HColumnDescriptor(CF_NAME)).setMaxVersions(MAX_VERSIONS).
-        setDataBlockEncoding(encoding).
-        setBlocksize(BLOCK_SIZE).
-        setBloomFilterType(BloomType.NONE).
-        setCompressTags(compressTags);
-    Region region = testUtil.createTestRegion(TABLE_NAME, hcd);
+    ColumnFamilyDescriptor cfd =
+        ColumnFamilyDescriptorBuilder.newBuilder(CF_BYTES).setMaxVersions(MAX_VERSIONS).
+            setDataBlockEncoding(encoding).
+            setBlocksize(BLOCK_SIZE).
+            setBloomFilterType(BloomType.NONE).
+            setCompressTags(compressTags).build();
+    HRegion region = testUtil.createTestRegion(TABLE_NAME, cfd, cache);
 
     //write the data, but leave some in the memstore
     doPuts(region);
@@ -137,8 +146,7 @@ public class TestEncodedSeekers {
     assertTrue(encodingCounts.get(encodingInCache) > 0);
   }
 
-
-  private void doPuts(Region region) throws IOException{
+  private void doPuts(HRegion region) throws IOException{
     LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(MIN_VALUE_SIZE, MAX_VALUE_SIZE);
      for (int i = 0; i < NUM_ROWS; ++i) {
       byte[] key = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
@@ -167,7 +175,6 @@ public class TestEncodedSeekers {
     }
   }
 
-
   private void doGets(Region region) throws IOException{
     for (int i = 0; i < NUM_ROWS; ++i) {
       final byte[] rowKey = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
@@ -187,5 +194,4 @@ public class TestEncodedSeekers {
       }
     }
   }
-
 }

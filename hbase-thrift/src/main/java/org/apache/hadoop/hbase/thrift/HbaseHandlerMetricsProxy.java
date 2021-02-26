@@ -23,12 +23,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
-
+import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Converts a Hbase.Iface using InvocationHandler so that it reports process
@@ -37,10 +35,7 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 @InterfaceAudience.Private
 public class HbaseHandlerMetricsProxy implements InvocationHandler {
 
-  private static final Log LOG = LogFactory.getLog(
-      HbaseHandlerMetricsProxy.class);
-
-  private final Hbase.Iface handler;
+  private final Object handler;
   private final ThriftMetrics metrics;
 
   public static Hbase.Iface newInstance(Hbase.Iface handler,
@@ -52,8 +47,18 @@ public class HbaseHandlerMetricsProxy implements InvocationHandler {
         new HbaseHandlerMetricsProxy(handler, metrics, conf));
   }
 
+  // for thrift 2
+  public static THBaseService.Iface newInstance(THBaseService.Iface handler,
+      ThriftMetrics metrics,
+      Configuration conf) {
+    return (THBaseService.Iface) Proxy.newProxyInstance(
+        handler.getClass().getClassLoader(),
+        new Class[]{THBaseService.Iface.class},
+        new HbaseHandlerMetricsProxy(handler, metrics, conf));
+  }
+
   private HbaseHandlerMetricsProxy(
-      Hbase.Iface handler, ThriftMetrics metrics, Configuration conf) {
+      Object handler, ThriftMetrics metrics, Configuration conf) {
     this.handler = handler;
     this.metrics = metrics;
   }

@@ -47,12 +47,13 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   }
 
   @Override
-  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx,
+  public void encode(Cell cell, HFileBlockEncodingContext encodingCtx,
       DataOutputStream out) throws IOException {
     NoneEncodingState state = (NoneEncodingState) encodingCtx
         .getEncodingState();
     NoneEncoder encoder = state.encoder;
-    return encoder.write(cell);
+    int size = encoder.write(cell);
+    state.postCellEncode(size, size);
   }
 
   @Override
@@ -99,7 +100,8 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
           + "encoding context.");
     }
 
-    HFileBlockDefaultEncodingContext encodingCtx = (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+    HFileBlockDefaultEncodingContext encodingCtx =
+      (HFileBlockDefaultEncodingContext) blkEncodingCtx;
     encodingCtx.prepareEncoding(out);
 
     NoneEncoder encoder = new NoneEncoder(out, encodingCtx);

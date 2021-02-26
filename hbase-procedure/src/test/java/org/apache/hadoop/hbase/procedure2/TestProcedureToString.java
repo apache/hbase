@@ -20,15 +20,23 @@ package org.apache.hadoop.hbase.procedure2;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ServerCrashState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ServerCrashState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
+
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureToString {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedureToString.class);
+
   /**
    * A do-nothing environment for BasicProcedure.
    */
@@ -79,11 +87,9 @@ public class TestProcedureToString {
 
   /**
    * Test that I can override the toString for its state value.
-   * @throws ProcedureYieldException
-   * @throws InterruptedException
    */
   @Test
-  public void testBasicToString() throws ProcedureYieldException, InterruptedException {
+  public void testBasicToString() {
     BasicProcedure p = new BasicProcedure();
     ProcedureState state = ProcedureState.RUNNABLE;
     p.setState(state);
@@ -100,10 +106,11 @@ public class TestProcedureToString {
    * Do-nothing SimpleMachineProcedure for checking its toString.
    */
   static class SimpleStateMachineProcedure
-  extends StateMachineProcedure<BasicProcedureEnv, ServerCrashState> {
+          extends StateMachineProcedure<BasicProcedureEnv, ServerCrashState> {
     @Override
-    protected org.apache.hadoop.hbase.procedure2.StateMachineProcedure.Flow executeFromState(BasicProcedureEnv env,
-        ServerCrashState state) throws ProcedureYieldException, InterruptedException {
+    protected org.apache.hadoop.hbase.procedure2.StateMachineProcedure.Flow executeFromState(
+            BasicProcedureEnv env, ServerCrashState state)
+            throws ProcedureYieldException, InterruptedException {
       return null;
     }
 

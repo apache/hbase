@@ -23,12 +23,9 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -46,6 +43,8 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class contains helper methods that repair parts of hbase's filesystem
@@ -53,7 +52,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public class HBaseFsckRepair {
-  private static final Log LOG = LogFactory.getLog(HBaseFsckRepair.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseFsckRepair.class);
 
   /**
    * Fix multiple assignment by doing silent closes on each RS hosting the region
@@ -119,8 +118,8 @@ public class HBaseFsckRepair {
     while (EnvironmentEdgeManager.currentTime() < expiration) {
       try {
         boolean inTransition = false;
-        for (RegionState rs : admin.getClusterStatus(EnumSet.of(Option.REGIONS_IN_TRANSITION))
-                                   .getRegionsInTransition()) {
+        for (RegionState rs : admin.getClusterMetrics(EnumSet.of(Option.REGIONS_IN_TRANSITION))
+                                   .getRegionStatesInTransition()) {
           if (RegionInfo.COMPARATOR.compare(rs.getRegion(), region) == 0) {
             inTransition = true;
             break;
@@ -163,7 +162,7 @@ public class HBaseFsckRepair {
       RegionInfo hri, Collection<ServerName> servers, int numReplicas) throws IOException {
     Connection conn = ConnectionFactory.createConnection(conf);
     Table meta = conn.getTable(TableName.META_TABLE_NAME);
-    Put put = MetaTableAccessor.makePutFromRegionInfo(hri);
+    Put put = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
     if (numReplicas > 1) {
       Random r = new Random();
       ServerName[] serversArr = servers.toArray(new ServerName[servers.size()]);
@@ -173,7 +172,7 @@ public class HBaseFsckRepair {
         // see the additional replicas when it is asked to assign. The
         // final value of these columns will be different and will be updated
         // by the actual regionservers that start hosting the respective replicas
-        MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), -1, i);
+        MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), i);
       }
     }
     meta.put(put);
@@ -187,7 +186,7 @@ public class HBaseFsckRepair {
   public static HRegion createHDFSRegionDir(Configuration conf,
       RegionInfo hri, TableDescriptor htd) throws IOException {
     // Create HRegion
-    Path root = FSUtils.getRootDir(conf);
+    Path root = CommonFSUtils.getRootDir(conf);
     HRegion region = HRegion.createHRegion(hri, root, conf, htd, null);
 
     // Close the new region to flush to disk. Close log file too.
@@ -200,6 +199,6 @@ public class HBaseFsckRepair {
    */
   public static void removeParentInMeta(Configuration conf, RegionInfo hri) throws IOException {
     Connection conn = ConnectionFactory.createConnection(conf);
-    MetaTableAccessor.deleteRegion(conn, hri);
+    MetaTableAccessor.deleteRegionInfo(conn, hri);
   }
 }

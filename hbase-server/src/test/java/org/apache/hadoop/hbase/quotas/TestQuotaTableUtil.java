@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
@@ -25,44 +24,57 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 
 /**
  * Test the quota table helpers (e.g. CRUD operations)
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestQuotaTableUtil {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestQuotaTableUtil.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Connection connection;
@@ -101,6 +113,68 @@ public class TestQuotaTableUtil {
   @After
   public void after() throws IOException {
     this.connection.close();
+  }
+
+  @Test
+  public void testDeleteSnapshots() throws Exception {
+    TableName tn = TableName.valueOf(name.getMethodName());
+    try (Table t = connection.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      Quotas quota = Quotas.newBuilder().setSpace(
+          QuotaProtos.SpaceQuota.newBuilder().setSoftLimit(7L)
+              .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.NO_WRITES).build()).build();
+      QuotaUtil.addTableQuota(connection, tn, quota);
+
+      String snapshotName = name.getMethodName() + "_snapshot";
+      t.put(QuotaTableUtil.createPutForSnapshotSize(tn, snapshotName, 3L));
+      t.put(QuotaTableUtil.createPutForSnapshotSize(tn, snapshotName, 5L));
+      assertEquals(1, QuotaTableUtil.getObservedSnapshotSizes(connection).size());
+
+      List<Delete> deletes = QuotaTableUtil.createDeletesForExistingTableSnapshotSizes(connection);
+      assertEquals(1, deletes.size());
+
+      t.delete(deletes);
+      assertEquals(0, QuotaTableUtil.getObservedSnapshotSizes(connection).size());
+
+      String ns = name.getMethodName();
+      t.put(QuotaTableUtil.createPutForNamespaceSnapshotSize(ns, 5L));
+      t.put(QuotaTableUtil.createPutForNamespaceSnapshotSize(ns, 3L));
+      assertEquals(3L, QuotaTableUtil.getNamespaceSnapshotSize(connection, ns));
+
+      deletes = QuotaTableUtil.createDeletesForExistingNamespaceSnapshotSizes(connection);
+      assertEquals(1, deletes.size());
+
+      t.delete(deletes);
+      assertEquals(0L, QuotaTableUtil.getNamespaceSnapshotSize(connection, ns));
+
+      t.put(QuotaTableUtil.createPutForSnapshotSize(TableName.valueOf("t1"), "s1", 3L));
+      t.put(QuotaTableUtil.createPutForSnapshotSize(TableName.valueOf("t2"), "s2", 3L));
+      t.put(QuotaTableUtil.createPutForSnapshotSize(TableName.valueOf("t3"), "s3", 3L));
+      t.put(QuotaTableUtil.createPutForSnapshotSize(TableName.valueOf("t4"), "s4", 3L));
+      t.put(QuotaTableUtil.createPutForSnapshotSize(TableName.valueOf("t1"), "s5", 3L));
+
+      t.put(QuotaTableUtil.createPutForNamespaceSnapshotSize("ns1", 3L));
+      t.put(QuotaTableUtil.createPutForNamespaceSnapshotSize("ns2", 3L));
+      t.put(QuotaTableUtil.createPutForNamespaceSnapshotSize("ns3", 3L));
+
+      assertEquals(5,QuotaTableUtil.getTableSnapshots(connection).size());
+      assertEquals(3,QuotaTableUtil.getNamespaceSnapshots(connection).size());
+
+      Multimap<TableName, String> tableSnapshotEntriesToRemove = HashMultimap.create();
+      tableSnapshotEntriesToRemove.put(TableName.valueOf("t1"), "s1");
+      tableSnapshotEntriesToRemove.put(TableName.valueOf("t3"), "s3");
+      tableSnapshotEntriesToRemove.put(TableName.valueOf("t4"), "s4");
+
+      Set<String> namespaceSnapshotEntriesToRemove = new HashSet<>();
+      namespaceSnapshotEntriesToRemove.add("ns2");
+      namespaceSnapshotEntriesToRemove.add("ns1");
+
+      deletes =
+          QuotaTableUtil.createDeletesForExistingTableSnapshotSizes(tableSnapshotEntriesToRemove);
+      assertEquals(3, deletes.size());
+      deletes = QuotaTableUtil
+          .createDeletesForExistingNamespaceSnapshotSizes(namespaceSnapshotEntriesToRemove);
+      assertEquals(2, deletes.size());
+    }
   }
 
   @Test
@@ -260,6 +334,8 @@ public class TestQuotaTableUtil {
       verifyTableSnapshotSize(quotaTable, tn2, "tn2snap0", 2048L);
       verifyTableSnapshotSize(quotaTable, tn2, "tn2snap1", 4096L);
       verifyTableSnapshotSize(quotaTable, tn2, "tn2snap2", 6144L);
+
+      cleanUpSnapshotSizes();
     }
   }
 
@@ -276,6 +352,8 @@ public class TestQuotaTableUtil {
       assertEquals(1024L, QuotaTableUtil.getNamespaceSnapshotSize(connection, ns1));
       assertEquals(2048L, QuotaTableUtil.getNamespaceSnapshotSize(connection, ns2));
       assertEquals(8192L, QuotaTableUtil.getNamespaceSnapshotSize(connection, defaultNs));
+
+      cleanUpSnapshotSizes();
     }
   }
 
@@ -293,5 +371,15 @@ public class TestQuotaTableUtil {
         UnsafeByteOperations.unsafeWrap(
             c.getValueArray(), c.getValueOffset(), c.getValueLength())).getQuotaUsage());
     assertFalse(cs.advance());
+  }
+
+  private void cleanUpSnapshotSizes() throws IOException {
+    try (Table t = connection.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      QuotaTableUtil.createDeletesForExistingTableSnapshotSizes(connection);
+      List<Delete> deletes =
+          QuotaTableUtil.createDeletesForExistingNamespaceSnapshotSizes(connection);
+      deletes.addAll(QuotaTableUtil.createDeletesForExistingTableSnapshotSizes(connection));
+      t.delete(deletes);
+    }
   }
 }

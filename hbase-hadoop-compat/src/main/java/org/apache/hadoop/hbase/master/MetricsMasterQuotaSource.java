@@ -17,10 +17,12 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A collection of exposed metrics for space quotas from the HBase Master.
  */
+@InterfaceAudience.Private
 public interface MetricsMasterQuotaSource extends BaseSource {
 
   String METRICS_NAME = "Quotas";

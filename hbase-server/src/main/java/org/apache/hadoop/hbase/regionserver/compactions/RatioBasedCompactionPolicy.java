@@ -24,17 +24,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.OptionalLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The default algorithm for selecting files for compaction.
@@ -43,7 +43,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
-  private static final Log LOG = LogFactory.getLog(RatioBasedCompactionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RatioBasedCompactionPolicy.class);
 
   public RatioBasedCompactionPolicy(Configuration conf,
                                     StoreConfigInformation storeConfigInfo) {
@@ -85,7 +85,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
         if (sf.isMajorCompactionResult() && (cfTTL == Long.MAX_VALUE || oldest < cfTTL)) {
           float blockLocalityIndex =
             sf.getHDFSBlockDistribution().getBlockLocalityIndex(
-            RSRpcServices.getHostname(comConf.conf, false));
+            DNS.getHostname(comConf.conf, DNS.ServerType.REGIONSERVER));
           if (blockLocalityIndex < comConf.getMinLocalityToForceCompact()) {
             LOG.debug("Major compaction triggered on only store " + regionInfo
               + "; to make hdfs blocks local, current blockLocalityIndex is "
@@ -106,8 +106,8 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
       } else {
         LOG.debug("Major compaction triggered on store " + regionInfo
           + "; time since last major compaction " + (now - lowTimestamp) + "ms");
+        result = true;
       }
-      result = true;
     }
     return result;
   }
@@ -117,7 +117,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
     candidateSelection, boolean tryingMajor, boolean mayUseOffPeak, boolean mayBeStuck)
     throws IOException {
     if (!tryingMajor) {
-      candidateSelection = filterBulk(candidateSelection);
+      filterBulk(candidateSelection);
       candidateSelection = applyCompactionPolicy(candidateSelection, mayUseOffPeak, mayBeStuck);
       candidateSelection = checkMinFilesCriteria(candidateSelection,
         comConf.getMinFilesToCompact());
@@ -209,6 +209,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
    * @param filesCompacting files being scheduled to compact.
    * @return true to schedule a request.
    */
+  @Override
   public boolean needsCompaction(Collection<HStoreFile> storeFiles,
       List<HStoreFile> filesCompacting) {
     int numCandidates = storeFiles.size() - filesCompacting.size();

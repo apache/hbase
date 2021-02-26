@@ -118,7 +118,7 @@ extends RowProcessorService implements RegionCoprocessor {
     Class<?> cls;
     try {
       cls = Class.forName(className);
-      RowProcessor<S,T> ci = (RowProcessor<S,T>) cls.newInstance();
+      RowProcessor<S,T> ci = (RowProcessor<S,T>) cls.getDeclaredConstructor().newInstance();
       if (request.hasRowProcessorInitializerMessageName()) {
         Class<?> imn = Class.forName(request.getRowProcessorInitializerMessageName())
             .asSubclass(Message.class);
@@ -141,11 +141,7 @@ extends RowProcessorService implements RegionCoprocessor {
         ci.initialize(s);
       }
       return ci;
-    } catch (ClassNotFoundException e) {
-      throw new IOException(e);
-    } catch (InstantiationException e) {
-      throw new IOException(e);
-    } catch (IllegalAccessException e) {
+    } catch (Exception e) {
       throw new IOException(e);
     }
   }

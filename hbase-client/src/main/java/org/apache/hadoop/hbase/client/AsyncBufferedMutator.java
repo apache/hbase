@@ -18,12 +18,15 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Used to communicate with a single HBase table in batches. Obtain an instance from a
@@ -52,7 +55,9 @@ public interface AsyncBufferedMutator extends Closeable {
    * part of a batch. Currently only supports {@link Put} and {@link Delete} mutations.
    * @param mutation The data to send.
    */
-  CompletableFuture<Void> mutate(Mutation mutation);
+  default CompletableFuture<Void> mutate(Mutation mutation) {
+    return Iterables.getOnlyElement(mutate(Collections.singletonList(mutation)));
+  }
 
   /**
    * Send some {@link Mutation}s to the table. The mutations will be buffered and sent over the wire
@@ -81,4 +86,11 @@ public interface AsyncBufferedMutator extends Closeable {
    * @return The size of the write buffer in bytes.
    */
   long getWriteBufferSize();
+
+  /**
+   * Returns the periodical flush interval, 0 means disabled.
+   */
+  default long getPeriodicalFlushTimeout(TimeUnit unit) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 }

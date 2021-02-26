@@ -15,38 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Int32Value;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-@Category({MasterTests.class, SmallTests.class})
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Threads;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Int32Value;
+
+@Category({MasterTests.class, MediumTests.class})
 public class TestProcedureRecovery {
-  private static final Log LOG = LogFactory.getLog(TestProcedureRecovery.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedureRecovery.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureRecovery.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
 
@@ -69,11 +74,11 @@ public class TestProcedureRecovery {
 
     logDir = new Path(testDir, "proc-logs");
     procEnv = new TestProcEnv();
-    procStore = ProcedureTestingUtility.createStore(htu.getConfiguration(), fs, logDir);
-    procExecutor = new ProcedureExecutor(htu.getConfiguration(), procEnv, procStore);
+    procStore = ProcedureTestingUtility.createStore(htu.getConfiguration(), logDir);
+    procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), procEnv, procStore);
     procExecutor.testing = new ProcedureExecutor.Testing();
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
     procSleepInterval = 0;
   }
 
@@ -108,7 +113,9 @@ public class TestProcedureRecovery {
     protected void rollback(TestProcEnv env) { }
 
     @Override
-    protected boolean abort(TestProcEnv env) { return true; }
+    protected boolean abort(TestProcEnv env) {
+      return true;
+    }
   }
 
   public static class BaseTestStepProcedure extends SequentialProcedure<TestProcEnv> {
@@ -184,7 +191,7 @@ public class TestProcedureRecovery {
     restart();
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testSingleStepProcRecovery() throws Exception {
     Procedure proc = new TestSingleStepProcedure();
     procExecutor.testing.killBeforeStoreUpdate = true;
@@ -210,7 +217,7 @@ public class TestProcedureRecovery {
     assertEquals(1, Bytes.toInt(result.getResult()));
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testMultiStepProcRecovery() throws Exception {
     // Step 0 - kill
     Procedure proc = new TestMultiStepProcedure();
@@ -239,7 +246,7 @@ public class TestProcedureRecovery {
     ProcedureTestingUtility.assertProcNotFailed(result);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testMultiStepRollbackRecovery() throws Exception {
     // Step 0 - kill
     Procedure proc = new TestMultiStepProcedure();
@@ -397,7 +404,7 @@ public class TestProcedureRecovery {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStateMachineMultipleLevel() throws Exception {
     long procId = procExecutor.submitProcedure(new TestStateMachineProcedure(true));
     // Wait the completion
@@ -408,7 +415,7 @@ public class TestProcedureRecovery {
     assertEquals(4, procExecutor.getLastProcId());
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStateMachineRecovery() throws Exception {
     ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExecutor, true);
     ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, true);
@@ -446,7 +453,7 @@ public class TestProcedureRecovery {
     assertEquals(26, Bytes.toInt(result.getResult()));
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStateMachineRollbackRecovery() throws Exception {
     ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExecutor, true);
     ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, true);

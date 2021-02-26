@@ -20,37 +20,31 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * An implementation of {@link RegionLocator}. Used to view region location information for a single
  * HBase table. Lightweight. Get as needed and just close when done. Instances of this class SHOULD
  * NOT be constructed directly. Obtain an instance via {@link Connection}. See
  * {@link ConnectionFactory} class comment for an example of how.
- *
- * <p> This class is thread safe
+ * <p/>
+ * This class is thread safe
  */
 @InterfaceAudience.Private
-@InterfaceStability.Stable
 public class HRegionLocator implements RegionLocator {
 
   private final TableName tableName;
-  private final ClusterConnection connection;
+  private final ConnectionImplementation connection;
 
-  public HRegionLocator(TableName tableName, ClusterConnection connection) {
+  public HRegionLocator(TableName tableName, ConnectionImplementation connection) {
     this.connection = connection;
     this.tableName = tableName;
   }
@@ -64,76 +58,35 @@ public class HRegionLocator implements RegionLocator {
     // persistent state, so there is no need to do anything here.
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public HRegionLocation getRegionLocation(final byte [] row)
-  throws IOException {
-    return connection.getRegionLocation(tableName, row, false);
+  public HRegionLocation getRegionLocation(byte[] row, int replicaId, boolean reload)
+      throws IOException {
+    return connection.locateRegion(tableName, row, !reload, true, replicaId)
+      .getRegionLocation(replicaId);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public HRegionLocation getRegionLocation(final byte [] row, boolean reload)
-  throws IOException {
-    return connection.getRegionLocation(tableName, row, reload);
+  public List<HRegionLocation> getRegionLocations(byte[] row, boolean reload) throws IOException {
+    RegionLocations locs =
+      connection.locateRegion(tableName, row, !reload, true, RegionInfo.DEFAULT_REPLICA_ID);
+    return Arrays.asList(locs.getRegionLocations());
   }
 
   @Override
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
-    TableName tableName = getName();
-    List<Pair<RegionInfo, ServerName>> locations =
-        MetaTableAccessor.getTableRegionsAndLocations(this.connection, tableName);
-    ArrayList<HRegionLocation> regions = new ArrayList<>(locations.size());
-    for (Pair<RegionInfo, ServerName> entry : locations) {
-      regions.add(new HRegionLocation(entry.getFirst(), entry.getSecond()));
-
-    }
-    if (regions.size() > 0) {
-      connection.cacheLocation(tableName, new RegionLocations(regions));
+    ArrayList<HRegionLocation> regions = new ArrayList<>();
+    for (RegionLocations locations : listRegionLocations()) {
+      for (HRegionLocation location : locations.getRegionLocations()) {
+        regions.add(location);
+      }
+      connection.cacheLocation(tableName, locations);
     }
     return regions;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public byte[][] getStartKeys() throws IOException {
-    return getStartEndKeys().getFirst();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public byte[][] getEndKeys() throws IOException {
-    return getStartEndKeys().getSecond();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public Pair<byte[][], byte[][]> getStartEndKeys() throws IOException {
-    return getStartEndKeys(listRegionLocations());
-  }
-
-  @VisibleForTesting
-  Pair<byte[][], byte[][]> getStartEndKeys(List<RegionLocations> regions) {
-    final byte[][] startKeyList = new byte[regions.size()][];
-    final byte[][] endKeyList = new byte[regions.size()][];
-
-    for (int i = 0; i < regions.size(); i++) {
-      HRegionInfo region = regions.get(i).getRegionLocation().getRegionInfo();
-      startKeyList[i] = region.getStartKey();
-      endKeyList[i] = region.getEndKey();
-    }
-
-    return new Pair<>(startKeyList, endKeyList);
+  public void clearRegionLocationCache() {
+    connection.clearRegionCache(tableName);
   }
 
   @Override
@@ -141,23 +94,24 @@ public class HRegionLocator implements RegionLocator {
     return this.tableName;
   }
 
-  @VisibleForTesting
-  List<RegionLocations> listRegionLocations() throws IOException {
+  private List<RegionLocations> listRegionLocations() throws IOException {
+    if (TableName.isMetaTableName(tableName)) {
+      return Collections
+        .singletonList(connection.locateRegion(tableName, HConstants.EMPTY_START_ROW, false, true));
+    }
     final List<RegionLocations> regions = new ArrayList<>();
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.TableVisitorBase(tableName) {
       @Override
       public boolean visitInternal(Result result) throws IOException {
         RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
-        if (locations == null) return true;
+        if (locations == null) {
+          return true;
+        }
         regions.add(locations);
         return true;
       }
     };
     MetaTableAccessor.scanMetaForTableRegions(connection, visitor, tableName);
     return regions;
-  }
-
-  public Configuration getConfiguration() {
-    return connection.getConfiguration();
   }
 }

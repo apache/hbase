@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 /**
  * This class is used to unify HTable calls with AsyncProcess Framework. HTable can use
@@ -92,30 +92,30 @@ abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<
   }
 
   protected ClientProtos.MultiResponse doMulti(ClientProtos.MultiRequest request)
-  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().multi(getRpcController(), request);
   }
 
   protected ClientProtos.ScanResponse doScan(ClientProtos.ScanRequest request)
-  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().scan(getRpcController(), request);
   }
 
   protected ClientProtos.PrepareBulkLoadResponse doPrepareBulkLoad(
       ClientProtos.PrepareBulkLoadRequest request)
-  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().prepareBulkLoad(getRpcController(), request);
   }
 
   protected ClientProtos.BulkLoadHFileResponse doBulkLoadHFile(
       ClientProtos.BulkLoadHFileRequest request)
-  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().bulkLoadHFile(getRpcController(), request);
   }
 
   protected ClientProtos.CleanupBulkLoadResponse doCleanupBulkLoad(
       ClientProtos.CleanupBulkLoadRequest request)
-  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().cleanupBulkLoad(getRpcController(), request);
   }
 }

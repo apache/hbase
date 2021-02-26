@@ -25,14 +25,14 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class MultithreadedTestUtil {
 
-  private static final Log LOG =
-    LogFactory.getLog(MultithreadedTestUtil.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(MultithreadedTestUtil.class);
 
   public static class TestContext {
     private final Configuration conf;
@@ -119,6 +119,7 @@ public abstract class MultithreadedTestUtil {
       this.ctx = ctx;
     }
 
+    @Override
     public void run() {
       try {
         doWork();
@@ -143,6 +144,7 @@ public abstract class MultithreadedTestUtil {
       super(ctx);
     }
 
+    @Override
     public final void doWork() throws Exception {
       try {
         while (ctx.shouldRun() && !stopped) {
@@ -161,26 +163,25 @@ public abstract class MultithreadedTestUtil {
    * Verify that no assertions have failed inside a future.
    * Used for unit tests that spawn threads. E.g.,
    * <p>
-   * <code>
-   *   List<Future<Void>> results = Lists.newArrayList();
-   *   Future<Void> f = executor.submit(new Callable<Void> {
+   * <pre>
+   *   List&lt;Future&lt;Void>> results = Lists.newArrayList();
+   *   Future&lt;Void> f = executor.submit(new Callable&lt;Void> {
    *     public Void call() {
    *       assertTrue(someMethod());
    *     }
    *   });
    *   results.add(f);
    *   assertOnFutures(results);
-   * </code>
+   * </pre>
    * @param threadResults A list of futures
-   * @param <T>
    * @throws InterruptedException If interrupted when waiting for a result
    *                              from one of the futures
    * @throws ExecutionException If an exception other than AssertionError
    *                            occurs inside any of the futures
    */
-  public static <T> void assertOnFutures(List<Future<T>> threadResults)
+  public static void assertOnFutures(List<Future<?>> threadResults)
   throws InterruptedException, ExecutionException {
-    for (Future<T> threadResult : threadResults) {
+    for (Future<?> threadResult : threadResults) {
       try {
         threadResult.get();
       } catch (ExecutionException e) {

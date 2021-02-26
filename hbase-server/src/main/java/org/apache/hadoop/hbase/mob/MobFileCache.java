@@ -31,15 +31,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.IdLock;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The cache for mob files.
@@ -50,7 +51,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
 @InterfaceAudience.Private
 public class MobFileCache {
 
-  private static final Log LOG = LogFactory.getLog(MobFileCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MobFileCache.class);
 
   /*
    * Eviction and statistics thread. Periodically run to print the statistics and
@@ -201,7 +202,7 @@ public class MobFileCache {
    * @return A opened mob file.
    * @throws IOException
    */
-  public MobFile openFile(FileSystem fs, Path path, MobCacheConfig cacheConf) throws IOException {
+  public MobFile openFile(FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
     if (!isCacheEnabled) {
       MobFile mobFile = MobFile.create(fs, path, conf, cacheConf);
       mobFile.open();

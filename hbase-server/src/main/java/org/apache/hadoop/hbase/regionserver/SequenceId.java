@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -27,5 +26,12 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface SequenceId {
-  public long getSequenceId() throws IOException;
+  /**
+   * Used to represent when a particular wal key doesn't know/care about the sequence ordering.
+   */
+  long NO_SEQUENCE_ID = -1;
+
+  default long getSequenceId() {
+    return NO_SEQUENCE_ID;
+  }
 }

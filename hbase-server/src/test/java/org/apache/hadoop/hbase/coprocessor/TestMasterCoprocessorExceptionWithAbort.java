@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,15 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,17 +42,13 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Tests unhandled exceptions thrown by coprocessors running on master.
@@ -60,10 +59,14 @@ import static org.junit.Assert.fail;
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestMasterCoprocessorExceptionWithAbort {
 
-  public static class MasterTracker extends ZooKeeperNodeTracker {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMasterCoprocessorExceptionWithAbort.class);
+
+  public static class MasterTracker extends ZKNodeTracker {
     public boolean masterZKNodeWasDeleted = false;
 
-    public MasterTracker(ZooKeeperWatcher zkw, String masterNode, Abortable abortable) {
+    public MasterTracker(ZKWatcher zkw, String masterNode, Abortable abortable) {
       super(zkw, masterNode, abortable);
     }
 
@@ -93,7 +96,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
         fail("BuggyMasterObserver failed to throw an exception.");
       } catch (IOException e) {
         assertEquals("HBaseAdmin threw an interrupted IOException as expected.",
-            e.getClass().getName(), "java.io.InterruptedIOException");
+            "java.io.InterruptedIOException", e.getClass().getName());
       }
    }
   }
@@ -162,7 +165,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testExceptionFromCoprocessorWhenCreatingTable()
       throws IOException {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
@@ -174,7 +177,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
 
     // set a watch on the zookeeper /hbase/master node. If the master dies,
     // the node will be deleted.
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(UTIL.getConfiguration(),
+    ZKWatcher zkw = new ZKWatcher(UTIL.getConfiguration(),
       "unittest", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {

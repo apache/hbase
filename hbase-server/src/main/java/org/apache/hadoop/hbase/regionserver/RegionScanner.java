@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface RegionScanner extends InternalScanner, Shipper {
+public interface RegionScanner extends InternalScanner {
   /**
    * @return The RegionInfo for this scanner.
    */
@@ -115,13 +115,4 @@ public interface RegionScanner extends InternalScanner, Shipper {
    */
   boolean nextRaw(List<Cell> result, ScannerContext scannerContext)
       throws IOException;
-
-  /**
-   * Empty implementation to provide compatibility for user migrating from 1.X
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16626">HBASE-16626</a>
-   */
-  @Override
-  default void shipped() throws IOException {
-    // do nothing
-  }
 }

@@ -30,10 +30,10 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * execute {@link #setTimeRange(long, long) setTimeRange}.
  * <p>
  * To only retrieve columns with a specific timestamp, execute
- * {@link #setTimeStamp(long) setTimestamp}.
+ * {@link #setTimestamp(long) setTimestamp}.
  * <p>
  * To limit the number of versions of each column to be returned, execute
  * {@link #setMaxVersions(int) setMaxVersions}.
@@ -64,16 +64,15 @@ import org.apache.hadoop.hbase.util.Bytes;
  * To add a filter, call {@link #setFilter(Filter) setFilter}.
  */
 @InterfaceAudience.Public
-public class Get extends Query
-  implements Row, Comparable<Row> {
-  private static final Log LOG = LogFactory.getLog(Get.class);
+public class Get extends Query implements Row {
+  private static final Logger LOG = LoggerFactory.getLogger(Get.class);
 
   private byte [] row = null;
   private int maxVersions = 1;
   private boolean cacheBlocks = true;
   private int storeLimit = -1;
   private int storeOffset = 0;
-  private TimeRange tr = new TimeRange();
+  private TimeRange tr = TimeRange.allTime();
   private boolean checkExistenceOnly = false;
   private boolean closestRowBefore = false;
   private Map<byte [], NavigableSet<byte []>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -232,16 +231,28 @@ public class Get extends Query
    * Get versions of columns with the specified timestamp.
    * @param timestamp version timestamp
    * @return this for invocation chaining
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #setTimestamp(long)} instead
    */
-  public Get setTimeStamp(long timestamp)
-  throws IOException {
+  @Deprecated
+  public Get setTimeStamp(long timestamp) throws IOException {
+    return this.setTimestamp(timestamp);
+  }
+
+  /**
+   * Get versions of columns with the specified timestamp.
+   * @param timestamp version timestamp
+   * @return this for invocation chaining
+   */
+  public Get setTimestamp(long timestamp) {
     try {
-      tr = new TimeRange(timestamp, timestamp+1);
+      tr = new TimeRange(timestamp, timestamp + 1);
     } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
       throw e;
     }
+
     return this;
   }
 
@@ -296,6 +307,7 @@ public class Get extends Query
     return this;
   }
 
+  @Override
   public Get setLoadColumnFamiliesOnDemand(boolean value) {
     return (Get) super.setLoadColumnFamiliesOnDemand(value);
   }

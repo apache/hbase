@@ -22,9 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,15 +36,17 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class TestCompactionPolicy {
-  private final static Log LOG = LogFactory.getLog(TestCompactionPolicy.class);
+  private final static Logger LOG = LoggerFactory.getLogger(TestCompactionPolicy.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   protected Configuration conf;
@@ -101,13 +100,13 @@ public class TestCompactionPolicy {
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
 
     hlog = new FSHLog(fs, basedir, logName, conf);
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     region = HRegion.createHRegion(info, basedir, conf, htd, hlog);
     region.close();
-    Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(basedir, htd.getTableName());
     region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
-
-    store = new HStore(region, hcd, conf);
+    store = new HStore(region, hcd, conf, false);
 
     TEST_FILE = region.getRegionFileSystem().createTempName();
     fs.createNewFile(TEST_FILE);

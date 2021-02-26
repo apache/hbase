@@ -15,39 +15,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@Category({MasterTests.class, SmallTests.class})
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@Category({MasterTests.class, MediumTests.class})
 public class TestStateMachineProcedure {
-  private static final Log LOG = LogFactory.getLog(TestStateMachineProcedure.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStateMachineProcedure.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestStateMachineProcedure.class);
 
   private static final Exception TEST_FAILURE_EXCEPTION = new Exception("test failure") {
+
+    private static final long serialVersionUID = 2147942238987041310L;
+
     @Override
     public boolean equals(final Object other) {
-      if (this == other) return true;
-      if (!(other instanceof Exception)) return false;
+      if (this == other) {
+        return true;
+      }
+
+      if (!(other instanceof Exception)) {
+        return false;
+      }
+
       // we are going to serialize the exception in the test,
       // so the instance comparison will not match
       return getMessage().equals(((Exception)other).getMessage());
@@ -76,10 +88,10 @@ public class TestStateMachineProcedure {
     fs = testDir.getFileSystem(htu.getConfiguration());
 
     logDir = new Path(testDir, "proc-logs");
-    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
-    procExecutor = new ProcedureExecutor(htu.getConfiguration(), new TestProcEnv(), procStore);
+    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
+    procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), new TestProcEnv(), procStore);
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
   @After
@@ -138,6 +150,24 @@ public class TestStateMachineProcedure {
   }
 
   @Test
+  public void testChildNormalRollbackStateCount() {
+    procExecutor.getEnvironment().triggerChildRollback = true;
+    TestSMProcedureBadRollback testNormalRollback = new TestSMProcedureBadRollback();
+    long procId = procExecutor.submitProcedure(testNormalRollback);
+    ProcedureTestingUtility.waitProcedure(procExecutor, procId);
+    assertEquals(0, testNormalRollback.stateCount);
+  }
+
+  @Test
+  public void testChildBadRollbackStateCount() {
+    procExecutor.getEnvironment().triggerChildRollback = true;
+    TestSMProcedureBadRollback testBadRollback = new TestSMProcedureBadRollback();
+    long procId = procExecutor.submitProcedure(testBadRollback);
+    ProcedureTestingUtility.waitProcedure(procExecutor, procId);
+    assertEquals(0, testBadRollback.stateCount);
+  }
+
+  @Test
   public void testChildOnLastStepWithRollbackDoubleExecution() throws Exception {
     procExecutor.getEnvironment().triggerChildRollback = true;
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExecutor, true);
@@ -152,6 +182,7 @@ public class TestStateMachineProcedure {
   public enum TestSMProcedureState { STEP_1, STEP_2 };
   public static class TestSMProcedure
       extends StateMachineProcedure<TestProcEnv, TestSMProcedureState> {
+    @Override
     protected Flow executeFromState(TestProcEnv env, TestSMProcedureState state) {
       LOG.info("EXEC " + state + " " + this);
       env.execCount.incrementAndGet();
@@ -168,26 +199,94 @@ public class TestStateMachineProcedure {
       return Flow.HAS_MORE_STATE;
     }
 
+    @Override
+    protected boolean isRollbackSupported(TestSMProcedureState state) {
+      return true;
+    }
+
+    @Override
     protected void rollbackState(TestProcEnv env, TestSMProcedureState state) {
       LOG.info("ROLLBACK " + state + " " + this);
       env.rollbackCount.incrementAndGet();
     }
 
+    @Override
     protected TestSMProcedureState getState(int stateId) {
       return TestSMProcedureState.values()[stateId];
     }
 
+    @Override
     protected int getStateId(TestSMProcedureState state) {
       return state.ordinal();
     }
 
+    @Override
     protected TestSMProcedureState getInitialState() {
       return TestSMProcedureState.STEP_1;
     }
   }
 
+  public static class TestSMProcedureBadRollback
+          extends StateMachineProcedure<TestProcEnv, TestSMProcedureState> {
+    @Override
+    protected Flow executeFromState(TestProcEnv env, TestSMProcedureState state) {
+      LOG.info("EXEC " + state + " " + this);
+      env.execCount.incrementAndGet();
+      switch (state) {
+        case STEP_1:
+          if (!env.loop) {
+            setNextState(TestSMProcedureState.STEP_2);
+          }
+          break;
+        case STEP_2:
+          addChildProcedure(new SimpleChildProcedure());
+          return Flow.NO_MORE_STATE;
+      }
+      return Flow.HAS_MORE_STATE;
+    }
+    @Override
+    protected void rollbackState(TestProcEnv env, TestSMProcedureState state) {
+      LOG.info("ROLLBACK " + state + " " + this);
+      env.rollbackCount.incrementAndGet();
+    }
+
+    @Override
+    protected TestSMProcedureState getState(int stateId) {
+      return TestSMProcedureState.values()[stateId];
+    }
+
+    @Override
+    protected int getStateId(TestSMProcedureState state) {
+      return state.ordinal();
+    }
+
+    @Override
+    protected TestSMProcedureState getInitialState() {
+      return TestSMProcedureState.STEP_1;
+    }
+
+    @Override
+    protected void rollback(final TestProcEnv env)
+            throws IOException, InterruptedException {
+      if (isEofState()) {
+        stateCount--;
+      }
+      try {
+        updateTimestamp();
+        rollbackState(env, getCurrentState());
+        throw new IOException();
+      } catch(IOException e) {
+        //do nothing for now
+      } finally {
+        stateCount--;
+        updateTimestamp();
+      }
+    }
+  }
+
   public static class SimpleChildProcedure extends NoopProcedure<TestProcEnv> {
-    protected Procedure[] execute(TestProcEnv env) {
+    @Override
+    protected Procedure<TestProcEnv>[] execute(TestProcEnv env) {
       LOG.info("EXEC " + this);
       env.execCount.incrementAndGet();
       if (env.triggerChildRollback) {
@@ -203,7 +302,7 @@ public class TestStateMachineProcedure {
     }
   }
 
-  public class TestProcEnv {
+  public static class TestProcEnv {
     AtomicInteger execCount = new AtomicInteger(0);
     AtomicInteger rollbackCount = new AtomicInteger(0);
     boolean triggerChildRollback = false;

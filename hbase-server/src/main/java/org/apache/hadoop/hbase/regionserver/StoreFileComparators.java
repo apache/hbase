@@ -17,12 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Function;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Ordering;
-
 import java.util.Comparator;
-
+import java.util.function.Function;
+import java.util.function.ToLongFunction;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -37,32 +34,23 @@ final class StoreFileComparators {
    * ordering, then bulkLoadTime. If there are ties, the path name is used as a tie-breaker.
    */
   public static final Comparator<HStoreFile> SEQ_ID =
-      Ordering.compound(ImmutableList.of(Ordering.natural().onResultOf(new GetSeqId()),
-        Ordering.natural().onResultOf(new GetFileSize()).reverse(),
-        Ordering.natural().onResultOf(new GetBulkTime()),
-        Ordering.natural().onResultOf(new GetPathName())));
+    Comparator.comparingLong(HStoreFile::getMaxSequenceId)
+      .thenComparing(Comparator.comparingLong(new GetFileSize()).reversed())
+      .thenComparingLong(new GetBulkTime()).thenComparing(new GetPathName());
 
   /**
    * Comparator for time-aware compaction. SeqId is still the first ordering criterion to maintain
    * MVCC.
    */
   public static final Comparator<HStoreFile> SEQ_ID_MAX_TIMESTAMP =
-      Ordering.compound(ImmutableList.of(Ordering.natural().onResultOf(new GetSeqId()),
-        Ordering.natural().onResultOf(new GetMaxTimestamp()),
-        Ordering.natural().onResultOf(new GetFileSize()).reverse(),
-        Ordering.natural().onResultOf(new GetBulkTime()),
-        Ordering.natural().onResultOf(new GetPathName())));
+    Comparator.comparingLong(HStoreFile::getMaxSequenceId).thenComparingLong(new GetMaxTimestamp())
+      .thenComparing(Comparator.comparingLong(new GetFileSize()).reversed())
+      .thenComparingLong(new GetBulkTime()).thenComparing(new GetPathName());
 
-  private static class GetSeqId implements Function<HStoreFile, Long> {
-    @Override
-    public Long apply(HStoreFile sf) {
-      return sf.getMaxSequenceId();
-    }
-  }
+  private static class GetFileSize implements ToLongFunction<HStoreFile> {
 
-  private static class GetFileSize implements Function<HStoreFile, Long> {
     @Override
-    public Long apply(HStoreFile sf) {
+    public long applyAsLong(HStoreFile sf) {
       if (sf.getReader() != null) {
         return sf.getReader().length();
       } else {
@@ -73,23 +61,26 @@ final class StoreFileComparators {
     }
   }
 
-  private static class GetBulkTime implements Function<HStoreFile, Long> {
+  private static class GetBulkTime implements ToLongFunction<HStoreFile> {
+
     @Override
-    public Long apply(HStoreFile sf) {
+    public long applyAsLong(HStoreFile sf) {
       return sf.getBulkLoadTimestamp().orElse(Long.MAX_VALUE);
     }
   }
 
   private static class GetPathName implements Function<HStoreFile, String> {
+
     @Override
     public String apply(HStoreFile sf) {
       return sf.getPath().getName();
     }
   }
 
-  private static class GetMaxTimestamp implements Function<HStoreFile, Long> {
+  private static class GetMaxTimestamp implements ToLongFunction<HStoreFile> {
+
     @Override
-    public Long apply(HStoreFile sf) {
+    public long applyAsLong(HStoreFile sf) {
       return sf.getMaximumTimestamp().orElse(Long.MAX_VALUE);
     }
   }

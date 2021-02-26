@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,44 +15,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingRpcChannel;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestHMasterRPCException {
 
-  private static final Log LOG = LogFactory.getLog(TestHMasterRPCException.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHMasterRPCException.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHMasterRPCException.class);
 
   private final HBaseTestingUtility testUtil = HBaseTestingUtility.createLocalHTU();
 
@@ -68,10 +71,10 @@ public class TestHMasterRPCException {
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 2000);
     testUtil.startMiniZKCluster();
 
-    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
-    ZooKeeperWatcher watcher = testUtil.getZooKeeperWatcher();
-    ZKUtil.createWithParents(watcher, watcher.znodePaths.masterAddressZNode, Bytes.toBytes("fake:123"));
-    master = new HMaster(conf, cp);
+    ZKWatcher watcher = testUtil.getZooKeeperWatcher();
+    ZKUtil.createWithParents(watcher, watcher.getZNodePaths().masterAddressZNode,
+            Bytes.toBytes("fake:123"));
+    master = new HMaster(conf);
     rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
   }
 
@@ -107,7 +110,7 @@ public class TestHMasterRPCException {
         LOG.info("Expected exception: ", ie);
         if (!fakeZNodeDelete) {
           testUtil.getZooKeeperWatcher().getRecoverableZooKeeper()
-              .delete(testUtil.getZooKeeperWatcher().znodePaths.masterAddressZNode, -1);
+              .delete(testUtil.getZooKeeperWatcher().getZNodePaths().masterAddressZNode, -1);
           fakeZNodeDelete = true;
         }
       }

@@ -22,13 +22,14 @@ module Shell
       def help
         <<-EOF
 Grant users specific rights.
-Syntax : grant <user>, <permissions> [, <@namespace> [, <table> [, <column family> [, <column qualifier>]]]
+Syntax: grant <user or @group>, <permissions> [, <table> [, <column family> [, <column qualifier>]]]
+Syntax: grant <user or @group>, <permissions>, <@namespace>
 
 permissions is either zero or more letters from the set "RWXCA".
 READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A')
 
 Note: Groups and users are granted access in the same way, but groups are prefixed with an '@'
-      character. In the same way, tables and namespaces are specified, but namespaces are
+      character. Tables and namespaces are specified the same way, but namespaces are
       prefixed with an '@' character.
 
 For example:

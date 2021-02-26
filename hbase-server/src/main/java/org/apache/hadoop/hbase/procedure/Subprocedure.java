@@ -20,15 +20,15 @@ package org.apache.hadoop.hbase.procedure;
 import java.io.IOException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Distributed procedure member's Subprocedure.  A procedure is sarted on a ProcedureCoordinator
@@ -39,7 +39,7 @@ import org.apache.zookeeper.KeeperException;
  * member), {@link #insideBarrier()} (execute while globally barriered and release barrier) and
  * {@link #cleanup(Exception)} (release state associated with subprocedure.)
  *
- * When submitted to a ProcedureMemeber, the call method is executed in a separate thread.
+ * When submitted to a ProcedureMember, the call method is executed in a separate thread.
  * Latches are use too block its progress and trigger continuations when barrier conditions are
  * met.
  *
@@ -50,8 +50,9 @@ import org.apache.zookeeper.KeeperException;
  * There is a category of procedure (ex: online-snapshots), and a user-specified instance-specific
  * barrierName. (ex: snapshot121126).
  */
+@InterfaceAudience.Private
 abstract public class Subprocedure implements Callable<Void> {
-  private static final Log LOG = LogFactory.getLog(Subprocedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Subprocedure.class);
 
   // Name of the procedure
   final private String barrierName;
@@ -146,13 +147,14 @@ abstract public class Subprocedure implements Callable<Void> {
    * Execute the Subprocedure {@link #acquireBarrier()} and {@link #insideBarrier()} methods
    * while keeping some state for other threads to access.
    *
-   * This would normally be executed by the ProcedureMemeber when a acquire message comes from the
+   * This would normally be executed by the ProcedureMember when a acquire message comes from the
    * coordinator.  Rpcs are used to spend message back to the coordinator after different phases
    * are executed.  Any exceptions caught during the execution (except for InterruptedException) get
    * converted and propagated to coordinator via {@link ProcedureMemberRpcs#sendMemberAborted(
    * Subprocedure, ForeignException)}.
    */
   @SuppressWarnings("finally")
+  @Override
   final public Void call() {
     LOG.debug("Starting subprocedure '" + barrierName + "' with timeout " +
         executionTimeoutTimer.getMaxTime() + "ms");

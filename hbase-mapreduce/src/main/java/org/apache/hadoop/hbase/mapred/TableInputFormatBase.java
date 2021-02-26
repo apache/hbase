@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -79,7 +79,7 @@ import org.apache.hadoop.mapred.Reporter;
 @InterfaceAudience.Public
 public abstract class TableInputFormatBase
 implements InputFormat<ImmutableBytesWritable, Result> {
-  private static final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableInputFormatBase.class);
   private byte [][] inputColumns;
   private Table table;
   private RegionLocator regionLocator;

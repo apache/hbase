@@ -20,6 +20,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
+  import="org.apache.hadoop.hbase.rest.model.VersionModel"
   import="org.apache.hadoop.hbase.util.VersionInfo"
   import="java.util.Date"%>
 <%
@@ -58,6 +59,7 @@ String listenPort = conf.get("hbase.rest.port", "8080");
                   <li><a href="/logs/">Local logs</a></li>
                   <li><a href="/logLevel">Log Level</a></li>
                   <li><a href="/jmx">Metrics Dump</a></li>
+                  <li><a href="/prof">Profiler</a></li>
                   <% if (HBaseConfiguration.isShowConfInServlet()) { %>
                   <li><a href="/conf">HBase Configuration</a></li>
                   <% } %>
@@ -82,6 +84,11 @@ String listenPort = conf.get("hbase.rest.port", "8080");
             <th>Value</th>
             <th>Description</th>
         </tr>
+      <tr>
+        <td>JVM Version</td>
+        <td><%= new VersionModel(getServletContext()).getJVMVersion() %></td>
+        <td>JVM vendor and version</td>
+      </tr>
         <tr>
             <td>HBase Version</td>
             <td><%= VersionInfo.getVersion() %>, revision=<%= VersionInfo.getRevision() %></td>

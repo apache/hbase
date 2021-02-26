@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,21 +27,22 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Helper class for constructing aggregation request and response.
  */
 @InterfaceAudience.Private
-public class AggregationHelper {
+public final class AggregationHelper {
+  private AggregationHelper() {}
 
   /**
-   * @param scan
+   * @param scan the HBase scan object to use to read data from HBase
    * @param canFamilyBeAbsent whether column family can be absent in familyMap of scan
    */
   private static void validateParameters(Scan scan, boolean canFamilyBeAbsent) throws IOException {
@@ -64,8 +65,8 @@ public class AggregationHelper {
     validateParameters(scan, canFamilyBeAbsent);
     final AggregateRequest.Builder requestBuilder = AggregateRequest.newBuilder();
     requestBuilder.setInterpreterClassName(ci.getClass().getCanonicalName());
-    P columnInterpreterSpecificData = null;
-    if ((columnInterpreterSpecificData = ci.getRequestData()) != null) {
+    P columnInterpreterSpecificData = ci.getRequestData();
+    if (columnInterpreterSpecificData != null) {
       requestBuilder.setInterpreterSpecificBytes(columnInterpreterSpecificData.toByteString());
     }
     requestBuilder.setScan(ProtobufUtil.toScan(scan));
@@ -80,7 +81,7 @@ public class AggregationHelper {
    * @param position the position of the argument in the class declaration
    * @param b the ByteString which should be parsed to get the instance created
    * @return the instance
-   * @throws IOException
+   * @throws IOException Either we couldn't instantiate the method object, or "parseFrom" failed.
    */
   @SuppressWarnings("unchecked")
   // Used server-side too by Aggregation Coprocesor Endpoint. Undo this interdependence. TODO.

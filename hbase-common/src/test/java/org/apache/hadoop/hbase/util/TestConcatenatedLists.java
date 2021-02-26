@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,14 +27,20 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestConcatenatedLists {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestConcatenatedLists.class);
+
   @Test
   public void testUnsupportedOps() {
     // If adding support, add tests.
@@ -119,6 +124,8 @@ public class TestConcatenatedLists {
   }
 
   @SuppressWarnings("ModifyingCollectionWithItself")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DMI_VACUOUS_SELF_COLLECTION_CALL",
+    justification="Intended vacuous containsAll call on 'c'")
   private void verify(ConcatenatedLists<Long> c, int last) {
     assertEquals((last == -1), c.isEmpty());
     assertEquals(last + 1, c.size());

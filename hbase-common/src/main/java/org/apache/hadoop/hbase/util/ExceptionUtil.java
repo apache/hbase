@@ -34,14 +34,22 @@ import org.apache.yetus.audience.InterfaceAudience;
  * interruption, so we have to distinguish the case. This pattern is unfortunately common.
  */
 @InterfaceAudience.Private
-public class ExceptionUtil {
+public final class ExceptionUtil {
+  private ExceptionUtil() {
+  }
 
   /**
    * @return true if the throwable comes an interruption, false otherwise.
    */
   public static boolean isInterrupt(Throwable t) {
-    if (t instanceof InterruptedException) return true;
-    if (t instanceof SocketTimeoutException) return false;
+    if (t instanceof InterruptedException) {
+      return true;
+    }
+
+    if (t instanceof SocketTimeoutException) {
+      return false;
+    }
+
     return (t instanceof InterruptedIOException || t instanceof ClosedByInterruptException);
   }
 
@@ -50,16 +58,23 @@ public class ExceptionUtil {
    */
   public static void rethrowIfInterrupt(Throwable t) throws InterruptedIOException {
     InterruptedIOException iie = asInterrupt(t);
-    if (iie != null) throw iie;
+
+    if (iie != null) {
+      throw iie;
+    }
   }
 
   /**
    * @return an InterruptedIOException if t was an interruption, null otherwise
    */
   public static InterruptedIOException asInterrupt(Throwable t) {
-    if (t instanceof SocketTimeoutException) return null;
+    if (t instanceof SocketTimeoutException) {
+      return null;
+    }
 
-    if (t instanceof InterruptedIOException) return (InterruptedIOException) t;
+    if (t instanceof InterruptedIOException) {
+      return (InterruptedIOException) t;
+    }
 
     if (t instanceof InterruptedException || t instanceof ClosedByInterruptException) {
       InterruptedIOException iie =
@@ -69,8 +84,5 @@ public class ExceptionUtil {
     }
 
     return null;
-  }
-
-  private ExceptionUtil() {
   }
 }

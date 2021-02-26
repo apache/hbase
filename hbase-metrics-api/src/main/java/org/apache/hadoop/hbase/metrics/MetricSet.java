@@ -32,10 +32,10 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface MetricSet extends Metric {
-    /**
-     * A map of metric names to metrics.
-     *
-     * @return the metrics
-     */
-    Map<String, Metric> getMetrics();
+  /**
+   * A map of metric names to metrics.
+   *
+   * @return the metrics
+   */
+  Map<String, Metric> getMetrics();
 }

@@ -20,15 +20,17 @@ package org.apache.hadoop.hbase;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * This class defines methods that can help with managing HBase clusters
@@ -57,11 +59,11 @@ import org.apache.hadoop.hbase.util.Threads;
 @InterfaceAudience.Private
 public abstract class HBaseCluster implements Closeable, Configurable {
   // Log is being used in DistributedHBaseCluster class, hence keeping it as package scope
-  static final Log LOG = LogFactory.getLog(HBaseCluster.class.getName());
+  static final Logger LOG = LoggerFactory.getLogger(HBaseCluster.class.getName());
   protected Configuration conf;
 
   /** the status of the cluster before we begin */
-  protected ClusterStatus initialClusterStatus;
+  protected ClusterMetrics initialClusterStatus;
 
   /**
    * Construct an HBaseCluster
@@ -82,16 +84,16 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   }
 
   /**
-   * Returns a ClusterStatus for this HBase cluster.
-   * @see #getInitialClusterStatus()
+   * Returns a ClusterMetrics for this HBase cluster.
+   * @see #getInitialClusterMetrics()
    */
-  public abstract ClusterStatus getClusterStatus() throws IOException;
+  public abstract ClusterMetrics getClusterMetrics() throws IOException;
 
   /**
    * Returns a ClusterStatus for this HBase cluster as observed at the
    * starting of the HBaseCluster
    */
-  public ClusterStatus getInitialClusterStatus() throws IOException {
+  public ClusterMetrics getInitialClusterMetrics() throws IOException {
     return initialClusterStatus;
   }
 
@@ -129,22 +131,29 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   public abstract void killRegionServer(ServerName serverName) throws IOException;
 
   /**
+   * Keeping track of killed servers and being able to check if a particular server was killed makes
+   * it possible to do fault tolerance testing for dead servers in a deterministic way. A concrete
+   * example of such case is - killing servers and waiting for all regions of a particular table
+   * to be assigned. We can check for server column in META table and that its value is not one
+   * of the killed servers.
+   */
+  public abstract boolean isKilledRS(ServerName serverName);
+
+  /**
    * Stops the given region server, by attempting a gradual stop.
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong
    */
   public abstract void stopRegionServer(ServerName serverName) throws IOException;
 
   /**
    * Wait for the specified region server to join the cluster
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public void waitForRegionServerToStart(String hostname, int port, long timeout)
       throws IOException {
     long start = System.currentTimeMillis();
     while ((System.currentTimeMillis() - start) < timeout) {
-      for (ServerName server : getClusterStatus().getServers()) {
+      for (ServerName server : getClusterMetrics().getLiveServerMetrics().keySet()) {
         if (server.getHostname().equals(hostname) && server.getPort() == port) {
           return;
         }
@@ -157,11 +166,24 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified region server to stop the thread / process.
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForRegionServerToStop(ServerName serverName, long timeout)
       throws IOException;
+
+  /**
+   * Suspend the region server
+   * @param serverName the hostname to suspend the regionserver on
+   * @throws IOException if something goes wrong
+   */
+  public abstract void suspendRegionServer(ServerName serverName) throws IOException;
+
+  /**
+   * Resume the region server
+   * @param serverName the hostname to resume the regionserver on
+   * @throws IOException if something goes wrong
+   */
+  public abstract void resumeRegionServer(ServerName serverName) throws IOException;
 
   /**
    * Starts a new zookeeper node on the given hostname or if this is a mini/local cluster,
@@ -187,7 +209,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified zookeeper node to join the cluster
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForZkNodeToStart(ServerName serverName, long timeout)
@@ -195,7 +216,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified zookeeper node to stop the thread / process.
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForZkNodeToStop(ServerName serverName, long timeout)
@@ -224,7 +244,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified datanode to join the cluster
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForDataNodeToStart(ServerName serverName, long timeout)
@@ -232,17 +251,49 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified datanode to stop the thread / process.
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForDataNodeToStop(ServerName serverName, long timeout)
     throws IOException;
 
   /**
+   * Starts a new namenode on the given hostname or if this is a mini/local cluster, silently logs
+   * warning message.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void startNameNode(ServerName serverName) throws IOException;
+
+  /**
+   * Kills the namenode process if this is a distributed cluster, otherwise, this causes master to
+   * exit doing basic clean up only.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void killNameNode(ServerName serverName) throws IOException;
+
+  /**
+   * Stops the namenode if this is a distributed cluster, otherwise silently logs warning message.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void stopNameNode(ServerName serverName) throws IOException;
+
+  /**
+   * Wait for the specified namenode to join the cluster
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForNameNodeToStart(ServerName serverName, long timeout)
+      throws IOException;
+
+  /**
+   * Wait for the specified namenode to stop
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForNameNodeToStop(ServerName serverName, long timeout)
+      throws IOException;
+
+  /**
    * Starts a new master on the given hostname or if this is a mini/local cluster,
    * starts a master locally.
    * @param hostname the hostname to start the master on
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong
    */
   public abstract void startMaster(String hostname, int port) throws IOException;
@@ -308,7 +359,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @return whether restoration is complete
    */
   public boolean restoreInitialStatus() throws IOException {
-    return restoreClusterStatus(getInitialClusterStatus());
+    return restoreClusterMetrics(getInitialClusterMetrics());
   }
 
   /**
@@ -318,7 +369,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * permissions, etc. restoration might be partial.
    * @return whether restoration is complete
    */
-  public boolean restoreClusterStatus(ClusterStatus desiredStatus) throws IOException {
+  public boolean restoreClusterMetrics(ClusterMetrics desiredStatus) throws IOException {
     return true;
   }
 
@@ -327,7 +378,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    */
   public ServerName getServerHoldingMeta() throws IOException {
     return getServerHoldingRegion(TableName.META_TABLE_NAME,
-      HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+      RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
   }
 
   /**
@@ -337,7 +388,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @return ServerName that hosts the region or null
    */
   public abstract ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)
-  throws IOException;
+      throws IOException;
 
   /**
    * @return whether we are interacting with a distributed cluster as opposed to an

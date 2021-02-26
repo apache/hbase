@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,8 +26,13 @@ import static org.junit.Assert.fail;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -35,15 +41,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 /**
  * Test class for {@link QuotaSettingsFactory}.
  */
 @Category(SmallTests.class)
 public class TestQuotaSettingsFactory {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestQuotaSettingsFactory.class);
 
   @Test
   public void testAllQuotasAddedToList() {
@@ -55,9 +61,11 @@ public class TestQuotaSettingsFactory {
     final long writeLimit = 500;
     final Throttle throttle = Throttle.newBuilder()
         // 1000 read reqs/min
-        .setReadNum(TimedQuota.newBuilder().setSoftLimit(readLimit).setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build())
+        .setReadNum(TimedQuota.newBuilder().setSoftLimit(readLimit)
+            .setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build())
         // 500 write reqs/min
-        .setWriteNum(TimedQuota.newBuilder().setSoftLimit(writeLimit).setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build())
+        .setWriteNum(TimedQuota.newBuilder().setSoftLimit(writeLimit)
+            .setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build())
         .build();
     final Quotas quotas = Quotas.newBuilder()
         .setSpace(spaceQuota) // Set the FS quotas
@@ -80,6 +88,7 @@ public class TestQuotaSettingsFactory {
             assertEquals(tn, throttleSettings.getTableName());
             assertNull("Username should be null", throttleSettings.getUserName());
             assertNull("Namespace should be null", throttleSettings.getNamespace());
+            assertNull("RegionServer should be null", throttleSettings.getRegionServer());
             seenRead = true;
             break;
           case WRITE_NUMBER:
@@ -89,6 +98,7 @@ public class TestQuotaSettingsFactory {
             assertEquals(tn, throttleSettings.getTableName());
             assertNull("Username should be null", throttleSettings.getUserName());
             assertNull("Namespace should be null", throttleSettings.getNamespace());
+            assertNull("RegionServer should be null", throttleSettings.getRegionServer());
             seenWrite = true;
             break;
           default:
@@ -100,6 +110,7 @@ public class TestQuotaSettingsFactory {
         assertEquals(tn, spaceLimit.getTableName());
         assertNull("Username should be null", spaceLimit.getUserName());
         assertNull("Namespace should be null", spaceLimit.getNamespace());
+        assertNull("RegionServer should be null", spaceLimit.getRegionServer());
         assertTrue("SpaceLimitSettings should have a SpaceQuota", spaceLimit.getProto().hasQuota());
         assertEquals(spaceQuota, spaceLimit.getProto().getQuota());
         seenSpace = true;
@@ -135,9 +146,11 @@ public class TestQuotaSettingsFactory {
     final TableName tableName = TableName.valueOf("foo");
     final long sizeLimit = 1024L * 1024L * 1024L * 75; // 75GB
     final SpaceViolationPolicy violationPolicy = SpaceViolationPolicy.NO_INSERTS;
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tableName, sizeLimit, violationPolicy);
+    QuotaSettings settings =
+        QuotaSettingsFactory.limitTableSpace(tableName, sizeLimit, violationPolicy);
     assertNotNull("QuotaSettings should not be null", settings);
-    assertTrue("Should be an instance of SpaceLimitSettings", settings instanceof SpaceLimitSettings);
+    assertTrue("Should be an instance of SpaceLimitSettings",
+        settings instanceof SpaceLimitSettings);
     SpaceLimitSettings spaceLimitSettings = (SpaceLimitSettings) settings;
     SpaceLimitRequest protoRequest = spaceLimitSettings.getProto();
     assertTrue("Request should have a SpaceQuota", protoRequest.hasQuota());
@@ -153,16 +166,18 @@ public class TestQuotaSettingsFactory {
     final TableName tn = TableName.valueOf("tn1");
     QuotaSettings nsSettings = QuotaSettingsFactory.removeNamespaceSpaceLimit(ns);
     assertNotNull("QuotaSettings should not be null", nsSettings);
-    assertTrue("Should be an instance of SpaceLimitSettings", nsSettings instanceof SpaceLimitSettings);
+    assertTrue("Should be an instance of SpaceLimitSettings",
+        nsSettings instanceof SpaceLimitSettings);
     SpaceLimitRequest nsProto = ((SpaceLimitSettings) nsSettings).getProto();
     assertTrue("Request should have a SpaceQuota", nsProto.hasQuota());
     assertTrue("The remove attribute should be true", nsProto.getQuota().getRemove());
 
     QuotaSettings tableSettings = QuotaSettingsFactory.removeTableSpaceLimit(tn);
     assertNotNull("QuotaSettings should not be null", tableSettings);
-    assertTrue("Should be an instance of SpaceLimitSettings", tableSettings instanceof SpaceLimitSettings);
+    assertTrue("Should be an instance of SpaceLimitSettings",
+        tableSettings instanceof SpaceLimitSettings);
     SpaceLimitRequest tableProto = ((SpaceLimitSettings) tableSettings).getProto();
     assertTrue("Request should have a SpaceQuota", tableProto.hasQuota());
     assertTrue("The remove attribute should be true", tableProto.getQuota().getRemove());
-   }
+  }
 }

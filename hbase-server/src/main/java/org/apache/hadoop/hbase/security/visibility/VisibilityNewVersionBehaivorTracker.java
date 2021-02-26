@@ -29,26 +29,28 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.regionserver.querymatcher.NewVersionBehaviorTracker;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Similar to MvccSensitiveTracker but tracks the visibility expression also before
  * deciding if a Cell can be considered deleted
  */
+@InterfaceAudience.Private
 public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTracker {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(VisibilityNewVersionBehaivorTracker.class);
 
-  private static final Log LOG = LogFactory.getLog(VisibilityNewVersionBehaivorTracker.class);
-
-  public VisibilityNewVersionBehaivorTracker(NavigableSet<byte[]> columns, int minVersion,
-      int maxVersion,
-      int resultMaxVersions, long oldestUnexpiredTS) {
-    super(columns, minVersion, maxVersion, resultMaxVersions, oldestUnexpiredTS);
+  public VisibilityNewVersionBehaivorTracker(NavigableSet<byte[]> columns,
+      CellComparator cellComparator, int minVersion, int maxVersion, int resultMaxVersions,
+      long oldestUnexpiredTS) {
+    super(columns, cellComparator, minVersion, maxVersion, resultMaxVersions, oldestUnexpiredTS);
   }
 
   private static class TagInfo {
@@ -84,6 +86,7 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
       mvccCountingMap.put(Long.MAX_VALUE, new TreeSet<Long>());
     }
 
+    @Override
     protected VisibilityDeleteVersionsNode getDeepCopy() {
       VisibilityDeleteVersionsNode node = new VisibilityDeleteVersionsNode(ts, mvcc, tagInfo);
       for (Map.Entry<Long, SortedMap<Long, TagInfo>> e : deletesMap.entrySet()) {
@@ -95,6 +98,7 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
       return node;
     }
 
+    @Override
     public void addVersionDelete(Cell cell) {
       SortedMap<Long, TagInfo> set = deletesMap.get(cell.getTimestamp());
       if (set == null) {
@@ -146,7 +150,7 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
     List<Tag> putVisTags = new ArrayList<>();
     Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(put, putVisTags);
     return putVisTags.isEmpty() == delInfo.tags.isEmpty() && (
-        putVisTags.isEmpty() && delInfo.tags.isEmpty() || VisibilityLabelServiceManager
+        (putVisTags.isEmpty() && delInfo.tags.isEmpty()) || VisibilityLabelServiceManager
             .getInstance().getVisibilityLabelService()
             .matchVisibility(putVisTags, putCellVisTagsFormat, delInfo.tags, delInfo.format));
   }
@@ -195,6 +199,7 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
     return DeleteResult.NOT_DELETED;
   }
 
+  @Override
   protected void resetInternal() {
     delFamMap.put(Long.MAX_VALUE,
         new VisibilityDeleteVersionsNode(Long.MIN_VALUE, Long.MAX_VALUE, new TagInfo()));

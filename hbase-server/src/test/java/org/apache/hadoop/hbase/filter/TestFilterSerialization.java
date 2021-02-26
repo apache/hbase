@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,20 +23,25 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.testclassification.FilterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({FilterTests.class, SmallTests.class})
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+
+@Category({FilterTests.class, MediumTests.class})
 public class TestFilterSerialization {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFilterSerialization.class);
 
   @Test
   public void testColumnCountGetFilter() throws Exception {
@@ -301,8 +304,8 @@ public class TestFilterSerialization {
 
     // Non-empty timestamp list
     LinkedList<Long> list = new LinkedList<>();
-    list.add(new Long(System.currentTimeMillis()));
-    list.add(new Long(System.currentTimeMillis()));
+    list.add(System.currentTimeMillis());
+    list.add(System.currentTimeMillis());
     timestampsFilter = new TimestampsFilter(list);
     assertTrue(timestampsFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(timestampsFilter))));
@@ -336,5 +339,14 @@ public class TestFilterSerialization {
       new MultiRowRangeFilter(ranges);
     assertTrue(multiRowRangeFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(multiRowRangeFilter))));
+  }
+
+  @Test
+  public void testColumnValueFilter() throws Exception {
+    ColumnValueFilter columnValueFilter =
+        new ColumnValueFilter(Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
+            CompareOperator.EQUAL, Bytes.toBytes("value"));
+    assertTrue(columnValueFilter.areSerializedFieldsEqual(
+        ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnValueFilter))));
   }
 }

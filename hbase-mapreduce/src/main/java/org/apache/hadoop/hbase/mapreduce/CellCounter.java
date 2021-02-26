@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
@@ -49,7 +48,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 
 /**
@@ -72,8 +71,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Public
 public class CellCounter extends Configured implements Tool {
-  private static final Log LOG =
-    LogFactory.getLog(CellCounter.class.getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(CellCounter.class.getName());
 
 
   /**
@@ -292,31 +291,36 @@ public class CellCounter extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     if (args.length < 2) {
-      System.err.println("ERROR: Wrong number of parameters: " + args.length);
-      System.err.println("Usage: CellCounter ");
-      System.err.println("       <tablename> <outputDir> <reportSeparator> [^[regex pattern] or " +
-        "[Prefix] for row filter]] --starttime=[starttime] --endtime=[endtime]");
-      System.err.println("  Note: -D properties will be applied to the conf used. ");
-      System.err.println("  Additionally, all of the SCAN properties from TableInputFormat");
-      System.err.println("  can be specified to get fine grained control on what is counted..");
-      System.err.println("   -D " + TableInputFormat.SCAN_ROW_START + "=<rowkey>");
-      System.err.println("   -D " + TableInputFormat.SCAN_ROW_STOP + "=<rowkey>");
-      System.err.println("   -D " + TableInputFormat.SCAN_COLUMNS + "=\"<col1> <col2>...\"");
-      System.err.println("   -D " + TableInputFormat.SCAN_COLUMN_FAMILY + "=<family1>,<family2>, ...");
-      System.err.println("   -D " + TableInputFormat.SCAN_TIMESTAMP + "=<timestamp>");
-      System.err.println("   -D " + TableInputFormat.SCAN_TIMERANGE_START + "=<timestamp>");
-      System.err.println("   -D " + TableInputFormat.SCAN_TIMERANGE_END + "=<timestamp>");
-      System.err.println("   -D " + TableInputFormat.SCAN_MAXVERSIONS + "=<count>");
-      System.err.println("   -D " + TableInputFormat.SCAN_CACHEDROWS + "=<count>");
-      System.err.println("   -D " + TableInputFormat.SCAN_BATCHSIZE + "=<count>");
-      System.err.println(" <reportSeparator> parameter can be used to override the default report separator " +
-          "string : used to separate the rowId/column family name and qualifier name.");
-      System.err.println(" [^[regex pattern] or [Prefix] parameter can be used to limit the cell counter count " +
-          "operation to a limited subset of rows from the table based on regex or prefix pattern.");
+      printUsage(args.length);
       return -1;
     }
     Job job = createSubmittableJob(getConf(), args);
     return (job.waitForCompletion(true) ? 0 : 1);
+  }
+
+  private void printUsage(int parameterCount) {
+    System.err.println("ERROR: Wrong number of parameters: " + parameterCount);
+    System.err.println("Usage: hbase cellcounter <tablename> <outputDir> [reportSeparator] "
+        + "[^[regex pattern] or [Prefix]] [--starttime=<starttime> --endtime=<endtime>]");
+    System.err.println("  Note: -D properties will be applied to the conf used.");
+    System.err.println("  Additionally, all of the SCAN properties from TableInputFormat can be "
+        + "specified to get fine grained control on what is counted.");
+    System.err.println("   -D" + TableInputFormat.SCAN_ROW_START + "=<rowkey>");
+    System.err.println("   -D" + TableInputFormat.SCAN_ROW_STOP + "=<rowkey>");
+    System.err.println("   -D" + TableInputFormat.SCAN_COLUMNS + "=\"<col1> <col2>...\"");
+    System.err.println("   -D" + TableInputFormat.SCAN_COLUMN_FAMILY
+        + "=<family1>,<family2>, ...");
+    System.err.println("   -D" + TableInputFormat.SCAN_TIMESTAMP + "=<timestamp>");
+    System.err.println("   -D" + TableInputFormat.SCAN_TIMERANGE_START + "=<timestamp>");
+    System.err.println("   -D" + TableInputFormat.SCAN_TIMERANGE_END + "=<timestamp>");
+    System.err.println("   -D" + TableInputFormat.SCAN_MAXVERSIONS + "=<count>");
+    System.err.println("   -D" + TableInputFormat.SCAN_CACHEDROWS + "=<count>");
+    System.err.println("   -D" + TableInputFormat.SCAN_BATCHSIZE + "=<count>");
+    System.err.println(" <reportSeparator> parameter can be used to override the default report "
+        + "separator string : used to separate the rowId/column family name and qualifier name.");
+    System.err.println(" [^[regex pattern] or [Prefix] parameter can be used to limit the cell "
+        + "counter count operation to a limited subset of rows from the table based on regex or "
+        + "prefix pattern.");
   }
 
   /**

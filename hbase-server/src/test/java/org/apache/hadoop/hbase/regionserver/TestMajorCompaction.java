@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,16 +33,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -57,31 +55,39 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test major compactions
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, LargeTests.class})
 @RunWith(Parameterized.class)
 public class TestMajorCompaction {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMajorCompaction.class);
+
   @Parameterized.Parameters
   public static Object[] data() {
     return new Object[] { "NONE", "BASIC", "EAGER" };
   }
   @Rule public TestName name;
-  private static final Log LOG = LogFactory.getLog(TestMajorCompaction.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(TestMajorCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
 
@@ -108,7 +114,8 @@ public class TestMajorCompaction {
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
-    thirdRowBytes[START_KEY_BYTES.length - 1] += 2;
+    thirdRowBytes[START_KEY_BYTES.length - 1] =
+        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
   }
 
   @Before
@@ -128,36 +135,20 @@ public class TestMajorCompaction {
    * Test that on a major compaction, if all cells are expired or deleted, then
    * we'll end up with no product.  Make sure scanner over region returns
    * right answer in this case - and that it just basically works.
-   * @throws IOException
+   * @throws IOException exception encountered
    */
   @Test
   public void testMajorCompactingToNoOutput() throws IOException {
-    createStoreFile(r);
-    for (int i = 0; i < compactionThreshold; i++) {
-      createStoreFile(r);
-    }
-    // Now delete everything.
-    InternalScanner s = r.getScanner(new Scan());
-    do {
-      List<Cell> results = new ArrayList<>();
-      boolean result = s.next(results);
-      r.delete(new Delete(CellUtil.cloneRow(results.get(0))));
-      if (!result) break;
-    } while(true);
-    s.close();
-    // Flush
-    r.flush(true);
-    // Major compact.
-    r.compact(true);
-    s = r.getScanner(new Scan());
-    int counter = 0;
-    do {
-      List<Cell> results = new ArrayList<>();
-      boolean result = s.next(results);
-      if (!result) break;
-      counter++;
-    } while(true);
-    assertEquals(0, counter);
+    testMajorCompactingWithDeletes(KeepDeletedCells.FALSE);
+  }
+
+  /**
+   * Test that on a major compaction,Deleted cells are retained if keep deleted cells is set to true
+   * @throws IOException exception encountered
+   */
+  @Test
+  public void testMajorCompactingWithKeepDeletedCells() throws IOException {
+    testMajorCompactingWithDeletes(KeepDeletedCells.TRUE);
   }
 
   /**
@@ -230,7 +221,7 @@ public class TestMajorCompaction {
       if( progress != null ) {
         ++storeCount;
         assertTrue(progress.currentCompactedKVs > 0);
-        assertTrue(progress.totalCompactingKVs > 0);
+        assertTrue(progress.getTotalCompactingKVs() > 0);
       }
       assertTrue(storeCount > 0);
     }
@@ -277,7 +268,7 @@ public class TestMajorCompaction {
 
     // Force major compaction.
     r.compact(true);
-    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 1);
+    assertEquals(1, r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size());
 
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     assertTrue("Second row should still be deleted", result.isEmpty());
@@ -292,9 +283,7 @@ public class TestMajorCompaction {
     final int ttl = 1000;
     for (HStore store : r.getStores()) {
       ScanInfo old = store.getScanInfo();
-      ScanInfo si = new ScanInfo(old.getConfiguration(), old.getFamily(), old.getMinVersions(),
-          old.getMaxVersions(), ttl, old.getKeepDeletedCells(), old.getPreadMaxBytes(), 0,
-          old.getComparator(), old.isNewVersionBehavior());
+      ScanInfo si = old.customize(old.getMaxVersions(), ttl, old.getKeepDeletedCells());
       store.setScanInfo(si);
     }
     Thread.sleep(1000);
@@ -388,20 +377,20 @@ public class TestMajorCompaction {
     return count;
   }
 
-  private void createStoreFile(final Region region) throws IOException {
+  private void createStoreFile(final HRegion region) throws IOException {
     createStoreFile(region, Bytes.toString(COLUMN_FAMILY));
   }
 
-  private void createStoreFile(final Region region, String family) throws IOException {
+  private void createStoreFile(final HRegion region, String family) throws IOException {
     Table loader = new RegionAsTable(region);
     HBaseTestCase.addContent(loader, family);
     region.flush(true);
   }
 
-  private void createSmallerStoreFile(final Region region) throws IOException {
+  private void createSmallerStoreFile(final HRegion region) throws IOException {
     Table loader = new RegionAsTable(region);
-    HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
-        "bbb").getBytes(), null);
+    HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), Bytes.toBytes("" +
+        "bbb"), null);
     region.flush(true);
   }
 
@@ -452,6 +441,7 @@ public class TestMajorCompaction {
    * basically works.
    * @throws IOException
    */
+  @Test
   public void testMajorCompactingToNoOutputWithReverseScan() throws IOException {
     createStoreFile(r);
     for (int i = 0; i < compactionThreshold; i++) {
@@ -466,7 +456,9 @@ public class TestMajorCompaction {
       boolean result = s.next(results);
       assertTrue(!results.isEmpty());
       r.delete(new Delete(CellUtil.cloneRow(results.get(0))));
-      if (!result) break;
+      if (!result) {
+        break;
+      }
     } while (true);
     s.close();
     // Flush
@@ -480,10 +472,51 @@ public class TestMajorCompaction {
     do {
       List<Cell> results = new ArrayList<>();
       boolean result = s.next(results);
-      if (!result) break;
+      if (!result) {
+        break;
+      }
       counter++;
     } while (true);
     s.close();
     assertEquals(0, counter);
+  }
+
+  private void testMajorCompactingWithDeletes(KeepDeletedCells keepDeletedCells)
+      throws IOException {
+    createStoreFile(r);
+    for (int i = 0; i < compactionThreshold; i++) {
+      createStoreFile(r);
+    }
+    // Now delete everything.
+    InternalScanner s = r.getScanner(new Scan());
+    int originalCount = 0;
+    do {
+      List<Cell> results = new ArrayList<>();
+      boolean result = s.next(results);
+      r.delete(new Delete(CellUtil.cloneRow(results.get(0))));
+      if (!result) break;
+      originalCount++;
+    } while (true);
+    s.close();
+    // Flush
+    r.flush(true);
+
+    for (HStore store : this.r.stores.values()) {
+      ScanInfo old = store.getScanInfo();
+      ScanInfo si = old.customize(old.getMaxVersions(), old.getTtl(), keepDeletedCells);
+      store.setScanInfo(si);
+    }
+    // Major compact.
+    r.compact(true);
+    s = r.getScanner(new Scan().setRaw(true));
+    int counter = 0;
+    do {
+      List<Cell> results = new ArrayList<>();
+      boolean result = s.next(results);
+      if (!result) break;
+      counter++;
+    } while (true);
+    assertEquals(keepDeletedCells == KeepDeletedCells.TRUE ? originalCount : 0, counter);
+
   }
 }

@@ -17,17 +17,22 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.AddRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
@@ -42,20 +47,25 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServers
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveTablesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
-import com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Client used for managing region server group information.
  */
 @InterfaceAudience.Private
-class RSGroupAdminClient implements RSGroupAdmin {
+public class RSGroupAdminClient implements RSGroupAdmin {
   private RSGroupAdminService.BlockingInterface stub;
+  private Admin admin;
 
   public RSGroupAdminClient(Connection conn) throws IOException {
-    stub = RSGroupAdminService.newBlockingStub(conn.getAdmin().coprocessorService());
+    admin = conn.getAdmin();
+    stub = RSGroupAdminService.newBlockingStub(admin.coprocessorService());
   }
 
   @Override
@@ -112,6 +122,9 @@ class RSGroupAdminClient implements RSGroupAdmin {
     MoveTablesRequest.Builder builder = MoveTablesRequest.newBuilder().setTargetGroup(targetGroup);
     for(TableName tableName: tables) {
       builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
+      if (!admin.tableExists(tableName)) {
+        throw new TableNotFoundException(tableName);
+      }
     }
     try {
       stub.moveTables(null, builder.build());
@@ -198,9 +211,60 @@ class RSGroupAdminClient implements RSGroupAdmin {
     }
     for(TableName tableName: tables) {
       builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
+      if (!admin.tableExists(tableName)) {
+        throw new TableNotFoundException(tableName);
+      }
     }
     try {
       stub.moveServersAndTables(null, builder.build());
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public void removeServers(Set<Address> servers) throws IOException {
+    Set<HBaseProtos.ServerName> hostPorts = Sets.newHashSet();
+    for(Address el: servers) {
+      hostPorts.add(HBaseProtos.ServerName.newBuilder()
+          .setHostName(el.getHostname())
+          .setPort(el.getPort())
+          .build());
+    }
+    RemoveServersRequest request = RemoveServersRequest.newBuilder()
+        .addAllServers(hostPorts)
+        .build();
+    try {
+      stub.removeServers(null, request);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    RenameRSGroupRequest request = RenameRSGroupRequest.newBuilder()
+      .setOldRsgroupName(oldName)
+      .setNewRsgroupName(newName).build();
+    try {
+      stub.renameRSGroup(null, request);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    UpdateRSGroupConfigRequest.Builder builder = UpdateRSGroupConfigRequest.newBuilder()
+        .setGroupName(groupName);
+    if (configuration != null) {
+      configuration.entrySet().forEach(e ->
+          builder.addConfiguration(NameStringPair.newBuilder().setName(e.getKey())
+              .setValue(e.getValue()).build()));
+    }
+    try {
+      stub.updateRSGroupConfig(null, builder.build());
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }

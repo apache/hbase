@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 /**
  * Impl for exposing HMaster Information through JMX
@@ -50,12 +50,12 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public long getSplitPlanCount() {
-    return master.getSplitPlanCount();
+    return master.getRegionNormalizerManager().getSplitPlanCount();
   }
 
   @Override
   public long getMergePlanCount() {
-    return master.getMergePlanCount();
+    return master.getRegionNormalizerManager().getMergePlanCount();
   }
 
   @Override
@@ -70,7 +70,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public String getZookeeperQuorum() {
-    ZooKeeperWatcher zk = master.getZooKeeper();
+    ZKWatcher zk = master.getZooKeeper();
     if (zk == null) {
       return "";
     }
@@ -100,7 +100,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     }
     return StringUtils.join(serverManager.getOnlineServers().keySet(), ";");
   }
-  
+
   @Override
   public int getNumRegionServers() {
     ServerManager serverManager = this.master.getServerManager();
@@ -119,7 +119,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     return StringUtils.join(serverManager.getDeadServers().copyServerNames(), ";");
   }
 
-  
+
   @Override
   public int getNumDeadRegionServers() {
     ServerManager serverManager = this.master.getServerManager();
@@ -127,6 +127,10 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
       return 0;
     }
     return serverManager.getDeadServers().size();
+  }
+
+  @Override public boolean isRunning() {
+    return !(master.isStopped() || master.isStopping());
   }
 
   @Override
@@ -168,6 +172,9 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public Map<String,Entry<Long,Long>> getTableSpaceUtilization() {
+    if (master == null) {
+      return Collections.emptyMap();
+    }
     QuotaObserverChore quotaChore = master.getQuotaObserverChore();
     if (quotaChore == null) {
       return Collections.emptyMap();

@@ -15,14 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mapreduce;
-
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -37,6 +30,13 @@ import java.util.Properties;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Assert;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.LoggerFactory;
 
 /**
  * This file was forked from hadoop/common/branches/branch-2@1350012.
@@ -44,11 +44,15 @@ import java.util.jar.Manifest;
 @Category(SmallTests.class)
 public class TestJarFinder {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestJarFinder.class);
+
   @Test
   public void testJar() throws Exception {
 
     //picking a class that is for sure in a JAR in the classpath
-    String jar = JarFinder.getJar(LogFactory.class);
+    String jar = JarFinder.getJar(LoggerFactory.class);
     Assert.assertTrue(new File(jar).exists());
   }
 

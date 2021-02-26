@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
+import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -28,31 +30,16 @@ import org.apache.yetus.audience.InterfaceAudience;
  * For each coarse-grained area of operations there will be a separate
  * interface with implementation, providing API for relevant operations
  * requiring coordination.
- *
- * Property hbase.coordinated.state.manager.class in hbase-site.xml controls
- * which provider to use.
  */
 @InterfaceAudience.Private
 public interface CoordinatedStateManager {
+  /**
+   * Method to retrieve coordination for split log worker
+   */
+  SplitLogWorkerCoordination getSplitLogWorkerCoordination();
 
   /**
-   * Initialize coordinated state management service.
-   * @param server server instance to run within.
+   * Method to retrieve coordination for split log manager
    */
-  void initialize(Server server);
-
-  /**
-   * Starts service.
-   */
-  void start();
-
-  /**
-   * Stops service.
-   */
-  void stop();
-
-  /**
-   * @return instance of Server coordinated state manager runs within
-   */
-  Server getServer();
+  SplitLogManagerCoordination getSplitLogManagerCoordination();
 }

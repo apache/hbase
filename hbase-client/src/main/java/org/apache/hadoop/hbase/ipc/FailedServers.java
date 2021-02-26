@@ -17,28 +17,25 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.net.InetSocketAddress;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * A class to manage a list of servers that failed recently.
  */
 @InterfaceAudience.Private
 public class FailedServers {
-  private final Map<String, Long> failedServers = new HashMap<String, Long>();
+  private final Map<Address, Long> failedServers = new HashMap<Address, Long>();
   private long latestExpiry = 0;
   private final int recheckServersTimeout;
-  private static final Log LOG = LogFactory.getLog(FailedServers.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FailedServers.class);
 
   public FailedServers(Configuration conf) {
     this.recheckServersTimeout = conf.getInt(
@@ -48,13 +45,13 @@ public class FailedServers {
   /**
    * Add an address to the list of the failed servers list.
    */
-  public synchronized void addToFailedServers(InetSocketAddress address, Throwable throwable) {
+  public synchronized void addToFailedServers(Address address, Throwable throwable) {
     final long expiry = EnvironmentEdgeManager.currentTime() + recheckServersTimeout;
-    this.failedServers.put(address.toString(), expiry);
+    this.failedServers.put(address, expiry);
     this.latestExpiry = expiry;
     if (LOG.isDebugEnabled()) {
       LOG.debug(
-        "Added failed server with address " + address.toString() + " to list caused by "
+        "Added failed server with address " + address + " to list caused by "
             + throwable.toString());
     }
   }
@@ -64,7 +61,7 @@ public class FailedServers {
    *
    * @return true if the server is in the failed servers list
    */
-  public synchronized boolean isFailedServer(final InetSocketAddress address) {
+  public synchronized boolean isFailedServer(final Address address) {
     if (failedServers.isEmpty()) {
       return false;
     }
@@ -73,15 +70,14 @@ public class FailedServers {
       failedServers.clear();
       return false;
     }
-    String key = address.toString();
-    Long expiry = this.failedServers.get(key);
+    Long expiry = this.failedServers.get(address);
     if (expiry == null) {
       return false;
     }
     if (expiry >= now) {
       return true;
     } else {
-      this.failedServers.remove(key);
+      this.failedServers.remove(address);
     }
     return false;
   }

@@ -15,9 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.QuotaCache;
@@ -31,20 +38,19 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 @RunWith(Parameterized.class)
 @Category({ ClientTests.class, MediumTests.class })
 public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncQuotaAdminApi.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -173,6 +179,20 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
     assertNumResults(0, null);
   }
 
+  @Test
+  public void testSwitchRpcThrottle() throws Exception {
+    CompletableFuture<Boolean> future1 = ASYNC_CONN.getAdmin().switchRpcThrottle(true);
+    assertEquals(true, future1.get().booleanValue());
+    CompletableFuture<Boolean> future2 = ASYNC_CONN.getAdmin().isRpcThrottleEnabled();
+    assertEquals(true, future2.get().booleanValue());
+  }
+
+  @Test
+  public void testSwitchExceedThrottleQuota() throws Exception {
+    AsyncAdmin admin = ASYNC_CONN.getAdmin();
+    assertEquals(false, admin.exceedThrottleQuotaSwitch(false).get().booleanValue());
+  }
+
   private void assertNumResults(int expected, final QuotaFilter filter) throws Exception {
     assertEquals(expected, countResults(filter));
   }
@@ -180,7 +200,7 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
   private int countResults(final QuotaFilter filter) throws Exception {
     int count = 0;
     for (QuotaSettings settings : admin.getQuota(filter).get()) {
-      LOG.debug(settings);
+      LOG.debug(Objects.toString(settings));
       count++;
     }
     return count;

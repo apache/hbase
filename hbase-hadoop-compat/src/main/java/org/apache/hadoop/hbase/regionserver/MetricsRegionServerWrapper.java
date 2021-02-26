@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * This is the interface that will expose RegionServer information to hadoop1/hadoop2
  * implementations of the MetricsRegionServerSource.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionServerWrapper {
 
   /**
@@ -133,6 +136,11 @@ public interface MetricsRegionServerWrapper {
   long getReadRequestsCount();
 
   /**
+   * Get the rate of read requests per second to regions hosted on this region server.
+   */
+  double getReadRequestsRatePerSecond();
+
+  /**
    * Get the number of filtered read requests to regions hosted on this region server.
    */
   long getFilteredReadRequestsCount();
@@ -141,6 +149,11 @@ public interface MetricsRegionServerWrapper {
    * Get the number of write requests to regions hosted on this region server.
    */
   long getWriteRequestsCount();
+
+  /**
+   * Get the rate of write requests per second to regions hosted on this region server.
+   */
+  double getWriteRequestsRatePerSecond();
 
   /**
    * Get the number of CAS operations that failed.
@@ -207,7 +220,7 @@ public interface MetricsRegionServerWrapper {
    */
   int getFlushQueueSize();
 
-  public long getMemStoreLimit();
+  long getMemStoreLimit();
   /**
    * Get the size (in bytes) of the block cache that is free.
    */
@@ -272,42 +285,42 @@ public interface MetricsRegionServerWrapper {
   /**
    * Hit count of L1 cache.
    */
-  public long getL1CacheHitCount();
+  long getL1CacheHitCount();
 
   /**
    * Miss count of L1 cache.
    */
-  public long getL1CacheMissCount();
+  long getL1CacheMissCount();
 
   /**
    * Hit ratio of L1 cache.
    */
-  public double getL1CacheHitRatio();
+  double getL1CacheHitRatio();
 
   /**
    * Miss ratio of L1 cache.
    */
-  public double getL1CacheMissRatio();
+  double getL1CacheMissRatio();
 
   /**
    * Hit count of L2 cache.
    */
-  public long getL2CacheHitCount();
+  long getL2CacheHitCount();
 
   /**
    * Miss count of L2 cache.
    */
-  public long getL2CacheMissCount();
+  long getL2CacheMissCount();
 
   /**
    * Hit ratio of L2 cache.
    */
-  public double getL2CacheHitRatio();
+  double getL2CacheHitRatio();
 
   /**
    * Miss ratio of L2 cache.
    */
-  public double getL2CacheMissRatio();
+  double getL2CacheMissRatio();
 
   /**
    * Force a re-computation of the metrics.
@@ -430,6 +443,31 @@ public interface MetricsRegionServerWrapper {
   long getHedgedReadWins();
 
   /**
+   * @return Count of times a hedged read executes in current thread
+   */
+  long getHedgedReadOpsInCurThread();
+
+  /**
+   * @return Number of total bytes read from HDFS.
+   */
+  long getTotalBytesRead();
+
+  /**
+   * @return Number of bytes read from the local HDFS DataNode.
+   */
+  long getLocalBytesRead();
+
+  /**
+   * @return Number of bytes read locally through HDFS short circuit.
+   */
+  long getShortCircuitBytesRead();
+
+  /**
+   * @return Number of bytes read locally through HDFS zero copy.
+   */
+  long getZeroCopyBytesRead();
+
+  /**
    * @return Count of requests blocked because the memstore size is larger than blockingMemStoreSize
    */
   long getBlockedRequestsCount();
@@ -443,6 +481,11 @@ public interface MetricsRegionServerWrapper {
    * Get the number of rpc scan requests to this region server.
    */
   long getRpcScanRequestsCount();
+
+  /**
+   * Get the number of full region rpc scan requests to this region server.
+   */
+  long getRpcFullScanRequestsCount();
 
   /**
    * Get the number of rpc multi requests to this region server.
@@ -500,4 +543,14 @@ public interface MetricsRegionServerWrapper {
   long getTrailerHitCount();
 
   long getTotalRowActionRequestCount();
+
+  long getByteBuffAllocatorHeapAllocationBytes();
+
+  long getByteBuffAllocatorPoolAllocationBytes();
+
+  double getByteBuffAllocatorHeapAllocRatio();
+
+  long getByteBuffAllocatorTotalBufferCount();
+
+  long getByteBuffAllocatorUsedBufferCount();
 }

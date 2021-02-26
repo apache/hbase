@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 
 /**
@@ -38,16 +37,22 @@ public interface IOEngine {
   boolean isPersistent();
 
   /**
-   * Transfers data from IOEngine to a Cacheable object.
-   * @param length How many bytes to be read from the offset
-   * @param offset The offset in the IO engine where the first byte to be read
-   * @param deserializer The deserializer to be used to make a Cacheable from the data.
-   * @return Cacheable
-   * @throws IOException
-   * @throws RuntimeException when the length of the ByteBuff read is less than 'len'
+   * IOEngine uses shared memory means, when reading Cacheable from it, those refers to the same
+   * memory area as used by the Engine for caching it.
+   * @return true when IOEngine using shared memory.
    */
-  Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
-      throws IOException;
+  default boolean usesSharedMemory() {
+    return false;
+  }
+
+  /**
+   * Transfers data from IOEngine to a Cacheable object.
+   * @param be maintains an (offset,len,refCnt) inside.
+   * @return Cacheable which will wrap the NIO ByteBuffers from IOEngine.
+   * @throws IOException when any IO error happen
+   * @throws IllegalArgumentException when the length of the ByteBuff read is less than 'len'
+   */
+  Cacheable read(BucketEntry be) throws IOException;
 
   /**
    * Transfers data from the given byte buffer to IOEngine

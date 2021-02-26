@@ -22,15 +22,15 @@ import java.io.IOException;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -51,7 +51,7 @@ import org.apache.hadoop.io.compress.Compressor;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class CompressionTest {
-  private static final Log LOG = LogFactory.getLog(CompressionTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompressionTest.class);
 
   public static boolean testCompression(String codec) {
     codec = codec.toLowerCase(Locale.ROOT);
@@ -133,14 +133,13 @@ public class CompressionTest {
     writer.appendFileInfo(Bytes.toBytes("compressioninfokey"), Bytes.toBytes("compressioninfoval"));
     writer.close();
     Cell cc = null;
-    HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), true, conf);
+    HFile.Reader reader = HFile.createReader(fs, path, CacheConfig.DISABLED, true, conf);
     try {
-      reader.loadFileInfo();
       HFileScanner scanner = reader.getScanner(false, true);
       scanner.seekTo(); // position to the start of file
       // Scanner does not do Cells yet. Do below for now till fixed.
       cc = scanner.getCell();
-      if (CellComparator.COMPARATOR.compareRows(c, cc) != 0) {
+      if (CellComparator.getInstance().compareRows(c, cc) != 0) {
         throw new Exception("Read back incorrect result: " + c.toString() + " vs " + cc.toString());
       }
     } finally {

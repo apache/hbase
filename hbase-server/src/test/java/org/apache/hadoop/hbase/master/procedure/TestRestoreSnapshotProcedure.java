@@ -15,49 +15,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.client.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({MasterTests.class, LargeTests.class})
 public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
-  private static final Log LOG = LogFactory.getLog(TestRestoreSnapshotProcedure.class);
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-      withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRestoreSnapshotProcedure.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRestoreSnapshotProcedure.class);
 
   protected final TableName snapshotTableName = TableName.valueOf("testRestoreSnapshot");
   protected final byte[] CF1 = Bytes.toBytes("cf1");
@@ -146,7 +146,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     return htd;
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testRestoreSnapshot() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -158,7 +158,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     validateSnapshotRestore();
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRestoreSnapshotToDifferentTable() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName restoredTableName = TableName.valueOf(name.getMethodName());
@@ -173,7 +173,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
       ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotFoundException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRestoreSnapshotToEnabledTable() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -193,7 +193,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 

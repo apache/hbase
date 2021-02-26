@@ -23,9 +23,7 @@ import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.TableName;
@@ -37,10 +35,11 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Predicate;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
@@ -50,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
  */
 @InterfaceAudience.Private
 public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
-  private static final Log LOG = LogFactory.getLog(TableQuotaSnapshotStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableQuotaSnapshotStore.class);
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final ReadLock rlock = lock.readLock();
@@ -145,15 +144,11 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
   }
 
   @Override
-  public Iterable<Entry<RegionInfo,Long>> filterBySubject(TableName table) {
+  public Iterable<Entry<RegionInfo, Long>> filterBySubject(TableName table) {
     rlock.lock();
     try {
-      return Iterables.filter(regionUsage.entrySet(), new Predicate<Entry<RegionInfo,Long>>() {
-        @Override
-        public boolean apply(Entry<RegionInfo,Long> input) {
-          return table.equals(input.getKey().getTable());
-        }
-      });
+      return regionUsage.entrySet().stream()
+        .filter(entry -> table.equals(entry.getKey().getTable())).collect(Collectors.toList());
     } finally {
       rlock.unlock();
     }

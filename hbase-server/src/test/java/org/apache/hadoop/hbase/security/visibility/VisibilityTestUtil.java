@@ -14,7 +14,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-
+import org.apache.hadoop.hbase.security.User;
 
 /**
  * Utility methods for testing visibility labels.
@@ -23,6 +23,7 @@ public class VisibilityTestUtil {
 
   public static void enableVisiblityLabels(Configuration conf) throws IOException {
     conf.setInt("hfile.format.version", 3);
+    conf.setBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
     appendCoprocessor(conf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       VisibilityController.class.getName());
     appendCoprocessor(conf, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,

@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.util.List;
+import java.util.Set;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -31,17 +37,17 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.List;
-import java.util.Set;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 @Category({MasterTests.class, MediumTests.class})
 public class TestDeadServer {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDeadServer.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   final ServerName hostname123 = ServerName.valueOf("127.0.0.1", 123, 3L);
@@ -61,20 +67,20 @@ public class TestDeadServer {
 
   @Test public void testIsDead() {
     DeadServer ds = new DeadServer();
-    ds.add(hostname123);
-    ds.notifyServer(hostname123);
+    ds.putIfAbsent(hostname123);
+    ds.processing(hostname123);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname123);
     assertFalse(ds.areDeadServersInProgress());
 
-    ds.add(hostname1234);
-    ds.notifyServer(hostname1234);
+    ds.putIfAbsent(hostname1234);
+    ds.processing(hostname1234);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname1234);
     assertFalse(ds.areDeadServersInProgress());
 
-    ds.add(hostname12345);
-    ds.notifyServer(hostname12345);
+    ds.putIfAbsent(hostname12345);
+    ds.processing(hostname12345);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname12345);
     assertFalse(ds.areDeadServersInProgress());
@@ -84,7 +90,7 @@ public class TestDeadServer {
 
     final ServerName deadServer = ServerName.valueOf("127.0.0.1", 9090, 112321L);
     assertFalse(ds.cleanPreviousInstance(deadServer));
-    ds.add(deadServer);
+    ds.putIfAbsent(deadServer);
     assertTrue(ds.isDeadServer(deadServer));
     Set<ServerName> deadServerNames = ds.copyServerNames();
     for (ServerName eachDeadServer : deadServerNames) {
@@ -97,7 +103,7 @@ public class TestDeadServer {
     assertFalse(ds.cleanPreviousInstance(deadServerHostComingAlive));
   }
 
-  @Test(timeout = 15000)
+  @Test
   public void testCrashProcedureReplay() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final ProcedureExecutor<MasterProcedureEnv> pExecutor = master.getMasterProcedureExecutor();
@@ -105,7 +111,7 @@ public class TestDeadServer {
       pExecutor.getEnvironment(), hostname123, false, false);
 
     ProcedureTestingUtility.submitAndWait(pExecutor, proc);
-    
+
     assertFalse(master.getServerManager().getDeadServers().areDeadServersInProgress());
   }
 
@@ -117,12 +123,11 @@ public class TestDeadServer {
 
     DeadServer d = new DeadServer();
 
-
-    d.add(hostname123);
+    d.putIfAbsent(hostname123);
     mee.incValue(1);
-    d.add(hostname1234);
+    d.putIfAbsent(hostname1234);
     mee.incValue(1);
-    d.add(hostname12345);
+    d.putIfAbsent(hostname12345);
 
     List<Pair<ServerName, Long>> copy = d.copyDeadServersSince(2L);
     Assert.assertEquals(2, copy.size());
@@ -139,7 +144,7 @@ public class TestDeadServer {
   @Test
   public void testClean(){
     DeadServer d = new DeadServer();
-    d.add(hostname123);
+    d.putIfAbsent(hostname123);
 
     d.cleanPreviousInstance(hostname12345);
     Assert.assertFalse(d.isEmpty());
@@ -154,18 +159,21 @@ public class TestDeadServer {
   @Test
   public void testClearDeadServer(){
     DeadServer d = new DeadServer();
-    d.add(hostname123);
-    d.add(hostname1234);
+    d.putIfAbsent(hostname123);
+    d.putIfAbsent(hostname1234);
     Assert.assertEquals(2, d.size());
 
+    d.finish(hostname123);
     d.removeDeadServer(hostname123);
     Assert.assertEquals(1, d.size());
+    d.finish(hostname1234);
     d.removeDeadServer(hostname1234);
     Assert.assertTrue(d.isEmpty());
 
-    d.add(hostname1234);
+    d.putIfAbsent(hostname1234);
     Assert.assertFalse(d.removeDeadServer(hostname123_2));
     Assert.assertEquals(1, d.size());
+    d.finish(hostname1234);
     Assert.assertTrue(d.removeDeadServer(hostname1234));
     Assert.assertTrue(d.isEmpty());
   }

@@ -58,7 +58,7 @@ public class SpaceViolationPolicyEnforcementFactory {
     if (!status.isInViolation()) {
       throw new IllegalArgumentException(tableName + " is not in violation. Snapshot=" + snapshot);
     }
-    switch (status.getPolicy()) {
+    switch (status.getPolicy().get()) {
       case DISABLE:
         enforcement = new DisableTableViolationPolicyEnforcement();
         break;

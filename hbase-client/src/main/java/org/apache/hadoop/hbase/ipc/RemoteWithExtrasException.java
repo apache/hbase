@@ -19,14 +19,15 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link RemoteException} with some extra information.  If source exception
@@ -36,19 +37,24 @@ import org.apache.hadoop.ipc.RemoteException;
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value = "DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED", justification = "None. Address sometime.")
 public class RemoteWithExtrasException extends RemoteException {
   private final String hostname;
   private final int port;
   private final boolean doNotRetry;
 
-  private final static ClassLoader CLASS_LOADER;
+  /**
+   * Dynamic class loader to load filter/comparators
+   */
+  private final static class ClassLoaderHolder {
+    private final static ClassLoader CLASS_LOADER;
 
-  static {
-    ClassLoader parent = RemoteWithExtrasException.class.getClassLoader();
-    Configuration conf = HBaseConfiguration.create();
-    CLASS_LOADER = new DynamicClassLoader(conf, parent);
+    static {
+      ClassLoader parent = RemoteWithExtrasException.class.getClassLoader();
+      Configuration conf = HBaseConfiguration.create();
+      CLASS_LOADER = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)
+        () -> new DynamicClassLoader(conf, parent)
+      );
+    }
   }
 
   public RemoteWithExtrasException(String className, String msg, final boolean doNotRetry) {
@@ -69,7 +75,7 @@ public class RemoteWithExtrasException extends RemoteException {
     try {
       // try to load a exception class from where the HBase classes are loaded or from Dynamic
       // classloader.
-      realClass = Class.forName(getClassName(), false, CLASS_LOADER);
+      realClass = Class.forName(getClassName(), false, ClassLoaderHolder.CLASS_LOADER);
     } catch (ClassNotFoundException cnfe) {
       try {
         // cause could be a hadoop exception, try to load from hadoop classpath

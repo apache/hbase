@@ -157,7 +157,7 @@ public class ForeignException extends IOException {
    * @param bytes
    * @return the ForeignExcpetion instance
    * @throws InvalidProtocolBufferException if there was deserialization problem this is thrown.
-   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException 
+   * @throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException 
    */
   public static ForeignException deserialize(byte[] bytes)
   throws IOException {

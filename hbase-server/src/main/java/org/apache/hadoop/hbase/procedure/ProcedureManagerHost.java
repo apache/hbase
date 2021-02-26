@@ -23,11 +23,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides the common setup framework and runtime services for globally
@@ -44,7 +44,7 @@ public abstract class ProcedureManagerHost<E extends ProcedureManager> {
   public static final String MASTER_PROCEDURE_CONF_KEY =
       "hbase.procedure.master.classes";
 
-  private static final Log LOG = LogFactory.getLog(ProcedureManagerHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureManagerHost.class);
 
   protected Set<E> procedures = new HashSet<>();
 
@@ -88,11 +88,9 @@ public abstract class ProcedureManagerHost<E extends ProcedureManager> {
     E impl;
     Object o = null;
     try {
-      o = implClass.newInstance();
+      o = implClass.getDeclaredConstructor().newInstance();
       impl = (E)o;
-    } catch (InstantiationException e) {
-      throw new IOException(e);
-    } catch (IllegalAccessException e) {
+    } catch (Exception e) {
       throw new IOException(e);
     }
 

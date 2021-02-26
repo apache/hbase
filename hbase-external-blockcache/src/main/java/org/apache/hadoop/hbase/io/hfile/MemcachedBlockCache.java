@@ -19,24 +19,6 @@
 
 package org.apache.hadoop.hbase.io.hfile;
 
-import net.spy.memcached.CachedData;
-import net.spy.memcached.ConnectionFactoryBuilder;
-import net.spy.memcached.FailureMode;
-import net.spy.memcached.MemcachedClient;
-import net.spy.memcached.transcoders.Transcoder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
-import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.nio.SingleByteBuff;
-import org.apache.hadoop.hbase.util.Addressing;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
-
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -46,6 +28,24 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 
+import net.spy.memcached.CachedData;
+import net.spy.memcached.ConnectionFactoryBuilder;
+import net.spy.memcached.FailureMode;
+import net.spy.memcached.MemcachedClient;
+import net.spy.memcached.transcoders.Transcoder;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.Addressing;
+import org.apache.htrace.core.TraceScope;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Class to store blocks into memcached.
  * This should only be used on a cluster of Memcached daemons that are tuned well and have a
@@ -54,7 +54,7 @@ import java.util.concurrent.ExecutionException;
  */
 @InterfaceAudience.Private
 public class MemcachedBlockCache implements BlockCache {
-  private static final Log LOG = LogFactory.getLog(MemcachedBlockCache.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(MemcachedBlockCache.class.getName());
 
   // Some memcache versions won't take more than 1024 * 1024. So set the limit below
   // that just in case this client is used with those versions.
@@ -100,6 +100,9 @@ public class MemcachedBlockCache implements BlockCache {
     // case.
     String serverListString = c.get(MEMCACHED_CONFIG_KEY,"localhost:11211");
     String[] servers = serverListString.split(",");
+    // MemcachedClient requires InetSocketAddresses, we have to create them now. Implies any
+    // resolved identities cannot have their address mappings changed while the MemcachedClient
+    // instance is alive. We won't get a chance to trigger re-resolution.
     List<InetSocketAddress> serverAddresses = new ArrayList<>(servers.length);
     for (String s:servers) {
       serverAddresses.add(Addressing.createInetSocketAddressFromHostAndPortStr(s));
@@ -109,10 +112,7 @@ public class MemcachedBlockCache implements BlockCache {
   }
 
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey,
-                         Cacheable buf,
-                         boolean inMemory,
-                         boolean cacheDataInL1) {
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
     cacheBlock(cacheKey, buf);
   }
 
@@ -134,7 +134,7 @@ public class MemcachedBlockCache implements BlockCache {
     // Assume that nothing is the block cache
     HFileBlock result = null;
 
-    try (TraceScope traceScope = Trace.startSpan("MemcachedBlockCache.getBlock")) {
+    try (TraceScope traceScope = TraceUtil.createTrace("MemcachedBlockCache.getBlock")) {
       result = client.get(cacheKey.toString(), tc);
     } catch (Exception e) {
       // Catch a pretty broad set of exceptions to limit any changes in the memecache client
@@ -266,7 +266,7 @@ public class MemcachedBlockCache implements BlockCache {
     @Override
     public CachedData encode(HFileBlock block) {
       ByteBuffer bb = ByteBuffer.allocate(block.getSerializedLength());
-      block.serialize(bb);
+      block.serialize(bb, true);
       return new CachedData(0, bb.array(), CachedData.MAX_SIZE);
     }
 
@@ -274,10 +274,9 @@ public class MemcachedBlockCache implements BlockCache {
     public HFileBlock decode(CachedData d) {
       try {
         ByteBuff buf = new SingleByteBuff(ByteBuffer.wrap(d.getData()));
-        return (HFileBlock) HFileBlock.BLOCK_DESERIALIZER.deserialize(buf, true,
-          MemoryType.EXCLUSIVE);
+        return (HFileBlock) HFileBlock.BLOCK_DESERIALIZER.deserialize(buf, ByteBuffAllocator.HEAP);
       } catch (IOException e) {
-        LOG.warn("Error deserializing data from memcached",e);
+        LOG.warn("Failed to deserialize data from memcached", e);
       }
       return null;
     }
@@ -287,10 +286,4 @@ public class MemcachedBlockCache implements BlockCache {
       return MAX_SIZE;
     }
   }
-
-  @Override
-  public void returnBlock(BlockCacheKey cacheKey, Cacheable block) {
-    // Not doing reference counting. All blocks here are EXCLUSIVE
-  }
-
 }

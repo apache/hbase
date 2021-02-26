@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -33,8 +31,9 @@ import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Compact passed set of files. Create an instance and then call
@@ -42,7 +41,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class DefaultCompactor extends Compactor<StoreFileWriter> {
-  private static final Log LOG = LogFactory.getLog(DefaultCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultCompactor.class);
 
   public DefaultCompactor(Configuration conf, HStore store) {
     super(conf, store);
@@ -87,7 +86,7 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
       CompactionRequestImpl request) throws IOException {
     List<Path> newFiles = Lists.newArrayList(writer.getPath());
-    writer.appendMetadata(fd.maxSeqId, request.isAllFiles());
+    writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     writer.close();
     return newFiles;
   }

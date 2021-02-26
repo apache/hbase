@@ -19,20 +19,16 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -41,17 +37,19 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
  * Class to test AsyncAdmin.
  */
-public abstract class TestAsyncAdminBase {
+public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration {
 
-  protected static final Log LOG = LogFactory.getLog(TestAsyncAdminBase.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(TestAsyncAdminBase.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static final byte[] FAMILY = Bytes.toBytes("testFamily");
   protected static final byte[] FAMILY_0 = Bytes.toBytes("cf0");
@@ -87,13 +85,15 @@ public abstract class TestAsyncAdminBase {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
-    TEST_UTIL.startMiniCluster(2);
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).
+        numMasters(2).build();
+    TEST_UTIL.startMiniCluster(option);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    IOUtils.closeQuietly(ASYNC_CONN);
+    Closeables.close(ASYNC_CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -106,35 +106,58 @@ public abstract class TestAsyncAdminBase {
 
   @After
   public void tearDown() throws Exception {
-    admin.listTableNames(Optional.of(Pattern.compile(tableName.getNameAsString() + ".*")), false)
-        .whenCompleteAsync((tables, err) -> {
-          if (tables != null) {
-            tables.forEach(table -> {
-              try {
-                admin.disableTable(table).join();
-              } catch (Exception e) {
-                LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
-              }
-              admin.deleteTable(table).join();
-            });
-          }
-        }, ForkJoinPool.commonPool()).join();
+    admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false)
+      .whenCompleteAsync((tables, err) -> {
+        if (tables != null) {
+          tables.forEach(table -> {
+            try {
+              admin.disableTable(table).join();
+            } catch (Exception e) {
+              LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
+            }
+            admin.deleteTable(table).join();
+          });
+        }
+      }, ForkJoinPool.commonPool()).join();
+    if (!admin.isBalancerEnabled().join()) {
+      admin.balancerSwitch(true, true);
+    }
   }
 
-  protected void createTableWithDefaultConf(TableName tableName) {
-    createTableWithDefaultConf(tableName, Optional.empty());
+  protected void createTableWithDefaultConf(TableName tableName) throws IOException {
+    createTableWithDefaultConf(tableName, null);
   }
 
-  protected void createTableWithDefaultConf(TableName tableName, Optional<byte[][]> splitKeys) {
+  protected void createTableWithDefaultConf(TableName tableName, int regionReplication)
+      throws IOException {
+    createTableWithDefaultConf(tableName, regionReplication, null, FAMILY);
+  }
+
+  protected void createTableWithDefaultConf(TableName tableName, byte[][] splitKeys)
+      throws IOException {
     createTableWithDefaultConf(tableName, splitKeys, FAMILY);
   }
 
-  protected void createTableWithDefaultConf(TableName tableName, Optional<byte[][]> splitKeys,
-      byte[]... families) {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+  protected void createTableWithDefaultConf(TableName tableName, int regionReplication,
+      byte[][] splitKeys) throws IOException {
+    createTableWithDefaultConf(tableName, regionReplication, splitKeys, FAMILY);
+  }
+
+  protected void createTableWithDefaultConf(TableName tableName, byte[][] splitKeys,
+      byte[]... families) throws IOException {
+    createTableWithDefaultConf(tableName, 1, splitKeys, families);
+  }
+
+  protected void createTableWithDefaultConf(TableName tableName, int regionReplication,
+      byte[][] splitKeys, byte[]... families) throws IOException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
     for (byte[] family : families) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
-    admin.createTable(builder.build(), splitKeys).join();
+    CompletableFuture<Void> future = splitKeys == null ? admin.createTable(builder.build())
+      : admin.createTable(builder.build(), splitKeys);
+    future.join();
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
   }
 }

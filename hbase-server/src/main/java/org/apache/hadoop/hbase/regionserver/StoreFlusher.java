@@ -22,13 +22,11 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.OptionalInt;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -57,7 +55,8 @@ abstract class StoreFlusher {
    * @return List of files written. Can be empty; must not be null.
    */
   public abstract List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushSeqNum,
-      MonitoredTask status, ThroughputController throughputController) throws IOException;
+      MonitoredTask status, ThroughputController throughputController,
+      FlushLifeCycleTracker tracker) throws IOException;
 
   protected void finalizeWriter(StoreFileWriter writer, long cacheFlushSeqNum,
       MonitoredTask status) throws IOException {
@@ -74,24 +73,23 @@ abstract class StoreFlusher {
   /**
    * Creates the scanner for flushing snapshot. Also calls coprocessors.
    * @param snapshotScanners
-   * @param smallestReadPoint
    * @return The scanner; null if coprocessor is canceling the flush.
    */
-  protected InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
-      long smallestReadPoint) throws IOException {
-    InternalScanner scanner = null;
+  protected final InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
+    FlushLifeCycleTracker tracker) throws IOException {
+    ScanInfo scanInfo;
     if (store.getCoprocessorHost() != null) {
-      scanner = store.getCoprocessorHost().preFlushScannerOpen(store, snapshotScanners,
-          smallestReadPoint);
+      scanInfo = store.getCoprocessorHost().preFlushScannerOpen(store, tracker);
+    } else {
+      scanInfo = store.getScanInfo();
     }
-    if (scanner == null) {
-      scanner = new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), snapshotScanners,
-          ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
-    }
-    assert scanner != null;
+    final long smallestReadPoint = store.getSmallestReadPoint();
+    InternalScanner scanner = new StoreScanner(store, scanInfo, snapshotScanners,
+        ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
+
     if (store.getCoprocessorHost() != null) {
       try {
-        return store.getCoprocessorHost().preFlush(store, scanner);
+        return store.getCoprocessorHost().preFlush(store, scanner, tracker);
       } catch (IOException ioe) {
         scanner.close();
         throw ioe;
@@ -104,13 +102,12 @@ abstract class StoreFlusher {
    * Performs memstore flush, writing data from scanner into sink.
    * @param scanner Scanner to get data from.
    * @param sink Sink to write data to. Could be StoreFile.Writer.
-   * @param smallestReadPoint Smallest read point used for the flush.
    * @param throughputController A controller to avoid flush too fast
    */
   protected void performFlush(InternalScanner scanner, CellSink sink,
-      long smallestReadPoint, ThroughputController throughputController) throws IOException {
+      ThroughputController throughputController) throws IOException {
     int compactionKVMax =
-      conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
+        conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
 
     ScannerContext scannerContext =
         ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
@@ -119,7 +116,8 @@ abstract class StoreFlusher {
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
     // no control on system table (such as meta, namespace, etc) flush
-    boolean control = throughputController != null && !store.getRegionInfo().isSystemTable();
+    boolean control =
+        throughputController != null && !store.getRegionInfo().getTable().isSystemTable();
     if (control) {
       throughputController.start(flushName);
     }
@@ -132,17 +130,16 @@ abstract class StoreFlusher {
             // set its memstoreTS to 0. This will help us save space when writing to
             // disk.
             sink.append(c);
-            int len = KeyValueUtil.length(c);
             if (control) {
-              throughputController.control(flushName, len);
+              throughputController.control(flushName, c.getSerializedSize());
             }
           }
           kvs.clear();
         }
       } while (hasMore);
     } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted while control throughput of flushing "
-          + flushName);
+      throw new InterruptedIOException(
+          "Interrupted while control throughput of flushing " + flushName);
     } finally {
       if (control) {
         throughputController.finish(flushName);

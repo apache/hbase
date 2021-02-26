@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,14 +25,13 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -41,25 +41,34 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.SpaceQuotaSnapshotPredicate;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 
 /**
  * Test class to exercise the inclusion of snapshots in space quotas
  */
 @Category({LargeTests.class})
 public class TestSpaceQuotasWithSnapshots {
-  private static final Log LOG = LogFactory.getLog(TestSpaceQuotasWithSnapshots.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSpaceQuotasWithSnapshots.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotasWithSnapshots.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   // Global for all tests in the class
   private static final AtomicLong COUNTER = new AtomicLong(0);
@@ -76,6 +85,13 @@ public class TestSpaceQuotasWithSnapshots {
     Configuration conf = TEST_UTIL.getConfiguration();
     SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
     TEST_UTIL.startMiniCluster(1);
+    // Wait till quota table onlined.
+    TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return TEST_UTIL.getAdmin().tableExists(QuotaTableUtil.QUOTA_TABLE_NAME);
+      }
+    });
   }
 
   @AfterClass
@@ -114,7 +130,7 @@ public class TestSpaceQuotasWithSnapshots {
     waitForStableQuotaSize(conn, tn, null);
 
     // The actual size on disk after we wrote our data the first time
-    final long actualInitialSize = QuotaTableUtil.getCurrentSnapshot(conn, tn).getUsage();
+    final long actualInitialSize = conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn).getUsage();
     LOG.info("Initial table size was " + actualInitialSize);
 
     LOG.info("Snapshot the table");
@@ -209,7 +225,7 @@ public class TestSpaceQuotasWithSnapshots {
     waitForStableQuotaSize(conn, null, ns);
 
     // The actual size on disk after we wrote our data the first time
-    final long actualInitialSize = QuotaTableUtil.getCurrentSnapshot(conn, ns).getUsage();
+    final long actualInitialSize = conn.getAdmin().getCurrentSpaceQuotaSnapshot(ns).getUsage();
     LOG.info("Initial table size was " + actualInitialSize);
 
     LOG.info("Snapshot the table");
@@ -233,7 +249,7 @@ public class TestSpaceQuotasWithSnapshots {
     TEST_UTIL.waitFor(30 * 1000, 500, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        Map<TableName,Long> sizes = QuotaTableUtil.getMasterReportedTableSizes(conn);
+        Map<TableName, Long> sizes = conn.getAdmin().getSpaceQuotaTableSizes();
         LOG.debug("Master observed table sizes from region size reports: " + sizes);
         Long size = sizes.get(tn);
         if (null == size) {
@@ -366,7 +382,7 @@ public class TestSpaceQuotasWithSnapshots {
     waitForStableQuotaSize(conn, tn, null);
 
     // The actual size on disk after we wrote our data the first time
-    final long actualInitialSize = QuotaTableUtil.getCurrentSnapshot(conn, tn).getUsage();
+    final long actualInitialSize = conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn).getUsage();
     LOG.info("Initial table size was " + actualInitialSize);
 
     LOG.info("Snapshot the table");
@@ -389,17 +405,19 @@ public class TestSpaceQuotasWithSnapshots {
     });
 
     // We know that reports were sent by our RS, verify that they take up zero size.
-    SpaceQuotaSnapshot snapshot = QuotaTableUtil.getCurrentSnapshot(conn, tn2);
+    SpaceQuotaSnapshot snapshot =
+      (SpaceQuotaSnapshot) conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn2);
     assertNotNull(snapshot);
     assertEquals(0, snapshot.getUsage());
 
     // Compact the cloned table to force it to own its own files.
     TEST_UTIL.compact(tn2, true);
     // After the table is compacted, it should have its own files and be the same size as originally
+    // But The compaction result file has an additional compaction event tracker
     TEST_UTIL.waitFor(30_000, 1_000, new SpaceQuotaSnapshotPredicate(conn, tn2) {
       @Override
       boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
-        return snapshot.getUsage() == actualInitialSize;
+        return snapshot.getUsage() >= actualInitialSize;
       }
     });
   }
@@ -428,7 +446,7 @@ public class TestSpaceQuotasWithSnapshots {
   }
 
   long getRegionSizeReportForTable(Connection conn, TableName tn) throws IOException {
-    Map<TableName,Long> sizes = QuotaTableUtil.getMasterReportedTableSizes(conn);
+    Map<TableName, Long> sizes = conn.getAdmin().getSpaceQuotaTableSizes();
     Long value = sizes.get(tn);
     if (null == value) {
       return 0L;

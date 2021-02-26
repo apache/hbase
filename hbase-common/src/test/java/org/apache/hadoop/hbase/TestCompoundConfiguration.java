@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,25 +17,33 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
-public class TestCompoundConfiguration extends TestCase {
+public class TestCompoundConfiguration {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompoundConfiguration.class);
+
   private Configuration baseConf;
   private int baseConfSize;
 
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     baseConf = new Configuration();
     baseConf.set("A", "1");
     baseConf.setInt("B", 2);
@@ -48,7 +54,7 @@ public class TestCompoundConfiguration extends TestCase {
   @Test
   public void testBasicFunctionality() throws ClassNotFoundException {
     CompoundConfiguration compoundConf = new CompoundConfiguration()
-        .add(baseConf); 
+        .add(baseConf);
     assertEquals("1", compoundConf.get("A"));
     assertEquals(2, compoundConf.getInt("B", 0));
     assertEquals(3, compoundConf.getInt("C", 0));
@@ -104,12 +110,15 @@ public class TestCompoundConfiguration extends TestCase {
     assertEquals(4, compoundConf.getInt("D", 0));
     assertNull(compoundConf.get("E"));
     assertEquals(6, compoundConf.getInt("F", 6));
-    
+
     int cnt = 0;
     for (Map.Entry<String,String> entry : compoundConf) {
       cnt++;
-      if (entry.getKey().equals("B")) assertEquals("2b", entry.getValue());
-      else if (entry.getKey().equals("G")) assertEquals(null, entry.getValue());
+      if (entry.getKey().equals("B")) {
+        assertEquals("2b", entry.getValue());
+      } else if (entry.getKey().equals("G")) {
+        assertNull(entry.getValue());
+      }
     }
     // verify that entries from ImmutableConfigMap's are merged in the iterator's view
     assertEquals(baseConfSize + 1, cnt);
@@ -139,12 +148,15 @@ public class TestCompoundConfiguration extends TestCase {
     assertNull(compoundConf.get("E"));
     assertEquals(6, compoundConf.getInt("F", 6));
     assertNull(compoundConf.get("G"));
-    
+
     int cnt = 0;
     for (Map.Entry<String,String> entry : compoundConf) {
       cnt++;
-      if (entry.getKey().equals("B")) assertEquals("2b", entry.getValue());
-      else if (entry.getKey().equals("G")) assertEquals(null, entry.getValue());
+      if (entry.getKey().equals("B")) {
+        assertEquals("2b", entry.getValue());
+      } else if (entry.getKey().equals("G")) {
+        assertNull(entry.getValue());
+      }
     }
     // verify that entries from ImmutableConfigMap's are merged in the iterator's view
     assertEquals(baseConfSize + 2, cnt);
@@ -180,12 +192,15 @@ public class TestCompoundConfiguration extends TestCase {
     int cnt = 0;
     for (Map.Entry<String,String> entry : compoundConf) {
       cnt++;
-      if (entry.getKey().equals("B")) assertEquals("2b", entry.getValue());
-      else if (entry.getKey().equals("G")) assertEquals(null, entry.getValue());
+      if (entry.getKey().equals("B")) {
+        assertEquals("2b", entry.getValue());
+      } else if (entry.getKey().equals("G")) {
+        assertNull(entry.getValue());
+      }
     }
     // verify that entries from ImmutableConfigMap's are merged in the iterator's view
     assertEquals(4, cnt);
-    
+
     // Verify that adding map after compound configuration is modified overrides properly
     CompoundConfiguration conf2 = new CompoundConfiguration();
     conf2.set("X", "modification");
@@ -218,8 +233,11 @@ public class TestCompoundConfiguration extends TestCase {
     int cnt = 0;
     for (Map.Entry<String,String> entry : compoundConf) {
       cnt++;
-      if (entry.getKey().equals("A")) assertEquals(newValueForA, entry.getValue());
-      else if (entry.getKey().equals("B")) assertEquals(newValueForB, entry.getValue());
+      if (entry.getKey().equals("A")) {
+        assertEquals(newValueForA, entry.getValue());
+      } else if (entry.getKey().equals("B")) {
+        assertEquals(newValueForB, entry.getValue());
+      }
     }
     // verify that entries from ImmutableConfigMap's are merged in the iterator's view
     assertEquals(baseConfSize + 1, cnt);

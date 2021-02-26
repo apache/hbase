@@ -20,12 +20,19 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.Map;
 import java.util.Map.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is the interface that will expose information to hadoop1/hadoop2 implementations of the
  * MetricsMasterSource.
  */
+@InterfaceAudience.Private
 public interface MetricsMasterWrapper {
+
+  /**
+   * Returns if the master is currently running and is not attempting to shutdown.
+   */
+  boolean isRunning();
 
   /**
    * Get ServerName

@@ -25,27 +25,31 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Describe a StoreFile (hfile, reference, link)
  */
 @InterfaceAudience.Private
 public class StoreFileInfo {
-  private static final Log LOG = LogFactory.getLog(StoreFileInfo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StoreFileInfo.class);
 
   /**
    * A non-capture group, for hfiles, so that this can be embedded.
@@ -79,14 +83,19 @@ public class StoreFileInfo {
     Pattern.compile(String.format("^(%s|%s)\\.(.+)$",
       HFILE_NAME_REGEX, HFileLink.LINK_NAME_REGEX));
 
+  public static final String STORE_FILE_READER_NO_READAHEAD = "hbase.store.reader.no-readahead";
+  public static final boolean DEFAULT_STORE_FILE_READER_NO_READAHEAD = false;
+
   // Configuration
-  private Configuration conf;
+  private final Configuration conf;
 
   // FileSystem handle
   private final FileSystem fs;
 
   // HDFS blocks distribution information
   private HDFSBlocksDistribution hdfsBlocksDistribution = null;
+
+  private HFileInfo hfileInfo;
 
   // If this storefile references another, this is the reference instance.
   private final Reference reference;
@@ -101,14 +110,31 @@ public class StoreFileInfo {
   // timestamp on when the file was created, is 0 and ignored for reference or link files
   private long createdTimestamp;
 
+  private long size;
+
+  private final boolean primaryReplica;
+
+  private final boolean noReadahead;
+
+  // Counter that is incremented every time a scanner is created on the
+  // store file. It is decremented when the scan on the store file is
+  // done.
+  final AtomicInteger refCount = new AtomicInteger(0);
+
   /**
    * Create a Store File Info
    * @param conf the {@link Configuration} to use
    * @param fs The current file system to use.
    * @param initialPath The {@link Path} of the file
+   * @param primaryReplica true if this is a store file for primary replica, otherwise false.
    */
-  public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath)
-      throws IOException {
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath,
+      final boolean primaryReplica) throws IOException {
+    this(conf, fs, null, initialPath, primaryReplica);
+  }
+
+  private StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+      final Path initialPath, final boolean primaryReplica) throws IOException {
     assert fs != null;
     assert initialPath != null;
     assert conf != null;
@@ -116,12 +142,15 @@ public class StoreFileInfo {
     this.fs = fs;
     this.conf = conf;
     this.initialPath = initialPath;
+    this.primaryReplica = primaryReplica;
+    this.noReadahead = this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD,
+        DEFAULT_STORE_FILE_READER_NO_READAHEAD);
     Path p = initialPath;
     if (HFileLink.isHFileLink(p)) {
       // HFileLink
       this.reference = null;
       this.link = HFileLink.buildFromHFileLinkPattern(conf, p);
-      if (LOG.isTraceEnabled()) LOG.trace(p + " is a link");
+      LOG.trace("{} is a link", p);
     } else if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       Path referencePath = getReferredToFile(p);
@@ -132,11 +161,17 @@ public class StoreFileInfo {
         // Reference
         this.link = null;
       }
-      if (LOG.isTraceEnabled()) LOG.trace(p + " is a " + reference.getFileRegion() +
-              " reference to " + referencePath);
+      LOG.trace("{} is a {} reference to {}", p, reference.getFileRegion(), referencePath);
     } else if (isHFile(p)) {
       // HFile
-      this.createdTimestamp = fs.getFileStatus(initialPath).getModificationTime();
+      if (fileStatus != null) {
+        this.createdTimestamp = fileStatus.getModificationTime();
+        this.size = fileStatus.getLen();
+      } else {
+        FileStatus fStatus = fs.getFileStatus(initialPath);
+        this.createdTimestamp = fStatus.getModificationTime();
+        this.size = fStatus.getLen();
+      }
       this.reference = null;
       this.link = null;
     } else {
@@ -152,44 +187,59 @@ public class StoreFileInfo {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus)
       throws IOException {
-    this(conf, fs, fileStatus.getPath());
+    this(conf, fs, fileStatus, fileStatus.getPath(), true);
   }
 
   /**
    * Create a Store File Info from an HFileLink
-   * @param conf the {@link Configuration} to use
-   * @param fs The current file system to use.
+   * @param conf The {@link Configuration} to use
+   * @param fs The current file system to use
    * @param fileStatus The {@link FileStatus} of the file
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-      final HFileLink link)
-      throws IOException {
-    this.fs = fs;
-    this.conf = conf;
-    // initialPath can be null only if we get a link.
-    this.initialPath = (fileStatus == null) ? null : fileStatus.getPath();
-      // HFileLink
-    this.reference = null;
-    this.link = link;
+      final HFileLink link) {
+    this(conf, fs, fileStatus, null, link);
   }
 
   /**
    * Create a Store File Info from an HFileLink
-   * @param conf
-   * @param fs
-   * @param fileStatus
-   * @param reference
-   * @throws IOException
+   * @param conf The {@link Configuration} to use
+   * @param fs The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
+   * @param reference The reference instance
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-      final Reference reference)
-      throws IOException {
+      final Reference reference) {
+    this(conf, fs, fileStatus, reference, null);
+  }
+
+  /**
+   * Create a Store File Info from an HFileLink and a Reference
+   * @param conf The {@link Configuration} to use
+   * @param fs The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
+   * @param reference The reference instance
+   * @param link The link instance
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+      final Reference reference, final HFileLink link) {
     this.fs = fs;
     this.conf = conf;
-    this.initialPath = fileStatus.getPath();
-    this.createdTimestamp = fileStatus.getModificationTime();
+    this.primaryReplica = false;
+    this.initialPath = (fileStatus == null) ? null : fileStatus.getPath();
+    this.createdTimestamp = (fileStatus == null) ? 0 :fileStatus.getModificationTime();
     this.reference = reference;
-    this.link = null;
+    this.link = link;
+    this.noReadahead = this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD,
+        DEFAULT_STORE_FILE_READER_NO_READAHEAD);
+  }
+
+  /**
+   * Size of the Hfile
+   * @return size
+   */
+  public long getSize() {
+    return size;
   }
 
   /**
@@ -228,19 +278,21 @@ public class StoreFileInfo {
     return this.hdfsBlocksDistribution;
   }
 
-  /**
-   * Open a Reader for the StoreFile
-   * @param fs The current file system to use.
-   * @param cacheConf The cache configuration and block cache reference.
-   * @return The StoreFile.Reader for the file
-   */
-  public StoreFileReader open(FileSystem fs, CacheConfig cacheConf, boolean canUseDropBehind,
-      long readahead, boolean isPrimaryReplicaStoreFile, AtomicInteger refCount, boolean shared)
+  StoreFileReader createReader(ReaderContext context, CacheConfig cacheConf)
+      throws IOException {
+    StoreFileReader reader = null;
+    if (this.reference != null) {
+      reader = new HalfStoreFileReader(context, hfileInfo, cacheConf, reference, refCount, conf);
+    } else {
+      reader = new StoreFileReader(context, hfileInfo, cacheConf, refCount, conf);
+    }
+    return reader;
+  }
+
+  ReaderContext createReaderContext(boolean doDropBehind, long readahead, ReaderType type)
       throws IOException {
     FSDataInputStreamWrapper in;
     FileStatus status;
-
-    final boolean doDropBehind = canUseDropBehind && cacheConf.shouldDropBehindCompaction();
     if (this.link != null) {
       // HFileLink
       in = new FSDataInputStreamWrapper(fs, this.link, doDropBehind, readahead);
@@ -248,34 +300,34 @@ public class StoreFileInfo {
     } else if (this.reference != null) {
       // HFile Reference
       Path referencePath = getReferredToFile(this.getPath());
-      in = new FSDataInputStreamWrapper(fs, referencePath, doDropBehind, readahead);
+      try {
+        in = new FSDataInputStreamWrapper(fs, referencePath, doDropBehind, readahead);
+      } catch (FileNotFoundException fnfe) {
+        // Intercept the exception so can insert more info about the Reference; otherwise
+        // exception just complains about some random file -- operator doesn't realize it
+        // other end of a Reference
+        FileNotFoundException newFnfe = new FileNotFoundException(toString());
+        newFnfe.initCause(fnfe);
+        throw newFnfe;
+      }
       status = fs.getFileStatus(referencePath);
     } else {
       in = new FSDataInputStreamWrapper(fs, this.getPath(), doDropBehind, readahead);
       status = fs.getFileStatus(initialPath);
     }
     long length = status.getLen();
-    hdfsBlocksDistribution = computeHDFSBlocksDistribution(fs);
-
-    StoreFileReader reader = null;
-    if (this.coprocessorHost != null) {
-      reader = this.coprocessorHost.preStoreFileReaderOpen(fs, this.getPath(), in, length,
-        cacheConf, reference);
+    ReaderContextBuilder contextBuilder = new ReaderContextBuilder()
+        .withInputStreamWrapper(in)
+        .withFileSize(length)
+        .withPrimaryReplicaReader(this.primaryReplica)
+        .withReaderType(type)
+        .withFileSystem(fs);
+    if (this.reference != null) {
+      contextBuilder.withFilePath(this.getPath());
+    } else {
+      contextBuilder.withFilePath(status.getPath());
     }
-    if (reader == null) {
-      if (this.reference != null) {
-        reader = new HalfStoreFileReader(fs, this.getPath(), in, length, cacheConf, reference,
-            isPrimaryReplicaStoreFile, refCount, shared, conf);
-      } else {
-        reader = new StoreFileReader(fs, status.getPath(), in, length, cacheConf,
-            isPrimaryReplicaStoreFile, refCount, shared, conf);
-      }
-    }
-    if (this.coprocessorHost != null) {
-      reader = this.coprocessorHost.postStoreFileReaderOpen(fs, this.getPath(), in, length,
-        cacheConf, reference, reader);
-    }
-    return reader;
+    return contextBuilder.build();
   }
 
   /**
@@ -374,7 +426,7 @@ public class StoreFileInfo {
   @Override
   public String toString() {
     return this.getPath() +
-      (isReference() ? "-" + getReferredToFile(this.getPath()) + "-" + reference : "");
+      (isReference() ? "->" + getReferredToFile(this.getPath()) + "-" + reference : "");
   }
 
   /**
@@ -441,7 +493,7 @@ public class StoreFileInfo {
   public static Path getReferredToFile(final Path p) {
     Matcher m = REF_NAME_PATTERN.matcher(p.getName());
     if (m == null || !m.matches()) {
-      LOG.warn("Failed match of store file name " + p.toString());
+      LOG.warn("Failed match of store file name {}", p.toString());
       throw new IllegalArgumentException("Failed match of store file name " +
           p.toString());
     }
@@ -451,10 +503,7 @@ public class StoreFileInfo {
     // Tabledir is up two directories from where Reference was written.
     Path tableDir = p.getParent().getParent().getParent();
     String nameStrippedOfSuffix = m.group(1);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("reference '" + p + "' to region=" + otherRegion
-        + " hfile=" + nameStrippedOfSuffix);
-    }
+    LOG.trace("reference {} to region={} hfile={}", p, otherRegion, nameStrippedOfSuffix);
 
     // Build up new path with the referenced region in place of our current
     // region in the reference path.  Also strip regionname suffix from name.
@@ -489,7 +538,7 @@ public class StoreFileInfo {
     // after data loss in hdfs for whatever reason (upgrade, etc.): HBASE-646
     // NOTE: that the HFileLink is just a name, so it's an empty file.
     if (!HFileLink.isHFileLink(p) && fileStatus.getLen() <= 0) {
-      LOG.warn("Skipping " + p + " because it is empty. HBASE-646 DATA LOSS?");
+      LOG.warn("Skipping {} because it is empty. HBASE-646 DATA LOSS?", p);
       return false;
     }
 
@@ -577,5 +626,51 @@ public class StoreFileInfo {
     } else {
       return HFileLink.getReferencedHFileName(initialPath.getName());
     }
+  }
+
+  FileSystem getFileSystem() {
+    return this.fs;
+  }
+
+  Configuration getConf() {
+    return this.conf;
+  }
+
+  boolean isNoReadahead() {
+    return this.noReadahead;
+  }
+
+  HFileInfo getHFileInfo() {
+    return hfileInfo;
+  }
+
+  void initHDFSBlocksDistribution() throws IOException {
+    hdfsBlocksDistribution = computeHDFSBlocksDistribution(fs);
+  }
+
+  StoreFileReader preStoreFileReaderOpen(ReaderContext context, CacheConfig cacheConf)
+      throws IOException {
+    StoreFileReader reader = null;
+    if (this.coprocessorHost != null) {
+      reader = this.coprocessorHost.preStoreFileReaderOpen(fs, this.getPath(),
+          context.getInputStreamWrapper(), context.getFileSize(),
+          cacheConf, reference);
+    }
+    return reader;
+  }
+
+  StoreFileReader postStoreFileReaderOpen(ReaderContext context, CacheConfig cacheConf,
+      StoreFileReader reader) throws IOException {
+    StoreFileReader res = reader;
+    if (this.coprocessorHost != null) {
+      res = this.coprocessorHost.postStoreFileReaderOpen(fs, this.getPath(),
+          context.getInputStreamWrapper(), context.getFileSize(),
+          cacheConf, reference, reader);
+    }
+    return res;
+  }
+
+  public void initHFileInfo(ReaderContext context) throws IOException {
+    this.hfileInfo = new HFileInfo(context, conf);
   }
 }

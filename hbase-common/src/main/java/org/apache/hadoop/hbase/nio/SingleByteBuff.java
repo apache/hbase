@@ -17,23 +17,25 @@
  */
 package org.apache.hadoop.hbase.nio;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.NONE;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import sun.nio.ch.DirectBuffer;
 
 /**
- * An implementation of ByteBuff where a single BB backs the BBI. This just acts
- * as a wrapper over a normal BB - offheap or onheap
+ * An implementation of ByteBuff where a single BB backs the BBI. This just acts as a wrapper over a
+ * normal BB - offheap or onheap
  */
 @InterfaceAudience.Private
 public class SingleByteBuff extends ByteBuff {
@@ -49,6 +51,15 @@ public class SingleByteBuff extends ByteBuff {
   private Object unsafeRef = null;
 
   public SingleByteBuff(ByteBuffer buf) {
+    this(NONE, buf);
+  }
+
+  public SingleByteBuff(Recycler recycler, ByteBuffer buf) {
+    this(new RefCnt(recycler), buf);
+  }
+
+  SingleByteBuff(RefCnt refCnt, ByteBuffer buf) {
+    this.refCnt = refCnt;
     this.buf = buf;
     if (buf.hasArray()) {
       this.unsafeOffset = UnsafeAccess.BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset();
@@ -60,63 +71,74 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public int position() {
+    checkRefCount();
     return this.buf.position();
   }
 
   @Override
   public SingleByteBuff position(int position) {
+    checkRefCount();
     this.buf.position(position);
     return this;
   }
 
   @Override
   public SingleByteBuff skip(int len) {
+    checkRefCount();
     this.buf.position(this.buf.position() + len);
     return this;
   }
 
   @Override
   public SingleByteBuff moveBack(int len) {
+    checkRefCount();
     this.buf.position(this.buf.position() - len);
     return this;
   }
 
   @Override
   public int capacity() {
+    checkRefCount();
     return this.buf.capacity();
   }
 
   @Override
   public int limit() {
+    checkRefCount();
     return this.buf.limit();
   }
 
   @Override
   public SingleByteBuff limit(int limit) {
+    checkRefCount();
     this.buf.limit(limit);
     return this;
   }
 
   @Override
   public SingleByteBuff rewind() {
+    checkRefCount();
     this.buf.rewind();
     return this;
   }
 
   @Override
   public SingleByteBuff mark() {
+    checkRefCount();
     this.buf.mark();
     return this;
   }
 
   @Override
   public ByteBuffer asSubByteBuffer(int length) {
+    checkRefCount();
     // Just return the single BB that is available
     return this.buf;
   }
 
   @Override
   public void asSubByteBuffer(int offset, int length, ObjectIntPair<ByteBuffer> pair) {
+    checkRefCount();
     // Just return the single BB that is available
     pair.setFirst(this.buf);
     pair.setSecond(offset);
@@ -124,37 +146,44 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public int remaining() {
+    checkRefCount();
     return this.buf.remaining();
   }
 
   @Override
   public boolean hasRemaining() {
+    checkRefCount();
     return buf.hasRemaining();
   }
 
   @Override
   public SingleByteBuff reset() {
+    checkRefCount();
     this.buf.reset();
     return this;
   }
 
   @Override
   public SingleByteBuff slice() {
-    return new SingleByteBuff(this.buf.slice());
+    checkRefCount();
+    return new SingleByteBuff(this.refCnt, this.buf.slice());
   }
 
   @Override
   public SingleByteBuff duplicate() {
-    return new SingleByteBuff(this.buf.duplicate());
+    checkRefCount();
+    return new SingleByteBuff(this.refCnt, this.buf.duplicate());
   }
 
   @Override
   public byte get() {
+    checkRefCount();
     return buf.get();
   }
 
   @Override
   public byte get(int index) {
+    checkRefCount();
     if (UNSAFE_AVAIL) {
       return UnsafeAccess.toByte(this.unsafeRef, this.unsafeOffset + index);
     }
@@ -163,29 +192,34 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public byte getByteAfterPosition(int offset) {
+    checkRefCount();
     return get(this.buf.position() + offset);
   }
 
   @Override
   public SingleByteBuff put(byte b) {
+    checkRefCount();
     this.buf.put(b);
     return this;
   }
 
   @Override
   public SingleByteBuff put(int index, byte b) {
+    checkRefCount();
     buf.put(index, b);
     return this;
   }
 
   @Override
   public void get(byte[] dst, int offset, int length) {
+    checkRefCount();
     ByteBufferUtils.copyFromBufferToArray(dst, buf, buf.position(), offset, length);
     buf.position(buf.position() + length);
   }
 
   @Override
   public void get(int sourceOffset, byte[] dst, int offset, int length) {
+    checkRefCount();
     ByteBufferUtils.copyFromBufferToArray(dst, buf, sourceOffset, offset, length);
   }
 
@@ -196,9 +230,10 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public SingleByteBuff put(int offset, ByteBuff src, int srcOffset, int length) {
+    checkRefCount();
     if (src instanceof SingleByteBuff) {
       ByteBufferUtils.copyFromBufferToBuffer(((SingleByteBuff) src).buf, this.buf, srcOffset,
-          offset, length);
+        offset, length);
     } else {
       // TODO we can do some optimization here? Call to asSubByteBuffer might
       // create a copy.
@@ -206,7 +241,7 @@ public class SingleByteBuff extends ByteBuff {
       src.asSubByteBuffer(srcOffset, length, pair);
       if (pair.getFirst() != null) {
         ByteBufferUtils.copyFromBufferToBuffer(pair.getFirst(), this.buf, pair.getSecond(), offset,
-            length);
+          length);
       }
     }
     return this;
@@ -214,37 +249,44 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public SingleByteBuff put(byte[] src, int offset, int length) {
+    checkRefCount();
     ByteBufferUtils.copyFromArrayToBuffer(this.buf, src, offset, length);
     return this;
   }
 
   @Override
   public SingleByteBuff put(byte[] src) {
+    checkRefCount();
     return put(src, 0, src.length);
   }
 
   @Override
   public boolean hasArray() {
+    checkRefCount();
     return this.buf.hasArray();
   }
 
   @Override
   public byte[] array() {
+    checkRefCount();
     return this.buf.array();
   }
 
   @Override
   public int arrayOffset() {
+    checkRefCount();
     return this.buf.arrayOffset();
   }
 
   @Override
   public short getShort() {
+    checkRefCount();
     return this.buf.getShort();
   }
 
   @Override
   public short getShort(int index) {
+    checkRefCount();
     if (UNSAFE_UNALIGNED) {
       return UnsafeAccess.toShort(unsafeRef, unsafeOffset + index);
     }
@@ -253,22 +295,26 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public short getShortAfterPosition(int offset) {
+    checkRefCount();
     return getShort(this.buf.position() + offset);
   }
 
   @Override
   public int getInt() {
+    checkRefCount();
     return this.buf.getInt();
   }
 
   @Override
   public SingleByteBuff putInt(int value) {
+    checkRefCount();
     ByteBufferUtils.putInt(this.buf, value);
     return this;
   }
 
   @Override
   public int getInt(int index) {
+    checkRefCount();
     if (UNSAFE_UNALIGNED) {
       return UnsafeAccess.toInt(unsafeRef, unsafeOffset + index);
     }
@@ -277,22 +323,26 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public int getIntAfterPosition(int offset) {
+    checkRefCount();
     return getInt(this.buf.position() + offset);
   }
 
   @Override
   public long getLong() {
+    checkRefCount();
     return this.buf.getLong();
   }
 
   @Override
   public SingleByteBuff putLong(long value) {
+    checkRefCount();
     ByteBufferUtils.putLong(this.buf, value);
     return this;
   }
 
   @Override
   public long getLong(int index) {
+    checkRefCount();
     if (UNSAFE_UNALIGNED) {
       return UnsafeAccess.toLong(unsafeRef, unsafeOffset + index);
     }
@@ -301,11 +351,13 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public long getLongAfterPosition(int offset) {
+    checkRefCount();
     return getLong(this.buf.position() + offset);
   }
 
   @Override
   public byte[] toBytes(int offset, int length) {
+    checkRefCount();
     byte[] output = new byte[length];
     ByteBufferUtils.copyFromBufferToArray(output, buf, offset, 0, length);
     return output;
@@ -313,18 +365,46 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public void get(ByteBuffer out, int sourceOffset, int length) {
+    checkRefCount();
     ByteBufferUtils.copyFromBufferToBuffer(buf, out, sourceOffset, length);
   }
 
   @Override
   public int read(ReadableByteChannel channel) throws IOException {
-    return channelRead(channel, buf);
+    checkRefCount();
+    return read(channel, buf, 0, CHANNEL_READER);
+  }
+
+  @Override
+  public int read(FileChannel channel, long offset) throws IOException {
+    checkRefCount();
+    return read(channel, buf, offset, FILE_READER);
+  }
+
+  @Override
+  public int write(FileChannel channel, long offset) throws IOException {
+    checkRefCount();
+    int total = 0;
+    while(buf.hasRemaining()) {
+      int len = channel.write(buf, offset);
+      total += len;
+      offset += len;
+    }
+    return total;
+  }
+
+  @Override
+  public ByteBuffer[] nioByteBuffers() {
+    checkRefCount();
+    return new ByteBuffer[] { this.buf };
   }
 
   @Override
   public boolean equals(Object obj) {
-    if(!(obj instanceof SingleByteBuff)) return false;
-    return this.buf.equals(((SingleByteBuff)obj).buf);
+    if (!(obj instanceof SingleByteBuff)) {
+      return false;
+    }
+    return this.buf.equals(((SingleByteBuff) obj).buf);
   }
 
   @Override
@@ -332,11 +412,9 @@ public class SingleByteBuff extends ByteBuff {
     return this.buf.hashCode();
   }
 
-  /**
-   * @return the ByteBuffer which this wraps.
-   */
-  @VisibleForTesting
-  public ByteBuffer getEnclosingByteBuffer() {
-    return this.buf;
+  @Override
+  public SingleByteBuff retain() {
+    refCnt.retain();
+    return this;
   }
 }

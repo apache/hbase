@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,22 +21,19 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.SortedSet;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
 
 /**
  * This is an abstraction of a segment maintained in a memstore, e.g., the active
@@ -46,55 +43,80 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  * segments from active set to snapshot set in the default implementation.
  */
 @InterfaceAudience.Private
-public abstract class Segment {
+public abstract class Segment implements MemStoreSizing {
 
   public final static long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
-      + 6 * ClassSize.REFERENCE // cellSet, comparator, memStoreLAB, dataSize,
-                                // heapSize, and timeRangeTracker
+      + 6 * ClassSize.REFERENCE // cellSet, comparator, updatesLock, memStoreLAB, memStoreSizing,
+                                // and timeRangeTracker
       + Bytes.SIZEOF_LONG // minSequenceId
       + Bytes.SIZEOF_BOOLEAN); // tagsPresent
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD + ClassSize.ATOMIC_REFERENCE
-      + ClassSize.CELL_SET + 2 * ClassSize.ATOMIC_LONG + ClassSize.SYNC_TIMERANGE_TRACKER;
+      + ClassSize.CELL_SET + 2 * ClassSize.ATOMIC_LONG
+      + ClassSize.REENTRANT_LOCK;
 
   private AtomicReference<CellSet> cellSet= new AtomicReference<>();
   private final CellComparator comparator;
+  private ReentrantReadWriteLock updatesLock;
   protected long minSequenceId;
   private MemStoreLAB memStoreLAB;
-  // Sum of sizes of all Cells added to this Segment. Cell's heapSize is considered. This is not
+  // Sum of sizes of all Cells added to this Segment. Cell's HeapSize is considered. This is not
   // including the heap overhead of this class.
-  protected final AtomicLong dataSize;
-  protected final AtomicLong heapSize;
+  protected final MemStoreSizing memStoreSizing;
   protected final TimeRangeTracker timeRangeTracker;
   protected volatile boolean tagsPresent;
 
   // Empty constructor to be used when Segment is used as interface,
   // and there is no need in true Segments state
-  protected Segment(CellComparator comparator) {
+  protected Segment(CellComparator comparator, TimeRangeTracker trt) {
     this.comparator = comparator;
-    this.dataSize = new AtomicLong(0);
-    this.heapSize = new AtomicLong(0);
-    this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
+    // Do we need to be thread safe always? What if ImmutableSegment?
+    // DITTO for the TimeRangeTracker below.
+    this.memStoreSizing = new ThreadSafeMemStoreSizing();
+    this.timeRangeTracker = trt;
+  }
+
+  protected Segment(CellComparator comparator, List<ImmutableSegment> segments,
+      TimeRangeTracker trt) {
+    long dataSize = 0;
+    long heapSize = 0;
+    long OffHeapSize = 0;
+    int cellsCount = 0;
+    for (Segment segment : segments) {
+      MemStoreSize memStoreSize = segment.getMemStoreSize();
+      dataSize += memStoreSize.getDataSize();
+      heapSize += memStoreSize.getHeapSize();
+      OffHeapSize += memStoreSize.getOffHeapSize();
+      cellsCount += memStoreSize.getCellsCount();
+    }
+    this.comparator = comparator;
+    this.updatesLock = new ReentrantReadWriteLock();
+    // Do we need to be thread safe always? What if ImmutableSegment?
+    // DITTO for the TimeRangeTracker below.
+    this.memStoreSizing = new ThreadSafeMemStoreSizing(dataSize, heapSize, OffHeapSize, cellsCount);
+    this.timeRangeTracker = trt;
   }
 
   // This constructor is used to create empty Segments.
-  protected Segment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
+  protected Segment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB, TimeRangeTracker trt) {
     this.cellSet.set(cellSet);
     this.comparator = comparator;
+    this.updatesLock = new ReentrantReadWriteLock();
     this.minSequenceId = Long.MAX_VALUE;
     this.memStoreLAB = memStoreLAB;
-    this.dataSize = new AtomicLong(0);
-    this.heapSize = new AtomicLong(0);
+    // Do we need to be thread safe always? What if ImmutableSegment?
+    // DITTO for the TimeRangeTracker below.
+    this.memStoreSizing = new ThreadSafeMemStoreSizing();
     this.tagsPresent = false;
-    this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
+    this.timeRangeTracker = trt;
   }
 
   protected Segment(Segment segment) {
     this.cellSet.set(segment.getCellSet());
     this.comparator = segment.getComparator();
+    this.updatesLock = segment.getUpdatesLock();
     this.minSequenceId = segment.getMinSequenceId();
     this.memStoreLAB = segment.getMemStoreLAB();
-    this.dataSize = new AtomicLong(segment.keySize());
-    this.heapSize = new AtomicLong(segment.heapSize.get());
+    this.memStoreSizing = segment.memStoreSizing;
     this.tagsPresent = segment.isTagsPresent();
     this.timeRangeTracker = segment.getTimeRangeTracker();
   }
@@ -107,16 +129,8 @@ public abstract class Segment {
     return new SegmentScanner(this, readPoint);
   }
 
-  /**
-   * Creates the scanner for the given read point, and a specific order in a list
-   * @return a scanner for the given read point
-   */
-  public KeyValueScanner getScanner(long readPoint, long order) {
-    return new SegmentScanner(this, readPoint, order);
-  }
-
-  public List<KeyValueScanner> getScanners(long readPoint, long order) {
-    return Collections.singletonList(new SegmentScanner(this, readPoint, order));
+  public List<KeyValueScanner> getScanners(long readPoint) {
+    return Collections.singletonList(new SegmentScanner(this, readPoint));
   }
 
   /**
@@ -126,23 +140,6 @@ public abstract class Segment {
     return getCellSet().isEmpty();
   }
 
-  /**
-   * @return number of cells in segment
-   */
-  public int getCellsCount() {
-    return getCellSet().size();
-  }
-
-  /**
-   * @return the first cell in the segment that has equal or greater key than the given cell
-   */
-  public Cell getFirstAfter(Cell cell) {
-    SortedSet<Cell> snTailSet = tailSet(cell);
-    if (!snTailSet.isEmpty()) {
-      return snTailSet.first();
-    }
-    return null;
-  }
 
   /**
    * Closing a segment before it is being discarded
@@ -158,28 +155,40 @@ public abstract class Segment {
   /**
    * If the segment has a memory allocator the cell is being cloned to this space, and returned;
    * otherwise the given cell is returned
+   *
+   * When a cell's size is too big (bigger than maxAlloc), it is not allocated on MSLAB.
+   * Since the process of flattening to CellChunkMap assumes that all cells
+   * are allocated on MSLAB, during this process, the input parameter
+   * forceCloneOfBigCell is set to 'true' and the cell is copied into MSLAB.
+   *
    * @return either the given cell or its clone
    */
-  public Cell maybeCloneWithAllocator(Cell cell) {
+  public Cell maybeCloneWithAllocator(Cell cell, boolean forceCloneOfBigCell) {
     if (this.memStoreLAB == null) {
       return cell;
     }
 
-    Cell cellFromMslab = this.memStoreLAB.copyCellInto(cell);
+    Cell cellFromMslab;
+    if (forceCloneOfBigCell) {
+      cellFromMslab = this.memStoreLAB.forceCopyOfBigCellInto(cell);
+    } else {
+      cellFromMslab = this.memStoreLAB.copyCellInto(cell);
+    }
     return (cellFromMslab != null) ? cellFromMslab : cell;
   }
 
   /**
    * Get cell length after serialized in {@link KeyValue}
    */
-  @VisibleForTesting
   static int getCellLength(Cell cell) {
-    return KeyValueUtil.length(cell);
+    return cell.getSerializedSize();
   }
 
-  public abstract boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS);
-
-  public abstract long getMinTimestamp();
+  public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS) {
+    return !isEmpty()
+        && (tr.isAllTime() || timeRangeTracker.includesTimeRange(tr))
+        && timeRangeTracker.getMax() >= oldestUnexpiredTS;
+  }
 
   public boolean isTagsPresent() {
     return tagsPresent;
@@ -208,27 +217,53 @@ public abstract class Segment {
     return this;
   }
 
-  /**
-   * @return Sum of all cell's size.
-   */
-  public long keySize() {
-    return this.dataSize.get();
+  @Override
+  public MemStoreSize getMemStoreSize() {
+    return this.memStoreSizing.getMemStoreSize();
   }
 
-  /**
-   * @return The heap size of this segment.
-   */
-  public long heapSize() {
-    return this.heapSize.get();
+  @Override
+  public long getDataSize() {
+    return this.memStoreSizing.getDataSize();
   }
 
-  /**
-   * Updates the size counters of the segment by the given delta
-   */
-  //TODO
-  protected void incSize(long delta, long heapOverhead) {
-    this.dataSize.addAndGet(delta);
-    this.heapSize.addAndGet(heapOverhead);
+  @Override
+  public long getHeapSize() {
+    return this.memStoreSizing.getHeapSize();
+  }
+
+  @Override
+  public long getOffHeapSize() {
+    return this.memStoreSizing.getOffHeapSize();
+  }
+
+  @Override
+  public int getCellsCount() {
+    return memStoreSizing.getCellsCount();
+  }
+
+  @Override
+  public long incMemStoreSize(long delta, long heapOverhead, long offHeapOverhead, int cellsCount) {
+    return this.memStoreSizing.incMemStoreSize(delta, heapOverhead, offHeapOverhead, cellsCount);
+  }
+
+  public boolean sharedLock() {
+    return updatesLock.readLock().tryLock();
+  }
+
+  public void sharedUnlock() {
+    updatesLock.readLock().unlock();
+  }
+
+  public void waitForUpdates() {
+    if(!updatesLock.isWriteLocked()) {
+      updatesLock.writeLock().lock();
+    }
+  }
+
+  @Override
+  public boolean compareAndSetDataSize(long expected, long updated) {
+    return memStoreSizing.compareAndSetDataSize(expected, updated);
   }
 
   public long getMinSequenceId() {
@@ -275,24 +310,31 @@ public abstract class Segment {
     return comparator;
   }
 
-  protected void internalAdd(Cell cell, boolean mslabUsed, MemStoreSize memstoreSize) {
+  protected void internalAdd(Cell cell, boolean mslabUsed, MemStoreSizing memstoreSizing,
+      boolean sizeAddedPreOperation) {
     boolean succ = getCellSet().add(cell);
-    updateMetaInfo(cell, succ, mslabUsed, memstoreSize);
+    updateMetaInfo(cell, succ, mslabUsed, memstoreSizing, sizeAddedPreOperation);
   }
 
   protected void updateMetaInfo(Cell cellToAdd, boolean succ, boolean mslabUsed,
-      MemStoreSize memstoreSize) {
-    long cellSize = 0;
+      MemStoreSizing memstoreSizing, boolean sizeAddedPreOperation) {
+    long delta = 0;
+    long cellSize = getCellLength(cellToAdd);
+    int cellsCount = succ ? 1 : 0;
     // If there's already a same cell in the CellSet and we are using MSLAB, we must count in the
     // MSLAB allocation size as well, or else there will be memory leak (occupied heap size larger
     // than the counted number)
     if (succ || mslabUsed) {
-      cellSize = getCellLength(cellToAdd);
+      delta = cellSize;
     }
-    long heapSize = heapSizeChange(cellToAdd, succ);
-    incSize(cellSize, heapSize);
-    if (memstoreSize != null) {
-      memstoreSize.incMemStoreSize(cellSize, heapSize);
+    if (sizeAddedPreOperation) {
+      delta -= cellSize;
+    }
+    long heapSize = heapSizeChange(cellToAdd, succ || mslabUsed);
+    long offHeapSize = offHeapSizeChange(cellToAdd, succ || mslabUsed);
+    incMemStoreSize(delta, heapSize, offHeapSize, cellsCount);
+    if (memstoreSizing != null) {
+      memstoreSizing.incMemStoreSize(delta, heapSize, offHeapSize, cellsCount);
     }
     getTimeRangeTracker().includeTimestamp(cellToAdd);
     minSequenceId = Math.min(minSequenceId, cellToAdd.getSequenceId());
@@ -305,19 +347,57 @@ public abstract class Segment {
     }
   }
 
-  protected void updateMetaInfo(Cell cellToAdd, boolean succ, MemStoreSize memstoreSize) {
-    updateMetaInfo(cellToAdd, succ, (getMemStoreLAB()!=null), memstoreSize);
+  protected void updateMetaInfo(Cell cellToAdd, boolean succ, MemStoreSizing memstoreSizing) {
+    updateMetaInfo(cellToAdd, succ, (getMemStoreLAB()!=null), memstoreSizing, false);
   }
 
   /**
    * @return The increase in heap size because of this cell addition. This includes this cell POJO's
    *         heap size itself and additional overhead because of addition on to CSLM.
    */
-  protected long heapSizeChange(Cell cell, boolean succ) {
-    if (succ) {
-      return ClassSize
-          .align(indexEntrySize() + CellUtil.estimatedHeapSizeOf(cell));
+  protected long heapSizeChange(Cell cell, boolean allocated) {
+    long res = 0;
+    if (allocated) {
+      boolean onHeap = true;
+      MemStoreLAB memStoreLAB = getMemStoreLAB();
+      if(memStoreLAB != null) {
+        onHeap = memStoreLAB.isOnHeap();
+      }
+      res += indexEntryOnHeapSize(onHeap);
+      if(onHeap) {
+        res += cell.heapSize();
+      }
+      res = ClassSize.align(res);
     }
+    return res;
+  }
+
+  protected long offHeapSizeChange(Cell cell, boolean allocated) {
+    long res = 0;
+    if (allocated) {
+      boolean offHeap = false;
+      MemStoreLAB memStoreLAB = getMemStoreLAB();
+      if(memStoreLAB != null) {
+        offHeap = memStoreLAB.isOffHeap();
+      }
+      res += indexEntryOffHeapSize(offHeap);
+      if(offHeap) {
+        res += cell.heapSize();
+      }
+      res = ClassSize.align(res);
+    }
+    return res;
+  }
+
+  protected long indexEntryOnHeapSize(boolean onHeap) {
+    // in most cases index is allocated on-heap
+    // override this method when it is not always the case, e.g., in CCM
+    return indexEntrySize();
+  }
+
+  protected long indexEntryOffHeapSize(boolean offHeap) {
+    // in most cases index is allocated on-heap
+    // override this method when it is not always the case, e.g., in CCM
     return 0;
   }
 
@@ -332,7 +412,6 @@ public abstract class Segment {
     return getCellSet().tailSet(firstCell);
   }
 
-  @VisibleForTesting
   MemStoreLAB getMemStoreLAB() {
     return memStoreLAB;
   }
@@ -341,20 +420,25 @@ public abstract class Segment {
   /**
    * Dumps all cells of the segment into the given log
    */
-  void dump(Log log) {
+  void dump(Logger log) {
     for (Cell cell: getCellSet()) {
-      log.debug(cell);
+      log.debug(Objects.toString(cell));
     }
   }
 
   @Override
   public String toString() {
-    String res = "Store segment of type "+this.getClass().getName()+"; ";
-    res += "isEmpty "+(isEmpty()?"yes":"no")+"; ";
-    res += "cellsCount "+getCellsCount()+"; ";
-    res += "cellsSize "+keySize()+"; ";
-    res += "totalHeapSize "+heapSize()+"; ";
-    res += "Min ts "+getMinTimestamp()+"; ";
+    String res = "type=" + this.getClass().getSimpleName() + ", ";
+    res += "empty=" + (isEmpty()? "yes": "no") + ", ";
+    res += "cellCount=" + getCellsCount() + ", ";
+    res += "cellSize=" + getDataSize() + ", ";
+    res += "totalHeapSize=" + getHeapSize() + ", ";
+    res += "min timestamp=" + timeRangeTracker.getMin() + ", ";
+    res += "max timestamp=" + timeRangeTracker.getMax();
     return res;
+  }
+
+  private ReentrantReadWriteLock getUpdatesLock() {
+    return updatesLock;
   }
 }

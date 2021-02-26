@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,19 +18,20 @@
 
 package org.apache.hadoop.hbase.master;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Set;
-
 import com.google.protobuf.Service;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -41,11 +41,12 @@ import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorServiceBackwardCompatiblity;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
@@ -57,7 +58,11 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides the coprocessor framework and environment for master oriented
@@ -68,7 +73,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class MasterCoprocessorHost
     extends CoprocessorHost<MasterCoprocessor, MasterCoprocessorEnvironment> {
 
-  private static final Log LOG = LogFactory.getLog(MasterCoprocessorHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterCoprocessorHost.class);
 
   /**
    * Coprocessor environment extension providing access to master related
@@ -76,23 +81,30 @@ public class MasterCoprocessorHost
    */
   private static class MasterEnvironment extends BaseEnvironment<MasterCoprocessor>
       implements MasterCoprocessorEnvironment {
-    private final MasterServices masterServices;
-    private final boolean supportGroupCPs;
     private final MetricRegistry metricRegistry;
+    private final MasterServices services;
 
     public MasterEnvironment(final MasterCoprocessor impl, final int priority, final int seq,
         final Configuration conf, final MasterServices services) {
       super(impl, priority, seq, conf);
-      this.masterServices = services;
-      supportGroupCPs = !useLegacyMethod(impl.getClass(),
-          "preBalanceRSGroup", ObserverContext.class, String.class);
+      this.services = services;
       this.metricRegistry =
           MetricsCoprocessor.createRegistryForMasterCoprocessor(impl.getClass().getName());
     }
 
     @Override
-    public MasterServices getMasterServices() {
-      return masterServices;
+    public ServerName getServerName() {
+      return this.services.getServerName();
+    }
+
+    @Override
+    public Connection getConnection() {
+      return new SharedConnection(this.services.getConnection());
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
+      return this.services.createConnection(conf);
     }
 
     @Override
@@ -107,6 +119,30 @@ public class MasterCoprocessorHost
     }
   }
 
+  /**
+   * Special version of MasterEnvironment that exposes MasterServices for Core Coprocessors only.
+   * Temporary hack until Core Coprocessors are integrated into Core.
+   */
+  private static class MasterEnvironmentForCoreCoprocessors extends MasterEnvironment
+      implements HasMasterServices {
+    private final MasterServices masterServices;
+
+    public MasterEnvironmentForCoreCoprocessors(final MasterCoprocessor impl, final int priority,
+        final int seq, final Configuration conf, final MasterServices services) {
+      super(impl, priority, seq, conf, services);
+      this.masterServices = services;
+    }
+
+    /**
+     * @return An instance of MasterServices, an object NOT for general user-space Coprocessor
+     * consumption.
+     */
+    @Override
+    public MasterServices getMasterServices() {
+      return this.masterServices;
+    }
+  }
+
   private MasterServices masterServices;
 
   public MasterCoprocessorHost(final MasterServices services, final Configuration conf) {
@@ -118,11 +154,9 @@ public class MasterCoprocessorHost
     // only one MasterCoprocessorHost instance in the master process
     boolean coprocessorsEnabled = conf.getBoolean(COPROCESSORS_ENABLED_CONF_KEY,
       DEFAULT_COPROCESSORS_ENABLED);
-    LOG.info("System coprocessor loading is " + (coprocessorsEnabled ? "enabled" : "disabled"));
+    LOG.trace("System coprocessor loading is {}",  (coprocessorsEnabled ? "enabled" : "disabled"));
     loadSystemCoprocessors(conf, MASTER_COPROCESSOR_CONF_KEY);
   }
-
-
 
   @Override
   public MasterEnvironment createEnvironment(final MasterCoprocessor instance, final int priority,
@@ -131,23 +165,31 @@ public class MasterCoprocessorHost
     for (Service service : instance.getServices()) {
       masterServices.registerService(service);
     }
-    return new MasterEnvironment(instance, priority, seq, conf, masterServices);
+    // If a CoreCoprocessor, return a 'richer' environment, one laden with MasterServices.
+    return instance.getClass().isAnnotationPresent(CoreCoprocessor.class)?
+        new MasterEnvironmentForCoreCoprocessors(instance, priority, seq, conf, masterServices):
+        new MasterEnvironment(instance, priority, seq, conf, masterServices);
   }
 
   @Override
   public MasterCoprocessor checkAndGetInstance(Class<?> implClass)
       throws InstantiationException, IllegalAccessException {
-    if (MasterCoprocessor.class.isAssignableFrom(implClass)) {
-      return (MasterCoprocessor)implClass.newInstance();
-    } else if (CoprocessorService.class.isAssignableFrom(implClass)) {
-      // For backward compatibility with old CoprocessorService impl which don't extend
-      // MasterCoprocessor.
-      return new CoprocessorServiceBackwardCompatiblity.MasterCoprocessorService(
-          (CoprocessorService)implClass.newInstance());
-    } else {
-      LOG.error(implClass.getName() + " is not of type MasterCoprocessor. Check the "
-          + "configuration " + CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-      return null;
+    try {
+      if (MasterCoprocessor.class.isAssignableFrom(implClass)) {
+        return implClass.asSubclass(MasterCoprocessor.class).getDeclaredConstructor().newInstance();
+      } else if (CoprocessorService.class.isAssignableFrom(implClass)) {
+        // For backward compatibility with old CoprocessorService impl which don't extend
+        // MasterCoprocessor.
+        CoprocessorService cs;
+        cs = implClass.asSubclass(CoprocessorService.class).getDeclaredConstructor().newInstance();
+        return new CoprocessorServiceBackwardCompatiblity.MasterCoprocessorService(cs);
+      } else {
+        LOG.error("{} is not of type MasterCoprocessor. Check the configuration of {}",
+            implClass.getName(), CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+        return null;
+      }
+    } catch (NoSuchMethodException | InvocationTargetException e) {
+      throw (InstantiationException) new InstantiationException(implClass.getName()).initCause(e);
     }
   }
 
@@ -160,8 +202,16 @@ public class MasterCoprocessorHost
       super(masterObserverGetter);
     }
 
+    public MasterObserverOperation(boolean bypassable) {
+      this(null, bypassable);
+    }
+
     public MasterObserverOperation(User user) {
       super(masterObserverGetter, user);
+    }
+
+    public MasterObserverOperation(User user, boolean bypassable) {
+      super(masterObserverGetter, user, bypassable);
     }
   }
 
@@ -171,8 +221,8 @@ public class MasterCoprocessorHost
   //////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-  public boolean preCreateNamespace(final NamespaceDescriptor ns) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+  public void preCreateNamespace(final NamespaceDescriptor ns) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preCreateNamespace(this, ns);
@@ -189,8 +239,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preDeleteNamespace(final String namespaceName) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+  public void preDeleteNamespace(final String namespaceName) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preDeleteNamespace(this, namespaceName);
@@ -207,20 +257,22 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preModifyNamespace(final NamespaceDescriptor ns) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+  public void preModifyNamespace(final NamespaceDescriptor currentNsDescriptor,
+    final NamespaceDescriptor newNsDescriptor) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preModifyNamespace(this, ns);
+        observer.preModifyNamespace(this, currentNsDescriptor, newNsDescriptor);
       }
     });
   }
 
-  public void postModifyNamespace(final NamespaceDescriptor ns) throws IOException {
+  public void postModifyNamespace(final NamespaceDescriptor oldNsDescriptor,
+    final NamespaceDescriptor currentNsDescriptor) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postModifyNamespace(this, ns);
+        observer.postModifyNamespace(this, oldNsDescriptor, currentNsDescriptor);
       }
     });
   }
@@ -245,9 +297,27 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preListNamespaceDescriptors(final List<NamespaceDescriptor> descriptors)
+  public void preListNamespaces(final List<String> namespaces) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver oserver) throws IOException {
+        oserver.preListNamespaces(this, namespaces);
+      }
+    });
+  }
+
+  public void postListNamespaces(final List<String> namespaces) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver oserver) throws IOException {
+        oserver.postListNamespaces(this, namespaces);
+      }
+    });
+  }
+
+  public void preListNamespaceDescriptors(final List<NamespaceDescriptor> descriptors)
       throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preListNamespaceDescriptors(this, descriptors);
@@ -266,6 +336,20 @@ public class MasterCoprocessorHost
   }
 
   /* Implementation of hooks for invoking MasterObservers */
+
+  public TableDescriptor preCreateTableRegionsInfos(TableDescriptor desc) throws IOException {
+    if (coprocEnvironments.isEmpty()) {
+      return desc;
+    }
+    return execOperationWithResult(
+      new ObserverOperationWithResult<MasterObserver, TableDescriptor>(masterObserverGetter, desc) {
+
+        @Override
+        protected TableDescriptor call(MasterObserver observer) throws IOException {
+          return observer.preCreateTableRegionsInfos(this, getResult());
+        }
+      });
+  }
 
   public void preCreateTable(final TableDescriptor htd, final RegionInfo[] regions)
       throws IOException {
@@ -382,175 +466,49 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preModifyTable(final TableName tableName, final TableDescriptor htd)
+  public TableDescriptor preModifyTable(final TableName tableName,
+      final TableDescriptor currentDescriptor, final TableDescriptor newDescriptor)
       throws IOException {
+    if (coprocEnvironments.isEmpty()) {
+      return newDescriptor;
+    }
+    return execOperationWithResult(new ObserverOperationWithResult<MasterObserver, TableDescriptor>(
+        masterObserverGetter, newDescriptor) {
+      @Override
+      protected TableDescriptor call(MasterObserver observer) throws IOException {
+        return observer.preModifyTable(this, tableName, currentDescriptor, getResult());
+      }
+    });
+  }
+
+  public void postModifyTable(final TableName tableName, final TableDescriptor oldDescriptor,
+    final TableDescriptor currentDescriptor) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preModifyTable(this, tableName, htd);
+        observer.postModifyTable(this, tableName, oldDescriptor, currentDescriptor);
       }
     });
   }
 
-  public void postModifyTable(final TableName tableName, final TableDescriptor htd)
-      throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.postModifyTable(this, tableName, htd);
-      }
-    });
-  }
-
-  public void preModifyTableAction(final TableName tableName, final TableDescriptor htd,
-      final User user) throws IOException {
+  public void preModifyTableAction(final TableName tableName,
+    final TableDescriptor currentDescriptor, final TableDescriptor newDescriptor, final User user)
+    throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preModifyTableAction(this, tableName, htd);
+        observer.preModifyTableAction(this, tableName, currentDescriptor, newDescriptor);
       }
     });
   }
 
-  public void postCompletedModifyTableAction(final TableName tableName, final TableDescriptor htd,
-      final User user) throws IOException {
+  public void postCompletedModifyTableAction(final TableName tableName,
+    final TableDescriptor oldDescriptor, final TableDescriptor currentDescriptor, final User user)
+    throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postCompletedModifyTableAction(this, tableName, htd);
-      }
-    });
-  }
-
-  public boolean preAddColumn(final TableName tableName, final ColumnFamilyDescriptor columnFamily)
-      throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.preAddColumnFamily(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public void postAddColumn(final TableName tableName, final ColumnFamilyDescriptor columnFamily)
-      throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.postAddColumnFamily(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public boolean preAddColumnFamilyAction(
-      final TableName tableName,
-      final ColumnFamilyDescriptor columnFamily,
-      final User user)
-      throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.preAddColumnFamilyAction(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public void postCompletedAddColumnFamilyAction(
-      final TableName tableName,
-      final ColumnFamilyDescriptor columnFamily,
-      final User user)
-      throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.postCompletedAddColumnFamilyAction(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public boolean preModifyColumn(final TableName tableName,
-      final ColumnFamilyDescriptor columnFamily) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.preModifyColumnFamily(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public void postModifyColumn(final TableName tableName, final ColumnFamilyDescriptor columnFamily)
-      throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.postModifyColumnFamily(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public boolean preModifyColumnFamilyAction(
-      final TableName tableName,
-      final ColumnFamilyDescriptor columnFamily,
-      final User user) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.preModifyColumnFamilyAction(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public void postCompletedModifyColumnFamilyAction(
-      final TableName tableName,
-      final ColumnFamilyDescriptor columnFamily,
-      final User user) throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.postCompletedModifyColumnFamilyAction(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public boolean preDeleteColumn(final TableName tableName, final byte[] columnFamily)
-      throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.preDeleteColumnFamily(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public void postDeleteColumn(final TableName tableName, final byte[] columnFamily)
-      throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.postDeleteColumnFamily(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public boolean preDeleteColumnFamilyAction(
-      final TableName tableName,
-      final byte[] columnFamily,
-      final User user)
-      throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.preDeleteColumnFamilyAction(this, tableName, columnFamily);
-      }
-    });
-  }
-
-  public void postCompletedDeleteColumnFamilyAction(
-      final TableName tableName, final byte[] columnFamily, final User user) throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.postCompletedDeleteColumnFamilyAction(this, tableName, columnFamily);
+        observer.postCompletedModifyTableAction(this, tableName, oldDescriptor, currentDescriptor);
       }
     });
   }
@@ -629,13 +587,13 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preAbortProcedure(
+  public void preAbortProcedure(
       final ProcedureExecutor<MasterProcedureEnv> procEnv,
       final long procId) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preAbortProcedure(this, procEnv, procId);
+        observer.preAbortProcedure(this,  procId);
       }
     });
   }
@@ -649,8 +607,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preGetProcedures() throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+  public void preGetProcedures() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preGetProcedures(this);
@@ -662,13 +620,13 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postGetProcedures(this, procInfoList);
+        observer.postGetProcedures(this);
       }
     });
   }
 
-  public boolean preGetLocks() throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+  public void preGetLocks() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preGetLocks(this);
@@ -680,14 +638,14 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postGetLocks(this, lockedResources);
+        observer.postGetLocks(this);
       }
     });
   }
 
-  public boolean preMove(final RegionInfo region, final ServerName srcServer,
+  public void preMove(final RegionInfo region, final ServerName srcServer,
       final ServerName destServer) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preMove(this, region, srcServer, destServer);
@@ -705,8 +663,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preAssign(final RegionInfo regionInfo) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+  public void preAssign(final RegionInfo regionInfo) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preAssign(this, regionInfo);
@@ -723,21 +681,20 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preUnassign(final RegionInfo regionInfo, final boolean force)
-      throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+  public void preUnassign(final RegionInfo regionInfo) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preUnassign(this, regionInfo, force);
+        observer.preUnassign(this, regionInfo);
       }
     });
   }
 
-  public void postUnassign(final RegionInfo regionInfo, final boolean force) throws IOException {
+  public void postUnassign(final RegionInfo regionInfo) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postUnassign(this, regionInfo, force);
+        observer.postUnassign(this, regionInfo);
       }
     });
   }
@@ -798,9 +755,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preSetSplitOrMergeEnabled(final boolean newValue,
+  public void preSetSplitOrMergeEnabled(final boolean newValue,
       final MasterSwitchType switchType) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+    execOperation(coprocEnvironments.isEmpty()? null: new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preSetSplitOrMergeEnabled(this, newValue, switchType);
@@ -880,11 +837,11 @@ public class MasterCoprocessorHost
    * @param user the user
    * @throws IOException
    */
-  public boolean preSplitBeforeMETAAction(
+  public void preSplitBeforeMETAAction(
       final byte[] splitKey,
       final List<Mutation> metaEntries,
       final User user) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preSplitRegionBeforeMETAAction(this, splitKey, metaEntries);
@@ -926,9 +883,9 @@ public class MasterCoprocessorHost
    * @param user the user
    * @throws IOException
    */
-  public boolean preMergeRegionsAction(
+  public void preMergeRegionsAction(
       final RegionInfo[] regionsToMerge, final User user) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preMergeRegionsAction(this, regionsToMerge);
@@ -962,11 +919,11 @@ public class MasterCoprocessorHost
    * @param user the user
    * @throws IOException
    */
-  public boolean preMergeRegionsCommit(
+  public void preMergeRegionsCommit(
       final RegionInfo[] regionsToMerge,
       final @MetaMutationAnnotation List<Mutation> metaEntries,
       final User user) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preMergeRegionsCommitAction(this, regionsToMerge, metaEntries);
@@ -1009,14 +966,17 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preBalanceSwitch(final boolean b) throws IOException {
-    return execOperationWithResult(b, coprocEnvironments.isEmpty() ? null :
-        new ObserverOperationWithResult<MasterObserver, Boolean>(masterObserverGetter) {
-          @Override
-          public Boolean call(MasterObserver observer) throws IOException {
-            return observer.preBalanceSwitch(this, getResult());
-          }
-        });
+  // This hook allows Coprocessor change value of balance switch.
+  public void preBalanceSwitch(final boolean b) throws IOException {
+    if (this.coprocEnvironments.isEmpty()) {
+      return;
+    }
+    execOperation(new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preBalanceSwitch(this, b);
+      }
+    });
   }
 
   public void postBalanceSwitch(final boolean oldValue, final boolean newValue)
@@ -1032,7 +992,10 @@ public class MasterCoprocessorHost
   public void preShutdown() throws IOException {
     // While stopping the cluster all coprocessors method should be executed first then the
     // coprocessor should be cleaned up.
-    execShutdown(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+    if (coprocEnvironments.isEmpty()) {
+      return;
+    }
+    execShutdown(new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preShutdown(this);
@@ -1048,7 +1011,10 @@ public class MasterCoprocessorHost
   public void preStopMaster() throws IOException {
     // While stopping master all coprocessors method should be executed first then the coprocessor
     // environment should be cleaned up.
-    execShutdown(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+    if (coprocEnvironments.isEmpty()) {
+      return;
+    }
+    execShutdown(new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preStopMaster(this);
@@ -1095,6 +1061,16 @@ public class MasterCoprocessorHost
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.postSnapshot(this, snapshot, hTableDescriptor);
+      }
+    });
+  }
+
+  public void postCompletedSnapshotAction(SnapshotDescription snapshot,
+      TableDescriptor hTableDescriptor) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postCompletedSnapshotAction(this, snapshot, hTableDescriptor);
       }
     });
   }
@@ -1175,9 +1151,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preGetTableDescriptors(final List<TableName> tableNamesList,
+  public void preGetTableDescriptors(final List<TableName> tableNamesList,
       final List<TableDescriptor> descriptors, final String regex) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preGetTableDescriptors(this, tableNamesList, descriptors, regex);
@@ -1195,9 +1171,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preGetTableNames(final List<TableDescriptor> descriptors,
+  public void preGetTableNames(final List<TableDescriptor> descriptors,
       final String regex) throws IOException {
-    return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preGetTableNames(this, descriptors, regex);
@@ -1337,14 +1313,32 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preSetRegionServerQuota(final String regionServer, final GlobalQuotaSettings quotas)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preSetRegionServerQuota(this, regionServer, quotas);
+      }
+    });
+  }
+
+  public void postSetRegionServerQuota(final String regionServer, final GlobalQuotaSettings quotas)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postSetRegionServerQuota(this, regionServer, quotas);
+      }
+    });
+  }
+
   public void preMoveServersAndTables(final Set<Address> servers, final Set<TableName> tables,
       final String targetGroup) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preMoveServersAndTables(this, servers, tables, targetGroup);
-        }
+        observer.preMoveServersAndTables(this, servers, tables, targetGroup);
       }
     });
   }
@@ -1354,9 +1348,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postMoveServersAndTables(this, servers, tables, targetGroup);
-        }
+        observer.postMoveServersAndTables(this, servers, tables, targetGroup);
       }
     });
   }
@@ -1366,9 +1358,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preMoveServers(this, servers, targetGroup);
-        }
+        observer.preMoveServers(this, servers, targetGroup);
       }
     });
   }
@@ -1378,9 +1368,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postMoveServers(this, servers, targetGroup);
-        }
+        observer.postMoveServers(this, servers, targetGroup);
       }
     });
   }
@@ -1390,9 +1378,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preMoveTables(this, tables, targetGroup);
-        }
+        observer.preMoveTables(this, tables, targetGroup);
       }
     });
   }
@@ -1402,9 +1388,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postMoveTables(this, tables, targetGroup);
-        }
+        observer.postMoveTables(this, tables, targetGroup);
       }
     });
   }
@@ -1414,9 +1398,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preAddRSGroup(this, name);
-        }
+        observer.preAddRSGroup(this, name);
       }
     });
   }
@@ -1426,9 +1408,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if (((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postAddRSGroup(this, name);
-        }
+        observer.postAddRSGroup(this, name);
       }
     });
   }
@@ -1438,9 +1418,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preRemoveRSGroup(this, name);
-        }
+        observer.preRemoveRSGroup(this, name);
       }
     });
   }
@@ -1450,9 +1428,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postRemoveRSGroup(this, name);
-        }
+        observer.postRemoveRSGroup(this, name);
       }
     });
   }
@@ -1462,9 +1438,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preBalanceRSGroup(this, name);
-        }
+        observer.preBalanceRSGroup(this, name);
       }
     });
   }
@@ -1474,9 +1448,67 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postBalanceRSGroup(this, name, balanceRan);
-        }
+        observer.postBalanceRSGroup(this, name, balanceRan);
+      }
+    });
+  }
+
+  public void preRenameRSGroup(final String oldName, final String newName)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null: new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preRenameRSGroup(this, oldName, newName);
+      }
+    });
+  }
+
+  public void postRenameRSGroup(final String oldName, final String newName)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null: new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postRenameRSGroup(this, oldName, newName);
+      }
+    });
+  }
+
+  public void preRemoveServers(final Set<Address> servers)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preRemoveServers(this, servers);
+      }
+    });
+  }
+
+  public void postRemoveServers(final Set<Address> servers)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postRemoveServers(this, servers);
+      }
+    });
+  }
+
+  public void preUpdateRSGroupConfig(final String groupName,
+                                     final Map<String, String> configuration) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.preUpdateRSGroupConfig(this, groupName, configuration);
+      }
+    });
+  }
+
+  public void postUpdateRSGroupConfig(final String groupName,
+                                      final Map<String, String> configuration) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.postUpdateRSGroupConfig(this, groupName, configuration);
       }
     });
   }
@@ -1616,7 +1648,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preRequestLock(this, namespace, tableName, regionInfos, type, description);
+        observer.preRequestLock(this, namespace, tableName, regionInfos, description);
       }
     });
   }
@@ -1626,7 +1658,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postRequestLock(this, namespace, tableName, regionInfos, type, description);
+        observer.postRequestLock(this, namespace, tableName, regionInfos, description);
       }
     });
   }
@@ -1635,7 +1667,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preLockHeartbeat(this, proc, keepAlive);
+        observer.preLockHeartbeat(this, proc.getTableName(), proc.getDescription());
       }
     });
   }
@@ -1644,25 +1676,25 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postLockHeartbeat(this, proc, keepAlive);
+        observer.postLockHeartbeat(this);
       }
     });
   }
 
-  public void preListDeadServers() throws IOException {
+  public void preGetClusterMetrics() throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preListDeadServers(this);
+        observer.preGetClusterMetrics(this);
       }
     });
   }
 
-  public void postListDeadServers() throws IOException {
+  public void postGetClusterMetrics(ClusterMetrics status) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postListDeadServers(this);
+        observer.postGetClusterMetrics(this, status);
       }
     });
   }
@@ -1676,11 +1708,202 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postClearDeadServers() throws IOException {
+  public void postClearDeadServers(List<ServerName> servers,
+      List<ServerName> notClearedServers) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postClearDeadServers(this);
+        observer.postClearDeadServers(this, servers, notClearedServers);
+      }
+    });
+  }
+
+  public void preDecommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preDecommissionRegionServers(this, servers, offload);
+      }
+    });
+  }
+
+  public void postDecommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postDecommissionRegionServers(this, servers, offload);
+      }
+    });
+  }
+
+  public void preListDecommissionedRegionServers() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preListDecommissionedRegionServers(this);
+      }
+    });
+  }
+
+  public void postListDecommissionedRegionServers() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postListDecommissionedRegionServers(this);
+      }
+    });
+  }
+
+  public void preRecommissionRegionServer(ServerName server, List<byte[]> encodedRegionNames)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preRecommissionRegionServer(this, server, encodedRegionNames);
+      }
+    });
+  }
+
+  public void postRecommissionRegionServer(ServerName server, List<byte[]> encodedRegionNames)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postRecommissionRegionServer(this, server, encodedRegionNames);
+      }
+    });
+  }
+
+  public void preSwitchRpcThrottle(boolean enable) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null :new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preSwitchRpcThrottle(this, enable);
+      }
+    });
+  }
+
+  public void postSwitchRpcThrottle(final boolean oldValue, final boolean newValue)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postSwitchRpcThrottle(this, oldValue, newValue);
+      }
+    });
+  }
+
+  public void preIsRpcThrottleEnabled() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preIsRpcThrottleEnabled(this);
+      }
+    });
+  }
+
+  public void postIsRpcThrottleEnabled(boolean enabled) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postIsRpcThrottleEnabled(this, enabled);
+      }
+    });
+  }
+
+  public void preSwitchExceedThrottleQuota(boolean enable) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preSwitchExceedThrottleQuota(this, enable);
+      }
+    });
+  }
+
+  public void postSwitchExceedThrottleQuota(final boolean oldValue, final boolean newValue)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postSwitchExceedThrottleQuota(this, oldValue, newValue);
+      }
+    });
+  }
+
+  public void preGrant(UserPermission userPermission, boolean mergeExistingPermissions)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preGrant(this, userPermission, mergeExistingPermissions);
+      }
+    });
+  }
+
+  public void postGrant(UserPermission userPermission, boolean mergeExistingPermissions)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postGrant(this, userPermission, mergeExistingPermissions);
+      }
+    });
+  }
+
+  public void preRevoke(UserPermission userPermission) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preRevoke(this, userPermission);
+      }
+    });
+  }
+
+  public void postRevoke(UserPermission userPermission) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postRevoke(this, userPermission);
+      }
+    });
+  }
+
+  public void preGetUserPermissions(String userName, String namespace, TableName tableName,
+      byte[] family, byte[] qualifier) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preGetUserPermissions(this, userName, namespace, tableName, family, qualifier);
+      }
+    });
+  }
+
+  public void postGetUserPermissions(String userName, String namespace, TableName tableName,
+      byte[] family, byte[] qualifier) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postGetUserPermissions(this, userName, namespace, tableName, family, qualifier);
+      }
+    });
+  }
+
+  public void preHasUserPermissions(String userName, List<Permission> permissions)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preHasUserPermissions(this, userName, permissions);
+      }
+    });
+  }
+
+  public void postHasUserPermissions(String userName, List<Permission> permissions)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postHasUserPermissions(this, userName, permissions);
       }
     });
   }

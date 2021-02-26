@@ -22,10 +22,10 @@ module Shell
   module Commands
     class ShowPeerTableCFs < Command
       def help
-        <<-EOF
+        <<~EOF
   Show replicable table-cf config for the specified peer.
 
-    hbase> show_peer_tableCFs
+    hbase> show_peer_tableCFs '2'
   EOF
       end
 
@@ -33,6 +33,10 @@ module Shell
         peer_table_cfs = replication_admin.show_peer_tableCFs(id)
         puts peer_table_cfs
         peer_table_cfs
+      end
+
+      def command_name
+        'show_peer_tableCFs'
       end
     end
   end

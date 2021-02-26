@@ -36,10 +36,14 @@ public class CSLMImmutableSegment extends ImmutableSegment {
    * This C-tor should be used when active MutableSegment is pushed into the compaction
    * pipeline and becomes an ImmutableSegment.
    */
-  protected CSLMImmutableSegment(Segment segment) {
+  protected CSLMImmutableSegment(Segment segment, MemStoreSizing memstoreSizing) {
     super(segment);
     // update the segment metadata heap size
-    incSize(0, -MutableSegment.DEEP_OVERHEAD + DEEP_OVERHEAD_CSLM);
+    long indexOverhead = -MutableSegment.DEEP_OVERHEAD + DEEP_OVERHEAD_CSLM;
+    incMemStoreSize(0, indexOverhead, 0, 0); // CSLM is always on-heap
+    if (memstoreSizing != null) {
+      memstoreSizing.incMemStoreSize(0, indexOverhead, 0, 0);
+    }
   }
 
   @Override

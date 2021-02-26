@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -25,19 +24,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class TimeOffsetEnvironmentEdge implements EnvironmentEdge {
   private long offset;
   
-  public TimeOffsetEnvironmentEdge(){}
-  
-  public void setTimeOffset(long off){
-    this.offset = off;
+  public TimeOffsetEnvironmentEdge() {
   }
   
-  public long getTimeOffset()
-  {
-    return offset;
-  }
-  
-  public void increment(long incr)
-  {
+  public void increment(long incr) {
     this.offset += incr;
   }
   
@@ -45,5 +35,4 @@ public class TimeOffsetEnvironmentEdge implements EnvironmentEdge {
   public long currentTime() {
     return System.currentTimeMillis() + offset;
   }
-
 }

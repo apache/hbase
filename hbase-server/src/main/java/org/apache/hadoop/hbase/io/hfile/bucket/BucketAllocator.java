@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,35 +26,29 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.LongAdder;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.MinMaxPriorityQueue;
-import org.apache.commons.collections4.map.LinkedMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.shaded.com.google.common.primitives.Ints;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.LinkedMap;
 
 /**
- * This class is used to allocate a block with specified size and free the block
- * when evicting. It manages an array of buckets, each bucket is associated with
- * a size and caches elements up to this size. For a completely empty bucket, this
- * size could be re-specified dynamically.
- *
+ * This class is used to allocate a block with specified size and free the block when evicting. It
+ * manages an array of buckets, each bucket is associated with a size and caches elements up to this
+ * size. For a completely empty bucket, this size could be re-specified dynamically.
+ * <p/>
  * This class is not thread safe.
  */
 @InterfaceAudience.Private
-@JsonIgnoreProperties({"indexStatistics", "freeSize", "usedSize"})
 public final class BucketAllocator {
-  private static final Log LOG = LogFactory.getLog(BucketAllocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BucketAllocator.class);
 
-  @JsonIgnoreProperties({"completelyFree", "uninstantiated"})
   public final static class Bucket {
     private long baseOffset;
     private int itemAllocationSize, sizeIndex;
@@ -277,8 +269,9 @@ public final class BucketAllocator {
 
   // Default block size in hbase is 64K, so we choose more sizes near 64K, you'd better
   // reset it according to your cluster's block size distribution
+  // The real block size in hfile maybe a little larger than the size we configured ,
+  // so we need add extra 1024 bytes for fit.
   // TODO Support the view of block size distribution statistics
-  // TODO: Why we add the extra 1024 bytes? Slop?
   private static final int DEFAULT_BUCKET_SIZES[] = { 4 * 1024 + 1024, 8 * 1024 + 1024,
       16 * 1024 + 1024, 32 * 1024 + 1024, 40 * 1024 + 1024, 48 * 1024 + 1024,
       56 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024, 128 * 1024 + 1024,
@@ -308,7 +301,7 @@ public final class BucketAllocator {
   private Bucket[] buckets;
   private BucketSizeInfo[] bucketSizeInfos;
   private final long totalSize;
-  private long usedSize = 0;
+  private transient long usedSize = 0;
 
   BucketAllocator(long availableSpace, int[] bucketSizes)
       throws BucketAllocatorException {
@@ -414,6 +407,7 @@ public final class BucketAllocator {
     }
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(1024);
     for (int i = 0; i < buckets.length; ++i) {
@@ -450,7 +444,7 @@ public final class BucketAllocator {
     BucketSizeInfo bsi = roundUpToBucketSizeInfo(blockSize);
     if (bsi == null) {
       throw new BucketAllocatorException("Allocation too big size=" + blockSize +
-        "; adjust BucketCache sizes " + CacheConfig.BUCKET_CACHE_BUCKETS_KEY +
+        "; adjust BucketCache sizes " + BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY +
         " to accomodate if size seems reasonable and you want it cached.");
     }
     long offset = bsi.allocateBlock();

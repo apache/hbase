@@ -20,13 +20,10 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
@@ -36,19 +33,23 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 
 /**
  * Tests bulk loading of HFiles with old non-secure client for backward compatibility. Will be
@@ -57,11 +58,17 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @RunWith(Parameterized.class)
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestHRegionServerBulkLoadWithOldClient extends TestHRegionServerBulkLoad {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHRegionServerBulkLoadWithOldClient.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestHRegionServerBulkLoadWithOldClient.class);
+
   public TestHRegionServerBulkLoadWithOldClient(int duration) {
     super(duration);
   }
-
-  private static final Log LOG = LogFactory.getLog(TestHRegionServerBulkLoadWithOldClient.class);
 
   public static class AtomicHFileLoader extends RepeatingTestThread {
     final AtomicLong numBulkLoads = new AtomicLong();
@@ -74,6 +81,7 @@ public class TestHRegionServerBulkLoadWithOldClient extends TestHRegionServerBul
       this.tableName = tableName;
     }
 
+    @Override
     public void doAnAction() throws Exception {
       long iteration = numBulkLoads.getAndIncrement();
       Path dir =  UTIL.getDataTestDirOnTestFS(String.format("bulkLoad_%08d",
@@ -124,7 +132,7 @@ public class TestHRegionServerBulkLoadWithOldClient extends TestHRegionServerBul
               conn.getAdmin(getLocation().getServerName());
             CompactRegionRequest request =
               RequestConverter.buildCompactRegionRequest(
-                getLocation().getRegionInfo().getRegionName(), true, Optional.empty());
+                getLocation().getRegionInfo().getRegionName(), true, null);
             server.compactRegion(null, request);
             numCompactions.incrementAndGet();
             return null;
@@ -135,6 +143,7 @@ public class TestHRegionServerBulkLoadWithOldClient extends TestHRegionServerBul
     }
   }
 
+  @Override
   void runAtomicBulkloadTest(TableName tableName, int millisToRun, int numScanners)
       throws Exception {
     setupTable(tableName, 10);

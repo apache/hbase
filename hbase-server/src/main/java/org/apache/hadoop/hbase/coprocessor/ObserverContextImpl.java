@@ -18,14 +18,10 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.util.Optional;
-
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * This is the only implementation of {@link ObserverContext}, which serves as the interface for
@@ -35,13 +31,22 @@ import org.apache.yetus.audience.InterfaceStability;
 public class ObserverContextImpl<E extends CoprocessorEnvironment> implements ObserverContext<E> {
   private E env;
   private boolean bypass;
-  private boolean complete;
+  /**
+   * Is this operation bypassable?
+   */
+  private final boolean bypassable;
   private final User caller;
 
   public ObserverContextImpl(User caller) {
-    this.caller = caller;
+    this(caller, false);
   }
 
+  public ObserverContextImpl(User caller, boolean bypassable) {
+    this.caller = caller;
+    this.bypassable = bypassable;
+  }
+
+  @Override
   public E getEnvironment() {
     return env;
   }
@@ -50,12 +55,16 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
     this.env = env;
   }
 
-  public void bypass() {
-    bypass = true;
-  }
+  public boolean isBypassable() {
+    return this.bypassable;
+  };
 
-  public void complete() {
-    complete = true;
+  @Override
+  public void bypass() {
+    if (!this.bypassable) {
+      throw new UnsupportedOperationException("This method does not support 'bypass'.");
+    }
+    bypass = true;
   }
 
   /**
@@ -63,6 +72,9 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
    * coprocessors, {@code false} otherwise.
    */
   public boolean shouldBypass() {
+    if (!isBypassable()) {
+      return false;
+    }
     if (bypass) {
       bypass = false;
       return true;
@@ -70,18 +82,7 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
     return false;
   }
 
-  /**
-   * @return {@code true}, if {@link ObserverContext#complete()} was called by one of the loaded
-   * coprocessors, {@code false} otherwise.
-   */
-  public boolean shouldComplete() {
-    if (complete) {
-      complete = false;
-      return true;
-    }
-    return false;
-  }
-
+  @Override
   public Optional<User> getCaller() {
     return Optional.ofNullable(caller);
   }
@@ -95,7 +96,6 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
    * @return An instance of <code>ObserverContext</code> with the environment set
    */
   @Deprecated
-  @VisibleForTesting
   // TODO: Remove this method, ObserverContext should not depend on RpcServer
   public static <E extends CoprocessorEnvironment> ObserverContext<E> createAndPrepare(E env) {
     ObserverContextImpl<E> ctx = new ObserverContextImpl<>(RpcServer.getRequestUser().orElse(null));

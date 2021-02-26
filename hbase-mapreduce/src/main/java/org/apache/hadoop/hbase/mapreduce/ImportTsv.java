@@ -23,12 +23,11 @@ import static java.lang.String.format;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -40,6 +39,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -47,7 +48,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
@@ -62,9 +62,9 @@ import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Splitter;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tool to import data from a TSV file.
@@ -77,7 +77,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @InterfaceAudience.Public
 public class ImportTsv extends Configured implements Tool {
 
-  protected static final Log LOG = LogFactory.getLog(ImportTsv.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(ImportTsv.class);
 
   final static String NAME = "importtsv";
 
@@ -471,7 +471,7 @@ public class ImportTsv extends Configured implements Tool {
         String actualSeparator = conf.get(SEPARATOR_CONF_KEY);
         if (actualSeparator != null) {
           conf.set(SEPARATOR_CONF_KEY,
-              Base64.encodeBytes(actualSeparator.getBytes()));
+              Bytes.toString(Base64.getEncoder().encode(actualSeparator.getBytes())));
         }
 
         // See if a non-default Mapper was set
@@ -588,7 +588,7 @@ public class ImportTsv extends Configured implements Tool {
         }
         TableMapReduceUtil.addDependencyJars(job);
         TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
-            org.apache.hadoop.hbase.shaded.com.google.common.base.Function.class /* Guava used by TsvParser */);
+            org.apache.hbase.thirdparty.com.google.common.base.Function.class /* Guava used by TsvParser */);
       }
     }
     return job;

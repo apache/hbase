@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,21 +21,22 @@ package org.apache.hadoop.hbase.util;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Version;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class finds the Version information for HBase.
  */
 @InterfaceAudience.Public
 public class VersionInfo {
-  private static final Log LOG = LogFactory.getLog(VersionInfo.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(VersionInfo.class.getName());
 
   // If between two dots there is not a number, we regard it as a very large number so it is
   // higher than any numbers in the version.
-  private static int VERY_LARGE_NUMBER = 100000;
+  private static final int VERY_LARGE_NUMBER = 100000;
 
   /**
    * Get the hbase version.
@@ -117,38 +118,56 @@ public class VersionInfo {
     if (v1.equals(v2)) {
       return 0;
     }
+    String[] v1Comps = getVersionComponents(v1);
+    String[] v2Comps = getVersionComponents(v2);
 
-    String s1[] = v1.split("\\.|-");//1.2.3-hotfix -> [1, 2, 3, hotfix]
-    String s2[] = v2.split("\\.|-");
-    int index = 0;
-    while (index < s1.length && index < s2.length) {
-      int va = VERY_LARGE_NUMBER, vb = VERY_LARGE_NUMBER;
-      try {
-        va = Integer.parseInt(s1[index]);
-      } catch (Exception ingore) {
+    int length = Math.max(v1Comps.length, v2Comps.length);
+    for (int i = 0; i < length; i++) {
+      Integer va = i < v1Comps.length ? Integer.parseInt(v1Comps[i]) : 0;
+      Integer vb = i < v2Comps.length ? Integer.parseInt(v2Comps[i]) : 0;
+      int compare = va.compareTo(vb);
+      if (compare != 0) {
+        return compare;
       }
-      try {
-        vb = Integer.parseInt(s2[index]);
-      } catch (Exception ingore) {
-      }
-      if (va != vb) {
-        return va - vb;
-      }
-      if (va == VERY_LARGE_NUMBER) {
-        // compare as String
-        int c = s1[index].compareTo(s2[index]);
-        if (c != 0) {
-          return c;
+    }
+    return 0;
+  }
+
+  /**
+   * Returns the version components as String objects
+   * Examples: "1.2.3" returns ["1", "2", "3"], "4.5.6-SNAPSHOT" returns ["4", "5", "6", "-1"]
+   * "4.5.6-beta" returns ["4", "5", "6", "-2"], "4.5.6-alpha" returns ["4", "5", "6", "-3"]
+   * "4.5.6-UNKNOW" returns ["4", "5", "6", "-4"]
+   * @return the components of the version string
+   */
+  private static String[] getVersionComponents(final String version) {
+    assert(version != null);
+    String[] strComps = version.split("[\\.-]");
+    assert(strComps.length > 0);
+
+    String[] comps = new String[strComps.length];
+    for (int i = 0; i < strComps.length; ++i) {
+      if (StringUtils.isNumeric(strComps[i])) {
+        comps[i] = strComps[i];
+      } else if (StringUtils.isEmpty(strComps[i])) {
+        comps[i] = String.valueOf(VERY_LARGE_NUMBER);
+      } else {
+        if("SNAPSHOT".equals(strComps[i])) {
+          comps[i] = "-1";
+        } else if("beta".equals(strComps[i])) {
+          comps[i] = "-2";
+        } else if("alpha".equals(strComps[i])) {
+          comps[i] = "-3";
+        } else {
+          comps[i] = "-4";
         }
       }
-      index++;
     }
-    if (index < s1.length) {
-      // s1 is longer
-      return 1;
-    }
-    //s2 is longer
-    return -1;
+    return comps;
+  }
+
+  public static int getMajorVersion(String version) {
+    return Integer.parseInt(version.split("\\.")[0]);
   }
 
   public static void main(String[] args) {

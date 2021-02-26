@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
@@ -29,11 +27,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -47,20 +42,25 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestColumnSeeking {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestColumnSeeking.class);
+
   @Rule public TestName name = new TestName();
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-      withLookingForStuckThread(true).build();
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
-  private static final Log LOG = LogFactory.getLog(TestColumnSeeking.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestColumnSeeking.class);
 
   @SuppressWarnings("unchecked")
   @Test
@@ -76,7 +76,7 @@ public class TestColumnSeeking {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(table, null, null, false);
     // Set this so that the archiver writes to the temp dir as well.
-    Region region = TEST_UTIL.createLocalHRegion(info, htd);
+    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
     try {
       List<String> rows = generateRandomWords(10, "row");
       List<String> allColumns = generateRandomWords(10, "column");
@@ -188,7 +188,7 @@ public class TestColumnSeeking {
     htd.addFamily(hcd);
 
     HRegionInfo info = new HRegionInfo(table, null, null, false);
-    Region region = TEST_UTIL.createLocalHRegion(info, htd);
+    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
 
     List<String> rows = generateRandomWords(10, "row");
     List<String> allColumns = generateRandomWords(100, "column");

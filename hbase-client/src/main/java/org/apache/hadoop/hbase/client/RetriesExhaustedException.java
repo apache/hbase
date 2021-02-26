@@ -19,9 +19,12 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.Date;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.StringJoiner;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -41,24 +44,34 @@ public class RetriesExhaustedException extends IOException {
   }
 
   /**
-   * Datastructure that allows adding more info around Throwable incident.
+   * Data structure that allows adding more info around Throwable incident.
    */
   @InterfaceAudience.Private
   public static class ThrowableWithExtraContext {
-    private final Throwable t;
-    private final long when;
+    private final Throwable throwable;
+    private final long whenAsEpochMilli;
     private final String extras;
 
-    public ThrowableWithExtraContext(final Throwable t, final long when,
+    public ThrowableWithExtraContext(final Throwable throwable, final long whenAsEpochMilli,
         final String extras) {
-      this.t = t;
-      this.when = when;
+      this.throwable = throwable;
+      this.whenAsEpochMilli = whenAsEpochMilli;
       this.extras = extras;
     }
 
     @Override
     public String toString() {
-      return new Date(this.when).toString() + ", " + extras + ", " + t.toString();
+      final StringJoiner joiner = new StringJoiner(", ");
+      if (whenAsEpochMilli != 0) {
+        joiner.add(DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(whenAsEpochMilli)));
+      }
+      if (StringUtils.isNotEmpty(extras)) {
+        joiner.add(extras);
+      }
+      if (throwable != null) {
+        joiner.add(throwable.toString());
+      }
+      return joiner.toString();
     }
   }
 
@@ -83,7 +96,7 @@ public class RetriesExhaustedException extends IOException {
   public RetriesExhaustedException(final int numRetries,
                                    final List<ThrowableWithExtraContext> exceptions) {
     super(getMessage(numRetries, exceptions),
-      exceptions.isEmpty()? null: exceptions.get(exceptions.size() - 1).t);
+      exceptions.isEmpty()? null: exceptions.get(exceptions.size() - 1).throwable);
   }
 
   private static String getMessage(String callableVitals, int numTries,

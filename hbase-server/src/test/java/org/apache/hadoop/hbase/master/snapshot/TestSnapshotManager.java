@@ -22,23 +22,23 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.zookeeper.KeeperException;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -50,13 +50,17 @@ import org.mockito.Mockito;
  */
 @Category({MasterTests.class, SmallTests.class})
 public class TestSnapshotManager {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSnapshotManager.class);
+
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   @Rule
   public TestName name = new TestName();
 
   MasterServices services = Mockito.mock(MasterServices.class);
-  MetricsMaster metrics = Mockito.mock(MetricsMaster.class);
   ProcedureCoordinator coordinator = Mockito.mock(ProcedureCoordinator.class);
   ExecutorService pool = Mockito.mock(ExecutorService.class);
   MasterFileSystem mfs = Mockito.mock(MasterFileSystem.class);
@@ -73,14 +77,44 @@ public class TestSnapshotManager {
     return getNewManager(UTIL.getConfiguration());
   }
 
-  private SnapshotManager getNewManager(final Configuration conf)
+  private SnapshotManager getNewManager(Configuration conf) throws IOException, KeeperException {
+    return getNewManager(conf, 1);
+  }
+
+  private SnapshotManager getNewManager(Configuration conf, int intervalSeconds)
       throws IOException, KeeperException {
     Mockito.reset(services);
     Mockito.when(services.getConfiguration()).thenReturn(conf);
     Mockito.when(services.getMasterFileSystem()).thenReturn(mfs);
     Mockito.when(mfs.getFileSystem()).thenReturn(fs);
     Mockito.when(mfs.getRootDir()).thenReturn(UTIL.getDataTestDir());
-    return new SnapshotManager(services, metrics, coordinator, pool);
+    return new SnapshotManager(services, coordinator, pool, intervalSeconds);
+  }
+
+  @Test
+  public void testCleanFinishedHandler() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    Configuration conf = UTIL.getConfiguration();
+    try {
+      conf.setLong(SnapshotManager.HBASE_SNAPSHOT_SENTINELS_CLEANUP_TIMEOUT_MILLIS, 5 * 1000L);
+      SnapshotManager manager = getNewManager(conf, 1);
+      TakeSnapshotHandler handler = Mockito.mock(TakeSnapshotHandler.class);
+      assertFalse("Manager is in process when there is no current handler",
+        manager.isTakingSnapshot(tableName));
+      manager.setSnapshotHandlerForTesting(tableName, handler);
+      Mockito.when(handler.isFinished()).thenReturn(false);
+      assertTrue(manager.isTakingAnySnapshot());
+      assertTrue("Manager isn't in process when handler is running",
+        manager.isTakingSnapshot(tableName));
+      Mockito.when(handler.isFinished()).thenReturn(true);
+      assertFalse("Manager is process when handler isn't running",
+        manager.isTakingSnapshot(tableName));
+      assertTrue(manager.isTakingAnySnapshot());
+      Thread.sleep(6 * 1000);
+      assertFalse(manager.isTakingAnySnapshot());
+    } finally {
+      conf.unset(SnapshotManager.HBASE_SNAPSHOT_SENTINELS_CLEANUP_TIMEOUT_MILLIS);
+    }
   }
 
   @Test

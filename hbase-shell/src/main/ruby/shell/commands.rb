@@ -21,14 +21,25 @@ require 'shell/formatter'
 
 module Shell
   module Commands
+    # rubocop:disable Metrics/ClassLength
     class Command
       def initialize(shell)
         @shell = shell
       end
 
+      # gets the name that an operator would type into the shell
+
+      def command_name
+        klass_name = self.class.name.split('::').last
+        command = klass_name.gsub(/([^\^])([A-Z])/, '\1_\2').downcase
+        command
+      end
+
       # wrap an execution of cmd to catch hbase exceptions
       # cmd - command name to execute
       # args - arguments to pass to the command
+
+      # rubocop:disable Metrics/AbcSize
       def command_safe(debug, cmd = :command, *args)
         # Commands can overwrite start_time to skip time used in some kind of setup.
         # See count.rb for example.
@@ -48,7 +59,7 @@ module Shell
           puts "ERROR: #{rootCause}"
           puts "Backtrace: #{rootCause.backtrace.join("\n           ")}" if debug
           puts
-          puts help
+          puts "For usage try 'help \"#{command_name}\"'"
           puts
         else
           raise rootCause
@@ -58,6 +69,7 @@ module Shell
         @end_time ||= Time.now
         formatter.output_str(format('Took %.4f seconds', @end_time - @start_time))
       end
+      # rubocop:enable Metrics/AbcSize
 
       # Convenience functions to get different admins
       # Returns HBase::Admin ruby class.
@@ -104,20 +116,36 @@ module Shell
         @formatter = formatter
       end
 
+      # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
+      # rubocop:disable Metrics/MethodLength, Metrics/PerceivedComplexity
       def translate_hbase_exceptions(*args)
         yield
       rescue => cause
         # let individual command handle exceptions first
+        cause = cause.getCause if cause.is_a? java.io.UncheckedIOException
         handle_exceptions(cause, *args) if respond_to?(:handle_exceptions)
         # Global HBase exception handling below if not handled by respective command above
         if cause.is_a?(org.apache.hadoop.hbase.TableNotFoundException)
+          strs = cause.to_s.split(' ')
+          raise "Unknown table #{strs[0]}!" if strs.size == 1
           raise "Unknown table #{args.first}!"
         end
+        if cause.is_a?(org.apache.hadoop.hbase.TableNotEnabledException)
+          raise "Table #{args.first} is disabled!"
+        end
+        if cause.is_a?(org.apache.hadoop.hbase.TableNotDisabledException)
+          raise "Table #{cause.message} should be disabled!"
+        end
         if cause.is_a?(org.apache.hadoop.hbase.UnknownRegionException)
-          raise "Unknown region #{args.first}!"
+          raise cause.message
+        end
+        if cause.is_a?(org.apache.hadoop.hbase.exceptions.MergeRegionException)
+          strs = cause.message.split("\n")
+          raise(strs[0]).to_s unless strs.empty?
         end
         if cause.is_a?(org.apache.hadoop.hbase.NamespaceNotFoundException)
-          raise "Unknown namespace #{args.first}!"
+          s = /.*NamespaceNotFoundException: (?<namespace>[^\n]+).*/.match(cause.message)
+          raise "Unknown namespace #{s['namespace']}!"
         end
         if cause.is_a?(org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException)
           raise "Unknown snapshot #{args.first}!"
@@ -132,6 +160,8 @@ module Shell
           end
         end
         if cause.is_a?(org.apache.hadoop.hbase.TableExistsException)
+          strs = cause.to_s.split(' ')
+          raise "Table already exists: #{strs[0]}!" if strs.size == 1
           raise "Table already exists: #{args.first}!"
         end
         # To be safe, here only AccessDeniedException is considered. In future
@@ -143,10 +173,29 @@ module Shell
           strs = str.split("\n")
           raise (strs[0]).to_s unless strs.empty?
         end
+        if cause.is_a?(org.apache.hadoop.hbase.quotas.SpaceLimitingException)
+          strs = cause.message.split("\n")
+          raise(strs[0]).to_s unless strs.empty?
+        end
+        if cause.is_a?(org.apache.hadoop.hbase.client.RetriesExhaustedException)
+          str = cause.cause.to_s
+          regex = /.*RpcThrottlingException: (?<message>[^\n]+).*/
+          error = regex.match(str)
+          raise error[:message].capitalize unless error.nil?
+        end
+        if cause.is_a?(org.apache.hadoop.hbase.DoNotRetryIOException)
+          regex = /.*UnsupportedOperationException: quota support disabled.*/
+          error = regex.match(cause.message)
+          error_msg = 'Quota Support disabled. Please enable in configuration.'
+          raise error_msg unless error.nil?
+        end
 
         # Throw the other exception which hasn't been handled above
         raise cause
       end
+      # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
+      # rubocop:enable Metrics/MethodLength, Metrics/PerceivedComplexity
     end
+    # rubocop:enable Metrics/ClassLength
   end
 end

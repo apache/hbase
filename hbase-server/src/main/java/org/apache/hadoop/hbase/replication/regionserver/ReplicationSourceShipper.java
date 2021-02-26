@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,33 +17,25 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTimeout;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAccumulator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader.WALEntryBatch;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheLoader;
-import org.apache.hadoop.hbase.shaded.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
 /**
  * This thread reads entries from a queue and ships them. Entries are placed onto the queue by
@@ -52,7 +43,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.cache.LoadingCache;
  */
 @InterfaceAudience.Private
 public class ReplicationSourceShipper extends Thread {
-  private static final Log LOG = LogFactory.getLog(ReplicationSourceShipper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceShipper.class);
 
   // Hold the state of a replication worker thread
   public enum WorkerState {
@@ -61,106 +52,119 @@ public class ReplicationSourceShipper extends Thread {
     FINISHED,  // The worker is done processing a recovered queue
   }
 
-  protected final Configuration conf;
+  private final Configuration conf;
   protected final String walGroupId;
-  protected final PriorityBlockingQueue<Path> queue;
-  protected final ReplicationSourceInterface source;
+  protected final ReplicationSourceLogQueue logQueue;
+  private final ReplicationSource source;
 
   // Last position in the log that we sent to ZooKeeper
-  protected long lastLoggedPosition = -1;
+  // It will be accessed by the stats thread so make it volatile
+  private volatile long currentPosition = -1;
   // Path of the current log
-  protected volatile Path currentPath;
+  private Path currentPath;
   // Current state of the worker thread
-  private WorkerState state;
+  private volatile WorkerState state;
   protected ReplicationSourceWALReader entryReader;
 
   // How long should we sleep for each retry
   protected final long sleepForRetries;
   // Maximum number of retries before taking bold actions
   protected final int maxRetriesMultiplier;
-
-  // Use guava cache to set ttl for each key
-  private final LoadingCache<String, Boolean> canSkipWaitingSet = CacheBuilder.newBuilder()
-      .expireAfterAccess(1, TimeUnit.DAYS).build(
-      new CacheLoader<String, Boolean>() {
-        @Override
-        public Boolean load(String key) throws Exception {
-          return false;
-        }
-      }
-  );
+  private final int DEFAULT_TIMEOUT = 20000;
+  private final int getEntriesTimeout;
+  private final int shipEditsTimeout;
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId,
-      PriorityBlockingQueue<Path> queue, ReplicationSourceInterface source) {
+      ReplicationSourceLogQueue logQueue, ReplicationSource source) {
     this.conf = conf;
     this.walGroupId = walGroupId;
-    this.queue = queue;
+    this.logQueue = logQueue;
     this.source = source;
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
     this.maxRetriesMultiplier =
         this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
+    this.getEntriesTimeout =
+        this.conf.getInt("replication.source.getEntries.timeout", DEFAULT_TIMEOUT); // 20 seconds
+    this.shipEditsTimeout = this.conf.getInt(HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT,
+        HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT);
   }
 
   @Override
-  public void run() {
+  public final void run() {
     setWorkerState(WorkerState.RUNNING);
+    LOG.info("Running ReplicationSourceShipper Thread for wal group: {}", this.walGroupId);
     // Loop until we close down
     while (isActive()) {
-      int sleepMultiplier = 1;
       // Sleep until replication is enabled again
       if (!source.isPeerEnabled()) {
-        if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
-          sleepMultiplier++;
-        }
+        // The peer enabled check is in memory, not expensive, so do not need to increase the
+        // sleep interval as it may cause a long lag when we enable the peer.
+        sleepForRetries("Replication is disabled", 1);
         continue;
       }
-
-      while (entryReader == null) {
-        if (sleepForRetries("Replication WAL entry reader thread not initialized",
-          sleepMultiplier)) {
-          sleepMultiplier++;
-        }
-      }
-
       try {
-        WALEntryBatch entryBatch = entryReader.take();
-        for (Map.Entry<String, Long> entry : entryBatch.getLastSeqIds().entrySet()) {
-          waitingUntilCanPush(entry);
+        WALEntryBatch entryBatch = entryReader.poll(getEntriesTimeout);
+        LOG.debug("Shipper from source {} got entry batch from reader: {}",
+            source.getQueueId(), entryBatch);
+        if (entryBatch == null) {
+          continue;
         }
-        shipEdits(entryBatch);
-      } catch (InterruptedException e) {
-        LOG.trace("Interrupted while waiting for next replication entry batch", e);
+        // the NO_MORE_DATA instance has no path so do not call shipEdits
+        if (entryBatch == WALEntryBatch.NO_MORE_DATA) {
+          noMoreData();
+        } else {
+          shipEdits(entryBatch);
+        }
+      } catch (InterruptedException | ReplicationRuntimeException e) {
+        // It is interrupted and needs to quit.
+        LOG.warn("Interrupted while waiting for next replication entry batch", e);
         Thread.currentThread().interrupt();
       }
     }
     // If the worker exits run loop without finishing its task, mark it as stopped.
-    if (state != WorkerState.FINISHED) {
+    if (!isFinished()) {
       setWorkerState(WorkerState.STOPPED);
+    } else {
+      source.workerThreads.remove(this.walGroupId);
+      postFinish();
     }
+  }
+
+  // To be implemented by recovered shipper
+  protected void noMoreData() {
+  }
+
+  // To be implemented by recovered shipper
+  protected void postFinish() {
+  }
+
+  /**
+   * get batchEntry size excludes bulk load file sizes.
+   * Uses ReplicationSourceWALReader's static method.
+   */
+  private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
+    int totalSize = 0;
+    for(Entry entry : entryBatch.getWalEntries()) {
+      totalSize += ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(entry);
+    }
+    return  totalSize;
   }
 
   /**
    * Do the shipping logic
    */
-  protected void shipEdits(WALEntryBatch entryBatch) {
+  private void shipEdits(WALEntryBatch entryBatch) {
     List<Entry> entries = entryBatch.getWalEntries();
-    long lastReadPosition = entryBatch.getLastWalPosition();
-    currentPath = entryBatch.getLastWalPath();
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
-      if (lastLoggedPosition != lastReadPosition) {
-        // Save positions to meta table before zk.
-        updateSerialRepPositions(entryBatch.getLastSeqIds());
-        updateLogPosition(lastReadPosition);
-        // if there was nothing to ship and it's not an error
-        // set "ageOfLastShippedOp" to <now> to indicate that we're current
-        source.getSourceMetrics().setAgeOfLastShippedOp(EnvironmentEdgeManager.currentTime(),
-          walGroupId);
-      }
+      updateLogPosition(entryBatch);
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
+    int sizeExcludeBulkLoad = getBatchEntrySizeExcludeBulkLoad(entryBatch);
+    source.getSourceMetrics().setTimeStampNextToReplicate(entries.get(entries.size() - 1)
+        .getKey().getWriteTime());
     while (isActive()) {
       try {
         try {
@@ -172,13 +176,13 @@ public class ReplicationSourceShipper extends Thread {
           // directly go back to while() for confirm this
           continue;
         }
-
         // create replicateContext here, so the entries can be GC'd upon return from this call
         // stack
         ReplicationEndpoint.ReplicateContext replicateContext =
             new ReplicationEndpoint.ReplicateContext();
         replicateContext.setEntries(entries).setSize(currentSize);
         replicateContext.setWalGroupId(walGroupId);
+        replicateContext.setTimeout(getAdaptiveTimeout(this.shipEditsTimeout, sleepMultiplier));
 
         long startTimeNs = System.nanoTime();
         // send the edits to the endpoint. Will block until the edits are shipped and acknowledged
@@ -190,65 +194,38 @@ public class ReplicationSourceShipper extends Thread {
         } else {
           sleepMultiplier = Math.max(sleepMultiplier - 1, 0);
         }
-
-        if (this.lastLoggedPosition != lastReadPosition) {
-          //Clean up hfile references
-          int size = entries.size();
-          for (int i = 0; i < size; i++) {
-            cleanUpHFileRefs(entries.get(i).getEdit());
-          }
-
-          // Save positions to meta table before zk.
-          updateSerialRepPositions(entryBatch.getLastSeqIds());
-          //Log and clean up WAL logs
-          updateLogPosition(lastReadPosition);
+        // Clean up hfile references
+        for (Entry entry : entries) {
+          cleanUpHFileRefs(entry.getEdit());
+          LOG.trace("shipped entry {}: ", entry);
         }
+        // Log and clean up WAL logs
+        updateLogPosition(entryBatch);
 
-        source.postShipEdits(entries, currentSize);
+        //offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
+        //this sizeExcludeBulkLoad has to use same calculation that when calling
+        //acquireBufferQuota() in ReplicationSourceWALReader because they maintain
+        //same variable: totalBufferUsed
+        source.postShipEdits(entries, sizeExcludeBulkLoad);
         // FIXME check relationship between wal group and overall
         source.getSourceMetrics().shipBatch(entryBatch.getNbOperations(), currentSize,
           entryBatch.getNbHFiles());
         source.getSourceMetrics().setAgeOfLastShippedOp(
           entries.get(entries.size() - 1).getKey().getWriteTime(), walGroupId);
+        source.getSourceMetrics().updateTableLevelMetrics(entryBatch.getWalEntriesWithSize());
+
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Replicated " + entries.size() + " entries or " + entryBatch.getNbOperations()
-              + " operations in " + ((endTimeNs - startTimeNs) / 1000000) + " ms");
+          LOG.debug("Replicated {} entries or {} operations in {} ms",
+              entries.size(), entryBatch.getNbOperations(), (endTimeNs - startTimeNs) / 1000000);
         }
         break;
       } catch (Exception ex) {
-        LOG.warn(source.getReplicationEndpoint().getClass().getName() + " threw unknown exception:"
-            + org.apache.hadoop.util.StringUtils.stringifyException(ex));
+        LOG.warn("{} threw unknown exception:",
+          source.getReplicationEndpoint().getClass().getName(), ex);
         if (sleepForRetries("ReplicationEndpoint threw exception", sleepMultiplier)) {
           sleepMultiplier++;
         }
       }
-    }
-  }
-
-  private void waitingUntilCanPush(Map.Entry<String, Long> entry) {
-    String key = entry.getKey();
-    long seq = entry.getValue();
-    boolean deleteKey = false;
-    if (seq <= 0) {
-      // There is a REGION_CLOSE marker, we can not continue skipping after this entry.
-      deleteKey = true;
-      seq = -seq;
-    }
-
-    if (!canSkipWaitingSet.getUnchecked(key)) {
-      try {
-        source.getSourceManager().waitUntilCanBePushed(Bytes.toBytes(key), seq, source.getPeerId());
-      } catch (IOException e) {
-        LOG.error("waitUntilCanBePushed fail", e);
-        throw new RuntimeException("waitUntilCanBePushed fail");
-      } catch (InterruptedException e) {
-        LOG.warn("waitUntilCanBePushed interrupted", e);
-        Thread.currentThread().interrupt();
-      }
-      canSkipWaitingSet.put(key, true);
-    }
-    if (deleteKey) {
-      canSkipWaitingSet.invalidate(key);
     }
   }
 
@@ -276,45 +253,50 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
-  protected void updateLogPosition(long lastReadPosition) {
-    source.getSourceManager().logPositionAndCleanOldLogs(currentPath, source.getPeerClusterZnode(),
-      lastReadPosition, false, false);
-    lastLoggedPosition = lastReadPosition;
-  }
-
-  private void updateSerialRepPositions(Map<String, Long> lastPositionsForSerialScope) {
-    try {
-      MetaTableAccessor.updateReplicationPositions(source.getSourceManager().getConnection(),
-        source.getPeerId(), lastPositionsForSerialScope);
-    } catch (IOException e) {
-      LOG.error("updateReplicationPositions fail", e);
-      throw new RuntimeException("updateReplicationPositions fail");
+  private boolean updateLogPosition(WALEntryBatch batch) {
+    boolean updated = false;
+    // if end of file is true, then the logPositionAndCleanOldLogs method will remove the file
+    // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
+    // there is no entry in the batch. It is OK because that the queue storage will ignore the zero
+    // position and the file will be removed soon in cleanOldLogs.
+    if (batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath) ||
+      batch.getLastWalPosition() != currentPosition) {
+      source.logPositionAndCleanOldLogs(batch);
+      updated = true;
     }
+    // if end of file is true, then we can just skip to the next file in queue.
+    // the only exception is for recovered queue, if we reach the end of the queue, then there will
+    // no more files so here the currentPath may be null.
+    if (batch.isEndOfFile()) {
+      currentPath = entryReader.getCurrentPath();
+      currentPosition = 0L;
+    } else {
+      currentPath = batch.getLastWalPath();
+      currentPosition = batch.getLastWalPosition();
+    }
+    return updated;
   }
 
   public void startup(UncaughtExceptionHandler handler) {
     String name = Thread.currentThread().getName();
-    Threads.setDaemonThreadRunning(this, name + ".replicationSource." + walGroupId + ","
-        + source.getPeerClusterZnode(), handler);
+    Threads.setDaemonThreadRunning(this,
+      name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(),
+      handler::uncaughtException);
   }
 
-  public PriorityBlockingQueue<Path> getLogQueue() {
-    return this.queue;
+  Path getCurrentPath() {
+    return entryReader.getCurrentPath();
   }
 
-  public Path getCurrentPath() {
-    return this.entryReader.getCurrentPath();
+  long getCurrentPosition() {
+    return currentPosition;
   }
 
-  public long getCurrentPosition() {
-    return this.lastLoggedPosition;
-  }
-
-  public void setWALReader(ReplicationSourceWALReader entryReader) {
+  void setWALReader(ReplicationSourceWALReader entryReader) {
     this.entryReader = entryReader;
   }
 
-  public long getStartPosition() {
+  long getStartPosition() {
     return 0;
   }
 
@@ -322,15 +304,11 @@ public class ReplicationSourceShipper extends Thread {
     return source.isSourceActive() && state == WorkerState.RUNNING && !isInterrupted();
   }
 
-  public void setWorkerState(WorkerState state) {
+  protected final void setWorkerState(WorkerState state) {
     this.state = state;
   }
 
-  public WorkerState getWorkerState() {
-    return state;
-  }
-
-  public void stopWorker() {
+  void stopWorker() {
     setWorkerState(WorkerState.STOPPED);
   }
 
@@ -346,14 +324,64 @@ public class ReplicationSourceShipper extends Thread {
    */
   public boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(msg + ", sleeping " + sleepForRetries + " times " + sleepMultiplier);
-      }
+      LOG.trace("{}, sleeping {} times {}", msg, sleepForRetries, sleepMultiplier);
       Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
       LOG.debug("Interrupted while sleeping between retries");
       Thread.currentThread().interrupt();
     }
     return sleepMultiplier < maxRetriesMultiplier;
+  }
+
+  /**
+   * Attempts to properly update <code>ReplicationSourceManager.totalBufferUser</code>,
+   * in case there were unprocessed entries batched by the reader to the shipper,
+   * but the shipper didn't manage to ship those because the replication source is being terminated.
+   * In that case, it iterates through the batched entries and decrease the pending
+   * entries size from <code>ReplicationSourceManager.totalBufferUser</code>
+   * <p/>
+   * <b>NOTES</b>
+   * 1) This method should only be called upon replication source termination.
+   * It blocks waiting for both shipper and reader threads termination,
+   * to make sure no race conditions
+   * when updating <code>ReplicationSourceManager.totalBufferUser</code>.
+   *
+   * 2) It <b>does not</b> attempt to terminate reader and shipper threads. Those <b>must</b>
+   * have been triggered interruption/termination prior to calling this method.
+   */
+  void clearWALEntryBatch() {
+    long timeout = System.currentTimeMillis() + this.shipEditsTimeout;
+    while(this.isAlive() || this.entryReader.isAlive()){
+      try {
+        if (System.currentTimeMillis() >= timeout) {
+          LOG.warn("Shipper clearWALEntryBatch method timed out whilst waiting reader/shipper "
+            + "thread to stop. Not cleaning buffer usage. Shipper alive: {}; Reader alive: {}",
+            this.source.getPeerId(), this.isAlive(), this.entryReader.isAlive());
+          return;
+        } else {
+          // Wait both shipper and reader threads to stop
+          Thread.sleep(this.sleepForRetries);
+        }
+      } catch (InterruptedException e) {
+        LOG.warn("{} Interrupted while waiting {} to stop on clearWALEntryBatch. "
+            + "Not cleaning buffer usage: {}", this.source.getPeerId(), this.getName(), e);
+        return;
+      }
+    }
+    LongAccumulator totalToDecrement = new LongAccumulator((a,b) -> a + b, 0);
+    entryReader.entryBatchQueue.forEach(w -> {
+      entryReader.entryBatchQueue.remove(w);
+      w.getWalEntries().forEach(e -> {
+        long entrySizeExcludeBulkLoad = ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(e);
+        totalToDecrement.accumulate(entrySizeExcludeBulkLoad);
+      });
+    });
+    if( LOG.isTraceEnabled()) {
+      LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",
+        totalToDecrement.longValue());
+    }
+    long newBufferUsed = source.getSourceManager().getTotalBufferUsed()
+      .addAndGet(-totalToDecrement.longValue());
+    source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
   }
 }

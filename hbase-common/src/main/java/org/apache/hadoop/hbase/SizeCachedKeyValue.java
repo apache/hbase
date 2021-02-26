@@ -19,8 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class is an extension to KeyValue where rowLen and keyLen are cached.
@@ -39,12 +39,22 @@ public class SizeCachedKeyValue extends KeyValue {
   private short rowLen;
   private int keyLen;
 
-  public SizeCachedKeyValue(byte[] bytes, int offset, int length, long seqId) {
+  public SizeCachedKeyValue(byte[] bytes, int offset, int length, long seqId, int keyLen) {
     super(bytes, offset, length);
     // We will read all these cached values at least once. Initialize now itself so that we can
     // avoid uninitialized checks with every time call
-    rowLen = super.getRowLength();
-    keyLen = super.getKeyLength();
+    this.rowLen = super.getRowLength();
+    this.keyLen = keyLen;
+    setSequenceId(seqId);
+  }
+
+  public SizeCachedKeyValue(byte[] bytes, int offset, int length, long seqId, int keyLen,
+      short rowLen) {
+    super(bytes, offset, length);
+    // We will read all these cached values at least once. Initialize now itself so that we can
+    // avoid uninitialized checks with every time call
+    this.rowLen = rowLen;
+    this.keyLen = keyLen;
     setSequenceId(seqId);
   }
 
@@ -61,5 +71,15 @@ public class SizeCachedKeyValue extends KeyValue {
   @Override
   public long heapSize() {
     return super.heapSize() + FIXED_OVERHEAD;
+  }
+
+  /**
+   * Override by just returning the length for saving cost of method dispatching. If not, it will
+   * call {@link ExtendedCell#getSerializedSize()} firstly, then forward to
+   * {@link SizeCachedKeyValue#getSerializedSize(boolean)}. (See HBASE-21657)
+   */
+  @Override
+  public int getSerializedSize() {
+    return this.length;
   }
 }

@@ -45,4 +45,7 @@ public enum KeepDeletedCells {
    * time remove deleted cells after the TTL.
    */
   TTL;
+  public static KeepDeletedCells getValue(String val) {
+    return valueOf(val.toUpperCase());
+  }
 }

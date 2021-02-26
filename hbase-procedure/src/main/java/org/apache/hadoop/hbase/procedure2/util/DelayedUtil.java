@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.util;
 
 import java.util.Objects;
@@ -23,9 +22,9 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 // FIX namings. TODO.
 @InterfaceAudience.Private
@@ -62,6 +61,11 @@ public final class DelayedUtil {
     @Override
     public boolean equals(final Object other) {
       return this == other;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(this);
     }
 
     @Override
@@ -133,8 +137,14 @@ public final class DelayedUtil {
 
     @Override
     public boolean equals(final Object other) {
-      if (other == this) return true;
-      if (!(other instanceof DelayedContainer)) return false;
+      if (other == this) {
+        return true;
+      }
+
+      if (!(other instanceof DelayedContainer)) {
+        return false;
+      }
+
       return Objects.equals(getObject(), ((DelayedContainer)other).getObject());
     }
 

@@ -50,12 +50,11 @@ public interface MemStore {
   void clearSnapshot(long id) throws UnexpectedStateException;
 
   /**
-   * On flush, how much memory we will clear.
    * Flush will first clear out the data in snapshot if any (It will take a second flush
    * invocation to clear the current Cell set). If snapshot is empty, current
    * Cell set will be flushed.
    *
-   * @return size of data that is going to be flushed
+   * @return On flush, how much memory we will clear.
    */
   MemStoreSize getFlushableSize();
 
@@ -68,18 +67,18 @@ public interface MemStore {
   /**
    * Write an update
    * @param cell
-   * @param memstoreSize The delta in memstore size will be passed back via this.
+   * @param memstoreSizing The delta in memstore size will be passed back via this.
    *        This will include both data size and heap overhead delta.
    */
-  void add(final Cell cell, MemStoreSize memstoreSize);
+  void add(final Cell cell, MemStoreSizing memstoreSizing);
 
   /**
    * Write the updates
    * @param cells
-   * @param memstoreSize The delta in memstore size will be passed back via this.
+   * @param memstoreSizing The delta in memstore size will be passed back via this.
    *        This will include both data size and heap overhead delta.
    */
-  void add(Iterable<Cell> cells, MemStoreSize memstoreSize);
+  void add(Iterable<Cell> cells, MemStoreSizing memstoreSizing);
 
   /**
    * @return Oldest timestamp of all the Cells in the MemStore
@@ -99,10 +98,10 @@ public interface MemStore {
    * only see each KeyValue update as atomic.
    * @param cells
    * @param readpoint readpoint below which we can safely remove duplicate Cells.
-   * @param memstoreSize The delta in memstore size will be passed back via this.
+   * @param memstoreSizing The delta in memstore size will be passed back via this.
    *        This will include both data size and heap overhead delta.
    */
-  void upsert(Iterable<Cell> cells, long readpoint, MemStoreSize memstoreSize);
+  void upsert(Iterable<Cell> cells, long readpoint, MemStoreSizing memstoreSizing);
 
   /**
    * @return scanner over the memstore. This might include scanner over the snapshot when one is

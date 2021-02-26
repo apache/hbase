@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,15 +29,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
@@ -52,6 +51,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -64,16 +64,24 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @Category({ LargeTests.class, ClientTests.class })
 @SuppressWarnings("deprecation")
 public class TestBlockEvictionFromClient {
-  private static final Log LOG = LogFactory.getLog(TestBlockEvictionFromClient.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBlockEvictionFromClient.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestBlockEvictionFromClient.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static byte[][] ROWS = new byte[2][];
   private static int NO_OF_THREADS = 3;
@@ -96,9 +104,6 @@ public class TestBlockEvictionFromClient {
   @Rule
   public TestName name = new TestName();
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     ROWS[0] = ROW;
@@ -106,11 +111,9 @@ public class TestBlockEvictionFromClient {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         MultiRowMutationEndpoint.class.getName());
-    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below
-                                                        // tests
     conf.setInt("hbase.regionserver.handler.count", 20);
     conf.setInt("hbase.bucketcache.size", 400);
-    conf.setStrings("hbase.bucketcache.ioengine", "offheap");
+    conf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     conf.setFloat("hfile.block.cache.size", 0.2f);
     conf.setFloat("hbase.regionserver.global.memstore.size", 0.1f);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);// do not retry
@@ -119,17 +122,11 @@ public class TestBlockEvictionFromClient {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @Before
   public void setUp() throws Exception {
     CustomInnerRegionObserver.waitForGets.set(false);
@@ -137,9 +134,6 @@ public class TestBlockEvictionFromClient {
     CustomInnerRegionObserver.countOfGets.set(0);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @After
   public void tearDown() throws Exception {
     if (latch != null) {
@@ -183,13 +177,13 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region = (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName)
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName)
           .getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
@@ -201,7 +195,6 @@ public class TestBlockEvictionFromClient {
       assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
       // data was in memstore so don't expect any changes
       // flush the data
-      System.out.println("Flushing cache in problematic area");
       // Should create one Hfile with 2 blocks
       region.flush(true);
       // Load cache
@@ -275,12 +268,12 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       insertData(table);
       // flush the data
@@ -334,12 +327,12 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -396,7 +389,7 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -434,9 +427,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -489,7 +482,7 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
 
       Put put = new Put(ROW);
@@ -529,9 +522,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -568,17 +561,22 @@ public class TestBlockEvictionFromClient {
     Table table = null;
     try {
       final TableName tableName = TableName.valueOf(name.getMethodName());
-      table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024);
+      HTableDescriptor desc = TEST_UTIL.createTableDescriptor(tableName);
+      // This test expects rpc refcount of cached data blocks to be 0 after split. After split,
+      // two daughter regions are opened and a compaction is scheduled to get rid of reference
+      // of the parent region hfiles. Compaction will increase refcount of cached data blocks by 1.
+      // It is flakey since compaction can kick in anytime. To solve this issue, table is created
+      // with compaction disabled.
+      desc.setCompactionEnabled(false);
+      table = TEST_UTIL.createTable(desc, FAMILIES_1, null, BloomType.ROW, 1024, null);
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
-
+      BlockCache cache = cacheConf.getBlockCache().get();
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
@@ -595,16 +593,19 @@ public class TestBlockEvictionFromClient {
       put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       region.flush(true);
-      LOG.info("About to SPLIT on " + Bytes.toString(ROW1));
+      ServerName rs = Iterables.getOnlyElement(TEST_UTIL.getAdmin().getRegionServers());
+      int regionCount = TEST_UTIL.getAdmin().getRegions(rs).size();
+      LOG.info("About to SPLIT on {} {}, count={}", Bytes.toString(ROW1), region.getRegionInfo(),
+        regionCount);
       TEST_UTIL.getAdmin().split(tableName, ROW1);
-      List<RegionInfo> tableRegions = TEST_UTIL.getAdmin().getRegions(tableName);
       // Wait for splits
-      while (tableRegions.size() != 2) {
-        tableRegions = TEST_UTIL.getAdmin().getRegions(tableName);
-        Thread.sleep(100);
-        LOG.info("Waiting on SPLIT to complete...");
+      TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getAdmin().getRegions(rs).size() > regionCount);
+      List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegionServer(rs).getRegions();
+      for (HRegion r: regions) {
+        LOG.info("" + r.getCompactionState());
+        TEST_UTIL.waitFor(30000, () -> r.getCompactionState().equals(CompactionState.NONE));
       }
-      region.compact(true);
+      LOG.info("Split finished, is region closed {} {}", region.isClosed(), cache);
       Iterator<CachedBlock> iterator = cache.iterator();
       // Though the split had created the HalfStorefileReader - the firstkey and lastkey scanners
       // should be closed inorder to return those blocks
@@ -632,12 +633,12 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -666,9 +667,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -715,7 +716,7 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
 
       Put put = new Put(ROW);
@@ -754,9 +755,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -793,7 +794,7 @@ public class TestBlockEvictionFromClient {
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
       // Use the last one
-      cache = cacheConf.getBlockCache();
+      cache = cacheConf.getBlockCache().get();
     }
     return cache;
   }
@@ -815,12 +816,12 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       // insert data. 2 Rows are added
       insertData(table);
@@ -862,7 +863,7 @@ public class TestBlockEvictionFromClient {
     testScanWithCompactionInternals(name.getMethodName(), false);
   }
 
-  @Ignore @Test
+  @Test
   public void testReverseScanWithCompaction() throws IOException, InterruptedException {
     testScanWithCompactionInternals(name.getMethodName(), true);
   }
@@ -881,12 +882,12 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
@@ -921,9 +922,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -948,9 +949,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -999,12 +1000,12 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
@@ -1039,9 +1040,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -1075,9 +1076,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -1129,12 +1130,12 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       HRegion region =
-          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
       // insert data. 2 Rows are added
       insertData(table);
       // flush the data
@@ -1156,9 +1157,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -1182,9 +1183,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -1210,9 +1211,11 @@ public class TestBlockEvictionFromClient {
       CachedBlock next = iterator.next();
       BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
       if (cache instanceof BucketCache) {
-        refCount = ((BucketCache) cache).getRefCount(cacheKey);
+        refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
+        LOG.info("BucketCache {} {}", cacheKey, refCount);
       } else if (cache instanceof CombinedBlockCache) {
-        refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+        refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
+        LOG.info("CombinedBlockCache {} {}", cacheKey, refCount);
       } else {
         continue;
       }
@@ -1289,9 +1292,9 @@ public class TestBlockEvictionFromClient {
       CachedBlock next = iterator.next();
       BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
       if (cache instanceof BucketCache) {
-        refCount = ((BucketCache) cache).getRefCount(cacheKey);
+        refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
       } else if (cache instanceof CombinedBlockCache) {
-        refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+        refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
       } else {
         continue;
       }
@@ -1309,7 +1312,7 @@ public class TestBlockEvictionFromClient {
             // If get has closed only the scan's blocks would be available
             assertEquals(refCount, CustomInnerRegionObserver.countOfGets.get());
           } else {
-              assertEquals(refCount, CustomInnerRegionObserver.countOfGets.get() + (NO_OF_THREADS));
+            assertEquals(refCount, CustomInnerRegionObserver.countOfGets.get() + (NO_OF_THREADS));
           }
         }
       } else {
@@ -1547,11 +1550,6 @@ public class TestBlockEvictionFromClient {
     public int getBatch() {
       return delegate.getBatch();
     }
-
-    @Override
-    public void shipped() throws IOException {
-      this.delegate.shipped();
-    }
   }
 
   public static class CustomInnerRegionObserverWrapper extends CustomInnerRegionObserver {
@@ -1563,8 +1561,6 @@ public class TestBlockEvictionFromClient {
   }
 
   public static class CustomInnerRegionObserver implements RegionCoprocessor, RegionObserver {
-    static final AtomicLong sleepTime = new AtomicLong(0);
-    static final AtomicBoolean slowDownNext = new AtomicBoolean(false);
     static final AtomicInteger countOfNext = new AtomicInteger(0);
     static final AtomicInteger countOfGets = new AtomicInteger(0);
     static final AtomicBoolean waitForGets = new AtomicBoolean(false);
@@ -1618,7 +1614,7 @@ public class TestBlockEvictionFromClient {
           }
         }
       } catch (InterruptedException e1) {
-        LOG.error(e1);
+        LOG.error(e1.toString(), e1);
       }
     }
   }

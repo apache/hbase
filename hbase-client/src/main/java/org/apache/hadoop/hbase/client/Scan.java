@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,10 +28,10 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
@@ -59,7 +58,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * To only retrieve columns within a specific range of version timestamps, call
  * {@link #setTimeRange(long, long) setTimeRange}.
  * <p>
- * To only retrieve columns with a specific timestamp, call {@link #setTimeStamp(long) setTimestamp}
+ * To only retrieve columns with a specific timestamp, call {@link #setTimestamp(long) setTimestamp}
  * .
  * <p>
  * To limit the number of versions of each column to be returned, call {@link #setMaxVersions(int)
@@ -87,7 +86,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 public class Scan extends Query {
-  private static final Log LOG = LogFactory.getLog(Scan.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Scan.class);
 
   private static final String RAW_ATTR = "_raw_";
 
@@ -141,7 +140,7 @@ public class Scan extends Query {
   private long maxResultSize = -1;
   private boolean cacheBlocks = true;
   private boolean reversed = false;
-  private TimeRange tr = new TimeRange();
+  private TimeRange tr = TimeRange.allTime();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
   private Boolean asyncPrefetch = null;
@@ -196,7 +195,9 @@ public class Scan extends Query {
   public Scan() {}
 
   /**
-   * @deprecated use {@code new Scan().withStartRow(startRow).setFilter(filter)} instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@code new Scan().withStartRow(startRow).setFilter(filter)} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
    */
   @Deprecated
   public Scan(byte[] startRow, Filter filter) {
@@ -210,7 +211,9 @@ public class Scan extends Query {
    * If the specified row does not exist, the Scanner will start from the next closest row after the
    * specified row.
    * @param startRow row to start scanner at or after
-   * @deprecated use {@code new Scan().withStartRow(startRow)} instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@code new Scan().withStartRow(startRow)} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
    */
   @Deprecated
   public Scan(byte[] startRow) {
@@ -221,7 +224,9 @@ public class Scan extends Query {
    * Create a Scan operation for the range of rows specified.
    * @param startRow row to start scanner at or after (inclusive)
    * @param stopRow row to stop scanner before (exclusive)
-   * @deprecated use {@code new Scan().withStartRow(startRow).withStopRow(stopRow)} instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@code new Scan().withStartRow(startRow).withStopRow(stopRow)} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
    */
   @Deprecated
   public Scan(byte[] startRow, byte[] stopRow) {
@@ -279,6 +284,8 @@ public class Scan extends Query {
     this.limit = scan.getLimit();
     this.needCursorResult = scan.isNeedCursorResult();
     setPriority(scan.getPriority());
+    readType = scan.getReadType();
+    super.setReplicaId(scan.getReplicaId());
   }
 
   /**
@@ -310,6 +317,7 @@ public class Scan extends Query {
     }
     this.mvccReadPoint = -1L;
     setPriority(get.getPriority());
+    super.setReplicaId(get.getReplicaId());
   }
 
   public boolean isGetScan() {
@@ -376,16 +384,34 @@ public class Scan extends Query {
    * @see #setMaxVersions()
    * @see #setMaxVersions(int)
    * @return this
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #setTimestamp(long)} instead
    */
+  @Deprecated
   public Scan setTimeStamp(long timestamp)
   throws IOException {
+    return this.setTimestamp(timestamp);
+  }
+
+  /**
+   * Get versions of columns with the specified timestamp. Note, default maximum
+   * versions to return is 1.  If your time range spans more than one version
+   * and you want all versions returned, up the number of versions beyond the
+   * defaut.
+   * @param timestamp version timestamp
+   * @see #setMaxVersions()
+   * @see #setMaxVersions(int)
+   * @return this
+   */
+  public Scan setTimestamp(long timestamp) {
     try {
-      tr = new TimeRange(timestamp, timestamp+1);
+      tr = new TimeRange(timestamp, timestamp + 1);
     } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
       throw e;
     }
+
     return this;
   }
 
@@ -402,8 +428,11 @@ public class Scan extends Query {
    * @return this
    * @throws IllegalArgumentException if startRow does not meet criteria for a row key (when length
    *           exceeds {@link HConstants#MAX_ROW_LENGTH})
-   * @deprecated use {@link #withStartRow(byte[])} instead. This method may change the inclusive of
-   *             the stop row to keep compatible with the old behavior.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #withStartRow(byte[])}
+   *   instead. This method may change the inclusive of the stop row to keep compatible with the old
+   *   behavior.
+   * @see #withStartRow(byte[])
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
    */
   @Deprecated
   public Scan setStartRow(byte[] startRow) {
@@ -462,8 +491,11 @@ public class Scan extends Query {
    * @return this
    * @throws IllegalArgumentException if stopRow does not meet criteria for a row key (when length
    *           exceeds {@link HConstants#MAX_ROW_LENGTH})
-   * @deprecated use {@link #withStartRow(byte[])} instead. This method may change the inclusive of
-   *             the stop row to keep compatible with the old behavior.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #withStopRow(byte[])} instead.
+   *   This method may change the inclusive of the stop row to keep compatible with the old
+   *   behavior.
+   * @see #withStopRow(byte[])
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
    */
   @Deprecated
   public Scan setStopRow(byte[] stopRow) {
@@ -530,58 +562,18 @@ public class Scan extends Query {
       setStopRow(HConstants.EMPTY_END_ROW);
     } else {
       this.setStartRow(rowPrefix);
-      this.setStopRow(calculateTheClosestNextRowKeyForPrefix(rowPrefix));
+      this.setStopRow(ClientUtil.calculateTheClosestNextRowKeyForPrefix(rowPrefix));
     }
     return this;
   }
 
   /**
-   * <p>When scanning for a prefix the scan should stop immediately after the the last row that
-   * has the specified prefix. This method calculates the closest next rowKey immediately following
-   * the given rowKeyPrefix.</p>
-   * <p><b>IMPORTANT: This converts a rowKey<u>Prefix</u> into a rowKey</b>.</p>
-   * <p>If the prefix is an 'ASCII' string put into a byte[] then this is easy because you can
-   * simply increment the last byte of the array.
-   * But if your application uses real binary rowids you may run into the scenario that your
-   * prefix is something like:</p>
-   * &nbsp;&nbsp;&nbsp;<b>{ 0x12, 0x23, 0xFF, 0xFF }</b><br/>
-   * Then this stopRow needs to be fed into the actual scan<br/>
-   * &nbsp;&nbsp;&nbsp;<b>{ 0x12, 0x24 }</b> (Notice that it is shorter now)<br/>
-   * This method calculates the correct stop row value for this usecase.
-   *
-   * @param rowKeyPrefix the rowKey<u>Prefix</u>.
-   * @return the closest next rowKey immediately following the given rowKeyPrefix.
-   */
-  private byte[] calculateTheClosestNextRowKeyForPrefix(byte[] rowKeyPrefix) {
-    // Essentially we are treating it like an 'unsigned very very long' and doing +1 manually.
-    // Search for the place where the trailing 0xFFs start
-    int offset = rowKeyPrefix.length;
-    while (offset > 0) {
-      if (rowKeyPrefix[offset - 1] != (byte) 0xFF) {
-        break;
-      }
-      offset--;
-    }
-
-    if (offset == 0) {
-      // We got an 0xFFFF... (only FFs) stopRow value which is
-      // the last possible prefix before the end of the table.
-      // So set it to stop at the 'end of the table'
-      return HConstants.EMPTY_END_ROW;
-    }
-
-    // Copy the right length of the original
-    byte[] newStopRow = Arrays.copyOfRange(rowKeyPrefix, 0, offset);
-    // And increment the last one
-    newStopRow[newStopRow.length - 1]++;
-    return newStopRow;
-  }
-
-  /**
    * Get all available versions.
    * @return this
-   * @deprecated It is easy to misunderstand with column family's max versions, so use
-   *             {@link #readAllVersions()} instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. It is easy to misunderstand with column
+   *   family's max versions, so use {@link #readAllVersions()} instead.
+   * @see #readAllVersions()
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17125">HBASE-17125</a>
    */
   @Deprecated
   public Scan setMaxVersions() {
@@ -592,8 +584,10 @@ public class Scan extends Query {
    * Get up to the specified number of versions of each column.
    * @param maxVersions maximum versions for each column
    * @return this
-   * @deprecated It is easy to misunderstand with column family's max versions, so use
-   *             {@link #readVersions(int)} instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. It is easy to misunderstand with column
+   *   family's max versions, so use {@link #readVersions(int)} instead.
+   * @see #readVersions(int)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17125">HBASE-17125</a>
    */
   @Deprecated
   public Scan setMaxVersions(int maxVersions) {
@@ -894,6 +888,7 @@ public class Scan extends Query {
     return allowPartialResults;
   }
 
+  @Override
   public Scan setLoadColumnFamiliesOnDemand(boolean value) {
     return (Scan) super.setLoadColumnFamiliesOnDemand(value);
   }
@@ -1015,12 +1010,13 @@ public class Scan extends Query {
    * better performance for small scan. [HBASE-9488]. Generally, if the scan range is within one
    * data block(64KB), it could be considered as a small scan.
    * @param small
-   * @deprecated since 2.0.0. Use {@link #setLimit(int)} and {@link #setReadType(ReadType)} instead.
-   *             And for the one rpc optimization, now we will also fetch data when openScanner, and
-   *             if the number of rows reaches the limit then we will close the scanner
-   *             automatically which means we will fall back to one rpc.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #setLimit(int)} and
+   *   {@link #setReadType(ReadType)} instead. And for the one rpc optimization, now we will also
+   *   fetch data when openScanner, and if the number of rows reaches the limit then we will close
+   *   the scanner automatically which means we will fall back to one rpc.
    * @see #setLimit(int)
    * @see #setReadType(ReadType)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17045">HBASE-17045</a>
    */
   @Deprecated
   public Scan setSmall(boolean small) {
@@ -1032,7 +1028,9 @@ public class Scan extends Query {
   /**
    * Get whether this scan is a small scan
    * @return true if small scan
-   * @deprecated since 2.0.0. See the comment of {@link #setSmall(boolean)}
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. See the comment of
+   *   {@link #setSmall(boolean)}
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17045">HBASE-17045</a>
    */
   @Deprecated
   public boolean isSmall() {

@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HBaseTestCase.assertByteEquals;
@@ -26,25 +24,29 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
-
 import junit.framework.TestCase;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({SmallTests.class, ClientTests.class})
 public class TestResult extends TestCase {
 
-  private static final Log LOG = LogFactory.getLog(TestResult.class.getName());
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestResult.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestResult.class.getName());
 
   static KeyValue[] genKVs(final byte[] row, final byte[] family,
                            final byte[] value,
@@ -71,7 +73,7 @@ public class TestResult extends TestCase {
    */
   public void testResultAsCellScanner() throws IOException {
     Cell [] cells = genKVs(row, family, value, 1, 10);
-    Arrays.sort(cells, CellComparator.COMPARATOR);
+    Arrays.sort(cells, CellComparator.getInstance());
     Result r = Result.create(cells);
     assertSame(r, cells);
     // Assert I run over same result multiple times.
@@ -93,7 +95,7 @@ public class TestResult extends TestCase {
   public void testBasicGetColumn() throws Exception {
     KeyValue [] kvs = genKVs(row, family, value, 1, 100);
 
-    Arrays.sort(kvs, CellComparator.COMPARATOR);
+    Arrays.sort(kvs, CellComparator.getInstance());
 
     Result r = Result.create(kvs);
 
@@ -132,7 +134,7 @@ public class TestResult extends TestCase {
     System.arraycopy(kvs1, 0, kvs, 0, kvs1.length);
     System.arraycopy(kvs2, 0, kvs, kvs1.length, kvs2.length);
 
-    Arrays.sort(kvs, CellComparator.COMPARATOR);
+    Arrays.sort(kvs, CellComparator.getInstance());
 
     Result r = Result.create(kvs);
     for (int i = 0; i < 100; ++i) {
@@ -149,7 +151,7 @@ public class TestResult extends TestCase {
   public void testBasicGetValue() throws Exception {
     KeyValue [] kvs = genKVs(row, family, value, 1, 100);
 
-    Arrays.sort(kvs, CellComparator.COMPARATOR);
+    Arrays.sort(kvs, CellComparator.getInstance());
 
     Result r = Result.create(kvs);
 
@@ -169,7 +171,7 @@ public class TestResult extends TestCase {
     System.arraycopy(kvs1, 0, kvs, 0, kvs1.length);
     System.arraycopy(kvs2, 0, kvs, kvs1.length, kvs2.length);
 
-    Arrays.sort(kvs, CellComparator.COMPARATOR);
+    Arrays.sort(kvs, CellComparator.getInstance());
 
     Result r = Result.create(kvs);
     for (int i = 0; i < 100; ++i) {
@@ -183,7 +185,7 @@ public class TestResult extends TestCase {
   public void testBasicLoadValue() throws Exception {
     KeyValue [] kvs = genKVs(row, family, value, 1, 100);
 
-    Arrays.sort(kvs, CellComparator.COMPARATOR);
+    Arrays.sort(kvs, CellComparator.getInstance());
 
     Result r = Result.create(kvs);
     ByteBuffer loadValueBuffer = ByteBuffer.allocate(1024);
@@ -194,7 +196,7 @@ public class TestResult extends TestCase {
       loadValueBuffer.clear();
       r.loadValue(family, qf, loadValueBuffer);
       loadValueBuffer.flip();
-      assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))), loadValueBuffer);
+      assertEquals(loadValueBuffer, ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))));
       assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))),
           r.getValueAsByteBuffer(family, qf));
     }
@@ -208,7 +210,7 @@ public class TestResult extends TestCase {
     System.arraycopy(kvs1, 0, kvs, 0, kvs1.length);
     System.arraycopy(kvs2, 0, kvs, kvs1.length, kvs2.length);
 
-    Arrays.sort(kvs, CellComparator.COMPARATOR);
+    Arrays.sort(kvs, CellComparator.getInstance());
 
     ByteBuffer loadValueBuffer = ByteBuffer.allocate(1024);
 
@@ -219,7 +221,7 @@ public class TestResult extends TestCase {
       loadValueBuffer.clear();
       r.loadValue(family, qf, loadValueBuffer);
       loadValueBuffer.flip();
-      assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))), loadValueBuffer);
+      assertEquals(loadValueBuffer, ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))));
       assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))),
           r.getValueAsByteBuffer(family, qf));
     }
@@ -291,7 +293,7 @@ public class TestResult extends TestCase {
 
     KeyValue [] kvs = genKVs(Bytes.toBytes(rowSB.toString()), family,
         Bytes.toBytes(valueSB.toString()), 1, n);
-    Arrays.sort(kvs, CellComparator.COMPARATOR);
+    Arrays.sort(kvs, CellComparator.getInstance());
     ByteBuffer loadValueBuffer = ByteBuffer.allocate(1024);
     Result r = Result.create(kvs);
 

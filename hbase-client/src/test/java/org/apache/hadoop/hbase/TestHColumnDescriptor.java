@@ -26,19 +26,34 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.junit.Assert;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 
-/** Tests the HColumnDescriptor with appropriate arguments */
+/**
+ * Tests the HColumnDescriptor with appropriate arguments.
+ *
+ * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 together with
+ *            {@link HColumnDescriptor}.
+ */
 @Category({MiscTests.class, SmallTests.class})
 @Deprecated
 public class TestHColumnDescriptor {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHColumnDescriptor.class);
+
+  @Rule
+  public ExpectedException expectedEx = ExpectedException.none();
   @Test
   public void testPb() throws DeserializationException {
     HColumnDescriptor hcd = new HColumnDescriptor(
@@ -87,15 +102,14 @@ public class TestHColumnDescriptor {
     assertEquals(v, deserializedHcd.getDFSReplication());
   }
 
+  /**
+   * Tests HColumnDescriptor with empty familyName
+   */
   @Test
-  /** Tests HColumnDescriptor with empty familyName*/
-  public void testHColumnDescriptorShouldThrowIAEWhenFamiliyNameEmpty()
-      throws Exception {
-    try {
-      new HColumnDescriptor("".getBytes());
-    } catch (IllegalArgumentException e) {
-      assertEquals("Column Family name can not be empty", e.getLocalizedMessage());
-    }
+  public void testHColumnDescriptorShouldThrowIAEWhenFamilyNameEmpty() throws Exception {
+    expectedEx.expect(IllegalArgumentException.class);
+    expectedEx.expectMessage("Column Family name can not be empty");
+    new HColumnDescriptor(Bytes.toBytes(""));
   }
 
   /**

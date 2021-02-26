@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.metrics;
 
 import javax.management.ObjectName;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Hadoop2 metrics2 implementation of an object that registers MBeans.

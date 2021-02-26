@@ -19,11 +19,13 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This metrics balancer uses extended source for stochastic load balancer
  * to report its related metrics to JMX. For details, refer to HBASE-13965
  */
+@InterfaceAudience.Private
 public class MetricsStochasticBalancer extends MetricsBalancer {
   /**
    * Use the stochastic source instead of the default source.
@@ -52,6 +54,14 @@ public class MetricsStochasticBalancer extends MetricsBalancer {
   @Override
   public void incrMiscInvocations() {
     stochasticSource.incrMiscInvocations();
+  }
+
+  /**
+   * Updates the balancer status tag reported to JMX
+   */
+  @Override
+  public void balancerStatus(boolean status) {
+    stochasticSource.updateBalancerStatus(status);
   }
 
   /**

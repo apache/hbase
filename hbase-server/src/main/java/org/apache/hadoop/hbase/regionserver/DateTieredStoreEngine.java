@@ -89,10 +89,13 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
       super.forceSelect(request);
     }
 
+    @Override
     public List<Path> compact(ThroughputController throughputController, User user)
         throws IOException {
       if (request instanceof DateTieredCompactionRequest) {
-        return compactor.compact(request, ((DateTieredCompactionRequest) request).getBoundaries(),
+        DateTieredCompactionRequest compactionRequest = (DateTieredCompactionRequest) request;
+        return compactor.compact(request, compactionRequest.getBoundaries(),
+          compactionRequest.getBoundariesPolicies(),
           throughputController, user);
       } else {
         throw new IllegalArgumentException("DateTieredCompactionRequest is expected. Actual: "

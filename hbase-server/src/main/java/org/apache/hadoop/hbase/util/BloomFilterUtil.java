@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.regionserver.BloomType.ROWPREFIX_FIXED_LENGTH;
+
 import java.text.NumberFormat;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utility methods related to BloomFilters
@@ -44,6 +48,8 @@ public final class BloomFilterUtil {
    * estimate the ideal false positive rate.
    */
   private static Random randomGeneratorForTest;
+
+  public static final String PREFIX_LENGTH_KEY = "RowPrefixBloomFilter.prefix_length";
   
   /** Bit-value lookup array to prevent doing the same work over and over */
   public static final byte [] bitvals = {
@@ -75,12 +81,16 @@ public final class BloomFilterUtil {
     return (long) Math.ceil(maxKeys * (-Math.log(errorRate) / LOG2_SQUARED));
   }
 
-  public static void setFakeLookupMode(boolean enabled) {
-    if (enabled) {
-      randomGeneratorForTest = new Random(283742987L);
-    } else {
-      randomGeneratorForTest = null;
-    }
+  /**
+   * Sets a random generator to be used for look-ups instead of computing hashes. Can be used to
+   * simulate uniformity of accesses better in a test environment. Should not be set in a real
+   * environment where correctness matters!
+   * <p>
+ *   This gets used in {@link #contains(ByteBuff, int, int, Hash, int, HashKey)}
+   * @param random The random number source to use, or null to compute actual hashes
+   */
+  public static void setRandomGeneratorForTest(Random random) {
+    randomGeneratorForTest = random;
   }
 
   /**
@@ -205,26 +215,26 @@ public final class BloomFilterUtil {
   private static <T> boolean contains(ByteBuff bloomBuf, int bloomOffset, int bloomSize, Hash hash,
       int hashCount, HashKey<T> hashKey) {
     int hash1 = hash.hash(hashKey, 0);
-    int hash2 = hash.hash(hashKey, hash1);
     int bloomBitSize = bloomSize << 3;
 
+    int hash2 = 0;
+    int compositeHash = 0;
+
     if (randomGeneratorForTest == null) {
-      // Production mode.
-      int compositeHash = hash1;
-      for (int i = 0; i < hashCount; i++) {
-        int hashLoc = Math.abs(compositeHash % bloomBitSize);
-        compositeHash += hash2;
-        if (!checkBit(hashLoc, bloomBuf, bloomOffset)) {
-          return false;
-        }
-      }
-    } else {
-      // Test mode with "fake lookups" to estimate "ideal false positive rate".
-      for (int i = 0; i < hashCount; i++) {
-        int hashLoc = randomGeneratorForTest.nextInt(bloomBitSize);
-        if (!checkBit(hashLoc, bloomBuf, bloomOffset)){
-          return false;
-        }
+      // Production mode
+      compositeHash = hash1;
+      hash2 = hash.hash(hashKey, hash1);
+    }
+
+    for (int i = 0; i < hashCount; i++) {
+      int hashLoc = (randomGeneratorForTest == null
+          // Production mode
+          ? Math.abs(compositeHash % bloomBitSize)
+          // Test mode with "fake look-ups" to estimate "ideal false positive rate"
+          : randomGeneratorForTest.nextInt(bloomBitSize));
+      compositeHash += hash2;
+      if (!checkBit(hashLoc, bloomBuf, bloomOffset)) {
+        return false;
       }
     }
     return true;
@@ -232,8 +242,8 @@ public final class BloomFilterUtil {
 
   public static boolean contains(Cell cell, ByteBuff bloomBuf, int bloomOffset, int bloomSize,
       Hash hash, int hashCount, BloomType type) {
-    HashKey<Cell> hashKey = type == BloomType.ROW ? new RowBloomHashKey(cell)
-        : new RowColBloomHashKey(cell);
+    HashKey<Cell> hashKey = type == BloomType.ROWCOL ? new RowColBloomHashKey(cell)
+        : new RowBloomHashKey(cell);
     return contains(bloomBuf, bloomOffset, bloomSize, hash, hashCount, hashKey);
   }
 
@@ -276,5 +286,33 @@ public final class BloomFilterUtil {
   public static String toString(BloomFilterChunk bloomFilter) {
     return formatStats(bloomFilter) + STATS_RECORD_SEP + "Actual error rate: "
         + String.format("%.8f", bloomFilter.actualErrorRate());
+  }
+
+  public static byte[] getBloomFilterParam(BloomType bloomFilterType, Configuration conf)
+      throws IllegalArgumentException {
+    byte[] bloomParam = null;
+    String message = "Bloom filter type is " + bloomFilterType + ", ";
+    if (bloomFilterType.equals(ROWPREFIX_FIXED_LENGTH)) {
+      String prefixLengthString = conf.get(PREFIX_LENGTH_KEY);
+      if (prefixLengthString == null) {
+        message += PREFIX_LENGTH_KEY + " not specified.";
+        throw new IllegalArgumentException(message);
+      }
+      int prefixLength;
+      try {
+        prefixLength = Integer.parseInt(prefixLengthString);
+        if (prefixLength <= 0 || prefixLength > HConstants.MAX_ROW_LENGTH) {
+          message +=
+              "the value of " + PREFIX_LENGTH_KEY + " must >=0 and < " + HConstants.MAX_ROW_LENGTH;
+          throw new IllegalArgumentException(message);
+        }
+      } catch (NumberFormatException nfe) {
+        message = "Number format exception when parsing " + PREFIX_LENGTH_KEY + " for BloomType " +
+            bloomFilterType.toString() + ":" + prefixLengthString;
+        throw new IllegalArgumentException(message, nfe);
+      }
+      bloomParam = Bytes.toBytes(prefixLength);
+    }
+    return bloomParam;
   }
 }

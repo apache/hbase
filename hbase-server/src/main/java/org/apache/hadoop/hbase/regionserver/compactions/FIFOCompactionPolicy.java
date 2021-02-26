@@ -23,14 +23,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 
@@ -47,7 +47,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
   
-  private static final Log LOG = LogFactory.getLog(FIFOCompactionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FIFOCompactionPolicy.class);
 
 
   public FIFOCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo) {
@@ -96,16 +96,29 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
     return hasExpiredStores(storeFiles);
   }
 
+  /**
+   * The FIFOCompactionPolicy only choose the TTL expired store files as the compaction candidates.
+   * If all the store files are TTL expired, then the compaction will generate a new empty file.
+   * While its max timestamp will be Long.MAX_VALUE. If not considered separately, the store file
+   * will never be archived because its TTL will be never expired. So we'll check the empty store
+   * file separately (See HBASE-21504).
+   */
+  private boolean isEmptyStoreFile(HStoreFile sf) {
+    return sf.getReader().getEntries() == 0;
+  }
+
   private boolean hasExpiredStores(Collection<HStoreFile> files) {
     long currentTime = EnvironmentEdgeManager.currentTime();
-    for(HStoreFile sf: files){
+    for (HStoreFile sf : files) {
+      if (isEmptyStoreFile(sf)) {
+        return true;
+      }
       // Check MIN_VERSIONS is in HStore removeUnneededFiles
       long maxTs = sf.getReader().getMaxTimestamp();
       long maxTtl = storeConfigInfo.getStoreFileTtl();
-      if (maxTtl == Long.MAX_VALUE
-          || (currentTime - maxTtl < maxTs)){
-        continue; 
-      } else{
+      if (maxTtl == Long.MAX_VALUE || (currentTime - maxTtl < maxTs)) {
+        continue;
+      } else {
         return true;
       }
     }
@@ -116,14 +129,17 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
       Collection<HStoreFile> filesCompacting) {
     long currentTime = EnvironmentEdgeManager.currentTime();
     Collection<HStoreFile> expiredStores = new ArrayList<>();
-    for(HStoreFile sf: files){
+    for (HStoreFile sf : files) {
+      if (isEmptyStoreFile(sf) && !filesCompacting.contains(sf)) {
+        expiredStores.add(sf);
+        continue;
+      }
       // Check MIN_VERSIONS is in HStore removeUnneededFiles
       long maxTs = sf.getReader().getMaxTimestamp();
       long maxTtl = storeConfigInfo.getStoreFileTtl();
-      if (maxTtl == Long.MAX_VALUE
-          || (currentTime - maxTtl < maxTs)){
-        continue; 
-      } else if(filesCompacting == null || !filesCompacting.contains(sf)){
+      if (maxTtl == Long.MAX_VALUE || (currentTime - maxTtl < maxTs)) {
+        continue;
+      } else if (filesCompacting == null || !filesCompacting.contains(sf)) {
         expiredStores.add(sf);
       }
     }

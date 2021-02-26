@@ -22,10 +22,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceImpl implements
@@ -37,15 +37,15 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
   private int metricsSize = 1000;
   private int mruCap = calcMruCap(metricsSize);
 
-  private Map<String, Map<String, Double>> stochasticCosts =
-      new LinkedHashMap<String, Map<String, Double>>(mruCap, MRU_LOAD_FACTOR, true) {
-        private static final long serialVersionUID = 8204713453436906599L;
+  private final Map<String, Map<String, Double>> stochasticCosts =
+          new LinkedHashMap<String, Map<String, Double>>(mruCap, MRU_LOAD_FACTOR, true) {
+    private static final long serialVersionUID = 8204713453436906599L;
 
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, Map<String, Double>> eldest) {
-          return size() > mruCap;
-        }
-      };
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<String, Map<String, Double>> eldest) {
+      return size() > mruCap;
+    }
+  };
   private Map<String, String> costFunctionDescs = new ConcurrentHashMap<>();
 
   /**
@@ -71,7 +71,6 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
     if (tableName == null || costFunctionName == null || cost == null) {
       return;
     }
-
     if (functionDesc != null) {
       costFunctionDescs.put(costFunctionName, functionDesc);
     }
@@ -81,7 +80,6 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
       if (costs == null) {
         costs = new ConcurrentHashMap<>();
       }
-
       costs.put(costFunctionName, cost);
       stochasticCosts.put(tableName, costs);
     }
@@ -98,7 +96,11 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
             String attrName = tableEntry.getKey() + TABLE_FUNCTION_SEP + costEntry.getKey();
             Double cost = costEntry.getValue();
             String functionDesc = costFunctionDescs.get(costEntry.getKey());
-            if (functionDesc == null) functionDesc = costEntry.getKey();
+
+            if (functionDesc == null) {
+              functionDesc = costEntry.getKey();
+            }
+
             metricsRecordBuilder.addGauge(Interns.info(attrName, functionDesc), cost);
           }
         }
@@ -106,5 +108,4 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
     }
     metricsRegistry.snapshot(metricsRecordBuilder, all);
   }
-
 }

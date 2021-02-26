@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -125,5 +124,19 @@ public interface RegionServerObserver {
    */
   default void postClearCompactionQueues(
       final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * This will be called before executing procedures
+   * @param ctx the environment to interact with the framework and region server.
+   */
+  default void preExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * This will be called after executing procedures
+   * @param ctx the environment to interact with the framework and region server.
+   */
+  default void postExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
       throws IOException {}
 }

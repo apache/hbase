@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -34,35 +32,40 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 @Category({MiscTests.class, MediumTests.class})
 // Medium as it creates 100 threads; seems better to run it isolated
 public class TestIdReadWriteLock {
 
-  private static final Log LOG = LogFactory.getLog(TestIdReadWriteLock.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestIdReadWriteLock.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestIdReadWriteLock.class);
 
   private static final int NUM_IDS = 16;
   private static final int NUM_THREADS = 128;
   private static final int NUM_SECONDS = 15;
 
   @Parameterized.Parameter
-  public IdReadWriteLock idLock;
+  public IdReadWriteLock<Long> idLock;
 
   @Parameterized.Parameters
   public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { new IdReadWriteLock(ReferenceType.WEAK) },
-        { new IdReadWriteLock(ReferenceType.SOFT) } });
+    return Arrays.asList(new Object[][] { { new IdReadWriteLock<Long>(ReferenceType.WEAK) },
+      { new IdReadWriteLock<Long>(ReferenceType.SOFT) } });
   }
 
   private Map<Long, String> idOwner = new ConcurrentHashMap<>();
@@ -112,7 +115,7 @@ public class TestIdReadWriteLock {
 
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMultipleClients() throws Exception {
     ExecutorService exec = Executors.newFixedThreadPool(NUM_THREADS);
     try {

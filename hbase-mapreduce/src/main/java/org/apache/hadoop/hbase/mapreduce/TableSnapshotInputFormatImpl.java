@@ -18,43 +18,45 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution.HostAndWeight;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.ClientSideRegionScanner;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos.TableSnapshotRegionSplit;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.Writable;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos.TableSnapshotRegionSplit;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
  * Hadoop MR API-agnostic implementation for mapreduce over table snapshots.
@@ -64,13 +66,13 @@ public class TableSnapshotInputFormatImpl {
   // TODO: Snapshots files are owned in fs by the hbase user. There is no
   // easy way to delegate access.
 
-  public static final Log LOG = LogFactory.getLog(TableSnapshotInputFormatImpl.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TableSnapshotInputFormatImpl.class);
 
   private static final String SNAPSHOT_NAME_KEY = "hbase.TableSnapshotInputFormat.snapshot.name";
   // key for specifying the root dir of the restored snapshot
   protected static final String RESTORE_DIR_KEY = "hbase.TableSnapshotInputFormat.restore.dir";
 
-  /** See {@link #getBestLocations(Configuration, HDFSBlocksDistribution)} */
+  /** See {@link #getBestLocations(Configuration, HDFSBlocksDistribution, int)} */
   private static final String LOCALITY_CUTOFF_MULTIPLIER =
     "hbase.tablesnapshotinputformat.locality.cutoff.multiplier";
   private static final float DEFAULT_LOCALITY_CUTOFF_MULTIPLIER = 0.8f;
@@ -85,6 +87,25 @@ public class TableSnapshotInputFormatImpl {
    * number of splits to generate per region.
    */
   public static final String NUM_SPLITS_PER_REGION = "hbase.mapreduce.splits.per.region";
+
+  /**
+   * Whether to calculate the block location for splits. Default to true.
+   * If the computing layer runs outside of HBase cluster, the block locality does not master.
+   * Setting this value to false could skip the calculation and save some time.
+   *
+   * Set access modifier to "public" so that these could be accessed by test classes of
+   * both org.apache.hadoop.hbase.mapred
+   * and  org.apache.hadoop.hbase.mapreduce.
+   */
+  public static final String  SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY =
+      "hbase.TableSnapshotInputFormat.locality.enabled";
+  public static final boolean SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT = true;
+
+  /**
+   * In some scenario, scan limited rows on each InputSplit for sampling data extraction
+   */
+  public static final String SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT =
+      "hbase.TableSnapshotInputFormat.row.limit.per.inputsplit";
 
   /**
    * Implementation class for InputSplit logic common between mapred and mapreduce.
@@ -198,6 +219,8 @@ public class TableSnapshotInputFormatImpl {
     private Result result = null;
     private ImmutableBytesWritable row = null;
     private ClientSideRegionScanner scanner;
+    private int numOfCompleteRows = 0;
+    private int rowLimitPerSplit;
 
     public ClientSideRegionScanner getScanner() {
       return scanner;
@@ -206,9 +229,10 @@ public class TableSnapshotInputFormatImpl {
     public void initialize(InputSplit split, Configuration conf) throws IOException {
       this.scan = TableMapReduceUtil.convertStringToScan(split.getScan());
       this.split = split;
+      this.rowLimitPerSplit = conf.getInt(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT, 0);
       TableDescriptor htd = split.htd;
       HRegionInfo hri = this.split.getRegionInfo();
-      FileSystem fs = FSUtils.getCurrentFileSystem(conf);
+      FileSystem fs = CommonFSUtils.getCurrentFileSystem(conf);
 
 
       // region is immutable, this should be fine,
@@ -229,6 +253,9 @@ public class TableSnapshotInputFormatImpl {
         return false;
       }
 
+      if (rowLimitPerSplit > 0 && ++this.numOfCompleteRows > rowLimitPerSplit) {
+        return false;
+      }
       if (this.row == null) {
         this.row = new ImmutableBytesWritable();
       }
@@ -262,7 +289,7 @@ public class TableSnapshotInputFormatImpl {
   public static List<InputSplit> getSplits(Configuration conf) throws IOException {
     String snapshotName = getSnapshotName(conf);
 
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
     SnapshotManifest manifest = getSnapshotManifest(conf, snapshotName, rootDir, fs);
@@ -281,22 +308,17 @@ public class TableSnapshotInputFormatImpl {
     return getSplits(scan, manifest, regionInfos, restoreDir, conf, splitAlgo, numSplits);
   }
 
-  public static RegionSplitter.SplitAlgorithm getSplitAlgo(Configuration conf) throws IOException{
+  public static RegionSplitter.SplitAlgorithm getSplitAlgo(Configuration conf) throws IOException {
     String splitAlgoClassName = conf.get(SPLIT_ALGO);
-    if (splitAlgoClassName == null)
+    if (splitAlgoClassName == null) {
       return null;
+    }
     try {
-      return ((Class<? extends RegionSplitter.SplitAlgorithm>)
-              Class.forName(splitAlgoClassName)).newInstance();
-    } catch (ClassNotFoundException e) {
-      throw new IOException("SplitAlgo class " + splitAlgoClassName +
-              " is not found", e);
-    } catch (InstantiationException e) {
-      throw new IOException("SplitAlgo class " + splitAlgoClassName +
-              " is not instantiable", e);
-    } catch (IllegalAccessException e) {
-      throw new IOException("SplitAlgo class " + splitAlgoClassName +
-              " is not instantiable", e);
+      return Class.forName(splitAlgoClassName).asSubclass(RegionSplitter.SplitAlgorithm.class)
+          .getDeclaredConstructor().newInstance();
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+        NoSuchMethodException | InvocationTargetException e) {
+      throw new IOException("SplitAlgo class " + splitAlgoClassName + " is not found", e);
     }
   }
 
@@ -354,7 +376,10 @@ public class TableSnapshotInputFormatImpl {
     // load table descriptor
     TableDescriptor htd = manifest.getTableDescriptor();
 
-    Path tableDir = FSUtils.getTableDir(restoreDir, htd.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(restoreDir, htd.getTableName());
+
+    boolean localityEnabled = conf.getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY,
+                                              SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT);
 
     List<InputSplit> splits = new ArrayList<>();
     for (HRegionInfo hri : regionManifests) {
@@ -363,38 +388,55 @@ public class TableSnapshotInputFormatImpl {
       if (numSplits > 1) {
         byte[][] sp = sa.split(hri.getStartKey(), hri.getEndKey(), numSplits, true);
         for (int i = 0; i < sp.length - 1; i++) {
-          if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), sp[i],
+          if (PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), sp[i],
                   sp[i + 1])) {
-            // compute HDFS locations from snapshot files (which will get the locations for
-            // referred hfiles)
-            List<String> hosts = getBestLocations(conf,
-                    HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
+            List<String> hosts =
+                calculateLocationsForInputSplit(conf, htd, hri, tableDir, localityEnabled);
 
-            int len = Math.min(3, hosts.size());
-            hosts = hosts.subList(0, len);
             Scan boundedScan = new Scan(scan);
-            boundedScan.setStartRow(sp[i]);
-            boundedScan.setStopRow(sp[i + 1]);
+            if (scan.getStartRow().length == 0) {
+              boundedScan.withStartRow(sp[i]);
+            } else {
+              boundedScan.withStartRow(
+                Bytes.compareTo(scan.getStartRow(), sp[i]) > 0 ? scan.getStartRow() : sp[i]);
+            }
+
+            if (scan.getStopRow().length == 0) {
+              boundedScan.withStopRow(sp[i + 1]);
+            } else {
+              boundedScan.withStopRow(
+                Bytes.compareTo(scan.getStopRow(), sp[i + 1]) < 0 ? scan.getStopRow() : sp[i + 1]);
+            }
+
             splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir));
           }
         }
       } else {
-        if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
-                hri.getEndKey())) {
-          // compute HDFS locations from snapshot files (which will get the locations for
-          // referred hfiles)
-          List<String> hosts = getBestLocations(conf,
-                  HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
-
-          int len = Math.min(3, hosts.size());
-          hosts = hosts.subList(0, len);
+        if (PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
+            hri.getStartKey(), hri.getEndKey())) {
+          List<String> hosts =
+              calculateLocationsForInputSplit(conf, htd, hri, tableDir, localityEnabled);
           splits.add(new InputSplit(htd, hri, hosts, scan, restoreDir));
         }
       }
     }
 
     return splits;
+  }
 
+  /**
+   * Compute block locations for snapshot files (which will get the locations for referred hfiles)
+   * only when localityEnabled is true.
+   */
+  private static List<String> calculateLocationsForInputSplit(Configuration conf,
+      TableDescriptor htd, HRegionInfo hri, Path tableDir, boolean localityEnabled)
+      throws IOException {
+    if (localityEnabled) { // care block locality
+      return getBestLocations(conf,
+                              HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
+    } else { // do not care block locality
+      return null;
+    }
   }
 
   /**
@@ -408,35 +450,52 @@ public class TableSnapshotInputFormatImpl {
    * we are doing a simple heuristic, where we will pass all hosts which have at least 80%
    * (hbase.tablesnapshotinputformat.locality.cutoff.multiplier) as much block locality as the top
    * host with the best locality.
+   * Return at most numTopsAtMost locations if there are more than that.
    */
-  public static List<String> getBestLocations(
-      Configuration conf, HDFSBlocksDistribution blockDistribution) {
-    List<String> locations = new ArrayList<>(3);
-
+  private static List<String> getBestLocations(Configuration conf,
+      HDFSBlocksDistribution blockDistribution, int numTopsAtMost) {
     HostAndWeight[] hostAndWeights = blockDistribution.getTopHostsWithWeights();
 
-    if (hostAndWeights.length == 0) {
-      return locations;
+    if (hostAndWeights.length == 0) { // no matter what numTopsAtMost is
+      return null;
     }
 
+    if (numTopsAtMost < 1) { // invalid if numTopsAtMost < 1, correct it to be 1
+      numTopsAtMost = 1;
+    }
+    int top = Math.min(numTopsAtMost, hostAndWeights.length);
+    List<String> locations = new ArrayList<>(top);
     HostAndWeight topHost = hostAndWeights[0];
     locations.add(topHost.getHost());
 
-    // Heuristic: filter all hosts which have at least cutoffMultiplier % of block locality
+    if (top == 1) { // only care about the top host
+      return locations;
+    }
+
+    // When top >= 2,
+    // do the heuristic: filter all hosts which have at least cutoffMultiplier % of block locality
     double cutoffMultiplier
             = conf.getFloat(LOCALITY_CUTOFF_MULTIPLIER, DEFAULT_LOCALITY_CUTOFF_MULTIPLIER);
 
     double filterWeight = topHost.getWeight() * cutoffMultiplier;
 
-    for (int i = 1; i < hostAndWeights.length; i++) {
+    for (int i = 1; i <= top - 1; i++) {
       if (hostAndWeights[i].getWeight() >= filterWeight) {
         locations.add(hostAndWeights[i].getHost());
       } else {
+        // As hostAndWeights is in descending order,
+        // we could break the loop as long as we meet a weight which is less than filterWeight.
         break;
       }
     }
 
     return locations;
+  }
+
+  public static List<String> getBestLocations(Configuration conf,
+      HDFSBlocksDistribution blockDistribution) {
+    // 3 nodes will contain highly local blocks. So default to 3.
+    return getBestLocations(conf, blockDistribution, 3);
   }
 
   private static String getSnapshotName(Configuration conf) {
@@ -451,9 +510,9 @@ public class TableSnapshotInputFormatImpl {
    * Configures the job to use TableSnapshotInputFormat to read from a snapshot.
    * @param conf the job to configuration
    * @param snapshotName the name of the snapshot to read from
-   * @param restoreDir a temporary directory to restore the snapshot into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * After the job is finished, restoreDir can be deleted.
+   * @param restoreDir a temporary directory to restore the snapshot into. Current user should have
+   *          write permissions to this directory, and this should not be a subdirectory of rootdir.
+   *          After the job is finished, restoreDir can be deleted.
    * @throws IOException if an error occurs
    */
   public static void setInput(Configuration conf, String snapshotName, Path restoreDir)
@@ -465,9 +524,9 @@ public class TableSnapshotInputFormatImpl {
    * Configures the job to use TableSnapshotInputFormat to read from a snapshot.
    * @param conf the job to configure
    * @param snapshotName the name of the snapshot to read from
-   * @param restoreDir a temporary directory to restore the snapshot into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * After the job is finished, restoreDir can be deleted.
+   * @param restoreDir a temporary directory to restore the snapshot into. Current user should have
+   *          write permissions to this directory, and this should not be a subdirectory of rootdir.
+   *          After the job is finished, restoreDir can be deleted.
    * @param numSplitsPerRegion how many input splits to generate per one region
    * @param splitAlgo SplitAlgorithm to be used when generating InputSplits
    * @throws IOException if an error occurs
@@ -487,14 +546,12 @@ public class TableSnapshotInputFormatImpl {
       conf.set(SPLIT_ALGO, splitAlgo.getClass().getName());
     }
     conf.setInt(NUM_SPLITS_PER_REGION, numSplitsPerRegion);
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
     restoreDir = new Path(restoreDir, UUID.randomUUID().toString());
 
-    // TODO: restore from record readers to parallelize.
     RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
-
     conf.set(RESTORE_DIR_KEY, restoreDir.toString());
   }
 }

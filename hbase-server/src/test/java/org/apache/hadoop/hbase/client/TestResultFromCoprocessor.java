@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static junit.framework.TestCase.assertTrue;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
-
-import static junit.framework.TestCase.assertTrue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -39,11 +38,17 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestResultFromCoprocessor {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestResultFromCoprocessor.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] ROW = Bytes.toBytes("normal_row");
   private static final byte[] FAMILY = Bytes.toBytes("fm");
@@ -58,8 +63,8 @@ public class TestResultFromCoprocessor {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-            .addCoprocessor(MyObserver.class.getName())
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+            .setCoprocessor(MyObserver.class.getName())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
             .build();
     TEST_UTIL.getAdmin().createTable(desc);
   }

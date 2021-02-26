@@ -26,8 +26,8 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -35,12 +35,14 @@ import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.RetryImmediatelyException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
-import org.apache.hadoop.hbase.quotas.ThrottlingException;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -60,7 +62,7 @@ public final class ClientExceptionsUtil {
 
   public static boolean isSpecialException(Throwable cur) {
     return (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
-        || cur instanceof RegionTooBusyException || cur instanceof ThrottlingException
+        || cur instanceof RegionTooBusyException || cur instanceof RpcThrottlingException
         || cur instanceof MultiActionResultTooLarge || cur instanceof RetryImmediatelyException
         || cur instanceof CallQueueTooBigException || cur instanceof CallDroppedException
         || cur instanceof NotServingRegionException || cur instanceof RequestTooBigException);
@@ -73,7 +75,7 @@ public final class ClientExceptionsUtil {
    * - nested exceptions
    *
    * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException /
-   *            ThrottlingException
+   *            RpcThrottlingException
    * @return null if we didn't find the exception, the exception otherwise.
    */
   public static Throwable findException(Object exception) {
@@ -131,10 +133,27 @@ public final class ClientExceptionsUtil {
     return (t instanceof CallDroppedException);
   }
 
+  // This list covers most connectivity exceptions but not all.
+  // For example, in SocketOutputStream a plain IOException is thrown at times when the channel is
+  // closed.
+  private static final ImmutableSet<Class<? extends Throwable>> CONNECTION_EXCEPTION_TYPES =
+    ImmutableSet.of(SocketTimeoutException.class, ConnectException.class,
+      ClosedChannelException.class, SyncFailedException.class, EOFException.class,
+      TimeoutException.class, TimeoutIOException.class, CallTimeoutException.class,
+      ConnectionClosingException.class, FailedServerException.class,
+      ConnectionClosedException.class);
+
   /**
-   * Check if the exception is something that indicates that we cannot
-   * contact/communicate with the server.
-   *
+   * For test only. Usually you should use the {@link #isConnectionException(Throwable)} method
+   * below.
+   */
+  public static Set<Class<? extends Throwable>> getConnectionExceptionTypes() {
+    return CONNECTION_EXCEPTION_TYPES;
+  }
+
+  /**
+   * Check if the exception is something that indicates that we cannot contact/communicate with the
+   * server.
    * @param e exception to check
    * @return true when exception indicates that the client wasn't able to make contact with server
    */
@@ -142,14 +161,12 @@ public final class ClientExceptionsUtil {
     if (e == null) {
       return false;
     }
-    // This list covers most connectivity exceptions but not all.
-    // For example, in SocketOutputStream a plain IOException is thrown
-    // at times when the channel is closed.
-    return (e instanceof SocketTimeoutException || e instanceof ConnectException
-      || e instanceof ClosedChannelException || e instanceof SyncFailedException
-      || e instanceof EOFException || e instanceof TimeoutException
-      || e instanceof CallTimeoutException || e instanceof ConnectionClosingException
-      || e instanceof FailedServerException);
+    for (Class<? extends Throwable> clazz : CONNECTION_EXCEPTION_TYPES) {
+      if (clazz.isAssignableFrom(e.getClass())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

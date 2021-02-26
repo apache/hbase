@@ -21,13 +21,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Class used to hold the current state of the cluster and how balanced it is.
  */
+@InterfaceAudience.Private
 public class ClusterLoadState {
   private final Map<ServerName, List<RegionInfo>> clusterState;
   private final NavigableMap<ServerAndLoad, List<RegionInfo>> serversByLoad;

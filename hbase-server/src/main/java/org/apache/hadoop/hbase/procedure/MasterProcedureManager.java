@@ -19,8 +19,9 @@ package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
@@ -34,28 +35,26 @@ import org.apache.zookeeper.KeeperException;
 *
 * To implement a custom globally barriered procedure, user needs to extend two classes:
 * {@link MasterProcedureManager} and {@link RegionServerProcedureManager}. Implementation of
-* {@link MasterProcedureManager} is loaded into {@link org.apache.hadoop.hbase.master.HMaster} 
+* {@link MasterProcedureManager} is loaded into {@link org.apache.hadoop.hbase.master.HMaster}
 * process via configuration parameter 'hbase.procedure.master.classes', while implementation of
-* {@link RegionServerProcedureManager} is loaded into 
+* {@link RegionServerProcedureManager} is loaded into
 * {@link org.apache.hadoop.hbase.regionserver.HRegionServer} process via
 * configuration parameter 'hbase.procedure.regionserver.classes'.
 *
-* An example of globally barriered procedure implementation is 
+* An example of globally barriered procedure implementation is
 * {@link org.apache.hadoop.hbase.master.snapshot.SnapshotManager} and
 * {@link org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager}.
 *
 * A globally barriered procedure is identified by its signature (usually it is the name of the
 * procedure znode). During the initialization phase, the initialize methods are called by both
-* {@link org.apache.hadoop.hbase.master.HMaster} 
-* and {@link org.apache.hadoop.hbase.regionserver.HRegionServer} which create the procedure znode 
-* and register the listeners. A procedure can be triggered by its signature and an instant name 
-* (encapsulated in a {@link ProcedureDescription} object). When the servers are shutdown, 
+* {@link org.apache.hadoop.hbase.master.HMaster}
+* and {@link org.apache.hadoop.hbase.regionserver.HRegionServer} which create the procedure znode
+* and register the listeners. A procedure can be triggered by its signature and an instant name
+* (encapsulated in a {@link ProcedureDescription} object). When the servers are shutdown,
 * the stop methods on both classes are called to clean up the data associated with the procedure.
 */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public abstract class MasterProcedureManager extends ProcedureManager implements
-    Stoppable {
+public abstract class MasterProcedureManager extends ProcedureManager implements Stoppable {
   /**
    * Initialize a globally barriered procedure for master.
    *
@@ -73,9 +72,7 @@ public abstract class MasterProcedureManager extends ProcedureManager implements
    * @param desc Procedure description
    * @throws IOException
    */
-  public void execProcedure(ProcedureDescription desc) throws IOException {
-
-  }
+  public void execProcedure(ProcedureDescription desc) throws IOException {}
 
   /**
    * Execute a distributed procedure on cluster with return data.
@@ -88,6 +85,13 @@ public abstract class MasterProcedureManager extends ProcedureManager implements
       throws IOException {
     return null;
   }
+
+  /**
+   * Check for required permissions before executing the procedure.
+   * @throws IOException if permissions requirements are not met.
+   */
+  public abstract void checkPermissions(ProcedureDescription desc, AccessChecker accessChecker,
+      User user) throws IOException;
 
   /**
    * Check if the procedure is finished successfully

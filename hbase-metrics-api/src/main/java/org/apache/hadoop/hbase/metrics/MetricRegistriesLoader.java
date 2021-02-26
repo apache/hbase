@@ -17,27 +17,26 @@
  * limitations under the License.
  */
 
-
 package org.apache.hadoop.hbase.metrics;
-
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceLoader;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class MetricRegistriesLoader {
-  private static final Log LOG = LogFactory.getLog(MetricRegistries.class);
+public final class MetricRegistriesLoader {
+  private static final Logger LOG = LoggerFactory.getLogger(MetricRegistries.class);
 
   private static final String defaultClass
       = "org.apache.hadoop.hbase.metrics.impl.MetricRegistriesImpl";
+
+  private MetricRegistriesLoader() {
+  }
 
   /**
    * Creates a {@link MetricRegistries} instance using the corresponding {@link MetricRegistries}
@@ -56,7 +55,6 @@ public class MetricRegistriesLoader {
    * implementation will be loaded.
    * @return A {@link MetricRegistries} implementation.
    */
-  @VisibleForTesting
   static MetricRegistries load(List<MetricRegistries> availableImplementations) {
 
     if (availableImplementations.size() == 1) {

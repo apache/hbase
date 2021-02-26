@@ -17,34 +17,32 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
-
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Maintains a collection of peers to replicate to, and randomly selects a
  * single peer to replicate to per set of data to replicate. Also handles
  * keeping track of peer availability.
  */
+@InterfaceAudience.Private
 public class ReplicationSinkManager {
 
-  private static final Log LOG = LogFactory.getLog(ReplicationSinkManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSinkManager.class);
 
   /**
    * Default maximum number of times a replication sink can be reported as bad before
@@ -57,7 +55,7 @@ public class ReplicationSinkManager {
    * Default ratio of the total number of peer cluster region servers to consider
    * replicating to.
    */
-  static final float DEFAULT_REPLICATION_SOURCE_RATIO = 0.1f;
+  static final float DEFAULT_REPLICATION_SOURCE_RATIO = 0.5f;
 
 
   private final Connection conn;
@@ -159,6 +157,9 @@ public class ReplicationSinkManager {
    */
   public synchronized void chooseSinks() {
     List<ServerName> slaveAddresses = endpoint.getRegionServers();
+    if(slaveAddresses.isEmpty()){
+      LOG.warn("No sinks available at peer. Will not be able to replicate");
+    }
     Collections.shuffle(slaveAddresses, random);
     int numSinks = (int) Math.ceil(slaveAddresses.size() * ratio);
     sinks = slaveAddresses.subList(0, numSinks);
@@ -170,7 +171,6 @@ public class ReplicationSinkManager {
     return sinks.size();
   }
 
-  @VisibleForTesting
   protected List<ServerName> getSinksForTesting() {
     return Collections.unmodifiableList(sinks);
   }

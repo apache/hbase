@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +16,13 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
-
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.CHECK;
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.FORCE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.DELETED;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.FAILURE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.IN_PROGRESS;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.SUCCESS;
-
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,10 +33,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,20 +43,18 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLogManagerDetails;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Distributes the task of log splitting to the available region servers.
@@ -93,10 +84,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLo
  * completed (either with success or with error) it will be not be submitted
  * again. If a task is resubmitted then there is a risk that old "delete task"
  * can delete the re-submission.
+ * @see SplitWALManager for an alternate implementation based on Procedures.
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *   distributed WAL splitter, see SplitWALManager.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class SplitLogManager {
-  private static final Log LOG = LogFactory.getLog(SplitLogManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SplitLogManager.class);
 
   private final MasterServices server;
 
@@ -107,17 +102,7 @@ public class SplitLogManager {
 
   private long unassignedTimeout;
   private long lastTaskCreateTime = Long.MAX_VALUE;
-  private long checkRecoveringTimeThreshold = 15000; // 15 seconds
-  private final List<Pair<Set<ServerName>, Boolean>> failedRecoveringRegionDeletions = Collections
-      .synchronizedList(new ArrayList<Pair<Set<ServerName>, Boolean>>());
 
-  /**
-   * In distributedLogReplay mode, we need touch both splitlog and recovering-regions znodes in one
-   * operation. So the lock is used to guard such cases.
-   */
-  protected final ReentrantLock recoveringRegionLock = new ReentrantLock();
-
-  @VisibleForTesting
   final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<>();
   private TimeoutMonitor timeoutMonitor;
 
@@ -135,29 +120,35 @@ public class SplitLogManager {
       throws IOException {
     this.server = master;
     this.conf = conf;
-    this.choreService = new ChoreService(master.getServerName() + "_splitLogManager_");
+    // If no CoordinatedStateManager, skip registering as a chore service (The
+    // CoordinatedStateManager is non-null if we are running the ZK-based distributed WAL
+    // splitting. It is null if we are configured to use procedure-based distributed WAL
+    // splitting.
     if (server.getCoordinatedStateManager() != null) {
+      this.choreService =
+        new ChoreService(master.getServerName().toShortString() + ".splitLogManager.");
       SplitLogManagerCoordination coordination = getSplitLogManagerCoordination();
       Set<String> failedDeletions = Collections.synchronizedSet(new HashSet<String>());
       SplitLogManagerDetails details = new SplitLogManagerDetails(tasks, master, failedDeletions);
       coordination.setDetails(details);
       coordination.init();
-      // Determine recovery mode
-    }
-    this.unassignedTimeout =
+      this.unassignedTimeout =
         conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
-    this.timeoutMonitor =
+      this.timeoutMonitor =
         new TimeoutMonitor(conf.getInt("hbase.splitlog.manager.timeoutmonitor.period", 1000),
-            master);
-    choreService.scheduleChore(timeoutMonitor);
+          master);
+      this.choreService.scheduleChore(timeoutMonitor);
+    } else {
+      this.choreService = null;
+      this.timeoutMonitor = null;
+    }
   }
 
   private SplitLogManagerCoordination getSplitLogManagerCoordination() {
-    return ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-        .getSplitLogManagerCoordination();
+    return server.getCoordinatedStateManager().getSplitLogManagerCoordination();
   }
 
-  private FileStatus[] getFileList(List<Path> logDirs, PathFilter filter) throws IOException {
+  private List<FileStatus> getFileList(List<Path> logDirs, PathFilter filter) throws IOException {
     return getFileList(conf, logDirs, filter);
   }
 
@@ -172,8 +163,7 @@ public class SplitLogManager {
    * {@link org.apache.hadoop.hbase.wal.WALSplitter#split(Path, Path, Path, FileSystem,
    *     Configuration, org.apache.hadoop.hbase.wal.WALFactory)} for tests.
    */
-  @VisibleForTesting
-  public static FileStatus[] getFileList(final Configuration conf, final List<Path> logDirs,
+  public static List<FileStatus> getFileList(final Configuration conf, final List<Path> logDirs,
       final PathFilter filter)
       throws IOException {
     List<FileStatus> fileStatus = new ArrayList<>();
@@ -183,15 +173,15 @@ public class SplitLogManager {
         LOG.warn(logDir + " doesn't exist. Nothing to do!");
         continue;
       }
-      FileStatus[] logfiles = FSUtils.listStatus(fs, logDir, filter);
+      FileStatus[] logfiles = CommonFSUtils.listStatus(fs, logDir, filter);
       if (logfiles == null || logfiles.length == 0) {
-        LOG.info(logDir + " is empty dir, no logs to split");
+        LOG.info("{} dir is empty, no logs to split.", logDir);
       } else {
         Collections.addAll(fileStatus, logfiles);
       }
     }
-    FileStatus[] a = new FileStatus[fileStatus.size()];
-    return fileStatus.toArray(a);
+
+    return fileStatus;
   }
 
   /**
@@ -246,37 +236,33 @@ public class SplitLogManager {
       PathFilter filter) throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus("Doing distributed log split in " +
       logDirs + " for serverName=" + serverNames);
-    FileStatus[] logfiles = getFileList(logDirs, filter);
-    status.setStatus("Checking directory contents...");
-    SplitLogCounters.tot_mgr_log_split_batch_start.increment();
-    LOG.info("Started splitting " + logfiles.length + " logs in " + logDirs +
-      " for " + serverNames);
-    long t = EnvironmentEdgeManager.currentTime();
     long totalSize = 0;
-    TaskBatch batch = new TaskBatch();
-    Boolean isMetaRecovery = (filter == null) ? null : false;
-    for (FileStatus lf : logfiles) {
-      // TODO If the log file is still being written to - which is most likely
-      // the case for the last log file - then its length will show up here
-      // as zero. The size of such a file can only be retrieved after
-      // recover-lease is done. totalSize will be under in most cases and the
-      // metrics that it drives will also be under-reported.
-      totalSize += lf.getLen();
-      String pathToLog = FSUtils.removeWALRootPath(lf.getPath(), conf);
-      if (!enqueueSplitTask(pathToLog, batch)) {
-        throw new IOException("duplicate log split scheduled for " + lf.getPath());
+    TaskBatch batch = null;
+    long startTime = 0;
+    List<FileStatus> logfiles = getFileList(logDirs, filter);
+    if (!logfiles.isEmpty()) {
+      status.setStatus("Checking directory contents...");
+      SplitLogCounters.tot_mgr_log_split_batch_start.increment();
+      LOG.info("Started splitting " + logfiles.size() + " logs in " + logDirs +
+          " for " + serverNames);
+      startTime = EnvironmentEdgeManager.currentTime();
+      batch = new TaskBatch();
+      for (FileStatus lf : logfiles) {
+        // TODO If the log file is still being written to - which is most likely
+        // the case for the last log file - then its length will show up here
+        // as zero. The size of such a file can only be retrieved after
+        // recover-lease is done. totalSize will be under in most cases and the
+        // metrics that it drives will also be under-reported.
+        totalSize += lf.getLen();
+        String pathToLog = CommonFSUtils.removeWALRootPath(lf.getPath(), conf);
+        if (!enqueueSplitTask(pathToLog, batch)) {
+          throw new IOException("duplicate log split scheduled for " + lf.getPath());
+        }
       }
+      waitForSplittingCompletion(batch, status);
     }
-    waitForSplittingCompletion(batch, status);
-    // remove recovering regions
-    if (filter == MasterWalManager.META_FILTER /* reference comparison */) {
-      // we split meta regions and user regions separately therefore logfiles are either all for
-      // meta or user regions but won't for both( we could have mixed situations in tests)
-      isMetaRecovery = true;
-    }
-    removeRecoveringRegions(serverNames, isMetaRecovery);
 
-    if (batch.done != batch.installed) {
+    if (batch != null && batch.done != batch.installed) {
       batch.isDead = true;
       SplitLogCounters.tot_mgr_log_split_batch_err.increment();
       LOG.warn("error while splitting logs in " + logDirs + " installed = " + batch.installed
@@ -305,9 +291,11 @@ public class SplitLogManager {
       SplitLogCounters.tot_mgr_log_split_batch_success.increment();
     }
     String msg =
-        "finished splitting (more than or equal to) " + totalSize + " bytes in " + batch.installed
-            + " log files in " + logDirs + " in "
-            + (EnvironmentEdgeManager.currentTime() - t) + "ms";
+        "Finished splitting (more than or equal to) " + StringUtils.humanSize(totalSize) + " (" +
+            totalSize + " bytes) in " + ((batch == null) ? 0 : batch.installed) + " log files in " +
+            logDirs + " in " +
+            ((startTime == 0) ? startTime : (EnvironmentEdgeManager.currentTime() - startTime)) +
+            "ms";
     status.markComplete(msg);
     LOG.info(msg);
     return totalSize;
@@ -329,6 +317,21 @@ public class SplitLogManager {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Get the amount of time in milliseconds to wait till next check.
+   * Check less frequently if a bunch of work to do still. At a max, check every minute.
+   * At a minimum, check every 100ms. This is to alleviate case where perhaps there are a bunch of
+   * threads waiting on a completion. For example, if the zk-based implementation, we will scan the
+   * '/hbase/splitWAL' dir every time through this loop. If there are lots of WALs to
+   * split -- could be tens of thousands if big cluster -- then it will take a while. If
+   * the Master has many SCPs waiting on wal splitting -- could be up to 10 x the configured
+   * PE thread count (default would be 160) -- then the Master will be putting up a bunch of
+   * load on zk.
+   */
+  static int getBatchWaitTimeMillis(int remainingTasks) {
+    return remainingTasks < 10? 100: remainingTasks < 100? 1000: 60_000;
   }
 
   private void waitForSplittingCompletion(TaskBatch batch, MonitoredTask status) {
@@ -355,7 +358,7 @@ public class SplitLogManager {
               return;
             }
           }
-          batch.wait(100);
+          batch.wait(getBatchWaitTimeMillis(remainingTasks));
           if (server.isStopped()) {
             LOG.warn("Stopped while waiting for log splits to be completed");
             return;
@@ -369,7 +372,6 @@ public class SplitLogManager {
     }
   }
 
-  @VisibleForTesting
   ConcurrentMap<String, Task> getTasks() {
     return tasks;
   }
@@ -383,61 +385,6 @@ public class SplitLogManager {
     }
     return count;
 
-  }
-
-  /**
-   * It removes recovering regions under /hbase/recovering-regions/[encoded region name] so that the
-   * region server hosting the region can allow reads to the recovered region
-   * @param serverNames servers which are just recovered
-   * @param isMetaRecovery whether current recovery is for the meta region on {@code serverNames}
-   */
-  private void removeRecoveringRegions(final Set<ServerName> serverNames, Boolean isMetaRecovery) {
-    if (!isLogReplaying()) {
-      // the function is only used in WALEdit direct replay mode
-      return;
-    }
-    if (serverNames == null || serverNames.isEmpty()) return;
-
-    Set<String> recoveredServerNameSet = new HashSet<>();
-    for (ServerName tmpServerName : serverNames) {
-      recoveredServerNameSet.add(tmpServerName.getServerName());
-    }
-
-    this.recoveringRegionLock.lock();
-    try {
-      getSplitLogManagerCoordination().removeRecoveringRegions(
-        recoveredServerNameSet, isMetaRecovery);
-    } catch (IOException e) {
-      LOG.warn("removeRecoveringRegions got exception. Will retry", e);
-      if (serverNames != null && !serverNames.isEmpty()) {
-        this.failedRecoveringRegionDeletions.add(new Pair<>(serverNames, isMetaRecovery));
-      }
-    } finally {
-      this.recoveringRegionLock.unlock();
-    }
-  }
-
-  /**
-   * It removes stale recovering regions under /hbase/recovering-regions/[encoded region name]
-   * during master initialization phase.
-   * @param failedServers A set of known failed servers
-   * @throws IOException
-   */
-  void removeStaleRecoveringRegions(final Set<ServerName> failedServers) throws IOException,
-      InterruptedIOException {
-    Set<String> knownFailedServers = new HashSet<>();
-    if (failedServers != null) {
-      for (ServerName tmpServerName : failedServers) {
-        knownFailedServers.add(tmpServerName.getServerName());
-      }
-    }
-
-    this.recoveringRegionLock.lock();
-    try {
-      getSplitLogManagerCoordination().removeStaleRecoveringRegions(knownFailedServers);
-    } finally {
-      this.recoveringRegionLock.unlock();
-    }
   }
 
   /**
@@ -495,7 +442,7 @@ public class SplitLogManager {
           batch.installed++;
           return null;
         }
-        LOG.fatal("Logic error. Deleted task still present in tasks map");
+        LOG.error(HBaseMarkers.FATAL, "Logic error. Deleted task still present in tasks map");
         assert false : "Deleted task still present in tasks map";
         return t;
       }
@@ -509,7 +456,7 @@ public class SplitLogManager {
       choreService.shutdown();
     }
     if (timeoutMonitor != null) {
-      timeoutMonitor.cancel(true);
+      timeoutMonitor.shutdown(true);
     }
   }
 
@@ -522,7 +469,7 @@ public class SplitLogManager {
       }
       deadWorkers.add(workerName);
     }
-    LOG.info("dead splitlog worker " + workerName);
+    LOG.info("Dead splitlog worker {}", workerName);
   }
 
   void handleDeadWorkers(Set<ServerName> serverNames) {
@@ -533,54 +480,6 @@ public class SplitLogManager {
       deadWorkers.addAll(serverNames);
     }
     LOG.info("dead splitlog workers " + serverNames);
-  }
-
-  /**
-   * This function is to set recovery mode from outstanding split log tasks from before or current
-   * configuration setting
-   * @param isForInitialization
-   * @throws IOException throws if it's impossible to set recovery mode
-   */
-  public void setRecoveryMode(boolean isForInitialization) throws IOException {
-    getSplitLogManagerCoordination().setRecoveryMode(isForInitialization);
-  }
-
-  public void markRegionsRecovering(ServerName server, Set<RegionInfo> userRegions)
-      throws InterruptedIOException, IOException {
-    if (userRegions == null || (!isLogReplaying())) {
-      return;
-    }
-    try {
-      this.recoveringRegionLock.lock();
-      // mark that we're creating recovering regions
-      getSplitLogManagerCoordination().markRegionsRecovering(server, userRegions);
-    } finally {
-      this.recoveringRegionLock.unlock();
-    }
-
-  }
-
-  /**
-   * @return whether log is replaying
-   */
-  public boolean isLogReplaying() {
-    if (server.getCoordinatedStateManager() == null) return false;
-    return getSplitLogManagerCoordination().isReplaying();
-  }
-
-  /**
-   * @return whether log is splitting
-   */
-  public boolean isLogSplitting() {
-    if (server.getCoordinatedStateManager() == null) return false;
-    return getSplitLogManagerCoordination().isSplitting();
-  }
-
-  /**
-   * @return the current log recovery mode
-   */
-  public RecoveryMode getRecoveryMode() {
-    return getSplitLogManagerCoordination().getRecoveryMode();
   }
 
   /**
@@ -665,7 +564,9 @@ public class SplitLogManager {
 
     @Override
     protected void chore() {
-      if (server.getCoordinatedStateManager() == null) return;
+      if (server.getCoordinatedStateManager() == null) {
+        return;
+      }
 
       int resubmitted = 0;
       int unassigned = 0;
@@ -755,36 +656,17 @@ public class SplitLogManager {
         }
         failedDeletions.removeAll(tmpPaths);
       }
-
-      // Garbage collect left-over
-      long timeInterval =
-          EnvironmentEdgeManager.currentTime()
-              - getSplitLogManagerCoordination().getLastRecoveryTime();
-      if (!failedRecoveringRegionDeletions.isEmpty()
-          || (tot == 0 && tasks.isEmpty() && (timeInterval > checkRecoveringTimeThreshold))) {
-        // inside the function there have more checks before GC anything
-        if (!failedRecoveringRegionDeletions.isEmpty()) {
-          List<Pair<Set<ServerName>, Boolean>> previouslyFailedDeletions =
-              new ArrayList<>(failedRecoveringRegionDeletions);
-          failedRecoveringRegionDeletions.removeAll(previouslyFailedDeletions);
-          for (Pair<Set<ServerName>, Boolean> failedDeletion : previouslyFailedDeletions) {
-            removeRecoveringRegions(failedDeletion.getFirst(), failedDeletion.getSecond());
-          }
-        } else {
-          removeRecoveringRegions(null, null);
-        }
-      }
     }
   }
 
   public enum ResubmitDirective {
-    CHECK(), FORCE();
+    CHECK(), FORCE()
   }
 
   public enum TerminationStatus {
     IN_PROGRESS("in_progress"), SUCCESS("success"), FAILURE("failure"), DELETED("deleted");
 
-    String statusMsg;
+    final String statusMsg;
 
     TerminationStatus(String msg) {
       statusMsg = msg;

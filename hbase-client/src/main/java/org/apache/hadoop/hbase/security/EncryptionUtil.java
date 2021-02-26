@@ -24,25 +24,23 @@ import java.security.Key;
 import java.security.KeyException;
 import java.security.SecureRandom;
 import java.util.Properties;
-
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 /**
  * Some static utility methods for encryption uses in hbase-client.
@@ -50,7 +48,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class EncryptionUtil {
-  static private final Log LOG = LogFactory.getLog(EncryptionUtil.class);
+  static private final Logger LOG = LoggerFactory.getLogger(EncryptionUtil.class);
 
   static private final SecureRandom RNG = new SecureRandom();
 
@@ -103,7 +101,9 @@ public final class EncryptionUtil {
     }
     byte[] keyBytes = key.getEncoded();
     builder.setLength(keyBytes.length);
-    builder.setHash(UnsafeByteOperations.unsafeWrap(Encryption.hash128(keyBytes)));
+    builder.setHashAlgorithm(Encryption.getConfiguredHashAlgorithm(conf));
+    builder.setHash(
+      UnsafeByteOperations.unsafeWrap(Encryption.computeCryptoKeyHash(conf, keyBytes)));
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Encryption.encryptWithSubjectKey(out, new ByteArrayInputStream(keyBytes), subject,
       conf, cipher, iv);
@@ -139,13 +139,24 @@ public final class EncryptionUtil {
 
   private static Key getUnwrapKey(Configuration conf, String subject,
       EncryptionProtos.WrappedKey wrappedKey, Cipher cipher) throws IOException, KeyException {
+    String configuredHashAlgorithm = Encryption.getConfiguredHashAlgorithm(conf);
+    String wrappedHashAlgorithm = wrappedKey.getHashAlgorithm().trim();
+    if(!configuredHashAlgorithm.equalsIgnoreCase(wrappedHashAlgorithm)) {
+      String msg = String.format("Unexpected encryption key hash algorithm: %s (expecting: %s)",
+        wrappedHashAlgorithm, configuredHashAlgorithm);
+      if(Encryption.failOnHashAlgorithmMismatch(conf)) {
+        throw new KeyException(msg);
+      }
+      LOG.debug(msg);
+    }
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] iv = wrappedKey.hasIv() ? wrappedKey.getIv().toByteArray() : null;
     Encryption.decryptWithSubjectKey(out, wrappedKey.getData().newInput(),
       wrappedKey.getLength(), subject, conf, cipher, iv);
     byte[] keyBytes = out.toByteArray();
     if (wrappedKey.hasHash()) {
-      if (!Bytes.equals(wrappedKey.getHash().toByteArray(), Encryption.hash128(keyBytes))) {
+      if (!Bytes.equals(wrappedKey.getHash().toByteArray(),
+                        Encryption.hashWithAlg(wrappedHashAlgorithm, keyBytes))) {
         throw new KeyException("Key was not successfully unwrapped");
       }
     }
@@ -181,12 +192,17 @@ public final class EncryptionUtil {
    * @param family The current column descriptor.
    * @return The created encryption context.
    * @throws IOException if an encryption key for the column cannot be unwrapped
+   * @throws IllegalStateException in case of encryption related configuration errors
    */
   public static Encryption.Context createEncryptionContext(Configuration conf,
     ColumnFamilyDescriptor family) throws IOException {
     Encryption.Context cryptoContext = Encryption.Context.NONE;
     String cipherName = family.getEncryptionType();
     if (cipherName != null) {
+      if(!Encryption.isEncryptionEnabled(conf)) {
+        throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
+          + "' configured with type '" + cipherName + "' but the encryption feature is disabled");
+      }
       Cipher cipher;
       Key key;
       byte[] keyBytes = family.getEncryptionKey();
@@ -196,13 +212,13 @@ public final class EncryptionUtil {
         // Use the algorithm the key wants
         cipher = Encryption.getCipher(conf, key.getAlgorithm());
         if (cipher == null) {
-          throw new RuntimeException("Cipher '" + key.getAlgorithm() + "' is not available");
+          throw new IllegalStateException("Cipher '" + key.getAlgorithm() + "' is not available");
         }
         // Fail if misconfigured
         // We use the encryption type specified in the column schema as a sanity check on
         // what the wrapped key is telling us
         if (!cipher.getName().equalsIgnoreCase(cipherName)) {
-          throw new RuntimeException("Encryption for family '" + family.getNameAsString()
+          throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
             + "' configured with type '" + cipherName + "' but key specifies algorithm '"
             + cipher.getName() + "'");
         }
@@ -210,7 +226,7 @@ public final class EncryptionUtil {
         // Family does not provide key material, create a random key
         cipher = Encryption.getCipher(conf, cipherName);
         if (cipher == null) {
-          throw new RuntimeException("Cipher '" + cipherName + "' is not available");
+          throw new IllegalStateException("Cipher '" + cipherName + "' is not available");
         }
         key = cipher.getRandomKey();
       }

@@ -20,16 +20,20 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This filter is used for selecting only those keys with columns that matches
@@ -38,15 +42,18 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 public class MultipleColumnPrefixFilter extends FilterBase {
+  private static final Logger LOG = LoggerFactory.getLogger(MultipleColumnPrefixFilter.class);
   protected byte [] hint = null;
   protected TreeSet<byte []> sortedPrefixes = createTreeSet();
   private final static int MAX_LOG_PREFIXES = 5;
 
   public MultipleColumnPrefixFilter(final byte [][] prefixes) {
     if (prefixes != null) {
-      for (int i = 0; i < prefixes.length; i++) {
-        if (!sortedPrefixes.add(prefixes[i]))
-          throw new IllegalArgumentException ("prefixes must be distinct");
+      for (byte[] prefix : prefixes) {
+        if (!sortedPrefixes.add(prefix)) {
+          LOG.error("prefix {} is repeated", Bytes.toString(prefix));
+          throw new IllegalArgumentException("prefixes must be distinct");
+        }
       }
     }
   }
@@ -66,12 +73,18 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     return false;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell kv) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
     if (sortedPrefixes.isEmpty()) {
       return ReturnCode.INCLUDE;
     } else {
-      return filterColumn(kv);
+      return filterColumn(c);
     }
   }
 
@@ -111,6 +124,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.MultipleColumnPrefixFilter.Builder builder =
       FilterProtos.MultipleColumnPrefixFilter.newBuilder();
@@ -144,10 +158,11 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof MultipleColumnPrefixFilter)) return false;
@@ -158,7 +173,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
 
   @Override
   public Cell getNextCellHint(Cell cell) {
-    return CellUtil.createFirstOnRowCol(cell, hint, 0, hint.length);
+    return PrivateCellUtil.createFirstOnRowCol(cell, hint, 0, hint.length);
   }
 
   public TreeSet<byte []> createTreeSet() {
@@ -197,5 +212,15 @@ public class MultipleColumnPrefixFilter extends FilterBase {
 
     return String.format("%s (%d/%d): [%s]", this.getClass().getSimpleName(),
         count, this.sortedPrefixes.size(), prefixes.toString());
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.sortedPrefixes);
   }
 }

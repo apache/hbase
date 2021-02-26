@@ -25,17 +25,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.IntegrationTestIngest;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Admin;
@@ -45,6 +41,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedReader;
 import org.apache.hadoop.hbase.util.Threads;
@@ -53,8 +50,9 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.experimental.categories.Category;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * An IntegrationTest for doing reads with a timeout, to a read-only table with region
@@ -95,7 +93,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @Category(IntegrationTests.class)
 public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends IntegrationTestIngest {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
     IntegrationTestTimeBoundedRequestsWithRegionReplicas.class);
 
   private static final String TEST_NAME
@@ -143,7 +141,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
   protected void runIngestTest(long defaultRunTime, long keysPerServerPerIter, int colsPerKey,
       int recordSize, int writeThreads, int readThreads) throws Exception {
     LOG.info("Cluster size:"+
-      util.getHBaseClusterInterface().getClusterStatus().getServersSize());
+      util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size());
 
     long start = System.currentTimeMillis();
     String runtimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());

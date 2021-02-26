@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * An interface for iterating through a sequence of cells. Similar to Java's Iterator, but without
@@ -47,8 +45,7 @@ import org.apache.yetus.audience.InterfaceStability;
  * <p>Often used reading {@link org.apache.hadoop.hbase.Cell}s written by
  * {@link org.apache.hadoop.hbase.io.CellOutputStream}.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceAudience.Public
 public interface CellScanner {
   /**
    * @return the current Cell which may be mutable
@@ -58,7 +55,7 @@ public interface CellScanner {
   /**
    * Advance the scanner 1 cell.
    * @return true if the next cell is found and {@link #current()} will return a valid Cell
-   * @throws IOException
+   * @throws IOException if advancing the scanner fails
    */
   boolean advance() throws IOException;
 }

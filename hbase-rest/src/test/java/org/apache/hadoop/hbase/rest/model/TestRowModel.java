@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,32 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Iterator;
-
-import javax.xml.bind.JAXBContext;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestRowModel extends TestModelBase<RowModel> {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRowModel.class);
+
   private static final byte[] ROW1 = Bytes.toBytes("testrow1");
   private static final byte[] COLUMN1 = Bytes.toBytes("testcolumn1");
   private static final byte[] VALUE1 = Bytes.toBytes("testvalue1");
   private static final long TIMESTAMP1 = 1245219839331L;
-
-  private JAXBContext context;
 
   public TestRowModel() throws Exception {
     super(RowModel.class);
@@ -54,6 +56,7 @@ public class TestRowModel extends TestModelBase<RowModel> {
       "\"timestamp\":1245219839331,\"$\":\"dGVzdHZhbHVlMQ==\"}]}";
   }
 
+  @Override
   protected RowModel buildTestModel() {
     RowModel model = new RowModel();
     model.setKey(ROW1);
@@ -61,6 +64,7 @@ public class TestRowModel extends TestModelBase<RowModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(RowModel model) {
     assertTrue(Bytes.equals(ROW1, model.getKey()));
     Iterator<CellModel> cells = model.getCells().iterator();
@@ -68,7 +72,7 @@ public class TestRowModel extends TestModelBase<RowModel> {
     assertTrue(Bytes.equals(COLUMN1, cell.getColumn()));
     assertTrue(Bytes.equals(VALUE1, cell.getValue()));
     assertTrue(cell.hasUserTimestamp());
-    assertEquals(cell.getTimestamp(), TIMESTAMP1);
+    assertEquals(TIMESTAMP1, cell.getTimestamp());
     assertFalse(cells.hasNext());
   }
 

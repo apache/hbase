@@ -74,15 +74,15 @@ public abstract class Hash {
    * @return hash function instance, or null if type is invalid
    */
   public static Hash getInstance(int type) {
-    switch(type) {
-    case JENKINS_HASH:
-      return JenkinsHash.getInstance();
-    case MURMUR_HASH:
-      return MurmurHash.getInstance();
-    case MURMUR_HASH3:
-      return MurmurHash3.getInstance();
-    default:
-      return null;
+    switch (type) {
+      case JENKINS_HASH:
+        return JenkinsHash.getInstance();
+      case MURMUR_HASH:
+        return MurmurHash.getInstance();
+      case MURMUR_HASH3:
+        return MurmurHash3.getInstance();
+      default:
+        return null;
     }
   }
 

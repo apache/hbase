@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class to pick which files if any to compact together.
@@ -38,7 +38,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
-  private static final Log LOG = LogFactory.getLog(ExploringCompactionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExploringCompactionPolicy.class);
 
   /**
    * Constructor for ExploringCompactionPolicy.
@@ -118,9 +118,9 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
           + " files of size "+ smallestSize + " because the store might be stuck");
       return new ArrayList<>(smallest);
     }
-    LOG.debug("Exploring compaction algorithm has selected " + bestSelection.size()
-        + " files of size " + bestSize + " starting at candidate #" + bestStart +
-        " after considering " + opts + " permutations with " + optsInRatio + " in ratio");
+    LOG.debug("Exploring compaction algorithm has selected {}  files of size {} starting at " +
+      "candidate #{} after considering {} permutations with {} in ratio", bestSelection.size(),
+      bestSize, bestSize, opts, optsInRatio);
     return new ArrayList<>(bestSelection);
   }
 

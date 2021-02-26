@@ -22,20 +22,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /***
  * Processes multiple {@link Constraint Constraints} on a given table.
@@ -46,7 +45,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 @InterfaceAudience.Private
 public class ConstraintProcessor implements RegionCoprocessor, RegionObserver {
 
-  private static final Log LOG = LogFactory.getLog(ConstraintProcessor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ConstraintProcessor.class);
 
   private final ClassLoader classloader;
 
@@ -97,12 +96,5 @@ public class ConstraintProcessor implements RegionCoprocessor, RegionObserver {
       c.check(put);
     }
     // if we made it here, then the Put is valid
-  }
-
-  @Override
-  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
-    return hasMore;
   }
 }

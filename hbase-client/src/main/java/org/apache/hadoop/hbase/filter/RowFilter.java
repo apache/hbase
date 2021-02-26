@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This filter is used to filter based on the key. It takes an operator
@@ -76,8 +76,14 @@ public class RowFilter extends CompareFilter {
     this.filterOutRow = false;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell v) {
     if(this.filterOutRow) {
       return ReturnCode.NEXT_ROW;
     }
@@ -108,6 +114,7 @@ public class RowFilter extends CompareFilter {
  /**
   * @return The filter serialized using pb
   */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.RowFilter.Builder builder =
       FilterProtos.RowFilter.newBuilder();
@@ -146,10 +153,21 @@ public class RowFilter extends CompareFilter {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof RowFilter)) return false;
 
     return super.areSerializedFieldsEqual(o);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 }

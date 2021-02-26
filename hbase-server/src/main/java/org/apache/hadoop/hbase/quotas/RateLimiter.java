@@ -23,8 +23,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Simple rate limiter.
  *
@@ -100,6 +98,7 @@ public abstract class RateLimiter {
     this.avail = limit;
   }
 
+  @Override
   public String toString() {
     String rateLimiter = this.getClass().getSimpleName();
     if (getLimit() == Long.MAX_VALUE) {
@@ -229,9 +228,8 @@ public abstract class RateLimiter {
   }
 
   // These two method are for strictly testing purpose only
-  @VisibleForTesting
+
   public abstract void setNextRefillTime(long nextRefillTime);
 
-  @VisibleForTesting
   public abstract long getNextRefillTime();
 }

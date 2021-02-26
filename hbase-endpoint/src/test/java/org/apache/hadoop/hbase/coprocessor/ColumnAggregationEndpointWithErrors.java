@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -37,10 +39,8 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test coprocessor endpoint that always throws a {@link DoNotRetryIOException} for requests on
@@ -48,9 +48,11 @@ import com.google.protobuf.Service;
  * coprocessor endpoints throwing exceptions.
  */
 public class ColumnAggregationEndpointWithErrors
-    extends ColumnAggregationWithErrorsProtos.ColumnAggregationServiceWithErrors
-    implements RegionCoprocessor {
-  private static final Log LOG = LogFactory.getLog(ColumnAggregationEndpointWithErrors.class);
+        extends ColumnAggregationWithErrorsProtos.ColumnAggregationServiceWithErrors
+        implements RegionCoprocessor {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ColumnAggregationEndpointWithErrors.class);
+
   private RegionCoprocessorEnvironment env = null;
 
   @Override
@@ -74,7 +76,7 @@ public class ColumnAggregationEndpointWithErrors
 
   @Override
   public void sum(RpcController controller, ColumnAggregationWithErrorsSumRequest request,
-      RpcCallback<ColumnAggregationWithErrorsSumResponse> done) {
+          RpcCallback<ColumnAggregationWithErrorsSumResponse> done) {
     // aggregate at each region
     Scan scan = new Scan();
     // Family is required in pb. Qualifier is not.

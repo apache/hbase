@@ -21,13 +21,11 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.htrace.core.SpanReceiver;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.SpanReceiverBuilder;
-import org.apache.htrace.Trace;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides functions for reading the names of SpanReceivers from
@@ -37,14 +35,14 @@ import org.apache.htrace.Trace;
 @InterfaceAudience.Private
 public class SpanReceiverHost {
   public static final String SPAN_RECEIVERS_CONF_KEY = "hbase.trace.spanreceiver.classes";
-  private static final Log LOG = LogFactory.getLog(SpanReceiverHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SpanReceiverHost.class);
   private Collection<SpanReceiver> receivers;
   private Configuration conf;
   private boolean closed = false;
 
-  private static enum SingletonHolder {
+  private enum SingletonHolder {
     INSTANCE;
-    transient Object lock = new Object();
+    final transient Object lock = new Object();
     transient SpanReceiverHost host = null;
   }
 
@@ -62,6 +60,16 @@ public class SpanReceiverHost {
 
   }
 
+  public static Configuration getConfiguration(){
+    synchronized (SingletonHolder.INSTANCE.lock) {
+      if (SingletonHolder.INSTANCE.host == null || SingletonHolder.INSTANCE.host.conf == null) {
+        return null;
+      }
+
+      return SingletonHolder.INSTANCE.host.conf;
+    }
+  }
+
   SpanReceiverHost(Configuration conf) {
     receivers = new HashSet<>();
     this.conf = conf;
@@ -70,7 +78,6 @@ public class SpanReceiverHost {
   /**
    * Reads the names of classes specified in the {@code hbase.trace.spanreceiver.classes} property
    * and instantiates and registers them with the Tracer.
-   *
    */
   public void loadSpanReceivers() {
     String[] receiverNames = conf.getStrings(SPAN_RECEIVERS_CONF_KEY);
@@ -78,18 +85,18 @@ public class SpanReceiverHost {
       return;
     }
 
-    SpanReceiverBuilder builder = new SpanReceiverBuilder(new HBaseHTraceConfiguration(conf));
+    SpanReceiver.Builder builder = new SpanReceiver.Builder(new HBaseHTraceConfiguration(conf));
     for (String className : receiverNames) {
       className = className.trim();
 
-      SpanReceiver receiver = builder.spanReceiverClass(className).build();
+      SpanReceiver receiver = builder.className(className).build();
       if (receiver != null) {
         receivers.add(receiver);
-        LOG.info("SpanReceiver " + className + " was loaded successfully.");
+        LOG.info("SpanReceiver {} was loaded successfully.", className);
       }
     }
     for (SpanReceiver rcvr : receivers) {
-      Trace.addReceiver(rcvr);
+      TraceUtil.addReceiver(rcvr);
     }
   }
 
@@ -97,7 +104,10 @@ public class SpanReceiverHost {
    * Calls close() on all SpanReceivers created by this SpanReceiverHost.
    */
   public synchronized void closeReceivers() {
-    if (closed) return;
+    if (closed) {
+      return;
+    }
+
     closed = true;
     for (SpanReceiver rcvr : receivers) {
       try {

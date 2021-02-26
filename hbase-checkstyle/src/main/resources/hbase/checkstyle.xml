@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
-<!DOCTYPE module PUBLIC "-//Puppy Crawl//DTD Check Configuration 1.3//EN"
-    "http://www.puppycrawl.com/dtds/configuration_1_3.dtd">
-  <!--
+<!DOCTYPE module PUBLIC
+  "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+  "https://checkstyle.org/dtds/configuration_1_3.dtd" >
+<!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -30,6 +31,10 @@
 
 -->
 <module name="Checker">
+  <!-- Filter out Checkstyle warnings that have been suppressed with the @SuppressWarnings
+  annotation -->
+  <module name="SuppressWarningsFilter"/>
+
   <module name="FileTabCharacter"/>
   <module name="TreeWalker">
 
@@ -51,6 +56,7 @@
     <module name="VisibilityModifier">
       <property name="packageAllowed" value="true"/>
       <property name="protectedAllowed" value="true"/>
+      <property name="allowPublicImmutableFields" value="true"/>
     </module>
 
     <!-- Coding Checks
@@ -60,13 +66,13 @@
     <module name="EqualsHashCode"/>
     <module name="IllegalInstantiation"/>
     <module name="InnerAssignment"/>
-    <module name="MissingSwitchDefault"/>
     <module name="NoFinalizer"/>
 
     <!-- Import Checks
     http://checkstyle.sourceforge.net/config_imports.html -->
     <module name="AvoidStarImport"/>
     <module name="ImportOrder">
+      <property name="groups" value="*,org.apache.hbase.thirdparty,org.apache.hadoop.hbase.shaded"/>
       <property name="option" value="top" />
       <property name="ordered" value="true"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>
@@ -75,7 +81,29 @@
     <module name="UnusedImports">
       <property name="processJavadoc" value="true"/>
     </module>
-
+    <module name="IllegalImport">
+<!--
+  TODO include the o.a.htrace package for HTrace v3 once we can upgrade
+  to checkstyle 8.6 plus and use a message filter to suppress
+  errors from proper use of o.a.htrace.core
+          org.apache.htrace,
+-->
+      <property name="illegalPkgs" value="
+          com.google.common,
+          io.netty,
+          org.apache.commons.cli,
+          org.apache.commons.collections,
+          org.apache.commons.collections4,
+          org.apache.commons.lang,
+          org.apache.curator.shaded,
+          org.apache.hadoop.classification,
+          org.apache.htrace.shaded,
+          org.codehaus.jackson,
+          org.htrace"/>
+      <property name="illegalClasses" value="
+          org.apache.commons.logging.Log,
+          org.apache.commons.logging.LogFactory"/>
+    </module>
     <!-- Javadoc Checks
     http://checkstyle.sourceforge.net/config_javadoc.html -->
     <module name="JavadocTagContinuationIndentation">
@@ -94,17 +122,21 @@
       <property name="lineWrappingIndentation" value="2"/>
     </module>
 
-    <!-- Size Violation Checks
-    http://checkstyle.sourceforge.net/config_sizes.html -->
-    <module name="LineLength">
-      <property name="max" value="100"/>
-      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://|org.apache.thrift.|com.google.protobuf.|hbase.protobuf.generated"/>
-    </module>
     <module name="MethodLength"/>
 
     <!-- Whitespace Checks
     http://checkstyle.sourceforge.net/config_whitespace.html -->
     <module name="MethodParamPad"/>
     <module name="ParenPad"/>
+
+    <!-- Make the @SuppressWarnings annotations available to Checkstyle -->
+    <module name="SuppressWarningsHolder"/>
+  </module>
+
+  <!-- Size Violation Checks
+  http://checkstyle.sourceforge.net/config_sizes.html -->
+  <module name="LineLength">
+    <property name="max" value="100"/>
+    <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://|org.apache.thrift.|com.google.protobuf.|hbase.protobuf.generated"/>
   </module>
 </module>

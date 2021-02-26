@@ -22,8 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -33,14 +32,21 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
  * Only used to test stopMaster/stopRegionServer/shutdown methods.
  */
 @Category({ ClientTests.class, MediumTests.class })
 public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncClusterAdminApi2.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -56,15 +62,17 @@ public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
   }
 
   @Before
+  @Override
   public void setUp() throws Exception {
-    TEST_UTIL.startMiniCluster(1, 3);
+    TEST_UTIL.startMiniCluster(3);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     admin = ASYNC_CONN.getAdmin();
   }
 
   @After
+  @Override
   public void tearDown() throws Exception {
-    IOUtils.closeQuietly(ASYNC_CONN);
+    Closeables.close(ASYNC_CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 

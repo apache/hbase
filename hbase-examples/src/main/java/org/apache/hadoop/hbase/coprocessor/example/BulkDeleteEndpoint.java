@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,9 +27,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -50,10 +50,9 @@ import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Defines a protocol to delete data in bulk based on a scan. The scan can be range scan or with
@@ -88,16 +87,17 @@ import com.google.protobuf.Service;
  *     return rpcCallback.get();
  *   }
  * };
- * Map&lt;byte[], BulkDeleteResponse&gt; result = ht.coprocessorService(BulkDeleteService.class, scan
- *     .getStartRow(), scan.getStopRow(), callable);
+ * Map&lt;byte[], BulkDeleteResponse&gt; result = ht.coprocessorService(BulkDeleteService.class,
+ *  scan.getStartRow(), scan.getStopRow(), callable);
  * for (BulkDeleteResponse response : result.values()) {
  *   noOfDeletedRows += response.getRowsDeleted();
  * }
  * </code></pre>
  */
+@InterfaceAudience.Private
 public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCoprocessor {
   private static final String NO_OF_VERSIONS_TO_DELETE = "noOfVersionsToDelete";
-  private static final Log LOG = LogFactory.getLog(BulkDeleteEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BulkDeleteEndpoint.class);
 
   private RegionCoprocessorEnvironment env;
 
@@ -150,8 +150,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
           for (List<Cell> deleteRow : deleteRows) {
             deleteArr[i++] = createDeleteMutation(deleteRow, deleteType, timestamp);
           }
-          OperationStatus[] opStatus = region.batchMutate(deleteArr, HConstants.NO_NONCE,
-            HConstants.NO_NONCE);
+          OperationStatus[] opStatus = region.batchMutate(deleteArr);
           for (i = 0; i < opStatus.length; i++) {
             if (opStatus[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
               break;
@@ -168,7 +167,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
         }
       }
     } catch (IOException ioe) {
-      LOG.error(ioe);
+      LOG.error(ioe.toString(), ioe);
       // Call ServerRpcController#getFailedOn() to retrieve this IOException at client side.
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
@@ -176,7 +175,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
         try {
           scanner.close();
         } catch (IOException ioe) {
-          LOG.error(ioe);
+          LOG.error(ioe.toString(), ioe);
         }
       }
     }
@@ -226,7 +225,8 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
       int noOfVersionsToDelete = 0;
       if (timestamp == null) {
         for (Cell kv : deleteRow) {
-          delete.addColumn(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), kv.getTimestamp());
+          delete.addColumn(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
+                  kv.getTimestamp());
           noOfVersionsToDelete++;
         }
       } else {

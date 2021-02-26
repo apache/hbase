@@ -17,45 +17,49 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
-import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
-import static org.junit.Assert.assertEquals;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 
 @Category({ClientTests.class, MetricsTests.class, SmallTests.class})
 public class TestMetricsConnection {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMetricsConnection.class);
 
   private static MetricsConnection METRICS;
-  private static final ExecutorService BATCH_POOL = Executors.newFixedThreadPool(2);
+  private static final ThreadPoolExecutor BATCH_POOL =
+    (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
   @BeforeClass
   public static void beforeClass() {
-    ConnectionImplementation mocked = Mockito.mock(ConnectionImplementation.class);
-    Mockito.when(mocked.toString()).thenReturn("mocked-connection");
-    Mockito.when(mocked.getCurrentBatchPool()).thenReturn(BATCH_POOL);
-    METRICS = new MetricsConnection(mocked);
+    METRICS = new MetricsConnection("mocked-connection", () -> BATCH_POOL, () -> null);
   }
 
   @AfterClass
@@ -114,9 +118,14 @@ public class TestMetricsConnection {
               .build(),
           MetricsConnection.newCallStats());
     }
+    for (String method: new String[]{"Get", "Scan", "Mutate"}) {
+      final String metricKey = "rpcCount_" + ClientService.getDescriptor().getName() + "_" + method;
+      final long metricVal = METRICS.rpcCounters.get(metricKey).getCount();
+      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
+    }
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
-        METRICS.getTracker, METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker,
-        METRICS.deleteTracker, METRICS.incrementTracker, METRICS.putTracker
+      METRICS.getTracker, METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker,
+      METRICS.deleteTracker, METRICS.incrementTracker, METRICS.putTracker
     }) {
       assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.getCount());
       assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.getCount());

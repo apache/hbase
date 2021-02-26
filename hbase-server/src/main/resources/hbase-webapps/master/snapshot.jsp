@@ -22,27 +22,30 @@
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.Admin"
   import="org.apache.hadoop.hbase.client.SnapshotDescription"
+  import="org.apache.hadoop.hbase.http.InfoServer"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.TableName"
-  import="org.apache.hadoop.hbase.HBaseConfiguration" %>
+%>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
-  boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
+  boolean readOnly = !InfoServer.canUserModifyUI(request, getServletContext(), conf);
   String snapshotName = request.getParameter("name");
   SnapshotDescription snapshot = null;
   SnapshotInfo.SnapshotStats stats = null;
   TableName snapshotTable = null;
   boolean tableExists = false;
-  if(snapshotName != null) {
+  long snapshotTtl = 0;
+  if(snapshotName != null && master.isInitialized()) {
     try (Admin admin = master.getConnection().getAdmin()) {
       for (SnapshotDescription snapshotDesc: admin.listSnapshots()) {
         if (snapshotName.equals(snapshotDesc.getName())) {
           snapshot = snapshotDesc;
           stats = SnapshotInfo.getSnapshotStats(conf, snapshot);
           snapshotTable = snapshot.getTableName();
+          snapshotTtl = snapshot.getTtl();
           tableExists = admin.tableExists(snapshotTable);
           break;
         }
@@ -51,72 +54,36 @@
   }
 
   String action = request.getParameter("action");
-  String cloneName = request.getParameter("cloneName");
   boolean isActionResultPage = (!readOnly && action != null);
+  String pageTitle;
+  if (isActionResultPage) {
+    pageTitle = "HBase Master: " + master.getServerName();
+  } else {
+    pageTitle = "Snapshot: " + snapshotName;
+  }
+  pageContext.setAttribute("pageTitle", pageTitle);
 %>
-<!DOCTYPE html>
-<?xml version="1.0" encoding="UTF-8" ?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta charset="utf-8">
-    <% if (isActionResultPage) { %>
-      <title>HBase Master: <%= master.getServerName() %></title>
-    <% } else { %>
-      <title>Snapshot: <%= snapshotName %></title>
-    <% } %>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
 
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-    <link href="/static/css/hbase.css" rel="stylesheet">
-    <% if (isActionResultPage) { %>
-    <script type="text/javascript">
-    <!--
-        setTimeout("history.back()",5000);
-    -->
-    </script>
-    <% } %>
-  </head>
-<body>
-<div class="navbar  navbar-fixed-top navbar-default">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-        </div>
-        <div class="collapse navbar-collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="/master-status">Home</a></li>
-                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-                <li><a href="/processMaster.jsp">Process Metrics</a></li>
-                <li><a href="/logs/">Local Logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/dump">Debug Dump</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
-                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                <li><a href="/conf">HBase Configuration</a></li>
-                <% } %>
-            </ul>
-        </div><!--/.nav-collapse -->
+<jsp:include page="header.jsp">
+  <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
+
+<div class="container-fluid content">
+<% if (!master.isInitialized()) { %>
+    <div class="row inner_header">
+    <div class="page-header">
+    <h1>Master is not initialized</h1>
     </div>
-</div>
-<% if (snapshot == null) { %>
-  <div class="container-fluid content">
+    </div>
+    <jsp:include page="redirect.jsp" />
+<% } else if (snapshot == null) { %>
   <div class="row inner_header">
     <div class="page-header">
       <h1>Snapshot "<%= snapshotName %>" does not exist</h1>
     </div>
   </div>
-  <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+  <jsp:include page="redirect.jsp" />
 <% } else { %>
-  <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
           <h1>Snapshot: <%= snapshotName %></h1>
@@ -127,6 +94,7 @@
     <tr>
         <th>Table</th>
         <th>Creation Time</th>
+        <th>Time To Live(Sec)</th>
         <th>Type</th>
         <th>Format Version</th>
         <th>State</th>
@@ -142,6 +110,13 @@
           <% } %>
         </td>
         <td><%= new Date(snapshot.getCreationTime()) %></td>
+        <td>
+          <% if (snapshotTtl == 0) { %>
+            FOREVER
+          <% } else { %>
+            <%= snapshotTtl %>
+          <% } %>
+        </td>
         <td><%= snapshot.getType() %></td>
         <td><%= snapshot.getVersion() %></td>
         <% if (stats.isSnapshotCorrupted()) { %>
@@ -178,10 +153,6 @@
 <%
   } // end else
 %>
+</div>
 
-
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
-
-</body>
-</html>
+<jsp:include page="footer.jsp" />

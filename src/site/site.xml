@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+
+<project xmlns="http://maven.apache.org/DECORATION/1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd">
+  <skin>
+    <!-- We tried to get some changes to the fluido-skin committed upstream
+         but with little success. This is a custom artifact that contains
+         some commits over the official maven-fluido-skin 1.4 release. The
+         actual code is available at:
+         https://github.com/joshelser/maven-fluido-skin/tree/1.4-HBase-patched.
+         The hope is that we can get these fixes included upstream and
+         remove the need for this custom fork. This is published to
+         my end-user's GAV for ease of releasing this to maven central
+         until the upstream update happens and is released.
+         See HBASE-14785 and HBASE-21005 for more info. -->
+    <groupId>com.github.joshelser</groupId>
+    <artifactId>maven-fluido-skin</artifactId>
+    <version>1.7.1-HBase</version>
+  </skin>
+  <custom>
+    <fluidoSkin>
+      <topBarEnabled>true</topBarEnabled>
+      <sideBarEnabled>false</sideBarEnabled>
+      <googleSearch>
+        <!-- The ID of the Google custom search engine to use.
+             This one searches hbase.apache.org, issues.apache.org/browse/HBASE-*,
+             and user and dev mailing list archives. -->
+        <customSearch>000385458301414556862:sq1bb0xugjg</customSearch>
+      </googleSearch>
+      <sourceLineNumbersEnabled>false</sourceLineNumbersEnabled>
+      <skipGenerationDate>true</skipGenerationDate>
+      <breadcrumbDivider>»</breadcrumbDivider>
+    </fluidoSkin>
+  </custom>
+  <bannerLeft>
+    <name />
+    <src />
+    <href />
+    <!--
+    <name/>
+    <height>0</height>
+    <width>0</width>
+-->
+  </bannerLeft>
+  <bannerRight>
+    <name>Apache HBase</name>
+    <src>images/hbase_logo_with_orca_large.png</src>
+    <href>http://hbase.apache.org/</href>
+  </bannerRight>
+  <publishDate position="bottom"/>
+  <version position="none"/>
+  <body>
+    <head>
+      <![CDATA[<meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.2/css/bootstrap-responsive.min.css"/>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/styles/github.min.css"/>
+      <link rel="stylesheet" href="css/site.css"/>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/highlight.min.js"></script>]]>
+    </head>
+    <menu name="Apache HBase Project">
+      <item name="Overview" href="index.html"/>
+      <item name="License" href="licenses.html"/>
+      <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/hbase/"/>
+      <item name="Release Notes" href="https://issues.apache.org/jira/browse/HBASE?report=com.atlassian.jira.plugin.system.project:changelog-panel#selectedTab=com.atlassian.jira.plugin.system.project%3Achangelog-panel" />
+      <item name="Code Of Conduct" href="coc.html"/>
+      <item name="Blog" href="http://blogs.apache.org/hbase/"/>
+      <item name="Mailing Lists" href="mailing-lists.html"/>
+      <item name="Team" href="team.html"/>
+      <item name="ReviewBoard" href="https://reviews.apache.org/"/>
+      <item name="Thanks" href="sponsors.html"/>
+      <item name="Powered by HBase" href="poweredbyhbase.html"/>
+      <item name="Other resources" href="resources.html"/>
+    </menu>
+    <menu name="Project Information">
+      <item name="Project Summary" href="summary.html"/>
+      <item name="Dependency Information" href="dependency-info.html"/>
+      <item name="Source Repository" href="scm.html"/>
+      <item name="Issue Tracking" href="issue-management.html"/>
+      <item name="Dependency Management" href="dependency-management.html"/>
+      <item name="Dependencies" href="dependencies.html"/>
+      <item name="Dependency Convergence" href="dependency-convergence.html"/>
+      <item name="Plugin Management" href="plugin-management.html"/>
+      <item name="Plugins" href="plugins.html"/>
+    </menu>
+    <menu name="Documentation and API">
+      <item name="Reference Guide" href="book.html" target="_blank" />
+      <item name="Reference Guide (PDF)" href="apache_hbase_reference_guide.pdf" target="_blank" />
+      <item name="Getting Started" href="book.html#quickstart" target="_blank" />
+      <item name="User API" href="apidocs/index.html" target="_blank" />
+      <item name="User API (Test)" href="testapidocs/index.html" target="_blank" />
+      <item name="Developer API" href="https://hbase.apache.org/2.0/devapidocs/index.html" target="_blank" />
+      <item name="Developer API (Test)" href="https://hbase.apache.org/2.0/testdevapidocs/index.html" target="_blank" />
+      <item name="中文参考指南(单页)" href="http://abloz.com/hbase/book.html" target="_blank" />
+      <item name="FAQ" href="book.html#faq" target="_blank" />
+      <item name="Videos/Presentations" href="book.html#other.info" target="_blank" />
+      <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" target="_blank" />
+      <item name="ACID Semantics" href="acid-semantics.html" target="_blank" />
+      <item name="Bulk Loads" href="book.html#arch.bulk.load" target="_blank" />
+      <item name="Metrics" href="metrics.html" target="_blank" />
+      <item name="HBase on Windows" href="cygwin.html" target="_blank" />
+      <item name="Cluster replication" href="book.html#replication" target="_blank" />
+      <item name="1.2 Documentation">
+        <item name="API" href="1.2/apidocs/index.html" target="_blank" />
+        <item name="X-Ref" href="1.2/xref/index.html" target="_blank" />
+        <item name="Ref Guide (single-page)" href="1.2/book.html" target="_blank" />
+      </item>
+      <item name="1.1 Documentation">
+        <item name="API" href="1.1/apidocs/index.html" target="_blank" />
+        <item name="X-Ref" href="1.1/xref/index.html" target="_blank" />
+        <item name="Ref Guide (single-page)" href="1.1/book.html" target="_blank" />
+      </item>
+    </menu>
+    <menu name="ASF">
+      <item name="Apache Software Foundation" href="http://www.apache.org/foundation/" target="_blank" />
+      <item name="How Apache Works" href="http://www.apache.org/foundation/how-it-works.html" target="_blank" />
+      <item name="Sponsoring Apache" href="http://www.apache.org/foundation/sponsorship.html" target="_blank" />
+    </menu>
+    </body>
+</project>

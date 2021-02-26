@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,17 +19,19 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to move a random region of a table.
 */
 public class MoveRandomRegionOfTableAction extends Action {
+  private static final Logger LOG = LoggerFactory.getLogger(MoveRandomRegionOfTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
 
@@ -42,6 +44,10 @@ public class MoveRandomRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     if (sleepTime > 0) {
@@ -51,17 +57,19 @@ public class MoveRandomRegionOfTableAction extends Action {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
 
-    LOG.info("Performing action: Move random region of table " + tableName);
-    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+    getLogger().info("Performing action: Move random region of table " + tableName);
+    List<RegionInfo> regions = admin.getRegions(tableName);
     if (regions == null || regions.isEmpty()) {
-      LOG.info("Table " + tableName + " doesn't have regions to move");
+      getLogger().info("Table " + tableName + " doesn't have regions to move");
       return;
     }
 
-    HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-      regions.toArray(new HRegionInfo[regions.size()]));
-    LOG.debug("Unassigning region " + region.getRegionNameAsString());
-    admin.unassign(region.getRegionName(), false);
+    RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
+      regions.toArray(new RegionInfo[0]));
+    getLogger().debug("Move random region {}", region.getRegionNameAsString());
+    // Use facility over in MoveRegionsOfTableAction...
+    MoveRegionsOfTableAction.moveRegion(admin, MoveRegionsOfTableAction.getServers(admin),
+      region, getLogger());
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);
     }

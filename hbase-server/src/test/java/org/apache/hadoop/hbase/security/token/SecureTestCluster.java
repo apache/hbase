@@ -18,22 +18,17 @@
 
 package org.apache.hadoop.hbase.security.token;
 
-import org.apache.hadoop.conf.Configuration;
+import java.io.File;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-
-import java.io.File;
 
 /**
  * The class for set up a security cluster with kerberos, hdfs, hbase.
@@ -55,28 +50,21 @@ public class SecureTestCluster {
 
   private static String HTTP_PRINCIPAL;
 
+  //When extending SecureTestCluster on downstream projects that refer SecureTestCluster via
+  //hbase-server jar, we need to provide a way for the implementation to refer to its own class
+  //definition, so that KeyStoreTestUtil.getClasspathDir can resolve a valid path in the local FS
+  //to place required SSL config files.
+  private static Class testRunnerClass = SecureTestCluster.class;
+
   /**
-   * Setup the security configuration for hdfs.
+   * SecureTestCluster extending classes can set their own <code>Class</code> reference type
+   * to be used as the target resource to be looked for on the class loader by
+   * <code>KeyStoreTestUtil</code>, when deciding where to place ssl related config files.
+   * @param testRunnerClass a <code>Class</code> reference from the
+   *                        <code>SecureTestCluster</code> extender.
    */
-  private static void setHdfsSecuredConfiguration(Configuration conf) throws Exception {
-    // change XXX_USER_NAME_KEY to XXX_KERBEROS_PRINCIPAL_KEY after we drop support for hadoop-2.4.1
-    conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, PRINCIPAL + "@" + KDC.getRealm());
-    conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, KEYTAB_FILE.getAbsolutePath());
-    conf.set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, PRINCIPAL + "@" + KDC.getRealm());
-    conf.set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, KEYTAB_FILE.getAbsolutePath());
-    conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, HTTP_PRINCIPAL + "@"
-        + KDC.getRealm());
-    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
-    conf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
-
-    File keystoresDir = new File(TEST_UTIL.getDataTestDir("keystore").toUri().getPath());
-    keystoresDir.mkdirs();
-    String sslConfDir = KeyStoreTestUtil.getClasspathDir(TestGenerateDelegationToken.class);
-    KeyStoreTestUtil.setupSSLConfig(keystoresDir.getAbsolutePath(), sslConfDir, conf, false);
-
-    conf.setBoolean("ignore.secure.ports.for.testing", true);
+  protected static void setTestRunner(Class testRunnerClass){
+    SecureTestCluster.testRunnerClass = testRunnerClass;
   }
 
   /**
@@ -91,29 +79,32 @@ public class SecureTestCluster {
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, HTTP_PRINCIPAL);
     TEST_UTIL.startMiniZKCluster();
 
-    HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
-    HBaseKerberosUtils.setSecuredConfiguration(TEST_UTIL.getConfiguration());
+    HBaseKerberosUtils.setSecuredConfiguration(TEST_UTIL.getConfiguration(),
+        PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
+    HBaseKerberosUtils.setSSLConfiguration(TEST_UTIL, testRunnerClass);
 
-    setHdfsSecuredConfiguration(TEST_UTIL.getConfiguration());
-    UserGroupInformation.setConfiguration(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         TokenProvider.class.getName());
     TEST_UTIL.startMiniDFSCluster(1);
     Path rootdir = TEST_UTIL.getDataTestDirOnTestFS("TestGenerateDelegationToken");
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootdir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootdir);
     CLUSTER = new LocalHBaseCluster(TEST_UTIL.getConfiguration(), 1);
     CLUSTER.startup();
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    if (CLUSTER != null) {
-      CLUSTER.shutdown();
+    try {
+      if (CLUSTER != null) {
+        CLUSTER.shutdown();
+      }
+      CLUSTER.join();
+      if (KDC != null) {
+        KDC.stop();
+      }
+      TEST_UTIL.shutdownMiniCluster();
+    } finally {
+      setTestRunner(SecureTestCluster.class);
     }
-    CLUSTER.join();
-    if (KDC != null) {
-      KDC.stop();
-    }
-    TEST_UTIL.shutdownMiniCluster();
   }
 }

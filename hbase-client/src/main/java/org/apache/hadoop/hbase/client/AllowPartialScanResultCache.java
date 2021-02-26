@@ -69,7 +69,7 @@ class AllowPartialScanResultCache implements ScanResultCache {
     if (i == results.length) {
       return EMPTY_RESULT_ARRAY;
     }
-    if (lastResultPartial && !CellUtil.matchingRow(lastCell, results[0].getRow())) {
+    if (lastResultPartial && !CellUtil.matchingRows(lastCell, results[0].getRow())) {
       // there is a row change, so increase numberOfCompleteRows
       numberOfCompleteRows++;
     }

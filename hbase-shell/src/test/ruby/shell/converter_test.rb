@@ -15,13 +15,12 @@
 # limitations under the License.
 
 require 'hbase_constants'
-require 'shell'
-
-include HBaseConstants
+require 'hbase_shell'
 
 module Hbase
   class ConverterTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     non_ascii_text = '⻆⻇'
     non_ascii_row = '⻄'

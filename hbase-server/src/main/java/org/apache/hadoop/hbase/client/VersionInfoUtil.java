@@ -70,16 +70,8 @@ public final class VersionInfoUtil {
   /**
    * @return the versionInfo extracted from the current RpcCallContext
    */
-  private static HBaseProtos.VersionInfo getCurrentClientVersionInfo() {
+  public static HBaseProtos.VersionInfo getCurrentClientVersionInfo() {
     return RpcServer.getCurrentCall().map(RpcCallContext::getClientVersionInfo).orElse(null);
-  }
-
-  /**
-   * @return the version number extracted from the current RpcCallContext as int.
-   *         (e.g. 0x0103004 is 1.3.4)
-   */
-  public static int getCurrentClientVersionNumber() {
-    return getVersionNumber(getCurrentClientVersionInfo());
   }
 
 
@@ -102,7 +94,7 @@ public final class VersionInfoUtil {
    * @param versionInfo the VersionInfo object to pack
    * @return the version number as int. (e.g. 0x0103004 is 1.3.4)
    */
-  private static int getVersionNumber(final HBaseProtos.VersionInfo versionInfo) {
+  public static int getVersionNumber(final HBaseProtos.VersionInfo versionInfo) {
     if (versionInfo != null) {
       try {
         final String[] components = getVersionComponents(versionInfo);
@@ -134,8 +126,8 @@ public final class VersionInfoUtil {
 
   /**
    * Returns the version components
-   * Examples: "1.2.3" returns [1, 2, 3], "4.5.6-SNAPSHOT" returns [4, 5, 6, "SNAPSHOT"]
-   * @returns the components of the version string
+   * Examples: "1.4.3" returns [1, 4, 3], "4.5.6-SNAPSHOT" returns [4, 5, 6, "SNAPSHOT"]
+   * @return the components of the version string
    */
   private static String[] getVersionComponents(final HBaseProtos.VersionInfo versionInfo) {
     return versionInfo.getVersion().split("[\\.-]");

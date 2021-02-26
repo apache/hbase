@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.util;
 import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.INCREMENT;
 import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.MUTATE_INFO;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -31,8 +31,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -45,13 +43,15 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Common base class for reader and writer parts of multi-thread HBase load
  * test (See LoadTestTool).
  */
 public abstract class MultiThreadedAction {
-  private static final Log LOG = LogFactory.getLog(MultiThreadedAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedAction.class);
 
   protected final TableName tableName;
   protected final Configuration conf;
@@ -101,7 +101,7 @@ public abstract class MultiThreadedAction {
 
     @Override
     public byte[] getDeterministicUniqueKey(long keyBase) {
-      return LoadTestKVGenerator.md5PrefixedKey(keyBase).getBytes();
+      return Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(keyBase));
     }
 
     @Override
@@ -114,7 +114,7 @@ public abstract class MultiThreadedAction {
       int numColumns = minColumnsPerKey + random.nextInt(maxColumnsPerKey - minColumnsPerKey + 1);
       byte[][] columns = new byte[numColumns][];
       for (int i = 0; i < numColumns; ++i) {
-        columns[i] = Integer.toString(i).getBytes();
+        columns[i] = Bytes.toBytes(Integer.toString(i));
       }
       return columns;
     }
@@ -320,7 +320,8 @@ public abstract class MultiThreadedAction {
    * @param verifyCfAndColumnIntegrity verify that cf/column set in the result is complete. Note
    *                                   that to use this multiPut should be used, or verification
    *                                   has to happen after writes, otherwise there can be races.
-   * @return
+   * @return true if the values of row result makes sense for row/cf/column combination and true if
+   *         the cf/column set in the result is complete, false otherwise.
    */
   public boolean verifyResultAgainstDataGenerator(Result result, boolean verifyValues,
       boolean verifyCfAndColumnIntegrity) {

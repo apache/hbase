@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +18,9 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.naming.ServiceUnavailableException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -37,55 +32,73 @@ import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test case for JMX Connector Server.
  */
 @Category({ MiscTests.class, MediumTests.class })
 public class TestJMXConnectorServer {
-  private static final Log LOG = LogFactory.getLog(TestJMXConnectorServer.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestJMXConnectorServer.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestJMXConnectorServer.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static Configuration conf = null;
   private static Admin admin;
   // RMI registry port
-  private static int rmiRegistryPort = 61120;
+  private static int rmiRegistryPort;
   // Switch for customized Accesscontroller to throw ACD exception while executing test case
-  static boolean hasAccess;
+  private volatile static boolean hasAccess;
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    conf = UTIL.getConfiguration();
+    String cps = JMXListener.class.getName() + "," + MyAccessController.class.getName();
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, cps);
+    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, cps);
+    rmiRegistryPort = UTIL.randomFreePort();
+    conf.setInt("master.rmi.registry.port", rmiRegistryPort);
+    conf.setInt("regionserver.rmi.registry.port", rmiRegistryPort);
+    UTIL.startMiniCluster();
+    admin = UTIL.getConnection().getAdmin();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    admin.close();
+    UTIL.shutdownMiniCluster();
+  }
 
   @Before
-  public void setUp() throws Exception {
-    UTIL = new HBaseTestingUtility();
-    conf = UTIL.getConfiguration();
+  public void setUp() {
+    hasAccess = false;
   }
 
   @After
-  public void tearDown() throws Exception {
-    // Set to true while stopping cluster
+  public void tearDown() {
     hasAccess = true;
-    admin.close();
-    UTIL.shutdownMiniCluster();
   }
 
   /**
    * This tests to validate the HMaster's ConnectorServer after unauthorised stopMaster call.
    */
-  @Test(timeout = 180000)
+  @Test
   public void testHMConnectorServerWhenStopMaster() throws Exception {
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      JMXListener.class.getName() + "," + MyAccessController.class.getName());
-    conf.setInt("master.rmi.registry.port", rmiRegistryPort);
-    UTIL.startMiniCluster();
-    admin = UTIL.getConnection().getAdmin();
-
     // try to stop master
     boolean accessDenied = false;
     try {
-      hasAccess = false;
       LOG.info("Stopping HMaster...");
       admin.stopMaster();
     } catch (AccessDeniedException e) {
@@ -94,66 +107,29 @@ public class TestJMXConnectorServer {
     }
     Assert.assertTrue(accessDenied);
 
-    // Check whether HMaster JMX Connector server can be connected
-    JMXConnector connector = null;
-    try {
-      connector = JMXConnectorFactory
-          .connect(JMXListener.buildJMXServiceURL(rmiRegistryPort, rmiRegistryPort));
-    } catch (IOException e) {
-      if (e.getCause() instanceof ServiceUnavailableException) {
-        Assert.fail("Can't connect to HMaster ConnectorServer.");
-      }
-    }
-    Assert.assertNotNull("JMXConnector should not be null.", connector);
-    connector.close();
+    checkConnector();
   }
 
   /**
    * This tests to validate the RegionServer's ConnectorServer after unauthorised stopRegionServer
    * call.
    */
-  @Test(timeout = 180000)
+  @Test
   public void testRSConnectorServerWhenStopRegionServer() throws Exception {
-    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-      JMXListener.class.getName() + "," + MyAccessController.class.getName());
-    conf.setInt("regionserver.rmi.registry.port", rmiRegistryPort);
-    UTIL.startMiniCluster();
-    admin = UTIL.getConnection().getAdmin();
-
-    hasAccess = false;
     ServerName serverName = UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     LOG.info("Stopping Region Server...");
     admin.stopRegionServer(serverName.getHostname() + ":" + serverName.getPort());
 
-    // Check whether Region Sever JMX Connector server can be connected
-    JMXConnector connector = null;
-    try {
-      connector = JMXConnectorFactory
-          .connect(JMXListener.buildJMXServiceURL(rmiRegistryPort, rmiRegistryPort));
-    } catch (IOException e) {
-      if (e.getCause() instanceof ServiceUnavailableException) {
-        Assert.fail("Can't connect to Region Server ConnectorServer.");
-      }
-    }
-    Assert.assertNotNull("JMXConnector should not be null.", connector);
-    connector.close();
+    checkConnector();
   }
 
   /**
    * This tests to validate the HMaster's ConnectorServer after unauthorised shutdown call.
    */
-  @Test(timeout = 180000)
+  @Test
   public void testHMConnectorServerWhenShutdownCluster() throws Exception {
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      JMXListener.class.getName() + "," + MyAccessController.class.getName());
-    conf.setInt("master.rmi.registry.port", rmiRegistryPort);
-
-    UTIL.startMiniCluster();
-    admin = UTIL.getConnection().getAdmin();
-
     boolean accessDenied = false;
     try {
-      hasAccess = false;
       LOG.info("Stopping HMaster...");
       admin.shutdown();
     } catch (AccessDeniedException e) {
@@ -162,14 +138,18 @@ public class TestJMXConnectorServer {
     }
     Assert.assertTrue(accessDenied);
 
+    checkConnector();
+  }
+
+  private void checkConnector() throws Exception {
     // Check whether HMaster JMX Connector server can be connected
     JMXConnector connector = null;
     try {
       connector = JMXConnectorFactory
-          .connect(JMXListener.buildJMXServiceURL(rmiRegistryPort, rmiRegistryPort));
+        .connect(JMXListener.buildJMXServiceURL(rmiRegistryPort, rmiRegistryPort));
     } catch (IOException e) {
       if (e.getCause() instanceof ServiceUnavailableException) {
-        Assert.fail("Can't connect to HMaster ConnectorServer.");
+        Assert.fail("Can't connect to ConnectorServer.");
       }
     }
     Assert.assertNotNull("JMXConnector should not be null.", connector);
@@ -181,6 +161,12 @@ public class TestJMXConnectorServer {
    * stopMaster/preStopRegionServer/preShutdown explicitly.
    */
   public static class MyAccessController extends AccessController {
+    @Override
+    public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) {
+      // Do nothing. In particular, stop the creation of the hbase:acl table. It makes the
+      // shutdown take time.
+    }
+
     @Override
     public void preStopMaster(ObserverContext<MasterCoprocessorEnvironment> c) throws IOException {
       if (!hasAccess) {
@@ -201,6 +187,13 @@ public class TestJMXConnectorServer {
       if (!hasAccess) {
         throw new AccessDeniedException("Insufficient permissions to shut down cluster.");
       }
+    }
+
+    @Override
+    public void preExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+        throws IOException {
+      // FIXME: ignore the procedure permission check since in our UT framework master is neither
+      // the systemuser nor the superuser so we can not call executeProcedures...
     }
   }
 }

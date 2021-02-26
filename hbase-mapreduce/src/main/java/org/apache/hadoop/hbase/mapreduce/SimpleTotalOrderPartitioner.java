@@ -18,13 +18,14 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.Base64;
+
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Partitioner;
 
@@ -46,10 +47,19 @@ import org.apache.hadoop.mapreduce.Partitioner;
 @InterfaceAudience.Public
 public class SimpleTotalOrderPartitioner<VALUE> extends Partitioner<ImmutableBytesWritable, VALUE>
 implements Configurable {
-  private final static Log LOG = LogFactory.getLog(SimpleTotalOrderPartitioner.class);
+  private final static Logger LOG = LoggerFactory.getLogger(SimpleTotalOrderPartitioner.class);
 
+  /**
+   * @deprecated since 0.90.0
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-1923">HBASE-1923</a>
+   */
   @Deprecated
   public static final String START = "hbase.simpletotalorder.start";
+
+  /**
+   * @deprecated since 0.90.0
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-1923">HBASE-1923</a>
+   */
   @Deprecated
   public static final String END = "hbase.simpletotalorder.end";
 
@@ -63,11 +73,11 @@ implements Configurable {
   private int lastReduces = -1;
 
   public static void setStartKey(Configuration conf, byte[] startKey) {
-    conf.set(START_BASE64, Base64.encodeBytes(startKey));
+    conf.set(START_BASE64, Bytes.toString(Base64.getEncoder().encode(startKey)));
   }
 
   public static void setEndKey(Configuration conf, byte[] endKey) {
-    conf.set(END_BASE64, Base64.encodeBytes(endKey));
+    conf.set(END_BASE64, Bytes.toString(Base64.getEncoder().encode(endKey)));
   }
 
   @SuppressWarnings("deprecation")
@@ -84,7 +94,7 @@ implements Configurable {
       String base64Key, String deprecatedKey) {
     String encoded = conf.get(base64Key);
     if (encoded != null) {
-      return Base64.decode(encoded);
+      return Base64.getDecoder().decode(encoded);
     }
     String oldStyleVal = conf.get(deprecatedKey);
     if (oldStyleVal == null) {

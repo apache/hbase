@@ -19,18 +19,23 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestByteRangeWithKVSerialization {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestByteRangeWithKVSerialization.class);
 
   static void writeCell(PositionedByteRange pbr, KeyValue kv) throws Exception {
     pbr.putInt(kv.getKeyLength());

@@ -28,8 +28,6 @@ import java.nio.charset.Charset;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Utility class that handles ordered byte arrays. That is, unlike
  * {@link Bytes}, these methods produce byte arrays which maintain the sort
@@ -339,7 +337,7 @@ public class OrderedBytes {
 
   /**
    * Perform unsigned comparison between two long values. Conforms to the same interface as
-   * {@link org.apache.hadoop.hbase.CellComparator#COMPARATOR#compare(Object, Object)}.
+   * {@link org.apache.hadoop.hbase.CellComparator}.
    */
   private static int unsignedCmp(long x1, long x2) {
     int cmp;
@@ -368,7 +366,7 @@ public class OrderedBytes {
    * @param comp Compliment the encoded value when {@code comp} is true.
    * @return number of bytes written.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static int putVaruint64(PositionedByteRange dst, long val, boolean comp) {
     int w, y, len = 0;
     final int offset = dst.getOffset(), start = dst.getPosition();
@@ -457,7 +455,7 @@ public class OrderedBytes {
    * @param comp if true, parse the compliment of the value.
    * @return the number of bytes consumed by this value.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static int lengthVaruint64(PositionedByteRange src, boolean comp) {
     int a0 = (comp ? DESCENDING : ASCENDING).apply(src.peek()) & 0xff;
     if (a0 <= 240) return 1;
@@ -478,7 +476,7 @@ public class OrderedBytes {
    * @param cmp if true, parse the compliment of the value.
    * @return the number of bytes skipped.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static int skipVaruint64(PositionedByteRange src, boolean cmp) {
     final int len = lengthVaruint64(src, cmp);
     src.setPosition(src.getPosition() + len);
@@ -490,7 +488,7 @@ public class OrderedBytes {
    * encoded value when {@code comp} is true.
    * @return the decoded value.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static long getVaruint64(PositionedByteRange src, boolean comp) {
     assert src.getRemaining() >= lengthVaruint64(src, comp);
     final long ret;
@@ -503,17 +501,17 @@ public class OrderedBytes {
     x = src.get();
     a1 = ord.apply(x) & 0xff;
     if (-1 == unsignedCmp(a0, 249)) {
-      return (a0 - 241) * 256 + a1 + 240;
+      return (a0 - 241L) * 256 + a1 + 240;
     }
     x = src.get();
     a2 = ord.apply(x) & 0xff;
     if (a0 == 249) {
-      return 2288 + 256 * a1 + a2;
+      return 2288L + 256 * a1 + a2;
     }
     x = src.get();
     a3 = ord.apply(x) & 0xff;
     if (a0 == 250) {
-      return (a1 << 16) | (a2 << 8) | a3;
+      return ((long) a1 << 16L) | (a2 << 8) | a3;
     }
     x = src.get();
     a4 = ord.apply(x) & 0xff;
@@ -547,7 +545,7 @@ public class OrderedBytes {
    * From Phoenix's {@code NumberUtil}.
    * @return new {@link BigDecimal} instance
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static BigDecimal normalize(BigDecimal val) {
     return null == val ? null : val.stripTrailingZeros().round(DEFAULT_MATH_CONTEXT);
   }
@@ -663,7 +661,8 @@ public class OrderedBytes {
       dst.put((byte) ((2 * d + 1) & 0xff));
       abs = abs.subtract(BigDecimal.valueOf(d));
     }
-    a[offset + dst.getPosition() - 1] &= 0xfe; // terminal digit should be 2x
+    // terminal digit should be 2x
+    a[offset + dst.getPosition() - 1] = (byte) (a[offset + dst.getPosition() - 1] & 0xfe);
     if (isNeg) {
       // negative values encoded as ~M
       DESCENDING.apply(a, offset + startM, dst.getPosition() - startM);
@@ -747,8 +746,8 @@ public class OrderedBytes {
       dst.put((byte) (2 * d + 1));
       abs = abs.subtract(BigDecimal.valueOf(d));
     }
-
-    a[offset + dst.getPosition() - 1] &= 0xfe; // terminal digit should be 2x
+    // terminal digit should be 2x
+    a[offset + dst.getPosition() - 1] = (byte) (a[offset + dst.getPosition() - 1] & 0xfe);
     if (isNeg) {
       // negative values encoded as ~M
       DESCENDING.apply(a, offset + startM, dst.getPosition() - startM);
@@ -1012,7 +1011,7 @@ public class OrderedBytes {
   /**
    * Calculate the expected BlobVar decoded length based on encoded length.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static int blobVarDecodedLength(int len) {
     return
         ((len
@@ -1063,7 +1062,8 @@ public class OrderedBytes {
       if (s > 1) {
         dst.put((byte) (0x7f & t));
       } else {
-        dst.getBytes()[offset + dst.getPosition() - 1] &= 0x7f;
+        dst.getBytes()[offset + dst.getPosition() - 1] =
+          (byte) (dst.getBytes()[offset + dst.getPosition() - 1] & 0x7f);
       }
     }
     ord.apply(dst.getBytes(), offset + start, dst.getPosition() - start);
@@ -1116,7 +1116,7 @@ public class OrderedBytes {
         ret.put((byte) (t | ((ord.apply(a[offset + i]) & 0x7f) >>> s)));
       }
       if (i == end) break;
-      t = (byte) ((ord.apply(a[offset + i]) << 8 - s) & 0xff);
+      t = (byte) ((ord.apply(a[offset + i]) << (8 - s)) & 0xff);
       s = s == 1 ? 7 : s - 1;
     }
     src.setPosition(end);
@@ -1372,7 +1372,7 @@ public class OrderedBytes {
   public static int encodeFloat32(PositionedByteRange dst, float val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
     int i = Float.floatToIntBits(val);
-    i ^= ((i >> Integer.SIZE - 1) | Integer.MIN_VALUE);
+    i ^= ((i >> (Integer.SIZE - 1)) | Integer.MIN_VALUE);
     dst.put(FIXED_FLOAT32)
         .put((byte) (i >> 24))
         .put((byte) (i >> 16))
@@ -1394,7 +1394,7 @@ public class OrderedBytes {
     for (int i = 1; i < 4; i++) {
       val = (val << 8) + (ord.apply(src.get()) & 0xff);
     }
-    val ^= (~val >> Integer.SIZE - 1) | Integer.MIN_VALUE;
+    val ^= (~val >> (Integer.SIZE - 1)) | Integer.MIN_VALUE;
     return Float.intBitsToFloat(val);
   }
 
@@ -1466,7 +1466,7 @@ public class OrderedBytes {
   public static int encodeFloat64(PositionedByteRange dst, double val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
     long lng = Double.doubleToLongBits(val);
-    lng ^= ((lng >> Long.SIZE - 1) | Long.MIN_VALUE);
+    lng ^= ((lng >> (Long.SIZE - 1)) | Long.MIN_VALUE);
     dst.put(FIXED_FLOAT64)
         .put((byte) (lng >> 56))
         .put((byte) (lng >> 48))
@@ -1492,7 +1492,7 @@ public class OrderedBytes {
     for (int i = 1; i < 8; i++) {
       val = (val << 8) + (ord.apply(src.get()) & 0xff);
     }
-    val ^= (~val >> Long.SIZE - 1) | Long.MIN_VALUE;
+    val ^= (~val >> (Long.SIZE - 1)) | Long.MIN_VALUE;
     return Double.longBitsToDouble(val);
   }
 

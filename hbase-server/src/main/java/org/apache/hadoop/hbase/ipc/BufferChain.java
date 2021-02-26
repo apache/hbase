@@ -101,7 +101,7 @@ class BufferChain {
     try {
       long ret = channel.write(buffers, bufferOffset, bufCount);
       if (ret > 0) {
-        remaining -= ret;
+        remaining = (int) (remaining - ret);
       }
       return ret;
     } finally {

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -28,9 +29,9 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * The filter looks for the given columns in KeyValue. Once there is a match for
@@ -42,7 +43,8 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
  * caveat, this filter is only useful for special cases
  * like org.apache.hadoop.hbase.mapreduce.RowCounter.
  * <p>
- * @deprecated Deprecated in 2.0. See HBASE-13347
+ * @deprecated Deprecated in 2.0.0 and will be removed in 3.0.0.
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-13347">HBASE-13347</a>
  */
 @InterfaceAudience.Public
 @Deprecated
@@ -60,19 +62,25 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
     this.qualifiers = qualifiers;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
     if (hasFoundKV()) {
       return ReturnCode.NEXT_ROW;
-    } else if (hasOneMatchingQualifier(v)) {
+    } else if (hasOneMatchingQualifier(c)) {
       setFoundKV(true);
     }
     return ReturnCode.INCLUDE;
   }
 
-  private boolean hasOneMatchingQualifier(Cell v) {
+  private boolean hasOneMatchingQualifier(Cell c) {
     for (byte[] q : qualifiers) {
-      if (CellUtil.matchingQualifier(v, q)) {
+      if (CellUtil.matchingQualifier(c, q)) {
         return true;
       }
     }
@@ -82,6 +90,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.FirstKeyValueMatchingQualifiersFilter.Builder builder =
       FilterProtos.FirstKeyValueMatchingQualifiersFilter.newBuilder();
@@ -114,15 +123,26 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof FirstKeyValueMatchingQualifiersFilter)) return false;
 
     FirstKeyValueMatchingQualifiersFilter other = (FirstKeyValueMatchingQualifiersFilter)o;
     return this.qualifiers.equals(other.qualifiers);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.qualifiers);
   }
 }

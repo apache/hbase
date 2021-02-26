@@ -17,15 +17,22 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandlerImpl;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 @Category({RPCTests.class, SmallTests.class})
 public class TestCallRunner {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCallRunner.class);
+
   /**
    * Does nothing but exercise a {@link CallRunner} outside of {@link RpcServer} context.
    */
@@ -37,5 +44,31 @@ public class TestCallRunner {
     CallRunner cr = new CallRunner(mockRpcServer, mockCall);
     cr.setStatus(new MonitoredRPCHandlerImpl());
     cr.run();
+  }
+
+  @Test
+  public void testCallCleanup() {
+    RpcServerInterface mockRpcServer = Mockito.mock(RpcServerInterface.class);
+    Mockito.when(mockRpcServer.isStarted()).thenReturn(true);
+    ServerCall mockCall = Mockito.mock(ServerCall.class);
+    Mockito.when(mockCall.disconnectSince()).thenReturn(1L);
+
+    CallRunner cr = new CallRunner(mockRpcServer, mockCall);
+    cr.setStatus(new MonitoredRPCHandlerImpl());
+    cr.run();
+    Mockito.verify(mockCall, Mockito.times(1)).cleanup();
+  }
+
+  @Test
+  public void testCallRunnerDrop() {
+    RpcServerInterface mockRpcServer = Mockito.mock(RpcServerInterface.class);
+    Mockito.when(mockRpcServer.isStarted()).thenReturn(true);
+    ServerCall mockCall = Mockito.mock(ServerCall.class);
+    Mockito.when(mockCall.disconnectSince()).thenReturn(1L);
+
+    CallRunner cr = new CallRunner(mockRpcServer, mockCall);
+    cr.setStatus(new MonitoredRPCHandlerImpl());
+    cr.drop();
+    Mockito.verify(mockCall, Mockito.times(1)).cleanup();
   }
 }

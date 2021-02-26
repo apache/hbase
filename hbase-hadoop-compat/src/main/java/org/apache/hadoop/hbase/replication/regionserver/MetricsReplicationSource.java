@@ -19,11 +19,13 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Provides access to gauges and counters. Implementers will hide the details of hadoop1 or
  * hadoop2's metrics2 classes and publishing.
  */
+@InterfaceAudience.Private
 public interface MetricsReplicationSource extends BaseSource {
   /**
    * The name of the metrics

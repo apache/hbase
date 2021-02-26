@@ -21,10 +21,10 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link FlushPolicy} that only flushes store larger a given threshold. If no store is large
@@ -33,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy {
 
-  private static final Log LOG = LogFactory.getLog(FlushAllLargeStoresPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushAllLargeStoresPolicy.class);
 
   @Override
   protected void configureForRegion(HRegion region) {
@@ -44,7 +44,7 @@ public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy {
       // Family number might also be zero in some of our unit test case
       return;
     }
-    this.flushSizeLowerBound = getFlushSizeLowerBound(region);
+    setFlushSizeLowerBounds(region);
   }
 
   @Override

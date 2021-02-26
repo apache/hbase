@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -29,15 +29,19 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -47,14 +51,15 @@ import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
-import com.google.protobuf.Service;
-
 /**
- * Services Master supplies
+ * A curated subset of services provided by {@link HMaster}.
+ * For use internally only. Passed to Managers, Services and Chores so can pass less-than-a
+ * full-on HMaster at test-time. Be judicious adding API. Changes cause ripples through
+ * the code base.
  */
 @InterfaceAudience.Private
 public interface MasterServices extends Server {
@@ -114,9 +119,9 @@ public interface MasterServices extends Server {
   MasterQuotaManager getMasterQuotaManager();
 
   /**
-   * @return Master's instance of {@link RegionNormalizer}
+   * @return Master's instance of {@link RegionNormalizerManager}
    */
-  RegionNormalizer getRegionNormalizer();
+  RegionNormalizerManager getRegionNormalizerManager();
 
   /**
    * @return Master's instance of {@link CatalogJanitor}
@@ -131,8 +136,7 @@ public interface MasterServices extends Server {
   /**
    * @return Tripped when Master has finished initialization.
    */
-  @VisibleForTesting
-  public ProcedureEvent getInitializedEvent();
+  public ProcedureEvent<?> getInitializedEvent();
 
   /**
    * @return Master's instance of {@link MetricsMaster}
@@ -318,22 +322,15 @@ public interface MasterServices extends Server {
   TableDescriptors getTableDescriptors();
 
   /**
-   * @return true if master enables ServerShutdownHandler;
-   */
-  boolean isServerCrashProcessingEnabled();
-
-  /**
    * Registers a new protocol buffer {@link Service} subclass as a master coprocessor endpoint.
-   *
-   * <p>
-   * Only a single instance may be registered for a given {@link Service} subclass (the
-   * instances are keyed on {@link com.google.protobuf.Descriptors.ServiceDescriptor#getFullName()}.
-   * After the first registration, subsequent calls with the same service name will fail with
-   * a return value of {@code false}.
-   * </p>
+   * <p/>
+   * Only a single instance may be registered for a given {@link Service} subclass (the instances
+   * are keyed on
+   * {@link org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor#getFullName()}.
+   * After the first registration, subsequent calls with the same service name will fail with a
+   * return value of {@code false}.
    * @param instance the {@code Service} subclass instance to expose as a coprocessor endpoint
-   * @return {@code true} if the registration was successful, {@code false}
-   * otherwise
+   * @return {@code true} if the registration was successful, {@code false} otherwise
    */
   boolean registerService(Service instance);
 
@@ -349,8 +346,16 @@ public interface MasterServices extends Server {
 
   /**
    * @return true if master is in maintanceMode
+   * @throws IOException if the inquiry failed due to an IO problem
    */
   boolean isInMaintenanceMode();
+
+  /**
+   * Checks master state before initiating action over region topology.
+   * @param action the name of the action under consideration, for logging.
+   * @return {@code true} when the caller should exit early, {@code false} otherwise.
+   */
+  boolean skipRegionManagementAction(final String action);
 
   /**
    * Abort a procedure.
@@ -413,11 +418,6 @@ public interface MasterServices extends Server {
    */
   public LoadBalancer getLoadBalancer();
 
-  /**
-   * @return True if this master is stopping.
-   */
-  boolean isStopping();
-
   boolean isSplitOrMergeEnabled(MasterSwitchType switchType);
 
   /**
@@ -429,27 +429,28 @@ public interface MasterServices extends Server {
    * Add a new replication peer for replicating data to slave cluster
    * @param peerId a short name that identifies the peer
    * @param peerConfig configuration for the replication slave cluster
+   * @param enabled peer state, true if ENABLED and false if DISABLED
    */
-  void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
+  long addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
       throws ReplicationException, IOException;
 
   /**
    * Removes a peer and stops the replication
    * @param peerId a short name that identifies the peer
    */
-  void removeReplicationPeer(String peerId) throws ReplicationException, IOException;
+  long removeReplicationPeer(String peerId) throws ReplicationException, IOException;
 
   /**
    * Restart the replication stream to the specified peer
    * @param peerId a short name that identifies the peer
    */
-  void enableReplicationPeer(String peerId) throws ReplicationException, IOException;
+  long enableReplicationPeer(String peerId) throws ReplicationException, IOException;
 
   /**
    * Stop the replication stream to the specified peer
    * @param peerId a short name that identifies the peer
    */
-  void disableReplicationPeer(String peerId) throws ReplicationException, IOException;
+  long disableReplicationPeer(String peerId) throws ReplicationException, IOException;
 
   /**
    * Returns the configured ReplicationPeerConfig for the specified peer
@@ -460,11 +461,16 @@ public interface MasterServices extends Server {
       IOException;
 
   /**
+   * Returns the {@link ReplicationPeerManager}.
+   */
+  ReplicationPeerManager getReplicationPeerManager();
+
+  /**
    * Update the peerConfig for the specified peer
    * @param peerId a short name that identifies the peer
    * @param peerConfig new config for the peer
    */
-  void updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig)
+  long updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig)
       throws ReplicationException, IOException;
 
   /**
@@ -476,38 +482,69 @@ public interface MasterServices extends Server {
       IOException;
 
   /**
-   * Mark a region server as draining to prevent additional regions from getting assigned to it.
-   * @param server Region servers to drain.
-   */
-  void drainRegionServer(final ServerName server);
-
-  /**
-   * List region servers marked as draining to not get additional regions assigned to them.
-   * @return List of draining servers.
-   */
-  List<ServerName> listDrainingRegionServers();
-
-  /**
-   * Remove drain from a region server to allow additional regions assignments.
-   * @param server Region server to remove drain from.
-   */
-  void removeDrainFromRegionServer(final ServerName server);
-
-  /**
    * @return {@link LockManager} to lock namespaces/tables/regions.
    */
   LockManager getLockManager();
 
   public String getRegionServerVersion(final ServerName sn);
 
+  /**
+   * Called when a new RegionServer is added to the cluster.
+   * Checks if new server has a newer version than any existing server and will move system tables
+   * there if so.
+   */
   public void checkIfShouldMoveSystemRegionAsync();
 
-  /**
-   * Recover meta table. Will result in no-op is meta is already initialized. Any code that has
-   * access to master and requires to access meta during process initialization can call this
-   * method to make sure meta is initialized.
-   */
-  boolean recoverMeta() throws IOException;
-
   String getClientIdAuditPrefix();
+
+  /**
+   * @return True if cluster is up; false if cluster is not up (we are shutting down).
+   */
+  boolean isClusterUp();
+
+  /**
+   * @return return null if current is zk-based WAL splitting
+   */
+  default SplitWALManager getSplitWALManager(){
+    return null;
+  }
+
+  /**
+   * @return the {@link AccessChecker}
+   */
+  AccessChecker getAccessChecker();
+
+  /**
+   * @return the {@link ZKPermissionWatcher}
+   */
+  ZKPermissionWatcher getZKPermissionWatcher();
+
+  /**
+   * Execute region plans with throttling
+   * @param plans to execute
+   * @return succeeded plans
+   */
+  List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans);
+
+  /**
+   * Run the ReplicationBarrierChore.
+   */
+  void runReplicationBarrierCleaner();
+
+  /**
+   * Perform normalization of cluster.
+   * @param ntfp Selection criteria for identifying which tables to normalize.
+   * @param isHighPriority {@code true} when these requested tables should skip to the front of
+   *   the queue.
+   * @return {@code true} when the request was submitted, {@code false} otherwise.
+   */
+  boolean normalizeRegions(
+    final NormalizeTableFilterParams ntfp, final boolean isHighPriority) throws IOException;
+
+  /**
+   * Get the meta location syncer.
+   * <p/>
+   * We need to get this in MTP to tell the syncer the new meta replica count.
+   */
+  MetaLocationSyncer getMetaLocationSyncer();
 }

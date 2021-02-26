@@ -15,8 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.store.wal;
+
+import static java.lang.System.currentTimeMillis;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,8 +27,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -38,7 +37,8 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 
-import static java.lang.System.currentTimeMillis;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
   protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
@@ -70,7 +70,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
   private WALProcedureStore store;
   static byte[] serializedState;
 
-  private class LoadCounter implements ProcedureStore.ProcedureLoader {
+  private static class LoadCounter implements ProcedureStore.ProcedureLoader {
     public LoadCounter() {}
 
     @Override
@@ -126,7 +126,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     Path logDir = new Path(testDir, "proc-logs");
     System.out.println("\n\nLogs directory : " + logDir.toString() + "\n\n");
     fs.delete(logDir, true);
-    store = ProcedureTestingUtility.createWalStore(conf, fs, logDir);
+    store = ProcedureTestingUtility.createWalStore(conf, logDir);
     store.start(1);
     store.recoverLease();
     store.load(new LoadCounter());
@@ -134,8 +134,8 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
 
   /**
    * @return a list of shuffled integers which represent state of proc id. First occurrence of a
-   * number denotes insert state, consecutive occurrences denote update states, and -ve value
-   * denotes delete state.
+   *         number denotes insert state, consecutive occurrences denote update states, and -ve
+   *         value denotes delete state.
    */
   private List<Integer> shuffleProcWriteSequence() {
     Random rand = new Random();
@@ -165,8 +165,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
   private void writeWals() throws IOException {
     List<Integer> procStates = shuffleProcWriteSequence();
     TestProcedure[] procs = new TestProcedure[numProcs + 1];  // 0 is not used.
-    int numProcsPerWal = numWals > 0 ? (int)Math.ceil(procStates.size() / numWals)
-        : Integer.MAX_VALUE;
+    int numProcsPerWal = numWals > 0 ? procStates.size() / numWals : Integer.MAX_VALUE;
     long startTime = currentTimeMillis();
     long lastTime = startTime;
     for (int i = 0; i < procStates.size(); ++i) {
@@ -207,11 +206,11 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     System.out.println("Load time : " + (timeTaken / 1000.0f) + "sec");
     System.out.println("******************************************");
     System.out.println("Raw format for scripts");
-        System.out.println(String.format("RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, "
+    System.out.println(String.format("RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, "
                 + "total_time_ms=%s]",
-        NUM_PROCS_OPTION.getOpt(), numProcs, STATE_SIZE_OPTION.getOpt(), serializedState.length,
-        UPDATES_PER_PROC_OPTION.getOpt(), updatesPerProc, DELETE_PROCS_FRACTION_OPTION.getOpt(),
-        deleteProcsFraction, NUM_WALS_OPTION.getOpt(), numWals, timeTaken));
+          NUM_PROCS_OPTION.getOpt(), numProcs, STATE_SIZE_OPTION.getOpt(), serializedState.length,
+          UPDATES_PER_PROC_OPTION.getOpt(), updatesPerProc, DELETE_PROCS_FRACTION_OPTION.getOpt(),
+          deleteProcsFraction, NUM_WALS_OPTION.getOpt(), numWals, timeTaken));
   }
 
   public void tearDownProcedureStore() {

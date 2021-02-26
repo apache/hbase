@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -33,8 +33,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,10 +41,14 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -61,9 +63,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.MapReduceCell;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
@@ -78,6 +78,8 @@ import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -85,7 +87,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Public
 public class Import extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(Import.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Import.class);
   final static String NAME = "import";
   public final static String CF_RENAME_PROP = "HBASE_IMPORTER_RENAME_CFS";
   public final static String BULK_OUTPUT_CONF_KEY = "import.bulk.output";
@@ -164,7 +166,7 @@ public class Import extends Configured implements Tool {
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_COMPARETO_USE_OBJECT_EQUALS",
         justification = "This is wrong, yes, but we should be purging Writables, not fixing them")
     public int compareTo(KeyValueWritableComparable o) {
-      return CellComparator.COMPARATOR.compare(this.kv, ((KeyValueWritableComparable) o).kv);
+      return CellComparator.getInstance().compare(this.kv, o.kv);
     }
 
     public static class KeyValueWritableComparator extends WritableComparator {
@@ -206,9 +208,9 @@ public class Import extends Configured implements Tool {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(CellUtil.estimatedSerializedSizeOfKey(kv));
+      out.writeInt(PrivateCellUtil.estimatedSerializedSizeOfKey(kv));
       out.writeInt(0);
-      CellUtil.writeFlatKey(kv, out);
+      PrivateCellUtil.writeFlatKey(kv, out);
     }
 
     @Override
@@ -217,10 +219,10 @@ public class Import extends Configured implements Tool {
     }
 
     @Override
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_COMPARETO_USE_OBJECT_EQUALS",
-      justification="This is wrong, yes, but we should be purging Writables, not fixing them")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_COMPARETO_USE_OBJECT_EQUALS",
+        justification = "This is wrong, yes, but we should be purging Writables, not fixing them")
     public int compareTo(CellWritableComparable o) {
-      return CellComparator.COMPARATOR.compare(this.kv, ((CellWritableComparable)o).kv);
+      return CellComparator.getInstance().compare(this.kv, o.kv);
     }
 
     public static class CellWritableComparator extends WritableComparator {
@@ -272,7 +274,7 @@ public class Import extends Configured implements Tool {
       int index = 0;
       for (Cell kv : kvs) {
         context.write(new ImmutableBytesWritable(CellUtil.cloneRow(kv)),
-          new MapReduceCell(kv));
+          new MapReduceExtendedCell(kv));
         if (++index % 100 == 0)
           context.setStatus("Wrote " + index + " KeyValues, "
               + "and the rowkey whose is being wrote is " + Bytes.toString(kv.getRowArray()));
@@ -288,7 +290,7 @@ public class Import extends Configured implements Tool {
       extends TableMapper<KeyValueWritableComparable, KeyValue> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
-    private static final Log LOG = LogFactory.getLog(KeyValueSortImporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(KeyValueSortImporter.class);
 
     /**
      * @param row The current table row key.
@@ -304,7 +306,7 @@ public class Import extends Configured implements Tool {
             "Considering the row." + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
         }
         if (filter == null || !filter.filterRowKey(
-          CellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))) {
+          PrivateCellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
@@ -353,7 +355,7 @@ public class Import extends Configured implements Tool {
   public static class KeyValueImporter extends TableMapper<ImmutableBytesWritable, KeyValue> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
-    private static final Log LOG = LogFactory.getLog(KeyValueImporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(KeyValueImporter.class);
 
     /**
      * @param row The current table row key.
@@ -369,7 +371,7 @@ public class Import extends Configured implements Tool {
             "Considering the row." + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
         }
         if (filter == null || !filter.filterRowKey(
-          CellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))) {
+          PrivateCellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
@@ -394,7 +396,7 @@ public class Import extends Configured implements Tool {
       extends TableMapper<CellWritableComparable, Cell> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
-    private static final Log LOG = LogFactory.getLog(CellImporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CellImporter.class);
 
     /**
      * @param row  The current table row key.
@@ -412,7 +414,7 @@ public class Import extends Configured implements Tool {
               + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
         }
         if (filter == null
-            || !filter.filterRowKey(CellUtil.createFirstOnRow(row.get(), row.getOffset(),
+            || !filter.filterRowKey(PrivateCellUtil.createFirstOnRow(row.get(), row.getOffset(),
                 (short) row.getLength()))) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
@@ -459,7 +461,7 @@ public class Import extends Configured implements Tool {
   public static class CellImporter extends TableMapper<ImmutableBytesWritable, Cell> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
-    private static final Log LOG = LogFactory.getLog(CellImporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CellImporter.class);
 
     /**
      * @param row  The current table row key.
@@ -477,13 +479,13 @@ public class Import extends Configured implements Tool {
               + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
         }
         if (filter == null
-            || !filter.filterRowKey(CellUtil.createFirstOnRow(row.get(), row.getOffset(),
+            || !filter.filterRowKey(PrivateCellUtil.createFirstOnRow(row.get(), row.getOffset(),
                 (short) row.getLength()))) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
             if (kv == null) continue;
-            context.write(row, new MapReduceCell(convertKv(kv, cfRenameMap)));
+            context.write(row, new MapReduceExtendedCell(convertKv(kv, cfRenameMap)));
           }
         }
       } catch (InterruptedException e) {
@@ -533,7 +535,7 @@ public class Import extends Configured implements Tool {
             + Bytes.toString(key.get(), key.getOffset(), key.getLength()));
       }
       if (filter == null
-          || !filter.filterRowKey(CellUtil.createFirstOnRow(key.get(), key.getOffset(),
+          || !filter.filterRowKey(PrivateCellUtil.createFirstOnRow(key.get(), key.getOffset(),
               (short) key.getLength()))) {
         processKV(key, result, context, put, delete);
       }
@@ -555,7 +557,7 @@ public class Import extends Configured implements Tool {
          * submit multiple DeleteFamily tombstones in single Delete request then we are maintaining
          * only newest in hbase table and ignoring other. Check - HBASE-12065
          */
-        if (CellUtil.isDeleteFamily(kv)) {
+        if (PrivateCellUtil.isDeleteFamily(kv)) {
           Delete deleteFamily = new Delete(key.get());
           deleteFamily.add(kv);
           if (durability != null) {
@@ -609,10 +611,10 @@ public class Import extends Configured implements Tool {
         LOG.info("setting WAL durability to default.");
       }
       // TODO: This is kind of ugly doing setup of ZKW just to read the clusterid.
-      ZooKeeperWatcher zkw = null;
+      ZKWatcher zkw = null;
       Exception ex = null;
       try {
-        zkw = new ZooKeeperWatcher(conf, context.getTaskAttemptID().toString(), null);
+        zkw = new ZKWatcher(conf, context.getTaskAttemptID().toString(), null);
         clusterIds = Collections.singletonList(ZKClusterId.getUUIDForCluster(zkw));
       } catch (ZooKeeperConnectionException e) {
         ex = e;
@@ -683,16 +685,16 @@ public class Import extends Configured implements Tool {
 
   /**
    * Attempt to filter out the keyvalue
-   * @param kv {@link KeyValue} on which to apply the filter
+   * @param c {@link Cell} on which to apply the filter
    * @return <tt>null</tt> if the key should not be written, otherwise returns the original
-   *         {@link KeyValue}
+   *         {@link Cell}
    */
-  public static Cell filterKv(Filter filter, Cell kv) throws IOException {
+  public static Cell filterKv(Filter filter, Cell c) throws IOException {
     // apply the filter and skip this kv if the filter doesn't apply
     if (filter != null) {
-      Filter.ReturnCode code = filter.filterKeyValue(kv);
+      Filter.ReturnCode code = filter.filterCell(c);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Filter returned:" + code + " for the key value:" + kv);
+        LOG.trace("Filter returned:" + code + " for the cell:" + c);
       }
       // if its not an accept type, then skip this kv
       if (!(code.equals(Filter.ReturnCode.INCLUDE) || code
@@ -700,7 +702,7 @@ public class Import extends Configured implements Tool {
         return null;
       }
     }
-    return kv;
+    return c;
   }
 
   // helper: create a new KeyValue based on CF rename map
@@ -709,6 +711,7 @@ public class Import extends Configured implements Tool {
       // If there's a rename mapping for this CF, create a new KeyValue
       byte[] newCfName = cfRenameMap.get(CellUtil.cloneFamily(kv));
       if (newCfName != null) {
+        List<Tag> tags = PrivateCellUtil.getTags(kv);
         kv = new KeyValue(kv.getRowArray(), // row buffer
             kv.getRowOffset(),              // row offset
             kv.getRowLength(),              // row length
@@ -722,7 +725,8 @@ public class Import extends Configured implements Tool {
             KeyValue.Type.codeToType(kv.getTypeByte()), // KV Type
             kv.getValueArray(),             // value buffer
             kv.getValueOffset(),            // value offset
-            kv.getValueLength());           // value length
+            kv.getValueLength(),           // value length
+            tags.size() == 0 ? null: tags);
       }
     }
     return kv;
@@ -834,7 +838,7 @@ public class Import extends Configured implements Tool {
         Path outputDir = new Path(hfileOutPath);
         FileOutputFormat.setOutputPath(job, outputDir);
         job.setMapOutputKeyClass(CellWritableComparable.class);
-        job.setMapOutputValueClass(MapReduceCell.class);
+        job.setMapOutputValueClass(MapReduceExtendedCell.class);
         job.getConfiguration().setClass("mapreduce.job.output.key.comparator.class",
             CellWritableComparable.CellWritableComparator.class,
             RawComparator.class);
@@ -845,7 +849,7 @@ public class Import extends Configured implements Tool {
         job.setPartitionerClass(CellWritableComparablePartitioner.class);
         job.setNumReduceTasks(regionLocator.getStartKeys().length);
         TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
-            org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.class);
+            org.apache.hbase.thirdparty.com.google.common.base.Preconditions.class);
       }
     } else if (hfileOutPath != null) {
       LOG.info("writing to hfiles for bulk load.");
@@ -857,10 +861,10 @@ public class Import extends Configured implements Tool {
         Path outputDir = new Path(hfileOutPath);
         FileOutputFormat.setOutputPath(job, outputDir);
         job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-        job.setMapOutputValueClass(MapReduceCell.class);
+        job.setMapOutputValueClass(MapReduceExtendedCell.class);
         HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
         TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
-            org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.class);
+            org.apache.hbase.thirdparty.com.google.common.base.Preconditions.class);
       }
     } else {
       LOG.info("writing directly to table from Mapper.");
@@ -884,7 +888,7 @@ public class Import extends Configured implements Tool {
     System.err.println("By default Import will load data directly into HBase. To instead generate");
     System.err.println("HFiles of data to prepare for a bulk data load, pass the option:");
     System.err.println("  -D" + BULK_OUTPUT_CONF_KEY + "=/path/for/output");
-    System.err.println("If there is a large result that includes too much KeyValue "
+    System.err.println("If there is a large result that includes too much Cell "
         + "whitch can occur OOME caused by the memery sort in reducer, pass the option:");
     System.err.println("  -D" + HAS_LARGE_RESULT + "=true");
     System.err
@@ -895,9 +899,9 @@ public class Import extends Configured implements Tool {
         + CF_RENAME_PROP + " property. Futher, filters will only use the"
         + " Filter#filterRowKey(byte[] buffer, int offset, int length) method to identify "
         + " whether the current row needs to be ignored completely for processing and "
-        + " Filter#filterKeyValue(KeyValue) method to determine if the KeyValue should be added;"
+        + " Filter#filterCell(Cell) method to determine if the Cell should be added;"
         + " Filter.ReturnCode#INCLUDE and #INCLUDE_AND_NEXT_COL will be considered as including"
-        + " the KeyValue.");
+        + " the Cell.");
     System.err.println("To import data exported from HBase 0.94, use");
     System.err.println("  -Dhbase.import.version=0.94");
     System.err.println("  -D " + JOB_NAME_CONF_KEY

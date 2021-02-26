@@ -15,19 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Thrown when a procedure WAL is corrupted
+ * @deprecated Since 2.3.0, will be removed in 4.0.0. Keep here only for rolling upgrading, now we
+ *             use the new region based procedure store.
  */
+@Deprecated
 @InterfaceAudience.Private
-@InterfaceStability.Stable
 public class CorruptedWALProcedureStoreException extends HBaseIOException {
+
+  private static final long serialVersionUID = -3407300445435898074L;
+
   /** default constructor */
   public CorruptedWALProcedureStoreException() {
     super();

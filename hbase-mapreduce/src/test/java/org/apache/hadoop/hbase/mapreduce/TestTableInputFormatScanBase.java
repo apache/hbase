@@ -21,12 +21,12 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
-import java.util.*;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.NavigableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -47,22 +47,17 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
- * <p>
- * Tests various scan start and stop row scenarios. This is set in a scan and
- * tested in a MapReduce job to see if that is handed over and done properly
- * too.
- * </p>
- * <p>
- * This test is broken into two parts in order to side-step the test timeout
- * period of 900, as documented in HBASE-8326.
- * </p>
+ * Tests various scan start and stop row scenarios. This is set in a scan and tested in a MapReduce
+ * job to see if that is handed over and done properly too.
  */
 public abstract class TestTableInputFormatScanBase {
 
-  private static final Log LOG = LogFactory.getLog(TestTableInputFormatScanBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableInputFormatScanBase.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   static final TableName TABLE_NAME = TableName.valueOf("scantest");
@@ -74,13 +69,6 @@ public abstract class TestTableInputFormatScanBase {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    // test intermittently fails under hadoop2 (2.0.2-alpha) if shortcircuit-read (scr) is on.
-    // this turns it off for this test.  TODO: Figure out why scr breaks recovery.
-    System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
-
-    // switch TIF to log at DEBUG level
-    TEST_UTIL.enableDebug(TableInputFormat.class);
-    TEST_UTIL.enableDebug(TableInputFormatBase.class);
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
@@ -97,7 +85,7 @@ public abstract class TestTableInputFormatScanBase {
    * Pass the key and value to reduce.
    */
   public static class ScanMapper
-  extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
+    extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
 
     /**
      * Pass the key and value to reduce.
@@ -110,7 +98,7 @@ public abstract class TestTableInputFormatScanBase {
     @Override
     public void map(ImmutableBytesWritable key, Result value,
       Context context)
-    throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
       if (value.size() != 2) {
         throw new IOException("There should be two input columns");
       }
@@ -134,7 +122,7 @@ public abstract class TestTableInputFormatScanBase {
    * Checks the last and first key seen against the scanner boundaries.
    */
   public static class ScanReducer
-  extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
+    extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
                     NullWritable, NullWritable> {
 
     private String first = null;
@@ -142,7 +130,7 @@ public abstract class TestTableInputFormatScanBase {
 
     protected void reduce(ImmutableBytesWritable key,
         Iterable<ImmutableBytesWritable> values, Context context)
-    throws IOException ,InterruptedException {
+      throws IOException ,InterruptedException {
       int count = 0;
       for (ImmutableBytesWritable value : values) {
         String val = Bytes.toStringBinary(value.get());
@@ -155,7 +143,7 @@ public abstract class TestTableInputFormatScanBase {
     }
 
     protected void cleanup(Context context)
-    throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
       Configuration c = context.getConfiguration();
       String startRow = c.get(KEY_STARTROW);
       String lastRow = c.get(KEY_LASTROW);
@@ -173,19 +161,15 @@ public abstract class TestTableInputFormatScanBase {
 
   /**
    * Tests an MR Scan initialized from properties set in the Configuration.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
    */
   protected void testScanFromConfiguration(String start, String stop, String last)
-  throws IOException, InterruptedException, ClassNotFoundException {
+      throws IOException, InterruptedException, ClassNotFoundException {
     String jobName = "ScanFromConfig" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") +
       "To" + (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     c.set(TableInputFormat.INPUT_TABLE, TABLE_NAME.getNameAsString());
-    c.set(TableInputFormat.SCAN_COLUMN_FAMILY, Bytes.toString(INPUT_FAMILYS[0]) + ", "
-          + Bytes.toString(INPUT_FAMILYS[1]));
+    c.set(TableInputFormat.SCAN_COLUMN_FAMILY,
+      Bytes.toString(INPUT_FAMILYS[0]) + ", " + Bytes.toString(INPUT_FAMILYS[1]));
     c.set(KEY_STARTROW, start != null ? start : "");
     c.set(KEY_LASTROW, last != null ? last : "");
 
@@ -197,7 +181,7 @@ public abstract class TestTableInputFormatScanBase {
       c.set(TableInputFormat.SCAN_ROW_STOP, stop);
     }
 
-    Job job = new Job(c, jobName);
+    Job job = Job.getInstance(c, jobName);
     job.setMapperClass(ScanMapper.class);
     job.setReducerClass(ScanReducer.class);
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);
@@ -211,32 +195,27 @@ public abstract class TestTableInputFormatScanBase {
 
   /**
    * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
    */
   protected void testScan(String start, String stop, String last)
-  throws IOException, InterruptedException, ClassNotFoundException {
-    String jobName = "Scan" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") +
-      "To" + (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
+      throws IOException, InterruptedException, ClassNotFoundException {
+    String jobName = "Scan" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") + "To" +
+      (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     Scan scan = new Scan();
     scan.addFamily(INPUT_FAMILYS[0]);
     scan.addFamily(INPUT_FAMILYS[1]);
     if (start != null) {
-      scan.setStartRow(Bytes.toBytes(start));
+      scan.withStartRow(Bytes.toBytes(start));
     }
     c.set(KEY_STARTROW, start != null ? start : "");
     if (stop != null) {
-      scan.setStopRow(Bytes.toBytes(stop));
+      scan.withStopRow(Bytes.toBytes(stop));
     }
     c.set(KEY_LASTROW, last != null ? last : "");
     LOG.info("scan before: " + scan);
-    Job job = new Job(c, jobName);
-    TableMapReduceUtil.initTableMapperJob(
-      TABLE_NAME, scan, ScanMapper.class,
+    Job job = Job.getInstance(c, jobName);
+    TableMapReduceUtil.initTableMapperJob(TABLE_NAME, scan, ScanMapper.class,
       ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
     job.setReducerClass(ScanReducer.class);
     job.setNumReduceTasks(1); // one to get final "first" and "last" key
@@ -250,14 +229,9 @@ public abstract class TestTableInputFormatScanBase {
   /**
    * Tests Number of inputSplits for MR job when specify number of mappers for TableInputFormatXXX
    * This test does not run MR job
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
    */
-  public void testNumOfSplits(int splitsPerRegion, int expectedNumOfSplits) throws IOException,
-      InterruptedException,
-      ClassNotFoundException {
+  protected void testNumOfSplits(int splitsPerRegion, int expectedNumOfSplits)
+      throws IOException, InterruptedException, ClassNotFoundException {
     String jobName = "TestJobForNumOfSplits";
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
@@ -267,25 +241,27 @@ public abstract class TestTableInputFormatScanBase {
     c.setInt("hbase.mapreduce.tableinput.mappers.per.region", splitsPerRegion);
     c.set(KEY_STARTROW, "");
     c.set(KEY_LASTROW, "");
-    Job job = new Job(c, jobName);
+    Job job = Job.getInstance(c, jobName);
     TableMapReduceUtil.initTableMapperJob(TABLE_NAME.getNameAsString(), scan, ScanMapper.class,
-        ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
+      ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
     TableInputFormat tif = new TableInputFormat();
     tif.setConf(job.getConfiguration());
     Assert.assertEquals(TABLE_NAME, table.getName());
     List<InputSplit> splits = tif.getSplits(job);
+    for (InputSplit split : splits) {
+      TableSplit tableSplit = (TableSplit) split;
+      // In table input format, we do no store the scanner at the split level
+      // because we use the scan object from the map-reduce job conf itself.
+      Assert.assertTrue(tableSplit.getScanAsString().isEmpty());
+    }
     Assert.assertEquals(expectedNumOfSplits, splits.size());
   }
 
   /**
    * Run MR job to check the number of mapper = expectedNumOfSplits
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws ClassNotFoundException
    */
-  public void testNumOfSplitsMR(int splitsPerRegion, int expectedNumOfSplits) throws IOException,
-      InterruptedException,
-      ClassNotFoundException {
+  protected void testNumOfSplitsMR(int splitsPerRegion, int expectedNumOfSplits)
+      throws IOException, InterruptedException, ClassNotFoundException {
     String jobName = "TestJobForNumOfSplits-MR";
     LOG.info("Before map/reduce startup - job " + jobName);
     JobConf c = new JobConf(TEST_UTIL.getConfiguration());
@@ -297,7 +273,7 @@ public abstract class TestTableInputFormatScanBase {
     c.set(KEY_LASTROW, "");
     Job job = Job.getInstance(c, jobName);
     TableMapReduceUtil.initTableMapperJob(TABLE_NAME.getNameAsString(), scan, ScanMapper.class,
-        ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
+      ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
     job.setReducerClass(ScanReducer.class);
     job.setNumReduceTasks(1);
     job.setOutputFormatClass(NullOutputFormat.class);
@@ -305,20 +281,20 @@ public abstract class TestTableInputFormatScanBase {
     // for some reason, hbase does not expose JobCounter.TOTAL_LAUNCHED_MAPS,
     // we use TaskCounter.SHUFFLED_MAPS to get total launched maps
     assertEquals("Saw the wrong count of mappers per region", expectedNumOfSplits,
-        job.getCounters().findCounter(TaskCounter.SHUFFLED_MAPS).getValue());
+      job.getCounters().findCounter(TaskCounter.SHUFFLED_MAPS).getValue());
   }
 
   /**
-   * Run MR job to test autobalance for setting number of mappers for TIF
-   * This does not run real MR job
+   * Run MR job to test autobalance for setting number of mappers for TIF This does not run real MR
+   * job
    */
-  public void testAutobalanceNumOfSplit() throws IOException {
+  protected void testAutobalanceNumOfSplit() throws IOException {
     // set up splits for testing
     List<InputSplit> splits = new ArrayList<>(5);
-    int[] regionLen = {10, 20, 20, 40, 60};
+    int[] regionLen = { 10, 20, 20, 40, 60 };
     for (int i = 0; i < 5; i++) {
-      InputSplit split = new TableSplit(TABLE_NAME, new Scan(),
-          Bytes.toBytes(i), Bytes.toBytes(i + 1), "", "", regionLen[i] * 1048576);
+      InputSplit split = new TableSplit(TABLE_NAME, new Scan(), Bytes.toBytes(i),
+        Bytes.toBytes(i + 1), "", "", regionLen[i] * 1048576);
       splits.add(split);
     }
     TableInputFormat tif = new TableInputFormat();

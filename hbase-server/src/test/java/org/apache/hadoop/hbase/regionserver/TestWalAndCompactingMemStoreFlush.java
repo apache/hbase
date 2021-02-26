@@ -17,27 +17,35 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.mockito.Mockito;
 
 /**
  * This test verifies the correctness of the Per Column Family flushing strategy
@@ -45,6 +53,10 @@ import static org.junit.Assert.assertTrue;
  */
 @Category({ RegionServerTests.class, LargeTests.class })
 public class TestWalAndCompactingMemStoreFlush {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWalAndCompactingMemStoreFlush.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Path DIR = TEST_UTIL.getDataTestDir("TestHRegion");
@@ -58,15 +70,17 @@ public class TestWalAndCompactingMemStoreFlush {
   public static final byte[] FAMILY2 = FAMILIES[1];
   public static final byte[] FAMILY3 = FAMILIES[2];
 
+  private Configuration conf;
+
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
-    int i=0;
+    int i = 0;
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
     for (byte[] family : FAMILIES) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       // even column families are going to have compacted memstore
-      if(i%2 == 0) {
-        hcd.setInMemoryCompaction(MemoryCompactionPolicy.valueOf(
-            conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY)));
+      if (i % 2 == 0) {
+        hcd.setInMemoryCompaction(MemoryCompactionPolicy
+            .valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY)));
       } else {
         hcd.setInMemoryCompaction(MemoryCompactionPolicy.NONE);
       }
@@ -76,7 +90,12 @@ public class TestWalAndCompactingMemStoreFlush {
 
     HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
     Path path = new Path(DIR, callingMethod);
-    return HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd, false);
+    region.regionServicesForStores = Mockito.spy(region.regionServicesForStores);
+    ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+    Mockito.when(region.regionServicesForStores.getInMemoryCompactionPool()).thenReturn(pool);
+    region.initialize(null);
+    return region;
   }
 
   // A helper function to create puts.
@@ -101,47 +120,31 @@ public class TestWalAndCompactingMemStoreFlush {
     return p;
   }
 
-  // A helper function to create gets.
-  private Get createGet(int familyNum, int putNum) {
-    byte[] row = Bytes.toBytes("row" + familyNum + "-" + putNum);
-    return new Get(row);
-  }
-
   private void verifyInMemoryFlushSize(Region region) {
     assertEquals(
       ((CompactingMemStore) ((HStore)region.getStore(FAMILY1)).memstore).getInmemoryFlushSize(),
       ((CompactingMemStore) ((HStore)region.getStore(FAMILY3)).memstore).getInmemoryFlushSize());
   }
 
-  // A helper function to verify edits.
-  void verifyEdit(int familyNum, int putNum, Table table) throws IOException {
-    Result r = table.get(createGet(familyNum, putNum));
-    byte[] family = FAMILIES[familyNum - 1];
-    byte[] qf = Bytes.toBytes("q" + familyNum);
-    byte[] val = Bytes.toBytes("val" + familyNum + "-" + putNum);
-    assertNotNull(("Missing Put#" + putNum + " for CF# " + familyNum), r.getFamilyMap(family));
-    assertNotNull(("Missing Put#" + putNum + " for CF# " + familyNum),
-      r.getFamilyMap(family).get(qf));
-    assertTrue(("Incorrect value for Put#" + putNum + " for CF# " + familyNum),
-      Arrays.equals(r.getFamilyMap(family).get(qf), val));
-  }
-
-  @Test(timeout = 180000)
-  public void testSelectiveFlushWithEager() throws IOException {
-
-    // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
-    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
+  @Before
+  public void setup() {
+    conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
         FlushNonSloppyStoresFirstPolicy.class.getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
+  }
+
+  @Test
+  public void testSelectiveFlushWithEager() throws IOException {
+    // Set up the configuration
+    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     // set memstore to do data compaction
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(MemoryCompactionPolicy.EAGER));
 
     // Intialize the region
-    Region region = initHRegion("testSelectiveFlushWithEager", conf);
+    HRegion region = initHRegion("testSelectiveFlushWithEager", conf);
     verifyInMemoryFlushSize(region);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
@@ -161,7 +164,7 @@ public class TestWalAndCompactingMemStoreFlush {
       region.put(createPut(2, i));
     }
 
-    long totalMemstoreSize = region.getMemStoreSize();
+    long totalMemstoreSize = region.getMemStoreDataSize();
 
     // Find the smallest LSNs for edits wrt to each CF.
     long smallestSeqCF1PhaseI = region.getOldestSeqIdOfStore(FAMILY1);
@@ -352,29 +355,25 @@ public class TestWalAndCompactingMemStoreFlush {
     s = s + "----AFTER THIRD AND FORTH FLUSH, The smallest sequence in region WAL is: "
         + smallestSeqInRegionCurrentMemstorePhaseV
         + ". After additional inserts and last flush, the entire region size is:" + region
-        .getMemStoreSize()
+        .getMemStoreDataSize()
         + "\n----------------------------------\n";
 
     // Since we won't find any CF above the threshold, and hence no specific
     // store to flush, we should flush all the memstores
     // Also compacted memstores are flushed to disk.
-    assertEquals(0, region.getMemStoreSize());
+    assertEquals(0, region.getMemStoreDataSize());
     System.out.println(s);
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /*------------------------------------------------------------------------------*/
   /* Check the same as above but for index-compaction type of compacting memstore */
-  @Test(timeout = 180000)
+  @Test
   public void testSelectiveFlushWithIndexCompaction() throws IOException {
-
     /*------------------------------------------------------------------------------*/
     /* SETUP */
     // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-        FlushNonSloppyStoresFirstPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to index-compaction
@@ -382,7 +381,7 @@ public class TestWalAndCompactingMemStoreFlush {
         String.valueOf(MemoryCompactionPolicy.BASIC));
 
     // Initialize the region
-    Region region = initHRegion("testSelectiveFlushWithIndexCompaction", conf);
+    HRegion region = initHRegion("testSelectiveFlushWithIndexCompaction", conf);
     verifyInMemoryFlushSize(region);
     /*------------------------------------------------------------------------------*/
     /* PHASE I - insertions */
@@ -404,7 +403,7 @@ public class TestWalAndCompactingMemStoreFlush {
     /*------------------------------------------------------------------------------*/
     /*------------------------------------------------------------------------------*/
     /* PHASE I - collect sizes */
-    long totalMemstoreSizePhaseI = region.getMemStoreSize();
+    long totalMemstoreSizePhaseI = region.getMemStoreDataSize();
     // Find the smallest LSNs for edits wrt to each CF.
     long smallestSeqCF1PhaseI = region.getOldestSeqIdOfStore(FAMILY1);
     long smallestSeqCF2PhaseI = region.getOldestSeqIdOfStore(FAMILY2);
@@ -467,7 +466,7 @@ public class TestWalAndCompactingMemStoreFlush {
         .getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
     // Find the smallest LSNs for edits wrt to each CF.
     long smallestSeqCF3PhaseII = region.getOldestSeqIdOfStore(FAMILY3);
-    long totalMemstoreSizePhaseII = region.getMemStoreSize();
+    long totalMemstoreSizePhaseII = region.getMemStoreDataSize();
 
     /*------------------------------------------------------------------------------*/
     /* PHASE II - validation */
@@ -510,7 +509,7 @@ public class TestWalAndCompactingMemStoreFlush {
     /* PHASE III - collect sizes */
     // How much does the CF1 memstore occupy now? Will be used later.
     MemStoreSize cf1MemstoreSizePhaseIII = region.getStore(FAMILY1).getMemStoreSize();
-    long totalMemstoreSizePhaseIII = region.getMemStoreSize();
+    long totalMemstoreSizePhaseIII = region.getMemStoreDataSize();
 
     /*------------------------------------------------------------------------------*/
     /* PHASE III - validation */
@@ -568,7 +567,7 @@ public class TestWalAndCompactingMemStoreFlush {
     MemStoreSize cf3MemstoreSizePhaseV = region.getStore(FAMILY3).getMemStoreSize();
     long smallestSeqInRegionCurrentMemstorePhaseV = getWAL(region)
         .getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
-    long totalMemstoreSizePhaseV = region.getMemStoreSize();
+    long totalMemstoreSizePhaseV = region.getMemStoreDataSize();
 
     /*------------------------------------------------------------------------------*/
     /* PHASE V - validation */
@@ -581,7 +580,7 @@ public class TestWalAndCompactingMemStoreFlush {
     // The total memstores size should be empty
     assertEquals(0, totalMemstoreSizePhaseV);
     // Because there is nothing in any memstore the WAL's LSN should be -1
-    assertEquals(smallestSeqInRegionCurrentMemstorePhaseV, HConstants.NO_SEQNUM);
+    assertEquals(HConstants.NO_SEQNUM, smallestSeqInRegionCurrentMemstorePhaseV);
 
     // What happens when we hit the memstore limit, but we are not able to find
     // any Column Family above the threshold?
@@ -625,15 +624,11 @@ public class TestWalAndCompactingMemStoreFlush {
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testSelectiveFlushAndWALinDataCompaction() throws IOException {
     // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-        FlushNonSloppyStoresFirstPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
-    conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to do data compaction and not to use the speculative scan
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(MemoryCompactionPolicy.EAGER));
@@ -660,7 +655,7 @@ public class TestWalAndCompactingMemStoreFlush {
     ((CompactingMemStore) ((HStore) region.getStore(FAMILY1)).memstore).setCompositeSnapshot(false);
     ((CompactingMemStore) ((HStore) region.getStore(FAMILY3)).memstore).setCompositeSnapshot(false);
 
-    long totalMemstoreSize = region.getMemStoreSize();
+    long totalMemstoreSize = region.getMemStoreDataSize();
 
     // Find the sizes of the memstores of each CF.
     MemStoreSize cf1MemstoreSizePhaseI = region.getStore(FAMILY1).getMemStoreSize();
@@ -761,21 +756,17 @@ public class TestWalAndCompactingMemStoreFlush {
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testSelectiveFlushWithBasicAndMerge() throws IOException {
     // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-        FlushNonSloppyStoresFirstPolicy.class.getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
-        75 * 1024);
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.8);
     // set memstore to do index compaction with merge
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(MemoryCompactionPolicy.BASIC));
     // length of pipeline that requires merge
-    conf.setInt(MemStoreCompactor.COMPACTING_MEMSTORE_THRESHOLD_KEY, 1);
+    conf.setInt(MemStoreCompactionStrategy.COMPACTING_MEMSTORE_THRESHOLD_KEY, 1);
 
     // Intialize the HRegion
     HRegion region = initHRegion("testSelectiveFlushWithBasicAndMerge", conf);
@@ -795,7 +786,13 @@ public class TestWalAndCompactingMemStoreFlush {
       region.put(createPut(2, i));
     }
 
-    long totalMemstoreSize = region.getMemStoreSize();
+    long totalMemstoreSize = region.getMemStoreDataSize();
+
+    // test in-memory flashing into CAM here
+    ((CompactingMemStore) ((HStore)region.getStore(FAMILY1)).memstore).setIndexType(
+        CompactingMemStore.IndexType.ARRAY_MAP);
+    ((CompactingMemStore) ((HStore)region.getStore(FAMILY3)).memstore).setIndexType(
+        CompactingMemStore.IndexType.ARRAY_MAP);
 
     // Find the sizes of the memstores of each CF.
     MemStoreSize cf1MemstoreSizePhaseI = region.getStore(FAMILY1).getMemStoreSize();
@@ -902,16 +899,12 @@ public class TestWalAndCompactingMemStoreFlush {
   }
 
   // should end in 300 seconds (5 minutes)
-  @Test(timeout = 300000)
+  @Test
   public void testStressFlushAndWALinIndexCompaction() throws IOException {
     // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 600 * 1024);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-        FlushNonSloppyStoresFirstPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
         200 * 1024);
-    conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to do data compaction and not to use the speculative scan
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(MemoryCompactionPolicy.BASIC));

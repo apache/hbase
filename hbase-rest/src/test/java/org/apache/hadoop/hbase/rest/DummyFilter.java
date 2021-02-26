@@ -28,11 +28,11 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DummyFilter implements Filter {
-  private static final Log LOG = LogFactory.getLog(DummyFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DummyFilter.class);
 
   @Override
   public void destroy() {

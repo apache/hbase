@@ -17,41 +17,42 @@
 pipeline {
   agent {
     node {
-      label 'Hadoop'
+      label 'hbase'
     }
   }
   triggers {
-    cron('@daily')
+    pollSCM('@daily')
   }
   options {
-    buildDiscarder(logRotator(numToKeepStr: '30'))
-    timeout (time: 6, unit: 'HOURS')
+    buildDiscarder(logRotator(numToKeepStr: '15'))
+    timeout (time: 16, unit: 'HOURS')
     timestamps()
     skipDefaultCheckout()
+    disableConcurrentBuilds()
   }
   environment {
-    TOOLS = "${env.WORKSPACE}/tools"
-    // where we check out to across stages
-    BASEDIR = "${env.WORKSPACE}/component"
-    YETUS_RELEASE = '0.5.0'
-    // where we'll write everything from different steps.
-    OUTPUT_RELATIVE_GENERAL = 'output-general'
-    OUTPUTDIR_GENERAL = "${env.WORKSPACE}/output-general"
-    OUTPUT_RELATIVE_JDK7 = 'output-jdk7'
-    OUTPUTDIR_JDK7 = "${env.WORKSPACE}/output-jdk7"
-    OUTPUT_RELATIVE_JDK8 = 'output-jdk8'
-    OUTPUTDIR_JDK8 = "${env.WORKSPACE}/output-jdk8"
+    YETUS_RELEASE = '0.12.0'
+    // where we'll write everything from different steps. Need a copy here so the final step can check for success/failure.
+    OUTPUT_DIR_RELATIVE_GENERAL = 'output-general'
+    OUTPUT_DIR_RELATIVE_JDK7 = 'output-jdk7'
+    OUTPUT_DIR_RELATIVE_JDK8_HADOOP2 = 'output-jdk8-hadoop2'
+    OUTPUT_DIR_RELATIVE_JDK8_HADOOP3 = 'output-jdk8-hadoop3'
+    OUTPUT_DIR_RELATIVE_JDK11_HADOOP3 = 'output-jdk11-hadoop3'
+
     PROJECT = 'hbase'
-    PROJET_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
+    PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
+    PERSONALITY_FILE = 'tools/personality.sh'
     // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
     AUTHOR_IGNORE_LIST = 'src/main/asciidoc/_chapters/developer.adoc,dev-support/test-patch.sh'
     WHITESPACE_IGNORE_LIST = '.*/generated/.*'
     // output from surefire; sadly the archive function in yetus only works on file names.
-    ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*.txt'
+    ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump'
     // These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
-    TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop'
-    BRANCH_SPECIFIC_DOCKERFILE = "${env.BASEDIR}/dev-support/docker/Dockerfile"
-    EXCLUDE_TESTS_URL = 'https://builds.apache.org/job/HBase-Find-Flaky-Tests/lastSuccessfulBuild/artifact/excludes/'
+    TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite'
+    EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/excludes"
+      // TODO does hadoopcheck need to be jdk specific?
+    SHALLOW_CHECKS = 'all,-shadedjars,-unit' // run by the 'yetus general check'
+    DEEP_CHECKS = 'compile,htmlout,javac,maven,mvninstall,shadedjars,unit' // run by 'yetus jdkX (HadoopY) checks'
   }
   parameters {
     booleanParam(name: 'USE_YETUS_PRERELEASE', defaultValue: false, description: '''Check to use the current HEAD of apache/yetus rather than our configured release.
@@ -60,250 +61,743 @@ pipeline {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
   }
   stages {
-    stage ('scm checkout') {
+    stage ('scm-checkout') {
       steps {
-        dir('component') {
-          checkout scm
-        }
+            dir('component') {
+              checkout scm
+            }
       }
     }
-    stage ('yetus install') {
-      steps {
-        sh  '''#!/usr/bin/env bash
-echo "Ensure we have a copy of Apache Yetus."
-if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
-  YETUS_DIR="${WORKSPACE}/yetus-${YETUS_RELEASE}"
-  echo "Checking for Yetus ${YETUS_RELEASE} in '${YETUS_DIR}'"
-  if [ ! -d "${YETUS_DIR}" ]; then
-    echo "New download of Apache Yetus version ${YETUS_RELEASE}."
-    rm -rf "${WORKSPACE}/.gpg"
-    mkdir -p "${WORKSPACE}/.gpg"
-    chmod -R 700 "${WORKSPACE}/.gpg"
-
-    echo "install yetus project KEYS"
-    curl -L --fail -o "${WORKSPACE}/KEYS_YETUS" https://dist.apache.org/repos/dist/release/yetus/KEYS
-    gpg --homedir "${WORKSPACE}/.gpg" --import "${WORKSPACE}/KEYS_YETUS"
-
-    echo "download yetus release ${YETUS_RELEASE}"
-    curl -L --fail -O "https://dist.apache.org/repos/dist/release/yetus/${YETUS_RELEASE}/yetus-${YETUS_RELEASE}-bin.tar.gz"
-    curl -L --fail -O "https://dist.apache.org/repos/dist/release/yetus/${YETUS_RELEASE}/yetus-${YETUS_RELEASE}-bin.tar.gz.asc"
-    echo "verifying yetus release"
-    gpg --homedir "${WORKSPACE}/.gpg" --verify "yetus-${YETUS_RELEASE}-bin.tar.gz.asc"
-    mv "yetus-${YETUS_RELEASE}-bin.tar.gz" yetus.tar.gz
-  else
-    echo "Reusing cached download of Apache Yetus version ${YETUS_RELEASE}."
-  fi
-else
-  YETUS_DIR="${WORKSPACE}/yetus-git"
-  rm -rf "${YETUS_DIR}"
-  echo "downloading from github"
-  curl -L --fail https://api.github.com/repos/apache/yetus/tarball/HEAD -o yetus.tar.gz
-fi
-if [ ! -d "${YETUS_DIR}" ]; then
-  echo "unpacking yetus into '${YETUS_DIR}'"
-  mkdir -p "${YETUS_DIR}"
-  gunzip -c yetus.tar.gz | tar xpf - -C "${YETUS_DIR}" --strip-components 1
-fi
-        '''
-        dir ("${env.TOOLS}") {
-          sh """#!/usr/bin/env bash
-echo "Downloading Project personality."
-curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
-          """
-        }
-        stash name: 'yetus', includes: "yetus-*/*,yetus-*/**/*,tools/personality.sh"
-      }
-    }
-    stage ('yetus general check') {
-      environment {
-        // TODO does hadoopcheck need to be jdk specific?
-        // Should be things that work with multijdk
-        TESTS = 'all,-unit,-findbugs'
-        // on branches that don't support jdk7, this will already be JAVA_HOME, so we'll end up not
-        // doing multijdk there.
-        MULTIJDK = '/usr/lib/jvm/java-8-oracle'
-        OUTPUT_RELATIVE = "${env.OUTPUT_RELATIVE_GENERAL}"
-        OUTPUTDIR = "${env.OUTPUTDIR_GENERAL}"
-      }
-      steps {
-        unstash 'yetus'
-        // TODO should this be a download from master, similar to how the personality is?
-        sh "${env.BASEDIR}/dev-support/hbase_nightly_yetus.sh"
-      }
-      post {
-        always {
-          // env variables don't work in archive? or this has to be relative to WORKSPACE. :(
-          archive 'output-general/*'
-          archive 'output-general/**/*'
-          publishHTML target: [
-            allowMissing: true,
-            keepAll: true,
-            alwaysLinkToLastBuild: true,
-            // has to be relative to WORKSPACE :(
-            reportDir: 'output-general',
-            reportFiles: 'console-report.html',
-            reportName: 'General Nightly Build Report'
-          ]
-        }
-      }
-    }
-    stage ('yetus jdk7 checks') {
-      when {
-        branch 'branch-1*'
-      }
-      environment {
-        TESTS = 'mvninstall,compile,javac,unit,htmlout'
-        OUTPUT_RELATIVE = "${env.OUTPUT_RELATIVE_JDK7}"
-        OUTPUTDIR = "${env.OUTPUTDIR_JDK7}"
-        // On branches where we do jdk7 checks, jdk7 will be JAVA_HOME already.
-      }
-      steps {
-        unstash 'yetus'
-        sh """#!/usr/bin/env bash
-          # for branch-1.1 we don't do jdk8 findbugs, so do it here
-          if [ "${env.BRANCH_NAME}" == "branch-1.1" ]; then
-            TESTS+=",findbugs"
-          fi
-          "${env.BASEDIR}/dev-support/hbase_nightly_yetus.sh"
-        """
-      }
-      post {
-        always {
-          junit 'output-jdk7/**/target/**/TEST-*.xml'
-          // zip surefire reports.
-          sh '''#!/bin/bash -e
-            if [ -d "${OUTPUTDIR}/archiver" ]; then
-              count=$(find "${OUTPUTDIR}/archiver" -type f | wc -l)
-              if [[ 0 -ne ${count} ]]; then
-                echo "zipping ${count} archived files"
-                zip -q -m -r "${OUTPUTDIR}/test_logs.zip" "${OUTPUTDIR}/archiver"
+    stage ('thirdparty installs') {
+      parallel {
+        stage ('yetus install') {
+          steps {
+            // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
+            dir('downloads-yetus') {
+              // can't just do a simple echo or the directory won't be created. :(
+              sh '''#!/usr/bin/env bash
+                echo "Make sure we have a directory for downloading dependencies: $(pwd)"
+'''
+            }
+            sh  '''#!/usr/bin/env bash
+              set -e
+              echo "Ensure we have a copy of Apache Yetus."
+              if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
+                YETUS_DIR="${WORKSPACE}/yetus-${YETUS_RELEASE}"
+                echo "Checking for Yetus ${YETUS_RELEASE} in '${YETUS_DIR}'"
+                if ! "${YETUS_DIR}/bin/test-patch" --version >/dev/null 2>&1 ; then
+                  rm -rf "${YETUS_DIR}"
+                  "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
+                      --working-dir "${WORKSPACE}/downloads-yetus" \
+                      --keys 'https://www.apache.org/dist/yetus/KEYS' \
+                      "${WORKSPACE}/yetus-${YETUS_RELEASE}-bin.tar.gz" \
+                      "yetus/${YETUS_RELEASE}/apache-yetus-${YETUS_RELEASE}-bin.tar.gz"
+                  mv "yetus-${YETUS_RELEASE}-bin.tar.gz" yetus.tar.gz
+                else
+                  echo "Reusing cached install of Apache Yetus version ${YETUS_RELEASE}."
+                fi
               else
-                echo "No archived files, skipping compressing."
+                YETUS_DIR="${WORKSPACE}/yetus-git"
+                rm -rf "${YETUS_DIR}"
+                echo "downloading from github"
+                curl -L --fail https://api.github.com/repos/apache/yetus/tarball/HEAD -o yetus.tar.gz
               fi
-            else
-              echo "No archiver directory, skipping compressing."
-            fi
+              if [ ! -d "${YETUS_DIR}" ]; then
+                echo "unpacking yetus into '${YETUS_DIR}'"
+                mkdir -p "${YETUS_DIR}"
+                gunzip -c yetus.tar.gz | tar xpf - -C "${YETUS_DIR}" --strip-components 1
+              fi
+            '''
+            // Set up the file we need at PERSONALITY_FILE location
+            dir ("tools") {
+              sh """#!/usr/bin/env bash
+                set -e
+                echo "Downloading Project personality from ${env.PROJECT_PERSONALITY}"
+                curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
+              """
+            }
+            stash name: 'yetus', includes: "yetus-*/*,yetus-*/**/*,tools/personality.sh"
+          }
+        }
+        stage ('hadoop 2 cache') {
+          environment {
+            HADOOP2_VERSION="2.10.0"
+          }
+          steps {
+            // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
+            dir('downloads-hadoop-2') {
+              sh '''#!/usr/bin/env bash
+                echo "Make sure we have a directory for downloading dependencies: $(pwd)"
 '''
-          // env variables don't work in archive? or this has to be relative to WORKSPACE. :(
-          archive 'output-jdk7/*'
-          archive 'output-jdk7/**/*'
-          publishHTML target: [
-            allowMissing: true,
-            keepAll: true,
-            alwaysLinkToLastBuild: true,
-            // has to be relative to WORKSPACE :(
-            reportDir: 'output-jdk7',
-            reportFiles: 'console-report.html',
-            reportName: 'JDK7 Nightly Build Report'
-          ]
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              echo "Ensure we have a copy of Hadoop ${HADOOP2_VERSION}"
+              "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
+                  --working-dir "${WORKSPACE}/downloads-hadoop-2" \
+                  --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
+                  "${WORKSPACE}/hadoop-${HADOOP2_VERSION}-bin.tar.gz" \
+                  "hadoop/common/hadoop-${HADOOP2_VERSION}/hadoop-${HADOOP2_VERSION}.tar.gz"
+              for stale in $(ls -1 "${WORKSPACE}"/hadoop-2*.tar.gz | grep -v ${HADOOP2_VERSION}); do
+                echo "Delete stale hadoop 2 cache ${stale}"
+                rm -rf $stale
+              done
+            '''
+            stash name: 'hadoop-2', includes: "hadoop-${HADOOP2_VERSION}-bin.tar.gz"
+          }
+        }
+        stage ('hadoop 3 cache') {
+          environment {
+            HADOOP3_VERSION="3.1.1"
+          }
+          steps {
+            // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
+            dir('downloads-hadoop-3') {
+              sh '''#!/usr/bin/env bash
+                echo "Make sure we have a directory for downloading dependencies: $(pwd)"
+'''
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              echo "Ensure we have a copy of Hadoop ${HADOOP3_VERSION}"
+              "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
+                  --working-dir "${WORKSPACE}/downloads-hadoop-3" \
+                  --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
+                  "${WORKSPACE}/hadoop-${HADOOP3_VERSION}-bin.tar.gz" \
+                  "hadoop/common/hadoop-${HADOOP3_VERSION}/hadoop-${HADOOP3_VERSION}.tar.gz"
+              for stale in $(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | grep -v ${HADOOP3_VERSION}); do
+                echo "Delete stale hadoop 3 cache ${stale}"
+                rm -rf $stale
+              done
+            '''
+            stash name: 'hadoop-3', includes: "hadoop-${HADOOP3_VERSION}-bin.tar.gz"
+          }
         }
       }
     }
-    stage ('yetus jdk8 checks') {
-      when {
-        not {
-          branch 'branch-1.1*'
-        }
-      }
-      environment {
-        TESTS = 'mvninstall,compile,javac,unit,findbugs,htmlout'
-        OUTPUT_RELATIVE = "${env.OUTPUT_RELATIVE_JDK8}"
-        OUTPUTDIR = "${env.OUTPUTDIR_JDK8}"
-        // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
-        // and is needed on branches that do both jdk7 and jdk8
-        SET_JAVA_HOME = '/usr/lib/jvm/java-8-oracle'
-      }
+    stage ('init health results') {
       steps {
-        unstash 'yetus'
-        sh "${env.BASEDIR}/dev-support/hbase_nightly_yetus.sh"
+        // stash with given name for all tests we might run, so that we can unstash all of them even if
+        // we skip some due to e.g. branch-specific JDK or Hadoop support
+        stash name: 'general-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_GENERAL}/doesn't-match"
+        stash name: 'jdk7-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK7}/doesn't-match"
+        stash name: 'jdk8-hadoop2-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/doesn't-match"
+        stash name: 'jdk8-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/doesn't-match"
+        stash name: 'jdk11-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/doesn't-match"
+        stash name: 'srctarball-result', allowEmpty: true, includes: "output-srctarball/doesn't-match"
       }
-      post {
-        always {
-          junit 'output-jdk8/**/target/**/TEST-*.xml'
-          // zip surefire reports.
-          sh '''#!/bin/bash -e
-            if [ -d "${OUTPUTDIR}/archiver" ]; then
-              count=$(find "${OUTPUTDIR}/archiver" -type f | wc -l)
-              if [[ 0 -ne ${count} ]]; then
-                echo "zipping ${count} archived files"
-                zip -q -m -r "${OUTPUTDIR}/test_logs.zip" "${OUTPUTDIR}/archiver"
+    }
+    stage ('health checks') {
+      parallel {
+        stage ('yetus general check') {
+          agent {
+            node {
+              label 'hbase'
+            }
+          }
+          environment {
+            BASEDIR = "${env.WORKSPACE}/component"
+            TESTS = "${env.SHALLOW_CHECKS}"
+            SET_JAVA_HOME = '/usr/lib/jvm/java-8'
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_GENERAL}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_GENERAL}"
+          }
+          steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 general checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+'''
+            unstash 'yetus'
+            // since we have a new node definition we need to re-do the scm checkout
+            dir('component') {
+              checkout scm
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+              "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
+'''
+            // TODO roll this into the hbase_nightly_yetus script
+            sh '''#!/usr/bin/env bash
+              set -e
+              declare -i status=0
+              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                echo '(/) {color:green}+1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
               else
-                echo "No archived files, skipping compressing."
+                echo '(x) {color:red}-1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
+                status=1
               fi
-            else
-              echo "No archiver directory, skipping compressing."
-            fi
-'''
-          // env variables don't work in archive? or this has to be relative to WORKSPACE. :(
-          archive 'output-jdk8/*'
-          archive 'output-jdk8/**/*'
-          publishHTML target: [
-            allowMissing: true,
-            keepAll: true,
-            alwaysLinkToLastBuild: true,
-            // has to be relative to WORKSPACE :(
-            reportDir: 'output-jdk8',
-            reportFiles: 'console-report.html',
-            reportName: 'JDK8 Nightly Build Report'
-          ]
+              echo "-- For more information [see general report|${BUILD_URL}General_20Nightly_20Build_20Report/]" >> "${OUTPUT_DIR}/commentfile"
+              exit "${status}"
+            '''
+          }
+          post {
+            always {
+              stash name: 'general-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              // Has to be relative to WORKSPACE.
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              publishHTML target: [
+                allowMissing: true,
+                keepAll: true,
+                alwaysLinkToLastBuild: true,
+                // Has to be relative to WORKSPACE
+                reportDir: "${env.OUTPUT_DIR_RELATIVE}",
+                reportFiles: 'console-report.html',
+                reportName: 'General Nightly Build Report'
+              ]
+            }
+          }
         }
-      }
-    }
-    // This is meant to mimic what a release manager will do to create RCs.
-    // See http://hbase.apache.org/book.html#maven.release
-    stage ('create source tarball') {
-      tools {
-        maven 'Maven (latest)'
-        // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
-        jdk "JDK 1.8 (latest)"
-      }
-      steps {
-        sh 'mvn --version --offline'
-        dir ("component") {
-          sh '''#!/bin/bash -e
-            echo "Clean..."
-            mvn --batch-mode -DskipTests clean
-            echo "Step 3 Build the source tarball"
-            mvn -Prelease --batch-mode -Dmaven.repo.local="${WORKSPACE}/.m2-for-repo" install -DskipTests assembly:single -Dassembly.file=hbase-assembly/src/main/assembly/src.xml
+        stage ('yetus jdk7 checks') {
+          agent {
+            node {
+              label 'hbase'
+            }
+          }
+          when {
+            branch 'branch-1*'
+          }
+          environment {
+            BASEDIR = "${env.WORKSPACE}/component"
+            TESTS = "${env.DEEP_CHECKS}"
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK7}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK7}"
+            SET_JAVA_HOME = "/usr/lib/jvm/java-7"
+          }
+          steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 jdk7 checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
 '''
+            unstash 'yetus'
+            dir('component') {
+              checkout scm
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+              "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
+'''
+            sh '''#!/usr/bin/env bash
+              set -e
+              declare -i status=0
+              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                echo '(/) {color:green}+1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
+              else
+                echo '(x) {color:red}-1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                status=1
+              fi
+              echo "-- For more information [see jdk7 report|${BUILD_URL}/JDK7_20Nightly_20Build_20Report/]" >> "${OUTPUT_DIR}/commentfile"
+              exit "${status}"
+            '''
+          }
+          post {
+            always {
+              stash name: 'jdk7-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
+              // zip surefire reports.
+              sh '''#!/bin/bash -e
+                if [ -d "${OUTPUT_DIR}/archiver" ]; then
+                  count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
+                  if [[ 0 -ne ${count} ]]; then
+                    echo "zipping ${count} archived files"
+                    zip -q -m -r "${OUTPUT_DIR}/test_logs.zip" "${OUTPUT_DIR}/archiver"
+                  else
+                    echo "No archived files, skipping compressing."
+                  fi
+                else
+                  echo "No archiver directory, skipping compressing."
+                fi
+'''
+              // Has to be relative to WORKSPACE.
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              publishHTML target: [
+                allowMissing         : true,
+                keepAll              : true,
+                alwaysLinkToLastBuild: true,
+                // Has to be relative to WORKSPACE.
+                reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+                reportFiles          : 'console-report.html',
+                reportName           : 'JDK7 Nightly Build Report'
+              ]
+            }
+          }
         }
-        dir ("unpacked_src_tarball") {
-          sh '''#!/bin/bash -e
-            echo "Unpack the source tarball"
-            tar --strip-components=1 -xzf ../component/hbase-assembly/target/hbase-*-src.tar.gz
-            echo "Building from source artifact."
-            mvn -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${WORKSPACE}/.m2-for-src" clean install assembly:single
-            echo "Clean up after checking ability to build."
-            mvn -DskipTests --batch-mode clean
+        stage ('yetus jdk8 hadoop2 checks') {
+          agent {
+            node {
+              label 'hbase'
+            }
+          }
+          environment {
+            BASEDIR = "${env.WORKSPACE}/component"
+            TESTS = "${env.DEEP_CHECKS}"
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}"
+            SET_JAVA_HOME = '/usr/lib/jvm/java-8'
+          }
+          steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
 '''
+            unstash 'yetus'
+            dir('component') {
+              checkout scm
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+              "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
+'''
+            sh '''#!/usr/bin/env bash
+              set -e
+              declare -i status=0
+              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                echo '(/) {color:green}+1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
+              else
+                echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                status=1
+              fi
+              echo "-- For more information [see jdk8 (hadoop2) report|${BUILD_URL}JDK8_20Nightly_20Build_20Report_20_28Hadoop2_29/]" >> "${OUTPUT_DIR}/commentfile"
+              exit "${status}"
+            '''
+          }
+          post {
+            always {
+              stash name: 'jdk8-hadoop2-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
+              // zip surefire reports.
+              sh '''#!/bin/bash -e
+                if [ -d "${OUTPUT_DIR}/archiver" ]; then
+                  count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
+                  if [[ 0 -ne ${count} ]]; then
+                    echo "zipping ${count} archived files"
+                    zip -q -m -r "${OUTPUT_DIR}/test_logs.zip" "${OUTPUT_DIR}/archiver"
+                  else
+                    echo "No archived files, skipping compressing."
+                  fi
+                else
+                  echo "No archiver directory, skipping compressing."
+                fi
+'''
+              // Has to be relative to WORKSPACE.
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              publishHTML target: [
+                allowMissing         : true,
+                keepAll              : true,
+                alwaysLinkToLastBuild: true,
+                // Has to be relative to WORKSPACE.
+                reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+                reportFiles          : 'console-report.html',
+                reportName           : 'JDK8 Nightly Build Report (Hadoop2)'
+              ]
+            }
+          }
         }
-        dir ("component") {
-          sh '''#!/bin/bash -e
-            echo "Clean up the source checkout"
-            mvn -DskipTests --batch-mode clean
-            echo "Diff against source tree"
-            diff --binary --recursive . ../unpacked_src_tarball >../diff_output || true
+        stage ('yetus jdk8 hadoop3 checks') {
+          agent {
+            node {
+              label 'hbase'
+            }
+          }
+          when {
+            not {
+              branch 'branch-1*'
+            }
+          }
+          environment {
+            BASEDIR = "${env.WORKSPACE}/component"
+            TESTS = "${env.DEEP_CHECKS}"
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}"
+            SET_JAVA_HOME = '/usr/lib/jvm/java-8'
+            // Activates hadoop 3.0 profile in maven runs.
+            HADOOP_PROFILE = '3.0'
+          }
+          steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
 '''
+            unstash 'yetus'
+            dir('component') {
+              checkout scm
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+              "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
+'''
+            sh '''#!/usr/bin/env bash
+              set -e
+              declare -i status=0
+              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                echo '(/) {color:green}+1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+              else
+                echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                status=1
+              fi
+              echo "-- For more information [see jdk8 (hadoop3) report|${BUILD_URL}JDK8_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
+              exit "${status}"
+            '''
+          }
+          post {
+            always {
+              stash name: 'jdk8-hadoop3-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
+              // zip surefire reports.
+              sh '''#!/bin/bash -e
+                if [ -d "${OUTPUT_DIR}/archiver" ]; then
+                  count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
+                  if [[ 0 -ne ${count} ]]; then
+                    echo "zipping ${count} archived files"
+                    zip -q -m -r "${OUTPUT_DIR}/test_logs.zip" "${OUTPUT_DIR}/archiver"
+                  else
+                    echo "No archived files, skipping compressing."
+                  fi
+                else
+                  echo "No archiver directory, skipping compressing."
+                fi
+'''
+              // Has to be relative to WORKSPACE.
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              publishHTML target: [
+                allowMissing         : true,
+                keepAll              : true,
+                alwaysLinkToLastBuild: true,
+                // Has to be relative to WORKSPACE.
+                reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+                reportFiles          : 'console-report.html',
+                reportName           : 'JDK8 Nightly Build Report (Hadoop3)'
+              ]
+            }
+          }
         }
-        // expectation check largely based on HBASE-14952
-        sh '''#!/bin/bash -e
-          echo "Checking against things we don't expect to include in the source tarball (git related, hbase-native-client, etc.)"
-          cat >known_excluded <<END
-Only in .: .git
-Only in .: .gitattributes
-Only in .: .gitignore
-Only in .: hbase-native-client
-END
-          if ! diff known_excluded diff_output >/dev/null ; then
-            echo "Any output here are unexpected differences between the source artifact we'd make for an RC and the current branch."
-            echo "The expected differences are on the < side and the current differences are on the > side."
-            echo "In a given set of differences, '.' refers to the branch in the repo and 'unpacked_src_tarball' refers to what we pulled out of the tarball."
-            diff known_excluded diff_output
-          else
-            echo "Everything looks as expected."
-          fi
+        stage ('yetus jdk11 hadoop3 checks') {
+          agent {
+            node {
+              label 'hbase'
+            }
+          }
+          when {
+            not {
+              branch 'branch-1*'
+            }
+          }
+          environment {
+            BASEDIR = "${env.WORKSPACE}/component"
+            TESTS = "${env.DEEP_CHECKS}"
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}"
+            SET_JAVA_HOME = "/usr/lib/jvm/java-11"
+            // Activates hadoop 3.0 profile in maven runs.
+            HADOOP_PROFILE = '3.0'
+            // ErrorProne is broken on JDK11, see HBASE-23894
+            SKIP_ERROR_PRONE = 'true'
+          }
+          steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 jdk11 hadoop3 checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
 '''
+            unstash 'yetus'
+            dir('component') {
+              checkout scm
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+              "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
+'''
+            sh '''#!/usr/bin/env bash
+              set -e
+              declare -i status=0
+              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                echo '(/) {color:green}+1 jdk11 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+              else
+                echo '(x) {color:red}-1 jdk11 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                status=1
+              fi
+              echo "-- For more information [see jdk11 report|${BUILD_URL}JDK11_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
+              exit "${status}"
+            '''
+          }
+          post {
+            always {
+              stash name: 'jdk11-hadoop3-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
+              // zip surefire reports.
+              sh '''#!/bin/bash -e
+                if [ -d "${OUTPUT_DIR}/archiver" ]; then
+                  count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
+                  if [[ 0 -ne ${count} ]]; then
+                    echo "zipping ${count} archived files"
+                    zip -q -m -r "${OUTPUT_DIR}/test_logs.zip" "${OUTPUT_DIR}/archiver"
+                  else
+                    echo "No archived files, skipping compressing."
+                  fi
+                else
+                  echo "No archiver directory, skipping compressing."
+                fi
+'''
+              // Has to be relative to WORKSPACE.
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              publishHTML target: [
+                allowMissing         : true,
+                keepAll              : true,
+                alwaysLinkToLastBuild: true,
+                // Has to be relative to WORKSPACE.
+                reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+                reportFiles          : 'console-report.html',
+                reportName           : 'JDK11 Nightly Build Report (Hadoop3)'
+              ]
+            }
+          }
+        }
+        // This is meant to mimic what a release manager will do to create RCs.
+        // See http://hbase.apache.org/book.html#maven.release
+        // TODO (HBASE-23870): replace this with invocation of the release tool
+        stage ('packaging and integration') {
+          tools {
+            maven 'maven_latest'
+            // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
+            jdk "jdk_1.8_latest"
+          }
+          environment {
+            BASEDIR = "${env.WORKSPACE}/component"
+            BRANCH = "${env.BRANCH_NAME}"
+          }
+          steps {
+            sh '''#!/bin/bash -e
+              echo "Setting up directories"
+              rm -rf "output-srctarball" && mkdir "output-srctarball"
+              rm -rf "output-integration" && mkdir "output-integration" "output-integration/hadoop-2" "output-integration/hadoop-3" "output-integration/hadoop-3-shaded"
+              rm -rf "unpacked_src_tarball" && mkdir "unpacked_src_tarball"
+              rm -rf "hbase-install" && mkdir "hbase-install"
+              rm -rf "hbase-client" && mkdir "hbase-client"
+              rm -rf "hadoop-2" && mkdir "hadoop-2"
+              rm -rf "hadoop-3" && mkdir "hadoop-3"
+              rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
+              rm -rf ".m2-for-src" && mkdir ".m2-for-src"
+              echo "(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-srctarball/commentfile
+              echo "(x) {color:red}-1 client integration test{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-integration/commentfile
+'''
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "output-srctarball/machine" && mkdir "output-srctarball/machine"
+              "${BASEDIR}/dev-support/gather_machine_environment.sh" "output-srctarball/machine"
+              echo "got the following saved stats in 'output-srctarball/machine'"
+              ls -lh "output-srctarball/machine"
+'''
+            sh """#!/bin/bash -e
+              echo "Checking the steps for an RM to make a source artifact, then a binary artifact."
+              if "${env.BASEDIR}/dev-support/hbase_nightly_source-artifact.sh" \
+                  --intermediate-file-dir output-srctarball \
+                  --unpack-temp-dir unpacked_src_tarball \
+                  --maven-m2-initial .m2-for-repo \
+                  --maven-m2-src-build .m2-for-src \
+                  --clean-source-checkout \
+                  "${env.BASEDIR}" ; then
+                echo '(/) {color:green}+1 source release artifact{color}\n-- See build output for details.' >output-srctarball/commentfile
+              else
+                echo '(x) {color:red}-1 source release artifact{color}\n-- See build output for details.' >output-srctarball/commentfile
+                exit 1
+              fi
+"""
+            echo "unpacking the hbase bin tarball into 'hbase-install' and the client tarball into 'hbase-client'"
+            sh '''#!/bin/bash -e
+              if [ 2 -ne $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | wc -l) ]; then
+                echo '(x) {color:red}-1 testing binary artifact{color}\n-- source tarball did not produce the expected binaries.' >>output-srctarball/commentfile
+                exit 1
+              fi
+              install_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | sort | head -n 1)
+              tar --strip-component=1 -xzf "${install_artifact}" -C "hbase-install"
+              client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | sort | tail -n 1)
+              tar --strip-component=1 -xzf "${client_artifact}" -C "hbase-client"
+'''
+            unstash 'hadoop-2'
+            sh '''#!/bin/bash -xe
+              if [[ "${BRANCH}" = branch-2* ]] || [[ "${BRANCH}" = branch-1* ]]; then
+                echo "Attempting to use run an instance on top of Hadoop 2."
+                artifact=$(ls -1 "${WORKSPACE}"/hadoop-2*.tar.gz | head -n 1)
+                tar --strip-components=1 -xzf "${artifact}" -C "hadoop-2"
+                if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+                    --single-process \
+                    --working-dir output-integration/hadoop-2 \
+                    --hbase-client-install "hbase-client" \
+                    "hbase-install" \
+                    "hadoop-2/bin/hadoop" \
+                    hadoop-2/share/hadoop/yarn/timelineservice \
+                    hadoop-2/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
+                    hadoop-2/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                    hadoop-2/bin/mapred \
+                    >output-integration/hadoop-2.log 2>&1 ; then
+                  echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 2. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-2.log]. (note that this means we didn't run on Hadoop 3)" >output-integration/commentfile
+                  exit 2
+                fi
+              else
+                echo "Skipping to run against Hadoop 2 for branch ${BRANCH}"
+              fi
+'''
+            unstash 'hadoop-3'
+            sh '''#!/bin/bash -e
+              if [[ "${BRANCH}" = branch-1* ]]; then
+                echo "Skipping to run against Hadoop 3 for branch ${BRANCH}"
+              else
+                echo "Attempting to use run an instance on top of Hadoop 3."
+                artifact=$(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | head -n 1)
+                tar --strip-components=1 -xzf "${artifact}" -C "hadoop-3"
+                if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+                    --single-process \
+                    --working-dir output-integration/hadoop-3 \
+                    --hbase-client-install hbase-client \
+                    hbase-install \
+                    hadoop-3/bin/hadoop \
+                    hadoop-3/share/hadoop/yarn/timelineservice \
+                    hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
+                    hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                    hadoop-3/bin/mapred \
+                    >output-integration/hadoop-3.log 2>&1 ; then
+                  echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3.log]. (note that this means we didn't check the Hadoop 3 shaded client)" >output-integration/commentfile
+                  exit 2
+                fi
+                echo "Attempting to use run an instance on top of Hadoop 3, relying on the Hadoop client artifacts for the example client program."
+                if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+                    --single-process \
+                    --hadoop-client-classpath hadoop-3/share/hadoop/client/hadoop-client-api-*.jar:hadoop-3/share/hadoop/client/hadoop-client-runtime-*.jar \
+                    --working-dir output-integration/hadoop-3-shaded \
+                    --hbase-client-install hbase-client \
+                    hbase-install \
+                    hadoop-3/bin/hadoop \
+                    hadoop-3/share/hadoop/yarn/timelineservice \
+                    hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
+                    hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                    hadoop-3/bin/mapred \
+                    >output-integration/hadoop-3-shaded.log 2>&1 ; then
+                  echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3 using Hadoop's shaded client. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3-shaded.log]." >output-integration/commentfile
+                  exit 2
+                fi
+                echo "(/) {color:green}+1 client integration test{color}" >output-integration/commentfile
+              fi
+'''
+
+
+          }
+          post {
+            always {
+              stash name: 'srctarball-result', includes: "output-srctarball/commentfile,output-integration/commentfile"
+              archiveArtifacts artifacts: 'output-srctarball/*'
+              archiveArtifacts artifacts: 'output-srctarball/**/*'
+              archiveArtifacts artifacts: 'output-integration/*'
+              archiveArtifacts artifacts: 'output-integration/**/*'
+            }
+          }
+        }
       }
     }
   }
+  post {
+    always {
+      script {
+         try {
+           unstash 'general-result'
+           unstash 'jdk7-result'
+           unstash 'jdk8-hadoop2-result'
+           unstash 'jdk8-hadoop3-result'
+           unstash 'jdk11-hadoop3-result'
+           unstash 'srctarball-result'
+           sh "printenv"
+           def results = ["${env.OUTPUT_DIR_RELATIVE_GENERAL}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK7}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/commentfile",
+                          'output-srctarball/commentfile',
+                          'output-integration/commentfile']
+           echo env.BRANCH_NAME
+           echo env.BUILD_URL
+           echo currentBuild.result
+           echo currentBuild.durationString
+           def comment = "Results for branch ${env.BRANCH_NAME}\n"
+           comment += "\t[build ${currentBuild.displayName} on builds.a.o|${env.BUILD_URL}]: "
+           if (currentBuild.result == null || currentBuild.result == "SUCCESS") {
+              comment += "(/) *{color:green}+1 overall{color}*\n"
+           } else {
+              comment += "(x) *{color:red}-1 overall{color}*\n"
+              // Ideally get the committer our of the change and @ mention them in the per-jira comment
+           }
+           comment += "----\ndetails (if available):\n\n"
+           echo ""
+           echo "[DEBUG] trying to aggregate step-wise results"
+           comment += results.collect { fileExists(file: it) ? readFile(file: it) : "" }.join("\n\n")
+           echo "[INFO] Comment:"
+           echo comment
+           echo ""
+           echo "[INFO] There are ${currentBuild.changeSets.size()} change sets."
+           getJirasToComment(currentBuild).each { currentIssue ->
+             jiraComment issueKey: currentIssue, body: comment
+           }
+        } catch (Exception exception) {
+          echo "Got exception: ${exception}"
+          echo "    ${exception.getStackTrace()}"
+        }
+      }
+    }
+  }
+}
+import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
+@NonCPS
+List<String> getJirasToComment(RunWrapper thisBuild) {
+  def seenJiras = []
+  thisBuild.changeSets.each { cs ->
+    cs.getItems().each { change ->
+      CharSequence msg = change.msg
+      echo "change: ${change}"
+      echo "     ${msg}"
+      echo "     ${change.commitId}"
+      echo "     ${change.author}"
+      echo ""
+      msg.eachMatch("HBASE-[0-9]+") { currentIssue ->
+        echo "[DEBUG] found jira key: ${currentIssue}"
+        if (currentIssue in seenJiras) {
+          echo "[DEBUG] already commented on ${currentIssue}."
+        } else {
+          echo "[INFO] commenting on ${currentIssue}."
+          seenJiras << currentIssue
+        }
+      }
+    }
+  }
+  return seenJiras
 }

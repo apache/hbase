@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -27,19 +28,18 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -65,24 +65,33 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing of HRegion.incrementColumnValue, HRegion.increment,
  * and HRegion.append
  */
-@Category({VerySlowRegionServerTests.class, MediumTests.class}) // Starts 100 threads
+@Category({VerySlowRegionServerTests.class, LargeTests.class}) // Starts 100 threads
 public class TestAtomicOperation {
-  private static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAtomicOperation.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestAtomicOperation.class);
   @Rule public TestName name = new TestName();
 
   HRegion region = null;
@@ -106,14 +115,17 @@ public class TestAtomicOperation {
   @After
   public void teardown() throws IOException {
     if (region != null) {
-      BlockCache bc = region.getStores().get(0).getCacheConfig().getBlockCache();
-      ((HRegion)region).close();
-      WAL wal = ((HRegion)region).getWAL();
-      if (wal != null) wal.close();
-      if (bc != null) bc.shutdown();
+      CacheConfig cacheConfig = region.getStores().get(0).getCacheConfig();
+      region.close();
+      WAL wal = region.getWAL();
+      if (wal != null) {
+        wal.close();
+      }
+      cacheConfig.getBlockCache().ifPresent(BlockCache::shutdown);
       region = null;
     }
   }
+
   //////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the
   // individual code pieces in the HRegion.
@@ -141,6 +153,44 @@ public class TestAtomicOperation {
     Result result = region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1+v2), result.getValue(fam1, qual1)));
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2+v1), result.getValue(fam1, qual2)));
+  }
+
+  @Test
+  public void testAppendWithMultipleFamilies() throws IOException {
+    final byte[] fam3 = Bytes.toBytes("colfamily31");
+    initHRegion(tableName, name.getMethodName(), fam1, fam2, fam3);
+    String v1 = "Appended";
+    String v2 = "Value";
+
+    Append a = new Append(row);
+    a.setReturnResults(false);
+    a.addColumn(fam1, qual1, Bytes.toBytes(v1));
+    a.addColumn(fam2, qual2, Bytes.toBytes(v2));
+    Result result = region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    assertTrue("Expected an empty result but result contains " + result.size() + " keys",
+      result.isEmpty());
+
+    a = new Append(row);
+    a.addColumn(fam2, qual2, Bytes.toBytes(v1));
+    a.addColumn(fam1, qual1, Bytes.toBytes(v2));
+    a.addColumn(fam3, qual3, Bytes.toBytes(v2));
+    a.addColumn(fam1, qual2, Bytes.toBytes(v1));
+
+    result = region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
+
+    byte[] actualValue1 = result.getValue(fam1, qual1);
+    byte[] actualValue2 = result.getValue(fam2, qual2);
+    byte[] actualValue3 = result.getValue(fam3, qual3);
+    byte[] actualValue4 = result.getValue(fam1, qual2);
+
+    assertNotNull("Value1 should bot be null", actualValue1);
+    assertNotNull("Value2 should bot be null", actualValue2);
+    assertNotNull("Value3 should bot be null", actualValue3);
+    assertNotNull("Value4 should bot be null", actualValue4);
+    assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1 + v2), actualValue1));
+    assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2 + v1), actualValue2));
+    assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2), actualValue3));
+    assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1), actualValue4));
   }
 
   @Test
@@ -287,7 +337,7 @@ public class TestAtomicOperation {
           inc.addColumn(fam1, qual2, amount*2);
           inc.addColumn(fam2, qual3, amount*3);
           inc.setDurability(Durability.ASYNC_WAL);
-          Result result = region.increment(inc, HConstants.NO_NONCE, HConstants.NO_NONCE);
+          Result result = region.increment(inc);
           if (result != null) {
             assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*2,
               Bytes.toLong(result.getValue(fam1, qual2)));
@@ -363,9 +413,9 @@ public class TestAtomicOperation {
     assertEquals(0, failures.get());
     Get g = new Get(row);
     Result result = region.get(g);
-    assertEquals(result.getValue(fam1, qual1).length, 10000);
-    assertEquals(result.getValue(fam1, qual2).length, 10000);
-    assertEquals(result.getValue(fam2, qual3).length, 10000);
+    assertEquals(10000, result.getValue(fam1, qual1).length);
+    assertEquals(10000, result.getValue(fam1, qual2).length);
+    assertEquals(10000, result.getValue(fam2, qual3).length);
   }
   /**
    * Test multi-threaded row mutations.
@@ -428,7 +478,7 @@ public class TestAtomicOperation {
               Get g = new Get(row);
               Result r = region.get(g);
               if (r.size() != 1) {
-                LOG.debug(r);
+                LOG.debug(Objects.toString(r));
                 failures.incrementAndGet();
                 fail();
               }
@@ -525,7 +575,7 @@ public class TestAtomicOperation {
                 ;
               rs.close();
               if (r.size() != 1) {
-                LOG.debug(r);
+                LOG.debug(Objects.toString(r));
                 failures.incrementAndGet();
                 fail();
               }
@@ -555,13 +605,13 @@ public class TestAtomicOperation {
   }
 
   public static class AtomicOperation extends Thread {
-    protected final Region region;
+    protected final HRegion region;
     protected final int numOps;
     protected final AtomicLong timeStamps;
     protected final AtomicInteger failures;
     protected final Random r = new Random();
 
-    public AtomicOperation(Region region, int numOps, AtomicLong timeStamps,
+    public AtomicOperation(HRegion region, int numOps, AtomicLong timeStamps,
         AtomicInteger failures) {
       this.region = region;
       this.numOps = numOps;
@@ -600,7 +650,7 @@ public class TestAtomicOperation {
     put.addColumn(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("10"));
     puts[0] = put;
 
-    region.batchMutate(puts, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    region.batchMutate(puts);
     MultithreadedTestUtil.TestContext ctx =
       new MultithreadedTestUtil.TestContext(conf);
     ctx.addThread(new PutThread(ctx, region));
@@ -627,13 +677,14 @@ public class TestAtomicOperation {
       this.region = region;
     }
 
+    @Override
     public void doWork() throws Exception {
       Put[] puts = new Put[1];
       Put put = new Put(Bytes.toBytes("r1"));
       put.addColumn(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("50"));
       puts[0] = put;
       testStep = TestStep.PUT_STARTED;
-      region.batchMutate(puts, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      region.batchMutate(puts);
     }
   }
 
@@ -644,6 +695,7 @@ public class TestAtomicOperation {
       this.region = region;
    }
 
+    @Override
     public void doWork() throws Exception {
       Put[] puts = new Put[1];
       Put put = new Put(Bytes.toBytes("r1"));
@@ -654,7 +706,7 @@ public class TestAtomicOperation {
       }
       testStep = TestStep.CHECKANDPUT_STARTED;
       region.checkAndMutate(Bytes.toBytes("r1"), Bytes.toBytes(family), Bytes.toBytes("q1"),
-        CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("10")), put, true);
+        CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("10")), put);
       testStep = TestStep.CHECKANDPUT_COMPLETED;
     }
   }
@@ -667,11 +719,12 @@ public class TestAtomicOperation {
     }
 
     @Override
-    public RowLock getRowLockInternal(final byte[] row, boolean readLock) throws IOException {
+    public RowLock getRowLockInternal(final byte[] row, boolean readLock,
+        final RowLock prevRowlock) throws IOException {
       if (testStep == TestStep.CHECKANDPUT_STARTED) {
         latch.countDown();
       }
-      return new WrappedRowLock(super.getRowLockInternal(row, readLock));
+      return new WrappedRowLock(super.getRowLockInternal(row, readLock, null));
     }
 
     public class WrappedRowLock implements RowLock {

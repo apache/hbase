@@ -22,7 +22,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparator;
 
 /**
- * Generate random <key, value> pairs.
+ * Generate random &lt;key, value> pairs.
  * <p>
  * Copied from
  * <a href="https://issues.apache.org/jira/browse/HADOOP-3315">hadoop-3315 tfile</a>.

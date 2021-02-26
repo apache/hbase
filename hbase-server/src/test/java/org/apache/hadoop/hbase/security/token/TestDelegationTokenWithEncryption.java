@@ -18,10 +18,9 @@
 package org.apache.hadoop.hbase.security.token;
 
 import static org.junit.Assert.assertArrayEquals;
-
 import java.util.Arrays;
 import java.util.Collection;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -32,7 +31,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.ipc.NettyRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -43,6 +41,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -56,20 +55,26 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestDelegationTokenWithEncryption extends SecureTestCluster {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDelegationTokenWithEncryption.class);
+
   @BeforeClass
   public static void setUp() throws Exception {
     // enable rpc encryption
     TEST_UTIL.getConfiguration().set("hbase.rpc.protection", "privacy");
     SecureTestCluster.setUp();
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      Token<? extends TokenIdentifier> token = TokenUtil.obtainToken(conn);
+      Token<? extends TokenIdentifier> token = ClientTokenUtil.obtainToken(conn);
       UserGroupInformation.getCurrentUser().addToken(token);
     }
   }
 
   @Parameters(name = "{index}: rpcClientImpl={0}")
-  public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[] { BlockingRpcClient.class.getName() },
+  public static Collection<Object> parameters() {
+    // Client connection supports only non-blocking RPCs (due to master registry restriction), hence
+    // we only test NettyRpcClient.
+    return Arrays.asList(
       new Object[] { NettyRpcClient.class.getName() });
   }
 

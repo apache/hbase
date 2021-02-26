@@ -21,27 +21,32 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
-import org.apache.hadoop.hbase.util.Bytes;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 /**
  * This is a generic filter to be used to filter by comparison.  It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator.
  * <p>
  * To filter by row key, use {@link RowFilter}.
  * <p>
+ * To filter by column family, use {@link FamilyFilter}.
+ * <p>
  * To filter by column qualifier, use {@link QualifierFilter}.
  * <p>
- * To filter by value, use {@link SingleColumnValueFilter}.
+ * To filter by value, use {@link ValueFilter}.
  * <p>
  * These filters can be wrapped with {@link SkipFilter} and {@link WhileMatchFilter}
  * to add more control.
@@ -137,7 +142,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareRow(cell, comparator);
+    int compareResult = PrivateCellUtil.compareRow(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -146,7 +151,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareRow(cell, comparator);
+    int compareResult = PrivateCellUtil.compareRow(cell, comparator);
     return compare(op, compareResult);
   }
 
@@ -160,7 +165,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareFamily(cell, comparator);
+    int compareResult = PrivateCellUtil.compareFamily(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -169,7 +174,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareFamily(cell, comparator);
+    int compareResult = PrivateCellUtil.compareFamily(cell, comparator);
     return compare(op, compareResult);
   }
 
@@ -184,7 +189,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareQualifier(cell, comparator);
+    int compareResult = PrivateCellUtil.compareQualifier(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -194,7 +199,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareQualifier(cell, comparator);
+    int compareResult = PrivateCellUtil.compareQualifier(cell, comparator);
     return compare(op, compareResult);
   }
 
@@ -209,7 +214,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareValue(cell, comparator);
+    int compareResult = PrivateCellUtil.compareValue(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -218,7 +223,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareValue(cell, comparator);
+    int compareResult = PrivateCellUtil.compareValue(cell, comparator);
     return compare(op, compareResult);
   }
 
@@ -300,6 +305,7 @@ public abstract class CompareFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof CompareFilter)) return false;
@@ -315,5 +321,15 @@ public abstract class CompareFilter extends FilterBase {
         this.getClass().getSimpleName(),
         this.op.name(),
         Bytes.toStringBinary(this.comparator.getValue()));
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.getComparator(), this.getCompareOperator());
   }
 }

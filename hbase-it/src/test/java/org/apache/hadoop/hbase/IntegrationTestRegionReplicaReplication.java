@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.ConstantDelayQueue;
@@ -30,6 +29,7 @@ import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedUpdater;
 import org.apache.hadoop.hbase.util.MultiThreadedWriter;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
@@ -38,7 +38,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Integration test for testing async wal replication to secondary region replicas. Sets up a table
@@ -51,11 +51,12 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  * with the replication of the edits before read_delay_ms to the given region replica id so that
  * the read and verify will not fail.
  *
- * The job will run for <b>at least<b> given runtime (default 10min) by running a concurrent
+ * The job will run for <b>at least</b> given runtime (default 10min) by running a concurrent
  * writer and reader workload followed by a concurrent updater and reader workload for
  * num_keys_per_server.
- *<p>
+ * <p>
  * Example usage:
+ * </p>
  * <pre>
  * hbase org.apache.hadoop.hbase.IntegrationTestRegionReplicaReplication
  * -DIntegrationTestRegionReplicaReplication.num_keys_per_server=10000
@@ -94,7 +95,7 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
       String.format("%s.%s", TEST_NAME, LoadTestTool.OPT_COLUMN_FAMILIES),
       StringUtils.join(",", DEFAULT_COLUMN_FAMILIES));
 
-    conf.setBoolean("hbase.table.sanity.checks", true);
+    conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, true);
 
     // enable async wal replication to region replicas for unit tests
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
@@ -154,7 +155,8 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
       int recordSize, int writeThreads, int readThreads) throws Exception {
 
     LOG.info("Running ingest");
-    LOG.info("Cluster size:" + util.getHBaseClusterInterface().getClusterStatus().getServersSize());
+    LOG.info("Cluster size:" + util.getHBaseClusterInterface()
+      .getClusterMetrics().getLiveServerMetrics().size());
 
     // sleep for some time so that the cache for disabled tables does not interfere.
     Threads.sleep(

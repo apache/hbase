@@ -19,16 +19,17 @@ package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Client-side manager for which table's hfiles should be preserved for long-term archive.
@@ -40,13 +41,13 @@ import org.apache.zookeeper.KeeperException;
 class HFileArchiveManager {
 
   private final String archiveZnode;
-  private static final Log LOG = LogFactory.getLog(HFileArchiveManager.class);
-  private final ZooKeeperWatcher zooKeeper;
+  private static final Logger LOG = LoggerFactory.getLogger(HFileArchiveManager.class);
+  private final ZKWatcher zooKeeper;
   private volatile boolean stopped = false;
 
   public HFileArchiveManager(Connection connection, Configuration conf)
       throws ZooKeeperConnectionException, IOException {
-    this.zooKeeper = new ZooKeeperWatcher(conf, "hfileArchiveManager-on-" + connection.toString(),
+    this.zooKeeper = new ZKWatcher(conf, "hfileArchiveManager-on-" + connection.toString(),
         connection);
     this.archiveZnode = ZKTableArchiveClient.getArchiveZNode(this.zooKeeper.getConfiguration(),
       this.zooKeeper);
@@ -67,14 +68,14 @@ class HFileArchiveManager {
 
   /**
    * Stop retaining HFiles for the given table in the archive. HFiles will be cleaned up on the next
-   * pass of the {@link org.apache.hadoop.hbase.master.cleaner.HFileCleaner}, if the HFiles are retained by another
-   * cleaner.
+   * pass of the {@link org.apache.hadoop.hbase.master.cleaner.HFileCleaner}, if the HFiles are
+   * retained by another cleaner.
    * @param table name of the table for which to disable hfile retention.
    * @return <tt>this</tt> for chaining.
    * @throws KeeperException if if we can't reach zookeeper to update the hfile cleaner.
    */
   public HFileArchiveManager disableHFileBackup(byte[] table) throws KeeperException {
-      disable(this.zooKeeper, table);
+    disable(this.zooKeeper, table);
     return this;
   }
 
@@ -94,17 +95,16 @@ class HFileArchiveManager {
   }
 
   /**
-   * Perform a best effort enable of hfile retention, which relies on zookeeper communicating the //
-   * * change back to the hfile cleaner.
+   * Perform a best effort enable of hfile retention, which relies on zookeeper communicating the
+   * change back to the hfile cleaner.
    * <p>
    * No attempt is made to make sure that backups are successfully created - it is inherently an
    * <b>asynchronous operation</b>.
    * @param zooKeeper watcher connection to zk cluster
    * @param table table name on which to enable archiving
-   * @throws KeeperException
+   * @throws KeeperException if a ZooKeeper operation fails
    */
-  private void enable(ZooKeeperWatcher zooKeeper, byte[] table)
-      throws KeeperException {
+  private void enable(ZKWatcher zooKeeper, byte[] table) throws KeeperException {
     LOG.debug("Ensuring archiving znode exists");
     ZKUtil.createAndFailSilent(zooKeeper, archiveZnode);
 
@@ -122,9 +122,9 @@ class HFileArchiveManager {
    * @param table name of the table to disable
    * @throws KeeperException if an unexpected ZK connection issues occurs
    */
-  private void disable(ZooKeeperWatcher zooKeeper, byte[] table) throws KeeperException {
+  private void disable(ZKWatcher zooKeeper, byte[] table) throws KeeperException {
     // ensure the latest state of the archive node is found
-    zooKeeper.sync(archiveZnode);
+    zooKeeper.syncOrTimeout(archiveZnode);
 
     // if the top-level archive node is gone, then we are done
     if (ZKUtil.checkExists(zooKeeper, archiveZnode) < 0) {
@@ -133,7 +133,7 @@ class HFileArchiveManager {
     // delete the table node, from the archive
     String tableNode = this.getTableNode(table);
     // make sure the table is the latest version so the delete takes
-    zooKeeper.sync(tableNode);
+    zooKeeper.syncOrTimeout(tableNode);
 
     LOG.debug("Attempting to delete table node:" + tableNode);
     ZKUtil.deleteNodeRecursively(zooKeeper, tableNode);
@@ -164,6 +164,6 @@ class HFileArchiveManager {
    * @return znode for the table's archive status
    */
   private String getTableNode(byte[] table) {
-    return ZKUtil.joinZNode(archiveZnode, Bytes.toString(table));
+    return ZNodePaths.joinZNode(archiveZnode, Bytes.toString(table));
   }
 }

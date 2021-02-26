@@ -16,13 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-
 import java.util.ArrayDeque;
+
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Type class.
@@ -31,4 +29,8 @@ import java.util.ArrayDeque;
  */
 @InterfaceAudience.Private
 public class ProcedureDeque extends ArrayDeque<Procedure> {
+  public ProcedureDeque() {
+    // Default is 16 for a list that is rarely used; elements will resize if too small.
+    super(2);
+  }
 }

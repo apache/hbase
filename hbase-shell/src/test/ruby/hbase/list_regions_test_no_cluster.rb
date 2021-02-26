@@ -15,10 +15,8 @@
 # limitations under the License.
 #
 
-require 'shell'
+require 'hbase_shell'
 require 'hbase_constants'
-
-include HBaseConstants
 
 java_import 'org.apache.hadoop.hbase.HRegionLocation'
 java_import 'org.apache.hadoop.hbase.HRegionInfo'
@@ -27,6 +25,7 @@ java_import 'org.apache.hadoop.hbase.ServerName'
 module Hbase
   class NoClusterListRegionsTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     define_test 'valid_locality_values' do
       command = ::Shell::Commands::ListRegions.new(nil)

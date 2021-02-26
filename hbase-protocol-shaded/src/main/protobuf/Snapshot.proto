@@ -44,6 +44,7 @@ message SnapshotDescription {
   optional int32 version = 5;
   optional string owner = 6;
   optional UsersAndPermissions users_and_permissions = 7;
+  optional int64 ttl = 8 [default = 0];
 }
 
 message SnapshotFileInfo {

@@ -35,10 +35,13 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
@@ -46,7 +49,7 @@ import org.apache.hadoop.hbase.rest.model.ScannerModel;
 @InterfaceAudience.Private
 public class ScannerResource extends ResourceBase {
 
-  private static final Log LOG = LogFactory.getLog(ScannerResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ScannerResource.class);
 
   static final Map<String,ScannerInstanceResource> scanners =
    Collections.synchronizedMap(new HashMap<String,ScannerInstanceResource>());
@@ -109,12 +112,14 @@ public class ScannerResource extends ResourceBase {
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.created(uri).build();
     } catch (Exception e) {
+      LOG.error("Exception occurred while processing " + uriInfo.getAbsolutePath() + " : ", e);
       servlet.getMetrics().incrementFailedPutRequests(1);
       if (e instanceof TableNotFoundException) {
         return Response.status(Response.Status.NOT_FOUND)
           .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
           .build();
-      } else if (e instanceof RuntimeException) {
+      } else if (e instanceof RuntimeException
+          || e instanceof JsonMappingException | e instanceof JsonParseException) {
         return Response.status(Response.Status.BAD_REQUEST)
           .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
           .build();

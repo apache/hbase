@@ -18,27 +18,28 @@
 
 package org.apache.hadoop.hbase.io;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.FileNotFoundException;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The FileLink is a sort of hardlink, that allows access to a file given a set of locations.
@@ -92,7 +93,7 @@ import org.apache.hadoop.ipc.RemoteException;
  */
 @InterfaceAudience.Private
 public class FileLink {
-  private static final Log LOG = LogFactory.getLog(FileLink.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FileLink.class);
 
   /** Define the Back-reference directory name prefix: .links-&lt;hfile&gt;/ */
   public static final String BACK_REFERENCES_DIRECTORY_PREFIX = ".links-";
@@ -102,7 +103,7 @@ public class FileLink {
    * and the alternative locations, when the file is moved.
    */
   private static class FileLinkInputStream extends InputStream
-      implements Seekable, PositionedReadable, CanSetDropBehind, CanSetReadahead {
+      implements Seekable, PositionedReadable, CanSetDropBehind, CanSetReadahead, CanUnbuffer {
     private FSDataInputStream in = null;
     private Path currentPath = null;
     private long pos = 0;
@@ -113,7 +114,7 @@ public class FileLink {
 
     public FileLinkInputStream(final FileSystem fs, final FileLink fileLink)
         throws IOException {
-      this(fs, fileLink, FSUtils.getDefaultBufferSize(fs));
+      this(fs, fileLink, CommonFSUtils.getDefaultBufferSize(fs));
     }
 
     public FileLinkInputStream(final FileSystem fs, final FileLink fileLink, int bufferSize)
@@ -281,6 +282,14 @@ public class FileLink {
       return false;
     }
 
+    @Override
+    public void unbuffer() {
+      if (in == null) {
+        return;
+      }
+      in.unbuffer();
+    }
+
     /**
      * Try to open the file from one of the available locations.
      *
@@ -288,6 +297,7 @@ public class FileLink {
      * @throws IOException on unexpected error, or file not found.
      */
     private FSDataInputStream tryOpen() throws IOException {
+      IOException exception = null;
       for (Path path: fileLink.getLocations()) {
         if (path.equals(currentPath)) continue;
         try {
@@ -303,14 +313,11 @@ public class FileLink {
           }
           currentPath = path;
           return(in);
-        } catch (FileNotFoundException e) {
-          // Try another file location
-        } catch (RemoteException re) {
-          IOException ioe = re.unwrapRemoteException(FileNotFoundException.class);
-          if (!(ioe instanceof FileNotFoundException)) throw re;
+        } catch (FileNotFoundException | AccessControlException | RemoteException e) {
+          exception = FileLink.handleAccessLocationException(fileLink, e, exception);
         }
       }
-      throw new FileNotFoundException("Unable to open link: " + fileLink);
+      throw exception;
     }
 
     @Override
@@ -354,7 +361,7 @@ public class FileLink {
 
   @Override
   public String toString() {
-    StringBuilder str = new StringBuilder(getClass().getName());
+    StringBuilder str = new StringBuilder(getClass().getSimpleName());
     str.append(" locations=[");
     for (int i = 0; i < locations.length; ++i) {
       if (i > 0) str.append(", ");
@@ -385,7 +392,7 @@ public class FileLink {
         return locations[i];
       }
     }
-    throw new FileNotFoundException("Unable to open link: " + this);
+    throw new FileNotFoundException(toString());
   }
 
   /**
@@ -396,14 +403,47 @@ public class FileLink {
    * @throws IOException on unexpected error.
    */
   public FileStatus getFileStatus(FileSystem fs) throws IOException {
+    IOException exception = null;
     for (int i = 0; i < locations.length; ++i) {
       try {
         return fs.getFileStatus(locations[i]);
-      } catch (FileNotFoundException e) {
-        // Try another file location
+      } catch (FileNotFoundException | AccessControlException e) {
+        exception = handleAccessLocationException(this, e, exception);
       }
     }
-    throw new FileNotFoundException("Unable to open link: " + this);
+    throw exception;
+  }
+
+  /**
+   * Handle exceptions which are thrown when access locations of file link
+   * @param fileLink the file link
+   * @param newException the exception caught by access the current location
+   * @param previousException the previous exception caught by access the other locations
+   * @return return AccessControlException if access one of the locations caught, otherwise return
+   *         FileNotFoundException. The AccessControlException is threw if user scan snapshot
+   *         feature is enabled, see
+   *         {@link org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController}.
+   * @throws IOException if the exception is neither AccessControlException nor
+   *           FileNotFoundException
+   */
+  private static IOException handleAccessLocationException(FileLink fileLink,
+      IOException newException, IOException previousException) throws IOException {
+    if (newException instanceof RemoteException) {
+      newException = ((RemoteException) newException)
+          .unwrapRemoteException(FileNotFoundException.class, AccessControlException.class);
+    }
+    if (newException instanceof FileNotFoundException) {
+      // Try another file location
+      if (previousException == null) {
+        previousException = new FileNotFoundException(fileLink.toString());
+      }
+    } else if (newException instanceof AccessControlException) {
+      // Try another file location
+      previousException = newException;
+    } else {
+      throw newException;
+    }
+    return previousException;
   }
 
   /**
@@ -481,12 +521,13 @@ public class FileLink {
 
   /**
    * Checks if the specified directory path is a back reference links folder.
-   *
    * @param dirPath Directory path to verify
    * @return True if the specified directory is a link references folder
    */
   public static boolean isBackReferencesDir(final Path dirPath) {
-    if (dirPath == null) return false;
+    if (dirPath == null) {
+      return false;
+    }
     return dirPath.getName().startsWith(BACK_REFERENCES_DIRECTORY_PREFIX);
   }
 

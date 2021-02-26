@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,18 +19,15 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertTrue;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -41,26 +38,33 @@ import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 public class TestRpcClientLeaks {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-      withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestRpcClientLeaks.class);
 
   @Rule
   public TestName name = new TestName();
 
+  private static BlockingQueue<Socket> SAVED_SOCKETS = new LinkedBlockingQueue<>();
+
   public static class MyRpcClientImpl extends BlockingRpcClient {
-    public static List<Socket> savedSockets = Lists.newArrayList();
-    @Rule public ExpectedException thrown = ExpectedException.none();
+
+    // Exceptions thrown only when this is set to false.
+    private static boolean throwException = false;
 
     public MyRpcClientImpl(Configuration conf) {
       super(conf);
@@ -77,13 +81,17 @@ public class TestRpcClientLeaks {
         @Override
         protected synchronized void setupConnection() throws IOException {
           super.setupConnection();
-          synchronized (savedSockets) {
-            savedSockets.add(socket);
+          if (throwException) {
+            SAVED_SOCKETS.add(socket);
+            throw new IOException(
+                "Sample exception for verifying socket closure in case of exceptions.");
           }
-          throw new IOException("Sample exception for " +
-            "verifying socket closure in case of exceptions.");
         }
       };
+    }
+
+    public static void enableThrowExceptions() {
+      throwException = true;
     }
   }
 
@@ -99,23 +107,26 @@ public class TestRpcClientLeaks {
     UTIL.shutdownMiniCluster();
   }
 
-  public static final Log LOG = LogFactory.getLog(TestRpcClientLeaks.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestRpcClientLeaks.class);
 
-  @Test(expected=RetriesExhaustedException.class)
+  @Test
   public void testSocketClosed() throws IOException, InterruptedException {
     TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.createTable(tableName, fam1).close();
 
     Configuration conf = new Configuration(UTIL.getConfiguration());
-    conf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,
-      MyRpcClientImpl.class.getName());
+    conf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, MyRpcClientImpl.class.getName());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
-    Connection connection = ConnectionFactory.createConnection(conf);
-    Table table = connection.getTable(TableName.valueOf(name.getMethodName()));
-    table.get(new Get("asd".getBytes()));
-    connection.close();
-    for (Socket socket : MyRpcClientImpl.savedSockets) {
-      assertTrue("Socket + " +  socket + " is not closed", socket.isClosed());
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+      Table table = connection.getTable(TableName.valueOf(name.getMethodName()))) {
+      MyRpcClientImpl.enableThrowExceptions();
+      table.get(new Get(Bytes.toBytes("asd")));
+      fail("Should fail because the injected error");
+    } catch (RetriesExhaustedException e) {
+      // expected
+    }
+    for (Socket socket : SAVED_SOCKETS) {
+      assertTrue("Socket " + socket + " is not closed", socket.isClosed());
     }
   }
 }

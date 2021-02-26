@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.RandomAccess;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Simple sorted list implementation that uses {@link java.util.ArrayList} as
@@ -38,7 +39,7 @@ import java.util.RandomAccess;
  * time of invocation, so will not see any mutations to the collection during
  * their operation. Iterating over list elements manually using the
  * RandomAccess pattern involves multiple operations. For this to be safe get
- * a reference to the internal list first using get(). 
+ * a reference to the internal list first using get().
  * <p>
  * If constructed with a {@link java.util.Comparator}, the list will be sorted
  * using the comparator. Adding or changing an element using an index will
@@ -48,6 +49,7 @@ import java.util.RandomAccess;
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UG_SYNC_SET_UNSYNC_GET",
   justification="TODO: synchronization in here needs review!!!")
+@InterfaceAudience.Private
 public class SortedList<E> implements List<E>, RandomAccess {
   private volatile List<E> list;
   private final Comparator<? super E> comparator;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,14 +19,13 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
 * Base class for restarting HBaseServer's
 */
-public class RestartActionBaseAction extends Action {
+public abstract class RestartActionBaseAction extends Action {
   long sleepTime; // how long should we sleep
 
   public RestartActionBaseAction(long sleepTime) {
@@ -34,7 +33,7 @@ public class RestartActionBaseAction extends Action {
   }
 
   void sleep(long sleepTime) {
-    LOG.info("Sleeping for:" + sleepTime);
+    getLogger().info("Sleeping for:" + sleepTime);
     Threads.sleep(sleepTime);
   }
 
@@ -45,9 +44,30 @@ public class RestartActionBaseAction extends Action {
       return;
     }
 
+    getLogger().info("Killing master: {}", server);
     killMaster(server);
     sleep(sleepTime);
+    getLogger().info("Starting master: {}", server);
     startMaster(server);
+  }
+
+  /**
+   * Stop and then restart the region server instead of killing it.
+   * @param server hostname to restart the regionserver on
+   * @param sleepTime number of milliseconds between stop and restart
+   * @throws IOException if something goes wrong
+   */
+  void gracefulRestartRs(ServerName server, long sleepTime) throws IOException {
+    sleepTime = Math.max(sleepTime, 1000);
+    // Don't try the stop if we're stopping already
+    if (context.isStopping()) {
+      return;
+    }
+    getLogger().info("Stopping region server: {}", server);
+    stopRs(server);
+    sleep(sleepTime);
+    getLogger().info("Starting region server: {}", server);
+    startRs(server);
   }
 
   void restartRs(ServerName server, long sleepTime) throws IOException {
@@ -56,8 +76,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
+    getLogger().info("Killing region server: {}", server);
     killRs(server);
     sleep(sleepTime);
+    getLogger().info("Starting region server: {}", server);
     startRs(server);
   }
 
@@ -67,8 +89,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
+    getLogger().info("Killing zookeeper node: {}", server);
     killZKNode(server);
     sleep(sleepTime);
+    getLogger().info("Starting zookeeper node: {}", server);
     startZKNode(server);
   }
 
@@ -78,8 +102,23 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
+    getLogger().info("Killing data node: {}", server);
     killDataNode(server);
     sleep(sleepTime);
+    getLogger().info("Starting data node: {}", server);
     startDataNode(server);
+  }
+
+  void restartNameNode(ServerName server, long sleepTime) throws IOException {
+    sleepTime = Math.max(sleepTime, 1000);
+    // Don't try the kill if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+    getLogger().info("Killing name node: {}", server);
+    killNameNode(server);
+    sleep(sleepTime);
+    getLogger().info("Starting name node: {}", server);
+    startNameNode(server);
   }
 }

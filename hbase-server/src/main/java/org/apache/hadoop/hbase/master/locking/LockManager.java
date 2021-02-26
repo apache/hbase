@@ -22,23 +22,21 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Functions to acquire lock on table/namespace/regions.
  */
 @InterfaceAudience.Private
 public final class LockManager {
-  private static final Log LOG = LogFactory.getLog(LockManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LockManager.class);
   private final HMaster master;
   private final RemoteLocks remoteLocks;
 
@@ -193,7 +191,6 @@ public final class LockManager {
       return "MasterLock: proc = " + proc.toString();
     }
 
-    @VisibleForTesting
     LockProcedure getProc() {
       return proc;
     }

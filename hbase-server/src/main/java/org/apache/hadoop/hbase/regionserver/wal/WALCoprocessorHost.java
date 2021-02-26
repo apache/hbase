@@ -21,9 +21,8 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -38,6 +37,8 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -46,7 +47,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class WALCoprocessorHost
     extends CoprocessorHost<WALCoprocessor, WALCoprocessorEnvironment> {
-  private static final Log LOG = LogFactory.getLog(WALCoprocessorHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALCoprocessorHost.class);
 
   /**
    * Encapsulation of the environment of each coprocessor
@@ -118,10 +119,14 @@ public class WALCoprocessorHost
   }
 
   @Override
-  public WALCoprocessor checkAndGetInstance(Class<?> implClass)
-      throws InstantiationException, IllegalAccessException {
+  public WALCoprocessor checkAndGetInstance(Class<?> implClass) throws IllegalAccessException,
+      InstantiationException {
     if (WALCoprocessor.class.isAssignableFrom(implClass)) {
-      return (WALCoprocessor)implClass.newInstance();
+      try {
+        return implClass.asSubclass(WALCoprocessor.class).getDeclaredConstructor().newInstance();
+      } catch (NoSuchMethodException | InvocationTargetException e) {
+        throw (InstantiationException) new InstantiationException(implClass.getName()).initCause(e);
+      }
     } else {
       LOG.error(implClass.getName() + " is not of type WALCoprocessor. Check the "
           + "configuration " + CoprocessorHost.WAL_COPROCESSOR_CONF_KEY);
@@ -139,31 +144,20 @@ public class WALCoprocessorHost
     }
   }
 
-
-  /**
-   * @param info
-   * @param logKey
-   * @param logEdit
-   * @return true if default behavior should be bypassed, false otherwise
-   * @throws IOException
-   */
-  public boolean preWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
+  public void preWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
-    return execOperationWithResult(false, coprocEnvironments.isEmpty() ? null :
-        new ObserverOperationWithResult<WALObserver, Boolean>(walObserverGetter) {
+    // Not bypassable.
+    if (this.coprocEnvironments.isEmpty()) {
+      return;
+    }
+    execOperation(new WALObserverOperation() {
       @Override
-      public Boolean call(WALObserver oserver) throws IOException {
-        return oserver.preWALWrite(this, info, logKey, logEdit);
+      public void call(WALObserver oserver) throws IOException {
+        oserver.preWALWrite(this, info, logKey, logEdit);
       }
     });
   }
 
-  /**
-   * @param info
-   * @param logKey
-   * @param logEdit
-   * @throws IOException
-   */
   public void postWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {

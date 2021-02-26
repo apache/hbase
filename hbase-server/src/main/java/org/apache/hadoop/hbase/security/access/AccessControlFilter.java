@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.FilterBase;
@@ -36,7 +38,7 @@ import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
  *
  * <p>
  * TODO: There is room for further performance optimization here.
- * Calling TableAuthManager.authorize() per KeyValue imposes a fair amount of
+ * Calling AuthManager.authorize() per KeyValue imposes a fair amount of
  * overhead.  A more optimized solution might look at the qualifiers where
  * permissions are actually granted and explicitly limit the scan to those.
  * </p>
@@ -56,7 +58,7 @@ class AccessControlFilter extends FilterBase {
     CHECK_CELL_DEFAULT,
   };
 
-  private TableAuthManager authManager;
+  private AuthManager authManager;
   private TableName table;
   private User user;
   private boolean isSystemTable;
@@ -73,7 +75,7 @@ class AccessControlFilter extends FilterBase {
   AccessControlFilter() {
   }
 
-  AccessControlFilter(TableAuthManager mgr, User ugi, TableName tableName,
+  AccessControlFilter(AuthManager mgr, User ugi, TableName tableName,
       Strategy strategy, Map<ByteRange, Integer> cfVsMaxVersions) {
     authManager = mgr;
     table = tableName;
@@ -92,12 +94,12 @@ class AccessControlFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell cell) {
+  public ReturnCode filterCell(final Cell cell) {
     if (isSystemTable) {
       return ReturnCode.INCLUDE;
     }
     if (prevFam.getBytes() == null
-        || !(CellUtil.matchingFamily(cell, prevFam.getBytes(), prevFam.getOffset(),
+        || !(PrivateCellUtil.matchingFamily(cell, prevFam.getBytes(), prevFam.getOffset(),
             prevFam.getLength()))) {
       prevFam.set(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
       // Similar to VisibilityLabelFilter
@@ -106,7 +108,7 @@ class AccessControlFilter extends FilterBase {
       prevQual.unset();
     }
     if (prevQual.getBytes() == null
-        || !(CellUtil.matchingQualifier(cell, prevQual.getBytes(), prevQual.getOffset(),
+        || !(PrivateCellUtil.matchingQualifier(cell, prevQual.getBytes(), prevQual.getOffset(),
             prevQual.getLength()))) {
       prevQual.set(cell.getQualifierArray(), cell.getQualifierOffset(),
           cell.getQualifierLength());
@@ -117,20 +119,20 @@ class AccessControlFilter extends FilterBase {
       return ReturnCode.SKIP;
     }
     // XXX: Compare in place, don't clone
-    byte[] family = CellUtil.cloneFamily(cell);
-    byte[] qualifier = CellUtil.cloneQualifier(cell);
+    byte[] f = CellUtil.cloneFamily(cell);
+    byte[] q = CellUtil.cloneQualifier(cell);
     switch (strategy) {
       // Filter only by checking the table or CF permissions
       case CHECK_TABLE_AND_CF_ONLY: {
-        if (authManager.authorize(user, table, family, qualifier, Permission.Action.READ)) {
+        if (authManager.authorizeUserTable(user, table, f, q, Permission.Action.READ)) {
           return ReturnCode.INCLUDE;
         }
       }
       break;
       // Cell permissions can override table or CF permissions
       case CHECK_CELL_DEFAULT: {
-        if (authManager.authorize(user, table, family, qualifier, Permission.Action.READ) ||
-            authManager.authorize(user, table, cell, Permission.Action.READ)) {
+        if (authManager.authorizeUserTable(user, table, f, q, Permission.Action.READ) ||
+            authManager.authorizeCell(user, table, cell, Permission.Action.READ)) {
           return ReturnCode.INCLUDE;
         }
       }
@@ -153,6 +155,7 @@ class AccessControlFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     // no implementation, server-side use only
     throw new UnsupportedOperationException(
@@ -163,12 +166,34 @@ class AccessControlFilter extends FilterBase {
    * @param pbBytes A pb serialized {@link AccessControlFilter} instance
    * @return An instance of {@link AccessControlFilter} made from <code>bytes</code>
    * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray()
    */
   public static AccessControlFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {
     // no implementation, server-side use only
     throw new UnsupportedOperationException(
       "Serialization not supported.  Intended for server-side use only.");
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof AccessControlFilter)) {
+      return false;
+    }
+    if (this == obj){
+      return true;
+    }
+    AccessControlFilter f=(AccessControlFilter)obj;
+    return this.authManager.equals(f.authManager) &&
+      this.table.equals(f.table) &&
+      this.user.equals(f.user) &&
+      this.strategy.equals(f.strategy) &&
+      this.cfVsMaxVersions.equals(f.cfVsMaxVersions);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.authManager, this.table, this.strategy, this.user,
+      this.cfVsMaxVersions);
   }
 }

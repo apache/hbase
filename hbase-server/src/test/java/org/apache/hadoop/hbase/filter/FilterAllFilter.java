@@ -28,7 +28,7 @@ public class FilterAllFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell v) throws IOException {
+  public ReturnCode filterCell(final Cell c) throws IOException {
     return ReturnCode.SKIP;
   }
 

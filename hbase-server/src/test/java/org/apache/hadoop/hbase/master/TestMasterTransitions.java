@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -41,9 +38,12 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test transitions of state across the master.  Sets up the cluster once and
@@ -51,7 +51,12 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterTransitions {
-  private static final Log LOG = LogFactory.getLog(TestMasterTransitions.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMasterTransitions.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterTransitions.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLENAME = TableName.valueOf("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),
@@ -193,7 +198,8 @@ public class TestMasterTransitions {
    * in.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2428">HBASE-2428</a>
    */
-  @Ignore @Test  (timeout=300000) public void testRegionCloseWhenNoMetaHBase2428()
+  @Ignore @Test
+  public void testRegionCloseWhenNoMetaHBase2428()
   throws Exception {
     /*
     LOG.info("Running testRegionCloseWhenNoMetaHBase2428");
@@ -248,7 +254,8 @@ public class TestMasterTransitions {
    * If confusion between old and new, purportedly meta never comes back.  Test
    * that meta gets redeployed.
    */
-  @Ignore @Test (timeout=300000) public void testAddingServerBeforeOldIsDead2413()
+  @Ignore @Test
+  public void testAddingServerBeforeOldIsDead2413()
   throws IOException {
     /*
     LOG.info("Running testAddingServerBeforeOldIsDead2413");
@@ -375,7 +382,8 @@ public class TestMasterTransitions {
    * done.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2482">HBASE-2482</a>
    */
-  @Ignore @Test (timeout=300000) public void testKillRSWithOpeningRegion2482()
+  @Ignore @Test
+  public void testKillRSWithOpeningRegion2482()
   throws Exception {
     /*
     LOG.info("Running testKillRSWithOpeningRegion2482");

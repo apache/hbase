@@ -23,12 +23,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hbase.io.util.BlockIOUtils;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -39,6 +37,9 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.DoNotPool;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Compression related stuff.
@@ -46,7 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 @InterfaceAudience.Private
 public final class Compression {
-  private static final Log LOG = LogFactory.getLog(Compression.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Compression.class);
 
   /**
    * Prevent the instantiation of class.
@@ -104,7 +105,7 @@ public final class Compression {
     LZO("lzo") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec lzoCodec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
@@ -131,7 +132,7 @@ public final class Compression {
     },
     GZ("gz") {
       private volatile transient GzipCodec codec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       DefaultCodec getCodec(Configuration conf) {
@@ -183,7 +184,7 @@ public final class Compression {
     SNAPPY("snappy") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec snappyCodec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
@@ -210,7 +211,7 @@ public final class Compression {
     LZ4("lz4") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec lz4Codec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
@@ -237,7 +238,7 @@ public final class Compression {
     BZIP2("bzip2") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec bzipCodec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
@@ -264,7 +265,7 @@ public final class Compression {
     ZSTD("zstd") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec zStandardCodec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
@@ -438,45 +439,29 @@ public final class Compression {
   }
 
   /**
-   * Decompresses data from the given stream using the configured compression
-   * algorithm. It will throw an exception if the dest buffer does not have
-   * enough space to hold the decompressed data.
-   *
-   * @param dest
-   *          the output bytes buffer
-   * @param destOffset
-   *          start writing position of the output buffer
-   * @param bufferedBoundedStream
-   *          a stream to read compressed data from, bounded to the exact amount
+   * Decompresses data from the given stream using the configured compression algorithm. It will
+   * throw an exception if the dest buffer does not have enough space to hold the decompressed data.
+   * @param dest the output buffer
+   * @param bufferedBoundedStream a stream to read compressed data from, bounded to the exact amount
    *          of compressed data
-   * @param compressedSize
-   *          compressed data size, header not included
-   * @param uncompressedSize
-   *          uncompressed data size, header not included
-   * @param compressAlgo
-   *          compression algorithm used
-   * @throws IOException
+   * @param uncompressedSize uncompressed data size, header not included
+   * @param compressAlgo compression algorithm used
+   * @throws IOException if any IO error happen
    */
-  public static void decompress(byte[] dest, int destOffset,
-      InputStream bufferedBoundedStream, int compressedSize,
-      int uncompressedSize, Compression.Algorithm compressAlgo)
-      throws IOException {
-
-    if (dest.length - destOffset < uncompressedSize) {
-      throw new IllegalArgumentException(
-          "Output buffer does not have enough space to hold "
-              + uncompressedSize + " decompressed bytes, available: "
-              + (dest.length - destOffset));
+  public static void decompress(ByteBuff dest, InputStream bufferedBoundedStream,
+      int uncompressedSize, Compression.Algorithm compressAlgo) throws IOException {
+    if (dest.remaining() < uncompressedSize) {
+      throw new IllegalArgumentException("Output buffer does not have enough space to hold "
+          + uncompressedSize + " decompressed bytes, available: " + dest.remaining());
     }
 
     Decompressor decompressor = null;
     try {
       decompressor = compressAlgo.getDecompressor();
-      InputStream is = compressAlgo.createDecompressionStream(
-          bufferedBoundedStream, decompressor, 0);
-
-      IOUtils.readFully(is, dest, destOffset, uncompressedSize);
-      is.close();
+      try (InputStream is =
+          compressAlgo.createDecompressionStream(bufferedBoundedStream, decompressor, 0)) {
+        BlockIOUtils.readFullyWithHeapBuffer(is, dest, uncompressedSize);
+      }
     } finally {
       if (decompressor != null) {
         compressAlgo.returnDecompressor(decompressor);

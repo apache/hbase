@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,10 +24,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -35,47 +33,47 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
-import org.apache.hadoop.hbase.io.ByteBufferPool;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.nio.MultiByteBuff;
-import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
+import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.codehaus.jackson.map.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -84,16 +82,20 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHea
  * An RPC server that hosts protobuf described Services.
  *
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public abstract class RpcServer implements RpcServerInterface,
     ConfigurationObserver {
   // LOG is being used in CallRunner and the log level is being changed in tests
-  public static final Log LOG = LogFactory.getLog(RpcServer.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RpcServer.class);
   protected static final CallQueueTooBigException CALL_QUEUE_TOO_BIG_EXCEPTION
       = new CallQueueTooBigException();
 
+  private static final String MULTI_GETS = "multi.gets";
+  private static final String MULTI_MUTATIONS = "multi.mutations";
+  private static final String MULTI_SERVICE_CALLS = "multi.service_calls";
+
   private final boolean authorize;
+  private final boolean isOnlineLogProviderEnabled;
   protected boolean isSecurityEnabled;
 
   public static final byte CURRENT_VERSION = 0;
@@ -113,10 +115,11 @@ public abstract class RpcServer implements RpcServerInterface,
 
   protected static final String AUTH_FAILED_FOR = "Auth failed for ";
   protected static final String AUTH_SUCCESSFUL_FOR = "Auth successful for ";
-  protected static final Log AUDITLOG = LogFactory.getLog("SecurityLogger."
+  protected static final Logger AUDITLOG = LoggerFactory.getLogger("SecurityLogger."
       + Server.class.getName());
   protected SecretManager<TokenIdentifier> secretManager;
   protected final Map<String, String> saslProps;
+
   protected ServiceAuthorizationManager authManager;
 
   /** This is set to Call object before Handler invokes an RPC and ybdie
@@ -191,7 +194,11 @@ public abstract class RpcServer implements RpcServerInterface,
   protected static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
   protected static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
 
-  protected static final ObjectMapper MAPPER = new ObjectMapper();
+  protected static final int DEFAULT_TRACE_LOG_MAX_LENGTH = 1000;
+  protected static final String TRACE_LOG_MAX_LENGTH = "hbase.ipc.trace.log.max.length";
+  protected static final String KEY_WORD_TRUNCATED = " <TRUNCATED>";
+
+  protected static final Gson GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
   protected final int maxRequestSize;
   protected final int warnResponseTime;
@@ -206,11 +213,7 @@ public abstract class RpcServer implements RpcServerInterface,
 
   protected UserProvider userProvider;
 
-  protected final ByteBufferPool reservoir;
-  // The requests and response will use buffers from ByteBufferPool, when the size of the
-  // request/response is at least this size.
-  // We make this to be 1/6th of the pool buffer size.
-  protected final int minSizeForReservoirUse;
+  protected final ByteBuffAllocator bbAllocator;
 
   protected volatile boolean allowFallbackToSimpleAuth;
 
@@ -220,8 +223,14 @@ public abstract class RpcServer implements RpcServerInterface,
    */
   private RSRpcServices rsRpcServices;
 
+
+  /**
+   * Use to add online slowlog responses
+   */
+  private NamedQueueRecorder namedQueueRecorder;
+
   @FunctionalInterface
-  protected static interface CallCleanup {
+  protected interface CallCleanup {
     void run();
   }
 
@@ -256,38 +265,13 @@ public abstract class RpcServer implements RpcServerInterface,
    * @param bindAddress Where to listen
    * @param conf
    * @param scheduler
+   * @param reservoirEnabled Enable ByteBufferPool or not.
    */
   public RpcServer(final Server server, final String name,
       final List<BlockingServiceAndInterface> services,
       final InetSocketAddress bindAddress, Configuration conf,
-      RpcScheduler scheduler)
-      throws IOException {
-    if (conf.getBoolean("hbase.ipc.server.reservoir.enabled", true)) {
-      int poolBufSize = conf.getInt(ByteBufferPool.BUFFER_SIZE_KEY,
-          ByteBufferPool.DEFAULT_BUFFER_SIZE);
-      // The max number of buffers to be pooled in the ByteBufferPool. The default value been
-      // selected based on the #handlers configured. When it is read request, 2 MB is the max size
-      // at which we will send back one RPC request. Means max we need 2 MB for creating the
-      // response cell block. (Well it might be much lesser than this because in 2 MB size calc, we
-      // include the heap size overhead of each cells also.) Considering 2 MB, we will need
-      // (2 * 1024 * 1024) / poolBufSize buffers to make the response cell block. Pool buffer size
-      // is by default 64 KB.
-      // In case of read request, at the end of the handler process, we will make the response
-      // cellblock and add the Call to connection's response Q and a single Responder thread takes
-      // connections and responses from that one by one and do the socket write. So there is chances
-      // that by the time a handler originated response is actually done writing to socket and so
-      // released the BBs it used, the handler might have processed one more read req. On an avg 2x
-      // we consider and consider that also for the max buffers to pool
-      int bufsForTwoMB = (2 * 1024 * 1024) / poolBufSize;
-      int maxPoolSize = conf.getInt(ByteBufferPool.MAX_POOL_SIZE_KEY,
-          conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-              HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * bufsForTwoMB * 2);
-      this.reservoir = new ByteBufferPool(poolBufSize, maxPoolSize);
-      this.minSizeForReservoirUse = getMinSizeForReservoirUse(this.reservoir);
-    } else {
-      reservoir = null;
-      this.minSizeForReservoirUse = Integer.MAX_VALUE;// reservoir itself not in place.
-    }
+      RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
+    this.bbAllocator = ByteBuffAllocator.create(conf, reservoirEnabled);
     this.server = server;
     this.services = services;
     this.bindAddress = bindAddress;
@@ -318,12 +302,9 @@ public abstract class RpcServer implements RpcServerInterface,
       saslProps = Collections.emptyMap();
     }
 
+    this.isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
+      HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
     this.scheduler = scheduler;
-  }
-
-  @VisibleForTesting
-  static int getMinSizeForReservoirUse(ByteBufferPool pool) {
-    return pool.getBufferSize() / 6;
   }
 
   @Override
@@ -331,6 +312,9 @@ public abstract class RpcServer implements RpcServerInterface,
     initReconfigurable(newConf);
     if (scheduler instanceof ConfigurationObserver) {
       ((ConfigurationObserver) scheduler).onConfigurationChange(newConf);
+    }
+    if (authorize) {
+      refreshAuthManager(newConf, new HBasePolicyProvider());
     }
   }
 
@@ -358,10 +342,14 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   @Override
-  public synchronized void refreshAuthManager(PolicyProvider pp) {
+  public synchronized void refreshAuthManager(Configuration conf, PolicyProvider pp) {
     // Ignore warnings that this should be accessed in a static way instead of via an instance;
     // it'll break if you go via static route.
-    this.authManager.refresh(this.conf, pp);
+    System.setProperty("hadoop.policy.file", "hbase-policy.xml");
+    this.authManager.refresh(conf, pp);
+    LOG.info("Refreshed hbase-policy.xml successfully");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    LOG.info("Refreshed super and proxy users successfully");
   }
 
   protected AuthenticationTokenSecretManager createSecretManager() {
@@ -436,13 +424,22 @@ public abstract class RpcServer implements RpcServerInterface,
       boolean tooSlow = (processingTime > warnResponseTime && warnResponseTime > -1);
       boolean tooLarge = (responseSize > warnResponseSize && warnResponseSize > -1);
       if (tooSlow || tooLarge) {
+        final String userName = call.getRequestUserName().orElse(StringUtils.EMPTY);
         // when tagging, we let TooLarge trump TooSmall to keep output simple
         // note that large responses will often also be slow.
         logResponse(param,
-            md.getName(), md.getName() + "(" + param.getClass().getName() + ")",
-            (tooLarge ? "TooLarge" : "TooSlow"),
-            status.getClient(), startTime, processingTime, qTime,
-            responseSize);
+          md.getName(), md.getName() + "(" + param.getClass().getName() + ")",
+          tooLarge, tooSlow,
+          status.getClient(), startTime, processingTime, qTime,
+          responseSize, userName);
+        if (this.namedQueueRecorder != null && this.isOnlineLogProviderEnabled) {
+          // send logs to ring buffer owned by slowLogRecorder
+          final String className =
+            server == null ? StringUtils.EMPTY : server.getClass().getSimpleName();
+          this.namedQueueRecorder.addRecord(
+            new RpcLogDetails(call, param, status.getClient(), responseSize, className, tooSlow,
+              tooLarge));
+        }
       }
       return new Pair<>(result, controller.cellScanner());
     } catch (Throwable e) {
@@ -473,17 +470,21 @@ public abstract class RpcServer implements RpcServerInterface,
    * @param param The parameters received in the call.
    * @param methodName The name of the method invoked
    * @param call The string representation of the call
-   * @param tag  The tag that will be used to indicate this event in the log.
-   * @param clientAddress   The address of the client who made this call.
-   * @param startTime       The time that the call was initiated, in ms.
-   * @param processingTime  The duration that the call took to run, in ms.
-   * @param qTime           The duration that the call spent on the queue
-   *                        prior to being initiated, in ms.
-   * @param responseSize    The size in bytes of the response buffer.
+   * @param tooLarge To indicate if the event is tooLarge
+   * @param tooSlow To indicate if the event is tooSlow
+   * @param clientAddress The address of the client who made this call.
+   * @param startTime The time that the call was initiated, in ms.
+   * @param processingTime The duration that the call took to run, in ms.
+   * @param qTime The duration that the call spent on the queue
+   *   prior to being initiated, in ms.
+   * @param responseSize The size in bytes of the response buffer.
+   * @param userName UserName of the current RPC Call
    */
-  void logResponse(Message param, String methodName, String call, String tag,
-      String clientAddress, long startTime, int processingTime, int qTime,
-      long responseSize) throws IOException {
+  void logResponse(Message param, String methodName, String call, boolean tooLarge,
+      boolean tooSlow, String clientAddress, long startTime, int processingTime, int qTime,
+      long responseSize, String userName) {
+    final String className = server == null ? StringUtils.EMPTY :
+      server.getClass().getSimpleName();
     // base information that is reported regardless of type of call
     Map<String, Object> responseInfo = new HashMap<>();
     responseInfo.put("starttimems", startTime);
@@ -491,21 +492,72 @@ public abstract class RpcServer implements RpcServerInterface,
     responseInfo.put("queuetimems", qTime);
     responseInfo.put("responsesize", responseSize);
     responseInfo.put("client", clientAddress);
-    responseInfo.put("class", server == null? "": server.getClass().getSimpleName());
+    responseInfo.put("class", className);
     responseInfo.put("method", methodName);
     responseInfo.put("call", call);
-    responseInfo.put("param", ProtobufUtil.getShortTextFormat(param));
+    // The params could be really big, make sure they don't kill us at WARN
+    String stringifiedParam = ProtobufUtil.getShortTextFormat(param);
+    if (stringifiedParam.length() > 150) {
+      // Truncate to 1000 chars if TRACE is on, else to 150 chars
+      stringifiedParam = truncateTraceLog(stringifiedParam);
+    }
+    responseInfo.put("param", stringifiedParam);
     if (param instanceof ClientProtos.ScanRequest && rsRpcServices != null) {
       ClientProtos.ScanRequest request = ((ClientProtos.ScanRequest) param);
+      String scanDetails;
       if (request.hasScannerId()) {
         long scannerId = request.getScannerId();
-        String scanDetails = rsRpcServices.getScanDetailsWithId(scannerId);
-        if (scanDetails != null) {
-          responseInfo.put("scandetails", scanDetails);
-        }
+        scanDetails = rsRpcServices.getScanDetailsWithId(scannerId);
+      } else {
+        scanDetails = rsRpcServices.getScanDetailsWithRequest(request);
+      }
+      if (scanDetails != null) {
+        responseInfo.put("scandetails", scanDetails);
       }
     }
-    LOG.warn("(response" + tag + "): " + MAPPER.writeValueAsString(responseInfo));
+    if (param instanceof ClientProtos.MultiRequest) {
+      int numGets = 0;
+      int numMutations = 0;
+      int numServiceCalls = 0;
+      ClientProtos.MultiRequest multi = (ClientProtos.MultiRequest)param;
+      for (ClientProtos.RegionAction regionAction : multi.getRegionActionList()) {
+        for (ClientProtos.Action action: regionAction.getActionList()) {
+          if (action.hasMutation()) {
+            numMutations++;
+          }
+          if (action.hasGet()) {
+            numGets++;
+          }
+          if (action.hasServiceCall()) {
+            numServiceCalls++;
+          }
+        }
+      }
+      responseInfo.put(MULTI_GETS, numGets);
+      responseInfo.put(MULTI_MUTATIONS, numMutations);
+      responseInfo.put(MULTI_SERVICE_CALLS, numServiceCalls);
+    }
+    final String tag = (tooLarge && tooSlow) ? "TooLarge & TooSlow"
+      : (tooSlow ? "TooSlow" : "TooLarge");
+    LOG.warn("(response" + tag + "): " + GSON.toJson(responseInfo));
+  }
+
+
+  /**
+   * Truncate to number of chars decided by conf hbase.ipc.trace.log.max.length
+   * if TRACE is on else to 150 chars Refer to Jira HBASE-20826 and HBASE-20942
+   * @param strParam stringifiedParam to be truncated
+   * @return truncated trace log string
+   */
+  String truncateTraceLog(String strParam) {
+    if (LOG.isTraceEnabled()) {
+      int traceLogMaxLength = getConf().getInt(TRACE_LOG_MAX_LENGTH, DEFAULT_TRACE_LOG_MAX_LENGTH);
+      int truncatedLength =
+          strParam.length() < traceLogMaxLength ? strParam.length() : traceLogMaxLength;
+      String truncatedFlag = truncatedLength == strParam.length() ? "" : KEY_WORD_TRUNCATED;
+      return strParam.subSequence(0, truncatedLength) + truncatedFlag;
+    }
+    return strParam.subSequence(0, 150) + KEY_WORD_TRUNCATED;
   }
 
   /**
@@ -537,19 +589,16 @@ public abstract class RpcServer implements RpcServerInterface,
 
   /**
    * Authorize the incoming client connection.
-   *
    * @param user client user
    * @param connection incoming connection
    * @param addr InetAddress of incoming connection
-   * @throws org.apache.hadoop.security.authorize.AuthorizationException
-   *         when the client isn't authorized to talk the protocol
+   * @throws AuthorizationException when the client isn't authorized to talk the protocol
    */
-  public synchronized void authorize(UserGroupInformation user,
-      ConnectionHeader connection, InetAddress addr)
-      throws AuthorizationException {
+  public synchronized void authorize(UserGroupInformation user, ConnectionHeader connection,
+      InetAddress addr) throws AuthorizationException {
     if (authorize) {
       Class<?> c = getServiceInterface(services, connection.getServiceName());
-      this.authManager.authorize(user != null ? user : null, c, getConf(), addr);
+      authManager.authorize(user, c, getConf(), addr);
     }
   }
 
@@ -584,9 +633,8 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   /**
-   * Helper for {@link #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer)}
-   * and {@link #channelWrite(GatheringByteChannel, BufferChain)}. Only
-   * one of readCh or writeCh should be non-null.
+   * Helper for {@link #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer)}.
+   * Only one of readCh or writeCh should be non-null.
    *
    * @param readCh read channel
    * @param writeCh write channel
@@ -594,7 +642,6 @@ public abstract class RpcServer implements RpcServerInterface,
    * @return bytes written
    * @throws java.io.IOException e
    * @see #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer)
-   * @see #channelWrite(GatheringByteChannel, BufferChain)
    */
   private static int channelIO(ReadableByteChannel readCh,
                                WritableByteChannel writeCh,
@@ -625,55 +672,6 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   /**
-   * This is extracted to a static method for better unit testing. We try to get buffer(s) from pool
-   * as much as possible.
-   *
-   * @param pool The ByteBufferPool to use
-   * @param minSizeForPoolUse Only for buffer size above this, we will try to use pool. Any buffer
-   *           need of size below this, create on heap ByteBuffer.
-   * @param reqLen Bytes count in request
-   */
-  @VisibleForTesting
-  static Pair<ByteBuff, CallCleanup> allocateByteBuffToReadInto(ByteBufferPool pool,
-      int minSizeForPoolUse, int reqLen) {
-    ByteBuff resultBuf;
-    List<ByteBuffer> bbs = new ArrayList<>((reqLen / pool.getBufferSize()) + 1);
-    int remain = reqLen;
-    ByteBuffer buf = null;
-    while (remain >= minSizeForPoolUse && (buf = pool.getBuffer()) != null) {
-      bbs.add(buf);
-      remain -= pool.getBufferSize();
-    }
-    ByteBuffer[] bufsFromPool = null;
-    if (bbs.size() > 0) {
-      bufsFromPool = new ByteBuffer[bbs.size()];
-      bbs.toArray(bufsFromPool);
-    }
-    if (remain > 0) {
-      bbs.add(ByteBuffer.allocate(remain));
-    }
-    if (bbs.size() > 1) {
-      ByteBuffer[] items = new ByteBuffer[bbs.size()];
-      bbs.toArray(items);
-      resultBuf = new MultiByteBuff(items);
-    } else {
-      // We are backed by single BB
-      resultBuf = new SingleByteBuff(bbs.get(0));
-    }
-    resultBuf.limit(reqLen);
-    if (bufsFromPool != null) {
-      final ByteBuffer[] bufsFromPoolFinal = bufsFromPool;
-      return new Pair<>(resultBuf, () -> {
-        // Return back all the BBs to pool
-        for (int i = 0; i < bufsFromPoolFinal.length; i++) {
-          pool.putbackBuffer(bufsFromPoolFinal[i]);
-        }
-      });
-    }
-    return new Pair<>(resultBuf, null);
-  }
-
-  /**
    * Needed for features such as delayed calls.  We need to be able to store the current call
    * so that we can complete it later or ask questions of what is supported by the current ongoing
    * call.
@@ -685,6 +683,27 @@ public abstract class RpcServer implements RpcServerInterface,
 
   public static boolean isInRpcCallContext() {
     return CurCall.get() != null;
+  }
+
+  /**
+   * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. For
+   * master's rpc call, it may generate new procedure and mutate the region which store procedure.
+   * There are some check about rpc when mutate region, such as rpc timeout check. So unset the rpc
+   * call to avoid the rpc check.
+   * @return the currently ongoing rpc call
+   */
+  public static Optional<RpcCall> unsetCurrentCall() {
+    Optional<RpcCall> rpcCall = getCurrentCall();
+    CurCall.set(null);
+    return rpcCall;
+  }
+
+  /**
+   * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. Set the
+   * rpc call back after mutate region.
+   */
+  public static void setCurrentCall(RpcCall rpcCall) {
+    CurCall.set(rpcCall);
   }
 
   /**
@@ -789,7 +808,21 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   @Override
+  public ByteBuffAllocator getByteBuffAllocator() {
+    return this.bbAllocator;
+  }
+
+  @Override
   public void setRsRpcServices(RSRpcServices rsRpcServices) {
     this.rsRpcServices = rsRpcServices;
+  }
+
+  @Override
+  public void setNamedQueueRecorder(NamedQueueRecorder namedQueueRecorder) {
+    this.namedQueueRecorder = namedQueueRecorder;
+  }
+
+  protected boolean needAuthorization() {
+    return authorize;
   }
 }

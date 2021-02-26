@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBuf;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -30,11 +30,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.htrace.TraceInfo;
 
 /**
  * RpcConnection implementation for netty rpc server.
@@ -60,12 +59,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   void process(final ByteBuf buf) throws IOException, InterruptedException {
     if (connectionHeaderRead) {
-      this.callCleanup = new RpcServer.CallCleanup() {
-        @Override
-        public void run() {
-          buf.release();
-        }
-      };
+      this.callCleanup = buf::release;
       process(new SingleByteBuff(buf.nioBuffer()));
     } else {
       ByteBuffer connectionHeader = ByteBuffer.allocate(buf.readableBytes());
@@ -119,10 +113,10 @@ class NettyServerRpcConnection extends ServerRpcConnection {
   @Override
   public NettyServerCall createCall(int id, final BlockingService service,
       final MethodDescriptor md, RequestHeader header, Message param, CellScanner cellScanner,
-      long size, TraceInfo tinfo, final InetAddress remoteAddress, int timeout,
+      long size, final InetAddress remoteAddress, int timeout,
       CallCleanup reqCleanup) {
-    return new NettyServerCall(id, service, md, header, param, cellScanner, this, size, tinfo,
-        remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.reservoir,
+    return new NettyServerCall(id, service, md, header, param, cellScanner, this, size,
+        remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.bbAllocator,
         this.rpcServer.cellBlockBuilder, reqCleanup);
   }
 

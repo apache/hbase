@@ -18,13 +18,12 @@
 #
 
 require 'hbase_constants'
-require 'shell'
-
-include HBaseConstants
+require 'hbase_shell'
 
 module Hbase
   class ListProceduresTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     def setup
       setup_hbase
@@ -49,7 +48,9 @@ module Hbase
       procedure = org.apache.hadoop.hbase.client.procedure.ShellTestProcedure.new
       procedure.tableNameString = 'table1'
 
-      @executor.submitProcedure(procedure)
+      proc_id = @executor.submitProcedure(procedure)
+      sleep(0.1) until @executor.isFinished(proc_id)
+
       output = capture_stdout { @list_procedures.command }
 
       regexp = create_procedure_regexp('table1')

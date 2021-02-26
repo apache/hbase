@@ -18,10 +18,8 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -30,15 +28,18 @@ import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test clone/restore snapshots from the client
@@ -46,9 +47,15 @@ import org.junit.experimental.categories.Category;
  * TODO This is essentially a clone of TestRestoreSnapshotFromClient.  This is worth refactoring
  * this because there will be a few more flavors of snapshots that need to run these tests.
  */
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestRestoreFlushSnapshotFromClient {
-  private static final Log LOG = LogFactory.getLog(TestRestoreFlushSnapshotFromClient.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRestoreFlushSnapshotFromClient.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRestoreFlushSnapshotFromClient.class);
 
   protected final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

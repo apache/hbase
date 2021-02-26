@@ -17,19 +17,23 @@
  */
 package org.apache.hadoop.hbase.nio;
 
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.NONE;
+
 import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.InvalidMarkException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Provides a unified view of all the underlying ByteBuffers and will look as if a bigger
@@ -52,7 +56,33 @@ public class MultiByteBuff extends ByteBuff {
   private int markedItemIndex = -1;
   private final int[] itemBeginPos;
 
+  private Iterator<ByteBuffer> buffsIterator = new Iterator<ByteBuffer>() {
+    @Override
+    public boolean hasNext() {
+      return curItemIndex < limitedItemIndex ||
+          (curItemIndex == limitedItemIndex && items[curItemIndex].hasRemaining());
+    }
+
+    @Override
+    public ByteBuffer next() {
+      if (curItemIndex >= items.length) {
+        throw new NoSuchElementException("items overflow");
+      }
+      curItem = items[curItemIndex++];
+      return curItem;
+    }
+  };
+
   public MultiByteBuff(ByteBuffer... items) {
+    this(NONE, items);
+  }
+
+  public MultiByteBuff(Recycler recycler, ByteBuffer... items) {
+    this(new RefCnt(recycler), items);
+  }
+
+  MultiByteBuff(RefCnt refCnt, ByteBuffer... items) {
+    this.refCnt = refCnt;
     assert items != null;
     assert items.length > 0;
     this.items = items;
@@ -75,8 +105,9 @@ public class MultiByteBuff extends ByteBuff {
     this.limitedItemIndex = this.items.length - 1;
   }
 
-  private MultiByteBuff(ByteBuffer[] items, int[] itemBeginPos, int limit, int limitedIndex,
-      int curItemIndex, int markedIndex) {
+  private MultiByteBuff(RefCnt refCnt, ByteBuffer[] items, int[] itemBeginPos, int limit,
+      int limitedIndex, int curItemIndex, int markedIndex) {
+    this.refCnt = refCnt;
     this.items = items;
     this.curItemIndex = curItemIndex;
     this.curItem = this.items[this.curItemIndex];
@@ -117,6 +148,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public int capacity() {
+    checkRefCount();
     int c = 0;
     for (ByteBuffer item : this.items) {
       c += item.capacity();
@@ -131,12 +163,14 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public byte get(int index) {
+    checkRefCount();
     int itemIndex = getItemIndex(index);
     return ByteBufferUtils.toByte(this.items[itemIndex], index - this.itemBeginPos[itemIndex]);
   }
 
   @Override
   public byte getByteAfterPosition(int offset) {
+    checkRefCount();
     // Mostly the index specified will land within this current item. Short circuit for that
     int index = offset + this.position();
     int itemIndex = getItemIndexFromCurItemIndex(index);
@@ -177,7 +211,9 @@ public class MultiByteBuff extends ByteBuff {
    * @param index
    * @return the int value at the given index
    */
+  @Override
   public int getInt(int index) {
+    checkRefCount();
     // Mostly the index specified will land within this current item. Short circuit for that
     int itemIndex;
     if (this.itemBeginPos[this.curItemIndex] <= index
@@ -191,6 +227,7 @@ public class MultiByteBuff extends ByteBuff {
 
   @Override
   public int getIntAfterPosition(int offset) {
+    checkRefCount();
     // Mostly the index specified will land within this current item. Short circuit for that
     int index = offset + this.position();
     int itemIndex;
@@ -207,7 +244,9 @@ public class MultiByteBuff extends ByteBuff {
    * @param index
    * @return the short value at the given index
    */
+  @Override
   public short getShort(int index) {
+    checkRefCount();
     // Mostly the index specified will land within this current item. Short circuit for that
     int itemIndex;
     if (this.itemBeginPos[this.curItemIndex] <= index
@@ -228,14 +267,15 @@ public class MultiByteBuff extends ByteBuff {
     ByteBuffer nextItem = items[itemIndex + 1];
     // Get available one byte from this item and remaining one from next
     short n = 0;
-    n ^= ByteBufferUtils.toByte(item, offsetInItem) & 0xFF;
-    n <<= 8;
-    n ^= ByteBufferUtils.toByte(nextItem, 0) & 0xFF;
+    n = (short) (n ^ (ByteBufferUtils.toByte(item, offsetInItem) & 0xFF));
+    n = (short) (n << 8);
+    n = (short) (n ^ (ByteBufferUtils.toByte(nextItem, 0) & 0xFF));
     return n;
   }
 
   @Override
   public short getShortAfterPosition(int offset) {
+    checkRefCount();
     // Mostly the index specified will land within this current item. Short circuit for that
     int index = offset + this.position();
     int itemIndex;
@@ -258,16 +298,10 @@ public class MultiByteBuff extends ByteBuff {
       // means cur item is the last one and we wont be able to read a int. Throw exception
       throw new BufferUnderflowException();
     }
-    ByteBuffer nextItem = items[itemIndex + 1];
-    // Get available bytes from this item and remaining from next
     int l = 0;
-    for (int i = offsetInItem; i < item.capacity(); i++) {
+    for (int i = 0; i < Bytes.SIZEOF_INT; i++) {
       l <<= 8;
-      l ^= ByteBufferUtils.toByte(item, i) & 0xFF;
-    }
-    for (int i = 0; i < Bytes.SIZEOF_INT - remainingLen; i++) {
-      l <<= 8;
-      l ^= ByteBufferUtils.toByte(nextItem, i) & 0xFF;
+      l ^= get(index + i) & 0xFF;
     }
     return l;
   }
@@ -280,19 +314,19 @@ public class MultiByteBuff extends ByteBuff {
       return ByteBufferUtils.toShort(item, offsetInItem);
     }
     if (items.length - 1 == itemIndex) {
-      // means cur item is the last one and we wont be able to read a int. Throw exception
+      // means cur item is the last one and we wont be able to read a short. Throw exception
       throw new BufferUnderflowException();
     }
     ByteBuffer nextItem = items[itemIndex + 1];
     // Get available bytes from this item and remaining from next
     short l = 0;
     for (int i = offsetInItem; i < item.capacity(); i++) {
-      l <<= 8;
-      l ^= ByteBufferUtils.toByte(item, i) & 0xFF;
+      l = (short) (l << 8);
+      l = (short) (l ^ (ByteBufferUtils.toByte(item, i) & 0xFF));
     }
     for (int i = 0; i < Bytes.SIZEOF_SHORT - remainingLen; i++) {
-      l <<= 8;
-      l ^= ByteBufferUtils.toByte(nextItem, i) & 0xFF;
+      l = (short) (l << 8);
+      l = (short) (l ^ (ByteBufferUtils.toByte(nextItem, i) & 0xFF));
     }
     return l;
   }
@@ -308,16 +342,10 @@ public class MultiByteBuff extends ByteBuff {
       // means cur item is the last one and we wont be able to read a long. Throw exception
       throw new BufferUnderflowException();
     }
-    ByteBuffer nextItem = items[itemIndex + 1];
-    // Get available bytes from this item and remaining from next
     long l = 0;
-    for (int i = offsetInItem; i < item.capacity(); i++) {
+    for (int i = 0; i < Bytes.SIZEOF_LONG; i++) {
       l <<= 8;
-      l ^= ByteBufferUtils.toByte(item, i) & 0xFF;
-    }
-    for (int i = 0; i < Bytes.SIZEOF_LONG - remainingLen; i++) {
-      l <<= 8;
-      l ^= ByteBufferUtils.toByte(nextItem, i) & 0xFF;
+      l ^= get(index + i) & 0xFF;
     }
     return l;
   }
@@ -327,7 +355,9 @@ public class MultiByteBuff extends ByteBuff {
    * @param index
    * @return the long value at the given index
    */
+  @Override
   public long getLong(int index) {
+    checkRefCount();
     // Mostly the index specified will land within this current item. Short circuit for that
     int itemIndex;
     if (this.itemBeginPos[this.curItemIndex] <= index
@@ -336,32 +366,12 @@ public class MultiByteBuff extends ByteBuff {
     } else {
       itemIndex = getItemIndex(index);
     }
-    ByteBuffer item = items[itemIndex];
-    int offsetInItem = index - this.itemBeginPos[itemIndex];
-    int remainingLen = item.limit() - offsetInItem;
-    if (remainingLen >= Bytes.SIZEOF_LONG) {
-      return ByteBufferUtils.toLong(item, offsetInItem);
-    }
-    if (items.length - 1 == itemIndex) {
-      // means cur item is the last one and we wont be able to read a long. Throw exception
-      throw new BufferUnderflowException();
-    }
-    ByteBuffer nextItem = items[itemIndex + 1];
-    // Get available bytes from this item and remaining from next
-    long l = 0;
-    for (int i = offsetInItem; i < item.capacity(); i++) {
-      l <<= 8;
-      l ^= ByteBufferUtils.toByte(item, i) & 0xFF;
-    }
-    for (int i = 0; i < Bytes.SIZEOF_LONG - remainingLen; i++) {
-      l <<= 8;
-      l ^= ByteBufferUtils.toByte(nextItem, i) & 0xFF;
-    }
-    return l;
+    return getLong(index, itemIndex);
   }
 
   @Override
   public long getLongAfterPosition(int offset) {
+    checkRefCount();
     // Mostly the index specified will land within this current item. Short circuit for that
     int index = offset + this.position();
     int itemIndex;
@@ -378,6 +388,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public int position() {
+    checkRefCount();
     return itemBeginPos[this.curItemIndex] + this.curItem.position();
   }
 
@@ -388,6 +399,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff position(int position) {
+    checkRefCount();
     // Short circuit for positioning within the cur item. Mostly that is the case.
     if (this.itemBeginPos[this.curItemIndex] <= position
         && this.itemBeginPos[this.curItemIndex + 1] > position) {
@@ -415,6 +427,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff rewind() {
+    checkRefCount();
     for (int i = 0; i < this.items.length; i++) {
       this.items[i].rewind();
     }
@@ -430,6 +443,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff mark() {
+    checkRefCount();
     this.markedItemIndex = this.curItemIndex;
     this.curItem.mark();
     return this;
@@ -442,6 +456,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff reset() {
+    checkRefCount();
     // when the buffer is moved to the next one.. the reset should happen on the previous marked
     // item and the new one should be taken as the base
     if (this.markedItemIndex < 0) throw new InvalidMarkException();
@@ -463,6 +478,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public int remaining() {
+    checkRefCount();
     int remain = 0;
     for (int i = curItemIndex; i < items.length; i++) {
       remain += items[i].remaining();
@@ -476,6 +492,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public final boolean hasRemaining() {
+    checkRefCount();
     return this.curItem.hasRemaining() || (this.curItemIndex < this.limitedItemIndex
         && this.items[this.curItemIndex + 1].hasRemaining());
   }
@@ -487,6 +504,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public byte get() {
+    checkRefCount();
     if (this.curItem.remaining() == 0) {
       if (items.length - 1 == this.curItemIndex) {
         // means cur item is the last one and we wont be able to read a long. Throw exception
@@ -506,23 +524,15 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public short getShort() {
+    checkRefCount();
     int remaining = this.curItem.remaining();
     if (remaining >= Bytes.SIZEOF_SHORT) {
       return this.curItem.getShort();
     }
-    if (remaining == 0) {
-      if (items.length - 1 == this.curItemIndex) {
-        // means cur item is the last one and we wont be able to read a long. Throw exception
-        throw new BufferUnderflowException();
-      }
-      this.curItemIndex++;
-      this.curItem = this.items[this.curItemIndex];
-      return this.curItem.getShort();
-    }
     short n = 0;
-    n ^= get() & 0xFF;
-    n <<= 8;
-    n ^= get() & 0xFF;
+    n = (short) (n ^ (get() & 0xFF));
+    n = (short) (n << 8);
+    n = (short) (n ^ (get() & 0xFF));
     return n;
   }
 
@@ -533,20 +543,11 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public int getInt() {
+    checkRefCount();
     int remaining = this.curItem.remaining();
     if (remaining >= Bytes.SIZEOF_INT) {
       return this.curItem.getInt();
     }
-    if (remaining == 0) {
-      if (items.length - 1 == this.curItemIndex) {
-        // means cur item is the last one and we wont be able to read a long. Throw exception
-        throw new BufferUnderflowException();
-      }
-      this.curItemIndex++;
-      this.curItem = this.items[this.curItemIndex];
-      return this.curItem.getInt();
-    }
-    // Get available bytes from this item and remaining from next
     int n = 0;
     for (int i = 0; i < Bytes.SIZEOF_INT; i++) {
       n <<= 8;
@@ -563,20 +564,11 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public long getLong() {
+    checkRefCount();
     int remaining = this.curItem.remaining();
     if (remaining >= Bytes.SIZEOF_LONG) {
       return this.curItem.getLong();
     }
-    if (remaining == 0) {
-      if (items.length - 1 == this.curItemIndex) {
-        // means cur item is the last one and we wont be able to read a long. Throw exception
-        throw new BufferUnderflowException();
-      }
-      this.curItemIndex++;
-      this.curItem = this.items[this.curItemIndex];
-      return this.curItem.getLong();
-    }
-    // Get available bytes from this item and remaining from next
     long l = 0;
     for (int i = 0; i < Bytes.SIZEOF_LONG; i++) {
       l <<= 8;
@@ -604,14 +596,14 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public void get(byte[] dst, int offset, int length) {
+    checkRefCount();
     while (length > 0) {
       int toRead = Math.min(length, this.curItem.remaining());
       ByteBufferUtils.copyFromBufferToArray(dst, this.curItem, this.curItem.position(), offset,
-          toRead);
+        toRead);
       this.curItem.position(this.curItem.position() + toRead);
       length -= toRead;
-      if (length == 0)
-        break;
+      if (length == 0) break;
       this.curItemIndex++;
       this.curItem = this.items[this.curItemIndex];
       offset += toRead;
@@ -620,16 +612,15 @@ public class MultiByteBuff extends ByteBuff {
 
   @Override
   public void get(int sourceOffset, byte[] dst, int offset, int length) {
+    checkRefCount();
     int itemIndex = getItemIndex(sourceOffset);
     ByteBuffer item = this.items[itemIndex];
     sourceOffset = sourceOffset - this.itemBeginPos[itemIndex];
     while (length > 0) {
       int toRead = Math.min((item.limit() - sourceOffset), length);
-      ByteBufferUtils.copyFromBufferToArray(dst, item, sourceOffset, offset,
-          toRead);
+      ByteBufferUtils.copyFromBufferToArray(dst, item, sourceOffset, offset, toRead);
       length -= toRead;
-      if (length == 0)
-        break;
+      if (length == 0) break;
       itemIndex++;
       item = this.items[itemIndex];
       offset += toRead;
@@ -644,6 +635,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff limit(int limit) {
+    checkRefCount();
     this.limit = limit;
     // Normally the limit will try to limit within the last BB item
     int limitedIndexBegin = this.itemBeginPos[this.limitedItemIndex];
@@ -683,29 +675,30 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff slice() {
+    checkRefCount();
     ByteBuffer[] copy = new ByteBuffer[this.limitedItemIndex - this.curItemIndex + 1];
     for (int i = curItemIndex, j = 0; i <= this.limitedItemIndex; i++, j++) {
       copy[j] = this.items[i].slice();
     }
-    return new MultiByteBuff(copy);
+    return new MultiByteBuff(refCnt, copy);
   }
 
   /**
-   * Returns an MBB which is a duplicate version of this MBB. The position, limit and mark
-   * of the new MBB will be independent than that of the original MBB.
-   * The content of the new MBB will start at this MBB's current position
-   * The position, limit and mark of the new MBB would be identical to this MBB in terms of
-   * values.
-   * @return a sliced MBB
+   * Returns an MBB which is a duplicate version of this MBB. The position, limit and mark of the
+   * new MBB will be independent than that of the original MBB. The content of the new MBB will
+   * start at this MBB's current position The position, limit and mark of the new MBB would be
+   * identical to this MBB in terms of values.
+   * @return a duplicated MBB
    */
   @Override
   public MultiByteBuff duplicate() {
+    checkRefCount();
     ByteBuffer[] itemsCopy = new ByteBuffer[this.items.length];
     for (int i = 0; i < this.items.length; i++) {
       itemsCopy[i] = items[i].duplicate();
     }
-    return new MultiByteBuff(itemsCopy, this.itemBeginPos, this.limit, this.limitedItemIndex,
-        this.curItemIndex, this.markedItemIndex);
+    return new MultiByteBuff(refCnt, itemsCopy, this.itemBeginPos, this.limit,
+        this.limitedItemIndex, this.curItemIndex, this.markedItemIndex);
   }
 
   /**
@@ -715,6 +708,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff put(byte b) {
+    checkRefCount();
     if (this.curItem.remaining() == 0) {
       if (this.curItemIndex == this.items.length - 1) {
         throw new BufferOverflowException();
@@ -734,6 +728,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff put(int index, byte b) {
+    checkRefCount();
     int itemIndex = getItemIndex(limit);
     ByteBuffer item = items[itemIndex];
     item.put(index - itemBeginPos[itemIndex], b);
@@ -749,6 +744,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff put(int offset, ByteBuff src, int srcOffset, int length) {
+    checkRefCount();
     int destItemIndex = getItemIndex(offset);
     int srcItemIndex = getItemIndex(srcOffset);
     ByteBuffer destItem = this.items[destItemIndex];
@@ -784,7 +780,7 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   private static ByteBuffer getItemByteBuffer(ByteBuff buf, int index) {
-    return (buf instanceof SingleByteBuff) ? ((SingleByteBuff) buf).getEnclosingByteBuffer()
+    return (buf instanceof SingleByteBuff) ? buf.nioByteBuffers()[0]
         : ((MultiByteBuff) buf).items[index];
   }
 
@@ -795,6 +791,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff putInt(int val) {
+    checkRefCount();
     if (this.curItem.remaining() >= Bytes.SIZEOF_INT) {
       this.curItem.putInt(val);
       return this;
@@ -845,6 +842,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff put(byte[] src, int offset, int length) {
+    checkRefCount();
     if (this.curItem.remaining() >= length) {
       ByteBufferUtils.copyFromArrayToBuffer(this.curItem, src, offset, length);
       return this;
@@ -864,6 +862,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff putLong(long val) {
+    checkRefCount();
     if (this.curItem.remaining() >= Bytes.SIZEOF_LONG) {
       this.curItem.putLong(val);
       return this;
@@ -921,6 +920,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff skip(int length) {
+    checkRefCount();
     // Get available bytes from this item and remaining from next
     int jump = 0;
     while (true) {
@@ -943,6 +943,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public MultiByteBuff moveBack(int length) {
+    checkRefCount();
     while (length != 0) {
       if (length > curItem.position()) {
         length -= curItem.position();
@@ -970,6 +971,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public ByteBuffer asSubByteBuffer(int length) {
+    checkRefCount();
     if (this.curItem.remaining() >= length) {
       return this.curItem;
     }
@@ -979,11 +981,10 @@ public class MultiByteBuff extends ByteBuff {
     ByteBuffer locCurItem = curItem;
     while (length > 0) {
       int toRead = Math.min(length, locCurItem.remaining());
-      ByteBufferUtils
-          .copyFromBufferToArray(dupB, locCurItem, locCurItem.position(), offset, toRead);
+      ByteBufferUtils.copyFromBufferToArray(dupB, locCurItem, locCurItem.position(), offset,
+        toRead);
       length -= toRead;
-      if (length == 0)
-        break;
+      if (length == 0) break;
       locCurItemIndex++;
       locCurItem = this.items[locCurItemIndex];
       offset += toRead;
@@ -1007,6 +1008,7 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public void asSubByteBuffer(int offset, int length, ObjectIntPair<ByteBuffer> pair) {
+    checkRefCount();
     if (this.itemBeginPos[this.curItemIndex] <= offset) {
       int relOffsetInCurItem = offset - this.itemBeginPos[this.curItemIndex];
       if (this.curItem.limit() - relOffsetInCurItem >= length) {
@@ -1037,23 +1039,30 @@ public class MultiByteBuff extends ByteBuff {
     }
     pair.setFirst(ByteBuffer.wrap(dst));
     pair.setSecond(0);
-    return;
   }
 
   /**
    * Copies the content from an this MBB to a ByteBuffer
-   * @param out the ByteBuffer to which the copy has to happen
-   * @param sourceOffset the offset in the MBB from which the elements has
-   * to be copied
+   * @param out the ByteBuffer to which the copy has to happen, its position will be advanced.
+   * @param sourceOffset the offset in the MBB from which the elements has to be copied
    * @param length the length in the MBB upto which the elements has to be copied
    */
   @Override
-  public void get(ByteBuffer out, int sourceOffset,
-      int length) {
-      // Not used from real read path actually. So not going with
-      // optimization
-    for (int i = 0; i < length; ++i) {
-      out.put(this.get(sourceOffset + i));
+  public void get(ByteBuffer out, int sourceOffset, int length) {
+    checkRefCount();
+    int itemIndex = getItemIndex(sourceOffset);
+    ByteBuffer in = this.items[itemIndex];
+    sourceOffset = sourceOffset - this.itemBeginPos[itemIndex];
+    while (length > 0) {
+      int toRead = Math.min(in.limit() - sourceOffset, length);
+      ByteBufferUtils.copyFromBufferToBuffer(in, out, sourceOffset, toRead);
+      length -= toRead;
+      if (length == 0) {
+        break;
+      }
+      itemIndex++;
+      in = this.items[itemIndex];
+      sourceOffset = 0;
     }
   }
 
@@ -1069,31 +1078,59 @@ public class MultiByteBuff extends ByteBuff {
    */
   @Override
   public byte[] toBytes(int offset, int length) {
+    checkRefCount();
     byte[] output = new byte[length];
     this.get(offset, output, 0, length);
     return output;
   }
 
-  @Override
-  public int read(ReadableByteChannel channel) throws IOException {
+  private int internalRead(ReadableByteChannel channel, long offset,
+      ChannelReader reader) throws IOException {
+    checkRefCount();
     int total = 0;
-    while (true) {
-      // Read max possible into the current BB
-      int len = channelRead(channel, this.curItem);
-      if (len > 0)
+    while (buffsIterator.hasNext()) {
+      ByteBuffer buffer = buffsIterator.next();
+      int len = read(channel, buffer, offset, reader);
+      if (len > 0) {
         total += len;
-      if (this.curItem.hasRemaining()) {
-        // We were not able to read enough to fill the current BB itself. Means there is no point in
-        // doing more reads from Channel. Only this much there for now.
+        offset += len;
+      }
+      if (buffer.hasRemaining()) {
         break;
-      } else {
-        if (this.curItemIndex >= this.limitedItemIndex)
-          break;
-        this.curItemIndex++;
-        this.curItem = this.items[this.curItemIndex];
       }
     }
     return total;
+  }
+
+  @Override
+  public int read(ReadableByteChannel channel) throws IOException {
+    return internalRead(channel, 0, CHANNEL_READER);
+  }
+
+  @Override
+  public int read(FileChannel channel, long offset) throws IOException {
+    return internalRead(channel, offset, FILE_READER);
+  }
+
+  @Override
+  public int write(FileChannel channel, long offset) throws IOException {
+    checkRefCount();
+    int total = 0;
+    while (buffsIterator.hasNext()) {
+      ByteBuffer buffer = buffsIterator.next();
+      while (buffer.hasRemaining()) {
+        int len = channel.write(buffer, offset);
+        total += len;
+        offset += len;
+      }
+    }
+    return total;
+  }
+
+  @Override
+  public ByteBuffer[] nioByteBuffers() {
+    checkRefCount();
+    return this.items;
   }
 
   @Override
@@ -1103,7 +1140,7 @@ public class MultiByteBuff extends ByteBuff {
     MultiByteBuff that = (MultiByteBuff) obj;
     if (this.capacity() != that.capacity()) return false;
     if (ByteBuff.compareTo(this, this.position(), this.limit(), that, that.position(),
-        that.limit()) == 0) {
+      that.limit()) == 0) {
       return true;
     }
     return false;
@@ -1118,11 +1155,9 @@ public class MultiByteBuff extends ByteBuff {
     return hash;
   }
 
-  /**
-   * @return the ByteBuffers which this wraps.
-   */
-  @VisibleForTesting
-  public ByteBuffer[] getEnclosingByteBuffers() {
-    return this.items;
+  @Override
+  public MultiByteBuff retain() {
+    refCnt.retain();
+    return this;
   }
 }

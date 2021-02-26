@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertTrue;
@@ -26,21 +24,23 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -48,14 +48,15 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -63,16 +64,22 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests {@link HFile} cache-on-write functionality for data blocks, non-root
  * index blocks, and Bloom filter blocks, as specified by the column family.
  */
 @RunWith(Parameterized.class)
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestCacheOnWriteInSchema {
 
-  private static final Log LOG = LogFactory.getLog(TestCacheOnWriteInSchema.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCacheOnWriteInSchema.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWriteInSchema.class);
   @Rule public TestName name = new TestName();
 
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
@@ -106,18 +113,19 @@ public class TestCacheOnWriteInSchema {
       return blockType == blockType1 || blockType == blockType2;
     }
 
-    public void modifyFamilySchema(HColumnDescriptor family) {
+    public ColumnFamilyDescriptorBuilder modifyFamilySchema(ColumnFamilyDescriptorBuilder builder) {
       switch (this) {
-      case DATA_BLOCKS:
-        family.setCacheDataOnWrite(true);
-        break;
-      case BLOOM_BLOCKS:
-        family.setCacheBloomsOnWrite(true);
-        break;
-      case INDEX_BLOCKS:
-        family.setCacheIndexesOnWrite(true);
-        break;
+        case DATA_BLOCKS:
+          builder.setCacheDataOnWrite(true);
+          break;
+        case BLOOM_BLOCKS:
+          builder.setCacheBloomsOnWrite(true);
+          break;
+        case INDEX_BLOCKS:
+          builder.setCacheIndexesOnWrite(true);
+          break;
       }
+      return builder;
     }
   }
 
@@ -154,28 +162,28 @@ public class TestCacheOnWriteInSchema {
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
     conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, false);
     conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, false);
-
     fs = HFileSystem.get(conf);
 
     // Create the schema
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setBloomFilterType(BloomType.ROWCOL);
-    cowType.modifyFamilySchema(hcd);
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-    htd.addFamily(hcd);
+    ColumnFamilyDescriptor hcd = cowType
+        .modifyFamilySchema(
+          ColumnFamilyDescriptorBuilder.newBuilder(family).setBloomFilterType(BloomType.ROWCOL))
+        .build();
+    TableDescriptor htd =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setColumnFamily(hcd).build();
 
     // Create a store based on the schema
-    final String id = TestCacheOnWriteInSchema.class.getName();
-    final Path logdir = new Path(FSUtils.getRootDir(conf),
-      AbstractFSWALProvider.getWALDirectoryName(id));
+    String id = TestCacheOnWriteInSchema.class.getName();
+    Path logdir =
+      new Path(CommonFSUtils.getRootDir(conf), AbstractFSWALProvider.getWALDirectoryName(id));
     fs.delete(logdir, true);
 
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    walFactory = new WALFactory(conf, null, id);
+    RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
+    walFactory = new WALFactory(conf, id);
 
-    region = TEST_UTIL.createLocalHRegion(info, htd,
-        walFactory.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()));
-    store = new HStore(region, hcd, conf);
+    region = TEST_UTIL.createLocalHRegion(info, conf, htd, walFactory.getWAL(info));
+    region.setBlockCache(BlockCacheFactory.createBlockCache(conf));
+    store = new HStore(region, hcd, conf, false);
   }
 
   @After
@@ -217,7 +225,7 @@ public class TestCacheOnWriteInSchema {
 
   private void readStoreFile(Path path) throws IOException {
     CacheConfig cacheConf = store.getCacheConfig();
-    BlockCache cache = cacheConf.getBlockCache();
+    BlockCache cache = cacheConf.getBlockCache().get();
     HStoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.ROWCOL, true);
     sf.initReader();
     HFile.Reader reader = sf.getReader().getHFileReader();
@@ -236,7 +244,10 @@ public class TestCacheOnWriteInSchema {
           offset);
         boolean isCached = cache.getBlock(blockCacheKey, true, false, true) != null;
         boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
-        if (shouldBeCached != isCached) {
+        final BlockType blockType = block.getBlockType();
+
+        if (shouldBeCached != isCached &&
+            (cowType.blockType1.equals(blockType) || cowType.blockType2.equals(blockType))) {
           throw new AssertionError(
             "shouldBeCached: " + shouldBeCached+ "\n" +
             "isCached: " + isCached + "\n" +
@@ -258,8 +269,7 @@ public class TestCacheOnWriteInSchema {
     } else {
       KeyValue.Type keyType =
           KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
-      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum)
-      {
+      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum) {
         throw new RuntimeException("Generated an invalid key type: " + keyType
             + ". " + "Probably the layout of KeyValue.Type has changed.");
       }

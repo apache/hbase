@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.errorhandling;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The dispatcher acts as the state holding entity for foreign error handling.  The first
@@ -40,7 +40,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ForeignExceptionDispatcher implements ForeignExceptionListener, ForeignExceptionSnare {
-  private static final Log LOG = LogFactory.getLog(ForeignExceptionDispatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ForeignExceptionDispatcher.class);
   protected final String name;
   protected final List<ForeignExceptionListener> listeners = new ArrayList<>();
   private ForeignException exception;
@@ -95,7 +95,6 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
 
   /**
    * Sends an exception to all listeners.
-   * @param message human readable message passed to the listener
    * @param e {@link ForeignException} containing the cause.  Can be null.
    */
   private void dispatch(ForeignException e) {

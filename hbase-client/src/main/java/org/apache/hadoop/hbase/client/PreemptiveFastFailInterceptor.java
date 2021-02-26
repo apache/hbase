@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import java.io.IOException;
 import java.util.Map.Entry;
@@ -27,17 +25,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The concrete {@link RetryingCallerInterceptor} class that implements the preemptive fast fail
@@ -66,8 +64,8 @@ import org.apache.hadoop.ipc.RemoteException;
 @InterfaceAudience.Private
 class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
 
-  private static final Log LOG = LogFactory
-      .getLog(PreemptiveFastFailInterceptor.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(PreemptiveFastFailInterceptor.class);
 
   // amount of time to wait before we consider a server to be in fast fail
   // mode
@@ -96,8 +94,11 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
         HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS,
         HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT);
     this.failureMapCleanupIntervalMilliSec = conf.getLong(
-        HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS,
-        HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT);
+            HConstants.HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS,
+            HConstants.HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS_DEFAULT);
+    this.fastFailClearingTimeMilliSec = conf.getLong(
+            HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS,
+            HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT);
     lastFailureMapCleanupTimeMilliSec = EnvironmentEdgeManager.currentTime();
   }
 
@@ -146,7 +147,6 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
    *          - the throwable to be handled.
    * @throws PreemptiveFastFailException
    */
-  @VisibleForTesting
   protected void handleFailureToServer(ServerName serverName, Throwable t) {
     if (serverName == null || t == null) {
       return;

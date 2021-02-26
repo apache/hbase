@@ -18,18 +18,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
-
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.ToStringHelper;
 
 /**
  * Manages the read/write consistency. This provides an interface for readers to determine what
@@ -38,8 +36,10 @@ import org.apache.hadoop.hbase.util.ClassSize;
  */
 @InterfaceAudience.Private
 public class MultiVersionConcurrencyControl {
-  private static final Log LOG = LogFactory.getLog(MultiVersionConcurrencyControl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiVersionConcurrencyControl.class);
+  private static final long READPOINT_ADVANCE_WAIT_TIME = 10L;
 
+  final String regionName;
   final AtomicLong readPoint = new AtomicLong(0);
   final AtomicLong writePoint = new AtomicLong(0);
   private final Object readWaiters = new Object();
@@ -57,13 +57,18 @@ public class MultiVersionConcurrencyControl {
   private final LinkedList<WriteEntry> writeQueue = new LinkedList<>();
 
   public MultiVersionConcurrencyControl() {
-    super();
+    this(null);
+  }
+
+  public MultiVersionConcurrencyControl(String regionName) {
+    this.regionName = regionName;
   }
 
   /**
    * Construct and set read point. Write point is uninitialized.
    */
   public MultiVersionConcurrencyControl(long startPoint) {
+    this(null);
     tryAdvanceTo(startPoint, NONE);
   }
 
@@ -74,8 +79,12 @@ public class MultiVersionConcurrencyControl {
   public void advanceTo(long newStartPoint) {
     while (true) {
       long seqId = this.getWritePoint();
-      if (seqId >= newStartPoint) break;
-      if (this.tryAdvanceTo(/* newSeqId = */ newStartPoint, /* expected = */ seqId)) break;
+      if (seqId >= newStartPoint) {
+        break;
+      }
+      if (this.tryAdvanceTo(newStartPoint, seqId)) {
+        break;
+      }
     }
   }
 
@@ -221,11 +230,12 @@ public class MultiVersionConcurrencyControl {
     synchronized (readWaiters) {
       while (readPoint.get() < e.getWriteNumber()) {
         if (count % 100 == 0 && count > 0) {
-          LOG.warn("STUCK: " + this);
+          long totalWaitTillNow = READPOINT_ADVANCE_WAIT_TIME * count;
+          LOG.warn("STUCK for : " + totalWaitTillNow + " millis. " + this);
         }
         count++;
         try {
-          readWaiters.wait(10);
+          readWaiters.wait(READPOINT_ADVANCE_WAIT_TIME);
         } catch (InterruptedException ie) {
           // We were interrupted... finish the loop -- i.e. cleanup --and then
           // on our way out, reset the interrupt flag.
@@ -238,18 +248,20 @@ public class MultiVersionConcurrencyControl {
     }
   }
 
-  @VisibleForTesting
+  @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("readPoint", readPoint)
-        .add("writePoint", writePoint).toString();
+    ToStringHelper helper = MoreObjects.toStringHelper(this).add("readPoint", readPoint)
+        .add("writePoint", writePoint);
+    if (this.regionName != null) {
+      helper.add("regionName", this.regionName);
+    }
+    return helper.toString();
   }
 
   public long getReadPoint() {
     return readPoint.get();
   }
 
-  @VisibleForTesting
   public long getWritePoint() {
     return writePoint.get();
   }

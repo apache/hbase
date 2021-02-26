@@ -24,19 +24,67 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsTable {
   private final MetricsTableAggregateSource tableSourceAgg;
-  private MetricsTableWrapperAggregate tableWrapperAgg;
+  private MetricsTableWrapperAggregate wrapper;
 
   public MetricsTable(final MetricsTableWrapperAggregate wrapper) {
     tableSourceAgg = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
                                              .getTableAggregate();
-    this.tableWrapperAgg = wrapper;
+    this.wrapper = wrapper;
   }
 
   public MetricsTableWrapperAggregate getTableWrapperAgg() {
-    return tableWrapperAgg;
+    return wrapper;
   }
 
   public MetricsTableAggregateSource getTableSourceAgg() {
     return tableSourceAgg;
+  }
+
+  public void incrSplitRequest(String table) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).incrSplitRequest();
+  }
+
+  public void incrSplitSuccess(String table) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).incrSplitSuccess();
+  }
+
+  public void updateSplitTime(String table, long t) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).updateSplitTime(t);
+  }
+
+  public void updateFlushTime(String table, long t) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).updateFlushTime(t);
+  }
+
+  public void updateFlushMemstoreSize(String table, long bytes) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).updateFlushMemstoreSize(bytes);
+  }
+
+  public void updateFlushOutputSize(String table, long bytes) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).updateFlushOutputSize(bytes);
+  }
+
+  public void updateCompactionTime(String table, boolean isMajor, long t) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).updateCompactionTime(isMajor, t);
+  }
+
+  public void updateCompactionInputFileCount(String table, boolean isMajor, long c) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper)
+      .updateCompactionInputFileCount(isMajor, c);
+  }
+
+  public void updateCompactionInputSize(String table, boolean isMajor, long bytes) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper)
+      .updateCompactionInputSize(isMajor, bytes);
+  }
+
+  public void updateCompactionOutputFileCount(String table, boolean isMajor, long c) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper)
+      .updateCompactionOutputFileCount(isMajor, c);
+  }
+
+  public void updateCompactionOutputSize(String table, boolean isMajor, long bytes) {
+    tableSourceAgg.getOrCreateTableSource(table, wrapper)
+      .updateCompactionOutputSize(isMajor, bytes);
   }
 }

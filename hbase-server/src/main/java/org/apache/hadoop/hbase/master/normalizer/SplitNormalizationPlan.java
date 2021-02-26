@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,28 +18,23 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import java.io.IOException;
-import java.util.Arrays;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Normalization plan to split region.
+ * Normalization plan to split a region.
  */
 @InterfaceAudience.Private
-public class SplitNormalizationPlan implements NormalizationPlan {
-  private static final Log LOG = LogFactory.getLog(SplitNormalizationPlan.class.getName());
+final class SplitNormalizationPlan implements NormalizationPlan {
 
-  private RegionInfo regionInfo;
-  private byte[] splitPoint;
+  private final NormalizationTarget splitTarget;
 
-  public SplitNormalizationPlan(RegionInfo regionInfo, byte[] splitPoint) {
-    this.regionInfo = regionInfo;
-    this.splitPoint = splitPoint;
+  SplitNormalizationPlan(final RegionInfo splitTarget, final long splitTargetSizeMb) {
+    this.splitTarget = new NormalizationTarget(splitTarget, splitTargetSizeMb);
   }
 
   @Override
@@ -47,40 +42,37 @@ public class SplitNormalizationPlan implements NormalizationPlan {
     return PlanType.SPLIT;
   }
 
-  public RegionInfo getRegionInfo() {
-    return regionInfo;
-  }
-
-  public void setRegionInfo(RegionInfo regionInfo) {
-    this.regionInfo = regionInfo;
-  }
-
-  public byte[] getSplitPoint() {
-    return splitPoint;
-  }
-
-  public void setSplitPoint(byte[] splitPoint) {
-    this.splitPoint = splitPoint;
+  public NormalizationTarget getSplitTarget() {
+    return splitTarget;
   }
 
   @Override
   public String toString() {
-    return "SplitNormalizationPlan{" +
-      "regionInfo=" + regionInfo +
-      ", splitPoint=" + Arrays.toString(splitPoint) +
-      '}';
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .append("splitTarget", splitTarget)
+      .toString();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public void execute(Admin admin) {
-    LOG.info("Executing splitting normalization plan: " + this);
-    try {
-      admin.splitRegion(regionInfo.getRegionName());
-    } catch (IOException ex) {
-      LOG.error("Error during region split: ", ex);
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
     }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SplitNormalizationPlan that = (SplitNormalizationPlan) o;
+
+    return new EqualsBuilder()
+      .append(splitTarget, that.splitTarget)
+      .isEquals();
+  }
+
+  @Override public int hashCode() {
+    return new HashCodeBuilder(17, 37)
+      .append(splitTarget)
+      .toHashCode();
   }
 }

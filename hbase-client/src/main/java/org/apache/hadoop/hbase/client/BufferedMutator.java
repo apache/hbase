@@ -18,13 +18,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * <p>Used to communicate with a single HBase table similar to {@link Table} but meant for
@@ -64,7 +63,13 @@ public interface BufferedMutator extends Closeable {
   /**
    * Key to use setting non-default BufferedMutator implementation in Configuration.
    */
-  public static final String CLASSNAME_KEY = "hbase.client.bufferedmutator.classname";
+  String CLASSNAME_KEY = "hbase.client.bufferedmutator.classname";
+
+  /**
+   * Having the timer tick run more often that once every 100ms is needless and will
+   * probably cause too many timer events firing having a negative impact on performance.
+   */
+  long MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS = 100;
 
   /**
    * Gets the fully qualified table name instance of the table that this BufferedMutator writes to.
@@ -113,6 +118,56 @@ public interface BufferedMutator extends Closeable {
    * @throws IOException if a remote or network exception occurs.
    */
   void flush() throws IOException;
+
+  /**
+   * Sets the maximum time before the buffer is automatically flushed checking once per second.
+   * @param timeoutMs    The maximum number of milliseconds how long records may be buffered
+   *                     before they are flushed. Set to 0 to disable.
+   */
+  default void setWriteBufferPeriodicFlush(long timeoutMs) {
+    setWriteBufferPeriodicFlush(timeoutMs, 1000L);
+  }
+
+  /**
+   * Sets the maximum time before the buffer is automatically flushed.
+   * @param timeoutMs    The maximum number of milliseconds how long records may be buffered
+   *                     before they are flushed. Set to 0 to disable.
+   * @param timerTickMs  The number of milliseconds between each check if the
+   *                     timeout has been exceeded. Must be 100ms (as defined in
+   *                     {@link #MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS})
+   *                     or larger to avoid performance problems.
+   */
+  default void setWriteBufferPeriodicFlush(long timeoutMs, long timerTickMs) {
+    throw new UnsupportedOperationException(
+            "The BufferedMutator::setWriteBufferPeriodicFlush has not been implemented");
+  }
+
+  /**
+   * Disable periodic flushing of the write buffer.
+   */
+  default void disableWriteBufferPeriodicFlush() {
+    setWriteBufferPeriodicFlush(0, MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS);
+  }
+
+  /**
+   * Returns the current periodic flush timeout value in milliseconds.
+   * @return The maximum number of milliseconds how long records may be buffered before they
+   *   are flushed. The value 0 means this is disabled.
+   */
+  default long getWriteBufferPeriodicFlushTimeoutMs() {
+    throw new UnsupportedOperationException(
+            "The BufferedMutator::getWriteBufferPeriodicFlushTimeoutMs has not been implemented");
+  }
+
+  /**
+   * Returns the current periodic flush timertick interval in milliseconds.
+   * @return The number of milliseconds between each check if the timeout has been exceeded.
+   *   This value only has a real meaning if the timeout has been set to > 0
+   */
+  default long getWriteBufferPeriodicFlushTimerTickMs() {
+    throw new UnsupportedOperationException(
+            "The BufferedMutator::getWriteBufferPeriodicFlushTimerTickMs has not been implemented");
+  }
 
   /**
    * Returns the maximum size in bytes of the write buffer for this HTable.

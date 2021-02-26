@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
@@ -48,16 +49,20 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
 
   private long oldestStamp;
 
+  private final CellComparator comparator;
   /**
    * Return maxVersions of every row.
    * @param minVersion Minimum number of versions to keep
    * @param maxVersion Maximum number of versions to return
    * @param oldestUnexpiredTS oldest timestamp that has not expired according to the TTL.
+   * @param comparator used to compare the qualifier of cell
    */
-  public ScanWildcardColumnTracker(int minVersion, int maxVersion, long oldestUnexpiredTS) {
+  public ScanWildcardColumnTracker(int minVersion, int maxVersion,
+      long oldestUnexpiredTS, CellComparator comparator) {
     this.maxVersions = maxVersion;
     this.minVersions = minVersion;
     this.oldestStamp = oldestUnexpiredTS;
+    this.comparator = comparator;
   }
 
   /**
@@ -84,7 +89,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       // do not count a delete marker as another version
       return checkVersion(type, timestamp);
     }
-    int cmp = CellComparator.compareQualifiers(cell, this.columnCell);
+    int cmp = comparator.compareQualifiers(cell, this.columnCell);
     if (cmp == 0) {
       if (ignoreCount) {
         return ScanQueryMatcher.MatchCode.INCLUDE;
@@ -130,7 +135,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * delete
    */
   private MatchCode checkVersion(byte type, long timestamp) {
-    if (!CellUtil.isDelete(type)) {
+    if (!PrivateCellUtil.isDelete(type)) {
       currentCount++;
     }
     if (currentCount > maxVersions) {
@@ -175,6 +180,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * scanner).
    * @return The column count.
    */
+  @Override
   public ColumnCount getColumnHint() {
     return null;
   }
@@ -200,6 +206,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     }
   }
 
+  @Override
   public boolean isDone(long timestamp) {
     return minVersions <= 0 && isExpired(timestamp);
   }

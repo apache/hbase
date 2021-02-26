@@ -17,43 +17,42 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.TestCacheConfig.DataCacheEntry;
 import org.apache.hadoop.hbase.io.hfile.TestCacheConfig.IndexCacheEntry;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.junit.After;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestBlockCacheReporting {
-  private static final Log LOG = LogFactory.getLog(TestBlockCacheReporting.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBlockCacheReporting.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestBlockCacheReporting.class);
   private Configuration conf;
 
   @Before
   public void setUp() throws Exception {
-    CacheConfig.clearGlobalInstances();
     this.conf = HBaseConfiguration.create();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    // Let go of current block cache.
-    CacheConfig.clearGlobalInstances();
   }
 
   private void addDataAndHits(final BlockCache bc, final int count) {
@@ -77,40 +76,38 @@ public class TestBlockCacheReporting {
   }
 
   @Test
-  public void testBucketCache() throws JsonGenerationException, JsonMappingException, IOException {
+  public void testBucketCache() throws IOException {
     this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 100);
-    CacheConfig cc = new CacheConfig(this.conf);
-    assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
-    logPerBlock(cc.getBlockCache());
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
+    assertTrue(blockCache instanceof CombinedBlockCache);
+    logPerBlock(blockCache);
     final int count = 3;
-    addDataAndHits(cc.getBlockCache(), count);
+    addDataAndHits(blockCache, count);
     // The below has no asserts.  It is just exercising toString and toJSON code.
-    LOG.info(cc.getBlockCache().getStats());
-    BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(cc.getBlockCache());
-    LOG.info(cbsbf);
+    LOG.info(Objects.toString(blockCache.getStats()));
+    BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(blockCache);
+    LOG.info(Objects.toString(cbsbf));
     logPerFile(cbsbf);
-    bucketCacheReport(cc.getBlockCache());
+    bucketCacheReport(blockCache);
     LOG.info(BlockCacheUtil.toJSON(cbsbf));
   }
 
   @Test
-  public void testLruBlockCache() throws JsonGenerationException, JsonMappingException, IOException {
+  public void testLruBlockCache() throws IOException {
     CacheConfig cc = new CacheConfig(this.conf);
-    assertTrue(cc.isBlockCacheEnabled());
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
-    assertTrue(cc.getBlockCache() instanceof LruBlockCache);
-    logPerBlock(cc.getBlockCache());
-    addDataAndHits(cc.getBlockCache(), 3);
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
+    logPerBlock(blockCache);
+    addDataAndHits(blockCache, 3);
     // The below has no asserts.  It is just exercising toString and toJSON code.
-    BlockCache bc = cc.getBlockCache();
-    LOG.info("count=" + bc.getBlockCount() + ", currentSize=" + bc.getCurrentSize() +
-        ", freeSize=" + bc.getFreeSize() );
-    LOG.info(cc.getBlockCache().getStats());
-    BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(cc.getBlockCache());
-    LOG.info(cbsbf);
+    LOG.info("count=" + blockCache.getBlockCount() + ", currentSize=" + blockCache.getCurrentSize()
+        + ", freeSize=" + blockCache.getFreeSize());
+    LOG.info(Objects.toString(blockCache.getStats()));
+    BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(blockCache);
+    LOG.info(Objects.toString(cbsbf));
     logPerFile(cbsbf);
-    bucketCacheReport(cc.getBlockCache());
+    bucketCacheReport(blockCache);
     LOG.info(BlockCacheUtil.toJSON(cbsbf));
   }
 
@@ -124,8 +121,7 @@ public class TestBlockCacheReporting {
     }
   }
 
-  private void logPerFile(final BlockCacheUtil.CachedBlocksByFile cbsbf)
-  throws JsonGenerationException, JsonMappingException, IOException {
+  private void logPerFile(final BlockCacheUtil.CachedBlocksByFile cbsbf) throws IOException {
     for (Map.Entry<String, NavigableSet<CachedBlock>> e:
         cbsbf.getCachedBlockStatsByFile().entrySet()) {
       int count = 0;
@@ -143,16 +139,15 @@ public class TestBlockCacheReporting {
       }
       LOG.info("filename=" + e.getKey() + ", count=" + count + ", countData=" + countData +
           ", size=" + size + ", sizeData=" + sizeData);
-      LOG.info(BlockCacheUtil.toJSON(e.getKey(), e.getValue()));
+      //LOG.info(BlockCacheUtil.toJSON(e.getKey(), e.getValue()));
     }
   }
 
-  private BlockCacheUtil.CachedBlocksByFile logPerBlock(final BlockCache bc)
-  throws JsonGenerationException, JsonMappingException, IOException {
+  private BlockCacheUtil.CachedBlocksByFile logPerBlock(final BlockCache bc) throws IOException {
     BlockCacheUtil.CachedBlocksByFile cbsbf = new BlockCacheUtil.CachedBlocksByFile();
-    for (CachedBlock cb: bc) {
+    for (CachedBlock cb : bc) {
       LOG.info(cb.toString());
-      LOG.info(BlockCacheUtil.toJSON(bc));
+      //LOG.info(BlockCacheUtil.toJSON(bc));
       cbsbf.update(cb);
     }
     return cbsbf;

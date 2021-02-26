@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@code byte} of 8-bits using a fixed-length encoding. Built on
@@ -33,16 +32,24 @@ public class OrderedInt8 extends OrderedBytesBase<Byte> {
   public static final OrderedInt8 ASCENDING = new OrderedInt8(Order.ASCENDING);
   public static final OrderedInt8 DESCENDING = new OrderedInt8(Order.DESCENDING);
 
-  protected OrderedInt8(Order order) { super(order); }
+  protected OrderedInt8(Order order) {
+    super(order);
+  }
 
   @Override
-  public boolean isNullable() { return false; }
+  public boolean isNullable() {
+    return false;
+  }
 
   @Override
-  public int encodedLength(Byte val) { return 2; }
+  public int encodedLength(Byte val) {
+    return 2;
+  }
 
   @Override
-  public Class<Byte> encodedClass() { return Byte.class; }
+  public Class<Byte> encodedClass() {
+    return Byte.class;
+  }
 
   @Override
   public Byte decode(PositionedByteRange src) {
@@ -51,7 +58,9 @@ public class OrderedInt8 extends OrderedBytesBase<Byte> {
 
   @Override
   public int encode(PositionedByteRange dst, Byte val) {
-    if (null == val) throw new IllegalArgumentException("Null values not supported.");
+    if (null == val) {
+      throw new IllegalArgumentException("Null values not supported.");
+    }
     return OrderedBytes.encodeInt8(dst, val, order);
   }
 

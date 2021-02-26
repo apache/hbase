@@ -17,24 +17,24 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
-
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyByteBufferCell;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyByteBufferExtendedCell;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyCell;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -44,6 +44,10 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({ MiscTests.class, SmallTests.class })
 @RunWith(Parameterized.class)
 public class TestKeyOnlyFilter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestKeyOnlyFilter.class);
 
   @Parameterized.Parameter
   public boolean lenAsVal;
@@ -82,7 +86,7 @@ public class TestKeyOnlyFilter {
     KeyValue KeyOnlyKeyValue = new KeyValue(newBuffer);
 
     KeyOnlyCell keyOnlyCell = new KeyOnlyCell(kv, lenAsVal);
-    KeyOnlyByteBufferCell keyOnlyByteBufferedCell = new KeyOnlyByteBufferCell(
+    KeyOnlyByteBufferExtendedCell keyOnlyByteBufferedCell = new KeyOnlyByteBufferExtendedCell(
         bbCell, lenAsVal);
 
     assertTrue(CellUtil.matchingRows(KeyOnlyKeyValue, keyOnlyCell));
@@ -99,6 +103,8 @@ public class TestKeyOnlyFilter {
     assertTrue(CellUtil.matchingValue(KeyOnlyKeyValue, keyOnlyCell));
     assertTrue(KeyOnlyKeyValue.getValueLength() == keyOnlyByteBufferedCell
         .getValueLength());
+    assertEquals(8 + keyLen + (lenAsVal ? 4 : 0), KeyOnlyKeyValue.getSerializedSize());
+    assertEquals(8 + keyLen + (lenAsVal ? 4 : 0), keyOnlyCell.getSerializedSize());
     if (keyOnlyByteBufferedCell.getValueLength() > 0) {
       assertTrue(CellUtil.matchingValue(KeyOnlyKeyValue,
           keyOnlyByteBufferedCell));

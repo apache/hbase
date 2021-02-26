@@ -19,20 +19,18 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements a heap merge across any number of KeyValueScanners.
@@ -49,7 +47,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 @InterfaceAudience.Private
 public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner {
-  private static final Log LOG = LogFactory.getLog(KeyValueHeap.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KeyValueHeap.class);
   protected PriorityQueue<KeyValueScanner> heap = null;
   // Holds the scanners when a ever a eager close() happens.  All such eagerly closed
   // scans are collected and when the final scanner.close() happens will perform the
@@ -104,6 +102,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     }
   }
 
+  @Override
   public Cell peek() {
     if (this.current == null) {
       return null;
@@ -111,6 +110,11 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     return this.current.peek();
   }
 
+  boolean isLatestCellFromMemstore() {
+    return !this.current.isFileScanner();
+  }
+
+  @Override
   public Cell next()  throws IOException {
     if(this.current == null) {
       return null;
@@ -140,14 +144,8 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * <p>
    * This can ONLY be called when you are using Scanners that implement InternalScanner as well as
    * KeyValueScanner (a {@link StoreScanner}).
-   * @param result
    * @return true if more rows exist after this one, false if scanner is done
    */
-  @Override
-  public boolean next(List<Cell> result) throws IOException {
-    return next(result, NoLimitScannerContext.getInstance());
-  }
-
   @Override
   public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
     if (this.current == null) {
@@ -188,6 +186,8 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     public KVScannerComparator(CellComparator kvComparator) {
       this.kvComparator = kvComparator;
     }
+
+    @Override
     public int compare(KeyValueScanner left, KeyValueScanner right) {
       int comparison = compare(left.peek(), right.peek());
       if (comparison != 0) {
@@ -216,6 +216,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     }
   }
 
+  @Override
   public void close() {
     for (KeyValueScanner scanner : this.scannersForDelayedClose) {
       scanner.close();
@@ -225,8 +226,8 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
       this.current.close();
     }
     if (this.heap != null) {
-      KeyValueScanner scanner;
-      while ((scanner = this.heap.poll()) != null) {
+      // Order of closing the scanners shouldn't matter here, so simply iterate and close them.
+      for (KeyValueScanner scanner : heap) {
         scanner.close();
       }
     }
@@ -416,15 +417,6 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     return this.heap;
   }
 
-  /**
-   * @see KeyValueScanner#getScannerOrder()
-   */
-  @Override
-  public long getScannerOrder() {
-    return 0;
-  }
-
-  @VisibleForTesting
   KeyValueScanner getCurrentForTesting() {
     return current;
   }

@@ -18,12 +18,13 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -31,8 +32,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import edu.umd.cs.findbugs.annotations.Nullable;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -54,14 +53,21 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * Master can carry regions as of hbase-2.0.0.
    * By default, it carries no tables.
    * TODO: Add any | system as flags to indicate what it can do.
+   *
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
-  public static final String TABLES_ON_MASTER = "hbase.balancer.tablesOnMaster";
+  @Deprecated
+  String TABLES_ON_MASTER = "hbase.balancer.tablesOnMaster";
 
   /**
    * Master carries system tables.
+   *
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
-  public static final String SYSTEM_TABLES_ON_MASTER =
-    "hbase.balancer.tablesOnMaster.systemTablesOnly";
+  @Deprecated
+  String SYSTEM_TABLES_ON_MASTER = "hbase.balancer.tablesOnMaster.systemTablesOnly";
 
   // Used to signal to the caller that the region(s) cannot be assigned
   // We deliberately use 'localhost' so the operation will fail fast
@@ -71,13 +77,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * Set the current cluster status.  This allows a LoadBalancer to map host name to a server
    * @param st
    */
-  void setClusterStatus(ClusterStatus st);
-
-  /**
-   * Pass RegionStates and allow balancer to set the current cluster load.
-   * @param ClusterLoad
-   */
-  void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> ClusterLoad);
+  void setClusterMetrics(ClusterMetrics st);
 
   /**
    * Set the master service.
@@ -86,32 +86,34 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   void setMasterServices(MasterServices masterServices);
 
   /**
-   * Perform the major balance operation
-   * @param tableName
-   * @param clusterState
-   * @return List of plans
+   * Perform the major balance operation for cluster, will invoke {@link #balanceTable} to do
+   * actual balance. Normally not need override this method, except SimpleLoadBalancer and
+   * RSGroupBasedLoadBalancer.
+   * @param loadOfAllTable region load of servers for all table
+   * @return a list of regions to be moved, including source and destination, or null if cluster is
+   *         already balanced
    */
-  List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
-      List<RegionInfo>> clusterState) throws HBaseIOException;
+  List<RegionPlan> balanceCluster(Map<TableName,
+      Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException;
 
   /**
-   * Perform the major balance operation
-   * @param clusterState
+   * Perform the major balance operation for table, all class implement of {@link LoadBalancer}
+   * should override this method
+   * @param tableName the table to be balanced
+   * @param loadOfOneTable region load of servers for the specific one table
    * @return List of plans
    */
-  List<RegionPlan> balanceCluster(Map<ServerName,
-      List<RegionInfo>> clusterState) throws HBaseIOException;
-
+  List<RegionPlan> balanceTable(TableName tableName,
+      Map<ServerName, List<RegionInfo>> loadOfOneTable);
   /**
    * Perform a Round Robin assignment of regions.
    * @param regions
    * @param servers
    * @return Map of servername to regioninfos
    */
-  Map<ServerName, List<RegionInfo>> roundRobinAssignment(
-    List<RegionInfo> regions,
-    List<ServerName> servers
-  ) throws HBaseIOException;
+  @NonNull
+  Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
+      List<ServerName> servers) throws HBaseIOException;
 
   /**
    * Assign regions to the previously hosting region server
@@ -119,11 +121,9 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @param servers
    * @return List of plans
    */
-  @Nullable
-  Map<ServerName, List<RegionInfo>> retainAssignment(
-    Map<RegionInfo, ServerName> regions,
-    List<ServerName> servers
-  ) throws HBaseIOException;
+  @NonNull
+  Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
+      List<ServerName> servers) throws HBaseIOException;
 
   /**
    * Get a random region server from the list
@@ -158,16 +158,42 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * Notification that config has changed
    * @param conf
    */
+  @Override
   void onConfigurationChange(Configuration conf);
 
   /**
-   * @return true if Master carries regions
+   * If balancer needs to do initialization after Master has started up, lets do that here.
    */
+  void postMasterStartupInitialize();
+
+  /*Updates balancer status tag reported to JMX*/
+  void updateBalancerStatus(boolean status);
+
+  /**
+   * @return true if Master carries regions
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
+   */
+  @Deprecated
   static boolean isTablesOnMaster(Configuration conf) {
     return conf.getBoolean(TABLES_ON_MASTER, false);
   }
 
+  /**
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
+   */
+  @Deprecated
   static boolean isSystemTablesOnlyOnMaster(Configuration conf) {
     return conf.getBoolean(SYSTEM_TABLES_ON_MASTER, false);
+  }
+
+  /**
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
+   */
+  @Deprecated
+  static boolean isMasterCanHostUserRegions(Configuration conf) {
+    return isTablesOnMaster(conf) && !isSystemTablesOnlyOnMaster(conf);
   }
 }

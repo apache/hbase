@@ -38,13 +38,17 @@ message TableCF {
 message ReplicationPeer {
   // clusterkey is the concatenation of the slave cluster's
   // hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
-  required string clusterkey = 1;
+  optional string clusterkey = 1;
   optional string replicationEndpointImpl = 2;
   repeated BytesBytesPair data = 3;
   repeated NameStringPair configuration = 4;
   repeated TableCF table_cfs = 5;
   repeated bytes namespaces = 6;
   optional int64 bandwidth = 7;
+  optional bool replicate_all = 8;
+  repeated TableCF exclude_table_cfs = 9;
+  repeated bytes exclude_namespaces = 10;
+  optional bool serial = 11;
 }
 
 /**
@@ -77,9 +81,11 @@ message ReplicationHLogPosition {
 message AddReplicationPeerRequest {
   required string peer_id = 1;
   required ReplicationPeer peer_config = 2;
+  required ReplicationState peer_state = 3;
 }
 
 message AddReplicationPeerResponse {
+  optional uint64 proc_id = 1;
 }
 
 message RemoveReplicationPeerRequest {
@@ -87,6 +93,7 @@ message RemoveReplicationPeerRequest {
 }
 
 message RemoveReplicationPeerResponse {
+  optional uint64 proc_id = 1;
 }
 
 message EnableReplicationPeerRequest {
@@ -94,6 +101,7 @@ message EnableReplicationPeerRequest {
 }
 
 message EnableReplicationPeerResponse {
+  optional uint64 proc_id = 1;
 }
 
 message DisableReplicationPeerRequest {
@@ -101,6 +109,7 @@ message DisableReplicationPeerRequest {
 }
 
 message DisableReplicationPeerResponse {
+  optional uint64 proc_id = 1;
 }
 
 message GetReplicationPeerConfigRequest {
@@ -118,6 +127,7 @@ message UpdateReplicationPeerConfigRequest {
 }
 
 message UpdateReplicationPeerConfigResponse {
+  optional uint64 proc_id = 1;
 }
 
 message ListReplicationPeersRequest {

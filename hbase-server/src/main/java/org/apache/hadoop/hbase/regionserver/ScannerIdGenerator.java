@@ -18,16 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.hash.Hashing;
+import org.apache.hbase.thirdparty.com.google.common.hash.Hashing;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.nio.charset.Charset;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Generate a new style scanner id to prevent collision with previous started server or other RSs.

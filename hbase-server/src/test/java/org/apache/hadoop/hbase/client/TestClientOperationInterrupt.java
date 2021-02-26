@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,11 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -32,26 +36,26 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-
-@Category({MediumTests.class, ClientTests.class})
+@Category({LargeTests.class, ClientTests.class})
 public class TestClientOperationInterrupt {
-  private static final Log LOG = LogFactory.getLog(TestClientOperationInterrupt.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestClientOperationInterrupt.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestClientOperationInterrupt.class);
 
   private static HBaseTestingUtility util;
   private static final TableName tableName = TableName.valueOf("test");
@@ -134,8 +138,12 @@ public class TestClientOperationInterrupt {
       threads.add(t);
       t.start();
     }
+    int expectedNoExNum = nbThread / 2;
 
     for (int i = 0; i < nbThread / 2; i++) {
+      if (threads.get(i).getState().equals(Thread.State.TERMINATED)) {
+        expectedNoExNum--;
+      }
       threads.get(i).interrupt();
     }
 
@@ -152,9 +160,8 @@ public class TestClientOperationInterrupt {
     }
 
     Assert.assertFalse(Thread.currentThread().isInterrupted());
-
     Assert.assertTrue(" noEx: " + noEx.get() + ", badEx=" + badEx.get() + ", noInt=" + noInt.get(),
-        noEx.get() == nbThread / 2 && badEx.get() == 0);
+        noEx.get() == expectedNoExNum && badEx.get() == 0);
 
     // The problem here is that we need the server to free its handlers to handle all operations
     while (done.get() != nbThread){

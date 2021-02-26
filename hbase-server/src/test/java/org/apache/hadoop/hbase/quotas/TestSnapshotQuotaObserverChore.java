@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,57 +18,74 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.quotas.SnapshotQuotaObserverChore.SnapshotWithSize;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.NoFilesToDischarge;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.SpaceQuotaSnapshotPredicate;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil.SnapshotVisitor;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Multimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile;
 
 /**
  * Test class for the {@link SnapshotQuotaObserverChore}.
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestSnapshotQuotaObserverChore {
-  private static final Log LOG = LogFactory.getLog(TestSnapshotQuotaObserverChore.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSnapshotQuotaObserverChore.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotQuotaObserverChore.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final AtomicLong COUNTER = new AtomicLong();
 
@@ -104,50 +122,6 @@ public class TestSnapshotQuotaObserverChore {
     testChore = new SnapshotQuotaObserverChore(
         TEST_UTIL.getConnection(), TEST_UTIL.getConfiguration(), master.getFileSystem(), master,
         null);
-  }
-
-  @Test
-  public void testSnapshotSizePersistence() throws IOException {
-    final Admin admin = TEST_UTIL.getAdmin();
-    final TableName tn = TableName.valueOf("quota_snapshotSizePersistence");
-    if (admin.tableExists(tn)) {
-      admin.disableTable(tn);
-      admin.deleteTable(tn);
-    }
-    HTableDescriptor desc = new HTableDescriptor(tn);
-    desc.addFamily(new HColumnDescriptor(QuotaTableUtil.QUOTA_FAMILY_USAGE));
-    admin.createTable(desc);
-
-    Multimap<TableName,SnapshotWithSize> snapshotsWithSizes = HashMultimap.create();
-    try (Table table = conn.getTable(tn)) {
-      // Writing no values will result in no records written.
-      verify(table, () -> {
-        testChore.persistSnapshotSizes(table, snapshotsWithSizes);
-        assertEquals(0, count(table));
-      });
-
-      verify(table, () -> {
-        TableName originatingTable = TableName.valueOf("t1");
-        snapshotsWithSizes.put(originatingTable, new SnapshotWithSize("ss1", 1024L));
-        snapshotsWithSizes.put(originatingTable, new SnapshotWithSize("ss2", 4096L));
-        testChore.persistSnapshotSizes(table, snapshotsWithSizes);
-        assertEquals(2, count(table));
-        assertEquals(1024L, extractSnapshotSize(table, originatingTable, "ss1"));
-        assertEquals(4096L, extractSnapshotSize(table, originatingTable, "ss2"));
-      });
-
-      snapshotsWithSizes.clear();
-      verify(table, () -> {
-        snapshotsWithSizes.put(TableName.valueOf("t1"), new SnapshotWithSize("ss1", 1024L));
-        snapshotsWithSizes.put(TableName.valueOf("t2"), new SnapshotWithSize("ss2", 4096L));
-        snapshotsWithSizes.put(TableName.valueOf("t3"), new SnapshotWithSize("ss3", 8192L));
-        testChore.persistSnapshotSizes(table, snapshotsWithSizes);
-        assertEquals(3, count(table));
-        assertEquals(1024L, extractSnapshotSize(table, TableName.valueOf("t1"), "ss1"));
-        assertEquals(4096L, extractSnapshotSize(table, TableName.valueOf("t2"), "ss2"));
-        assertEquals(8192L, extractSnapshotSize(table, TableName.valueOf("t3"), "ss3"));
-      });
-    }
   }
 
   @Test
@@ -195,6 +169,13 @@ public class TestSnapshotQuotaObserverChore {
     TableName tn2 = helper.createTableWithRegions(ns.getName(), 1);
     TableName tn3 = helper.createTableWithRegions(1);
 
+    // Set a throttle quota on 'default' namespace
+    admin.setQuota(QuotaSettingsFactory.throttleNamespace(tn3.getNamespaceAsString(),
+      ThrottleType.WRITE_NUMBER, 100, TimeUnit.SECONDS));
+    // Set a user throttle quota
+    admin.setQuota(
+      QuotaSettingsFactory.throttleUser("user", ThrottleType.WRITE_NUMBER, 100, TimeUnit.MINUTES));
+
     // Set a space quota on the namespace
     admin.setQuota(QuotaSettingsFactory.limitNamespaceSpace(
         ns.getName(), SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS));
@@ -240,13 +221,14 @@ public class TestSnapshotQuotaObserverChore {
     helper.writeData(tn1, 256L * SpaceQuotaHelperForTests.ONE_KILOBYTE);
     admin.flush(tn1);
 
-    final AtomicReference<Long> lastSeenSize = new AtomicReference<>();
+    final long snapshotSize = TEST_UTIL.getMiniHBaseCluster().getRegions(tn1).stream()
+        .flatMap(r -> r.getStores().stream()).mapToLong(HStore::getHFilesSize).sum();
+
     // Wait for the Master chore to run to see the usage (with a fudge factor)
     TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
       @Override
       boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
-        lastSeenSize.set(snapshot.getUsage());
-        return snapshot.getUsage() > 230L * SpaceQuotaHelperForTests.ONE_KILOBYTE;
+        return snapshot.getUsage() == snapshotSize;
       }
     });
 
@@ -260,13 +242,13 @@ public class TestSnapshotQuotaObserverChore {
         "Expected to see the single snapshot: " + snapshotsToCompute, 1, snapshotsToCompute.size());
 
     // Get the size of our snapshot
-    Multimap<TableName,SnapshotWithSize> snapshotsWithSize = testChore.computeSnapshotSizes(
+    Map<String,Long> namespaceSnapshotSizes = testChore.computeSnapshotSizes(
         snapshotsToCompute);
-    assertEquals(1, snapshotsWithSize.size());
-    SnapshotWithSize sws = Iterables.getOnlyElement(snapshotsWithSize.get(tn1));
-    assertEquals(snapshotName, sws.getName());
+    assertEquals(1, namespaceSnapshotSizes.size());
+    Long size = namespaceSnapshotSizes.get(tn1.getNamespaceAsString());
+    assertNotNull(size);
     // The snapshot should take up no space since the table refers to it completely
-    assertEquals(0, sws.getSize());
+    assertEquals(0, size.longValue());
 
     // Write some more data, flush it, and then major_compact the table
     helper.writeData(tn1, 256L * SpaceQuotaHelperForTests.ONE_KILOBYTE);
@@ -275,11 +257,15 @@ public class TestSnapshotQuotaObserverChore {
 
     // Test table should reflect it's original size since ingest was deterministic
     TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      private final long regionSize = TEST_UTIL.getMiniHBaseCluster().getRegions(tn1).stream()
+          .flatMap(r -> r.getStores().stream()).mapToLong(HStore::getHFilesSize).sum();
+
       @Override
       boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
-        LOG.debug("Current usage=" + snapshot.getUsage() + " lastSeenSize=" + lastSeenSize.get());
-        return closeInSize(
-            snapshot.getUsage(), lastSeenSize.get(), SpaceQuotaHelperForTests.ONE_KILOBYTE);
+        LOG.debug("Current usage=" + snapshot.getUsage() + " snapshotSize=" + snapshotSize);
+        // The usage of table space consists of region size and snapshot size
+        return closeInSize(snapshot.getUsage(), snapshotSize + regionSize,
+            SpaceQuotaHelperForTests.ONE_KILOBYTE);
       }
     });
 
@@ -290,75 +276,253 @@ public class TestSnapshotQuotaObserverChore {
     snapshotsToCompute = testChore.getSnapshotsToComputeSize();
     assertEquals(
         "Expected to see the single snapshot: " + snapshotsToCompute, 1, snapshotsToCompute.size());
-    snapshotsWithSize = testChore.computeSnapshotSizes(
+    namespaceSnapshotSizes = testChore.computeSnapshotSizes(
             snapshotsToCompute);
-    assertEquals(1, snapshotsWithSize.size());
-    sws = Iterables.getOnlyElement(snapshotsWithSize.get(tn1));
-    assertEquals(snapshotName, sws.getName());
+    assertEquals(1, namespaceSnapshotSizes.size());
+    size = namespaceSnapshotSizes.get(tn1.getNamespaceAsString());
+    assertNotNull(size);
     // The snapshot should take up the size the table originally took up
-    assertEquals(lastSeenSize.get().longValue(), sws.getSize());
+    assertEquals(snapshotSize, size.longValue());
   }
 
   @Test
   public void testPersistingSnapshotsForNamespaces() throws Exception {
-    Multimap<TableName,SnapshotWithSize> snapshotsWithSizes = HashMultimap.create();
     TableName tn1 = TableName.valueOf("ns1:tn1");
     TableName tn2 = TableName.valueOf("ns1:tn2");
     TableName tn3 = TableName.valueOf("ns2:tn1");
     TableName tn4 = TableName.valueOf("ns2:tn2");
     TableName tn5 = TableName.valueOf("tn1");
+    // Shim in a custom factory to avoid computing snapshot sizes.
+    FileArchiverNotifierFactory test = new FileArchiverNotifierFactory() {
+      Map<TableName,Long> tableToSize = ImmutableMap.of(
+          tn1, 1024L, tn2, 1024L, tn3, 512L, tn4, 1024L, tn5, 3072L);
+      @Override
+      public FileArchiverNotifier get(
+          Connection conn, Configuration conf, FileSystem fs, TableName tn) {
+        return new FileArchiverNotifier() {
+          @Override public void addArchivedFiles(Set<Entry<String,Long>> fileSizes)
+              throws IOException {}
 
-    snapshotsWithSizes.put(tn1, new SnapshotWithSize("", 1024L));
-    snapshotsWithSizes.put(tn2, new SnapshotWithSize("", 1024L));
-    snapshotsWithSizes.put(tn3, new SnapshotWithSize("", 512L));
-    snapshotsWithSizes.put(tn4, new SnapshotWithSize("", 1024L));
-    snapshotsWithSizes.put(tn5, new SnapshotWithSize("", 3072L));
-
-    Map<String,Long> nsSizes = testChore.groupSnapshotSizesByNamespace(snapshotsWithSizes);
-    assertEquals(3, nsSizes.size());
-    assertEquals(2048L, (long) nsSizes.get("ns1"));
-    assertEquals(1536L, (long) nsSizes.get("ns2"));
-    assertEquals(3072L, (long) nsSizes.get(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR));
-  }
-
-  private long count(Table t) throws IOException {
-    try (ResultScanner rs = t.getScanner(new Scan())) {
-      long sum = 0;
-      for (Result r : rs) {
-        while (r.advance()) {
-          sum++;
-        }
+          @Override
+          public long computeAndStoreSnapshotSizes(Collection<String> currentSnapshots)
+              throws IOException {
+            return tableToSize.get(tn);
+          }
+        };
       }
-      return sum;
+    };
+    try {
+      FileArchiverNotifierFactoryImpl.setInstance(test);
+
+      Multimap<TableName,String> snapshotsToCompute = HashMultimap.create();
+      snapshotsToCompute.put(tn1, "");
+      snapshotsToCompute.put(tn2, "");
+      snapshotsToCompute.put(tn3, "");
+      snapshotsToCompute.put(tn4, "");
+      snapshotsToCompute.put(tn5, "");
+      Map<String,Long> nsSizes = testChore.computeSnapshotSizes(snapshotsToCompute);
+      assertEquals(3, nsSizes.size());
+      assertEquals(2048L, (long) nsSizes.get("ns1"));
+      assertEquals(1536L, (long) nsSizes.get("ns2"));
+      assertEquals(3072L, (long) nsSizes.get(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR));
+    } finally {
+      FileArchiverNotifierFactoryImpl.reset();
     }
   }
 
-  private long extractSnapshotSize(
-      Table quotaTable, TableName tn, String snapshot) throws IOException {
-    Get g = QuotaTableUtil.makeGetForSnapshotSize(tn, snapshot);
+  @Test
+  public void testRemovedSnapshots() throws Exception {
+    // Create a table and set a quota
+    TableName tn1 = helper.createTableWithRegions(1);
+    admin.setQuota(QuotaSettingsFactory.limitTableSpace(tn1, SpaceQuotaHelperForTests.ONE_GIGABYTE,
+        SpaceViolationPolicy.NO_INSERTS));
+
+    // Write some data and flush it
+    helper.writeData(tn1, 256L * SpaceQuotaHelperForTests.ONE_KILOBYTE); // 256 KB
+
+    final AtomicReference<Long> lastSeenSize = new AtomicReference<>();
+    // Wait for the Master chore to run to see the usage (with a fudge factor)
+    TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        lastSeenSize.set(snapshot.getUsage());
+        return snapshot.getUsage() > 230L * SpaceQuotaHelperForTests.ONE_KILOBYTE;
+      }
+    });
+
+    // Create a snapshot on the table
+    final String snapshotName1 = tn1 + "snapshot1";
+    admin.snapshot(new SnapshotDescription(snapshotName1, tn1, SnapshotType.SKIPFLUSH));
+
+    // Snapshot size has to be 0 as the snapshot shares the data with the table
+    final Table quotaTable = conn.getTable(QuotaUtil.QUOTA_TABLE_NAME);
+    TEST_UTIL.waitFor(30_000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        Get g = QuotaTableUtil.makeGetForSnapshotSize(tn1, snapshotName1);
+        Result r = quotaTable.get(g);
+        if (r == null || r.isEmpty()) {
+          return false;
+        }
+        r.advance();
+        Cell c = r.current();
+        return QuotaTableUtil.parseSnapshotSize(c) == 0;
+      }
+    });
+    // Total usage has to remain same as what we saw before taking a snapshot
+    TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        return snapshot.getUsage() == lastSeenSize.get();
+      }
+    });
+
+    // Major compact the table to force a rewrite
+    TEST_UTIL.compact(tn1, true);
+    // Now the snapshot size has to prev total size
+    TEST_UTIL.waitFor(30_000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        Get g = QuotaTableUtil.makeGetForSnapshotSize(tn1, snapshotName1);
+        Result r = quotaTable.get(g);
+        if (r == null || r.isEmpty()) {
+          return false;
+        }
+        r.advance();
+        Cell c = r.current();
+        // The compaction result file has an additional compaction event tracker
+        return lastSeenSize.get() == QuotaTableUtil.parseSnapshotSize(c);
+      }
+    });
+    // The total size now has to be equal/more than double of prev total size
+    // as double the number of store files exist now.
+    final AtomicReference<Long> sizeAfterCompaction = new AtomicReference<>();
+    TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        sizeAfterCompaction.set(snapshot.getUsage());
+        return snapshot.getUsage() >= 2 * lastSeenSize.get();
+      }
+    });
+
+    // Delete the snapshot
+    admin.deleteSnapshot(snapshotName1);
+    // Total size has to come down to prev totalsize - snapshot size(which was removed)
+    TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        return snapshot.getUsage() == (sizeAfterCompaction.get() - lastSeenSize.get());
+      }
+    });
+  }
+
+  @Test
+  public void testBucketingFilesToSnapshots() throws Exception {
+    // Create a table and set a quota
+    TableName tn1 = helper.createTableWithRegions(1);
+    admin.setQuota(QuotaSettingsFactory.limitTableSpace(
+        tn1, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS));
+
+    // Write some data and flush it
+    helper.writeData(tn1, 256L * SpaceQuotaHelperForTests.ONE_KILOBYTE);
+    admin.flush(tn1);
+
+    final AtomicReference<Long> lastSeenSize = new AtomicReference<>();
+    // Wait for the Master chore to run to see the usage (with a fudge factor)
+    TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        lastSeenSize.set(snapshot.getUsage());
+        return snapshot.getUsage() > 230L * SpaceQuotaHelperForTests.ONE_KILOBYTE;
+      }
+    });
+
+    // Create a snapshot on the table
+    final String snapshotName1 = tn1 + "snapshot1";
+    admin.snapshot(new SnapshotDescription(snapshotName1, tn1, SnapshotType.SKIPFLUSH));
+    // Major compact the table to force a rewrite
+    TEST_UTIL.compact(tn1, true);
+
+    // Make sure that the snapshot owns the size
+    final Table quotaTable = conn.getTable(QuotaUtil.QUOTA_TABLE_NAME);
+    TEST_UTIL.waitFor(30_000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        LOG.info("Waiting to see quota snapshot1 size");
+        debugFilesForSnapshot(tn1, snapshotName1);
+        Get g = QuotaTableUtil.makeGetForSnapshotSize(tn1, snapshotName1);
+        Result r = quotaTable.get(g);
+        if (r == null || r.isEmpty()) {
+          return false;
+        }
+        r.advance();
+        Cell c = r.current();
+        // The compaction result file has an additional compaction event tracker
+        return lastSeenSize.get() == QuotaTableUtil.parseSnapshotSize(c);
+      }
+    });
+
+    LOG.info("Snapshotting table again");
+    // Create another snapshot on the table
+    final String snapshotName2 = tn1 + "snapshot2";
+    admin.snapshot(new SnapshotDescription(snapshotName2, tn1, SnapshotType.SKIPFLUSH));
+    LOG.info("Compacting table");
+    // Major compact the table to force a rewrite
+    TEST_UTIL.compact(tn1, true);
+
+    // Make sure that the snapshot owns the size
+    TEST_UTIL.waitFor(30_000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        LOG.info("Waiting to see quota snapshot2 size");
+        debugFilesForSnapshot(tn1, snapshotName2);
+        Get g = QuotaTableUtil.makeGetForSnapshotSize(tn1, snapshotName2);
+        Result r = quotaTable.get(g);
+        if (r == null || r.isEmpty()) {
+          return false;
+        }
+        r.advance();
+        Cell c = r.current();
+        return closeInSize(lastSeenSize.get(),
+            QuotaTableUtil.parseSnapshotSize(c), SpaceQuotaHelperForTests.ONE_KILOBYTE);
+      }
+    });
+
+    Get g = QuotaTableUtil.createGetNamespaceSnapshotSize(tn1.getNamespaceAsString());
     Result r = quotaTable.get(g);
     assertNotNull(r);
-    CellScanner cs = r.cellScanner();
-    cs.advance();
-    Cell c = cs.current();
-    assertNotNull(c);
-    return QuotaTableUtil.extractSnapshotSize(
-        c.getValueArray(), c.getValueOffset(), c.getValueLength());
+    assertFalse(r.isEmpty());
+    r.advance();
+    long size = QuotaTableUtil.parseSnapshotSize(r.current());
+    // Two snapshots of equal size.
+    assertTrue(closeInSize(lastSeenSize.get() * 2, size, SpaceQuotaHelperForTests.ONE_KILOBYTE));
   }
 
-  private void verify(Table t, IOThrowingRunnable test) throws IOException {
-    admin.disableTable(t.getName());
-    admin.truncateTable(t.getName(), false);
-    test.run();
-  }
-
-  @FunctionalInterface
-  private interface IOThrowingRunnable {
-    void run() throws IOException;
+  /**
+   * Prints details about every file referenced by the snapshot with the given name.
+   */
+  void debugFilesForSnapshot(TableName table, String snapshot) throws IOException {
+    final Configuration conf = TEST_UTIL.getConfiguration();
+    final FileSystem fs = TEST_UTIL.getTestFileSystem();
+    final Path snapshotDir = new Path(conf.get("hbase.rootdir"), HConstants.SNAPSHOT_DIR_NAME);
+    SnapshotReferenceUtil.visitReferencedFiles(conf, fs, new Path(snapshotDir, snapshot),
+        new SnapshotVisitor() {
+          @Override
+          public void storeFile(
+              RegionInfo regionInfo, String familyName, StoreFile storeFile) throws IOException {
+            LOG.info("Snapshot={} references file={}, size={}", snapshot, storeFile.getName(),
+                storeFile.getFileSize());
+          }
+        }
+    );
   }
 
   /**
    * Computes if {@code size2} is within {@code delta} of {@code size1}, inclusive.
+   *
+   * The size of our store files will change after the first major compaction as the last
+   * compaction gets serialized into the store file (see the fields referenced by
+   * COMPACTION_EVENT_KEY in HFilePrettyPrinter).
    */
   boolean closeInSize(long size1, long size2, long delta) {
     long lower = size1 - delta;

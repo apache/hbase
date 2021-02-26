@@ -20,13 +20,15 @@ package org.apache.hadoop.hbase;
 
 
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomStringGeneratorImpl implements RandomStringGenerator {
 
   private final String s;
 
   public RandomStringGeneratorImpl() {
-    s = UUID.randomUUID().toString();
+    s = new UUID(ThreadLocalRandom.current().nextLong(),
+                 ThreadLocalRandom.current().nextLong()).toString();
   }
 
   @Override

@@ -17,32 +17,136 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
-
-import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.FutureUtils;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.io.netty.channel.DefaultEventLoop;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 
 @Category({ ClientTests.class, SmallTests.class })
 public class TestIPCUtil {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestIPCUtil.class);
+
+  private static Throwable create(Class<? extends Throwable> clazz) throws InstantiationException,
+    IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+    try {
+      Constructor<? extends Throwable> c = clazz.getDeclaredConstructor();
+      c.setAccessible(true);
+      return c.newInstance();
+    } catch (NoSuchMethodException e) {
+      // fall through
+    }
+
+    try {
+      Constructor<? extends Throwable> c = clazz.getDeclaredConstructor(String.class);
+      c.setAccessible(true);
+      return c.newInstance("error");
+    } catch (NoSuchMethodException e) {
+      // fall through
+    }
+
+    try {
+      Constructor<? extends Throwable> c = clazz.getDeclaredConstructor(Throwable.class);
+      c.setAccessible(true);
+      return c.newInstance(new Exception("error"));
+    } catch (NoSuchMethodException e) {
+      // fall through
+    }
+
+    try {
+      Constructor<? extends Throwable> c =
+        clazz.getDeclaredConstructor(String.class, Throwable.class);
+      c.setAccessible(true);
+      return c.newInstance("error", new Exception("error"));
+    } catch (NoSuchMethodException e) {
+      // fall through
+    }
+
+    Constructor<? extends Throwable> c =
+      clazz.getDeclaredConstructor(Throwable.class, Throwable.class);
+    c.setAccessible(true);
+    return c.newInstance(new Exception("error"), "error");
+  }
+
+  /**
+   * See HBASE-21862, it is very important to keep the original exception type for connection
+   * exceptions.
+   */
   @Test
-  public void testWrapException() throws Exception {
-    final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", 0);
-    assertTrue(wrapException(address, new ConnectException()) instanceof ConnectException);
-    assertTrue(
-      wrapException(address, new SocketTimeoutException()) instanceof SocketTimeoutException);
-    assertTrue(wrapException(address, new ConnectionClosingException(
-        "Test AbstractRpcClient#wrapException")) instanceof ConnectionClosingException);
-    assertTrue(
-      wrapException(address, new CallTimeoutException("Test AbstractRpcClient#wrapException"))
-          .getCause() instanceof CallTimeoutException);
+  public void testWrapConnectionException() throws Exception {
+    List<Throwable> exceptions = new ArrayList<>();
+    for (Class<? extends Throwable> clazz : ClientExceptionsUtil.getConnectionExceptionTypes()) {
+      exceptions.add(create(clazz));
+    }
+    Address addr = Address.fromParts("127.0.0.1", 12345);
+    for (Throwable exception : exceptions) {
+      if (exception instanceof TimeoutException) {
+        assertThat(IPCUtil.wrapException(addr, exception), instanceOf(TimeoutIOException.class));
+      } else {
+        assertThat(IPCUtil.wrapException(addr, exception), instanceOf(exception.getClass()));
+      }
+    }
+  }
+
+  @Test
+  public void testExecute() throws IOException {
+    EventLoop eventLoop = new DefaultEventLoop();
+    MutableInt executed = new MutableInt(0);
+    MutableInt numStackTraceElements = new MutableInt(0);
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    try {
+      IPCUtil.execute(eventLoop, new Runnable() {
+
+        @Override
+        public void run() {
+          int numElements = new Exception().getStackTrace().length;
+          int depth = executed.getAndIncrement();
+          if (depth <= IPCUtil.MAX_DEPTH) {
+            if (numElements <= numStackTraceElements.intValue()) {
+              future.completeExceptionally(
+                new AssertionError("should call run directly but stack trace decreased from " +
+                  numStackTraceElements.intValue() + " to " + numElements));
+              return;
+            }
+            numStackTraceElements.setValue(numElements);
+            IPCUtil.execute(eventLoop, this);
+          } else {
+            if (numElements >= numStackTraceElements.intValue()) {
+              future.completeExceptionally(
+                new AssertionError("should call eventLoop.execute to prevent stack overflow but" +
+                  " stack trace increased from " + numStackTraceElements.intValue() + " to " +
+                  numElements));
+            } else {
+              future.complete(null);
+            }
+          }
+        }
+      });
+      FutureUtils.get(future);
+    } finally {
+      eventLoop.shutdownGracefully();
+    }
   }
 }

@@ -26,10 +26,11 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -41,7 +42,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class JVM {
-  private static final Log LOG = LogFactory.getLog(JVM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JVM.class);
   private OperatingSystemMXBean osMbean;
 
   private static final boolean ibmvendor =
@@ -160,7 +161,7 @@ public class JVM {
           new String[]{"bash", "-c",
               "ls /proc/" + pidhost[0] + "/fdinfo | wc -l"});
       inputStream = p.getInputStream();
-      inputStreamReader = new InputStreamReader(inputStream);
+      inputStreamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
       bufferedReader = new BufferedReader(inputStreamReader);
       String openFileDesCount;
       if ((openFileDesCount = bufferedReader.readLine()) != null) {
@@ -236,7 +237,7 @@ public class JVM {
       int count = 0;
       Process p = Runtime.getRuntime().exec("ps -e");
       inputStream = p.getInputStream();
-      inputStreamReader = new InputStreamReader(inputStream);
+      inputStreamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
       bufferedReader = new BufferedReader(inputStreamReader);
       while (bufferedReader.readLine() != null) {
         count++;
@@ -288,7 +289,7 @@ public class JVM {
       //using linux bash commands to retrieve info
       Process p = Runtime.getRuntime().exec(new String[]{"bash", "-c", "ulimit -n"});
       in = p.getInputStream();
-      output = new BufferedReader(new InputStreamReader(in));
+      output = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
       String maxFileDesCount;
       if ((maxFileDesCount = output.readLine()) != null) {
         return Long.parseLong(maxFileDesCount);

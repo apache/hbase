@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   int replicaid = 0;
 
@@ -58,6 +61,16 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   @Override
   public long getNumStoreFiles() {
     return 102;
+  }
+
+  @Override
+  public long getStoreRefCount() {
+    return 0;
+  }
+
+  @Override
+  public long getMaxCompactedStoreFileRefCount() {
+    return 0;
   }
 
   @Override
@@ -161,5 +174,24 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   @Override
   public long getMaxFlushQueueSize() {
     return 6;
+  }
+
+  @Override
+  public long getTotalRequestCount() {
+    return 0;
+  }
+
+  @Override
+  public Map<String, Long> getMemstoreOnlyRowReadsCount() {
+    Map<String, Long> map = new HashMap<>();
+    map.put("info", 0L);
+    return map;
+  }
+
+  @Override
+  public Map<String, Long> getMixedRowReadsCount() {
+    Map<String, Long> map = new HashMap<>();
+    map.put("info", 0L);
+    return map;
   }
 }

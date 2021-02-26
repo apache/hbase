@@ -23,10 +23,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -46,17 +44,25 @@ import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestCompactionWithThroughputController {
 
-  private static final Log LOG = LogFactory.getLog(TestCompactionWithThroughputController.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompactionWithThroughputController.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCompactionWithThroughputController.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -197,7 +203,7 @@ public class TestCompactionWithThroughputController {
     try {
       TEST_UTIL.getAdmin()
           .createTable(TableDescriptorBuilder.newBuilder(tableName)
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
               .build());
       TEST_UTIL.waitTableAvailable(tableName);
       HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
@@ -254,7 +260,7 @@ public class TestCompactionWithThroughputController {
     try {
       TEST_UTIL.getAdmin()
           .createTable(TableDescriptorBuilder.newBuilder(tableName)
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
               .build());
       TEST_UTIL.waitTableAvailable(tableName);
       HStore store = getStoreWithName(tableName);

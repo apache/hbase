@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,40 +20,40 @@ package org.apache.hadoop.hbase.client;
 import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
@@ -61,6 +61,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.io.netty.util.Timer;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility used by client connections.
@@ -68,7 +74,7 @@ import org.apache.hadoop.net.DNS;
 @InterfaceAudience.Private
 public final class ConnectionUtils {
 
-  private static final Log LOG = LogFactory.getLog(ConnectionUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ConnectionUtils.class);
 
   private ConnectionUtils() {
   }
@@ -111,16 +117,57 @@ public final class ConnectionUtils {
    * @param log Used to log what we set in here.
    */
   public static void setServerSideHConnectionRetriesConfig(final Configuration c, final String sn,
-      final Log log) {
+      final Logger log) {
     // TODO: Fix this. Not all connections from server side should have 10 times the retries.
     int hcRetries = c.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     // Go big. Multiply by 10. If we can't get to meta after this many retries
     // then something seriously wrong.
-    int serversideMultiplier = c.getInt("hbase.client.serverside.retries.multiplier", 10);
+    int serversideMultiplier = c.getInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER,
+      HConstants.DEFAULT_HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER);
     int retries = hcRetries * serversideMultiplier;
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
     log.info(sn + " server-side Connection retries=" + retries);
+  }
+
+  /**
+   * A ClusterConnection that will short-circuit RPC making direct invocations against the localhost
+   * if the invocation target is 'this' server; save on network and protobuf invocations.
+   */
+  // TODO This has to still do PB marshalling/unmarshalling stuff. Check how/whether we can avoid.
+  // Class is visible so can assert we are short-circuiting when expected.
+  public static class ShortCircuitingClusterConnection extends ConnectionImplementation {
+    private final ServerName serverName;
+    private final AdminService.BlockingInterface localHostAdmin;
+    private final ClientService.BlockingInterface localHostClient;
+
+    private ShortCircuitingClusterConnection(Configuration conf, ExecutorService pool, User user,
+        ServerName serverName, AdminService.BlockingInterface admin,
+        ClientService.BlockingInterface client) throws IOException {
+      super(conf, pool, user);
+      this.serverName = serverName;
+      this.localHostAdmin = admin;
+      this.localHostClient = client;
+    }
+
+    @Override
+    public AdminService.BlockingInterface getAdmin(ServerName sn) throws IOException {
+      return serverName.equals(sn) ? this.localHostAdmin : super.getAdmin(sn);
+    }
+
+    @Override
+    public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
+      return serverName.equals(sn) ? this.localHostClient : super.getClient(sn);
+    }
+
+    @Override
+    public MasterKeepAliveConnection getMaster() throws IOException {
+      if (this.localHostClient instanceof MasterService.BlockingInterface) {
+        return new ShortCircuitMasterConnection(
+          (MasterService.BlockingInterface) this.localHostClient);
+      }
+      return super.getMaster();
+    }
   }
 
   /**
@@ -142,34 +189,13 @@ public final class ConnectionUtils {
     if (user == null) {
       user = UserProvider.instantiate(conf).getCurrent();
     }
-    return new ConnectionImplementation(conf, pool, user) {
-      @Override
-      public AdminService.BlockingInterface getAdmin(ServerName sn) throws IOException {
-        return serverName.equals(sn) ? admin : super.getAdmin(sn);
-      }
-
-      @Override
-      public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
-        return serverName.equals(sn) ? client : super.getClient(sn);
-      }
-
-      @Override
-      public MasterKeepAliveConnection getKeepAliveMasterService()
-          throws MasterNotRunningException {
-        if (!(client instanceof MasterService.BlockingInterface)) {
-          return super.getKeepAliveMasterService();
-        } else {
-          return new ShortCircuitMasterConnection((MasterService.BlockingInterface) client);
-        }
-      }
-    };
+    return new ShortCircuitingClusterConnection(conf, pool, user, serverName, admin, client);
   }
 
   /**
    * Setup the connection class, so that it will not depend on master being online. Used for testing
    * @param conf configuration to set
    */
-  @VisibleForTesting
   public static void setupMasterlessConnection(Configuration conf) {
     conf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL, MasterlessConnection.class.getName());
   }
@@ -191,32 +217,17 @@ public final class ConnectionUtils {
   }
 
   /**
+   * Get a unique key for the rpc stub to the given server.
+   */
+  static String getStubKey(String serviceName, ServerName serverName) {
+    return String.format("%s@%s", serviceName, serverName);
+  }
+
+  /**
    * Return retires + 1. The returned value will be in range [1, Integer.MAX_VALUE].
    */
   static int retries2Attempts(int retries) {
     return Math.max(1, retries == Integer.MAX_VALUE ? Integer.MAX_VALUE : retries + 1);
-  }
-
-  /**
-   * Get a unique key for the rpc stub to the given server.
-   */
-  static String getStubKey(String serviceName, ServerName serverName, boolean hostnameCanChange) {
-    // Sometimes, servers go down and they come back up with the same hostname but a different
-    // IP address. Force a resolution of the rsHostname by trying to instantiate an
-    // InetSocketAddress, and this way we will rightfully get a new stubKey.
-    // Also, include the hostname in the key so as to take care of those cases where the
-    // DNS name is different but IP address remains the same.
-    String hostname = serverName.getHostname();
-    int port = serverName.getPort();
-    if (hostnameCanChange) {
-      try {
-        InetAddress ip = InetAddress.getByName(hostname);
-        return serviceName + "@" + hostname + "-" + ip.getHostAddress() + ":" + port;
-      } catch (UnknownHostException e) {
-        LOG.warn("Can not resolve " + hostname + ", please check your network", e);
-      }
-    }
-    return serviceName + "@" + hostname + ":" + port;
   }
 
   static void checkHasFamilies(Mutation mutation) {
@@ -275,12 +286,13 @@ public final class ConnectionUtils {
     return Bytes.equals(row, EMPTY_END_ROW);
   }
 
-  static void resetController(HBaseRpcController controller, long timeoutNs) {
+  static void resetController(HBaseRpcController controller, long timeoutNs, int priority) {
     controller.reset();
     if (timeoutNs >= 0) {
       controller.setCallTimeout(
         (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(timeoutNs)));
     }
+    controller.setPriority(priority);
   }
 
   static Throwable translateException(Throwable t) {
@@ -300,7 +312,7 @@ public final class ConnectionUtils {
     long estimatedHeapSizeOfResult = 0;
     // We don't make Iterator here
     for (Cell cell : rs.rawCells()) {
-      estimatedHeapSizeOfResult += CellUtil.estimatedHeapSizeOf(cell);
+      estimatedHeapSizeOfResult += cell.heapSize();
     }
     return estimatedHeapSizeOfResult;
   }
@@ -311,11 +323,12 @@ public final class ConnectionUtils {
       return result;
     }
     // not the same row
-    if (!CellUtil.matchingRow(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
+    if (!PrivateCellUtil.matchingRows(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
       return result;
     }
     Cell[] rawCells = result.rawCells();
-    int index = Arrays.binarySearch(rawCells, keepCellsAfter, CellComparator::compareWithoutRow);
+    int index = Arrays.binarySearch(rawCells, keepCellsAfter,
+      CellComparator.getInstance()::compareWithoutRow);
     if (index < 0) {
       index = -index - 1;
     } else {
@@ -357,7 +370,7 @@ public final class ConnectionUtils {
     }
   }
 
-  static boolean noMoreResultsForScan(Scan scan, HRegionInfo info) {
+  static boolean noMoreResultsForScan(Scan scan, RegionInfo info) {
     if (isEmptyStopRow(info.getEndKey())) {
       return true;
     }
@@ -371,7 +384,7 @@ public final class ConnectionUtils {
     return c > 0 || (c == 0 && !scan.includeStopRow());
   }
 
-  static boolean noMoreResultsForReverseScan(Scan scan, HRegionInfo info) {
+  static boolean noMoreResultsForReverseScan(Scan scan, RegionInfo info) {
     if (isEmptyStartRow(info.getStartKey())) {
       return true;
     }
@@ -385,7 +398,7 @@ public final class ConnectionUtils {
 
   static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> futures) {
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-        .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
+      .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
   }
 
   public static ScanResultCache createScanResultCache(Scan scan) {
@@ -441,7 +454,7 @@ public final class ConnectionUtils {
     long resultSize = 0;
     for (Result rr : rrs) {
       for (Cell cell : rr.rawCells()) {
-        resultSize += CellUtil.estimatedSerializedSizeOf(cell);
+        resultSize += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
     }
     scanMetrics.countOfBytesInResults.addAndGet(resultSize);
@@ -467,5 +480,209 @@ public final class ConnectionUtils {
       return;
     }
     scanMetrics.countOfRegions.incrementAndGet();
+  }
+
+  /**
+   * Connect the two futures, if the src future is done, then mark the dst future as done. And if
+   * the dst future is done, then cancel the src future. This is used for timeline consistent read.
+   * <p/>
+   * Pass empty metrics if you want to link the primary future and the dst future so we will not
+   * increase the hedge read related metrics.
+   */
+  private static <T> void connect(CompletableFuture<T> srcFuture, CompletableFuture<T> dstFuture,
+      Optional<MetricsConnection> metrics) {
+    addListener(srcFuture, (r, e) -> {
+      if (e != null) {
+        dstFuture.completeExceptionally(e);
+      } else {
+        if (dstFuture.complete(r)) {
+          metrics.ifPresent(MetricsConnection::incrHedgedReadWin);
+        }
+      }
+    });
+    // The cancellation may be a dummy one as the dstFuture may be completed by this srcFuture.
+    // Notice that this is a bit tricky, as the execution chain maybe 'complete src -> complete dst
+    // -> cancel src', for now it seems to be fine, as the will use CAS to set the result first in
+    // CompletableFuture. If later this causes problems, we could use whenCompleteAsync to break the
+    // tie.
+    addListener(dstFuture, (r, e) -> srcFuture.cancel(false));
+  }
+
+  private static <T> void sendRequestsToSecondaryReplicas(
+      Function<Integer, CompletableFuture<T>> requestReplica, RegionLocations locs,
+      CompletableFuture<T> future, Optional<MetricsConnection> metrics) {
+    if (future.isDone()) {
+      // do not send requests to secondary replicas if the future is done, i.e, the primary request
+      // has already been finished.
+      return;
+    }
+    for (int replicaId = 1, n = locs.size(); replicaId < n; replicaId++) {
+      CompletableFuture<T> secondaryFuture = requestReplica.apply(replicaId);
+      metrics.ifPresent(MetricsConnection::incrHedgedReadOps);
+      connect(secondaryFuture, future, metrics);
+    }
+  }
+
+  static <T> CompletableFuture<T> timelineConsistentRead(AsyncRegionLocator locator,
+      TableName tableName, Query query, byte[] row, RegionLocateType locateType,
+      Function<Integer, CompletableFuture<T>> requestReplica, long rpcTimeoutNs,
+      long primaryCallTimeoutNs, Timer retryTimer, Optional<MetricsConnection> metrics) {
+    if (query.getConsistency() != Consistency.TIMELINE) {
+      return requestReplica.apply(RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    }
+    // user specifies a replica id explicitly, just send request to the specific replica
+    if (query.getReplicaId() >= 0) {
+      return requestReplica.apply(query.getReplicaId());
+    }
+    // Timeline consistent read, where we may send requests to other region replicas
+    CompletableFuture<T> primaryFuture = requestReplica.apply(RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    CompletableFuture<T> future = new CompletableFuture<>();
+    connect(primaryFuture, future, Optional.empty());
+    long startNs = System.nanoTime();
+    // after the getRegionLocations, all the locations for the replicas of this region should have
+    // been cached, so it is not big deal to locate them again when actually sending requests to
+    // these replicas.
+    addListener(locator.getRegionLocations(tableName, row, locateType, false, rpcTimeoutNs),
+      (locs, error) -> {
+        if (error != null) {
+          LOG.warn(
+            "Failed to locate all the replicas for table={}, row='{}', locateType={}" +
+              " give up timeline consistent read",
+            tableName, Bytes.toStringBinary(row), locateType, error);
+          return;
+        }
+        if (locs.size() <= 1) {
+          LOG.warn(
+            "There are no secondary replicas for region {}, give up timeline consistent read",
+            locs.getDefaultRegionLocation().getRegion());
+          return;
+        }
+        long delayNs = primaryCallTimeoutNs - (System.nanoTime() - startNs);
+        if (delayNs <= 0) {
+          sendRequestsToSecondaryReplicas(requestReplica, locs, future, metrics);
+        } else {
+          retryTimer.newTimeout(
+            timeout -> sendRequestsToSecondaryReplicas(requestReplica, locs, future, metrics),
+            delayNs, TimeUnit.NANOSECONDS);
+        }
+      });
+    return future;
+  }
+
+  // validate for well-formedness
+  static void validatePut(Put put, int maxKeyValueSize) {
+    if (put.isEmpty()) {
+      throw new IllegalArgumentException("No columns to insert");
+    }
+    if (maxKeyValueSize > 0) {
+      for (List<Cell> list : put.getFamilyCellMap().values()) {
+        for (Cell cell : list) {
+          if (cell.getSerializedSize() > maxKeyValueSize) {
+            throw new IllegalArgumentException("KeyValue size too large");
+          }
+        }
+      }
+    }
+  }
+
+  static void validatePutsInRowMutations(RowMutations rowMutations, int maxKeyValueSize) {
+    for (Mutation mutation : rowMutations.getMutations()) {
+      if (mutation instanceof Put) {
+        validatePut((Put) mutation, maxKeyValueSize);
+      }
+    }
+  }
+
+  /**
+   * Select the priority for the rpc call.
+   * <p/>
+   * The rules are:
+   * <ol>
+   * <li>If user set a priority explicitly, then just use it.</li>
+   * <li>For system table, use {@link HConstants#SYSTEMTABLE_QOS}.</li>
+   * <li>For other tables, use {@link HConstants#NORMAL_QOS}.</li>
+   * </ol>
+   * @param priority the priority set by user, can be {@link HConstants#PRIORITY_UNSET}.
+   * @param tableName the table we operate on
+   */
+  static int calcPriority(int priority, TableName tableName) {
+    if (priority != HConstants.PRIORITY_UNSET) {
+      return priority;
+    } else {
+      return getPriority(tableName);
+    }
+  }
+
+  static int getPriority(TableName tableName) {
+    if (tableName.isSystemTable()) {
+      return HConstants.SYSTEMTABLE_QOS;
+    } else {
+      return HConstants.NORMAL_QOS;
+    }
+  }
+
+  static <T> CompletableFuture<T> getOrFetch(AtomicReference<T> cacheRef,
+      AtomicReference<CompletableFuture<T>> futureRef, boolean reload,
+      Supplier<CompletableFuture<T>> fetch, Predicate<T> validator, String type) {
+    for (;;) {
+      if (!reload) {
+        T value = cacheRef.get();
+        if (value != null && validator.test(value)) {
+          return CompletableFuture.completedFuture(value);
+        }
+      }
+      LOG.trace("{} cache is null, try fetching from registry", type);
+      if (futureRef.compareAndSet(null, new CompletableFuture<>())) {
+        LOG.debug("Start fetching {} from registry", type);
+        CompletableFuture<T> future = futureRef.get();
+        addListener(fetch.get(), (value, error) -> {
+          if (error != null) {
+            LOG.debug("Failed to fetch {} from registry", type, error);
+            futureRef.getAndSet(null).completeExceptionally(error);
+            return;
+          }
+          LOG.debug("The fetched {} is {}", type, value);
+          // Here we update cache before reset future, so it is possible that someone can get a
+          // stale value. Consider this:
+          // 1. update cacheRef
+          // 2. someone clears the cache and relocates again
+          // 3. the futureRef is not null so the old future is used.
+          // 4. we clear futureRef and complete the future in it with the value being
+          // cleared in step 2.
+          // But we do not think it is a big deal as it rarely happens, and even if it happens, the
+          // caller will retry again later, no correctness problems.
+          cacheRef.set(value);
+          futureRef.set(null);
+          future.complete(value);
+        });
+        return future;
+      } else {
+        CompletableFuture<T> future = futureRef.get();
+        if (future != null) {
+          return future;
+        }
+      }
+    }
+  }
+
+  static void updateStats(Optional<ServerStatisticTracker> optStats,
+      Optional<MetricsConnection> optMetrics, ServerName serverName, MultiResponse resp) {
+    if (!optStats.isPresent() && !optMetrics.isPresent()) {
+      // ServerStatisticTracker and MetricsConnection are both not present, just return
+      return;
+    }
+    resp.getResults().forEach((regionName, regionResult) -> {
+      ClientProtos.RegionLoadStats stat = regionResult.getStat();
+      if (stat == null) {
+        LOG.error("No ClientProtos.RegionLoadStats found for server={}, region={}", serverName,
+          Bytes.toStringBinary(regionName));
+        return;
+      }
+      RegionLoadStats regionLoadStats = ProtobufUtil.createRegionLoadStats(stat);
+      optStats.ifPresent(
+        stats -> ResultStatsUtil.updateStats(stats, serverName, regionName, regionLoadStats));
+      optMetrics.ifPresent(
+        metrics -> ResultStatsUtil.updateStats(metrics, serverName, regionName, regionLoadStats));
+    });
   }
 }

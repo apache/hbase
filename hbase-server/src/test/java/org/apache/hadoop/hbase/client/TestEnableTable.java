@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,50 +17,46 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Predicate;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestEnableTable {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestEnableTable.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestEnableTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestEnableTable.class);
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
 
   @Rule
@@ -79,63 +74,6 @@ public class TestEnableTable {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 300000)
-  public void testEnableTableWithNoRegionServers() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    final HMaster m = cluster.getMaster();
-    final Admin admin = TEST_UTIL.getAdmin();
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(FAMILYNAME));
-    admin.createTable(desc);
-    admin.disableTable(tableName);
-    TEST_UTIL.waitTableDisabled(tableName.getName());
-
-    admin.enableTable(tableName);
-    TEST_UTIL.waitTableEnabled(tableName);
-    // disable once more
-    admin.disableTable(tableName);
-
-    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-    // now stop region servers
-    JVMClusterUtil.RegionServerThread rs = cluster.getRegionServerThreads().get(0);
-    rs.getRegionServer().stop("stop");
-    cluster.waitForRegionServerToStop(rs.getRegionServer().getServerName(), 10000);
-
-    // We used to enable the table here but AMv2 would hang waiting on a RS to check-in.
-    // Revisit.
-
-    JVMClusterUtil.RegionServerThread rs2 = cluster.startRegionServer();
-    cluster.waitForRegionServerToStart(rs2.getRegionServer().getServerName().getHostname(),
-        rs2.getRegionServer().getServerName().getPort(), 60000);
-
-    LOG.debug("Now enabling table " + tableName);
-    admin.enableTable(tableName);
-    assertTrue(admin.isTableEnabled(tableName));
-
-    List<HRegionInfo> regions = TEST_UTIL.getAdmin().getTableRegions(tableName);
-    assertEquals(1, regions.size());
-    for (HRegionInfo region : regions) {
-      TEST_UTIL.getAdmin().assign(region.getEncodedNameAsBytes());
-    }
-    LOG.debug("Waiting for table assigned " + tableName);
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-    List<HRegionInfo> onlineRegions = admin.getOnlineRegions(
-        rs2.getRegionServer().getServerName());
-    ArrayList<HRegionInfo> tableRegions = filterTableRegions(tableName, onlineRegions);
-    assertEquals(1, tableRegions.size());
-  }
-
-  private ArrayList<HRegionInfo> filterTableRegions(final TableName tableName,
-      List<HRegionInfo> onlineRegions) {
-    return Lists.newArrayList(Iterables.filter(onlineRegions, new Predicate<HRegionInfo>() {
-      @Override
-      public boolean apply(HRegionInfo input) {
-        return input.getTable().equals(tableName);
-      }
-    }));
-  }
-
   /**
    * We were only clearing rows that had a hregioninfo column in hbase:meta.  Mangled rows that
    * were missing the hregioninfo because of error were being left behind messing up any
@@ -143,7 +81,7 @@ public class TestEnableTable {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test(timeout=60000)
+  @Test
   public void testDeleteForSureClearsAllTableRowsFromMeta()
   throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -160,7 +98,7 @@ public class TestEnableTable {
     // content from a few of the rows.
     try (Table metaTable = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       try (ResultScanner scanner = metaTable.getScanner(
-        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
+        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConfiguration(), tableName))) {
         for (Result result : scanner) {
           // Just delete one row.
           Delete d = new Delete(result.getRow());
@@ -180,8 +118,8 @@ public class TestEnableTable {
         fail("Got an exception while deleting " + tableName);
       }
       int rowCount = 0;
-      try (ResultScanner scanner =
-          metaTable.getScanner(MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
+      try (ResultScanner scanner = metaTable.getScanner(
+        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConfiguration(), tableName))) {
         for (Result result : scanner) {
           LOG.info("Found when none expected: " + result);
           rowCount++;

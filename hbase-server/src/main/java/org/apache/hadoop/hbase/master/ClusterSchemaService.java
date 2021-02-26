@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.Service;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Service;
 
 /**
  * Mixes in ClusterSchema and Service

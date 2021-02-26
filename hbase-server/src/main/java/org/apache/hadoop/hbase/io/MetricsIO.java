@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase.io;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServerSourceFactory;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class MetricsIO {
 
   private final MetricsIOSource source;
@@ -37,12 +38,10 @@ public class MetricsIO {
     this.wrapper = wrapper;
   }
 
-  @VisibleForTesting
   public MetricsIOSource getMetricsSource() {
     return source;
   }
 
-  @VisibleForTesting
   public MetricsIOWrapper getWrapper() {
     return wrapper;
   }

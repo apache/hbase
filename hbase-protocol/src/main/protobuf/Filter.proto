@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 
 // This file contains protocol buffers that are used for filters
 package hbase.pb;
@@ -168,4 +169,11 @@ message RowRange {
 
 message MultiRowRangeFilter {
   repeated RowRange row_range_list = 1;
+}
+
+message ColumnValueFilter {
+  required bytes family = 1;
+  required bytes qualifier = 2;
+  required CompareType compare_op = 3;
+  required Comparator comparator = 4;
 }

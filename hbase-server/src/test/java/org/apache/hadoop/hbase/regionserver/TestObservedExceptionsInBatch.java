@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.regionserver.HRegion.ObservedExceptionsInBatch;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -31,6 +33,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestObservedExceptionsInBatch {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestObservedExceptionsInBatch.class);
 
   private ObservedExceptionsInBatch observedExceptions;
 

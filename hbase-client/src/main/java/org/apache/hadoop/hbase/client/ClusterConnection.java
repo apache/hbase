@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -29,12 +28,12 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 
 /** Internal methods on Connection that should not be used by user code. */
 @InterfaceAudience.Private
@@ -108,9 +107,12 @@ public interface ClusterConnection extends Connection {
       final byte [] row) throws IOException;
 
   /**
-   * Allows flushing the region cache.
+   * @deprecated {@link #clearRegionLocationCache()} instead.
    */
-  void clearRegionCache();
+  @Deprecated
+  default void clearRegionCache() {
+    clearRegionLocationCache();
+  }
 
   void cacheLocation(final TableName tableName, final RegionLocations location);
 
@@ -224,12 +226,16 @@ public interface ClusterConnection extends Connection {
   /**
    * Returns a {@link MasterKeepAliveConnection} to the active master
    */
-  MasterService.BlockingInterface getMaster() throws IOException;
+  MasterKeepAliveConnection getMaster() throws IOException;
 
+  /**
+   * Get the admin service for master.
+   */
+  AdminService.BlockingInterface getAdminForMaster() throws IOException;
 
   /**
    * Establishes a connection to the region server at the specified address.
-   * @param serverName
+   * @param serverName the region server to connect to
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
    */
@@ -239,7 +245,7 @@ public interface ClusterConnection extends Connection {
    * Establishes a connection to the region server at the specified address, and returns
    * a region client protocol.
    *
-   * @param serverName
+   * @param serverName the region server to connect to
    * @return ClientProtocol proxy for RegionServer
    * @throws IOException if a remote or network exception occurs
    *
@@ -254,33 +260,14 @@ public interface ClusterConnection extends Connection {
    * @return Location of row.
    * @throws IOException if a remote or network exception occurs
    */
-  HRegionLocation getRegionLocation(TableName tableName, byte [] row,
-    boolean reload)
-  throws IOException;
+  HRegionLocation getRegionLocation(TableName tableName, byte[] row, boolean reload)
+      throws IOException;
 
   /**
    * Clear any caches that pertain to server name <code>sn</code>.
    * @param sn A server name
    */
   void clearCaches(final ServerName sn);
-
-  /**
-   * This function allows HBaseAdmin and potentially others to get a shared MasterService
-   * connection.
-   * @return The shared instance. Never returns null.
-   * @throws MasterNotRunningException if master is not running
-   * @deprecated Since 0.96.0
-   */
-  @Deprecated
-  MasterKeepAliveConnection getKeepAliveMasterService()
-  throws MasterNotRunningException;
-
-  /**
-   * @param serverName of server to check
-   * @return true if the server is known as dead, false otherwise.
-   * @deprecated internal method, do not use thru ClusterConnection */
-  @Deprecated
-  boolean isDeadServer(ServerName serverName);
 
   /**
    * @return Nonce generator for this ClusterConnection; may be null if disabled in configuration.
@@ -336,10 +323,4 @@ public interface ClusterConnection extends Connection {
    *         supports cell blocks.
    */
   boolean hasCellBlockSupport();
-
-  /**
-   * @return the number of region servers that are currently running
-   * @throws IOException if a remote or network exception occurs
-   */
-  int getCurrentNrHRS() throws IOException;
 }

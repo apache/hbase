@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,16 +22,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -66,15 +63,22 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestImportTsv implements Configurable {
 
-  private static final Log LOG = LogFactory.getLog(TestImportTsv.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestImportTsv.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestImportTsv.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -113,7 +117,7 @@ public class TestImportTsv implements Configurable {
 
   @Before
   public void setup() throws Exception {
-    tn = TableName.valueOf("test-" + UUID.randomUUID());
+    tn = TableName.valueOf("test-" + util.getRandomUUID());
     args = new HashMap<>();
     // Prepare the arguments required for the test.
     args.put(ImportTsv.COLUMNS_CONF_KEY, "HBASE_ROW_KEY,FAM:A,FAM:B");
@@ -430,7 +434,7 @@ public class TestImportTsv implements Configurable {
 
     // run the import
     Tool tool = new ImportTsv();
-    LOG.debug("Running ImportTsv with arguments: " + argsArray);
+    LOG.debug("Running ImportTsv with arguments: " + Arrays.toString(argsArray));
     assertEquals(0, ToolRunner.run(conf, tool, argsArray));
 
     // Perform basic validation. If the input args did not include
@@ -480,8 +484,8 @@ public class TestImportTsv implements Configurable {
           numRows++;
           assertEquals(2, res.size());
           List<Cell> kvs = res.listCells();
-          assertTrue(CellUtil.matchingRow(kvs.get(0), Bytes.toBytes("KEY")));
-          assertTrue(CellUtil.matchingRow(kvs.get(1), Bytes.toBytes("KEY")));
+          assertTrue(CellUtil.matchingRows(kvs.get(0), Bytes.toBytes("KEY")));
+          assertTrue(CellUtil.matchingRows(kvs.get(1), Bytes.toBytes("KEY")));
           assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
           assertTrue(CellUtil.matchingValue(kvs.get(1), Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
           // Only one result set is expected, so let it loop.
@@ -557,7 +561,6 @@ public class TestImportTsv implements Configurable {
   private static int getKVCountFromHfile(FileSystem fs, Path p) throws IOException {
     Configuration conf = util.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, false);
     scanner.seekTo();
     int count = 0;

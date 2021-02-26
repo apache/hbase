@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -39,15 +37,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 public abstract class AbstractStateMachineRegionProcedure<TState>
     extends AbstractStateMachineTableProcedure<TState> {
   private RegionInfo hri;
-  private volatile boolean lock = false;
 
-  public AbstractStateMachineRegionProcedure(final MasterProcedureEnv env,
-      final RegionInfo hri) {
+  protected AbstractStateMachineRegionProcedure(MasterProcedureEnv env, RegionInfo hri) {
     super(env);
     this.hri = hri;
   }
 
-  public AbstractStateMachineRegionProcedure() {
+  protected AbstractStateMachineRegionProcedure() {
     // Required by the Procedure framework to create the procedure on replay
     super();
   }
@@ -55,7 +51,7 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
   /**
    * @return The RegionInfo of the region we are operating on.
    */
-  protected RegionInfo getRegion() {
+  public RegionInfo getRegion() {
     return this.hri;
   }
 
@@ -80,19 +76,6 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
     sb.append(", region=").append(getRegion().getShortNameToLog());
   }
 
-  /**
-   * Check whether a table is modifiable - exists and either offline or online with config set
-   * @param env MasterProcedureEnv
-   * @throws IOException
-   */
-  @Override
-  protected void checkTableModifiable(final MasterProcedureEnv env) throws IOException {
-    // Checks whether the table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
-      throw new TableNotFoundException(getTableName());
-    }
-  }
-
   @Override
   protected boolean holdLock(MasterProcedureEnv env) {
     return true;
@@ -100,23 +83,15 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
 
   @Override
   protected LockState acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return LockState.LOCK_EVENT_WAIT;
     if (env.getProcedureScheduler().waitRegions(this, getTableName(), getRegion())) {
       return LockState.LOCK_EVENT_WAIT;
     }
-    this.lock = true;
     return LockState.LOCK_ACQUIRED;
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    this.lock = false;
     env.getProcedureScheduler().wakeRegions(this, getTableName(), getRegion());
-  }
-
-  @Override
-  protected boolean hasLock(final MasterProcedureEnv env) {
-    return this.lock;
   }
 
   protected void setFailure(Throwable cause) {

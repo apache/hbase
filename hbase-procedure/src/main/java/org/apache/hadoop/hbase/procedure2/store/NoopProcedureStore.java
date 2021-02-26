@@ -15,16 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An In-Memory store that does not keep track of the procedures inserted.
  */
+@InterfaceAudience.Private
 public class NoopProcedureStore extends ProcedureStoreBase {
   private int numThreads;
 
@@ -62,17 +63,17 @@ public class NoopProcedureStore extends ProcedureStoreBase {
   }
 
   @Override
-  public void insert(Procedure proc, Procedure[] subprocs) {
+  public void insert(Procedure<?> proc, Procedure<?>[] subprocs) {
     // no-op
   }
 
   @Override
-  public void insert(Procedure[] proc) {
+  public void insert(Procedure<?>[] proc) {
     // no-op
   }
 
   @Override
-  public void update(Procedure proc) {
+  public void update(Procedure<?> proc) {
     // no-op
   }
 
@@ -82,7 +83,7 @@ public class NoopProcedureStore extends ProcedureStoreBase {
   }
 
   @Override
-  public void delete(Procedure proc, long[] subprocs) {
+  public void delete(Procedure<?> proc, long[] subprocs) {
     // no-op
   }
 

@@ -78,7 +78,7 @@ abstract class RetryingCallerInterceptor {
    * Call this function alongside the actual call done on the callable.
    * 
    * @param abstractRetryingCallerInterceptorContext
-   * @throws PreemptiveFastFailException
+   * @throws IOException
    */
   public abstract void intercept(
       RetryingCallerInterceptorContext abstractRetryingCallerInterceptorContext)

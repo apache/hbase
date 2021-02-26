@@ -15,17 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -36,14 +34,15 @@ import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CreateTableState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
@@ -53,12 +52,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.T
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterFailoverWithProcedures {
-  private static final Log LOG = LogFactory.getLog(TestMasterFailoverWithProcedures.class);
-
 
   @ClassRule
-  public static final TestRule timeout =
-      CategoryBasedTimeout.forClass(TestMasterFailoverWithProcedures.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMasterFailoverWithProcedures.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterFailoverWithProcedures.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -74,7 +73,9 @@ public class TestMasterFailoverWithProcedures {
   @Before
   public void setup() throws Exception {
     setupConf(UTIL.getConfiguration());
-    UTIL.startMiniCluster(2, 1);
+    // Set master number and use default values for other options.
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(2).build();
+    UTIL.startMiniCluster(option);
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExec, false);
@@ -143,7 +144,7 @@ public class TestMasterFailoverWithProcedures {
     byte[][] splitKeys = null;
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
         getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
-    Path tableDir = FSUtils.getTableDir(getRootDir(), tableName);
+    Path tableDir = CommonFSUtils.getTableDir(getRootDir(), tableName);
     MasterProcedureTestingUtility.validateTableCreation(
         UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
     UTIL.getAdmin().disableTable(tableName);
@@ -288,7 +289,7 @@ public class TestMasterFailoverWithProcedures {
 
     // Start the Delete procedure && kill the executor
     long procId = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
+        new EnableTableProcedure(procExec.getEnvironment(), tableName));
     testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     MasterProcedureTestingUtility.validateTableIsEnabled(

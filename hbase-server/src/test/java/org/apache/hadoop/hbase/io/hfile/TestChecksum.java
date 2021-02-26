@@ -1,6 +1,4 @@
-/*
- * Copyright The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,39 +21,47 @@ import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.GZ;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.BufferUnderflowException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestChecksum {
-  private static final Log LOG = LogFactory.getLog(TestHFileBlock.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestChecksum.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlock.class);
 
   static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = {
       NONE, GZ };
@@ -92,28 +98,48 @@ public class TestChecksum {
 
     FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
     meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
-    HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(
-        is, totalSize, (HFileSystem) fs, path, meta);
-    HFileBlock b = hbr.readBlockData(0, -1, false, false);
+    ReaderContext context = new ReaderContextBuilder()
+        .withInputStreamWrapper(is)
+        .withFileSize(totalSize)
+        .withFileSystem((HFileSystem) fs)
+        .withFilePath(path)
+        .build();
+    HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context,
+        meta, ByteBuffAllocator.HEAP);
+    HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
+    assertTrue(!b.isSharedMem());
     assertEquals(b.getChecksumType(), ChecksumType.getDefaultChecksumType().getCode());
   }
 
-  /**
-   * Test all checksum types by writing and reading back blocks.
-   */
+  private void verifyMBBCheckSum(ByteBuff buf) throws IOException {
+    int size = buf.remaining() / 2 + 1;
+    ByteBuff mbb = new MultiByteBuff(ByteBuffer.allocate(size), ByteBuffer.allocate(size))
+          .position(0).limit(buf.remaining());
+    for (int i = buf.position(); i < buf.limit(); i++) {
+      mbb.put(buf.get(i));
+    }
+    mbb.position(0).limit(buf.remaining());
+    assertEquals(mbb.remaining(), buf.remaining());
+    assertTrue(mbb.remaining() > size);
+    ChecksumUtil.validateChecksum(mbb, "test", 0, HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM);
+  }
+
+  private void verifySBBCheckSum(ByteBuff buf) throws IOException {
+    ChecksumUtil.validateChecksum(buf, "test", 0, HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM);
+  }
+
   @Test
-  public void testAllChecksumTypes() throws IOException {
-    List<ChecksumType> cktypes = new ArrayList<>(Arrays.asList(ChecksumType.values()));
-    for (Iterator<ChecksumType> itr = cktypes.iterator(); itr.hasNext(); ) {
-      ChecksumType cktype = itr.next();
-      Path path = new Path(TEST_UTIL.getDataTestDir(), "checksum" + cktype.getName());
+  public void testVerifyCheckSum() throws IOException {
+    int intCount = 10000;
+    for (ChecksumType ckt : ChecksumType.values()) {
+      Path path = new Path(TEST_UTIL.getDataTestDir(), "checksum" + ckt.getName());
       FSDataOutputStream os = fs.create(path);
       HFileContext meta = new HFileContextBuilder()
-          .withChecksumType(cktype)
-          .build();
+            .withChecksumType(ckt)
+            .build();
       HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
       DataOutputStream dos = hbw.startWriting(BlockType.DATA);
-      for (int i = 0; i < 1000; ++i) {
+      for (int i = 0; i < intCount; ++i) {
         dos.writeInt(i);
       }
       hbw.writeHeaderAndData(os);
@@ -125,20 +151,33 @@ public class TestChecksum {
 
       FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
       meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
-      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(
-          is, totalSize, (HFileSystem) fs, path, meta);
-      HFileBlock b = hbr.readBlockData(0, -1, false, false);
+      ReaderContext context = new ReaderContextBuilder()
+          .withInputStreamWrapper(is)
+          .withFileSize(totalSize)
+          .withFileSystem((HFileSystem) fs)
+          .withFilePath(path)
+          .build();
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context,
+          meta, ByteBuffAllocator.HEAP);
+      HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
+      assertTrue(!b.isSharedMem());
+
+      // verify SingleByteBuff checksum.
+      verifySBBCheckSum(b.getBufferReadOnly());
+
+      // verify MultiByteBuff checksum.
+      verifyMBBCheckSum(b.getBufferReadOnly());
+
       ByteBuff data = b.getBufferWithoutHeader();
-      for (int i = 0; i < 1000; i++) {
+      for (int i = 0; i < intCount; i++) {
         assertEquals(i, data.getInt());
       }
-      boolean exception_thrown = false;
       try {
         data.getInt();
+        fail();
       } catch (BufferUnderflowException e) {
-        exception_thrown = true;
+        // expected failure
       }
-      assertTrue(exception_thrown);
       assertEquals(0, HFile.getAndResetChecksumFailuresCount());
     }
   }
@@ -178,7 +217,7 @@ public class TestChecksum {
         }
         os.close();
 
-        // Use hbase checksums. 
+        // Use hbase checksums.
         assertEquals(true, hfs.useHBaseChecksum());
 
         // Do a read that purposely introduces checksum verification failures.
@@ -189,11 +228,17 @@ public class TestChecksum {
               .withIncludesTags(useTags)
               .withHBaseCheckSum(true)
               .build();
-        HFileBlock.FSReader hbr = new CorruptedFSReaderImpl(is, totalSize, fs, path, meta);
-        HFileBlock b = hbr.readBlockData(0, -1, pread, false);
+        ReaderContext context = new ReaderContextBuilder()
+           .withInputStreamWrapper(is)
+           .withFileSize(totalSize)
+           .withFileSystem(fs)
+           .withFilePath(path)
+           .build();
+        HFileBlock.FSReader hbr = new CorruptedFSReaderImpl(context, meta);
+        HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
-        assertEquals(algo == GZ ? 2173 : 4936, 
+        assertEquals(algo == GZ ? 2173 : 4936,
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
         // read data back from the hfile, exclude header and checksum
         ByteBuff bb = b.unpack(meta, hbr).getBufferWithoutHeader(); // read back data
@@ -209,35 +254,44 @@ public class TestChecksum {
         // A single instance of hbase checksum failure causes the reader to
         // switch off hbase checksum verification for the next 100 read
         // requests. Verify that this is correct.
-        for (int i = 0; i < 
+        for (int i = 0; i <
              HFileBlock.CHECKSUM_VERIFICATION_NUM_IO_THRESHOLD + 1; i++) {
-          b = hbr.readBlockData(0, -1, pread, false);
+          b = hbr.readBlockData(0, -1, pread, false, true);
+          assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
           assertEquals(0, HFile.getAndResetChecksumFailuresCount());
         }
         // The next read should have hbase checksum verification reanabled,
         // we verify this by assertng that there was a hbase-checksum failure.
-        b = hbr.readBlockData(0, -1, pread, false);
+        b = hbr.readBlockData(0, -1, pread, false, true);
+        assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
         assertEquals(1, HFile.getAndResetChecksumFailuresCount());
 
         // Since the above encountered a checksum failure, we switch
         // back to not checking hbase checksums.
-        b = hbr.readBlockData(0, -1, pread, false);
+        b = hbr.readBlockData(0, -1, pread, false, true);
+        assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
         assertEquals(0, HFile.getAndResetChecksumFailuresCount());
         is.close();
 
-        // Now, use a completely new reader. Switch off hbase checksums in 
+        // Now, use a completely new reader. Switch off hbase checksums in
         // the configuration. In this case, we should not detect
-        // any retries within hbase. 
+        // any retries within hbase.
         HFileSystem newfs = new HFileSystem(TEST_UTIL.getConfiguration(), false);
         assertEquals(false, newfs.useHBaseChecksum());
         is = new FSDataInputStreamWrapper(newfs, path);
-        hbr = new CorruptedFSReaderImpl(is, totalSize, newfs, path, meta);
-        b = hbr.readBlockData(0, -1, pread, false);
+        context = new ReaderContextBuilder()
+            .withInputStreamWrapper(is)
+            .withFileSize(totalSize)
+            .withFileSystem(newfs)
+            .withFilePath(path)
+            .build();
+        hbr = new CorruptedFSReaderImpl(context, meta);
+        b = hbr.readBlockData(0, -1, pread, false, true);
         is.close();
         b.sanityCheck();
         b = b.unpack(meta, hbr);
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
-        assertEquals(algo == GZ ? 2173 : 4936, 
+        assertEquals(algo == GZ ? 2173 : 4936,
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
         // read data back from the hfile, exclude header and checksum
         bb = b.getBufferWithoutHeader(); // read back data
@@ -265,7 +319,7 @@ public class TestChecksum {
     Compression.Algorithm algo = NONE;
     for (boolean pread : new boolean[] { false, true }) {
       for (int bytesPerChecksum : BYTES_PER_CHECKSUM) {
-        Path path = new Path(TEST_UTIL.getDataTestDir(), "checksumChunk_" + 
+        Path path = new Path(TEST_UTIL.getDataTestDir(), "checksumChunk_" +
                              algo + bytesPerChecksum);
         FSDataOutputStream os = fs.create(path);
         HFileContext meta = new HFileContextBuilder()
@@ -295,13 +349,11 @@ public class TestChecksum {
         long expectedChunks = ChecksumUtil.numChunks(
                                dataSize + HConstants.HFILEBLOCK_HEADER_SIZE,
                                bytesPerChecksum);
-        LOG.info("testChecksumChunks: pread=" + pread +
-                   ", bytesPerChecksum=" + bytesPerChecksum +
-                   ", fileSize=" + totalSize +
-                   ", dataSize=" + dataSize +
-                   ", expectedChunks=" + expectedChunks);
+        LOG.info("testChecksumChunks: pread={}, bytesPerChecksum={}, fileSize={}, "
+                + "dataSize={}, expectedChunks={}, compression={}", pread, bytesPerChecksum,
+            totalSize, dataSize, expectedChunks, algo.toString());
 
-        // Verify hbase checksums. 
+        // Verify hbase checksums.
         assertEquals(true, hfs.useHBaseChecksum());
 
         // Read data back from file.
@@ -314,9 +366,16 @@ public class TestChecksum {
                .withHBaseCheckSum(true)
                .withBytesPerCheckSum(bytesPerChecksum)
                .build();
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(
-            is, nochecksum), totalSize, hfs, path, meta);
-        HFileBlock b = hbr.readBlockData(0, -1, pread, false);
+        ReaderContext context = new ReaderContextBuilder()
+            .withInputStreamWrapper(new FSDataInputStreamWrapper(is, nochecksum))
+            .withFileSize(totalSize)
+            .withFileSystem(hfs)
+            .withFilePath(path)
+            .build();
+        HFileBlock.FSReader hbr =
+            new HFileBlock.FSReaderImpl(context, meta, ByteBuffAllocator.HEAP);
+        HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
+        assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
         is.close();
         b.sanityCheck();
         assertEquals(dataSize, b.getUncompressedSizeWithoutHeader());
@@ -354,41 +413,42 @@ public class TestChecksum {
      */
     boolean corruptDataStream = false;
 
-    public CorruptedFSReaderImpl(FSDataInputStreamWrapper istream, long fileSize, FileSystem fs,
-        Path path, HFileContext meta) throws IOException {
-      super(istream, fileSize, (HFileSystem) fs, path, meta);
+    public CorruptedFSReaderImpl(ReaderContext context, HFileContext meta) throws IOException {
+      super(context, meta, ByteBuffAllocator.HEAP);
     }
 
     @Override
     protected HFileBlock readBlockDataInternal(FSDataInputStream is, long offset,
-        long onDiskSizeWithHeaderL, boolean pread, boolean verifyChecksum, boolean updateMetrics)
-        throws IOException {
+        long onDiskSizeWithHeaderL, boolean pread, boolean verifyChecksum, boolean updateMetrics,
+        boolean useHeap) throws IOException {
       if (verifyChecksum) {
         corruptDataStream = true;
       }
       HFileBlock b = super.readBlockDataInternal(is, offset, onDiskSizeWithHeaderL, pread,
-          verifyChecksum, updateMetrics);
+        verifyChecksum, updateMetrics, useHeap);
       corruptDataStream = false;
       return b;
     }
 
+
     @Override
-    protected int readAtOffset(FSDataInputStream istream, byte [] dest, int destOffset, int size,
+    protected boolean readAtOffset(FSDataInputStream istream, ByteBuff dest, int size,
         boolean peekIntoNextBlock, long fileOffset, boolean pread) throws IOException {
-      int returnValue = super.readAtOffset(istream, dest, destOffset, size, peekIntoNextBlock,
-          fileOffset, pread);
+      int destOffset = dest.position();
+      boolean returnValue =
+          super.readAtOffset(istream, dest, size, peekIntoNextBlock, fileOffset, pread);
       if (!corruptDataStream) {
         return returnValue;
       }
       // Corrupt 3rd character of block magic of next block's header.
       if (peekIntoNextBlock) {
-        dest[destOffset + size + 3] = 0b00000000;
+        dest.put(destOffset + size + 3, (byte) 0b00000000);
       }
       // We might be reading this block's header too, corrupt it.
-      dest[destOffset + 1] = 0b00000000;
+      dest.put(destOffset + 1, (byte) 0b00000000);
       // Corrupt non header data
       if (size > hdrSize) {
-        dest[destOffset + hdrSize + 1] = 0b00000000;
+        dest.put(destOffset + hdrSize + 1, (byte) 0b00000000);
       }
       return returnValue;
     }

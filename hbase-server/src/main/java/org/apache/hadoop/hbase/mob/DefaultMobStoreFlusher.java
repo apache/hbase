@@ -24,16 +24,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -45,6 +43,8 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of the StoreFlusher. It extends the DefaultStoreFlusher.
@@ -64,7 +64,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
 
-  private static final Log LOG = LogFactory.getLog(DefaultMobStoreFlusher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultMobStoreFlusher.class);
   private final Object flushLock = new Object();
   private long mobCellValueSizeThreshold = 0;
   private Path targetPath;
@@ -100,17 +100,14 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
    */
   @Override
   public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
-      MonitoredTask status, ThroughputController throughputController) throws IOException {
+      MonitoredTask status, ThroughputController throughputController,
+      FlushLifeCycleTracker tracker) throws IOException {
     ArrayList<Path> result = new ArrayList<>();
     long cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
     // Use a store scanner to find which rows to flush.
-    long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint);
-    if (scanner == null) {
-      return result; // NULL scanner returned from coprocessor hooks means skip normal processing
-    }
+    InternalScanner scanner = createScanner(snapshot.getScanners(), tracker);
     StoreFileWriter writer;
     try {
       // TODO: We can fail in the below block before we complete adding this flush to
@@ -185,7 +182,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     List<Cell> cells = new ArrayList<>();
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
-    boolean control = throughputController != null && !store.getRegionInfo().isSystemTable();
+    boolean control = throughputController != null && !store.getRegionInfo().getTable().isSystemTable();
     if (control) {
       throughputController.start(flushName);
     }
@@ -213,9 +210,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
                   this.mobStore.getRefCellTags());
               writer.append(reference);
             }
-            int len = KeyValueUtil.length(c);
             if (control) {
-              throughputController.control(flushName, len);
+              throughputController.control(flushName, c.getSerializedSize());
             }
           }
           cells.clear();

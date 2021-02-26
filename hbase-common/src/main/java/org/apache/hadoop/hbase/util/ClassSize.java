@@ -25,12 +25,9 @@ import java.lang.reflect.Modifier;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class for determining the "size" of a class, an attempt to calculate the
@@ -40,7 +37,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Private
 public class ClassSize {
-  private static final Log LOG = LogFactory.getLog(ClassSize.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClassSize.class);
 
   /** Array overhead */
   public static final int ARRAY;
@@ -132,6 +129,9 @@ public class ClassSize {
   /** Overhead for SyncTimeRangeTracker */
   public static final int SYNC_TIMERANGE_TRACKER;
 
+  /** Overhead for NonSyncTimeRangeTracker */
+  public static final int NON_SYNC_TIMERANGE_TRACKER;
+
   /** Overhead for CellSkipListSet */
   public static final int CELL_SET;
 
@@ -170,7 +170,7 @@ public class ClassSize {
     }
 
     long sizeOfByteArray(int len) {
-      return align(arrayHeaderSize() + len);
+      return align(ARRAY + len);
     }
   }
 
@@ -194,7 +194,7 @@ public class ClassSize {
         return (int) UnsafeAccess.theUnsafe.objectFieldOffset(
           HeaderSize.class.getDeclaredField("a"));
       } catch (NoSuchFieldException | SecurityException e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
       }
       return super.headerSize();
     }
@@ -215,7 +215,7 @@ public class ClassSize {
     @Override
     @SuppressWarnings("static-access")
     long sizeOfByteArray(int len) {
-      return align(arrayHeaderSize() + len * UnsafeAccess.theUnsafe.ARRAY_BYTE_INDEX_SCALE);
+      return align(ARRAY + len * UnsafeAccess.theUnsafe.ARRAY_BYTE_INDEX_SCALE);
     }
   }
 
@@ -234,7 +234,6 @@ public class ClassSize {
   private static final MemoryLayout memoryLayout = getMemoryLayout();
   private static final boolean USE_UNSAFE_LAYOUT = (memoryLayout instanceof UnsafeLayout);
 
-  @VisibleForTesting
   public static boolean useUnsafeLayout() {
     return USE_UNSAFE_LAYOUT;
   }
@@ -327,7 +326,10 @@ public class ClassSize {
     TIMERANGE = align(ClassSize.OBJECT + Bytes.SIZEOF_LONG * 2 + Bytes.SIZEOF_BOOLEAN);
 
     SYNC_TIMERANGE_TRACKER = align(ClassSize.OBJECT + 2 * REFERENCE);
-    CELL_SET = align(OBJECT + REFERENCE);
+
+    NON_SYNC_TIMERANGE_TRACKER = align(ClassSize.OBJECT + 2 * Bytes.SIZEOF_LONG);
+
+    CELL_SET = align(OBJECT + REFERENCE + Bytes.SIZEOF_INT);
 
     STORE_SERVICES = align(OBJECT + REFERENCE + ATOMIC_LONG);
   }

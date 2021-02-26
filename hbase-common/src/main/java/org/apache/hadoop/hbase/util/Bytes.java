@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.checkArgument;
-import static org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.checkPositionIndex;
+import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkPositionIndex;
 
+import com.google.protobuf.ByteString;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -30,27 +31,25 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
-
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -71,7 +70,7 @@ public class Bytes implements Comparable<Bytes> {
   //HConstants.EMPTY_BYTE_ARRAY should be updated if this changed
   private static final byte [] EMPTY_BYTE_ARRAY = new byte [0];
 
-  private static final Log LOG = LogFactory.getLog(Bytes.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Bytes.class);
 
   /**
    * Size of boolean in bytes
@@ -127,7 +126,8 @@ public class Bytes implements Comparable<Bytes> {
   // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
 
-  private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  @InterfaceAudience.Private
+  static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 
   /**
    * Returns length of the byte array, returning 0 if the array is null.
@@ -222,7 +222,9 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * @return the number of valid bytes in the buffer
-   * @deprecated use {@link #getLength()} instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #getLength()} instead.
+   * @see #getLength()
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-11862">HBASE-11862</a>
    */
   @Deprecated
   public int getSize() {
@@ -270,6 +272,7 @@ public class Bytes implements Comparable<Bytes> {
    * @return Positive if left is bigger than right, 0 if they are equal, and
    *         negative if left is smaller than right.
    */
+  @Override
   public int compareTo(Bytes that) {
     return BYTES_RAWCOMPARATOR.compare(
         this.bytes, this.offset, this.length,
@@ -807,16 +810,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_LONG || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_LONG);
     }
-    if (UNSAFE_UNALIGNED) {
-      return UnsafeAccess.toLong(bytes, offset);
-    } else {
-      long l = 0;
-      for(int i = offset; i < offset + length; i++) {
-        l <<= 8;
-        l ^= bytes[i] & 0xFF;
-      }
-      return l;
-    }
+    return ConverterHolder.BEST_CONVERTER.toLong(bytes, offset, length);
   }
 
   private static IllegalArgumentException
@@ -848,16 +842,7 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put a long at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UNSAFE_UNALIGNED) {
-      return UnsafeAccess.putLong(bytes, offset, val);
-    } else {
-      for(int i = offset + 7; i > offset; i--) {
-        bytes[i] = (byte) val;
-        val >>>= 8;
-      }
-      bytes[offset] = (byte) val;
-      return offset + SIZEOF_LONG;
-    }
+    return ConverterHolder.BEST_CONVERTER.putLong(bytes, offset, val);
   }
 
   /**
@@ -999,16 +984,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_INT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_INT);
     }
-    if (UNSAFE_UNALIGNED) {
-      return UnsafeAccess.toInt(bytes, offset);
-    } else {
-      int n = 0;
-      for(int i = offset; i < (offset + length); i++) {
-        n <<= 8;
-        n ^= bytes[i] & 0xFF;
-      }
-      return n;
-    }
+    return ConverterHolder.BEST_CONVERTER.toInt(bytes, offset, length);
   }
 
   /**
@@ -1083,16 +1059,7 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put an int at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UNSAFE_UNALIGNED) {
-      return UnsafeAccess.putInt(bytes, offset, val);
-    } else {
-      for(int i= offset + 3; i > offset; i--) {
-        bytes[i] = (byte) val;
-        val >>>= 8;
-      }
-      bytes[offset] = (byte) val;
-      return offset + SIZEOF_INT;
-    }
+    return ConverterHolder.BEST_CONVERTER.putInt(bytes, offset, val);
   }
 
   /**
@@ -1153,15 +1120,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_SHORT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_SHORT);
     }
-    if (UNSAFE_UNALIGNED) {
-      return UnsafeAccess.toShort(bytes, offset);
-    } else {
-      short n = 0;
-      n ^= bytes[offset] & 0xFF;
-      n <<= 8;
-      n ^= bytes[offset+1] & 0xFF;
-      return n;
-   }
+    return ConverterHolder.BEST_CONVERTER.toShort(bytes, offset, length);
   }
 
   /**
@@ -1191,14 +1150,7 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put a short at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UNSAFE_UNALIGNED) {
-      return UnsafeAccess.putShort(bytes, offset, val);
-    } else {
-      bytes[offset+1] = (byte) val;
-      val >>= 8;
-      bytes[offset] = (byte) val;
-      return offset + SIZEOF_SHORT;
-    }
+    return ConverterHolder.BEST_CONVERTER.putShort(bytes, offset, val);
   }
 
   /**
@@ -1365,7 +1317,9 @@ public class Bytes implements Comparable<Bytes> {
    * @param offset Offset into array at which vint begins.
    * @throws java.io.IOException e
    * @return deserialized long from buffer.
-   * @deprecated Use {@link #readAsVLong(byte[],int)} instead.
+   * @deprecated since 0.98.12. Use {@link #readAsVLong(byte[],int)} instead.
+   * @see #readAsVLong(byte[], int)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-6919">HBASE-6919</a>
    */
   @Deprecated
   public static long readVLong(final byte [] buffer, final int offset)
@@ -1401,7 +1355,7 @@ public class Bytes implements Comparable<Bytes> {
    */
   public static int compareTo(final byte [] left, final byte [] right) {
     return LexicographicalComparerHolder.BEST_COMPARER.
-      compareTo(left, 0, left.length, right, 0, right.length);
+      compareTo(left, 0, left == null? 0: left.length, right, 0, right == null? 0: right.length);
   }
 
   /**
@@ -1427,9 +1381,159 @@ public class Bytes implements Comparable<Bytes> {
     );
   }
 
-  @VisibleForTesting
+  static abstract class Converter {
+    abstract long toLong(byte[] bytes, int offset, int length);
+    abstract int putLong(byte[] bytes, int offset, long val);
+
+    abstract int toInt(byte[] bytes, int offset, final int length);
+    abstract int putInt(byte[] bytes, int offset, int val);
+
+    abstract short toShort(byte[] bytes, int offset, final int length);
+    abstract int putShort(byte[] bytes, int offset, short val);
+
+  }
+
+  @InterfaceAudience.Private
   static Comparer<byte[]> lexicographicalComparerJavaImpl() {
     return LexicographicalComparerHolder.PureJavaComparer.INSTANCE;
+  }
+
+  static class ConverterHolder {
+    static final String UNSAFE_CONVERTER_NAME =
+            ConverterHolder.class.getName() + "$UnsafeConverter";
+
+    static final Converter BEST_CONVERTER = getBestConverter();
+    /**
+     * Returns the Unsafe-using Converter, or falls back to the pure-Java
+     * implementation if unable to do so.
+     */
+    static Converter getBestConverter() {
+      try {
+        Class<?> theClass = Class.forName(UNSAFE_CONVERTER_NAME);
+
+        // yes, UnsafeComparer does implement Comparer<byte[]>
+        @SuppressWarnings("unchecked")
+        Converter converter = (Converter) theClass.getConstructor().newInstance();
+        return converter;
+      } catch (Throwable t) { // ensure we really catch *everything*
+        return PureJavaConverter.INSTANCE;
+      }
+    }
+
+    protected static final class PureJavaConverter extends Converter {
+      static final PureJavaConverter INSTANCE = new PureJavaConverter();
+
+      private PureJavaConverter() {}
+
+      @Override
+      long toLong(byte[] bytes, int offset, int length) {
+        long l = 0;
+        for(int i = offset; i < offset + length; i++) {
+          l <<= 8;
+          l ^= bytes[i] & 0xFF;
+        }
+        return l;
+      }
+
+      @Override
+      int putLong(byte[] bytes, int offset, long val) {
+        for(int i = offset + 7; i > offset; i--) {
+          bytes[i] = (byte) val;
+          val >>>= 8;
+        }
+        bytes[offset] = (byte) val;
+        return offset + SIZEOF_LONG;
+      }
+
+      @Override
+      int toInt(byte[] bytes, int offset, int length) {
+        int n = 0;
+        for(int i = offset; i < (offset + length); i++) {
+          n <<= 8;
+          n ^= bytes[i] & 0xFF;
+        }
+        return n;
+      }
+
+      @Override
+      int putInt(byte[] bytes, int offset, int val) {
+        for(int i= offset + 3; i > offset; i--) {
+          bytes[i] = (byte) val;
+          val >>>= 8;
+        }
+        bytes[offset] = (byte) val;
+        return offset + SIZEOF_INT;
+      }
+
+      @Override
+      short toShort(byte[] bytes, int offset, int length) {
+        short n = 0;
+        n = (short) ((n ^ bytes[offset]) & 0xFF);
+        n = (short) (n << 8);
+        n ^= (short) (bytes[offset+1] & 0xFF);
+        return n;
+      }
+
+      @Override
+      int putShort(byte[] bytes, int offset, short val) {
+        bytes[offset+1] = (byte) val;
+        val >>= 8;
+        bytes[offset] = (byte) val;
+        return offset + SIZEOF_SHORT;
+      }
+    }
+
+    protected static final class UnsafeConverter extends Converter {
+
+      static final Unsafe theUnsafe;
+
+      public UnsafeConverter() {}
+
+      static {
+        if (UNSAFE_UNALIGNED) {
+          theUnsafe = UnsafeAccess.theUnsafe;
+        } else {
+          // It doesn't matter what we throw;
+          // it's swallowed in getBestComparer().
+          throw new Error();
+        }
+
+        // sanity check - this should never fail
+        if (theUnsafe.arrayIndexScale(byte[].class) != 1) {
+          throw new AssertionError();
+        }
+      }
+
+      @Override
+      long toLong(byte[] bytes, int offset, int length) {
+        return UnsafeAccess.toLong(bytes, offset);
+      }
+
+      @Override
+      int putLong(byte[] bytes, int offset, long val) {
+        return UnsafeAccess.putLong(bytes, offset, val);
+      }
+
+      @Override
+      int toInt(byte[] bytes, int offset, int length) {
+        return UnsafeAccess.toInt(bytes, offset);
+      }
+
+      @Override
+      int putInt(byte[] bytes, int offset, int val) {
+        return UnsafeAccess.putInt(bytes, offset, val);
+      }
+
+      @Override
+      short toShort(byte[] bytes, int offset, int length) {
+        return UnsafeAccess.toShort(bytes, offset);
+      }
+
+      @Override
+      int putShort(byte[] bytes, int offset, short val) {
+        return UnsafeAccess.putShort(bytes, offset, val);
+      }
+    }
   }
 
   /**
@@ -1439,7 +1543,7 @@ public class Bytes implements Comparable<Bytes> {
    * <p>Uses reflection to gracefully fall back to the Java implementation if
    * {@code Unsafe} isn't available.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class LexicographicalComparerHolder {
     static final String UNSAFE_COMPARER_NAME =
         LexicographicalComparerHolder.class.getName() + "$UnsafeComparer";
@@ -1489,7 +1593,7 @@ public class Bytes implements Comparable<Bytes> {
       }
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     enum UnsafeComparer implements Comparer<byte[]> {
       INSTANCE;
 
@@ -1542,10 +1646,10 @@ public class Bytes implements Comparable<Bytes> {
          * than 4 bytes even on 32-bit. On the other hand, it is substantially faster on 64-bit.
          */
         for (i = 0; i < strideLimit; i += stride) {
-          long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
-          long rw = theUnsafe.getLong(buffer2, offset2Adj + (long) i);
+          long lw = theUnsafe.getLong(buffer1, offset1Adj + i);
+          long rw = theUnsafe.getLong(buffer2, offset2Adj + i);
           if (lw != rw) {
-            if(!UnsafeAccess.littleEndian) {
+            if(!UnsafeAccess.LITTLE_ENDIAN) {
               return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
             }
 
@@ -1936,7 +2040,7 @@ public class Bytes implements Comparable<Bytes> {
   public static int hashCode(byte[] bytes, int offset, int length) {
     int hash = 1;
     for (int i = offset; i < offset + length; i++)
-      hash = (31 * hash) + (int) bytes[i];
+      hash = (31 * hash) + bytes[i];
     return hash;
   }
 
@@ -1998,7 +2102,10 @@ public class Bytes implements Comparable<Bytes> {
    *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
    *         means that this function can return 2N + 1 different values
    *         ranging from -(N + 1) to N - 1.
-   * @deprecated {@link Bytes#binarySearch(byte[][], byte[], int, int)}
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #binarySearch(byte[][], byte[], int, int)} instead.
+   * @see #binarySearch(byte[][], byte[], int, int)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13450">HBASE-13450</a>
    */
   @Deprecated
   public static int binarySearch(byte [][]arr, byte []key, int offset,
@@ -2025,7 +2132,7 @@ public class Bytes implements Comparable<Bytes> {
     int high = arr.length - 1;
 
     while (low <= high) {
-      int mid = (low + high) >>> 1;
+      int mid = low + ((high - low) >> 1);
       // we have to compare in this order, because the comparator order
       // has special logic when the 'left side' is a special key.
       int cmp = Bytes.BYTES_RAWCOMPARATOR
@@ -2056,7 +2163,10 @@ public class Bytes implements Comparable<Bytes> {
    *         means that this function can return 2N + 1 different values
    *         ranging from -(N + 1) to N - 1.
    * @return the index of the block
-   * @deprecated Use {@link Bytes#binarySearch(Cell[], Cell, CellComparator)}
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #binarySearch(Cell[], Cell, CellComparator)} instead.
+   * @see #binarySearch(Cell[], Cell, CellComparator)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13450">HBASE-13450</a>
    */
   @Deprecated
   public static int binarySearch(byte[][] arr, Cell key, RawComparator<Cell> comparator) {
@@ -2064,7 +2174,7 @@ public class Bytes implements Comparable<Bytes> {
     int high = arr.length - 1;
     KeyValue.KeyOnlyKeyValue r = new KeyValue.KeyOnlyKeyValue();
     while (low <= high) {
-      int mid = (low+high) >>> 1;
+      int mid = low + ((high - low) >> 1);
       // we have to compare in this order, because the comparator order
       // has special logic when the 'left side' is a special key.
       r.setKey(arr[mid], 0, arr[mid].length);
@@ -2100,7 +2210,7 @@ public class Bytes implements Comparable<Bytes> {
     int low = 0;
     int high = arr.length - 1;
     while (low <= high) {
-      int mid = (low+high) >>> 1;
+      int mid = low + ((high - low) >> 1);
       // we have to compare in this order, because the comparator order
       // has special logic when the 'left side' is a special key.
       int cmp = comparator.compare(key, arr[mid]);
@@ -2274,7 +2384,7 @@ public class Bytes implements Comparable<Bytes> {
     int high = toIndex - 1;
 
     while (low <= high) {
-      int mid = (low + high) >>> 1;
+      int mid = low + ((high - low) >> 1);
       int midVal = a[mid] & 0xff;
 
       if (midVal < unsignedKey) {
@@ -2337,21 +2447,24 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   public static boolean isSorted(Collection<byte[]> arrays) {
-    byte[] previous = new byte[0];
-    for (byte[] array : IterableUtils.nullSafe(arrays)) {
-      if (Bytes.compareTo(previous, array) > 0) {
-        return false;
+    if (!CollectionUtils.isEmpty(arrays)) {
+      byte[] previous = new byte[0];
+      for (byte[] array : arrays) {
+        if (Bytes.compareTo(previous, array) > 0) {
+          return false;
+        }
+        previous = array;
       }
-      previous = array;
     }
     return true;
   }
 
   public static List<byte[]> getUtf8ByteArrays(List<String> strings) {
-    List<byte[]> byteArrays = Lists.newArrayListWithCapacity(CollectionUtils.nullSafeSize(strings));
-    for (String s : IterableUtils.nullSafe(strings)) {
-      byteArrays.add(Bytes.toBytes(s));
+    if (CollectionUtils.isEmpty(strings)) {
+      return Collections.emptyList();
     }
+    List<byte[]> byteArrays = new ArrayList<>(strings.size());
+    strings.forEach(s -> byteArrays.add(Bytes.toBytes(s)));
     return byteArrays;
   }
 
@@ -2517,7 +2630,7 @@ public class Bytes implements Comparable<Bytes> {
     }
     return new String(ch);
   }
-  
+
   /**
    * Convert a byte array into a hex string
    */

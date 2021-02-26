@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
-
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.closeRegion;
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.openRegion;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
@@ -29,10 +26,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -45,7 +40,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -55,10 +50,12 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -67,13 +64,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole
  * cluster. See {@link TestRegionServerNoMaster}.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestRegionReplicas {
-  private static final Log LOG = LogFactory.getLog(TestRegionReplicas.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionReplicas.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicas.class);
 
   private static final int NB_SERVERS = 1;
   private static Table table;
-  private static final byte[] row = "TestRegionReplicas".getBytes();
+  private static final byte[] row = Bytes.toBytes("TestRegionReplicas");
 
   private static HRegionInfo hriPrimary;
   private static HRegionInfo hriSecondary;
@@ -118,7 +120,7 @@ public class TestRegionReplicas {
     return HTU.getMiniHBaseCluster().getRegionServer(0);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testOpenRegionReplica() throws Exception {
     openRegion(HTU, getRS(), hriSecondary);
     try {
@@ -134,7 +136,7 @@ public class TestRegionReplicas {
   }
 
   /** Tests that the meta location is saved for secondary regions */
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicaUpdatesMetaLocation() throws Exception {
     openRegion(HTU, getRS(), hriSecondary);
     Table meta = null;
@@ -143,12 +145,14 @@ public class TestRegionReplicas {
       TestMetaTableAccessor.assertMetaLocation(meta, hriPrimary.getRegionName()
         , getRS().getServerName(), -1, 1, false);
     } finally {
-      if (meta != null ) meta.close();
+      if (meta != null) {
+        meta.close();
+      }
       closeRegion(HTU, getRS(), hriSecondary);
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicaGets() throws Exception {
     try {
       //load some data to primary
@@ -156,7 +160,7 @@ public class TestRegionReplicas {
       // assert that we can read back from primary
       Assert.assertEquals(1000, HTU.countRows(table));
       // flush so that region replica can read
-      Region region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
+      HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
 
       openRegion(HTU, getRS(), hriSecondary);
@@ -172,7 +176,7 @@ public class TestRegionReplicas {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testGetOnTargetRegionReplica() throws Exception {
     try {
       //load some data to primary
@@ -180,7 +184,7 @@ public class TestRegionReplicas {
       // assert that we can read back from primary
       Assert.assertEquals(1000, HTU.countRows(table));
       // flush so that region replica can read
-      Region region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
+      HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
 
       openRegion(HTU, getRS(), hriSecondary);
@@ -211,7 +215,7 @@ public class TestRegionReplicas {
 
   // build a mock rpc
   private void assertGetRpc(HRegionInfo info, int value, boolean expect)
-      throws IOException, org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+      throws IOException, org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     byte[] row = Bytes.toBytes(String.valueOf(value));
     Get get = new Get(row);
     ClientProtos.GetRequest getReq = RequestConverter.buildGetRequest(info.getRegionName(), get);
@@ -229,7 +233,7 @@ public class TestRegionReplicas {
     before();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRefresStoreFiles() throws Exception {
     // enable store file refreshing
     final int refreshPeriod = 2000; // 2 sec
@@ -250,9 +254,9 @@ public class TestRegionReplicas {
       Assert.assertEquals(1000, HTU.countRows(table));
       // flush so that region replica can read
       LOG.info("Flushing primary region");
-      Region region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
+      HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
-      HRegion primaryRegion = (HRegion) region;
+      HRegion primaryRegion = region;
 
       // ensure that chore is run
       LOG.info("Sleeping for " + (4 * refreshPeriod));
@@ -306,15 +310,15 @@ public class TestRegionReplicas {
     }
   }
 
-  @Ignore
-  @Test(timeout = 300000)
+  @Test
   public void testFlushAndCompactionsInPrimary() throws Exception {
 
     long runtime = 30 * 1000;
     // enable store file refreshing
     final int refreshPeriod = 100; // 100ms refresh is a lot
     HTU.getConfiguration().setInt("hbase.hstore.compactionThreshold", 3);
-    HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, refreshPeriod);
+    HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
+      refreshPeriod);
     // restart the region server so that it starts the refresher chore
     restartRegionServer();
     final int startKey = 0, endKey = 1000;
@@ -346,10 +350,12 @@ public class TestRegionReplicas {
               put.addColumn(f, null, data);
               table.put(put);
               key++;
-              if (key == endKey) key = startKey;
+              if (key == endKey) {
+                key = startKey;
+              }
             }
           } catch (Exception ex) {
-            LOG.warn(ex);
+            LOG.warn(ex.toString(), ex);
             exceptions[0].compareAndSet(null, ex);
           }
         }
@@ -369,7 +375,7 @@ public class TestRegionReplicas {
               }
             }
           } catch (Exception ex) {
-            LOG.warn(ex);
+            LOG.warn(ex.toString(), ex);
             exceptions[1].compareAndSet(null, ex);
           }
         }
@@ -386,13 +392,15 @@ public class TestRegionReplicas {
                 try {
                   closeRegion(HTU, getRS(), hriSecondary);
                 } catch (Exception ex) {
-                  LOG.warn("Failed closing the region " + hriSecondary + " "  + StringUtils.stringifyException(ex));
+                  LOG.warn("Failed closing the region " + hriSecondary + " "  +
+                    StringUtils.stringifyException(ex));
                   exceptions[2].compareAndSet(null, ex);
                 }
                 try {
                   openRegion(HTU, getRS(), hriSecondary);
                 } catch (Exception ex) {
-                  LOG.warn("Failed opening the region " + hriSecondary + " "  + StringUtils.stringifyException(ex));
+                  LOG.warn("Failed opening the region " + hriSecondary + " "  +
+                    StringUtils.stringifyException(ex));
                   exceptions[2].compareAndSet(null, ex);
                 }
               }
@@ -401,13 +409,14 @@ public class TestRegionReplicas {
               assertGetRpc(hriSecondary, key, true);
             }
           } catch (Exception ex) {
-            LOG.warn("Failed getting the value in the region " + hriSecondary + " "  + StringUtils.stringifyException(ex));
+            LOG.warn("Failed getting the value in the region " + hriSecondary + " "  +
+              StringUtils.stringifyException(ex));
             exceptions[2].compareAndSet(null, ex);
           }
         }
       };
 
-      LOG.info("Starting writer and reader");
+      LOG.info("Starting writer and reader, secondary={}", hriSecondary.getEncodedName());
       ExecutorService executor = Executors.newFixedThreadPool(3);
       executor.submit(writer);
       executor.submit(flusherCompactor);
@@ -424,11 +433,15 @@ public class TestRegionReplicas {
       }
     } finally {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, startKey, endKey);
-      closeRegion(HTU, getRS(), hriSecondary);
+      try {
+        closeRegion(HTU, getRS(), hriSecondary);
+      } catch (ServiceException e) {
+        LOG.info("Closing wrong region {}", hriSecondary, e);
+      }
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testVerifySecondaryAbilityToReadWithOnFiles() throws Exception {
     // disable the store file refresh chore (we do this by hand)
     HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 0);
@@ -442,11 +455,11 @@ public class TestRegionReplicas {
       LOG.info("Loading data to primary region");
       for (int i = 0; i < 3; ++i) {
         HTU.loadNumericRows(table, f, i * 1000, (i + 1) * 1000);
-        Region region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
+        HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
         region.flush(true);
       }
 
-      Region primaryRegion = getRS().getRegion(hriPrimary.getEncodedName());
+      HRegion primaryRegion = getRS().getRegion(hriPrimary.getEncodedName());
       Assert.assertEquals(3, primaryRegion.getStore(f).getStorefilesCount());
 
       // Refresh store files on the secondary
@@ -479,7 +492,7 @@ public class TestRegionReplicas {
       int sum = 0;
       for (HStoreFile sf : ((HStore) secondaryRegion.getStore(f)).getStorefiles()) {
         // Our file does not exist anymore. was moved by the compaction above.
-        LOG.debug(getRS().getFileSystem().exists(sf.getPath()));
+        LOG.debug(Boolean.toString(getRS().getFileSystem().exists(sf.getPath())));
         Assert.assertFalse(getRS().getFileSystem().exists(sf.getPath()));
 
         HFileScanner scanner = sf.getReader().getScanner(false, false);

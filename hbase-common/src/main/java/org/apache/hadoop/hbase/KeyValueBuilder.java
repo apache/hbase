@@ -21,6 +21,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 class KeyValueBuilder extends ExtendedCellBuilderImpl {
+
   @Override
   protected ExtendedCell innerBuild() {
     KeyValue kv = new KeyValue(row, rOffset, rLength,
@@ -28,7 +29,7 @@ class KeyValueBuilder extends ExtendedCellBuilderImpl {
             qualifier, qOffset, qLength,
             timestamp, type,
             value, vOffset, vLength,
-            tags, tagsOffset, tagsLength);
+        tags, tagsOffset, tagsLength);
     kv.setSequenceId(seqId);
     return kv;
   }

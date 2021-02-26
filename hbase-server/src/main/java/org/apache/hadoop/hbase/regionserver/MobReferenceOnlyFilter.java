@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 class MobReferenceOnlyFilter extends FilterBase {
 
   @Override
-  public ReturnCode filterKeyValue(Cell cell) {
+  public ReturnCode filterCell(final Cell cell) {
     if (null != cell) {
       // If a cell with a mob reference tag, it's included.
       if (MobUtils.isMobReferenceCell(cell)) {
@@ -38,5 +38,18 @@ class MobReferenceOnlyFilter extends FilterBase {
       }
     }
     return ReturnCode.SKIP;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof MobReferenceOnlyFilter)) {
+      return false;
+    }
+    return obj == this;
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 }

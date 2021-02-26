@@ -27,9 +27,9 @@ import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Not thread safe!
@@ -142,6 +142,7 @@ public class ByteBufferOutputStream extends OutputStream
     ByteBufferUtils.copyFromArrayToBuffer(curBuf, b, off, len);
   }
 
+  @Override
   public void write(ByteBuffer b, int off, int len) throws IOException {
     checkSizeAndGrow(len);
     ByteBufferUtils.copyFromBufferToBuffer(b, curBuf, off, len);
@@ -153,6 +154,7 @@ public class ByteBufferOutputStream extends OutputStream
    * @param i the <code>int</code> to write
    * @throws IOException if an I/O error occurs.
    */
+  @Override
   public void writeInt(int i) throws IOException {
     checkSizeAndGrow(Bytes.SIZEOF_INT);
     ByteBufferUtils.putInt(this.curBuf, i);

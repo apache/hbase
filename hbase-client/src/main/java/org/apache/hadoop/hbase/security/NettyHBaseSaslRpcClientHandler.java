@@ -17,19 +17,22 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBuf;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.Promise;
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.FallbackDisallowedException;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -41,7 +44,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 @InterfaceAudience.Private
 public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
-  private static final Log LOG = LogFactory.getLog(NettyHBaseSaslRpcClientHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NettyHBaseSaslRpcClientHandler.class);
 
   private final Promise<Boolean> saslPromise;
 
@@ -59,21 +62,19 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
    *          simple.
    */
   public NettyHBaseSaslRpcClientHandler(Promise<Boolean> saslPromise, UserGroupInformation ugi,
-      AuthMethod method, Token<? extends TokenIdentifier> token, String serverPrincipal,
-      boolean fallbackAllowed, Configuration conf)
-      throws IOException {
+      SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
+      InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed,
+      Configuration conf) throws IOException {
     this.saslPromise = saslPromise;
     this.ugi = ugi;
     this.conf = conf;
-    this.saslRpcClient = new NettyHBaseSaslRpcClient(method, token, serverPrincipal,
-        fallbackAllowed, conf.get(
+    this.saslRpcClient = new NettyHBaseSaslRpcClient(conf, provider, token, serverAddr,
+        securityInfo, fallbackAllowed, conf.get(
         "hbase.rpc.protection", SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
   }
 
   private void writeResponse(ChannelHandlerContext ctx, byte[] response) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Will send token of size " + response.length + " from initSASLContext.");
-    }
+    LOG.trace("Sending token size={} from initSASLContext.", response.length);
     ctx.writeAndFlush(
       ctx.alloc().buffer(4 + response.length).writeInt(response.length).writeBytes(response));
   }
@@ -133,9 +134,7 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
       }
       return;
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Will read input token of size " + len + " for processing by initSASLContext");
-    }
+    LOG.trace("Reading input token size={} for processing by initSASLContext", len);
     final byte[] challenge = new byte[len];
     msg.readBytes(challenge);
     byte[] response = ugi.doAs(new PrivilegedExceptionAction<byte[]>() {
@@ -154,7 +153,7 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     saslRpcClient.dispose();
-    saslPromise.tryFailure(new IOException("Connection closed"));
+    saslPromise.tryFailure(new ConnectionClosedException("Connection closed"));
     ctx.fireChannelInactive();
   }
 

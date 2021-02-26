@@ -24,6 +24,7 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -40,7 +41,7 @@ public class MobTestUtil {
   protected static String generateRandomString(int demoLength) {
     String base = "abcdefghijklmnopqrstuvwxyz";
     Random random = new Random();
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     for (int i = 0; i < demoLength; i++) {
       int number = random.nextInt(base.length());
       sb.append(base.charAt(number));
@@ -103,5 +104,17 @@ public class MobTestUtil {
     }
     results.close();
     Assert.assertEquals(expectedCount, count);
+  }
+
+  /**
+   * Gets the number of rows in the given table.
+   * @param table to get the scanner
+   * @return the number of rows
+   */
+  public static int countMobRows(HBaseTestingUtility util, Table table) throws IOException {
+    Scan scan = new Scan();
+    // Do not retrieve the mob data when scanning
+    scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
+    return util.countRows(table, scan);
   }
 }

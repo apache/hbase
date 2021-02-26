@@ -33,7 +33,7 @@ public abstract class PeriodicPolicy extends Policy {
   public void run() {
     // Add some jitter.
     int jitter = RandomUtils.nextInt(0, (int) periodMs);
-    LOG.info("Sleeping for " + jitter + " to add jitter");
+    LOG.info("Sleeping for {} ms to add jitter", jitter);
     Threads.sleep(jitter);
 
     while (!isStopped()) {
@@ -43,7 +43,7 @@ public abstract class PeriodicPolicy extends Policy {
       if (isStopped()) return;
       long sleepTime = periodMs - (System.currentTimeMillis() - start);
       if (sleepTime > 0) {
-        LOG.info("Sleeping for: " + sleepTime);
+        LOG.info("Sleeping for {} ms", sleepTime);
         Threads.sleep(sleepTime);
       }
     }
@@ -54,6 +54,6 @@ public abstract class PeriodicPolicy extends Policy {
   @Override
   public void init(PolicyContext context) throws Exception {
     super.init(context);
-    LOG.info("Using ChaosMonkey Policy: " + this.getClass() + ", period: " + periodMs);
+    LOG.info("Using ChaosMonkey Policy {}, period={} ms", this.getClass(), periodMs);
   }
 }

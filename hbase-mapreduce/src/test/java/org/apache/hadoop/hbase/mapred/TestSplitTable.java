@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,11 +21,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -34,11 +35,16 @@ import org.junit.rules.TestName;
 
 @Category({MapReduceTests.class, SmallTests.class})
 public class TestSplitTable {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSplitTable.class);
+
   @Rule
   public TestName name = new TestName();
 
   @Test
-  @SuppressWarnings("deprecation")
+  @SuppressWarnings({"deprecation", "SelfComparison"})
   public void testSplitTableCompareTo() {
     TableSplit aTableSplit = new TableSplit(Bytes.toBytes("tableA"),
         Bytes.toBytes("aaa"), Bytes.toBytes("ddd"), "locationA");
@@ -49,9 +55,9 @@ public class TestSplitTable {
     TableSplit cTableSplit = new TableSplit(Bytes.toBytes("tableA"),
         Bytes.toBytes("lll"), Bytes.toBytes("zzz"), "locationA");
 
-    assertTrue(aTableSplit.compareTo(aTableSplit) == 0);
-    assertTrue(bTableSplit.compareTo(bTableSplit) == 0);
-    assertTrue(cTableSplit.compareTo(cTableSplit) == 0);
+    assertEquals(0, aTableSplit.compareTo(aTableSplit));
+    assertEquals(0, bTableSplit.compareTo(bTableSplit));
+    assertEquals(0, cTableSplit.compareTo(cTableSplit));
 
     assertTrue(aTableSplit.compareTo(bTableSplit) < 0);
     assertTrue(bTableSplit.compareTo(aTableSplit) > 0);

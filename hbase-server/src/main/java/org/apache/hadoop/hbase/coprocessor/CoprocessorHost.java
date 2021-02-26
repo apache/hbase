@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,21 +32,18 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedList;
 
@@ -58,8 +54,7 @@ import org.apache.hadoop.hbase.util.SortedList;
  * @param <E> type of specific coprocessor environment this host requires.
  * provides
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public abstract class CoprocessorHost<C extends Coprocessor, E extends CoprocessorEnvironment<C>> {
   public static final String REGION_COPROCESSOR_CONF_KEY =
       "hbase.coprocessor.region.classes";
@@ -78,8 +73,11 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   public static final String USER_COPROCESSORS_ENABLED_CONF_KEY =
     "hbase.coprocessor.user.enabled";
   public static final boolean DEFAULT_USER_COPROCESSORS_ENABLED = true;
+  public static final String SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR =
+      "hbase.skip.load.duplicate.table.coprocessor";
+  public static final boolean DEFAULT_SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR = false;
 
-  private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CoprocessorHost.class);
   protected Abortable abortable;
   /** Ordered set of loaded coprocessors with lock */
   protected final SortedList<E> coprocEnvironments =
@@ -144,8 +142,16 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     if (defaultCPClasses == null || defaultCPClasses.length == 0)
       return;
 
-    int priority = Coprocessor.PRIORITY_SYSTEM;
+    int currentSystemPriority = Coprocessor.PRIORITY_SYSTEM;
     for (String className : defaultCPClasses) {
+      String[] classNameAndPriority = className.split("\\|");
+      boolean hasPriorityOverride = false;
+      className = classNameAndPriority[0];
+      int overridePriority = Coprocessor.PRIORITY_SYSTEM;
+      if (classNameAndPriority.length > 1){
+        overridePriority = Integer.parseInt(classNameAndPriority[1]);
+        hasPriorityOverride = true;
+      }
       className = className.trim();
       if (findCoprocessor(className) != null) {
         // If already loaded will just continue
@@ -156,14 +162,16 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       Thread.currentThread().setContextClassLoader(cl);
       try {
         implClass = cl.loadClass(className);
+        int coprocPriority = hasPriorityOverride ? overridePriority : currentSystemPriority;
         // Add coprocessors as we go to guard against case where a coprocessor is specified twice
         // in the configuration
-        E env = checkAndLoadInstance(implClass, priority, conf);
+        E env = checkAndLoadInstance(implClass, coprocPriority, conf);
         if (env != null) {
           this.coprocEnvironments.add(env);
-          LOG.info(
-              "System coprocessor " + className + " was loaded " + "successfully with priority (" + priority + ").");
-          ++priority;
+          LOG.info("System coprocessor {} loaded, priority={}.", className, coprocPriority);
+          if (!hasPriorityOverride) {
+            ++currentSystemPriority;
+          }
         }
       } catch (Throwable t) {
         // We always abort if system coprocessors cannot be loaded
@@ -205,6 +213,14 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     LOG.debug("Loading coprocessor class " + className + " with path " +
         path + " and priority " + priority);
 
+    boolean skipLoadDuplicateCoprocessor = conf.getBoolean(SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR,
+      DEFAULT_SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR);
+    if (skipLoadDuplicateCoprocessor && findCoprocessor(className) != null) {
+      // If already loaded will just continue
+      LOG.warn("Attempted duplicate loading of {}; skipped", className);
+      return null;
+    }
+
     ClassLoader cl = null;
     if (path == null) {
       try {
@@ -236,7 +252,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
   }
 
-  @VisibleForTesting
   public void load(Class<? extends C> implClass, int priority, Configuration conf)
       throws IOException {
     E env = checkAndLoadInstance(implClass, priority, conf);
@@ -264,7 +279,8 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
     // create the environment
     E env = createEnvironment(impl, priority, loadSequence.incrementAndGet(), conf);
-    env.startup();
+    assert env instanceof BaseEnvironment;
+    ((BaseEnvironment<C>) env).startup();
     // HBASE-4014: maintain list of loaded coprocessors for later crash analysis
     // if server (master or regionserver) aborts.
     coprocessorNames.add(implClass.getName());
@@ -287,10 +303,11 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       throws InstantiationException, IllegalAccessException;
 
   public void shutdown(E e) {
+    assert e instanceof BaseEnvironment;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Stop coprocessor " + e.getInstance().getClass().getName());
     }
-    e.shutdown();
+    ((BaseEnvironment<C>) e).shutdown();
   }
 
   /**
@@ -306,7 +323,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     return null;
   }
 
-  @VisibleForTesting
   public <T extends C> T findCoprocessor(Class<T> cls) {
     for (E env: coprocEnvironments) {
       if (cls.isAssignableFrom(env.getInstance().getClass())) {
@@ -341,7 +357,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
    * @param className the class name
    * @return the coprocessor, or null if not found
    */
-  @VisibleForTesting
   public E findCoprocessorEnvironment(String className) {
     for (E env: coprocEnvironments) {
       if (env.getInstance().getClass().getName().equals(className) ||
@@ -462,49 +477,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   /**
-   * Used to gracefully handle fallback to deprecated methods when we
-   * evolve coprocessor APIs.
-   *
-   * When a particular Coprocessor API is updated to change methods, hosts can support fallback
-   * to the deprecated API by using this method to determine if an instance implements the new API.
-   * In the event that said support is partial, then in the face of a runtime issue that prevents
-   * proper operation {@link #legacyWarning(Class, String)} should be used to let operators know.
-   *
-   * For examples of this in action, see the implementation of
-   * <ul>
-   *   <li>{@link org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost}
-   *   <li>{@link org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost}
-   * </ul>
-   *
-   * @param clazz Coprocessor you wish to evaluate
-   * @param methodName the name of the non-deprecated method version
-   * @param parameterTypes the Class of the non-deprecated method's arguments in the order they are
-   *     declared.
-   */
-  @InterfaceAudience.Private
-  protected static boolean useLegacyMethod(final Class<? extends Coprocessor> clazz,
-      final String methodName, final Class<?>... parameterTypes) {
-    boolean useLegacy;
-    // Use reflection to see if they implement the non-deprecated version
-    try {
-      clazz.getDeclaredMethod(methodName, parameterTypes);
-      LOG.debug("Found an implementation of '" + methodName + "' that uses updated method " +
-          "signature. Skipping legacy support for invocations in '" + clazz +"'.");
-      useLegacy = false;
-    } catch (NoSuchMethodException exception) {
-      useLegacy = true;
-    } catch (SecurityException exception) {
-      LOG.warn("The Security Manager denied our attempt to detect if the coprocessor '" + clazz +
-          "' requires legacy support; assuming it does. If you get later errors about legacy " +
-          "coprocessor use, consider updating your security policy to allow access to the package" +
-          " and declared members of your implementation.");
-      LOG.debug("Details of Security Manager rejection.", exception);
-      useLegacy = true;
-    }
-    return useLegacy;
-  }
-
-  /**
    * Used to limit legacy handling to once per Coprocessor class per classloader.
    */
   private static final Set<Class<? extends Coprocessor>> legacyWarning =
@@ -518,21 +490,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
               return c1.getName().compareTo(c2.getName());
             }
           });
-
-  /**
-   * limits the amount of logging to once per coprocessor class.
-   * Used in concert with {@link #useLegacyMethod(Class, String, Class[])} when a runtime issue
-   * prevents properly supporting the legacy version of a coprocessor API.
-   * Since coprocessors can be in tight loops this serves to limit the amount of log spam we create.
-   */
-  @InterfaceAudience.Private
-  protected void legacyWarning(final Class<? extends Coprocessor> clazz, final String message) {
-    if(legacyWarning.add(clazz)) {
-      LOG.error("You have a legacy coprocessor loaded and there are events we can't map to the " +
-          " deprecated API. Your coprocessor will not see these events.  Please update '" + clazz +
-          "'. Details of the problem: " + message);
-    }
-  }
 
   /**
    * Implementations defined function to get an observer of type {@code O} from a coprocessor of
@@ -549,11 +506,19 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     ObserverGetter<C, O> observerGetter;
 
     ObserverOperation(ObserverGetter<C, O> observerGetter) {
-      this(observerGetter, RpcServer.getRequestUser().orElse(null));
+      this(observerGetter, null);
     }
 
     ObserverOperation(ObserverGetter<C, O> observerGetter, User user) {
-      super(user);
+      this(observerGetter, user, false);
+    }
+
+    ObserverOperation(ObserverGetter<C, O> observerGetter, boolean bypassable) {
+      this(observerGetter, null, bypassable);
+    }
+
+    ObserverOperation(ObserverGetter<C, O> observerGetter, User user, boolean bypassable) {
+      super(user != null? user: RpcServer.getRequestUser().orElse(null), bypassable);
       this.observerGetter = observerGetter;
     }
 
@@ -573,6 +538,11 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
     public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter, User user) {
       super(observerGetter, user);
+    }
+
+    public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter, User user,
+        boolean bypassable) {
+      super(observerGetter, user, bypassable);
     }
 
     /**
@@ -595,15 +565,23 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
     private R result;
 
-    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter) {
-      super(observerGetter);
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result) {
+      this(observerGetter, result, false);
     }
 
-    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, User user) {
-      super(observerGetter, user);
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
+        boolean bypassable) {
+      this(observerGetter, result, null, bypassable);
     }
 
-    void setResult(final R result) {
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
+        User user) {
+      this(observerGetter, result, user, false);
+    }
+
+    private ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result, User user,
+        boolean bypassable) {
+      super(observerGetter, user, bypassable);
       this.result = result;
     }
 
@@ -611,6 +589,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       return this.result;
     }
 
+    @Override
     void callObserver() throws IOException {
       Optional<O> observer = observerGetter.apply(getEnvironment().getInstance());
       if (observer.isPresent()) {
@@ -622,38 +601,27 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   //////////////////////////////////////////////////////////////////////////////////////////
   // Functions to execute observer hooks and handle results (if any)
   //////////////////////////////////////////////////////////////////////////////////////////
-  protected <O, R> R execOperationWithResult(final R defaultValue,
+
+  /**
+   * Do not call with an observerOperation that is null! Have the caller check.
+   */
+  protected <O, R> R execOperationWithResult(
       final ObserverOperationWithResult<O, R> observerOperation) throws IOException {
-    if (observerOperation == null) {
-      return defaultValue;
-    }
-    observerOperation.setResult(defaultValue);
-    execOperation(observerOperation);
-    return observerOperation.getResult();
+    boolean bypass = execOperation(observerOperation);
+    R result = observerOperation.getResult();
+    return bypass == observerOperation.isBypassable()? result: null;
   }
 
-  // what does bypass mean?
-  protected <O, R> R execOperationWithResult(final boolean ifBypass, final R defaultValue,
-      final ObserverOperationWithResult<O, R> observerOperation) throws IOException {
-    if (observerOperation == null) {
-      return ifBypass ? null : defaultValue;
-    } else {
-      observerOperation.setResult(defaultValue);
-      boolean bypass = execOperation(true, observerOperation);
-      R result = observerOperation.getResult();
-      return bypass == ifBypass ? result : null;
-    }
-  }
-
+  /**
+   * @return True if we are to bypass (Can only be <code>true</code> if
+   * ObserverOperation#isBypassable().
+   */
   protected <O> boolean execOperation(final ObserverOperation<O> observerOperation)
       throws IOException {
-    return execOperation(true, observerOperation);
-  }
-
-  protected <O> boolean execOperation(final boolean earlyExit,
-      final ObserverOperation<O> observerOperation) throws IOException {
-    if (observerOperation == null) return false;
     boolean bypass = false;
+    if (observerOperation == null) {
+      return bypass;
+    }
     List<E> envs = coprocEnvironments.get();
     for (E env : envs) {
       observerOperation.prepare(env);
@@ -667,15 +635,17 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       } finally {
         currentThread.setContextClassLoader(cl);
       }
+      // Internal to shouldBypass, it checks if obeserverOperation#isBypassable().
       bypass |= observerOperation.shouldBypass();
-      if (earlyExit && observerOperation.shouldComplete()) {
+      observerOperation.postEnvCall();
+      if (bypass) {
+        // If CP says bypass, skip out w/o calling any following CPs; they might ruin our response.
+        // In hbase1, this used to be called 'complete'. In hbase2, we unite bypass and 'complete'.
         break;
       }
-      observerOperation.postEnvCall();
     }
     return bypass;
   }
-
 
   /**
    * Coprocessor classes can be configured in any order, based on that priority is set and
@@ -708,9 +678,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
         currentThread.setContextClassLoader(cl);
       }
       bypass |= observerOperation.shouldBypass();
-      if (observerOperation.shouldComplete()) {
-        break;
-      }
     }
 
     // Iterate the coprocessors and execute ObserverOperation's postEnvCall()
@@ -720,5 +687,4 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
     return bypass;
   }
-
 }

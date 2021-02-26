@@ -19,11 +19,9 @@
 package org.apache.hadoop.hbase.mapred;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.util.ProgramDriver;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.util.ProgramDriver;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Driver for hbase mapreduce jobs. Select which to run by passing name of job
@@ -35,7 +33,7 @@ public class Driver {
 
   private static ProgramDriver pgd = new ProgramDriver();
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void setProgramDriver(ProgramDriver pgd0) {
     pgd = pgd0;
   }

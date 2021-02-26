@@ -48,10 +48,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -62,7 +59,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -84,108 +80,141 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.HashMultimap;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimaps;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSHDFSUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimaps;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
+ * <p/>
+ * Notice that, by default, this class should be kept till 4.0.0, but as this is a bad practice that
+ * we expose an implementation class instead of an interface, we want to fix it ASAP. That's why we
+ * will remove this class completely in 3.0.0. Please change your code to use
+ * {@link BulkLoadHFiles}.
+ * @deprecated since 2.2.0, will be removed in 3.0.0. Use {@link BulkLoadHFiles} instead. Please
+ *             rewrite your code if you rely on methods other than the {@link #run(Map, TableName)}
+ *             and {@link #run(String, TableName)}, as all the methods other than them will be
+ *             removed with no replacement.
  */
+@Deprecated
 @InterfaceAudience.Public
 public class LoadIncrementalHFiles extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LoadIncrementalHFiles.class);
 
-  public static final String NAME = "completebulkload";
-  static final String RETRY_ON_IO_EXCEPTION = "hbase.bulkload.retries.retryOnIOException";
+  /**
+   * @deprecated since 2.2.0, will be removed in 3.0.0, with no replacement. End user should not
+   *             depend on this value.
+   */
+  @Deprecated
+  public static final String NAME = BulkLoadHFilesTool.NAME;
+  static final String RETRY_ON_IO_EXCEPTION = BulkLoadHFiles.RETRY_ON_IO_EXCEPTION;
   public static final String MAX_FILES_PER_REGION_PER_FAMILY =
-      "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
-  private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
-  public final static String CREATE_TABLE_CONF_KEY = "create.table";
-  public final static String IGNORE_UNMATCHED_CF_CONF_KEY = "ignore.unmatched.families";
-  public final static String ALWAYS_COPY_FILES = "always.copy.files";
+    BulkLoadHFiles.MAX_FILES_PER_REGION_PER_FAMILY;
+  private static final String ASSIGN_SEQ_IDS = BulkLoadHFiles.ASSIGN_SEQ_IDS;
+  public final static String CREATE_TABLE_CONF_KEY = BulkLoadHFiles.CREATE_TABLE_CONF_KEY;
+  public final static String IGNORE_UNMATCHED_CF_CONF_KEY =
+    BulkLoadHFiles.IGNORE_UNMATCHED_CF_CONF_KEY;
+  public final static String ALWAYS_COPY_FILES = BulkLoadHFiles.ALWAYS_COPY_FILES;
 
   // We use a '.' prefix which is ignored when walking directory trees
   // above. It is invalid family name.
   static final String TMP_DIR = ".tmp";
 
-  private final int maxFilesPerRegionPerFamily;
-  private final boolean assignSeqIds;
+  private int maxFilesPerRegionPerFamily;
+  private boolean assignSeqIds;
+  private boolean bulkLoadByFamily;
 
   // Source delegation token
-  private final FsDelegationToken fsDelegationToken;
-  private final UserProvider userProvider;
-  private final int nrThreads;
-  private final RpcControllerFactory rpcControllerFactory;
+  private FsDelegationToken fsDelegationToken;
+  private UserProvider userProvider;
+  private int nrThreads;
+  private AtomicInteger numRetries;
+  private RpcControllerFactory rpcControllerFactory;
 
   private String bulkToken;
+
+  private List<String> clusterIds = new ArrayList<>();
+
+  private boolean replicate = true;
 
   /**
    * Represents an HFile waiting to be loaded. An queue is used in this class in order to support
    * the case where a region has split during the process of the load. When this happens, the HFile
    * is split into two physical parts across the new region boundary, and each part is added back
    * into the queue. The import process finishes when the queue is empty.
+   * @deprecated since 2.2.0 and will be removed in 3.0.0. Use {@link BulkLoadHFiles} instead.
+   * @see BulkLoadHFiles
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21782">HBASE-21782</a>
    */
   @InterfaceAudience.Public
-  public static class LoadQueueItem {
-    private final byte[] family;
-    private final Path hfilePath;
+  @Deprecated
+  public static class LoadQueueItem extends BulkLoadHFiles.LoadQueueItem {
 
     public LoadQueueItem(byte[] family, Path hfilePath) {
-      this.family = family;
-      this.hfilePath = hfilePath;
-    }
-
-    @Override
-    public String toString() {
-      return "family:" + Bytes.toString(family) + " path:" + hfilePath.toString();
-    }
-
-    public byte[] getFamily() {
-      return family;
-    }
-
-    public Path getFilePath() {
-      return hfilePath;
+      super(family, hfilePath);
     }
   }
 
   public LoadIncrementalHFiles(Configuration conf) {
     // make a copy, just to be sure we're not overriding someone else's config
     super(HBaseConfiguration.create(conf));
-    conf = getConf();
+    initialize();
+  }
+
+  public void initialize() {
+    Configuration conf = getConf();
     // disable blockcache for tool invocation, see HBASE-10500
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
     userProvider = UserProvider.instantiate(conf);
     fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
     maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
+    bulkLoadByFamily = conf.getBoolean(BulkLoadHFiles.BULK_LOAD_HFILES_BY_FAMILY, false);
     nrThreads = conf.getInt("hbase.loadincremental.threads.max",
       Runtime.getRuntime().availableProcessors());
+    numRetries = new AtomicInteger(0);
     rpcControllerFactory = new RpcControllerFactory(conf);
   }
 
   private void usage() {
-    System.err.println("usage: " + NAME + " /path/to/hfileoutputformat-output tablename" + "\n -D" +
-        CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by this tool\n" +
-        "  Note: if you set this to 'no', then the target table must already exist in HBase\n -D" +
-        IGNORE_UNMATCHED_CF_CONF_KEY + "=yes - can be used to ignore unmatched column families\n" +
-        "\n");
+    System.err.println("Usage: " + "bin/hbase completebulkload [OPTIONS] "
+        + "</PATH/TO/HFILEOUTPUTFORMAT-OUTPUT> <TABLENAME>\n"
+        + "Loads directory of hfiles -- a region dir or product of HFileOutputFormat -- "
+        + "into an hbase table.\n"
+        + "OPTIONS (for other -D options, see source code):\n"
+        + " -D" + CREATE_TABLE_CONF_KEY + "=no whether to create table; when 'no', target "
+        + "table must exist.\n"
+        + " -D" + IGNORE_UNMATCHED_CF_CONF_KEY + "=yes to ignore unmatched column families.\n"
+        + " -loadTable for when directory of files to load has a depth of 3; target table must "
+        + "exist;\n"
+        + " must be last of the options on command line.\n"
+        + "See http://hbase.apache.org/book.html#arch.bulk.load.complete.strays for "
+        + "documentation.\n");
   }
 
   /**
@@ -327,10 +356,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
       if (queue.isEmpty()) {
         LOG.warn(
-          "Bulk load operation did not find any files to load in " + "directory " + hfofDir != null
-              ? hfofDir.toUri()
-              : "" + ".  Does it contain files in " +
-                  "subdirectories that correspond to column family names?");
+            "Bulk load operation did not find any files to load in directory {}. " +
+            "Does it contain files in subdirectories that correspond to column family names?",
+            (hfofDir != null ? hfofDir.toUri().toString() : ""));
         return Collections.emptyMap();
       }
       pool = createExecutorService();
@@ -405,7 +433,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       // need to reload split keys each iteration.
       final Pair<byte[][], byte[][]> startEndKeys = regionLocator.getStartEndKeys();
       if (count != 0) {
-        LOG.info("Split occurred while grouping HFiles, retry attempt " + +count + " with " +
+        LOG.info("Split occurred while grouping HFiles, retry attempt " + count + " with " +
             queue.size() + " files remaining to group or split");
       }
 
@@ -442,13 +470,21 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     return item2RegionMap;
   }
 
+  private Map<byte[], Collection<LoadQueueItem>>
+      groupByFamilies(Collection<LoadQueueItem> itemsInRegion) {
+    Map<byte[], Collection<LoadQueueItem>> families2Queue = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    itemsInRegion.forEach(item -> families2Queue
+        .computeIfAbsent(item.getFamily(), queue -> new ArrayList<>()).add(item));
+    return families2Queue;
+  }
+
   /**
    * This takes the LQI's grouped by likely regions and attempts to bulk load them. Any failures are
    * re-queued for another pass with the groupOrSplitPhase.
    * <p>
    * protected for testing.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void bulkLoadPhase(Table table, Connection conn, ExecutorService pool,
       Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
       boolean copyFile, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
@@ -458,24 +494,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         .entrySet()) {
       byte[] first = e.getKey().array();
       Collection<LoadQueueItem> lqis = e.getValue();
-
-      ClientServiceCallable<byte[]> serviceCallable =
-          buildClientServiceCallable(conn, table.getName(), first, lqis, copyFile);
-
-      Callable<List<LoadQueueItem>> call = new Callable<List<LoadQueueItem>>() {
-        @Override
-        public List<LoadQueueItem> call() throws Exception {
-          List<LoadQueueItem> toRetry =
-              tryAtomicRegionLoad(serviceCallable, table.getName(), first, lqis);
-          return toRetry;
-        }
-      };
       if (item2RegionMap != null) {
         for (LoadQueueItem lqi : lqis) {
           item2RegionMap.put(lqi, e.getKey());
         }
       }
-      loadingFutures.add(pool.submit(call));
+      if (bulkLoadByFamily) {
+        groupByFamilies(lqis).values().forEach(familyQueue -> loadingFutures.add(pool.submit(
+          () -> tryAtomicRegionLoad(conn, table.getName(), first, familyQueue, copyFile))));
+      } else {
+        loadingFutures.add(
+          pool.submit(() -> tryAtomicRegionLoad(conn, table.getName(), first, lqis, copyFile)));
+      }
     }
 
     // get all the results.
@@ -507,7 +537,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected ClientServiceCallable<byte[]> buildClientServiceCallable(Connection conn,
       TableName tableName, byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) {
     List<Pair<byte[], String>> famPaths =
@@ -529,7 +559,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           try (Table table = conn.getTable(getTableName())) {
             secureClient = new SecureBulkLoadClient(getConf(), table);
             success = secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-              assignSeqIds, fsDelegationToken.getUserToken(), bulkToken, copyFile);
+              assignSeqIds, fsDelegationToken.getUserToken(),
+                bulkToken, copyFile, clusterIds, replicate);
           }
           return success ? regionName : null;
         } finally {
@@ -542,7 +573,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
             // Check to see if the source and target filesystems are the same
             // If they are the same filesystem, we will try move the files back
             // because previously we moved them to the staging directory.
-            if (FSHDFSUtils.isSameHdfs(getConf(), sourceFs, targetFs)) {
+            if (FSUtils.isSameHdfs(getConf(), sourceFs, targetFs)) {
               for (Pair<byte[], String> el : famPaths) {
                 Path hfileStagingPath = null;
                 Path hfileOrigPath = new Path(el.getSecond());
@@ -691,6 +722,45 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   /**
+   * @param startEndKeys the start/end keys of regions belong to this table, the list in ascending
+   *          order by start key
+   * @param key the key need to find which region belong to
+   * @return region index
+   */
+  private int getRegionIndex(final Pair<byte[][], byte[][]> startEndKeys, byte[] key) {
+    int idx = Arrays.binarySearch(startEndKeys.getFirst(), key, Bytes.BYTES_COMPARATOR);
+    if (idx < 0) {
+      // not on boundary, returns -(insertion index). Calculate region it
+      // would be in.
+      idx = -(idx + 1) - 1;
+    }
+    return idx;
+  }
+
+  /**
+   * we can consider there is a region hole in following conditions. 1) if idx < 0,then first
+   * region info is lost. 2) if the endkey of a region is not equal to the startkey of the next
+   * region. 3) if the endkey of the last region is not empty.
+   */
+  private void checkRegionIndexValid(int idx, final Pair<byte[][], byte[][]> startEndKeys,
+    TableName tableName) throws IOException {
+    if (idx < 0) {
+      throw new IOException("The first region info for table " + tableName +
+        " can't be found in hbase:meta.Please use hbck tool to fix it first.");
+    } else if ((idx == startEndKeys.getFirst().length - 1) &&
+      !Bytes.equals(startEndKeys.getSecond()[idx], HConstants.EMPTY_BYTE_ARRAY)) {
+      throw new IOException("The last region info for table " + tableName +
+        " can't be found in hbase:meta.Please use hbck tool to fix it first.");
+    } else if (idx + 1 < startEndKeys.getFirst().length &&
+      !(Bytes.compareTo(startEndKeys.getSecond()[idx],
+        startEndKeys.getFirst()[idx + 1]) == 0)) {
+      throw new IOException("The endkey of one region for table " + tableName +
+        " is not equal to the startkey of the next region in hbase:meta." +
+        "Please use hbck tool to fix it first.");
+    }
+  }
+
+  /**
    * Attempt to assign the given load queue item into its target region group. If the hfile boundary
    * no longer fits into a region, physically splits the hfile such that the new bottom half will
    * fit and returns the list of LQI's corresponding to the resultant hfiles.
@@ -698,15 +768,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * protected for testing
    * @throws IOException if an IO failure is encountered
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected Pair<List<LoadQueueItem>, String> groupOrSplit(
       Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item, final Table table,
       final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
     Path hfilePath = item.getFilePath();
     Optional<byte[]> first, last;
     try (HFile.Reader hfr = HFile.createReader(hfilePath.getFileSystem(getConf()), hfilePath,
-      new CacheConfig(getConf()), true, getConf())) {
-      hfr.loadFileInfo();
+      CacheConfig.DISABLED, true, getConf())) {
       first = hfr.getFirstRowKey();
       last = hfr.getLastRowKey();
     } catch (FileNotFoundException fnfe) {
@@ -714,8 +783,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       return new Pair<>(null, hfilePath.getName());
     }
 
-    LOG.info("Trying to load hfile=" + hfilePath + " first=" + first.map(Bytes::toStringBinary) +
-        " last=" + last.map(Bytes::toStringBinary));
+    LOG.info("Trying to load hfile=" + hfilePath + " first=" + first.map(Bytes::toStringBinary)
+        + " last=" + last.map(Bytes::toStringBinary));
     if (!first.isPresent() || !last.isPresent()) {
       assert !first.isPresent() && !last.isPresent();
       // TODO what if this is due to a bad HFile?
@@ -723,47 +792,30 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       return null;
     }
     if (Bytes.compareTo(first.get(), last.get()) > 0) {
-      throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(first.get()) +
-          " > " + Bytes.toStringBinary(last.get()));
-    }
-    int idx = Arrays.binarySearch(startEndKeys.getFirst(), first.get(), Bytes.BYTES_COMPARATOR);
-    if (idx < 0) {
-      // not on boundary, returns -(insertion index). Calculate region it
-      // would be in.
-      idx = -(idx + 1) - 1;
-    }
-    int indexForCallable = idx;
-
-    /**
-     * we can consider there is a region hole in following conditions. 1) if idx < 0,then first
-     * region info is lost. 2) if the endkey of a region is not equal to the startkey of the next
-     * region. 3) if the endkey of the last region is not empty.
-     */
-    if (indexForCallable < 0) {
-      throw new IOException("The first region info for table " + table.getName() +
-          " can't be found in hbase:meta.Please use hbck tool to fix it first.");
-    } else if ((indexForCallable == startEndKeys.getFirst().length - 1) &&
-        !Bytes.equals(startEndKeys.getSecond()[indexForCallable], HConstants.EMPTY_BYTE_ARRAY)) {
-      throw new IOException("The last region info for table " + table.getName() +
-          " can't be found in hbase:meta.Please use hbck tool to fix it first.");
-    } else if (indexForCallable + 1 < startEndKeys.getFirst().length &&
-        !(Bytes.compareTo(startEndKeys.getSecond()[indexForCallable],
-          startEndKeys.getFirst()[indexForCallable + 1]) == 0)) {
-      throw new IOException("The endkey of one region for table " + table.getName() +
-          " is not equal to the startkey of the next region in hbase:meta." +
-          "Please use hbck tool to fix it first.");
+      throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(first.get())
+          + " > " + Bytes.toStringBinary(last.get()));
     }
 
-    boolean lastKeyInRange = Bytes.compareTo(last.get(), startEndKeys.getSecond()[idx]) < 0 ||
-        Bytes.equals(startEndKeys.getSecond()[idx], HConstants.EMPTY_BYTE_ARRAY);
+    int firstKeyRegionIdx = getRegionIndex(startEndKeys, first.get());
+    checkRegionIndexValid(firstKeyRegionIdx, startEndKeys, table.getName());
+    boolean lastKeyInRange =
+        Bytes.compareTo(last.get(), startEndKeys.getSecond()[firstKeyRegionIdx]) < 0 || Bytes
+            .equals(startEndKeys.getSecond()[firstKeyRegionIdx], HConstants.EMPTY_BYTE_ARRAY);
     if (!lastKeyInRange) {
+      int lastKeyRegionIdx = getRegionIndex(startEndKeys, last.get());
+      int splitIdx = (firstKeyRegionIdx + lastKeyRegionIdx) >>> 1;
+      // make sure the splitPoint is valid in case region overlap occur, maybe the splitPoint bigger
+      // than hfile.endkey w/o this check
+      if (splitIdx != firstKeyRegionIdx) {
+        checkRegionIndexValid(splitIdx, startEndKeys, table.getName());
+      }
       List<LoadQueueItem> lqis = splitStoreFile(item, table,
-        startEndKeys.getFirst()[indexForCallable], startEndKeys.getSecond()[indexForCallable]);
+        startEndKeys.getFirst()[firstKeyRegionIdx], startEndKeys.getSecond()[splitIdx]);
       return new Pair<>(lqis, null);
     }
 
     // group regions.
-    regionGroups.put(ByteBuffer.wrap(startEndKeys.getFirst()[idx]), item);
+    regionGroups.put(ByteBuffer.wrap(startEndKeys.getFirst()[firstKeyRegionIdx]), item);
     return null;
   }
 
@@ -776,13 +828,36 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * <p>
    * Protected for testing.
    * @return empty list if success, list of items to retry on recoverable failure
+   * @deprecated as of release 2.3.0. Use {@link BulkLoadHFiles} instead.
    */
-  @VisibleForTesting
+  @Deprecated
+  @InterfaceAudience.Private
+  protected List<LoadQueueItem> tryAtomicRegionLoad(final Connection conn,
+    final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis,
+    boolean copyFile) throws IOException {
+    ClientServiceCallable<byte[]> serviceCallable =
+      buildClientServiceCallable(conn, tableName, first, lqis, copyFile);
+    return tryAtomicRegionLoad(serviceCallable, tableName, first, lqis);
+  }
+
+  /**
+   * Attempts to do an atomic load of many hfiles into a region. If it fails, it returns a list of
+   * hfiles that need to be retried. If it is successful it will return an empty list.
+   * <p>
+   * NOTE: To maintain row atomicity guarantees, region server callable should succeed atomically
+   * and fails atomically.
+   * <p>
+   * Protected for testing.
+   * @return empty list if success, list of items to retry on recoverable failure
+   * @deprecated as of release 2.3.0. Use {@link BulkLoadHFiles} instead.
+   */
+  @Deprecated
+  @InterfaceAudience.Private
   protected List<LoadQueueItem> tryAtomicRegionLoad(ClientServiceCallable<byte[]> serviceCallable,
-      final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis)
-      throws IOException {
+    final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis)
+    throws IOException {
+    List<LoadQueueItem> toRetry = new ArrayList<>();
     try {
-      List<LoadQueueItem> toRetry = new ArrayList<>();
       Configuration conf = getConf();
       byte[] region = RpcRetryingCallerFactory.instantiate(conf, null).<byte[]> newCaller()
           .callWithRetries(serviceCallable, Integer.MAX_VALUE);
@@ -796,8 +871,22 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       return toRetry;
     } catch (IOException e) {
       LOG.error("Encountered unrecoverable error from region server, additional details: " +
-          serviceCallable.getExceptionMessageAdditionalDetail(),
-        e);
+                      serviceCallable.getExceptionMessageAdditionalDetail(),
+              e);
+      LOG.warn(
+              "Received a " + e.getClass().getSimpleName()
+                      + " from region server: "
+                      + serviceCallable.getExceptionMessageAdditionalDetail(), e);
+      if (getConf().getBoolean(RETRY_ON_IO_EXCEPTION, false)
+              && numRetries.get() < getConf().getInt(
+              HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+              HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
+        LOG.warn("Will attempt to retry loading failed HFiles. Retry #"
+                + numRetries.incrementAndGet());
+        toRetry.addAll(lqis);
+        return toRetry;
+      }
+      LOG.error(RETRY_ON_IO_EXCEPTION + " is disabled. Unable to recover");
       throw e;
     }
   }
@@ -806,8 +895,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * If the table is created for the first time, then "completebulkload" reads the files twice. More
    * modifications necessary if we want to avoid doing it.
    */
-  private void createTable(TableName tableName, String dirPath, Admin admin) throws IOException {
-    final Path hfofDir = new Path(dirPath);
+  private void createTable(TableName tableName, Path hfofDir, Admin admin) throws IOException {
     final FileSystem fs = hfofDir.getFileSystem(getConf());
 
     // Add column families
@@ -828,13 +916,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           throws IOException {
         Path hfile = hfileStatus.getPath();
         try (HFile.Reader reader =
-            HFile.createReader(fs, hfile, new CacheConfig(getConf()), true, getConf())) {
+            HFile.createReader(fs, hfile, CacheConfig.DISABLED, true, getConf())) {
           if (builder.getCompressionType() != reader.getFileContext().getCompression()) {
             builder.setCompressionType(reader.getFileContext().getCompression());
             LOG.info("Setting compression " + reader.getFileContext().getCompression().name() +
                 " for family " + builder.getNameAsString());
           }
-          reader.loadFileInfo();
           byte[] first = reader.getFirstRowKey().get();
           byte[] last = reader.getLastRowKey().get();
 
@@ -854,7 +941,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     byte[][] keys = inferBoundaries(map);
     TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
     familyBuilders.stream().map(ColumnFamilyDescriptorBuilder::build)
-        .forEachOrdered(tdBuilder::addColumnFamily);
+        .forEachOrdered(tdBuilder::setColumnFamily);
     admin.createTable(tdBuilder.build(), keys);
 
     LOG.info("Table " + tableName + " is available!!");
@@ -877,7 +964,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       for (LoadQueueItem q : queue) {
         err.append("  ").append(q.getFilePath()).append('\n');
       }
-      LOG.error(err);
+      LOG.error(err.toString());
     }
   }
 
@@ -968,7 +1055,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         continue;
       }
       Path familyDir = familyStat.getPath();
-      byte[] familyName = familyDir.getName().getBytes();
+      byte[] familyName = Bytes.toBytes(familyDir.getName());
       // Skip invalid family
       try {
         ColumnFamilyDescriptorBuilder.isLegalColumnFamilyName(familyName);
@@ -1047,7 +1134,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * Split a storefile into a top and bottom half, maintaining the metadata, recreating bloom
    * filters, etc.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void splitStoreFile(Configuration conf, Path inFile, ColumnFamilyDescriptor familyDesc,
       byte[] splitKey, Path bottomOut, Path topOut) throws IOException {
     // Open reader with no block cache, and not in-memory
@@ -1064,20 +1151,23 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private static void copyHFileHalf(Configuration conf, Path inFile, Path outFile,
       Reference reference, ColumnFamilyDescriptor familyDescriptor) throws IOException {
     FileSystem fs = inFile.getFileSystem(conf);
-    CacheConfig cacheConf = new CacheConfig(conf);
+    CacheConfig cacheConf = CacheConfig.DISABLED;
     HalfStoreFileReader halfReader = null;
     StoreFileWriter halfWriter = null;
     try {
-      halfReader = new HalfStoreFileReader(fs, inFile, cacheConf, reference, true,
-          new AtomicInteger(0), true, conf);
+      ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, inFile).build();
+      HFileInfo hfile = new HFileInfo(context, conf);
+      halfReader =
+        new HalfStoreFileReader(context, hfile, cacheConf, reference, new AtomicInteger(0), conf);
+      hfile.initMetaAndIndex(halfReader.getHFileReader());
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
       Algorithm compression = familyDescriptor.getCompressionType();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
       HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
-          .withChecksumType(HStore.getChecksumType(conf))
-          .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(blocksize)
+          .withChecksumType(StoreUtils.getChecksumType(conf))
+          .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf)).withBlockSize(blocksize)
           .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding()).withIncludesTags(true)
           .build();
       halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
@@ -1114,7 +1204,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       return false;
     }
 
-    return !HFile.isReservedFileInfoKey(key);
+    return !HFileInfo.isReservedFileInfoKey(key);
   }
 
   private boolean isCreateTable() {
@@ -1129,13 +1219,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     return getConf().getBoolean(ALWAYS_COPY_FILES, false);
   }
 
-  /**
-   * Perform bulk load on the given table.
-   * @param hfofDir the directory that was provided as the output path of a job using
-   *          HFileOutputFormat
-   * @param tableName the table to load into
-   */
-  public Map<LoadQueueItem, ByteBuffer> run(String hfofDir, TableName tableName)
+  protected final Map<LoadQueueItem, ByteBuffer> run(Path hfofDir, TableName tableName)
       throws IOException {
     try (Connection connection = ConnectionFactory.createConnection(getConf());
         Admin admin = connection.getAdmin()) {
@@ -1150,9 +1234,20 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
       try (Table table = connection.getTable(tableName);
           RegionLocator locator = connection.getRegionLocator(tableName)) {
-        return doBulkLoad(new Path(hfofDir), admin, table, locator, isSilence(), isAlwaysCopyFiles());
+        return doBulkLoad(hfofDir, admin, table, locator, isSilence(),
+            isAlwaysCopyFiles());
       }
     }
+  }
+  /**
+   * Perform bulk load on the given table.
+   * @param hfofDir the directory that was provided as the output path of a job using
+   *          HFileOutputFormat
+   * @param tableName the table to load into
+   */
+  public Map<LoadQueueItem, ByteBuffer> run(String hfofDir, TableName tableName)
+      throws IOException {
+    return run(new Path(hfofDir), tableName);
   }
 
   /**
@@ -1178,13 +1273,33 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    if (args.length < 2) {
+    if (args.length != 2 && args.length != 3) {
       usage();
       return -1;
     }
+    // Re-initialize to apply -D options from the command line parameters
+    initialize();
     String dirPath = args[0];
     TableName tableName = TableName.valueOf(args[1]);
-    return !run(dirPath, tableName).isEmpty() ? 0 : -1;
+    if (args.length == 2) {
+      return !run(dirPath, tableName).isEmpty() ? 0 : -1;
+    } else {
+      Map<byte[], List<Path>> family2Files = Maps.newHashMap();
+      FileSystem fs = FileSystem.get(getConf());
+      for (FileStatus regionDir : fs.listStatus(new Path(dirPath))) {
+        FSVisitor.visitRegionStoreFiles(fs, regionDir.getPath(), (region, family, hfileName) -> {
+          Path path = new Path(regionDir.getPath(), new Path(family, hfileName));
+          byte[] familyName = Bytes.toBytes(family);
+          if (family2Files.containsKey(familyName)) {
+            family2Files.get(familyName).add(path);
+          } else {
+            family2Files.put(familyName, Lists.newArrayList(path));
+          }
+        });
+      }
+      return !run(family2Files, tableName).isEmpty() ? 0 : -1;
+    }
+
   }
 
   public static void main(String[] args) throws Exception {
@@ -1206,6 +1321,16 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     this.bulkToken = stagingDir;
   }
 
+  public void setClusterIds(List<String> clusterIds) {
+    this.clusterIds = clusterIds;
+  }
+
+  /**
+   * Disables replication for these bulkloaded files.
+   */
+  public void disableReplication(){
+    this.replicate = false;
+  }
   /**
    * Infers region boundaries for a new table.
    * <p>

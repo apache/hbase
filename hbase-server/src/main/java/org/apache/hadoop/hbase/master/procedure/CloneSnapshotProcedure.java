@@ -24,13 +24,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -41,7 +37,10 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsRegions;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -50,12 +49,15 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -65,7 +67,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 @InterfaceAudience.Private
 public class CloneSnapshotProcedure
     extends AbstractStateMachineTableProcedure<CloneSnapshotState> {
-  private static final Log LOG = LogFactory.getLog(CloneSnapshotProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CloneSnapshotProcedure.class);
 
   private TableDescriptor tableDescriptor;
   private SnapshotDescription snapshot;
@@ -75,8 +77,6 @@ public class CloneSnapshotProcedure
 
   // Monitor
   private MonitoredTask monitorStatus = null;
-
-  private Boolean traceEnabled = null;
 
   /**
    * Constructor (for failover)
@@ -128,9 +128,7 @@ public class CloneSnapshotProcedure
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final CloneSnapshotState state)
       throws InterruptedException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
         case CLONE_SNAPSHOT_PRE_OPERATION:
@@ -142,6 +140,7 @@ public class CloneSnapshotProcedure
           break;
         case CLONE_SNAPSHOT_WRITE_FS_LAYOUT:
           newRegions = createFilesystemLayout(env, tableDescriptor, newRegions);
+          env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_ADD_TO_META);
           break;
         case CLONE_SNAPSHOT_ADD_TO_META:
@@ -150,12 +149,32 @@ public class CloneSnapshotProcedure
           break;
         case CLONE_SNAPSHOT_ASSIGN_REGIONS:
           CreateTableProcedure.setEnablingState(env, getTableName());
-          addChildProcedure(env.getAssignmentManager().createAssignProcedures(newRegions));
+
+          // Separate newRegions to split regions and regions to assign
+          List<RegionInfo> splitRegions = new ArrayList<>();
+          List<RegionInfo> regionsToAssign = new ArrayList<>();
+          newRegions.forEach(ri -> {
+            if (ri.isOffline() && (ri.isSplit() || ri.isSplitParent())) {
+              splitRegions.add(ri);
+            } else {
+              regionsToAssign.add(ri);
+            }
+          });
+
+          // For split regions, add them to RegionStates
+          AssignmentManager am = env.getAssignmentManager();
+          splitRegions.forEach(ri ->
+            am.getRegionStates().updateRegionState(ri, RegionState.State.SPLIT)
+          );
+
+          addChildProcedure(env.getAssignmentManager()
+            .createRoundRobinAssignProcedures(regionsToAssign));
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_UPDATE_DESC_CACHE);
           break;
         case CLONE_SNAPSHOT_UPDATE_DESC_CACHE:
+          // XXX: this stage should be named as set table enabled, as now we will cache the
+          // descriptor after writing fs layout.
           CreateTableProcedure.setEnabledState(env, getTableName());
-          CreateTableProcedure.updateTableDescCache(env, getTableName());
           setNextState(CloneSnapshotState.CLONE_SNAPHOST_RESTORE_ACL);
           break;
         case CLONE_SNAPHOST_RESTORE_ACL:
@@ -310,12 +329,11 @@ public class CloneSnapshotProcedure
   /**
    * Action before any real action of cloning from snapshot.
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private void prepareClone(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
-    if (MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
-      throw new TableExistsException(getTableName());
+    if (env.getMasterServices().getTableDescriptors().exists(tableName)) {
+      throw new TableExistsException(tableName);
     }
   }
 
@@ -439,10 +457,15 @@ public class CloneSnapshotProcedure
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
-    final Path tempTableDir = FSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
-    ((FSTableDescriptors)(env.getMasterServices().getTableDescriptors()))
+    final Path tempTableDir = CommonFSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
+    if (CommonFSUtils.isExists(mfs.getFileSystem(), tempTableDir)) {
+      // if the region dirs exist, will cause exception and unlimited retry (see HBASE-24546)
+      LOG.warn("temp table dir already exists on disk: {}, will be deleted.", tempTableDir);
+      CommonFSUtils.deleteDirectory(mfs.getFileSystem(), tempTableDir);
+    }
+    ((FSTableDescriptors) (env.getMasterServices().getTableDescriptors()))
       .createTableDescriptorForTableDirectory(tempTableDir,
-              TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
+        TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
 
     // 2. Create Regions
     newRegions = hdfsRegionHandler.createHdfsRegions(
@@ -450,8 +473,36 @@ public class CloneSnapshotProcedure
 
     // 3. Move Table temp directory to the hbase root location
     CreateTableProcedure.moveTempDirectoryToHBaseRoot(env, tableDescriptor, tempTableDir);
-
+    // Move Table temp mob directory to the hbase root location
+    Path tempMobTableDir = MobUtils.getMobTableDir(tempdir, tableDescriptor.getTableName());
+    if (mfs.getFileSystem().exists(tempMobTableDir)) {
+      moveTempMobDirectoryToHBaseRoot(mfs, tableDescriptor, tempMobTableDir);
+    }
     return newRegions;
+  }
+
+  /**
+   * Move table temp mob directory to the hbase root location
+   * @param mfs The master file system
+   * @param tableDescriptor The table to operate on
+   * @param tempMobTableDir The temp mob directory of table
+   * @throws IOException If failed to move temp mob dir to hbase root dir
+   */
+  private void moveTempMobDirectoryToHBaseRoot(final MasterFileSystem mfs,
+      final TableDescriptor tableDescriptor, final Path tempMobTableDir) throws IOException {
+    FileSystem fs = mfs.getFileSystem();
+    final Path tableMobDir =
+        MobUtils.getMobTableDir(mfs.getRootDir(), tableDescriptor.getTableName());
+    if (!fs.delete(tableMobDir, true) && fs.exists(tableMobDir)) {
+      throw new IOException("Couldn't delete mob table " + tableMobDir);
+    }
+    if (!fs.exists(tableMobDir.getParent())) {
+      fs.mkdirs(tableMobDir.getParent());
+    }
+    if (!fs.rename(tempMobTableDir, tableMobDir)) {
+      throw new IOException("Unable to move mob table from temp=" + tempMobTableDir
+          + " to hbase root=" + tableMobDir);
+    }
   }
 
   /**
@@ -462,21 +513,12 @@ public class CloneSnapshotProcedure
   private void addRegionsToMeta(final MasterProcedureEnv env) throws IOException {
     newRegions = CreateTableProcedure.addTableToMeta(env, tableDescriptor, newRegions);
 
+    // TODO: parentsToChildrenPairMap is always empty, which makes updateMetaParentRegions()
+    // a no-op. This part seems unnecessary. Figure out. - Appy 12/21/17
     RestoreSnapshotHelper.RestoreMetaChanges metaChanges =
         new RestoreSnapshotHelper.RestoreMetaChanges(
                 tableDescriptor, parentsToChildrenPairMap);
     metaChanges.updateMetaParentRegions(env.getMasterServices().getConnection(), newRegions);
   }
 
-  /**
-   * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it.
-   * @return traceEnabled
-   */
-  private Boolean isTraceEnabled() {
-    if (traceEnabled == null) {
-      traceEnabled = LOG.isTraceEnabled();
-    }
-    return traceEnabled;
-  }
 }

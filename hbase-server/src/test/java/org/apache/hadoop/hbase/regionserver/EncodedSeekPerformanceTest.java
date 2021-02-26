@@ -51,7 +51,7 @@ public class EncodedSeekPerformanceTest {
   /** Use this benchmark with default options */
   public EncodedSeekPerformanceTest() {
     configuration.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.5f);
-    randomizer = new Random(42l);
+    randomizer = new Random(42L);
     numberOfSeeks = DEFAULT_NUMBER_OF_SEEKS;
   }
 
@@ -143,7 +143,7 @@ public class EncodedSeekPerformanceTest {
 
   /**
    * @param path Path to the HFile which will be used.
-   * @param encoders List of encoders which will be used for tests.
+   * @param encodings the data block encoding algorithms to use
    * @throws IOException if there is a bug while reading from disk
    */
   public void runTests(Path path, DataBlockEncoding[] encodings)
@@ -180,6 +180,6 @@ public class EncodedSeekPerformanceTest {
   }
 
   private void clearBlockCache() {
-    ((LruBlockCache) cacheConf.getBlockCache()).clearCache();
+    ((LruBlockCache) cacheConf.getBlockCache().get()).clearCache();
   }
 }

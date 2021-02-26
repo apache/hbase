@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.master;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Interface of a factory to create MetricsMasterSource when given a MetricsMasterWrapper
  */
+@InterfaceAudience.Private
 public interface MetricsMasterProcSourceFactory {
 
   MetricsMasterProcSource create(MetricsMasterWrapper masterWrapper);

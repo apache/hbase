@@ -30,7 +30,7 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.protobuf.ProtobufMessageConverter;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.util.JRubyFormat;
 
@@ -69,7 +69,8 @@ public class ProcedureDescriber {
     description.put("LAST_UPDATE", new Date(proc.getLastUpdate()));
 
     if (proc.isFailed()) {
-      description.put("ERRORS", proc.getException().unwrapRemoteIOException().getMessage());
+      description.put("ERRORS",
+          MasterProcedureUtil.unwrapRemoteIOException(proc).getMessage());
     }
     description.put("PARAMETERS", parametersToObject(proc));
 

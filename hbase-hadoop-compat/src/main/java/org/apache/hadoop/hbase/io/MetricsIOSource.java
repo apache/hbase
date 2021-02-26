@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.io;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public interface MetricsIOSource extends BaseSource {
 
   /**

@@ -28,10 +28,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
@@ -42,6 +41,7 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityNewVersionBehaivorT
 import org.apache.hadoop.hbase.security.visibility.VisibilityScanDeleteTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A query matcher that is specifically designed for the scan case.
@@ -148,7 +148,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     // Look for a TTL tag first. Use it instead of the family setting if
     // found. If a cell has multiple TTLs, resolve the conflict by using the
     // first tag encountered.
-    Iterator<Tag> i = CellUtil.tagsIterator(cell);
+    Iterator<Tag> i = PrivateCellUtil.tagsIterator(cell);
     while (i.hasNext()) {
       Tag t = i.next();
       if (TagType.TTL_TAG_TYPE == t.getType()) {
@@ -156,7 +156,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
         // to convert
         long ts = cell.getTimestamp();
         assert t.getValueLength() == Bytes.SIZEOF_LONG;
-        long ttl = TagUtil.getValueAsLong(t);
+        long ttl = Tag.getValueAsLong(t);
         if (ts + ttl < now) {
           return true;
         }
@@ -296,7 +296,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     // see TestFromClientSide3#testScanAfterDeletingSpecifiedRow
     // see TestFromClientSide3#testScanAfterDeletingSpecifiedRowV2
     if (cell.getQualifierLength() == 0) {
-      Cell nextKey = CellUtil.createNextOnRowCol(cell);
+      Cell nextKey = PrivateCellUtil.createNextOnRowCol(cell);
       if (nextKey != cell) {
         return nextKey;
       }
@@ -305,10 +305,10 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     }
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return CellUtil.createLastOnRowCol(cell);
+      return PrivateCellUtil.createLastOnRowCol(cell);
     } else {
-      return CellUtil.createFirstOnRowCol(cell, nextColumn.getBuffer(), nextColumn.getOffset(),
-        nextColumn.getLength());
+      return PrivateCellUtil.createFirstOnRowCol(cell, nextColumn.getBuffer(),
+        nextColumn.getOffset(), nextColumn.getLength());
     }
   }
 
@@ -318,8 +318,8 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
   public int compareKeyForNextRow(Cell nextIndexed, Cell currentCell) {
-    return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell, 0, 0, null, 0, 0,
-      HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+    return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null, 0,
+      0, HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
   }
 
   /**
@@ -330,10 +330,10 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   public int compareKeyForNextColumn(Cell nextIndexed, Cell currentCell) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell, 0, 0, null, 0, 0,
-        HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+      return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null,
+        0, 0, HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
     } else {
-      return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell,
+      return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell,
         currentCell.getFamilyOffset(), currentCell.getFamilyLength(), nextColumn.getBuffer(),
         nextColumn.getOffset(), nextColumn.getLength(), HConstants.LATEST_TIMESTAMP,
         Type.Maximum.getCode());
@@ -353,7 +353,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   @Override
   public void beforeShipped() throws IOException {
     if (this.currentRow != null) {
-      this.currentRow = CellUtil.createFirstOnRow(CellUtil.copyRow(this.currentRow));
+      this.currentRow = PrivateCellUtil.createFirstOnRow(CellUtil.copyRow(this.currentRow));
     }
     if (columns != null) {
       columns.beforeShipped();
@@ -361,7 +361,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   }
 
   protected static Cell createStartKeyFromRow(byte[] startRow, ScanInfo scanInfo) {
-    return CellUtil.createFirstDeleteFamilyCellOnRow(startRow, scanInfo.getFamily());
+    return PrivateCellUtil.createFirstDeleteFamilyCellOnRow(startRow, scanInfo.getFamily());
   }
 
   protected static Pair<DeleteTracker, ColumnTracker> getTrackers(RegionCoprocessorHost host,
@@ -372,24 +372,27 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     if (userScan != null) {
       if (userScan.isRaw()) {
         resultMaxVersion = userScan.getMaxVersions();
+        maxVersionToCheck = userScan.hasFilter() ? Integer.MAX_VALUE : resultMaxVersion;
       } else {
         resultMaxVersion = Math.min(userScan.getMaxVersions(), scanInfo.getMaxVersions());
+        maxVersionToCheck = userScan.hasFilter() ? scanInfo.getMaxVersions() : resultMaxVersion;
       }
-      maxVersionToCheck = userScan.hasFilter() ? scanInfo.getMaxVersions() : resultMaxVersion;
     }
 
     DeleteTracker deleteTracker;
     if (scanInfo.isNewVersionBehavior() && (userScan == null || !userScan.isRaw())) {
-      deleteTracker = new NewVersionBehaviorTracker(columns, scanInfo.getMinVersions(),
-          scanInfo.getMaxVersions(), resultMaxVersion, oldestUnexpiredTS);
+      deleteTracker = new NewVersionBehaviorTracker(columns, scanInfo.getComparator(),
+          scanInfo.getMinVersions(), scanInfo.getMaxVersions(), resultMaxVersion,
+          oldestUnexpiredTS);
     } else {
-      deleteTracker = new ScanDeleteTracker();
+      deleteTracker = new ScanDeleteTracker(scanInfo.getComparator());
     }
     if (host != null) {
       deleteTracker = host.postInstantiateDeleteTracker(deleteTracker);
       if (deleteTracker instanceof VisibilityScanDeleteTracker && scanInfo.isNewVersionBehavior()) {
-        deleteTracker = new VisibilityNewVersionBehaivorTracker(columns, scanInfo.getMinVersions(),
-            scanInfo.getMaxVersions(), resultMaxVersion, oldestUnexpiredTS);
+        deleteTracker = new VisibilityNewVersionBehaivorTracker(columns, scanInfo.getComparator(),
+            scanInfo.getMinVersions(), scanInfo.getMaxVersions(), resultMaxVersion,
+            oldestUnexpiredTS);
       }
     }
 
@@ -399,7 +402,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
       columnTracker = (NewVersionBehaviorTracker) deleteTracker;
     } else if (columns == null || columns.size() == 0) {
       columnTracker = new ScanWildcardColumnTracker(scanInfo.getMinVersions(), maxVersionToCheck,
-          oldestUnexpiredTS);
+          oldestUnexpiredTS, scanInfo.getComparator());
     } else {
       columnTracker = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(),
         maxVersionToCheck, oldestUnexpiredTS);

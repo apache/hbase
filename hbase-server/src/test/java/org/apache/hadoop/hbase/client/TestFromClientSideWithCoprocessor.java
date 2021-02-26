@@ -17,28 +17,50 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import java.util.Arrays;
+import java.util.Collection;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.regionserver.NoOpScanPolicyObserver;
-import org.junit.BeforeClass;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.AfterClass;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
- * Test all client operations with a coprocessor that
- * just implements the default flush/compact/scan policy.
+ * Test all client operations with a coprocessor that just implements the default flush/compact/scan
+ * policy.
+ *
+ * <p>Base class was split into three so this class got split into three. See below for other parts.
+ * @see TestFromClientSide4
+ * @see TestFromClientSide5
  */
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestFromClientSideWithCoprocessor extends TestFromClientSide {
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        MultiRowMutationEndpoint.class.getName(), NoOpScanPolicyObserver.class.getName());
-    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
-    // We need more than one region server in this test
-    TEST_UTIL.startMiniCluster(SLAVES);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor.class);
+
+  // Override the parameters from the parent class. We just want to run it for the default
+  // param combination.
+  @Parameterized.Parameters
+  public static Collection parameters() {
+    return Arrays.asList(new Object[][] {
+        { MasterRegistry.class, 1},
+        { ZKConnectionRegistry.class, 1}
+    });
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    afterClass();
+  }
+
+  public TestFromClientSideWithCoprocessor(Class registry, int numHedgedReqs) throws Exception {
+    initialize(registry, numHedgedReqs, NoOpScanPolicyObserver.class,
+        MultiRowMutationEndpoint.class);
   }
 }

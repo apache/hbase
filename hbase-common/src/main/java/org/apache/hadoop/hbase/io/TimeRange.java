@@ -18,25 +18,68 @@
 
 package org.apache.hadoop.hbase.io;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Represents an interval of version timestamps. Presumes timestamps between
  * {@link #INITIAL_MIN_TIMESTAMP} and {@link #INITIAL_MAX_TIMESTAMP} only. Gets freaked out if
  * passed a timestamp that is < {@link #INITIAL_MIN_TIMESTAMP},
  * <p>
- * Evaluated according to minStamp &lt;= timestamp &lt; maxStamp
- * or [minStamp,maxStamp) in interval notation.
+ * Evaluated according to minStamp &lt;= timestamp &lt; maxStamp or [minStamp,maxStamp) in interval
+ * notation.
  * <p>
- * Can be returned and read by clients.  Should not be directly created by clients.
- * Thus, all constructors are purposely @InterfaceAudience.Private.
- *<p>Immutable. Thread-safe.
+ * Can be returned and read by clients. Should not be directly created by clients. Thus, all
+ * constructors are purposely @InterfaceAudience.Private.
+ * <p>
+ * Immutable. Thread-safe.
  */
 @InterfaceAudience.Public
 public class TimeRange {
   public static final long INITIAL_MIN_TIMESTAMP = 0L;
   public static final long INITIAL_MAX_TIMESTAMP = Long.MAX_VALUE;
+  private static final TimeRange ALL_TIME = new TimeRange(INITIAL_MIN_TIMESTAMP,
+    INITIAL_MAX_TIMESTAMP);
+
+  public static TimeRange allTime() {
+    return ALL_TIME;
+  }
+
+  public static TimeRange at(long ts) {
+    if (ts < 0 || ts == Long.MAX_VALUE) {
+      throw new IllegalArgumentException("invalid ts:" + ts);
+    }
+    return new TimeRange(ts, ts + 1);
+  }
+
+  /**
+   * Represents the time interval [minStamp, Long.MAX_VALUE)
+   * @param minStamp the minimum timestamp value, inclusive
+   */
+  public static TimeRange from(long minStamp) {
+    check(minStamp, INITIAL_MAX_TIMESTAMP);
+    return new TimeRange(minStamp, INITIAL_MAX_TIMESTAMP);
+  }
+
+  /**
+   * Represents the time interval [0, maxStamp)
+   * @param maxStamp the minimum timestamp value, exclusive
+   */
+  public static TimeRange until(long maxStamp) {
+    check(INITIAL_MIN_TIMESTAMP, maxStamp);
+    return new TimeRange(INITIAL_MIN_TIMESTAMP, maxStamp);
+  }
+
+  /**
+   * Represents the time interval [minStamp, maxStamp)
+   * @param minStamp the minimum timestamp, inclusive
+   * @param maxStamp the maximum timestamp, exclusive
+   */
+  public static TimeRange between(long minStamp, long maxStamp) {
+    check(minStamp, maxStamp);
+    return new TimeRange(minStamp, maxStamp);
+  }
+
   private final long minStamp;
   private final long maxStamp;
   private final boolean allTime;
@@ -150,7 +193,10 @@ public class TimeRange {
    * @param bytes timestamp to check
    * @param offset offset into the bytes
    * @return true if within TimeRange, false if not
+   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
+   *   changed to private or removed in 3.0. Use {@link #withinTimeRange(long)} instead
    */
+  @Deprecated
   public boolean withinTimeRange(byte [] bytes, int offset) {
     if (allTime) {
       return true;

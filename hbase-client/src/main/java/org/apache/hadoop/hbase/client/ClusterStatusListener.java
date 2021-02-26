@@ -19,18 +19,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-
-import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.Bootstrap;
-import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBufInputStream;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOption;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramChannel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramPacket;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioDatagramChannel;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -40,21 +28,30 @@ import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
-
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufInputStream;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.DatagramChannel;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.DatagramPacket;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioDatagramChannel;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class that receives the cluster status, and provide it as a set of service to the client.
@@ -63,7 +60,7 @@ import org.apache.hadoop.hbase.util.Threads;
  */
 @InterfaceAudience.Private
 class ClusterStatusListener implements Closeable {
-  private static final Log LOG = LogFactory.getLog(ClusterStatusListener.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClusterStatusListener.class);
   private final List<ServerName> deadServers = new ArrayList<>();
   protected final DeadServerHandler deadServerHandler;
   private final Listener listener;
@@ -104,7 +101,7 @@ class ClusterStatusListener implements Closeable {
      * Called to connect.
      *
      * @param conf Configuration to use.
-     * @throws IOException
+     * @throws IOException if failing to connect
      */
     void connect(Configuration conf) throws IOException;
   }
@@ -134,7 +131,7 @@ class ClusterStatusListener implements Closeable {
    *
    * @param ncs the cluster status
    */
-  public void receive(ClusterStatus ncs) {
+  public void receive(ClusterMetrics ncs) {
     if (ncs.getDeadServerNames() != null) {
       for (ServerName sn : ncs.getDeadServerNames()) {
         if (!isDeadServer(sn)) {
@@ -182,8 +179,9 @@ class ClusterStatusListener implements Closeable {
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   class MulticastListener implements Listener {
     private DatagramChannel channel;
-    private final EventLoopGroup group = new NioEventLoopGroup(
-        1, Threads.newDaemonThreadFactory("hbase-client-clusterStatusListener"));
+    private final EventLoopGroup group = new NioEventLoopGroup(1,
+      new ThreadFactoryBuilder().setNameFormat("hbase-client-clusterStatusListener-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     public MulticastListener() {
     }
@@ -197,6 +195,7 @@ class ClusterStatusListener implements Closeable {
         HConstants.DEFAULT_STATUS_MULTICAST_BIND_ADDRESS);
       int port = conf.getInt(HConstants.STATUS_MULTICAST_PORT,
           HConstants.DEFAULT_STATUS_MULTICAST_PORT);
+      String niName = conf.get(HConstants.STATUS_MULTICAST_NI_NAME);
 
       InetAddress ina;
       try {
@@ -209,19 +208,26 @@ class ClusterStatusListener implements Closeable {
       try {
         Bootstrap b = new Bootstrap();
         b.group(group)
-            .channel(NioDatagramChannel.class)
-            .option(ChannelOption.SO_REUSEADDR, true)
-            .handler(new ClusterStatusHandler());
-
+          .channel(NioDatagramChannel.class)
+          .option(ChannelOption.SO_REUSEADDR, true)
+          .handler(new ClusterStatusHandler());
         channel = (DatagramChannel)b.bind(bindAddress, port).sync().channel();
       } catch (InterruptedException e) {
         close();
         throw ExceptionUtil.asInterrupt(e);
       }
 
-      NetworkInterface ni = NetworkInterface.getByInetAddress(Addressing.getIpAddress());
+      NetworkInterface ni;
+      if (niName != null) {
+        ni = NetworkInterface.getByName(niName);
+      } else {
+        ni = NetworkInterface.getByInetAddress(Addressing.getIpAddress());
+      }
+
+      LOG.debug("Channel bindAddress={}, networkInterface={}, INA={}", bindAddress, ni, ina);
       channel.joinGroup(ina, ni, null, channel.newPromise());
     }
+
 
     @Override
     public void close() {
@@ -247,8 +253,7 @@ class ClusterStatusListener implements Closeable {
       }
 
       @Override
-      public boolean acceptInboundMessage(Object msg)
-          throws Exception {
+      public boolean acceptInboundMessage(Object msg) throws Exception {
         return super.acceptInboundMessage(msg);
       }
 
@@ -258,7 +263,7 @@ class ClusterStatusListener implements Closeable {
         ByteBufInputStream bis = new ByteBufInputStream(dp.content());
         try {
           ClusterStatusProtos.ClusterStatus csp = ClusterStatusProtos.ClusterStatus.parseFrom(bis);
-          ClusterStatus ncs = ProtobufUtil.convert(csp);
+          ClusterMetrics ncs = ClusterMetricsBuilder.toClusterMetrics(csp);
           receive(ncs);
         } finally {
           bis.close();

@@ -16,6 +16,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+require 'irb'
+require 'irb/workspace'
+
+#
+# Simple class to act as the main receiver for an IRB Workspace (and its respective ruby Binding)
+# in our HBase shell. This will hold all the commands we want in our shell.
+#
+class HBaseReceiver < Object
+  def get_binding
+    binding
+  end
+end
+
+##
+# HBaseIOExtensions is a module to be "mixed-in" (ie. included) to Ruby's IO class. It is required
+# if you want to use RubyLex with an IO object. RubyLex claims to take an IO but really wants an
+# InputMethod.
+module HBaseIOExtensions
+  def encoding
+    external_encoding
+  end
+end
+
 
 # Shell commands module
 module Shell
@@ -68,6 +91,7 @@ module Shell
   end
 
   #----------------------------------------------------------------------
+  # rubocop:disable Metrics/ClassLength
   class Shell
     attr_accessor :hbase
     attr_accessor :interactive
@@ -114,20 +138,48 @@ module Shell
       @rsgroup_admin ||= hbase.rsgroup_admin
     end
 
-    def export_commands(where)
+    ##
+    # Create singleton methods on the target receiver object for all the loaded commands
+    #
+    # Therefore, export_commands will create "class methods" if passed a Module/Class and if passed
+    # an instance the methods will not exist on any other instances of the instantiated class.
+    def export_commands(target)
+      # We need to store a reference to this Shell instance in the scope of this method so that it
+      # can be accessed later in the scope of the target object.
+      shell_inst = self
+      # Define each method as a lambda. We need to use a lambda (rather than a Proc or block) for
+      # its properties: preservation of local variables and return
       ::Shell.commands.keys.each do |cmd|
-        # here where is the IRB namespace
-        # this method just adds the call to the specified command
-        # which just references back to 'this' shell object
-        # a decently extensible way to add commands
-        where.send :instance_eval, <<-EOF
-          def #{cmd}(*args)
-            ret = @shell.command('#{cmd}', *args)
-            puts
-            return ret
-          end
-        EOF
+        target.send :define_singleton_method, cmd.to_sym, lambda { |*args|
+          ret = shell_inst.command(cmd.to_s, *args)
+          puts
+          ret
+        }
       end
+      # Export help method
+      target.send :define_singleton_method, :help, lambda { |command = nil|
+        shell_inst.help(command)
+        nil
+      }
+      # Export tools method for backwards compatibility
+      target.send :define_singleton_method, :tools, lambda {
+        shell_inst.help_group('tools')
+        nil
+      }
+    end
+
+    # Export HBase commands, constants, and variables to target receiver
+    def export_all(target)
+      raise ArgumentError, 'target should not be a module' if target.is_a? Module
+
+      # add constants to class of target
+      target.class.include ::HBaseConstants
+      target.class.include ::HBaseQuotasConstants
+      # add instance variables @hbase and @shell for backwards compatibility
+      target.instance_variable_set :'@hbase', @hbase
+      target.instance_variable_set :'@shell', self
+      # add commands to target
+      export_commands(target)
     end
 
     def command_instance(command)
@@ -135,16 +187,8 @@ module Shell
     end
 
     # call the method 'command' on the specified command
-    # If interactive is enabled, then we suppress the return value. The command should have
-    # printed relevant output.
-    # Return value is only useful in non-interactive mode, for e.g. tests.
     def command(command, *args)
-      ret = internal_command(command, :command, *args)
-      if interactive
-        return nil
-      else
-        return ret
-      end
+      internal_command(command, :command, *args)
     end
 
     # call a specific internal method in the command instance
@@ -159,6 +203,7 @@ module Shell
       puts 'HBase Shell'
       puts 'Use "help" to get list of supported commands.'
       puts 'Use "exit" to quit this interactive shell.'
+      puts 'For Reference, please visit: http://hbase.apache.org/2.0/book.html#shell'
       print 'Version '
       command('version')
       puts
@@ -244,7 +289,73 @@ The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
 For more on the HBase Shell, see http://hbase.apache.org/book.html
       HERE
     end
+
+    @irb_workspace = nil
+    ##
+    # Returns an IRB Workspace for this shell instance with all the IRB and HBase commands installed
+    def get_workspace
+      return @irb_workspace unless @irb_workspace.nil?
+
+      hbase_receiver = HBaseReceiver.new
+      # install all the IRB commands onto our receiver
+      IRB::ExtendCommandBundle.extend_object(hbase_receiver)
+      # Install all the hbase commands, constants, and instance variables @shell and @hbase. This
+      # will override names that conflict with IRB methods like "help".
+      export_all(hbase_receiver)
+      ::IRB::WorkSpace.new(hbase_receiver.get_binding)
+    end
+
+    ##
+    # Read from an instance of Ruby's IO class and evaluate each line within the shell's workspace
+    #
+    # Unlike Ruby's require or load, this method allows us to execute code with a custom binding. In
+    # this case, we are using the binding constructed with all the HBase shell constants and
+    # methods.
+    #
+    # @param [IO] io instance of Ruby's IO (or subclass like File) to read script from
+    # @param [String] filename to print in tracebacks
+    def eval_io(io, filename = 'stdin')
+      require 'irb/ruby-lex'
+      # Mixing HBaseIOExtensions into IO allows us to pass IO objects to RubyLex.
+      IO.include HBaseIOExtensions
+
+      workspace = get_workspace
+      scanner = RubyLex.new
+      scanner.set_input(io)
+
+      scanner.each_top_level_statement do |statement, linenum|
+        puts(workspace.evaluate(nil, statement, filename, linenum))
+      end
+      nil
+    end
+
+    ##
+    # Runs a block and logs exception from both Ruby and Java, optionally discarding the traceback
+    #
+    # @param [Boolean] hide_traceback if true, Exceptions will be converted to
+    #   a SystemExit so that the traceback is not printed
+    def self.exception_handler(hide_traceback)
+      begin
+        yield
+      rescue Exception => e
+        message = e.to_s
+        # exception unwrapping in shell means we'll have to handle Java exceptions
+        # as a special case in order to format them properly.
+        if e.is_a? java.lang.Exception
+          warn 'java exception'
+          message = e.get_message
+        end
+        # Include the 'ERROR' string to try to make transition easier for scripts that
+        # may have already been relying on grepping output.
+        puts "ERROR #{e.class}: #{message}"
+        raise e unless hide_traceback
+
+        exit 1
+      end
+      nil
+    end
   end
+  # rubocop:enable Metrics/ClassLength
 end
 
 # Load commands base class
@@ -286,6 +397,7 @@ Shell.load_command_group(
     get_table
     locate_region
     list_regions
+    clone_table_schema
   ],
   aliases: {
     'describe' => ['desc']
@@ -336,9 +448,15 @@ Shell.load_command_group(
     normalize
     normalizer_switch
     normalizer_enabled
+    is_in_maintenance_mode
+    clear_slowlog_responses
     close_region
     compact
+    compaction_switch
     flush
+    get_balancer_decisions
+    get_slowlog_responses
+    get_largelog_responses
     major_compact
     move
     split
@@ -346,6 +464,7 @@ Shell.load_command_group(
     unassign
     zk_dump
     wal_roll
+    hbck_chore_run
     catalogjanitor_run
     catalogjanitor_switch
     catalogjanitor_enabled
@@ -355,11 +474,21 @@ Shell.load_command_group(
     compact_rs
     compaction_state
     trace
+    snapshot_cleanup_switch
+    snapshot_cleanup_enabled
     splitormerge_switch
     splitormerge_enabled
     clear_compaction_queues
     list_deadservers
     clear_deadservers
+    clear_block_cache
+    stop_master
+    stop_regionserver
+    regioninfo
+    rit
+    list_decommissioned_regionservers
+    decommission_regionservers
+    recommission_regionserver
   ],
   # TODO: remove older hlog_roll command
   aliases: {
@@ -376,11 +505,19 @@ Shell.load_command_group(
     list_peers
     enable_peer
     disable_peer
+    set_peer_replicate_all
+    set_peer_serial
     set_peer_namespaces
     append_peer_namespaces
     remove_peer_namespaces
+    set_peer_exclude_namespaces
+    append_peer_exclude_namespaces
+    remove_peer_exclude_namespaces
     show_peer_tableCFs
     set_peer_tableCFs
+    set_peer_exclude_tableCFs
+    append_peer_exclude_tableCFs
+    remove_peer_exclude_tableCFs
     set_peer_bandwidth
     list_replicated_tables
     append_peer_tableCFs
@@ -426,6 +563,10 @@ Shell.load_command_group(
     list_quota_table_sizes
     list_quota_snapshots
     list_snapshot_sizes
+    enable_rpc_throttle
+    disable_rpc_throttle
+    enable_exceed_throttle_quota
+    disable_exceed_throttle_quota
   ]
 )
 
@@ -445,7 +586,6 @@ Shell.load_command_group(
   'procedures',
   full_name: 'PROCEDURES & LOCKS MANAGEMENT',
   commands: %w[
-    abort_procedure
     list_procedures
     list_locks
   ]
@@ -478,8 +618,15 @@ Shell.load_command_group(
     balance_rsgroup
     move_servers_rsgroup
     move_tables_rsgroup
+    move_namespaces_rsgroup
     move_servers_tables_rsgroup
+    move_servers_namespaces_rsgroup
     get_server_rsgroup
     get_table_rsgroup
+    remove_servers_rsgroup
+    rename_rsgroup
+    alter_rsgroup_config
+    show_rsgroup_config
+    get_namespace_rsgroup
   ]
 )

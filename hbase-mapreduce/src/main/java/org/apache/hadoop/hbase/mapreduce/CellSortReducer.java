@@ -23,9 +23,9 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.MapReduceCell;
+import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,10 +42,10 @@ public class CellSortReducer
   protected void reduce(ImmutableBytesWritable row, Iterable<Cell> kvs,
       Reducer<ImmutableBytesWritable, Cell, ImmutableBytesWritable, Cell>.Context context)
   throws java.io.IOException, InterruptedException {
-    TreeSet<Cell> map = new TreeSet<>(CellComparator.COMPARATOR);
+    TreeSet<Cell> map = new TreeSet<>(CellComparator.getInstance());
     for (Cell kv : kvs) {
       try {
-        map.add(CellUtil.deepClone(kv));
+        map.add(PrivateCellUtil.deepClone(kv));
       } catch (CloneNotSupportedException e) {
         throw new IOException(e);
       }
@@ -53,7 +53,7 @@ public class CellSortReducer
     context.setStatus("Read " + map.getClass());
     int index = 0;
     for (Cell kv: map) {
-      context.write(row, new MapReduceCell(kv));
+      context.write(row, new MapReduceExtendedCell(kv));
       if (++index % 100 == 0) context.setStatus("Wrote " + index);
     }
   }

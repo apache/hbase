@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,30 +18,39 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 
-@Category({SmallTests.class})
+@Category(SmallTests.class)
 public class TestTimeout {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder()
-      .withTimeout(this.getClass())
-      .withLookingForStuckThread(true)
-      .build();
 
-    @Test
-    public void run1() throws InterruptedException {
-        Thread.sleep(100);
-    }
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTimeout.class);
 
-    /**
-     * Enable to check if timeout works.
-     * Can't enable as it waits 30seconds and expected doesn't do Exception catching
-     */
-    @Ignore @Test
-    public void infiniteLoop() {
-        while (true) {}
-   }
+  @Test
+  public void run1() throws InterruptedException {
+    Thread.sleep(100);
+  }
+
+  /**
+   * Enable to check if timeout works.
+   * Can't enable as it waits 30seconds and expected doesn't do Exception catching
+   */
+  @Ignore
+  @Test
+  public void infiniteLoop() {
+    // Launch a background non-daemon thread.
+    Thread t = new Thread("HangingThread") {
+      public void run() {
+        synchronized(this) {
+          while (true) {}
+        }
+      }
+    };
+    t.start();
+    while (true) {}
+  }
 }

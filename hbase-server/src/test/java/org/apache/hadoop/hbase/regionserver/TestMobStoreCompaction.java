@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,16 +31,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -52,6 +49,8 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -61,27 +60,34 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test mob store compaction
  */
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestMobStoreCompaction {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMobStoreCompaction.class);
+
   @Rule
   public TestName name = new TestName();
-  static final Log LOG = LogFactory.getLog(TestMobStoreCompaction.class.getName());
+  static final Logger LOG = LoggerFactory.getLogger(TestMobStoreCompaction.class.getName());
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private Configuration conf = null;
 
@@ -96,16 +102,6 @@ public class TestMobStoreCompaction {
   private final byte[] STARTROW = Bytes.toBytes(START_KEY);
   private int compactionThreshold;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    UTIL.startMiniCluster(1);
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    UTIL.shutdownMiniCluster();
-  }
-
   private void init(Configuration conf, long mobThreshold) throws Exception {
     this.conf = conf;
     this.mobCellThreshold = mobThreshold;
@@ -119,7 +115,9 @@ public class TestMobStoreCompaction {
     hcd.setMaxVersions(1);
     htd.modifyFamily(hcd);
 
-    region = UTIL.createLocalHRegion(htd, null, null);
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
+    region = HBaseTestingUtility
+        .createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, htd, new MobFileCache(conf));
     fs = FileSystem.get(conf);
   }
 
@@ -196,7 +194,7 @@ public class TestMobStoreCompaction {
     TableDescriptor td = TableDescriptorBuilder
             .newBuilder(region.getTableDescriptor())
             .removeColumnFamily(cfName)
-            .addColumnFamily(cfd)
+            .setColumnFamily(cfd)
             .build();
     region.setTableDescriptor(td);
     return region;
@@ -212,7 +210,7 @@ public class TestMobStoreCompaction {
     init(UTIL.getConfiguration(), 300);
     byte[] dummyData = makeDummyData(600);
 
-    Path hbaseRootDir = FSUtils.getRootDir(conf);
+    Path hbaseRootDir = CommonFSUtils.getRootDir(conf);
     Path basedir = new Path(hbaseRootDir, htd.getNameAsString());
     List<Pair<byte[], String>> hfiles = new ArrayList<>(1);
     for (int i = 0; i < compactionThreshold; i++) {
@@ -447,7 +445,7 @@ public class TestMobStoreCompaction {
       long timeToPurgeDeletes = Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
       long ttl = HStore.determineTTLFromFamily(hcd);
       ScanInfo scanInfo = new ScanInfo(copyOfConf, hcd, ttl, timeToPurgeDeletes,
-        CellComparator.COMPARATOR);
+        CellComparatorImpl.COMPARATOR);
       StoreScanner scanner = new StoreScanner(scanInfo, ScanType.COMPACT_DROP_DELETES, scanners);
       try {
         size += UTIL.countRows(scanner);

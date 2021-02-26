@@ -22,9 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -36,8 +33,9 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * A base class for tests that do something with the cluster while running
@@ -63,7 +61,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   protected static final int DEFAULT_NUM_READ_THREADS = 20;
 
   // Log is being used in IntegrationTestIngestWithEncryption, hence it is protected
-  protected static final Log LOG = LogFactory.getLog(IntegrationTestIngest.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestIngest.class);
   protected IntegrationTestingUtility util;
   protected HBaseCluster cluster;
   protected LoadTestTool loadTool;
@@ -161,7 +159,8 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       int recordSize, int writeThreads, int readThreads) throws Exception {
 
     LOG.info("Running ingest");
-    LOG.info("Cluster size:" + util.getHBaseClusterInterface().getClusterStatus().getServersSize());
+    LOG.info("Cluster size:" + util.getHBaseClusterInterface()
+      .getClusterMetrics().getLiveServerMetrics().size());
 
     long start = System.currentTimeMillis();
     String runtimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());
@@ -249,7 +248,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   /** Estimates a data size based on the cluster size */
   protected long getNumKeys(long keysPerServer)
       throws IOException {
-    int numRegionServers = cluster.getClusterStatus().getServersSize();
+    int numRegionServers = cluster.getClusterMetrics().getLiveServerMetrics().size();
     return keysPerServer * numRegionServers;
   }
 

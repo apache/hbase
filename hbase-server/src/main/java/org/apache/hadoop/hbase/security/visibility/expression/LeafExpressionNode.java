@@ -58,6 +58,7 @@ public class LeafExpressionNode implements ExpressionNode {
     return true;
   }
 
+  @Override
   public LeafExpressionNode deepClone() {
     LeafExpressionNode clone = new LeafExpressionNode(this.identifier);
     return clone;

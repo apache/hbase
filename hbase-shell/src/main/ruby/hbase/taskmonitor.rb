@@ -27,24 +27,24 @@ end
 
 module Hbase
   class TaskMonitor
-    include HBaseConstants
-
     #---------------------------------------------------------------------------------------------
     # Represents information reported by a server on a single MonitoredTask
     class Task
       def initialize(taskMap, host)
-        taskMap.each_pair do |k, v|
+        taskMap.entrySet.each do |entry|
+          k = entry.getKey
+          v = entry.getValue
           case k
           when 'statustimems'
-            @statustime = Time.at(v / 1000)
+            @statustime = Time.at(v.getAsLong / 1000)
           when 'status'
-            @status = v
+            @status = v.getAsString
           when 'starttimems'
-            @starttime = Time.at(v / 1000)
+            @starttime = Time.at(v.getAsLong / 1000)
           when 'description'
-            @description = v
+            @description = v.getAsString
           when 'state'
-            @state = v
+            @state = v.getAsString
           end
         end
 
@@ -74,30 +74,35 @@ module Hbase
     # Returns a filtered list of tasks on the given host
     def tasksOnHost(filter, host)
       java_import 'java.net.URL'
-      java_import 'org.codehaus.jackson.map.ObjectMapper'
+      java_import 'java.net.SocketException'
+      java_import 'java.io.InputStreamReader'
+      java_import 'org.apache.hbase.thirdparty.com.google.gson.JsonParser'
 
       infoport = @admin.getClusterStatus.getLoad(host).getInfoServerPort.to_s
 
-      # Note: This condition use constants from hbase-server
-      # if (!@admin.getConfiguration().getBoolean(org.apache.hadoop.hbase.http.ServerConfigurationKeys::HBASE_SSL_ENABLED_KEY,
-      #  org.apache.hadoop.hbase.http.ServerConfigurationKeys::HBASE_SSL_ENABLED_DEFAULT))
-      #  schema = "http://"
-      # else
-      #  schema = "https://"
-      # end
-      schema = 'http://'
-      url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
+      begin
+        schema = "http://"
+        url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
+        json = URL.new(url).openStream
+      rescue SocketException => e
+        # Let's try with https when SocketException occur
+        schema = "https://"
+        url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
+        json = URL.new(url).openStream
+      end
 
-      json = URL.new(url)
-      mapper = ObjectMapper.new
+      parser = JsonParser.new
 
       # read and parse JSON
-      tasksArrayList = mapper.readValue(json, java.lang.Object.java_class)
-
+      begin
+        tasks_array_list = parser.parse(InputStreamReader.new(json, 'UTF-8')).getAsJsonArray
+      ensure
+        json.close
+      end
       # convert to an array of TaskMonitor::Task instances
       tasks = []
-      tasksArrayList.each do |t|
-        tasks.unshift Task.new(t, host)
+      tasks_array_list.each do |t|
+        tasks.unshift Task.new(t.getAsJsonObject, host)
       end
 
       tasks
@@ -146,7 +151,7 @@ module Hbase
                  setCellWidth('Description', descriptionWidth),
                  setCellWidth('Status', statusWidth)]
 
-        line = format('| %s | %s | %s | %s | %s |', cells)
+        line = format('| %s | %s | %s | %s | %s |', *cells)
 
         puts(rowSeparator)
         puts(line)
@@ -159,7 +164,7 @@ module Hbase
                    setCellWidth(t.description, descriptionWidth),
                    setCellWidth(format('%s (since %d seconds ago)', t.status, Time.now - t.statustime), statusWidth)]
 
-          line = format('| %s | %s | %s | %s | %s |', cells)
+          line = format('| %s | %s | %s | %s | %s |', *cells)
 
           puts(rowSeparator)
           puts(line)

@@ -16,8 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.metrics.impl;
 
 import java.util.Collection;
@@ -69,7 +67,7 @@ class RefCountingMap<K, V> {
    * @return the value associated with the specified key or null if key is removed from map.
    */
   V remove(K k) {
-    Payload<V> p = map.computeIfPresent(k, (k1, v) -> --v.refCount <= 0 ? null : v );
+    Payload<V> p = map.computeIfPresent(k, (k1, v) -> --v.refCount <= 0 ? null : v);
     return p == null ? null : p.v;
   }
 

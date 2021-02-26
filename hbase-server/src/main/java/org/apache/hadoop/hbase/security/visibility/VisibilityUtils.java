@@ -31,18 +31,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -65,6 +63,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility method to support visibility
@@ -72,7 +72,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class VisibilityUtils {
 
-  private static final Log LOG = LogFactory.getLog(VisibilityUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(VisibilityUtils.class);
 
   public static final String VISIBILITY_LABEL_GENERATOR_CLASS =
       "hbase.regionserver.scan.visibility.label.generator.class";
@@ -212,11 +212,11 @@ public class VisibilityUtils {
    */
   public static Byte extractVisibilityTags(Cell cell, List<Tag> tags) {
     Byte serializationFormat = null;
-    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+    Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
       if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
-        serializationFormat = TagUtil.getValueAsByte(tag);
+        serializationFormat = Tag.getValueAsByte(tag);
       } else if (tag.getType() == VISIBILITY_TAG_TYPE) {
         tags.add(tag);
       }
@@ -239,11 +239,11 @@ public class VisibilityUtils {
   public static Byte extractAndPartitionTags(Cell cell, List<Tag> visTags,
       List<Tag> nonVisTags) {
     Byte serializationFormat = null;
-    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+    Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
       if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
-        serializationFormat = TagUtil.getValueAsByte(tag);
+        serializationFormat = Tag.getValueAsByte(tag);
       } else if (tag.getType() == VISIBILITY_TAG_TYPE) {
         visTags.add(tag);
       } else {
@@ -255,7 +255,7 @@ public class VisibilityUtils {
   }
 
   public static boolean isVisibilityTagsPresent(Cell cell) {
-    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+    Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
       if (tag.getType() == VISIBILITY_TAG_TYPE) {
@@ -283,7 +283,13 @@ public class VisibilityUtils {
    * @throws IOException When there is IOE in getting the system user (During non-RPC handling).
    */
   public static User getActiveUser() throws IOException {
-    User user = RpcServer.getRequestUser().orElse(User.getCurrent());
+    Optional<User> optionalUser = RpcServer.getRequestUser();
+    User user;
+    if (optionalUser.isPresent()) {
+      user = optionalUser.get();
+    } else {
+      user = User.getCurrent();
+    }
     if (LOG.isTraceEnabled()) {
       LOG.trace("Current active user name is " + user.getShortName());
     }

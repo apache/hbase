@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * This class holds all logical details necessary to run a compaction.
@@ -43,6 +43,7 @@ public class CompactionRequestImpl implements CompactionRequest {
   private DisplayCompactionType isMajor = DisplayCompactionType.MINOR;
   private int priority = NO_PRIORITY;
   private Collection<HStoreFile> filesToCompact;
+  private boolean isAfterSplit = false;
 
   // CompactRequest object creation time.
   private long selectionTime;
@@ -134,6 +135,92 @@ public class CompactionRequestImpl implements CompactionRequest {
 
   public CompactionLifeCycleTracker getTracker() {
     return tracker;
+  }
+
+  public boolean isAfterSplit() {
+    return isAfterSplit;
+  }
+
+  public void setAfterSplit(boolean afterSplit) {
+    isAfterSplit = afterSplit;
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((filesToCompact == null) ? 0 : filesToCompact.hashCode());
+    result = prime * result + ((isMajor == null) ? 0 : isMajor.hashCode());
+    result = prime * result + (isOffPeak ? 1231 : 1237);
+    result = prime * result + priority;
+    result = prime * result + ((regionName == null) ? 0 : regionName.hashCode());
+    result = prime * result + (int) (selectionTime ^ (selectionTime >>> 32));
+    result = prime * result + ((storeName == null) ? 0 : storeName.hashCode());
+    result = prime * result + (int) (totalSize ^ (totalSize >>> 32));
+    result = prime * result + ((tracker == null) ? 0 : tracker.hashCode());
+    result = prime * result + (isAfterSplit ? 1231 : 1237);
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    CompactionRequestImpl other = (CompactionRequestImpl) obj;
+    if (filesToCompact == null) {
+      if (other.filesToCompact != null) {
+        return false;
+      }
+    } else if (!filesToCompact.equals(other.filesToCompact)) {
+      return false;
+    }
+    if (isMajor != other.isMajor) {
+      return false;
+    }
+    if (isOffPeak != other.isOffPeak) {
+      return false;
+    }
+    if (priority != other.priority) {
+      return false;
+    }
+    if (regionName == null) {
+      if (other.regionName != null) {
+        return false;
+      }
+    } else if (!regionName.equals(other.regionName)) {
+      return false;
+    }
+    if (selectionTime != other.selectionTime) {
+      return false;
+    }
+    if (storeName == null) {
+      if (other.storeName != null) {
+        return false;
+      }
+    } else if (!storeName.equals(other.storeName)) {
+      return false;
+    }
+    if (totalSize != other.totalSize) {
+      return false;
+    }
+    if (isAfterSplit != other.isAfterSplit) {
+      return false;
+    }
+    if (tracker == null) {
+      if (other.tracker != null) {
+        return false;
+      }
+    } else if (!tracker.equals(other.tracker)) {
+      return false;
+    }
+    return true;
   }
 
   @Override

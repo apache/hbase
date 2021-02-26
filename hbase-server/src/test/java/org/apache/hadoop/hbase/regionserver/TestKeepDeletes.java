@@ -23,37 +23,43 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestKeepDeletes {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestKeepDeletes.class);
+
   HBaseTestingUtility hbu = HBaseTestingUtility.createLocalHTU();
   private final byte[] T0 = Bytes.toBytes("0");
   private final byte[] T1 = Bytes.toBytes("1");
@@ -67,7 +73,7 @@ public class TestKeepDeletes {
   private final byte[] c1 = COLUMNS[1];
 
   @Rule public TestName name = new TestName();
-  
+
   @Before
   public void setUp() throws Exception {
     /* HBASE-6832: [WINDOWS] Tests should use explicit timestamp for Puts, and not rely on
@@ -196,7 +202,7 @@ public class TestKeepDeletes {
     // KEEP_DELETED_CELLS is NOT enabled
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
         HConstants.FOREVER, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);
@@ -272,8 +278,9 @@ public class TestKeepDeletes {
     s.setTimeRange(0L, ts+1);
     InternalScanner scanner = region.getScanner(s);
     List<Cell> kvs = new ArrayList<>();
-    while (scanner.next(kvs))
-      ;
+    while (scanner.next(kvs)) {
+      continue;
+    }
     assertTrue(kvs.isEmpty());
 
     // flushing and minor compaction keep delete markers
@@ -349,15 +356,15 @@ public class TestKeepDeletes {
     List<Cell> kvs = new ArrayList<>();
     scan.next(kvs);
     assertEquals(8, kvs.size());
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(0)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(0)));
     assertArrayEquals(CellUtil.cloneValue(kvs.get(1)), T3);
     assertTrue(CellUtil.isDelete(kvs.get(2)));
     assertTrue(CellUtil.isDelete(kvs.get(3))); // .isDeleteType());
     assertArrayEquals(CellUtil.cloneValue(kvs.get(4)), T2);
     assertArrayEquals(CellUtil.cloneValue(kvs.get(5)), T1);
     // we have 3 CFs, so there are two more delete markers
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(6)));
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(7)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(6)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(7)));
 
     // verify that raw scans honor the passed timerange
     s = new Scan();
@@ -379,11 +386,11 @@ public class TestKeepDeletes {
     kvs = new ArrayList<>();
     scan.next(kvs);
     assertEquals(4, kvs.size());
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(0)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(0)));
     assertArrayEquals(CellUtil.cloneValue(kvs.get(1)), T1);
     // we have 3 CFs
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(2)));
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(3)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(2)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(3)));
 
     // filter old delete markers
     s = new Scan();
@@ -763,6 +770,7 @@ public class TestKeepDeletes {
   /**
    * Verify scenarios with multiple CFs and columns
    */
+  @Test
   public void testWithMixedCFs() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
         HConstants.FOREVER, KeepDeletedCells.TRUE);
@@ -812,7 +820,6 @@ public class TestKeepDeletes {
 
   /**
    * Test keeping deleted rows together with min versions set
-   * @throws Exception
    */
   @Test
   public void testWithMinVersions() throws Exception {
@@ -891,7 +898,6 @@ public class TestKeepDeletes {
 
   /**
    * Test keeping deleted rows together with min versions set
-   * @throws Exception
    */
   @Test
   public void testWithTTL() throws Exception {
@@ -957,7 +963,9 @@ public class TestKeepDeletes {
     do {
       hasMore = scan.next(kvs);
       for (Cell kv : kvs) {
-        if(CellUtil.isDelete(kv)) res++;
+        if(CellUtil.isDelete(kv)) {
+          res++;
+        }
       }
       kvs.clear();
     } while (hasMore);

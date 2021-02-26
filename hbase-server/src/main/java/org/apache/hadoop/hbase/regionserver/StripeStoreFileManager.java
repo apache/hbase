@@ -31,8 +31,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -44,9 +42,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableCollection;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * Stripe implementation of StoreFileManager.
@@ -67,7 +66,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 @InterfaceAudience.Private
 public class StripeStoreFileManager
   implements StoreFileManager, StripeCompactionPolicy.StripeInformationProvider {
-  private static final Log LOG = LogFactory.getLog(StripeStoreFileManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StripeStoreFileManager.class);
 
   /**
    * The file metadata fields that contain the stripe information.
@@ -868,7 +867,6 @@ public class StripeStoreFileManager
 
     /**
      * Remove compacted files.
-     * @param compactedFiles Compacted files.
      */
     private void removeCompactedFiles() throws IOException {
       for (HStoreFile oldFile : this.compactedFiles) {
@@ -997,7 +995,9 @@ public class StripeStoreFileManager
 
   @Override
   public List<byte[]> getStripeBoundaries() {
-    if (this.state.stripeFiles.isEmpty()) return new ArrayList<>();
+    if (this.state.stripeFiles.isEmpty()) {
+      return Collections.emptyList();
+    }
     ArrayList<byte[]> result = new ArrayList<>(this.state.stripeEndRows.length + 2);
     result.add(OPEN_KEY);
     Collections.addAll(result, this.state.stripeEndRows);
@@ -1035,7 +1035,7 @@ public class StripeStoreFileManager
       synchronized (sf) {
         long fileTs = sf.getReader().getMaxTimestamp();
         if (fileTs < maxTs && !filesCompacting.contains(sf)) {
-          LOG.info("Found an expired store file: " + sf.getPath() + " whose maxTimeStamp is "
+          LOG.info("Found an expired store file: " + sf.getPath() + " whose maxTimestamp is "
               + fileTs + ", which is below " + maxTs);
           if (expiredStoreFiles == null) {
             expiredStoreFiles = new ArrayList<>();

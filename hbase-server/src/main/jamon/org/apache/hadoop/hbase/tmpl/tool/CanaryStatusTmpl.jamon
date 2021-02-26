@@ -1,0 +1,162 @@
+
+<%doc>
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+</%doc>
+<%args>
+RegionStdOutSink sink;
+</%args>
+<%import>
+java.util.Map;
+java.util.concurrent.atomic.LongAdder;
+org.apache.hadoop.hbase.ServerName;
+org.apache.hadoop.hbase.tool.CanaryTool.RegionStdOutSink;
+org.apache.hadoop.hbase.util.JvmVersion;
+</%import>
+
+<!--[if IE]>
+<!DOCTYPE html>
+<![endif]-->
+<?xml version="1.0" encoding="UTF-8" ?>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Canary</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="/static/css/hbase.css" rel="stylesheet">
+  </head>
+
+  <body>
+
+    <div class="navbar  navbar-fixed-top navbar-default">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/canary-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
+            </div>
+        </div>
+    </div>
+
+  <div class="container">
+    <section>
+    <h2>Failed Servers</h2>
+        <%java>
+           Map<ServerName, LongAdder> perServerFailuresCount = sink.getPerServerFailuresCount();
+        </%java>
+        <table class="table table-striped">
+          <tr>
+              <th>Server</th>
+              <th>Failures Count</th>
+          </tr>
+          <%if (perServerFailuresCount != null && perServerFailuresCount.size() > 0)%>
+          <%for Map.Entry<ServerName, LongAdder> entry : perServerFailuresCount.entrySet() %>
+          <tr>
+              <td><& serverNameLink ; serverName = entry.getKey() &></td>
+              <td><% entry.getValue() %></td>
+          </tr>
+          </%for>
+          </%if>
+          <tr><td>Total Failed Servers: <% (perServerFailuresCount != null) ? perServerFailuresCount.size() : 0 %></td></tr>
+        </table>
+    </section>
+    <section>
+      <h2>Failed Tables</h2>
+            <%java>
+               Map<String, LongAdder> perTableFailuresCount = sink.getPerTableFailuresCount();
+            </%java>
+            <table class="table table-striped">
+              <tr>
+                  <th>Table</th>
+                  <th>Failures Count</th>
+              </tr>
+              <%if (perTableFailuresCount != null && perTableFailuresCount.size() > 0)%>
+              <%for Map.Entry<String, LongAdder> entry : perTableFailuresCount.entrySet()%>
+              <tr>
+                  <td><% entry.getKey() %></td>
+                  <td><% entry.getValue() %></td>
+              </tr>
+              </%for>
+              </%if>
+              <tr><td>Total Failed Tables: <% (perTableFailuresCount != null) ? perTableFailuresCount.size() : 0 %></td></tr>
+            </table>
+    </section>
+
+        <section>
+            <h2>Software Attributes</h2>
+            <table id="attributes_table" class="table table-striped">
+                <tr>
+                    <th>Attribute Name</th>
+                    <th>Value</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td>JVM Version</td>
+                    <td><% JvmVersion.getVersion() %></td>
+                    <td>JVM vendor and version</td>
+                </tr>
+                <tr>
+                    <td>HBase Version</td>
+                    <td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and revision</td>
+                </tr>
+                <tr>
+                    <td>HBase Compiled</td>
+                    <td><% org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <% org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td>
+                    <td>When HBase version was compiled and by whom</td>
+                </tr>
+                <tr>
+                    <td>Hadoop Version</td>
+                    <td><% org.apache.hadoop.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.util.VersionInfo.getRevision() %></td>
+                    <td>Hadoop version and revision</td>
+                </tr>
+                <tr>
+                    <td>Hadoop Compiled</td>
+                    <td><% org.apache.hadoop.util.VersionInfo.getDate() %>, <% org.apache.hadoop.util.VersionInfo.getUser() %></td>
+                    <td>When Hadoop version was compiled and by whom</td>
+                </tr>
+            </table>
+        </section>
+        </div>
+    </div> <!-- /container -->
+
+    <script src="/static/js/jquery.min.js" type="text/javascript"></script>
+    <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="/static/js/tab.js" type="text/javascript"></script>
+  </body>
+</html>
+
+<%def serverNameLink>
+        <%args>
+        ServerName serverName;
+        </%args>
+        <%java>
+        int infoPort = serverName.getPort() + 1;
+        String url = "//" + serverName.getHostname() + ":" + infoPort + "/";
+        </%java>
+
+        <%if (infoPort > 0) %>
+            <a href="<% url %>"><% serverName.getServerName() %></a>
+        <%else>
+            <% serverName.getServerName() %>
+        </%if>
+</%def>

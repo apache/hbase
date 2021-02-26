@@ -15,16 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -42,12 +39,20 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 public class TestSafemodeBringsDownMaster {
-  private static final Log LOG = LogFactory.getLog(TestSafemodeBringsDownMaster.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSafemodeBringsDownMaster.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSafemodeBringsDownMaster.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -89,7 +94,7 @@ public class TestSafemodeBringsDownMaster {
   public void tearDown() throws Exception {
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSafemodeBringsDownMaster() throws Exception {
     final TableName tableName = TableName.valueOf("testSafemodeBringsDownMaster");
     final byte[][] splitKeys = new byte[][] {

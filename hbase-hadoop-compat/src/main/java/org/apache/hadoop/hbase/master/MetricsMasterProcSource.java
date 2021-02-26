@@ -19,10 +19,12 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface that classes that expose metrics about the master will implement.
  */
+@InterfaceAudience.Private
 public interface MetricsMasterProcSource extends BaseSource {
 
   /**

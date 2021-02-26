@@ -24,9 +24,9 @@ import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HeapMemoryManager.MEMSTORE_SIZE_MAX_RANGE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HeapMemoryManager.MEMSTORE_SIZE_MIN_RANGE_KEY;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
@@ -93,7 +93,7 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
   // NEUTRAL(given that last tuner period was also NEUTRAL).
   private static final double TUNER_STEP_EPS = 1e-6;
 
-  private Log LOG = LogFactory.getLog(DefaultHeapMemoryTuner.class);
+  private Logger LOG = LoggerFactory.getLogger(DefaultHeapMemoryTuner.class);
   private TunerResult TUNER_RESULT = new TunerResult(true);
   private Configuration conf;
   private float sufficientMemoryLevel = DEFAULT_SUFFICIENT_MEMORY_LEVEL_VALUE;

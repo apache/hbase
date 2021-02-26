@@ -26,10 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,9 +37,12 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Stopwatch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 /**
  * Tool to test performance of different {@link org.apache.hadoop.hbase.master.LoadBalancer}
@@ -55,8 +54,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Stopwatch;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
-  private static final Log LOG =
-      LogFactory.getLog(LoadBalancerPerformanceEvaluation.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LoadBalancerPerformanceEvaluation.class.getName());
 
   protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
@@ -174,7 +173,8 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
     methodName = "balanceCluster";
     LOG.info("Calling " + methodName);
     watch.reset().start();
-    loadBalancer.balanceCluster(serverRegionMap);
+
+    loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverRegionMap);
     System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     return EXIT_SUCCESS;

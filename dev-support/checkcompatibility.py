@@ -116,13 +116,18 @@ def checkout_java_tree(rev, path):
 
 def get_git_hash(revname):
     """ Convert 'revname' to its SHA-1 hash. """
-    return check_output(["git", "rev-parse", revname],
+    try:
+        return check_output(["git", "rev-parse", revname],
+                        cwd=get_repo_dir()).strip()
+    except:
+        revname = "origin/" + revname
+        return check_output(["git", "rev-parse", revname],
                         cwd=get_repo_dir()).strip()
 
 
-def get_repo_name():
+def get_repo_name(remote_name="origin"):
     """ Get the name of the repo based on the git remote."""
-    remote = check_output(["git", "config", "--get", "remote.origin.url"],
+    remote = check_output(["git", "config", "--get", "remote.{0}.url".format(remote_name)],
                            cwd=get_repo_dir()).strip()
     remote = remote.split("/")[-1]
     return remote[:-4] if remote.endswith(".git") else remote
@@ -151,7 +156,7 @@ def checkout_java_acc(force):
 
     logging.info("Downloading Java ACC...")
 
-    url = "https://github.com/lvc/japi-compliance-checker/archive/2.1.tar.gz"
+    url = "https://github.com/lvc/japi-compliance-checker/archive/2.4.tar.gz"
     scratch_dir = get_scratch_dir()
     path = os.path.join(scratch_dir, os.path.basename(url))
     jacc = urllib2.urlopen(url)
@@ -161,7 +166,7 @@ def checkout_java_acc(force):
     subprocess.check_call(["tar", "xzf", path],
                           cwd=scratch_dir)
 
-    shutil.move(os.path.join(scratch_dir, "japi-compliance-checker-2.1"),
+    shutil.move(os.path.join(scratch_dir, "japi-compliance-checker-2.4"),
                 os.path.join(acc_dir))
 
 
@@ -261,8 +266,14 @@ def process_java_acc_output(output):
             return_value[line[:6]] = values
     return return_value
 
+def log_java_acc_version():
+    java_acc_path = os.path.join(
+        get_java_acc_dir(), "japi-compliance-checker.pl")
 
-def run_java_acc(src_name, src_jars, dst_name, dst_jars, annotations, skip_annotations):
+    args = ["perl", java_acc_path, "-dumpversion"]
+    logging.info("Java ACC version: " + check_output(args))
+
+def run_java_acc(src_name, src_jars, dst_name, dst_jars, annotations, skip_annotations, name):
     """ Run the compliance checker to compare 'src' and 'dst'. """
     logging.info("Will check compatibility between original jars:\n\t%s\n"
                  "and new jars:\n\t%s",
@@ -280,7 +291,7 @@ def run_java_acc(src_name, src_jars, dst_name, dst_jars, annotations, skip_annot
     out_path = os.path.join(get_scratch_dir(), "report.html")
 
     args = ["perl", java_acc_path,
-            "-l", get_repo_name(),
+            "-l", name,
             "-d1", src_xml_path,
             "-d2", dst_xml_path,
             "-report-path", out_path]
@@ -424,6 +435,9 @@ def main():
     parser.add_argument("--verbose",
                         action="store_true",
                         help="more output")
+    parser.add_argument("-r", "--remote", default="origin", dest="remote_name",
+                        help="Name of remote to use. e.g. its repo name will be used as the name "
+                        "we pass to Java ACC for the library.")
     parser.add_argument("src_rev", nargs=1, help="Source revision.")
     parser.add_argument("dst_rev", nargs="?", default="HEAD",
                         help="Destination revision. "
@@ -471,6 +485,7 @@ def main():
 
     # Download deps.
     checkout_java_acc(args.force_download)
+    log_java_acc_version()
 
     # Set up the build.
     scratch_dir = get_scratch_dir()
@@ -505,7 +520,8 @@ def main():
         sys.exit(1)
 
     output = run_java_acc(src_rev, src_jars, dst_rev,
-                            dst_jars, args.annotations, skip_annotations)
+                            dst_jars, args.annotations, skip_annotations,
+                            get_repo_name(args.remote_name))
     sys.exit(compare_results(output, known_problems,
                               args.compare_warnings))
 

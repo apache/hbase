@@ -98,6 +98,7 @@ public class NanoTimer {
    *
    * Note: If timer is never started, "ERR" will be returned.
    */
+  @Override
   public String toString() {
     if (!readable()) {
       return "ERR";

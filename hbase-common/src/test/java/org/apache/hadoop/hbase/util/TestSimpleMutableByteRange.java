@@ -17,14 +17,20 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestSimpleMutableByteRange {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSimpleMutableByteRange.class);
 
   @Test
   public void testEmpty(){
@@ -69,7 +75,7 @@ public class TestSimpleMutableByteRange {
     r.setLength(2);//verify we retained the 2nd byte, but dangerous in real code
     Assert.assertTrue(Bytes.equals(new byte[]{1, 3}, r.deepCopyToNewArray()));
   }
-  
+
   @Test
   public void testPutandGetPrimitiveTypes() throws Exception {
     ByteRange r = new SimpleMutableByteRange(100);

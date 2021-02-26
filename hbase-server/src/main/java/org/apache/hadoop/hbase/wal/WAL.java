@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.wal;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
@@ -34,9 +32,7 @@ import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
-// imports we use from yet-to-be-moved regionsever.wal
+import static org.apache.commons.lang3.StringUtils.isNumeric;
 
 /**
  * A Write Ahead Log (WAL) provides service for reading, writing waledits. This interface provides
@@ -62,31 +58,31 @@ public interface WAL extends Closeable, WALFileLengthProvider {
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
    *
-   * <p>
+   * <p/>
    * The implementation is synchronized in order to make sure there's one rollWriter
    * running at any given time.
    *
-   * @return If lots of logs, flush the returned regions so next time through we
+   * @return If lots of logs, flush the stores of returned regions so next time through we
    *         can clean logs. Returns null if nothing to flush. Names are actual
    *         region names as returned by {@link RegionInfo#getEncodedName()}
    */
-  byte[][] rollWriter() throws FailedLogCloseException, IOException;
+  Map<byte[], List<byte[]>> rollWriter() throws FailedLogCloseException, IOException;
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
    *
-   * <p>
+   * <p/>
    * The implementation is synchronized in order to make sure there's one rollWriter
    * running at any given time.
    *
    * @param force
    *          If true, force creation of a new writer even if no entries have
    *          been written to the current writer
-   * @return If lots of logs, flush the returned regions so next time through we
+   * @return If lots of logs, flush the stores of returned regions so next time through we
    *         can clean logs. Returns null if nothing to flush. Names are actual
    *         region names as returned by {@link RegionInfo#getEncodedName()}
    */
-  byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException;
+  Map<byte[], List<byte[]>> rollWriter(boolean force) throws IOException;
 
   /**
    * Stop accepting new writes. If we have unsynced writes still in buffer, sync them.
@@ -99,49 +95,81 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * underlying resources after this call; i.e. filesystem based WALs can archive or
    * delete files.
    */
+  @Override
   void close() throws IOException;
 
   /**
-   * Append a set of edits to the WAL. The WAL is not flushed/sync'd after this transaction
-   * completes BUT on return this edit must have its region edit/sequence id assigned
-   * else it messes up our unification of mvcc and sequenceid.  On return <code>key</code> will
-   * have the region edit/sequence id filled in.
+   * Append a set of data edits to the WAL. 'Data' here means that the content in the edits will
+   * also have transitioned through the memstore.
+   * <p/>
+   * The WAL is not flushed/sync'd after this transaction completes BUT on return this edit must
+   * have its region edit/sequence id assigned else it messes up our unification of mvcc and
+   * sequenceid. On return <code>key</code> will have the region edit/sequence id filled in.
    * @param info the regioninfo associated with append
    * @param key Modified by this call; we add to it this edits region edit/sequence id.
    * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
-   * sequence id that is after all currently appended edits.
-   * @param inMemstore Always true except for case where we are writing a compaction completion
-   * record into the WAL; in this case the entry is just so we can finish an unfinished compaction
-   * -- it is not an edit for memstore.
+   *          sequence id that is after all currently appended edits.
    * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
-   * in it.
+   *         in it.
+   * @see #appendMarker(RegionInfo, WALKeyImpl, WALEdit)
    */
-  long append(RegionInfo info, WALKey key, WALEdit edits, boolean inMemstore) throws IOException;
+  long appendData(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException;
+
+  /**
+   * Append an operational 'meta' event marker edit to the WAL. A marker meta edit could
+   * be a FlushDescriptor, a compaction marker, or a region event marker; e.g. region open
+   * or region close. The difference between a 'marker' append and a 'data' append as in
+   * {@link #appendData(RegionInfo, WALKeyImpl, WALEdit)}is that a marker will not have
+   * transitioned through the memstore.
+   * <p/>
+   * The WAL is not flushed/sync'd after this transaction completes BUT on return this edit must
+   * have its region edit/sequence id assigned else it messes up our unification of mvcc and
+   * sequenceid. On return <code>key</code> will have the region edit/sequence id filled in.
+   * @param info the regioninfo associated with append
+   * @param key Modified by this call; we add to it this edits region edit/sequence id.
+   * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
+   *          sequence id that is after all currently appended edits.
+   * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
+   *         in it.
+   * @see #appendData(RegionInfo, WALKeyImpl, WALEdit)
+   */
+  long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException;
 
   /**
    * updates the seuence number of a specific store.
    * depending on the flag: replaces current seq number if the given seq id is bigger,
    * or even if it is lower than existing one
-   * @param encodedRegionName
-   * @param familyName
-   * @param sequenceid
-   * @param onlyIfGreater
    */
   void updateStore(byte[] encodedRegionName, byte[] familyName, Long sequenceid,
       boolean onlyIfGreater);
 
   /**
    * Sync what we have in the WAL.
-   * @throws IOException
    */
   void sync() throws IOException;
 
   /**
    * Sync the WAL if the txId was not already sync'd.
    * @param txid Transaction id to sync to.
-   * @throws IOException
    */
   void sync(long txid) throws IOException;
+
+  /**
+   * @param forceSync Flag to force sync rather than flushing to the buffer. Example - Hadoop hflush
+   *          vs hsync.
+   */
+  default void sync(boolean forceSync) throws IOException {
+    sync();
+  }
+
+  /**
+   * @param txid Transaction id to sync to.
+   * @param forceSync Flag to force sync rather than flushing to the buffer. Example - Hadoop hflush
+   *          vs hsync.
+   */
+  default void sync(long txid, boolean forceSync) throws IOException {
+    sync(txid);
+  }
 
   /**
    * WAL keeps track of the sequence numbers that are as yet not flushed im memstores
@@ -157,7 +185,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * being flushed; in other words, this is effectively same as a flush of all of the region
    * though we were passed a subset of regions. Otherwise, it returns the sequence id of the
    * oldest/lowest outstanding edit.
-   * @see #completeCacheFlush(byte[])
+   * @see #completeCacheFlush(byte[], long)
    * @see #abortCacheFlush(byte[])
    */
   Long startCacheFlush(final byte[] encodedRegionName, Set<byte[]> families);
@@ -167,10 +195,12 @@ public interface WAL extends Closeable, WALFileLengthProvider {
   /**
    * Complete the cache flush.
    * @param encodedRegionName Encoded region name.
+   * @param maxFlushedSeqId The maxFlushedSeqId for this flush. There is no edit in memory that is
+   *          less that this sequence id.
    * @see #startCacheFlush(byte[], Set)
    * @see #abortCacheFlush(byte[])
    */
-  void completeCacheFlush(final byte[] encodedRegionName);
+  void completeCacheFlush(final byte[] encodedRegionName, long maxFlushedSeqId);
 
   /**
    * Abort a cache flush. Call if the flush fails. Note that the only recovery
@@ -192,7 +222,6 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @deprecated Since version 1.2.0. Removing because not used and exposes subtle internal
    * workings. Use {@link #getEarliestMemStoreSeqNum(byte[], byte[])}
    */
-  @VisibleForTesting
   @Deprecated
   long getEarliestMemStoreSeqNum(byte[] encodedRegionName);
 
@@ -230,10 +259,10 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    */
   class Entry {
     private final WALEdit edit;
-    private final WALKey key;
+    private final WALKeyImpl key;
 
     public Entry() {
-      this(new WALKey(), new WALEdit());
+      this(new WALKeyImpl(), new WALEdit());
     }
 
     /**
@@ -242,7 +271,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
      * @param edit log's edit
      * @param key log's key
      */
-    public Entry(WALKey key, WALEdit edit) {
+    public Entry(WALKeyImpl key, WALEdit edit) {
       this.key = key;
       this.edit = edit;
     }
@@ -261,7 +290,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
      *
      * @return key
      */
-    public WALKey getKey() {
+    public WALKeyImpl getKey() {
       return key;
     }
 
@@ -270,26 +299,44 @@ public interface WAL extends Closeable, WALFileLengthProvider {
      *
      * @param compressionContext
      *          Compression context
+     * @deprecated deparcated since hbase 2.1.0
      */
+    @Deprecated
     public void setCompressionContext(CompressionContext compressionContext) {
       key.setCompressionContext(compressionContext);
-    }
-
-    public boolean hasSerialReplicationScope () {
-      if (getKey().getReplicationScopes() == null || getKey().getReplicationScopes().isEmpty()) {
-        return false;
-      }
-      for (Map.Entry<byte[], Integer> e:getKey().getReplicationScopes().entrySet()) {
-        if (e.getValue() == HConstants.REPLICATION_SCOPE_SERIAL){
-          return true;
-        }
-      }
-      return false;
     }
 
     @Override
     public String toString() {
       return this.key + "=" + this.edit;
     }
+  }
+
+  /**
+   * Split a WAL filename to get a start time. WALs usually have the time we start writing to them
+   * as part of their name, usually the suffix. Sometimes there will be an extra suffix as when it
+   * is a WAL for the meta table. For example, WALs might look like this
+   * <code>10.20.20.171%3A60020.1277499063250</code> where <code>1277499063250</code> is the
+   * timestamp. Could also be a meta WAL which adds a '.meta' suffix or a
+   * synchronous replication WAL which adds a '.syncrep' suffix. Check for these. File also may have
+   * no timestamp on it. For example the recovered.edits files are WALs but are named in ascending
+   * order. Here is an example: 0000000000000016310. Allow for this.
+   * @param name Name of the WAL file.
+   * @return Timestamp or -1.
+   */
+  public static long getTimestamp(String name) {
+    String [] splits = name.split("\\.");
+    if (splits.length <= 1) {
+      return -1;
+    }
+    String timestamp = splits[splits.length - 1];
+    if (!isNumeric(timestamp)) {
+      // Its a '.meta' or a '.syncrep' suffix.
+      timestamp = splits[splits.length - 2];
+      if (!isNumeric(timestamp)) {
+        return -1;
+      }
+    }
+    return Long.parseLong(timestamp);
   }
 }

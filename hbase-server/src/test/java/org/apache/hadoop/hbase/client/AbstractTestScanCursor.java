@@ -112,9 +112,9 @@ public abstract class AbstractTestScanCursor {
     }
 
     @Override
-    public ReturnCode filterKeyValue(Cell v) throws IOException {
+    public ReturnCode filterCell(final Cell c) throws IOException {
       Threads.sleep(TIMEOUT / 2 + 100);
-      return Bytes.equals(CellUtil.cloneRow(v), ROWS[reversed ? 0 : NUM_ROWS - 1])
+      return Bytes.equals(CellUtil.cloneRow(c), ROWS[reversed ? 0 : NUM_ROWS - 1])
           ? ReturnCode.INCLUDE
           : ReturnCode.SKIP;
     }

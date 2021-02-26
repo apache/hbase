@@ -19,12 +19,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -37,7 +36,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class FlushPolicyFactory {
 
-  private static final Log LOG = LogFactory.getLog(FlushPolicyFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushPolicyFactory.class);
 
   public static final String HBASE_FLUSH_POLICY_KEY = "hbase.regionserver.flush.policy";
 

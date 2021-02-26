@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,20 +17,25 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.fail;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests to make sure that the default environment edge conforms to appropriate
  * behaviour.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({MiscTests.class, SmallTests.class})
 public class TestDefaultEnvironmentEdge {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDefaultEnvironmentEdge.class);
 
   @Test
   public void testGetCurrentTimeUsesSystemClock() {

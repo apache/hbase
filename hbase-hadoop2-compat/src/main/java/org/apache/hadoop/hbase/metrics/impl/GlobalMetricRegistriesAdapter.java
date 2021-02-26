@@ -17,17 +17,13 @@
  */
 package org.apache.hadoop.hbase.metrics.impl;
 
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.Optional;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
@@ -38,8 +34,9 @@ import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystemHelper;
 import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class acts as an adapter to export the MetricRegistry's in the global registry. Each
@@ -63,9 +60,10 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  * initialization should be moved here.
  * </p>
  */
-public class GlobalMetricRegistriesAdapter {
+@InterfaceAudience.Private
+public final class GlobalMetricRegistriesAdapter {
 
-  private static final Log LOG = LogFactory.getLog(GlobalMetricRegistriesAdapter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GlobalMetricRegistriesAdapter.class);
 
   private class MetricsSourceAdapter implements MetricsSource {
     private final MetricRegistry registry;
@@ -102,7 +100,6 @@ public class GlobalMetricRegistriesAdapter {
     return new GlobalMetricRegistriesAdapter();
   }
 
-  @VisibleForTesting
   public void stop() {
     stopped.set(true);
   }

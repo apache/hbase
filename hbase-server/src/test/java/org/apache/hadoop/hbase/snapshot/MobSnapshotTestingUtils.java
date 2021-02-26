@@ -20,10 +20,14 @@ package org.apache.hadoop.hbase.snapshot;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -32,11 +36,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 
@@ -59,23 +59,28 @@ public class MobSnapshotTestingUtils {
       1, families);
   }
 
-  private static void createMobTable(final HBaseTestingUtility util,
-      final TableName tableName, final byte[][] splitKeys, int regionReplication,
-      final byte[]... families) throws IOException, InterruptedException {
-    TableDescriptorBuilder builder
-      = TableDescriptorBuilder.newBuilder(tableName)
-            .setRegionReplication(regionReplication);
+  public static void createMobTable(final HBaseTestingUtility util, final TableName tableName,
+      final byte[][] splitKeys, int regionReplication, final byte[]... families)
+      throws IOException, InterruptedException {
+    createMobTable(util, tableName, splitKeys, regionReplication, null, families);
+  }
+
+  public static void createMobTable(HBaseTestingUtility util, TableName tableName,
+      byte[][] splitKeys, int regionReplication, String cpClassName, byte[]... families)
+      throws IOException, InterruptedException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
     for (byte[] family : families) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder
-          .newBuilder(family)
-          .setMobEnabled(true)
-          .setMobThreshold(0L)
-          .build());
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true)
+        .setMobThreshold(0L).build());
+    }
+    if (!StringUtils.isBlank(cpClassName)) {
+      builder.setCoprocessor(cpClassName);
     }
     util.getAdmin().createTable(builder.build(), splitKeys);
     SnapshotTestingUtils.waitForTableToBeOnline(util, tableName);
-    assertEquals((splitKeys.length + 1) * regionReplication, util
-        .getAdmin().getTableRegions(tableName).size());
+    assertEquals((splitKeys.length + 1) * regionReplication,
+      util.getAdmin().getRegions(tableName).size());
   }
 
   /**
@@ -96,7 +101,7 @@ public class MobSnapshotTestingUtils {
       // tests have hard coded counts of what to expect in block cache, etc.,
       // and blooms being
       // on is interfering.
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
               .setBloomFilterType(BloomType.NONE)
               .setMobEnabled(true)
               .setMobThreshold(0L)
@@ -152,7 +157,7 @@ public class MobSnapshotTestingUtils {
     @Override
     public TableDescriptor createHtd(final String tableName) {
       return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-              .addColumnFamily(ColumnFamilyDescriptorBuilder
+              .setColumnFamily(ColumnFamilyDescriptorBuilder
                   .newBuilder(Bytes.toBytes(TEST_FAMILY))
                   .setMobEnabled(true)
                   .setMobThreshold(0L)

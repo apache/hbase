@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Extended histogram implementation with counters for metric size ranges.
  */
 @InterfaceAudience.Private
 public class MutableSizeHistogram extends MutableRangeHistogram {
+
   private final static String RANGE_TYPE = "SizeRangeCount";
   private final static long[] RANGES = {10,100,1000,10000,100000,1000000,10000000,100000000};
 
@@ -34,11 +35,7 @@ public class MutableSizeHistogram extends MutableRangeHistogram {
   }
 
   public MutableSizeHistogram(String name, String description) {
-    this(name, description, RANGES[RANGES.length-2]);
-  }
-
-  public MutableSizeHistogram(String name, String description, long expectedMax) {
-    super(name, description, expectedMax);
+    super(name, description);
   }
 
   @Override

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertTrue;
@@ -34,7 +33,8 @@ import java.util.Set;
  *     .setBar(bar)
  *     .setBaz(baz)
  */
-public class BuilderStyleTest {
+public final class BuilderStyleTest {
+  private BuilderStyleTest() {}
 
   /*
    * If a base class Foo declares a method setFoo() returning Foo, then the subclass should
@@ -92,7 +92,9 @@ public class BuilderStyleTest {
         boolean found = false;
         for (Method m : e.getValue()) {
           found = clazz.isAssignableFrom(m.getReturnType());
-          if (found) break;
+          if (found) {
+            break;
+          }
         }
         String errorMsg = "All setXXX()|addXX() methods in " + clazz.getSimpleName()
             + " should return a " + clazz.getSimpleName() + " object in builder style. "

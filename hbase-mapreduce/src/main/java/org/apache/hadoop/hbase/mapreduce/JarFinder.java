@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
-
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,6 +33,9 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Finds the Jar for a class. If the class is in a directory in the
@@ -44,7 +45,8 @@ import java.util.zip.ZipOutputStream;
  *
  * This file was forked from hadoop/common/branches/branch-2@1377176.
  */
-public class JarFinder {
+@InterfaceAudience.Private
+public final class JarFinder {
 
   private static void copyToZipStream(File file, ZipEntry entry,
                               ZipOutputStream zos) throws IOException {
@@ -183,4 +185,6 @@ public class JarFinder {
     }
     return null;
   }
+
+  private JarFinder() {}
 }

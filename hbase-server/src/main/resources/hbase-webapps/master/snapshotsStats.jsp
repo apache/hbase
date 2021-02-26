@@ -24,13 +24,13 @@
   import="java.util.Map"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.fs.Path"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription"
 %>
+<%@ page import="org.apache.hadoop.hbase.util.PrettyPrinter" %>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
@@ -50,48 +50,11 @@
                    totalArchivedSize, totalSharedSize, totalMobSize);
     totalSize = totalSharedSize.get() + totalArchivedSize.get() + totalMobSize.get();
   }
+  pageContext.setAttribute("pageTitle", "HBase Master Snapshots: " + master.getServerName());
 %>
-<!DOCTYPE html>
-<?xml version="1.0" encoding="UTF-8" ?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta charset="utf-8">
-    <title>HBase Master Snapshots: <%= master.getServerName() %></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-    <link href="/static/css/hbase.css" rel="stylesheet">
-  </head>
-<body>
-<div class="navbar  navbar-fixed-top navbar-default">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-        </div>
-        <div class="collapse navbar-collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="/master-status">Home</a></li>
-                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-                <li><a href="/logs/">Local Logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/dump">Debug Dump</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
-                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                <li><a href="/conf">HBase Configuration</a></li>
-                <% } %>
-            </ul>
-        </div><!--/.nav-collapse -->
-    </div>
-</div>
+<jsp:include page="header.jsp">
+    <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
 <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
@@ -103,6 +66,8 @@
         <th>Snapshot Name</th>
         <th>Table</th>
         <th>Creation Time</th>
+        <th>Owner</th>
+        <th>TTL</th>
         <th>Shared Storefile Size</th>
         <th>Mob Storefile Size</th>
         <th>Archived Storefile Size</th>
@@ -120,6 +85,15 @@
       <td><a href="/table.jsp?name=<%= snapshotTable.getNameAsString() %>">
         <%= snapshotTable.getNameAsString() %></a></td>
       <td><%= new Date(snapshotDesc.getCreationTime()) %></td>
+      <td><%= snapshotDesc.getOwner() %></td>
+      <td>
+        <% if (snapshotDesc.getTtl() == 0) { %>
+        FOREVER
+        <% } else { %>
+        <%=PrettyPrinter
+          .format(String.valueOf(snapshotDesc.getTtl()), PrettyPrinter.Unit.TIME_INTERVAL)%>
+        <% } %>
+      </td>
       <td><%= StringUtils.humanReadableInt(stats.getSharedStoreFilesSize()) %></td>
       <td><%= StringUtils.humanReadableInt(stats.getMobStoreFilesSize())  %></td>
       <td><%= StringUtils.humanReadableInt(stats.getArchivedStoreFileSize()) %>
@@ -141,8 +115,4 @@
   </table>
 </div>
 
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
-
-</body>
-</html>
+<jsp:include page="footer.jsp" />

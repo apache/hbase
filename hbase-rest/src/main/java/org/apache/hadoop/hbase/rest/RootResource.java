@@ -31,10 +31,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.rest.model.TableListModel;
 import org.apache.hadoop.hbase.rest.model.TableModel;
@@ -42,7 +41,7 @@ import org.apache.hadoop.hbase.rest.model.TableModel;
 @Path("/")
 @InterfaceAudience.Private
 public class RootResource extends ResourceBase {
-  private static final Log LOG = LogFactory.getLog(RootResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RootResource.class);
 
   static CacheControl cacheControl;
   static {

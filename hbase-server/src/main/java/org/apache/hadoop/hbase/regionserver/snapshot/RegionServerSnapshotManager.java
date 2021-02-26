@@ -26,20 +26,13 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -51,13 +44,21 @@ import org.apache.hadoop.hbase.procedure.RegionServerProcedureManager;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.procedure.SubprocedureFactory;
 import org.apache.hadoop.hbase.procedure.ZKProcedureMemberRpcs;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
  * This manager class handles the work dealing with snapshots for a {@link HRegionServer}.
@@ -75,7 +76,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 @InterfaceStability.Unstable
 public class RegionServerSnapshotManager extends RegionServerProcedureManager {
-  private static final Log LOG = LogFactory.getLog(RegionServerSnapshotManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionServerSnapshotManager.class);
 
   /** Maximum number of snapshot region tasks that can run concurrently */
   private static final String CONCURENT_SNAPSHOT_TASKS_KEY = "hbase.snapshot.region.concurrentTasks";
@@ -150,7 +151,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
    * the snapshot verification step.
    *
    * @param snapshot
-   * @return Subprocedure to submit to the ProcedureMemeber.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(SnapshotDescription snapshot) {
 
@@ -162,7 +163,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
 
     // check to see if this server is hosting any regions for the snapshots
     // check to see if we have regions for the snapshot
-    List<Region> involvedRegions;
+    List<HRegion> involvedRegions;
     try {
       involvedRegions = getRegionsToSnapshot(snapshot);
     } catch (IOException e1) {
@@ -222,12 +223,13 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
    *         the given snapshot.
    * @throws IOException
    */
-  private List<Region> getRegionsToSnapshot(SnapshotDescription snapshot) throws IOException {
-    List<Region> onlineRegions = rss.getRegions(TableName.valueOf(snapshot.getTable()));
-    Iterator<Region> iterator = onlineRegions.iterator();
+  private List<HRegion> getRegionsToSnapshot(SnapshotDescription snapshot) throws IOException {
+    List<HRegion> onlineRegions = (List<HRegion>) rss
+        .getRegions(TableName.valueOf(snapshot.getTable()));
+    Iterator<HRegion> iterator = onlineRegions.iterator();
     // remove the non-default regions
     while (iterator.hasNext()) {
-      Region r = iterator.next();
+      HRegion r = iterator.next();
       if (!RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())) {
         iterator.remove();
       }
@@ -282,10 +284,9 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
         RegionServerSnapshotManager.SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
       int threads = conf.getInt(CONCURENT_SNAPSHOT_TASKS_KEY, DEFAULT_CONCURRENT_SNAPSHOT_TASKS);
       this.name = name;
-      executor = new ThreadPoolExecutor(threads, threads, keepAlive, TimeUnit.MILLISECONDS,
-          new LinkedBlockingQueue<>(), new DaemonThreadFactory("rs("
-              + name + ")-snapshot-pool"));
-      executor.allowCoreThreadTimeOut(true);
+      executor = Threads.getBoundedCachedThreadPool(threads, keepAlive, TimeUnit.MILLISECONDS,
+        new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-snapshot-pool-%d")
+          .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       taskPool = new ExecutorCompletionService<>(executor);
     }
 
@@ -392,7 +393,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
   @Override
   public void initialize(RegionServerServices rss) throws KeeperException {
     this.rss = rss;
-    ZooKeeperWatcher zkw = rss.getZooKeeper();
+    ZKWatcher zkw = rss.getZooKeeper();
     this.memberRpcs = new ZKProcedureMemberRpcs(zkw,
         SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION);
 

@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.Optional;
 import java.util.OptionalLong;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -54,7 +53,7 @@ public interface StoreFile {
   /**
    * Get the comparator for comparing two cells.
    */
-  Comparator<Cell> getComparator();
+  CellComparator getComparator();
 
   /**
    * Get max of the MemstoreTS in the KV's in this store file.
@@ -65,6 +64,11 @@ public interface StoreFile {
    * @return Path or null if this StoreFile was made with a Stream.
    */
   Path getPath();
+
+  /**
+   * @return Encoded Path if this StoreFile was made with a Stream.
+   */
+  Path getEncodedPath();
 
   /**
    * @return Returns the qualified path of this StoreFile
@@ -99,8 +103,17 @@ public interface StoreFile {
   /**
    * Get the modification time of this store file. Usually will access the file system so throws
    * IOException.
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0.
+   * @see #getModificationTimestamp()
    */
+  @Deprecated
   long getModificationTimeStamp() throws IOException;
+
+  /**
+   * Get the modification time of this store file. Usually will access the file system so throws
+   * IOException.
+   */
+  long getModificationTimestamp() throws IOException;
 
   /**
    * Check if this storefile was created by bulk load. When a hfile is bulk loaded into HBase, we
@@ -116,12 +129,6 @@ public interface StoreFile {
    * Return the timestamp at which this bulk load file was generated.
    */
   OptionalLong getBulkLoadTimestamp();
-
-  /**
-   * @return the cached value of HDFS blocks distribution. The cached value is calculated when store
-   *         file is opened.
-   */
-  HDFSBlocksDistribution getHDFSBlockDistribution();
 
   /**
    * @return a length description of this StoreFile, suitable for debug output

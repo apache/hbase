@@ -18,35 +18,29 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mob.MobConstants;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclHelper;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class abstracts a bunch of operations the HMaster needs to interact with
@@ -55,7 +49,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MasterFileSystem {
-  private static final Log LOG = LogFactory.getLog(MasterFileSystem.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterFileSystem.class);
 
   /** Parameter name for HBase instance root directory permission*/
   public static final String HBASE_DIR_PERMS = "hbase.rootdir.perms";
@@ -97,25 +91,22 @@ public class MasterFileSystem {
 
   private boolean isSecurityEnabled;
 
-  private final MasterServices services;
-
-  public MasterFileSystem(MasterServices services) throws IOException {
-    this.conf = services.getConfiguration();
-    this.services = services;
+  public MasterFileSystem(Configuration conf) throws IOException {
+    this.conf = conf;
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
     // default localfs.  Presumption is that rootdir is fully-qualified before
     // we get to here with appropriate fs scheme.
-    this.rootdir = FSUtils.getRootDir(conf);
+    this.rootdir = CommonFSUtils.getRootDir(conf);
     this.tempdir = new Path(this.rootdir, HConstants.HBASE_TEMP_DIRECTORY);
     // Cover both bases, the old way of setting default fs and the new.
     // We're supposed to run on 0.20 and 0.21 anyways.
     this.fs = this.rootdir.getFileSystem(conf);
-    this.walRootDir = FSUtils.getWALRootDir(conf);
-    this.walFs = FSUtils.getWALFileSystem(conf);
-    FSUtils.setFsDefault(conf, new Path(this.walFs.getUri()));
+    this.walRootDir = CommonFSUtils.getWALRootDir(conf);
+    this.walFs = CommonFSUtils.getWALFileSystem(conf);
+    CommonFSUtils.setFsDefault(conf, new Path(this.walFs.getUri()));
     walFs.setConf(conf);
-    FSUtils.setFsDefault(conf, new Path(this.fs.getUri()));
+    CommonFSUtils.setFsDefault(conf, new Path(this.fs.getUri()));
     // make sure the fs has the same conf
     fs.setConf(conf);
     this.secureRootSubDirPerms = new FsPermission(conf.get("hbase.rootdir.perms", "700"));
@@ -143,11 +134,12 @@ public class MasterFileSystem {
         MobConstants.MOB_DIR_NAME
     };
 
+    //With the introduction of RegionProcedureStore,
+    // there's no need to create MasterProcWAL dir here anymore. See HBASE-23715
     final String[] protectedSubLogDirs = new String[] {
-            HConstants.HREGION_LOGDIR_NAME,
-            HConstants.HREGION_OLDLOGDIR_NAME,
-            HConstants.CORRUPT_DIR_NAME,
-            MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR
+      HConstants.HREGION_LOGDIR_NAME,
+      HConstants.HREGION_OLDLOGDIR_NAME,
+      HConstants.CORRUPT_DIR_NAME
     };
     // check if the root directory exists
     checkRootDir(this.rootdir, conf, this.fs);
@@ -194,7 +186,9 @@ public class MasterFileSystem {
     return this.fs;
   }
 
-  protected FileSystem getWALFileSystem() { return this.walFs; }
+  public FileSystem getWALFileSystem() {
+    return this.walFs;
+  }
 
   public Configuration getConfiguration() {
     return this.conf;
@@ -210,7 +204,16 @@ public class MasterFileSystem {
   /**
    * @return HBase root log dir.
    */
-  public Path getWALRootDir() { return this.walRootDir; }
+  public Path getWALRootDir() {
+    return this.walRootDir;
+  }
+
+  /**
+   * @return the directory for a give {@code region}.
+   */
+  public Path getRegionDir(RegionInfo region) {
+    return FSUtils.getRegionDirFromRootDir(getRootDir(), region);
+  }
 
   /**
    * @return HBase temp dir.
@@ -235,15 +238,26 @@ public class MasterFileSystem {
    * needed populating the directory with necessary bootup files).
    * @throws IOException
    */
-  private Path checkRootDir(final Path rd, final Configuration c, final FileSystem fs)
-      throws IOException {
+  private void checkRootDir(final Path rd, final Configuration c, final FileSystem fs)
+    throws IOException {
+    int threadWakeFrequency = c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     // If FS is in safe mode wait till out of it.
-    FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
+    FSUtils.waitOnSafeMode(c, threadWakeFrequency);
 
     // Filesystem is good. Go ahead and check for hbase.rootdir.
+    FileStatus status;
     try {
-      if (!fs.exists(rd)) {
-        fs.mkdirs(rd);
+      status = fs.getFileStatus(rd);
+    } catch (FileNotFoundException e) {
+      status = null;
+    }
+    int versionFileWriteAttempts = c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
+      HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
+    try {
+      if (status == null) {
+        if (!fs.mkdirs(rd)) {
+          throw new IOException("Can not create configured '" + HConstants.HBASE_DIR + "' " + rd);
+        }
         // DFS leaves safe mode with 0 DNs when there are 0 blocks.
         // We used to handle this by checking the current DN count and waiting until
         // it is nonzero. With security, the check for datanode count doesn't work --
@@ -251,78 +265,64 @@ public class MasterFileSystem {
         // and simply retry file creation during bootstrap indefinitely. As soon as
         // there is one datanode it will succeed. Permission problems should have
         // already been caught by mkdirs above.
-        FSUtils.setVersion(fs, rd, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
-            HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+        FSUtils.setVersion(fs, rd, threadWakeFrequency, versionFileWriteAttempts);
       } else {
-        if (!fs.isDirectory(rd)) {
-          throw new IllegalArgumentException(rd.toString() + " is not a directory");
+        if (!status.isDirectory()) {
+          throw new IllegalArgumentException(
+            "Configured '" + HConstants.HBASE_DIR + "' " + rd + " is not a directory.");
         }
         // as above
-        FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
-            HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+        FSUtils.checkVersion(fs, rd, true, threadWakeFrequency, versionFileWriteAttempts);
       }
     } catch (DeserializationException de) {
-      LOG.fatal("Please fix invalid configuration for " + HConstants.HBASE_DIR, de);
-      IOException ioe = new IOException();
-      ioe.initCause(de);
-      throw ioe;
+      LOG.error(HBaseMarkers.FATAL, "Please fix invalid configuration for '{}' {}",
+        HConstants.HBASE_DIR, rd, de);
+      throw new IOException(de);
     } catch (IllegalArgumentException iae) {
-      LOG.fatal("Please fix invalid configuration for "
-        + HConstants.HBASE_DIR + " " + rd.toString(), iae);
+      LOG.error(HBaseMarkers.FATAL, "Please fix invalid configuration for '{}' {}",
+        HConstants.HBASE_DIR, rd, iae);
       throw iae;
     }
     // Make sure cluster ID exists
-    if (!FSUtils.checkClusterIdExists(fs, rd, c.getInt(
-        HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000))) {
-      FSUtils.setClusterId(fs, rd, new ClusterId(), c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
+    if (!FSUtils.checkClusterIdExists(fs, rd, threadWakeFrequency)) {
+      FSUtils.setClusterId(fs, rd, new ClusterId(), threadWakeFrequency);
     }
     clusterId = FSUtils.getClusterId(fs, rd);
-
-    // Make sure the meta region directory exists!
-    if (!FSUtils.metaRegionExists(fs, rd)) {
-      bootstrap(rd, c);
-    }
-
-    // Create tableinfo-s for hbase:meta if not already there.
-    // assume, created table descriptor is for enabling table
-    // meta table is a system table, so descriptors are predefined,
-    // we should get them from registry.
-    FSTableDescriptors fsd = new FSTableDescriptors(c, fs, rd);
-    fsd.createTableDescriptor(fsd.get(TableName.META_TABLE_NAME));
-
-    return rd;
   }
 
   /**
    * Make sure the hbase temp directory exists and is empty.
    * NOTE that this method is only executed once just after the master becomes the active one.
    */
-  private void checkTempDir(final Path tmpdir, final Configuration c, final FileSystem fs)
+  void checkTempDir(final Path tmpdir, final Configuration c, final FileSystem fs)
       throws IOException {
     // If the temp directory exists, clear the content (left over, from the previous run)
     if (fs.exists(tmpdir)) {
       // Archive table in temp, maybe left over from failed deletion,
       // if not the cleaner will take care of them.
-      for (Path tabledir: FSUtils.getTableDirs(fs, tmpdir)) {
-        for (Path regiondir: FSUtils.getRegionDirs(fs, tabledir)) {
-          HFileArchiver.archiveRegion(fs, this.rootdir, tabledir, regiondir);
+      for (Path tableDir: FSUtils.getTableDirs(fs, tmpdir)) {
+        HFileArchiver.archiveRegions(c, fs, this.rootdir, tableDir,
+          FSUtils.getRegionDirs(fs, tableDir));
+        if (!FSUtils.getRegionDirs(fs, tableDir).isEmpty()) {
+          LOG.warn("Found regions in tmp dir after archiving table regions, {}", tableDir);
         }
       }
-      if (!fs.delete(tmpdir, true)) {
+      // if acl sync to hdfs is enabled, then skip delete tmp dir because ACLs are set
+      if (!SnapshotScannerHDFSAclHelper.isAclSyncToHdfsEnabled(c) && !fs.delete(tmpdir, true)) {
         throw new IOException("Unable to clean the temp directory: " + tmpdir);
       }
     }
 
     // Create the temp directory
-    if (isSecurityEnabled) {
-      if (!fs.mkdirs(tmpdir, secureRootSubDirPerms)) {
-        throw new IOException("HBase temp directory '" + tmpdir + "' creation failure.");
-      }
-    } else {
-      if (!fs.mkdirs(tmpdir)) {
-        throw new IOException("HBase temp directory '" + tmpdir + "' creation failure.");
+    if (!fs.exists(tmpdir)) {
+      if (isSecurityEnabled) {
+        if (!fs.mkdirs(tmpdir, secureRootSubDirPerms)) {
+          throw new IOException("HBase temp directory '" + tmpdir + "' creation failure.");
+        }
+      } else {
+        if (!fs.mkdirs(tmpdir)) {
+          throw new IOException("HBase temp directory '" + tmpdir + "' creation failure.");
+        }
       }
     }
   }
@@ -381,42 +381,6 @@ public class MasterFileSystem {
     }
   }
 
-  private static void bootstrap(final Path rd, final Configuration c)
-  throws IOException {
-    LOG.info("BOOTSTRAP: creating hbase:meta region");
-    try {
-      // Bootstrapping, make sure blockcache is off.  Else, one will be
-      // created here in bootstrap and it'll need to be cleaned up.  Better to
-      // not make it in first place.  Turn off block caching for bootstrap.
-      // Enable after.
-      TableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
-      HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rd,
-          c, setInfoFamilyCachingForMeta(metaDescriptor, false), null);
-      meta.close();
-    } catch (IOException e) {
-        e = e instanceof RemoteException ?
-                ((RemoteException)e).unwrapRemoteException() : e;
-      LOG.error("bootstrap", e);
-      throw e;
-    }
-  }
-
-  /**
-   * Enable in memory caching for hbase:meta
-   */
-  public static TableDescriptor setInfoFamilyCachingForMeta(TableDescriptor metaDescriptor, final boolean b) {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(metaDescriptor);
-    for (ColumnFamilyDescriptor hcd: metaDescriptor.getColumnFamilies()) {
-      if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
-        builder.modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(hcd)
-                .setBlockCacheEnabled(b)
-                .setInMemory(b)
-                .build());
-      }
-    }
-    return builder.build();
-  }
-
   public void deleteFamilyFromFS(RegionInfo region, byte[] familyName)
       throws IOException {
     deleteFamilyFromFS(rootdir, region, familyName);
@@ -425,7 +389,7 @@ public class MasterFileSystem {
   public void deleteFamilyFromFS(Path rootDir, RegionInfo region, byte[] familyName)
       throws IOException {
     // archive family store files
-    Path tableDir = FSUtils.getTableDir(rootDir, region.getTable());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, region.getTable());
     HFileArchiver.archiveFamily(fs, conf, region, tableDir, familyName);
 
     // delete the family folder
@@ -444,7 +408,7 @@ public class MasterFileSystem {
   public void stop() {
   }
 
-  public void logFileSystemState(Log log) throws IOException {
-    FSUtils.logFileSystemState(fs, rootdir, log);
+  public void logFileSystemState(Logger log) throws IOException {
+    CommonFSUtils.logFileSystemState(fs, rootdir, log);
   }
 }

@@ -27,10 +27,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -39,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -60,7 +57,7 @@ import org.apache.hadoop.hbase.security.visibility.ScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.SimpleScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
-import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
@@ -70,15 +67,23 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithVisibilityLabels implements Configurable {
 
-  private static final Log LOG = LogFactory.getLog(TestImportTSVWithVisibilityLabels.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestImportTSVWithVisibilityLabels.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestImportTSVWithVisibilityLabels.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -120,9 +125,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     conf = util.getConfiguration();
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     conf.set("hbase.superuser", "admin,"+User.getCurrent().getName());
-    conf.setInt("hfile.format.version", 3);
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
+    VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
     util.startMiniCluster();
@@ -157,7 +160,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMROnTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -173,7 +176,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMROnTableWithDeletes() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -225,7 +228,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMROnTableWithBulkload() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -241,7 +244,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testBulkOutputWithTsvImporterTextMapper() throws Exception {
-    final TableName table = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName table = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     String FAMILY = "FAM";
     Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table.getNameAsString()),"hfiles");
     // Prepare the arguments required for the test.
@@ -262,7 +265,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMRWithOutputFormat() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -279,7 +282,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testBulkOutputWithInvalidLabels() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args =
@@ -297,7 +300,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testBulkOutputWithTsvImporterTextMapperWithInvalidLabels() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args =
@@ -448,8 +451,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
           LOG.debug("Getting results " + res.size());
           assertTrue(res.size() == 2);
           List<Cell> kvs = res.listCells();
-          assertTrue(CellUtil.matchingRow(kvs.get(0), Bytes.toBytes("KEY")));
-          assertTrue(CellUtil.matchingRow(kvs.get(1), Bytes.toBytes("KEY")));
+          assertTrue(CellUtil.matchingRows(kvs.get(0), Bytes.toBytes("KEY")));
+          assertTrue(CellUtil.matchingRows(kvs.get(1), Bytes.toBytes("KEY")));
           assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
           assertTrue(CellUtil.matchingValue(kvs.get(1),
               Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
@@ -481,7 +484,6 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   private static int getKVCountFromHfile(FileSystem fs, Path p) throws IOException {
     Configuration conf = util.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, false);
     scanner.seekTo();
     int count = 0;

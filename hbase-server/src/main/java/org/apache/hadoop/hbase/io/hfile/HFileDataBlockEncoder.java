@@ -52,10 +52,9 @@ public interface HFileDataBlockEncoder {
    * @param cell
    * @param encodingCtx
    * @param out
-   * @return unencoded kv size
    * @throws IOException
    */
-  int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException;
 
   /**

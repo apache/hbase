@@ -24,9 +24,9 @@ import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.util.EncryptionTest;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecureProtobufLogReader extends ProtobufLogReader {
 
-  private static final Log LOG = LogFactory.getLog(SecureProtobufLogReader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SecureProtobufLogReader.class);
 
   private Decryptor decryptor = null;
   private static List<String> writerClsNames = new ArrayList<>();
@@ -141,6 +141,7 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
       this.cellDecoder = codec.getDecoder(this.inputStream);
       // We do not support compression with WAL encryption
       this.compressionContext = null;
+      this.byteStringUncompressor = WALCellCodec.getNoneUncompressor();
       this.hasCompression = false;
     } else {
       super.initAfterCompression(cellCodecClsName);

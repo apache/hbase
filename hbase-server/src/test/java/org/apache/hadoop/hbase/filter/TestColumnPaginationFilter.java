@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,15 +19,18 @@ package org.apache.hadoop.hbase.filter;
 
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
 /**
  * Test for the ColumnPaginationFilter, used mainly to test the successful serialization of the filter.
@@ -37,6 +39,11 @@ import org.junit.experimental.categories.Category;
 @Category({FilterTests.class, SmallTests.class})
 public class TestColumnPaginationFilter
 {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestColumnPaginationFilter.class);
+
     private static final byte[] ROW = Bytes.toBytes("row_1_test");
     private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
     private static final byte[] VAL_1 = Bytes.toBytes("a");
@@ -76,8 +83,8 @@ public class TestColumnPaginationFilter
      */
     private void basicFilterTests(ColumnPaginationFilter filter) throws Exception
     {
-      KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
-      assertTrue("basicFilter1", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE_AND_NEXT_COL);
+      KeyValue c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
+      assertTrue("basicFilter1", filter.filterCell(c) == Filter.ReturnCode.INCLUDE_AND_NEXT_COL);
     }
 
     /**

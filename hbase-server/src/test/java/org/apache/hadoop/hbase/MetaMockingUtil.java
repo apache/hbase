@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -66,14 +66,14 @@ public class MetaMockingUtil {
    * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    * @throws IOException
    */
-  public static Result getMetaTableRowResult(HRegionInfo region, final ServerName sn,
-      HRegionInfo splita, HRegionInfo splitb) throws IOException {
+  public static Result getMetaTableRowResult(RegionInfo region, final ServerName sn,
+      RegionInfo splita, RegionInfo splitb) throws IOException {
     List<Cell> kvs = new ArrayList<>();
     if (region != null) {
       kvs.add(new KeyValue(
         region.getRegionName(),
         HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        region.toByteArray()));
+        RegionInfo.toByteArray(region)));
     }
 
     if (sn != null) {
@@ -89,18 +89,18 @@ public class MetaMockingUtil {
       kvs.add(new KeyValue(
           region.getRegionName(),
           HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
-          splita.toByteArray()));
+          RegionInfo.toByteArray(splita)));
     }
 
     if (splitb != null) {
       kvs.add(new KeyValue(
           region.getRegionName(),
           HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
-          splitb.toByteArray()));
+          RegionInfo.toByteArray(splitb)));
     }
 
     //important: sort the kvs so that binary search work
-    Collections.sort(kvs, CellComparator.META_COMPARATOR);
+    Collections.sort(kvs, MetaCellComparator.META_COMPARATOR);
 
     return Result.create(kvs);
   }

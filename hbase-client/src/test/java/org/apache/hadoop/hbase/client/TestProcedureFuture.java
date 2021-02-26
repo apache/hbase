@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
@@ -27,18 +25,25 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
+
 @Category({ClientTests.class, SmallTests.class})
 public class TestProcedureFuture {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedureFuture.class);
+
   private static class TestFuture extends HBaseAdmin.ProcedureFuture<Void> {
     private boolean postOperationResultCalled = false;
     private boolean waitOperationResultCalled = false;
@@ -100,7 +105,7 @@ public class TestProcedureFuture {
    * we are skipping the waitOperationResult() call,
    * since we are getting the procedure result.
    */
-  @Test(timeout=60000)
+  @Test
   public void testWithProcId() throws Exception {
     HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
     TestFuture f = new TestFuture(admin, 100L);
@@ -115,7 +120,7 @@ public class TestProcedureFuture {
   /**
    * Verify that the spin loop for the procedure running works.
    */
-  @Test(timeout=60000)
+  @Test
   public void testWithProcIdAndSpinning() throws Exception {
     final AtomicInteger spinCount = new AtomicInteger(0);
     HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
@@ -142,7 +147,7 @@ public class TestProcedureFuture {
    * When a master return a result without procId,
    * we are skipping the getProcedureResult() call.
    */
-  @Test(timeout=60000)
+  @Test
   public void testWithoutProcId() throws Exception {
     HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
     TestFuture f = new TestFuture(admin, null);
@@ -162,7 +167,7 @@ public class TestProcedureFuture {
    * This happens when the operation calls happens on a "new master" but while we are waiting
    * the operation to be completed, we failover on an "old master".
    */
-  @Test(timeout=60000)
+  @Test
   public void testOnServerWithNoProcedureSupport() throws Exception {
     HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
     TestFuture f = new TestFuture(admin, 100L) {

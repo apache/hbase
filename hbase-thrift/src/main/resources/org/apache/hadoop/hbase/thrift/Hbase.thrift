@@ -192,6 +192,14 @@ exception AlreadyExists {
   1:string message
 }
 
+/**
+ * Specify type of thrift server: thrift and thrift2
+ */
+enum TThriftServerType {
+  ONE = 1,
+  TWO = 2
+}
+
 //
 // Service 
 //
@@ -957,4 +965,11 @@ service Hbase {
     /** Mutation attributes */
     7:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
+   * Get the type of this thrift server.
+   *
+   * @return the type of this thrift server
+   */
+  TThriftServerType getThriftServerType()
 }

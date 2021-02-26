@@ -25,21 +25,31 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestSequenceIdAccounting {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSequenceIdAccounting.class);
+
   private static final byte [] ENCODED_REGION_NAME = Bytes.toBytes("r");
   private static final byte [] FAMILY_NAME = Bytes.toBytes("cf");
+  private static final byte [] META_FAMILY = Bytes.toBytes("METAFAMILY");
   private static final Set<byte[]> FAMILIES;
+  private static final Set<byte[]> META_FAMILY_SET;
   static {
     FAMILIES = new HashSet<>();
     FAMILIES.add(FAMILY_NAME);
+    META_FAMILY_SET = new HashSet<>();
+    META_FAMILY_SET.add(META_FAMILY);
   }
 
   @Test
@@ -49,12 +59,12 @@ public class TestSequenceIdAccounting {
     Map<byte[], Long> m = new HashMap<>();
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     assertEquals(HConstants.NO_SEQNUM, (long)sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES));
-    sida.completeCacheFlush(ENCODED_REGION_NAME);
+    sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     long sequenceid = 1;
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid, true);
     // Only one family so should return NO_SEQNUM still.
     assertEquals(HConstants.NO_SEQNUM, (long)sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES));
-    sida.completeCacheFlush(ENCODED_REGION_NAME);
+    sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     long currentSequenceId = sequenceid;
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid, true);
     final Set<byte[]> otherFamily = new HashSet<>(1);
@@ -62,7 +72,7 @@ public class TestSequenceIdAccounting {
     sida.update(ENCODED_REGION_NAME, FAMILIES, ++sequenceid, true);
     // Should return oldest sequence id in the region.
     assertEquals(currentSequenceId, (long)sida.startCacheFlush(ENCODED_REGION_NAME, otherFamily));
-    sida.completeCacheFlush(ENCODED_REGION_NAME);
+    sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
   }
 
   @Test
@@ -89,7 +99,7 @@ public class TestSequenceIdAccounting {
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     assertTrue(sida.areAllLower(m));
     // Let the flush complete and if we ask if the sequenceid is lower, should be yes since no edits
-    sida.completeCacheFlush(ENCODED_REGION_NAME);
+    sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     m.put(ENCODED_REGION_NAME, sequenceid);
     assertTrue(sida.areAllLower(m));
     // Flush again but add sequenceids while we are flushing.
@@ -102,7 +112,7 @@ public class TestSequenceIdAccounting {
     sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES);
     // The cache flush will clear out all sequenceid accounting by region.
     assertEquals(HConstants.NO_SEQNUM, sida.getLowestSequenceId(ENCODED_REGION_NAME));
-    sida.completeCacheFlush(ENCODED_REGION_NAME);
+    sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     // No new edits have gone in so no sequenceid to work with.
     assertEquals(HConstants.NO_SEQNUM, sida.getLowestSequenceId(ENCODED_REGION_NAME));
     // Make an edit behind all we'll put now into sida.
@@ -111,6 +121,20 @@ public class TestSequenceIdAccounting {
     sida.update(ENCODED_REGION_NAME, FAMILIES, ++sequenceid, true);
     sida.update(ENCODED_REGION_NAME, FAMILIES, ++sequenceid, true);
     assertTrue(sida.areAllLower(m));
+    m.put(ENCODED_REGION_NAME, sequenceid);
+    assertFalse(sida.areAllLower(m));
+
+    // Test the METAFAMILY is filtered in SequenceIdAccounting.lowestUnflushedSequenceIds
+    SequenceIdAccounting meta_sida = new SequenceIdAccounting();
+    Map<byte[], Long> meta_m = new HashMap<>();
+    meta_sida.getOrCreateLowestSequenceIds(ENCODED_REGION_NAME);
+    meta_m.put(ENCODED_REGION_NAME, sequenceid);
+    meta_sida.update(ENCODED_REGION_NAME, META_FAMILY_SET, ++sequenceid, true);
+    meta_sida.update(ENCODED_REGION_NAME, META_FAMILY_SET, ++sequenceid, true);
+    meta_sida.update(ENCODED_REGION_NAME, META_FAMILY_SET, ++sequenceid, true);
+    assertTrue(meta_sida.areAllLower(meta_m));
+    meta_m.put(ENCODED_REGION_NAME, sequenceid);
+    assertTrue(meta_sida.areAllLower(meta_m));
   }
 
   @Test
@@ -125,7 +149,7 @@ public class TestSequenceIdAccounting {
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid++, true);
     assertTrue(sida.findLower(m) == null);
     m.put(ENCODED_REGION_NAME, sida.getLowestSequenceId(ENCODED_REGION_NAME));
-    assertTrue(sida.findLower(m).length == 1);
+    assertTrue(sida.findLower(m).size() == 1);
     m.put(ENCODED_REGION_NAME, sida.getLowestSequenceId(ENCODED_REGION_NAME) - 1);
     assertTrue(sida.findLower(m) == null);
   }

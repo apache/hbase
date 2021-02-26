@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 
@@ -58,7 +58,7 @@ public class MajorCompactionScanQueryMatcher extends DropDeletesCompactionScanQu
     // 7. Delete marker need to be version counted together with puts
     // they affect
     //
-    if (CellUtil.isDelete(typeByte)) {
+    if (PrivateCellUtil.isDelete(typeByte)) {
       if (mvccVersion > maxReadPointToTrackVersions) {
         // We can not drop this delete marker yet, and also we should not use this delete marker to
         // mask any cell yet.

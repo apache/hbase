@@ -23,9 +23,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanDeleteTracker;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.Triple;
 @InterfaceAudience.Private
 public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
 
-  private static final Log LOG = LogFactory.getLog(VisibilityScanDeleteTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(VisibilityScanDeleteTracker.class);
 
   /**
    * This tag is used for the DELETE cell which has no visibility label.
@@ -63,12 +63,12 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
   // Need to track it per ts.
   private List<Triple<List<Tag>, Byte, Long>> visibilityTagsDeleteFamilyVersion = new ArrayList<>();
   private List<Pair<List<Tag>, Byte>> visibilityTagsDeleteColumns;
-  // Tracking as List<List> is to handle same ts cell but different visibility tag. 
+  // Tracking as List<List> is to handle same ts cell but different visibility tag.
   // TODO : Need to handle puts with same ts but different vis tags.
   private List<Pair<List<Tag>, Byte>> visiblityTagsDeleteColumnVersion = new ArrayList<>();
 
-  public VisibilityScanDeleteTracker() {
-    super();
+  public VisibilityScanDeleteTracker(CellComparator comparator) {
+    super(comparator);
   }
 
   @Override
@@ -246,7 +246,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         }
       }
       if (deleteCell != null) {
-        int ret = CellComparator.compareQualifiers(cell, deleteCell);
+        int ret = comparator.compareQualifiers(cell, deleteCell);
         if (ret == 0) {
           if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
             if (visibilityTagsDeleteColumns != null) {

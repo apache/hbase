@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.metrics.impl;
 
+import com.codahale.metrics.Meter;
+
 import java.util.Objects;
 
 import org.apache.yetus.audience.InterfaceAudience;
-
-import com.codahale.metrics.Meter;
 
 /**
  * Dropwizard metrics implementation of {@link org.apache.hadoop.hbase.metrics.Meter}.

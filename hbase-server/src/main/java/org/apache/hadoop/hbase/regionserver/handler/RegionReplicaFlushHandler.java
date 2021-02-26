@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +20,13 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.FlushRegionCallable;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -42,9 +41,9 @@ import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 /**
- * HBASE-11580: With the async wal approach (HBASE-11568), the edits are not persisted to wal in
+ * HBASE-11580: With the async wal approach (HBASE-11568), the edits are not persisted to WAL in
  * secondary region replicas. This means that a secondary region replica can serve some edits from
- * it's memstore that that is still not flushed from primary. We do not want to allow secondary
+ * it's memstore that are still not flushed from primary. We do not want to allow secondary
  * region's seqId to go back in time, when this secondary region is opened elsewhere after a
  * crash or region move. We will trigger a flush cache in the primary region replica and wait
  * for observing a complete flush cycle before marking the region readsEnabled. This handler does
@@ -53,8 +52,7 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
  */
 @InterfaceAudience.Private
 public class RegionReplicaFlushHandler extends EventHandler {
-
-  private static final Log LOG = LogFactory.getLog(RegionReplicaFlushHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionReplicaFlushHandler.class);
 
   private final ClusterConnection connection;
   private final RpcRetryingCallerFactory rpcRetryingCallerFactory;
@@ -83,7 +81,7 @@ public class RegionReplicaFlushHandler extends EventHandler {
     if (t instanceof InterruptedIOException || t instanceof InterruptedException) {
       LOG.error("Caught throwable while processing event " + eventType, t);
     } else if (t instanceof RuntimeException) {
-      server.abort("ServerAborting because a runtime exception was thrown", t);
+      server.abort("Server aborting", t);
     } else {
       // something fishy since we cannot flush the primary region until all retries (retries from
       // rpc times 35 trigger). We cannot close the region since there is no such mechanism to
@@ -96,7 +94,8 @@ public class RegionReplicaFlushHandler extends EventHandler {
     int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     if (numRetries > 10) {
-      int mult = conf.getInt("hbase.client.serverside.retries.multiplier", 10);
+      int mult = conf.getInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER,
+        HConstants.DEFAULT_HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER);
       numRetries = numRetries / mult; // reset if HRS has multiplied this already
     }
     return numRetries;
@@ -110,9 +109,9 @@ public class RegionReplicaFlushHandler extends EventHandler {
     RetryCounter counter = new RetryCounterFactory(maxAttempts, (int)pause).create();
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Attempting to do an RPC to the primary region replica " + ServerRegionReplicaUtil
-        .getRegionInfoForDefaultReplica(region.getRegionInfo()).getEncodedName() + " of region "
-       + region.getRegionInfo().getEncodedName() + " to trigger a flush");
+      LOG.debug("RPC'ing to primary " + ServerRegionReplicaUtil.
+          getRegionInfoForDefaultReplica(region.getRegionInfo()).getRegionNameAsString() +
+        " from " + region.getRegionInfo().getRegionNameAsString() + " to trigger FLUSH");
     }
     while (!region.isClosing() && !region.isClosed()
         && !server.isAborted() && !server.isStopped()) {
@@ -138,23 +137,25 @@ public class RegionReplicaFlushHandler extends EventHandler {
         // then we have to wait for seeing the flush entry. All reads will be rejected until we see
         // a complete flush cycle or replay a region open event
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Successfully triggered a flush of primary region replica "
+          LOG.debug("Triggered flush of primary region replica "
               + ServerRegionReplicaUtil
                 .getRegionInfoForDefaultReplica(region.getRegionInfo()).getEncodedName()
-                + " of region " + region.getRegionInfo().getEncodedName()
-                + " Now waiting and blocking reads until observing a full flush cycle");
+                + " for " + region.getRegionInfo().getEncodedName()
+                + "; now waiting and blocking reads until completes a full flush cycle");
         }
+        region.setReadsEnabled(true);
         break;
       } else {
         if (response.hasWroteFlushWalMarker()) {
           if(response.getWroteFlushWalMarker()) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Successfully triggered an empty flush marker(memstore empty) of primary "
+              LOG.debug("Triggered empty flush marker (memstore empty) on primary "
                   + "region replica " + ServerRegionReplicaUtil
                     .getRegionInfoForDefaultReplica(region.getRegionInfo()).getEncodedName()
-                  + " of region " + region.getRegionInfo().getEncodedName() + " Now waiting and "
+                  + " for " + region.getRegionInfo().getEncodedName() + "; now waiting and "
                   + "blocking reads until observing a flush marker");
             }
+            region.setReadsEnabled(true);
             break;
           } else {
             // somehow we were not able to get the primary to write the flush request. It may be

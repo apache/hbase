@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
+import java.io.IOException;
+import java.util.Random;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.io.compress.Compressor;
-
-import java.io.IOException;
-import java.util.Random;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that changes the compression algorithm on a column family from a list of tables.
@@ -31,10 +32,15 @@ import java.util.Random;
 public class ChangeCompressionAction extends Action {
   private final TableName tableName;
   private final Random random;
+  private static final Logger LOG = LoggerFactory.getLogger(ChangeCompressionAction.class);
 
   public ChangeCompressionAction(TableName tableName) {
     this.tableName = tableName;
     this.random = new Random();
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override
@@ -60,13 +66,13 @@ public class ChangeCompressionAction extends Action {
         algo.returnCompressor(c);
         break;
       } catch (Throwable t) {
-        LOG.info("Performing action: Changing compression algorithms to " + algo +
+        getLogger().info("Performing action: Changing compression algorithms to " + algo +
             " is not supported, pick another one");
       }
     } while (true);
 
     final Algorithm chosenAlgo = algo; // for use in lambda
-    LOG.debug("Performing action: Changing compression algorithms on "
+    getLogger().debug("Performing action: Changing compression algorithms on "
       + tableName.getNameAsString() + " to " + chosenAlgo);
     modifyAllTableColumns(tableName, columnFamilyDescriptorBuilder -> {
       if (random.nextBoolean()) {

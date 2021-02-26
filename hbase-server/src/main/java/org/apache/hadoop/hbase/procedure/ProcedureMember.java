@@ -25,14 +25,14 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
+import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Process to kick off and manage a running {@link Subprocedure} on a member. This is the
@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
  */
 @InterfaceAudience.Private
 public class ProcedureMember implements Closeable {
-  private static final Log LOG = LogFactory.getLog(ProcedureMember.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureMember.class);
 
   final static long KEEP_ALIVE_MILLIS_DEFAULT = 5000;
 
@@ -86,8 +86,9 @@ public class ProcedureMember implements Closeable {
   public static ThreadPoolExecutor defaultPool(String memberName, int procThreads,
       long keepAliveMillis) {
     return new ThreadPoolExecutor(1, procThreads, keepAliveMillis, TimeUnit.MILLISECONDS,
-        new SynchronousQueue<>(),
-        new DaemonThreadFactory("member: '" + memberName + "' subprocedure-pool"));
+      new SynchronousQueue<>(),
+      new ThreadFactoryBuilder().setNameFormat("member: '" + memberName + "' subprocedure-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   /**

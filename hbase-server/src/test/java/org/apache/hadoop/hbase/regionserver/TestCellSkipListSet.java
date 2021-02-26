@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,44 +17,51 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Iterator;
+import java.util.SortedSet;
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-
-import java.util.Iterator;
-import java.util.SortedSet;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestCellSkipListSet extends TestCase {
-  private final CellSet csls =
-    new CellSet(CellComparator.COMPARATOR);
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCellSkipListSet.class);
+
+  private final CellSet csls =
+    new CellSet(CellComparatorImpl.COMPARATOR);
+
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     this.csls.clear();
   }
 
   public void testAdd() throws Exception {
-    byte [] bytes = Bytes.toBytes(getName());
+    byte[] bytes = Bytes.toBytes(getName());
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
     this.csls.add(kv);
     assertTrue(this.csls.contains(kv));
-    assertEquals(1, this.csls.size());
+    assertEquals(1, this.csls.getDelegatee().size());
     Cell first = this.csls.first();
     assertTrue(kv.equals(first));
     assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(),
       first.getValueArray(), first.getValueOffset(), first.getValueLength()));
     // Now try overwritting
-    byte [] overwriteValue = Bytes.toBytes("overwrite");
+    byte[] overwriteValue = Bytes.toBytes("overwrite");
     KeyValue overwrite = new KeyValue(bytes, bytes, bytes, overwriteValue);
     this.csls.add(overwrite);
-    assertEquals(1, this.csls.size());
+    assertEquals(1, this.csls.getDelegatee().size());
     first = this.csls.first();
     assertTrue(Bytes.equals(overwrite.getValueArray(), overwrite.getValueOffset(),
       overwrite.getValueLength(), first.getValueArray(), first.getValueOffset(),

@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An extension of the ByteBufferKeyValue where the tags length is always 0

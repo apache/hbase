@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,32 +22,38 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.TestTableName;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ MediumTests.class })
 public class TestSnapshotClientRetries {
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestSnapshotClientRetries.class);
 
-  @Rule public TestTableName TEST_TABLE = new TestTableName();
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSnapshotClientRetries.class);
+
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotClientRetries.class);
+
+  @Rule public TableNameTestRule testTable = new TableNameTestRule();
 
   @Before
   public void setUp() throws Exception {
@@ -62,18 +67,18 @@ public class TestSnapshotClientRetries {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 60000, expected=SnapshotExistsException.class)
+  @Test(expected=SnapshotExistsException.class)
   public void testSnapshotAlreadyExist() throws Exception {
     final String snapshotName = "testSnapshotAlreadyExist";
-    TEST_UTIL.createTable(TEST_TABLE.getTableName(), "f");
-    TEST_UTIL.getAdmin().snapshot(snapshotName, TEST_TABLE.getTableName());
-    snapshotAndAssertOneRetry(snapshotName, TEST_TABLE.getTableName());
+    TEST_UTIL.createTable(testTable.getTableName(), "f");
+    TEST_UTIL.getAdmin().snapshot(snapshotName, testTable.getTableName());
+    snapshotAndAssertOneRetry(snapshotName, testTable.getTableName());
   }
 
-  @Test(timeout = 60000, expected=SnapshotDoesNotExistException.class)
+  @Test(expected=SnapshotDoesNotExistException.class)
   public void testCloneNonExistentSnapshot() throws Exception {
     final String snapshotName = "testCloneNonExistentSnapshot";
-    cloneAndAssertOneRetry(snapshotName, TEST_TABLE.getTableName());
+    cloneAndAssertOneRetry(snapshotName, testTable.getTableName());
   }
 
   public static class MasterSyncObserver implements MasterCoprocessor, MasterObserver {

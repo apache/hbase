@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A binary comparator which lexicographically compares against the specified
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  * @since 2.0.0
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayComparable {
   /**
    * Constructor
@@ -58,6 +59,7 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
   /**
    * @return The comparator serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     ComparatorProtos.BinaryComparator.Builder builder =
       ComparatorProtos.BinaryComparator.newBuilder();
@@ -87,6 +89,7 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
    * @return true if and only if the fields of the comparator that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
     if (other == this) return true;
     if (!(other instanceof BinaryComparator)) return false;

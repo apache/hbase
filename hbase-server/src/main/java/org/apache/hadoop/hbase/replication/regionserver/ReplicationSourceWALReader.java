@@ -20,56 +20,51 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
 /**
- * Reads and filters WAL entries, groups the filtered entries into batches, and puts the batches onto a queue
- *
+ * Reads and filters WAL entries, groups the filtered entries into batches, and puts the batches
+ * onto a queue
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class ReplicationSourceWALReader extends Thread {
-  private static final Log LOG = LogFactory.getLog(ReplicationSourceWALReader.class);
+class ReplicationSourceWALReader extends Thread {
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceWALReader.class);
 
-  private final PriorityBlockingQueue<Path> logQueue;
+  private final ReplicationSourceLogQueue logQueue;
   private final FileSystem fs;
   private final Configuration conf;
   private final WALEntryFilter filter;
   private final ReplicationSource source;
 
-  protected final BlockingQueue<WALEntryBatch> entryBatchQueue;
+  @InterfaceAudience.Private
+  final BlockingQueue<WALEntryBatch> entryBatchQueue;
   // max (heap) size of each batch - multiply by number of batches in queue to get total
   private final long replicationBatchSizeCapacity;
   // max count of each batch - multiply by number of batches in queue to get total
-  protected final int replicationBatchCountCapacity;
+  private final int replicationBatchCountCapacity;
   // position in the WAL to start reading at
   private long currentPosition;
   private final long sleepForRetries;
@@ -81,6 +76,7 @@ public class ReplicationSourceWALReader extends Thread {
 
   private AtomicLong totalBufferUsed;
   private long totalBufferQuota;
+  private final String walGroupId;
 
   /**
    * Creates a reader worker for a given WAL queue. Reads WAL entries off a given queue, batches the
@@ -93,8 +89,8 @@ public class ReplicationSourceWALReader extends Thread {
    * @param source replication source
    */
   public ReplicationSourceWALReader(FileSystem fs, Configuration conf,
-      PriorityBlockingQueue<Path> logQueue, long startPosition, WALEntryFilter filter,
-      ReplicationSource source) {
+      ReplicationSourceLogQueue logQueue, long startPosition, WALEntryFilter filter,
+      ReplicationSource source, String walGroupId) {
     this.logQueue = logQueue;
     this.currentPosition = startPosition;
     this.fs = fs;
@@ -108,15 +104,15 @@ public class ReplicationSourceWALReader extends Thread {
     // the +1 is for the current thread reading before placing onto the queue
     int batchCount = conf.getInt("replication.source.nb.batches", 1);
     this.totalBufferUsed = source.getSourceManager().getTotalBufferUsed();
-    this.totalBufferQuota = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
-      HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
+    this.totalBufferQuota = source.getSourceManager().getTotalBufferLimit();
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
     this.maxRetriesMultiplier =
         this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
     this.eofAutoRecovery = conf.getBoolean("replication.source.eof.autorecovery", false);
     this.entryBatchQueue = new LinkedBlockingQueue<>(batchCount);
-    LOG.info("peerClusterZnode=" + source.getPeerClusterZnode()
+    this.walGroupId = walGroupId;
+    LOG.info("peerClusterZnode=" + source.getQueueId()
         + ", ReplicationSourceWALReaderThread : " + source.getPeerId()
         + " inited, replicationBatchSizeCapacity=" + replicationBatchSizeCapacity
         + ", replicationBatchCountCapacity=" + replicationBatchCountCapacity
@@ -126,150 +122,242 @@ public class ReplicationSourceWALReader extends Thread {
   @Override
   public void run() {
     int sleepMultiplier = 1;
-    while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
-      try (WALEntryStream entryStream = new WALEntryStream(logQueue, fs, conf, currentPosition,
-          source.getWALFileLengthProvider(), source.getSourceMetrics())) {
-        while (isReaderRunning()) { // loop here to keep reusing stream while we can
-          if (!checkQuota()) {
-            continue;
-          }
-          WALEntryBatch batch = readWALEntries(entryStream);
-          if (batch != null && (!batch.getLastSeqIds().isEmpty() || batch.getNbEntries() > 0)) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace(String.format("Read %s WAL entries eligible for replication",
-                batch.getNbEntries()));
+    WALEntryBatch batch = null;
+    WALEntryStream entryStream = null;
+    try {
+      // we only loop back here if something fatal happened to our stream
+      while (isReaderRunning()) {
+        try {
+          entryStream =
+            new WALEntryStream(logQueue, conf, currentPosition, source.getWALFileLengthProvider(),
+              source.getServerWALsBelongTo(), source.getSourceMetrics(), walGroupId);
+          while (isReaderRunning()) { // loop here to keep reusing stream while we can
+            if (!source.isPeerEnabled()) {
+              Threads.sleep(sleepForRetries);
+              continue;
             }
-            entryBatchQueue.put(batch);
-            sleepMultiplier = 1;
-          } else { // got no entries and didn't advance position in WAL
-            handleEmptyWALEntryBatch(batch, entryStream.getCurrentPath());
+            if (!checkQuota()) {
+              continue;
+            }
+
+            batch = createBatch(entryStream);
+            batch = readWALEntries(entryStream, batch);
+            currentPosition = entryStream.getPosition();
+            if (batch == null) {
+              // either the queue have no WAL to read
+              // or got no new entries (didn't advance position in WAL)
+              handleEmptyWALEntryBatch();
+              entryStream.reset(); // reuse stream
+            } else {
+              addBatchToShippingQueue(batch);
+            }
           }
-          currentPosition = entryStream.getPosition();
-          entryStream.reset(); // reuse stream
+        } catch (IOException e) { // stream related
+          if (handleEofException(e, batch)) {
+            sleepMultiplier = 1;
+          } else {
+            LOG.warn("Failed to read stream of replication entries", e);
+            if (sleepMultiplier < maxRetriesMultiplier) {
+              sleepMultiplier++;
+            }
+            Threads.sleep(sleepForRetries * sleepMultiplier);
+          }
+        } catch (InterruptedException e) {
+          LOG.trace("Interrupted while sleeping between WAL reads");
+          Thread.currentThread().interrupt();
+        } finally {
+          entryStream.close();
         }
-      } catch (IOException e) { // stream related
-        if (sleepMultiplier < maxRetriesMultiplier) {
-          LOG.debug("Failed to read stream of replication entries: " + e);
-          sleepMultiplier++;
-        } else {
-          LOG.error("Failed to read stream of replication entries", e);
-          handleEofException(e);
-        }
-        Threads.sleep(sleepForRetries * sleepMultiplier);
-      } catch (InterruptedException e) {
-        LOG.trace("Interrupted while sleeping between WAL reads");
-        Thread.currentThread().interrupt();
       }
+    } catch (IOException e) {
+      if (sleepMultiplier < maxRetriesMultiplier) {
+        LOG.debug("Failed to read stream of replication entries: " + e);
+        sleepMultiplier++;
+      } else {
+        LOG.error("Failed to read stream of replication entries", e);
+      }
+      Threads.sleep(sleepForRetries * sleepMultiplier);
+    } catch (InterruptedException e) {
+      LOG.trace("Interrupted while sleeping between WAL reads");
+      Thread.currentThread().interrupt();
     }
   }
 
-  private WALEntryBatch readWALEntries(WALEntryStream entryStream) throws IOException {
-    WALEntryBatch batch = null;
-    while (entryStream.hasNext()) {
-      if (batch == null) {
-        batch = new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath());
+  // returns true if we reach the size limit for batch, i.e, we need to finish the batch and return.
+  protected final boolean addEntryToBatch(WALEntryBatch batch, Entry entry) {
+    WALEdit edit = entry.getEdit();
+    if (edit == null || edit.isEmpty()) {
+      LOG.debug("Edit null or empty for entry {} ", entry);
+      return false;
+    }
+    LOG.debug("updating TimeStampOfLastAttempted to {}, from entry {}, for source queue: {}",
+        entry.getKey().getWriteTime(), entry.getKey(), this.source.getQueueId());
+    long entrySize = getEntrySizeIncludeBulkLoad(entry);
+    long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
+    batch.addEntry(entry, entrySize);
+    updateBatchStats(batch, entry, entrySize);
+    boolean totalBufferTooLarge = acquireBufferQuota(entrySizeExcludeBulkLoad);
+
+    // Stop if too many entries or too big
+    return totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity ||
+      batch.getNbEntries() >= replicationBatchCountCapacity;
+  }
+
+  protected static final boolean switched(WALEntryStream entryStream, Path path) {
+    Path newPath = entryStream.getCurrentPath();
+    return newPath == null || !path.getName().equals(newPath.getName());
+  }
+
+  // We need to get the WALEntryBatch from the caller so we can add entries in there
+  // This is required in case there is any exception in while reading entries
+  // we do want to loss the existing entries in the batch
+  protected WALEntryBatch readWALEntries(WALEntryStream entryStream,
+      WALEntryBatch batch) throws IOException, InterruptedException {
+    Path currentPath = entryStream.getCurrentPath();
+    if (!entryStream.hasNext()) {
+      // check whether we have switched a file
+      if (currentPath != null && switched(entryStream, currentPath)) {
+        return WALEntryBatch.endOfFile(currentPath);
+      } else {
+        // This would mean either no more files in the queue
+        // or there is no new data yet on the current wal
+        return null;
       }
+    }
+    if (currentPath != null) {
+      if (switched(entryStream, currentPath)) {
+        return WALEntryBatch.endOfFile(currentPath);
+      }
+    } else {
+      // when reading from the entry stream first time we will enter here
+      currentPath = entryStream.getCurrentPath();
+    }
+    batch.setLastWalPath(currentPath);
+    for (;;) {
       Entry entry = entryStream.next();
-      if (updateSerialReplPos(batch, entry)) {
-        batch.lastWalPosition = entryStream.getPosition();
-        break;
-      }
+      batch.setLastWalPosition(entryStream.getPosition());
       entry = filterEntry(entry);
       if (entry != null) {
-        WALEdit edit = entry.getEdit();
-        if (edit != null && !edit.isEmpty()) {
-          long entrySize = getEntrySize(entry);
-          batch.addEntry(entry);
-          updateBatchStats(batch, entry, entryStream.getPosition(), entrySize);
-          boolean totalBufferTooLarge = acquireBufferQuota(entrySize);
-          // Stop if too many entries or too big
-          if (totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity
-              || batch.getNbEntries() >= replicationBatchCountCapacity) {
-            break;
-          }
+        if (addEntryToBatch(batch, entry)) {
+          break;
         }
+      }
+      boolean hasNext = entryStream.hasNext();
+      // always return if we have switched to a new file
+      if (switched(entryStream, currentPath)) {
+        batch.setEndOfFile(true);
+        break;
+      }
+      if (!hasNext) {
+        break;
       }
     }
     return batch;
   }
 
-  protected void handleEmptyWALEntryBatch(WALEntryBatch batch, Path currentPath)
-      throws InterruptedException {
+  private void handleEmptyWALEntryBatch() throws InterruptedException {
     LOG.trace("Didn't read any new entries from WAL");
-    Thread.sleep(sleepForRetries);
+    if (logQueue.getQueue(walGroupId).isEmpty()) {
+      // we're done with current queue, either this is a recovered queue, or it is the special group
+      // for a sync replication peer and the peer has been transited to DA or S state.
+      LOG.debug("Stopping the replication source wal reader");
+      setReaderRunning(false);
+      // shuts down shipper thread immediately
+      entryBatchQueue.put(WALEntryBatch.NO_MORE_DATA);
+    } else {
+      Thread.sleep(sleepForRetries);
+    }
   }
 
-  // if we get an EOF due to a zero-length log, and there are other logs in queue
-  // (highly likely we've closed the current log), we've hit the max retries, and autorecovery is
-  // enabled, then dump the log
-  private void handleEofException(IOException e) {
-    if (e instanceof EOFException ||
-        e.getCause() instanceof EOFException && logQueue.size() > 1 && this.eofAutoRecovery) {
+  /**
+   * This is to handle the EOFException from the WAL entry stream. EOFException should
+   * be handled carefully because there are chances of data loss because of never replicating
+   * the data. Thus we should always try to ship existing batch of entries here.
+   * If there was only one log in the queue before EOF, we ship the empty batch here
+   * and since reader is still active, in the next iteration of reader we will
+   * stop the reader.
+   * If there was more than one log in the queue before EOF, we ship the existing batch
+   * and reset the wal patch and position to the log with EOF, so shipper can remove
+   * logs from replication queue
+   * @return true only the IOE can be handled
+   */
+  private boolean handleEofException(IOException e, WALEntryBatch batch)
+      throws InterruptedException {
+    PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
+    // Dump the log even if logQueue size is 1 if the source is from recovered Source
+    // since we don't add current log to recovered source queue so it is safe to remove.
+    if ((e instanceof EOFException || e.getCause() instanceof EOFException)
+      && (source.isRecovered() || queue.size() > 1)
+      && this.eofAutoRecovery) {
+      Path head = queue.peek();
       try {
-        if (fs.getFileStatus(logQueue.peek()).getLen() == 0) {
-          LOG.warn("Forcing removal of 0 length log in queue: " + logQueue.peek());
-          logQueue.remove();
+        if (fs.getFileStatus(head).getLen() == 0) {
+          // head of the queue is an empty log file
+          LOG.warn("Forcing removal of 0 length log in queue: {}", head);
+          logQueue.remove(walGroupId);
           currentPosition = 0;
+          // After we removed the WAL from the queue, we should
+          // try shipping the existing batch of entries and set the wal position
+          // and path to the wal just dequeued to correctly remove logs from the zk
+          batch.setLastWalPath(head);
+          batch.setLastWalPosition(currentPosition);
+          addBatchToShippingQueue(batch);
+          return true;
         }
       } catch (IOException ioe) {
-        LOG.warn("Couldn't get file length information about log " + logQueue.peek());
+        LOG.warn("Couldn't get file length information about log {}", queue.peek());
       }
     }
+    return false;
+  }
+
+  /**
+   * Update the batch try to ship and return true if shipped
+   * @param batch Batch of entries to ship
+   * @throws InterruptedException throws interrupted exception
+   * @throws IOException throws io exception from stream
+   */
+  private void addBatchToShippingQueue(WALEntryBatch batch)
+    throws InterruptedException, IOException {
+    // need to propagate the batch even it has no entries since it may carry the last
+    // sequence id information for serial replication.
+    LOG.debug("Read {} WAL entries eligible for replication", batch.getNbEntries());
+    entryBatchQueue.put(batch);
   }
 
   public Path getCurrentPath() {
     // if we've read some WAL entries, get the Path we read from
     WALEntryBatch batchQueueHead = entryBatchQueue.peek();
     if (batchQueueHead != null) {
-      return batchQueueHead.lastWalPath;
+      return batchQueueHead.getLastWalPath();
     }
     // otherwise, we must be currently reading from the head of the log queue
-    return logQueue.peek();
+    return logQueue.getQueue(walGroupId).peek();
   }
 
   //returns false if we've already exceeded the global quota
   private boolean checkQuota() {
     // try not to go over total quota
     if (totalBufferUsed.get() > totalBufferQuota) {
+      LOG.warn("peer={}, can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
+          this.source.getPeerId(), totalBufferUsed.get(), totalBufferQuota);
       Threads.sleep(sleepForRetries);
       return false;
     }
     return true;
   }
 
-  private Entry filterEntry(Entry entry) {
+  protected final WALEntryBatch createBatch(WALEntryStream entryStream) {
+    return new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath());
+  }
+
+  protected final Entry filterEntry(Entry entry) {
     Entry filtered = filter.filter(entry);
-    if (entry != null && filtered == null) {
+    if (entry != null && (filtered == null || filtered.getEdit().size() == 0)) {
+      LOG.debug("Filtered entry for replication: {}", entry);
       source.getSourceMetrics().incrLogEditsFiltered();
     }
     return filtered;
-  }
-
-  /**
-   * @return true if we should stop reading because we're at REGION_CLOSE
-   */
-  private boolean updateSerialReplPos(WALEntryBatch batch, Entry entry) throws IOException {
-    if (entry.hasSerialReplicationScope()) {
-      String key = Bytes.toString(entry.getKey().getEncodedRegionName());
-      batch.setLastPosition(key, entry.getKey().getSequenceId());
-      if (!entry.getEdit().getCells().isEmpty()) {
-        WALProtos.RegionEventDescriptor maybeEvent =
-            WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
-        if (maybeEvent != null && maybeEvent
-            .getEventType() == WALProtos.RegionEventDescriptor.EventType.REGION_CLOSE) {
-          // In serially replication, if we move a region to another RS and move it back, we may
-          // read logs crossing two sections. We should break at REGION_CLOSE and push the first
-          // section first in case of missing the middle section belonging to the other RS.
-          // In a worker thread, if we can push the first log of a region, we can push all logs
-          // in the same region without waiting until we read a close marker because next time
-          // we read logs in this region, it must be a new section and not adjacent with this
-          // region. Mark it negative.
-          batch.setLastPosition(key, -entry.getKey().getSequenceId());
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   /**
@@ -282,20 +370,28 @@ public class ReplicationSourceWALReader extends Thread {
     return entryBatchQueue.take();
   }
 
-  private long getEntrySize(Entry entry) {
-    WALEdit edit = entry.getEdit();
-    return edit.heapSize() + calculateTotalSizeOfStoreFiles(edit);
+  public WALEntryBatch poll(long timeout) throws InterruptedException {
+    return entryBatchQueue.poll(timeout, TimeUnit.MILLISECONDS);
   }
 
-  private void updateBatchStats(WALEntryBatch batch, Entry entry, long entryPosition, long entrySize) {
+  private long getEntrySizeIncludeBulkLoad(Entry entry) {
     WALEdit edit = entry.getEdit();
-    if (edit != null && !edit.isEmpty()) {
-      batch.incrementHeapSize(entrySize);
-      Pair<Integer, Integer> nbRowsAndHFiles = countDistinctRowKeysAndHFiles(edit);
-      batch.incrementNbRowKeys(nbRowsAndHFiles.getFirst());
-      batch.incrementNbHFiles(nbRowsAndHFiles.getSecond());
-    }
-    batch.lastWalPosition = entryPosition;
+    return  getEntrySizeExcludeBulkLoad(entry) + sizeOfStoreFilesIncludeBulkLoad(edit);
+  }
+
+  public static long getEntrySizeExcludeBulkLoad(Entry entry) {
+    WALEdit edit = entry.getEdit();
+    WALKey key = entry.getKey();
+    return edit.heapSize() + key.estimatedSerializedSizeOf();
+  }
+
+
+  private void updateBatchStats(WALEntryBatch batch, Entry entry, long entrySize) {
+    WALEdit edit = entry.getEdit();
+    batch.incrementHeapSize(entrySize);
+    Pair<Integer, Integer> nbRowsAndHFiles = countDistinctRowKeysAndHFiles(edit);
+    batch.incrementNbRowKeys(nbRowsAndHFiles.getFirst());
+    batch.incrementNbHFiles(nbRowsAndHFiles.getSecond());
   }
 
   /**
@@ -342,7 +438,7 @@ public class ReplicationSourceWALReader extends Thread {
    * @param edit edit to count row keys from
    * @return the total size of the store files
    */
-  private int calculateTotalSizeOfStoreFiles(WALEdit edit) {
+  private int sizeOfStoreFilesIncludeBulkLoad(WALEdit edit) {
     List<Cell> cells = edit.getCells();
     int totalStoreFilesSize = 0;
 
@@ -354,7 +450,8 @@ public class ReplicationSourceWALReader extends Thread {
           List<StoreDescriptor> stores = bld.getStoresList();
           int totalStores = stores.size();
           for (int j = 0; j < totalStores; j++) {
-            totalStoreFilesSize += stores.get(j).getStoreFileSizeBytes();
+            totalStoreFilesSize =
+                (int) (totalStoreFilesSize + stores.get(j).getStoreFileSizeBytes());
           }
         } catch (IOException e) {
           LOG.error("Failed to deserialize bulk load entry from wal edit. "
@@ -372,7 +469,10 @@ public class ReplicationSourceWALReader extends Thread {
    * @return true if we should clear buffer and push all
    */
   private boolean acquireBufferQuota(long size) {
-    return totalBufferUsed.addAndGet(size) >= totalBufferQuota;
+    long newBufferUsed = totalBufferUsed.addAndGet(size);
+    // Record the new buffer usage
+    this.source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    return newBufferUsed >= totalBufferQuota;
   }
 
   /**
@@ -387,115 +487,5 @@ public class ReplicationSourceWALReader extends Thread {
    */
   public void setReaderRunning(boolean readerRunning) {
     this.isReaderRunning = readerRunning;
-  }
-
-  /**
-   * Holds a batch of WAL entries to replicate, along with some statistics
-   *
-   */
-  static class WALEntryBatch {
-    private List<Entry> walEntries;
-    // last WAL that was read
-    private Path lastWalPath;
-    // position in WAL of last entry in this batch
-    private long lastWalPosition = 0;
-    // number of distinct row keys in this batch
-    private int nbRowKeys = 0;
-    // number of HFiles
-    private int nbHFiles = 0;
-    // heap size of data we need to replicate
-    private long heapSize = 0;
-    // save the last sequenceid for each region if the table has serial-replication scope
-    private Map<String, Long> lastSeqIds = new HashMap<>();
-
-    /**
-     * @param walEntries
-     * @param lastWalPath Path of the WAL the last entry in this batch was read from
-     * @param lastWalPosition Position in the WAL the last entry in this batch was read from
-     */
-    WALEntryBatch(int maxNbEntries, Path lastWalPath) {
-      this.walEntries = new ArrayList<>(maxNbEntries);
-      this.lastWalPath = lastWalPath;
-    }
-
-    public void addEntry(Entry entry) {
-      walEntries.add(entry);
-    }
-
-    /**
-     * @return the WAL Entries.
-     */
-    public List<Entry> getWalEntries() {
-      return walEntries;
-    }
-
-    /**
-     * @return the path of the last WAL that was read.
-     */
-    public Path getLastWalPath() {
-      return lastWalPath;
-    }
-
-    /**
-     * @return the position in the last WAL that was read.
-     */
-    public long getLastWalPosition() {
-      return lastWalPosition;
-    }
-
-    public int getNbEntries() {
-      return walEntries.size();
-    }
-
-    /**
-     * @return the number of distinct row keys in this batch
-     */
-    public int getNbRowKeys() {
-      return nbRowKeys;
-    }
-
-    /**
-     * @return the number of HFiles in this batch
-     */
-    public int getNbHFiles() {
-      return nbHFiles;
-    }
-
-    /**
-     * @return total number of operations in this batch
-     */
-    public int getNbOperations() {
-      return getNbRowKeys() + getNbHFiles();
-    }
-
-    /**
-     * @return the heap size of this batch
-     */
-    public long getHeapSize() {
-      return heapSize;
-    }
-
-    /**
-     * @return the last sequenceid for each region if the table has serial-replication scope
-     */
-    public Map<String, Long> getLastSeqIds() {
-      return lastSeqIds;
-    }
-
-    private void incrementNbRowKeys(int increment) {
-      nbRowKeys += increment;
-    }
-
-    private void incrementNbHFiles(int increment) {
-      nbHFiles += increment;
-    }
-
-    private void incrementHeapSize(long increment) {
-      heapSize += increment;
-    }
-
-    private void setLastPosition(String region, Long sequenceId) {
-      getLastSeqIds().put(region, sequenceId);
-    }
   }
 }

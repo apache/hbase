@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.base.Preconditions;
-
 import java.util.concurrent.TimeUnit;
-
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 /**
  * The implementation of {@link AsyncBufferedMutatorBuilder}.
@@ -29,14 +29,23 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class AsyncBufferedMutatorBuilderImpl implements AsyncBufferedMutatorBuilder {
 
-  private final AsyncTableBuilder<? extends AsyncTableBase> tableBuilder;
+  private final HashedWheelTimer periodicalFlushTimer;
+
+  private final AsyncTableBuilder<?> tableBuilder;
 
   private long writeBufferSize;
 
+  private long periodicFlushTimeoutNs;
+
+  private int maxKeyValueSize;
+
   public AsyncBufferedMutatorBuilderImpl(AsyncConnectionConfiguration connConf,
-      AsyncTableBuilder<? extends AsyncTableBase> tableBuilder) {
+      AsyncTableBuilder<?> tableBuilder, HashedWheelTimer periodicalFlushTimer) {
     this.tableBuilder = tableBuilder;
     this.writeBufferSize = connConf.getWriteBufferSize();
+    this.periodicFlushTimeoutNs = connConf.getWriteBufferPeriodicFlushTimeoutNs();
+    this.maxKeyValueSize = connConf.getMaxKeyValueSize();
+    this.periodicalFlushTimer = periodicalFlushTimer;
   }
 
   @Override
@@ -71,15 +80,29 @@ class AsyncBufferedMutatorBuilderImpl implements AsyncBufferedMutatorBuilder {
 
   @Override
   public AsyncBufferedMutatorBuilder setWriteBufferSize(long writeBufferSize) {
-    Preconditions.checkArgument(writeBufferSize > 0, "writeBufferSize %d must be >= 0",
+    Preconditions.checkArgument(writeBufferSize > 0, "writeBufferSize %d must be > 0",
       writeBufferSize);
     this.writeBufferSize = writeBufferSize;
     return this;
   }
 
   @Override
-  public AsyncBufferedMutator build() {
-    return new AsyncBufferedMutatorImpl(tableBuilder.build(), writeBufferSize);
+  public AsyncBufferedMutatorBuilder setWriteBufferPeriodicFlush(long timeout, TimeUnit unit) {
+    this.periodicFlushTimeoutNs = unit.toNanos(timeout);
+    return this;
   }
 
+  @Override
+  public AsyncBufferedMutatorBuilder setMaxKeyValueSize(int maxKeyValueSize) {
+    Preconditions.checkArgument(maxKeyValueSize > 0, "maxKeyValueSize %d must be > 0",
+      maxKeyValueSize);
+    this.maxKeyValueSize = maxKeyValueSize;
+    return this;
+  }
+
+  @Override
+  public AsyncBufferedMutator build() {
+    return new AsyncBufferedMutatorImpl(periodicalFlushTimer, tableBuilder.build(), writeBufferSize,
+      periodicFlushTimeoutNs, maxKeyValueSize);
+  }
 }

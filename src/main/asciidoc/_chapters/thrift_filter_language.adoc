@@ -28,7 +28,7 @@
 :experimental:
 
 
-Apache link:http://thrift.apache.org/[Thrift] is a cross-platform, cross-language development framework.
+Apache link:https://thrift.apache.org/[Thrift] is a cross-platform, cross-language development framework.
 HBase includes a Thrift API and filter language.
 The Thrift API relies on client and server processes.
 

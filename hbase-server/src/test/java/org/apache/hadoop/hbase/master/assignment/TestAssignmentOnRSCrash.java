@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
@@ -23,10 +22,8 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -41,12 +38,20 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestAssignmentOnRSCrash {
-  private static final Log LOG = LogFactory.getLog(TestAssignmentOnRSCrash.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAssignmentOnRSCrash.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentOnRSCrash.class);
 
   private static final TableName TEST_TABLE = TableName.valueOf("testb");
   private static final String FAMILY_STR = "f";
@@ -77,22 +82,22 @@ public class TestAssignmentOnRSCrash {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testKillRsWithUserRegionWithData() throws Exception {
     testCrashRsWithUserRegion(true, true);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testKillRsWithUserRegionWithoutData() throws Exception {
     testCrashRsWithUserRegion(true, false);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStopRsWithUserRegionWithData() throws Exception {
     testCrashRsWithUserRegion(false, true);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStopRsWithUserRegionWithoutData() throws Exception {
     testCrashRsWithUserRegion(false, false);
   }
@@ -128,12 +133,12 @@ public class TestAssignmentOnRSCrash {
     assertTrue("expected RSs to be killed", nkilled > 0);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testKillRsWithMetaRegion() throws Exception {
     testCrashRsWithMetaRegion(true);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testStopRsWithMetaRegion() throws Exception {
     testCrashRsWithMetaRegion(false);
   }

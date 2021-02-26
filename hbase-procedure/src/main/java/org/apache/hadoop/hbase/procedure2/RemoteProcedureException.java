@@ -19,11 +19,12 @@ package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
-import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 
 /**
  * A RemoteProcedureException is an exception from another thread or process.
@@ -40,7 +41,6 @@ import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 @InterfaceStability.Evolving
 @SuppressWarnings("serial")
 public class RemoteProcedureException extends ProcedureException {
-
   /**
    * Name of the throwable's source such as a host or thread name.  Must be non-null.
    */
@@ -49,8 +49,8 @@ public class RemoteProcedureException extends ProcedureException {
   /**
    * Create a new RemoteProcedureException that can be serialized.
    * It is assumed that this came form a local source.
-   * @param source
-   * @param cause
+   * @param source the host or thread name of the source
+   * @param cause the actual cause of the exception
    */
   public RemoteProcedureException(String source, Throwable cause) {
     super(cause);
@@ -74,6 +74,10 @@ public class RemoteProcedureException extends ProcedureException {
     return new Exception(cause);
   }
 
+  // NOTE: Does not throw DoNotRetryIOE because it does not
+  // have access (DNRIOE is in the client module). Use
+  // MasterProcedureUtil.unwrapRemoteIOException if need to
+  // throw DNRIOE.
   public IOException unwrapRemoteIOException() {
     final Exception cause = unwrapRemoteException();
     if (cause instanceof IOException) {
@@ -100,9 +104,9 @@ public class RemoteProcedureException extends ProcedureException {
 
   /**
    * Takes a series of bytes and tries to generate an RemoteProcedureException instance for it.
-   * @param bytes
+   * @param bytes the bytes to generate the {@link RemoteProcedureException} from
    * @return the ForeignExcpetion instance
-   * @throws InvalidProtocolBufferException if there was deserialization problem this is thrown.
+   * @throws IOException if there was deserialization problem this is thrown.
    */
   public static RemoteProcedureException deserialize(byte[] bytes) throws IOException {
     return fromProto(ForeignExceptionMessage.parseFrom(bytes));

@@ -20,35 +20,32 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
-import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 
 /**
  * Test the scenario where a HRegionServer#scan() call, while scanning, timeout at client side and
@@ -56,7 +53,12 @@ import org.junit.rules.TestName;
  */
 @Category({MediumTests.class, ClientTests.class})
 public class TestClientScannerRPCTimeout {
-  private static final Log LOG = LogFactory.getLog(TestClientScannerRPCTimeout.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestClientScannerRPCTimeout.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestClientScannerRPCTimeout.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
@@ -69,9 +71,6 @@ public class TestClientScannerRPCTimeout {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)AbstractRpcClient.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     Configuration conf = TEST_UTIL.getConfiguration();
     // Don't report so often so easier to see other rpcs
     conf.setInt("hbase.regionserver.msginterval", 3 * 10000);
@@ -141,11 +140,12 @@ public class TestClientScannerRPCTimeout {
   }
 
   private static class RegionServerWithScanTimeout extends MiniHBaseClusterRegionServer {
-    public RegionServerWithScanTimeout(Configuration conf, CoordinatedStateManager cp)
+    public RegionServerWithScanTimeout(Configuration conf)
         throws IOException, InterruptedException {
-      super(conf, cp);
+      super(conf);
     }
 
+    @Override
     protected RSRpcServices createRpcServices() throws IOException {
       return new RSRpcServicesWithScanTimeout(this);
     }
@@ -168,7 +168,7 @@ public class TestClientScannerRPCTimeout {
         throws ServiceException {
       if (request.hasScannerId()) {
         ScanResponse scanResponse = super.scan(controller, request);
-        if (this.tableScannerId == request.getScannerId() && 
+        if (this.tableScannerId == request.getScannerId() &&
             (sleepAlways || (!slept && seqNoToSleepOn == request.getNextCallSeq()))) {
           try {
             LOG.info("SLEEPING " + (rpcTimeout + 500));

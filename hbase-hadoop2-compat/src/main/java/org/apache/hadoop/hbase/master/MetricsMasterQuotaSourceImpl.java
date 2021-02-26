@@ -19,20 +19,21 @@ package org.apache.hadoop.hbase.master;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Implementation of {@link MetricsMasterQuotaSource} which writes the values passed in via the
  * interface to the metrics backend.
  */
 @InterfaceAudience.Private
-public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl implements MetricsMasterQuotaSource {
+public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl
+        implements MetricsMasterQuotaSource {
   private final MetricsMasterWrapper wrapper;
   private final MutableGaugeLong spaceQuotasGauge;
   private final MutableGaugeLong tablesViolatingQuotasGauge;

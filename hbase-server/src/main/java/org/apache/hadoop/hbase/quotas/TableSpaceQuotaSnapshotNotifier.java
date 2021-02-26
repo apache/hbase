@@ -17,19 +17,20 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link SpaceQuotaSnapshotNotifier} which uses the hbase:quota table.
  */
+@InterfaceAudience.Private
 public class TableSpaceQuotaSnapshotNotifier implements SpaceQuotaSnapshotNotifier {
-  private static final Log LOG = LogFactory.getLog(TableSpaceQuotaSnapshotNotifier.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableSpaceQuotaSnapshotNotifier.class);
 
   private Connection conn;
 

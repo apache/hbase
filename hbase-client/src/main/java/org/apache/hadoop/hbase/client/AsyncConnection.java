@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -49,32 +52,47 @@ public interface AsyncConnection extends Closeable {
   AsyncTableRegionLocator getRegionLocator(TableName tableName);
 
   /**
-   * Retrieve an {@link RawAsyncTable} implementation for accessing a table.
+   * Clear all the entries in the region location cache, for all the tables.
+   * <p/>
+   * If you only want to clear the cache for a specific table, use
+   * {@link AsyncTableRegionLocator#clearRegionLocationCache()}.
+   * <p/>
+   * This may cause performance issue so use it with caution.
+   */
+  void clearRegionLocationCache();
+
+  /**
+   * Retrieve an {@link AsyncTable} implementation for accessing a table.
    * <p>
-   * The returned instance will use default configs. Use {@link #getRawTableBuilder(TableName)} if you
-   * want to customize some configs.
+   * The returned instance will use default configs. Use {@link #getTableBuilder(TableName)} if
+   * you want to customize some configs.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
+   * <p>
+   * The returned {@code CompletableFuture} will be finished directly in the rpc framework's
+   * callback thread, so typically you should not do any time consuming work inside these methods.
+   * And also the observer style scan API will use {@link AdvancedScanResultConsumer} which is
+   * designed for experts only. Only use it when you know what you are doing.
    * @param tableName the name of the table
-   * @return an RawAsyncTable to use for interactions with this table
-   * @see #getRawTableBuilder(TableName)
+   * @return an AsyncTable to use for interactions with this table
+   * @see #getTableBuilder(TableName)
    */
-  default RawAsyncTable getRawTable(TableName tableName) {
-    return getRawTableBuilder(tableName).build();
+  default AsyncTable<AdvancedScanResultConsumer> getTable(TableName tableName) {
+    return getTableBuilder(tableName).build();
   }
 
   /**
-   * Returns an {@link AsyncTableBuilder} for creating {@link RawAsyncTable}.
+   * Returns an {@link AsyncTableBuilder} for creating {@link AsyncTable}.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
    * @param tableName the name of the table
    */
-  AsyncTableBuilder<RawAsyncTable> getRawTableBuilder(TableName tableName);
+  AsyncTableBuilder<AdvancedScanResultConsumer> getTableBuilder(TableName tableName);
 
   /**
-   * Retrieve an AsyncTable implementation for accessing a table.
+   * Retrieve an {@link AsyncTable} implementation for accessing a table.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
@@ -82,7 +100,7 @@ public interface AsyncConnection extends Closeable {
    * @param pool the thread pool to use for executing callback
    * @return an AsyncTable to use for interactions with this table
    */
-  default AsyncTable getTable(TableName tableName, ExecutorService pool) {
+  default AsyncTable<ScanResultConsumer> getTable(TableName tableName, ExecutorService pool) {
     return getTableBuilder(tableName, pool).build();
   }
 
@@ -94,7 +112,7 @@ public interface AsyncConnection extends Closeable {
    * @param tableName the name of the table
    * @param pool the thread pool to use for executing callback
    */
-  AsyncTableBuilder<AsyncTable> getTableBuilder(TableName tableName, ExecutorService pool);
+  AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName, ExecutorService pool);
 
   /**
    * Retrieve an {@link AsyncAdmin} implementation to administer an HBase cluster.
@@ -176,4 +194,39 @@ public interface AsyncConnection extends Closeable {
    * @param pool the thread pool to use for executing callback
    */
   AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName, ExecutorService pool);
+
+  /**
+   * Returns whether the connection is closed or not.
+   * @return true if this connection is closed
+   */
+  boolean isClosed();
+
+  /**
+   * Retrieve an Hbck implementation to fix an HBase cluster. The returned Hbck is not guaranteed to
+   * be thread-safe. A new instance should be created by each thread. This is a lightweight
+   * operation. Pooling or caching of the returned Hbck instance is not recommended.
+   * <p/>
+   * The caller is responsible for calling {@link Hbck#close()} on the returned Hbck instance.
+   * <p/>
+   * This will be used mostly by hbck tool.
+   * @return an Hbck instance for active master. Active master is fetched from the zookeeper.
+   */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.HBCK)
+  CompletableFuture<Hbck> getHbck();
+
+  /**
+   * Retrieve an Hbck implementation to fix an HBase cluster. The returned Hbck is not guaranteed to
+   * be thread-safe. A new instance should be created by each thread. This is a lightweight
+   * operation. Pooling or caching of the returned Hbck instance is not recommended.
+   * <p/>
+   * The caller is responsible for calling {@link Hbck#close()} on the returned Hbck instance.
+   * <p/>
+   * This will be used mostly by hbck tool. This may only be used to by pass getting registered
+   * master from ZK. In situations where ZK is not available or active master is not registered with
+   * ZK and user can get master address by other means, master can be explicitly specified.
+   * @param masterServer explicit {@link ServerName} for master server
+   * @return an Hbck instance for a specified master server
+   */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.HBCK)
+  Hbck getHbck(ServerName masterServer) throws IOException;
 }

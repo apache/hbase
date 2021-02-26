@@ -45,13 +45,42 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
     throw new IllegalStateException("This is an Immutable MemStoreLAB.");
   }
 
+  /**
+   * The process of merging assumes all cells are allocated on mslab.
+   * There is a rare case in which the first immutable segment,
+   * participating in a merge, is a CSLM.
+   * Since the CSLM hasn't been flattened yet, and there is no point in flattening it (since it is
+   * going to be merged), its big cells (for whom size > maxAlloc) must be copied into mslab.
+   * This method copies the passed cell into the first mslab in the mslabs list,
+   * returning either a new cell instance over the copied data,
+   * or null when this cell cannt be copied.
+   */
   @Override
-  // returning a new chunk, without replacing current chunk,
-  // the space on this chunk will be allocated externally
-  // use the first MemStoreLABImpl in the list
-  public Chunk getNewExternalChunk() {
+  public Cell forceCopyOfBigCellInto(Cell cell) {
     MemStoreLAB mslab = this.mslabs.get(0);
-    return mslab.getNewExternalChunk();
+    return mslab.forceCopyOfBigCellInto(cell);
+  }
+
+  /* Returning a new pool chunk, without replacing current chunk,
+  ** meaning MSLABImpl does not make the returned chunk as CurChunk.
+  ** The space on this chunk will be allocated externally.
+  ** The interface is only for external callers.
+  */
+  @Override
+  public Chunk getNewExternalChunk(ChunkCreator.ChunkType chunkType) {
+    MemStoreLAB mslab = this.mslabs.get(0);
+    return mslab.getNewExternalChunk(chunkType);
+  }
+
+  /* Returning a new chunk, without replacing current chunk,
+   ** meaning MSLABImpl does not make the returned chunk as CurChunk.
+   ** The space on this chunk will be allocated externally.
+   ** The interface is only for external callers.
+   */
+  @Override
+  public Chunk getNewExternalChunk(int size) {
+    MemStoreLAB mslab = this.mslabs.get(0);
+    return mslab.getNewExternalChunk(size);
   }
 
   @Override
@@ -98,4 +127,16 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
       checkAndCloseMSLABs(count);
     }
   }
+
+  @Override
+  public boolean isOnHeap() {
+    return !isOffHeap();
+  }
+
+  @Override
+  public boolean isOffHeap() {
+    return ChunkCreator.getInstance().isOffheap();
+  }
+
+
 }

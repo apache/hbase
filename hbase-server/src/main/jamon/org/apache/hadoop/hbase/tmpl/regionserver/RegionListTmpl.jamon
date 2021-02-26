@@ -88,14 +88,17 @@
 <%args>
     List<RegionInfo> onlineRegions;
 </%args>
-    <table class="table table-striped">
+    <table id="baseStatsTable" class="tablesorter table table-striped">
+    <thead>
         <tr>
             <th>Region Name</th>
             <th>Start Key</th>
             <th>End Key</th>
             <th>ReplicaID</th>
         </tr>
+    </thead>
 
+    <tbody>
         <%for RegionInfo r: onlineRegions %>
         <tr>
             <%java>
@@ -110,6 +113,7 @@
             <td><% r.getReplicaId() %></td>
         </tr>
         </%for>
+    </tbody>
     </table>
 </%def>
 
@@ -117,14 +121,17 @@
 <%args>
     List<RegionInfo> onlineRegions;
 </%args>
-    <table class="table table-striped">
+    <table id="requestStatsTable" class="tablesorter table table-striped">
+    <thead>
         <tr>
             <th>Region Name</th>
             <th>Read Request Count</th>
             <th>Filtered Read Request Count</th>
             <th>Write Request Count</th>
         </tr>
+    </thead>
 
+    <tbody>
         <%for RegionInfo r: onlineRegions %>
 
         <tr>
@@ -135,12 +142,13 @@
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
-            <td><% load.getReadRequestsCount() %></td>
-            <td><% load.getFilteredReadRequestsCount() %></td>
-            <td><% load.getWriteRequestsCount() %></td>
+            <td><% String.format("%,1d", load.getReadRequestsCount()) %></td>
+            <td><% String.format("%,1d", load.getFilteredReadRequestsCount()) %></td>
+            <td><% String.format("%,1d", load.getWriteRequestsCount()) %></td>
             </%if>
         </tr>
         </%for>
+    </tbody>
     </table>
 </%def>
 
@@ -149,7 +157,8 @@
 <%args>
     List<RegionInfo> onlineRegions;
 </%args>
-    <table class="table table-striped">
+    <table id="storeStatsTable" class="tablesorter table table-striped">
+    <thead>
         <tr>
             <th>Region Name</th>
             <th>Num. Stores</th>
@@ -160,31 +169,58 @@
             <th>Bloom Size</th>
             <th>Data Locality</th>
         </tr>
+    </thead>
 
+    <tbody>
         <%for RegionInfo r: onlineRegions %>
 
         <tr>
         <%java>
+            final String ZEROMB = "0 MB";
+            final String ZEROKB = "0 KB";
+            String uncompressedStorefileSizeStr = ZEROMB;
+            String storefileSizeStr = ZEROMB;
+            String indexSizeStr = ZEROKB;
+            String bloomSizeStr = ZEROKB;
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
             String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(r,
               regionServer.getConfiguration());
+             if (load != null) {
+             long uncompressedStorefileSize  = load.getStoreUncompressedSizeMB();
+             long storefileSize  = load.getStorefileSizeMB();
+             long indexSize  = load.getTotalStaticIndexSizeKB();
+             long bloomSize  = load.getTotalStaticBloomSizeKB();
+             if (uncompressedStorefileSize > 0) {
+                uncompressedStorefileSizeStr = TraditionalBinaryPrefix.long2String(
+                    uncompressedStorefileSize * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+             }
+             if (storefileSize > 0) {
+                storefileSizeStr = TraditionalBinaryPrefix.long2String(storefileSize
+                             * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+             }
+             if(indexSize > 0) {
+               indexSizeStr = TraditionalBinaryPrefix.long2String(indexSize
+                                              * TraditionalBinaryPrefix.KILO.value, "B", 1);
+             }
+             if (bloomSize > 0) {
+               bloomSizeStr = TraditionalBinaryPrefix.long2String(bloomSize
+                                              * TraditionalBinaryPrefix.KILO.value, "B", 1);
+              }
+           }
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
-            <td><% load.getStores() %></td>
-            <td><% load.getStorefiles() %></td>
-            <td><% TraditionalBinaryPrefix.long2String(load.getStoreUncompressedSizeMB()
-                * TraditionalBinaryPrefix.MEGA.value, "B", 1)%></td>
-            <td><% TraditionalBinaryPrefix.long2String(load.getStorefileSizeMB()
-                * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-            <td><% TraditionalBinaryPrefix.long2String(load.getTotalStaticIndexSizeKB()
-                * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
-            <td><% TraditionalBinaryPrefix.long2String(load.getTotalStaticBloomSizeKB()
-                * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
+            <td><% String.format("%,1d", load.getStores()) %></td>
+            <td><% String.format("%,1d", load.getStorefiles()) %></td>
+            <td><% uncompressedStorefileSizeStr %></td>
+            <td><% storefileSizeStr %></td>
+            <td><% indexSizeStr %></td>
+            <td><% bloomSizeStr %></td>
             <td><% load.getDataLocality() %></td>
             </%if>
         </tr>
         </%for>
+    </tbody>
     </table>
 </%def>
 
@@ -193,15 +229,18 @@
 <%args>
     List<RegionInfo> onlineRegions;
 </%args>
-    <table class="table table-striped">
+    <table id="compactionStatsTable" class="tablesorter table table-striped">
+    <thead>
         <tr>
             <th>Region Name</th>
-            <th>Num. Compacting KVs</th>
-            <th>Num. Compacted KVs</th>
+            <th>Num. Compacting Cells</th>
+            <th>Num. Compacted Cells</th>
             <th>Compaction Progress</th>
-            <th>Last Major Compaction</th>
+            <th data-date-format="yyyymmdd hhmm zz">Last Major Compaction</th>
         </tr>
+    </thead>
 
+    <tbody>
         <%for RegionInfo r: onlineRegions %>
 
         <tr>
@@ -215,7 +254,7 @@
                     ((float) load.getCurrentCompactedKVs() / load.getTotalCompactingKVs())) + "%";
               }
               if (load.getLastMajorCompactionTs() > 0) {
-                FastDateFormat fdf = FastDateFormat.getInstance("yyyy-MM-dd HH:mm ZZ");
+                FastDateFormat fdf = FastDateFormat.getInstance("yyyy-MM-dd HH:mm (ZZ)");
                 compactTime = fdf.format(load.getLastMajorCompactionTs());
               }
             }
@@ -224,13 +263,14 @@
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
-            <td><% load.getTotalCompactingKVs() %></td>
-            <td><% load.getCurrentCompactedKVs() %></td>
+            <td><% String.format("%,1d", load.getTotalCompactingKVs()) %></td>
+            <td><% String.format("%,1d", load.getCurrentCompactedKVs()) %></td>
             <td><% percentDone %></td>
             <td><% compactTime %></td>
             </%if>
         </tr>
         </%for>
+    </tbody>
     </table>
 </%def>
 
@@ -238,26 +278,38 @@
 <%args>
     List<RegionInfo> onlineRegions;
 </%args>
-    <table class="table table-striped">
+    <table id="memstoreStatsTable" class="tablesorter table table-striped">
+    <thead>
         <tr>
             <th>Region Name</th>
             <th>Memstore Size</th>
         </tr>
+    </thead>
 
+    <tbody>
         <%for RegionInfo r: onlineRegions %>
 
         <tr>
         <%java>
+            final String ZEROMB = "0 MB";
+            String memStoreSizeMBStr = ZEROMB;
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
             String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(r,
               regionServer.getConfiguration());
+              if (load != null) {
+              long memStoreSizeMB = load.getMemStoreSizeMB();
+              if (memStoreSizeMB > 0) {
+              memStoreSizeMBStr = TraditionalBinaryPrefix.long2String(
+                         memStoreSizeMB * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+               }
+             }
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
-            <td><% TraditionalBinaryPrefix.long2String(
-                load.getMemStoreSizeMB() * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
+            <td><% memStoreSizeMBStr %></td>
             </%if>
         </tr>
         </%for>
+    </tbody>
     </table>
 </%def>

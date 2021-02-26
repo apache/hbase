@@ -17,13 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-
-import org.apache.hadoop.hbase.shaded.io.netty.util.HashedWheelTimer;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.io.netty.util.Timer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 
 /**
@@ -40,11 +43,11 @@ public class AsyncAdminRequestRetryingCaller<T> extends AsyncRpcRetryingCaller<T
   private final Callable<T> callable;
   private ServerName serverName;
 
-  public AsyncAdminRequestRetryingCaller(HashedWheelTimer retryTimer, AsyncConnectionImpl conn,
-      long pauseNs, int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs,
-      int startLogErrorsCnt, ServerName serverName, Callable<T> callable) {
-    super(retryTimer, conn, pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
-        startLogErrorsCnt);
+  public AsyncAdminRequestRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn, int priority,
+      long pauseNs, long pauseForCQTBENs, int maxAttempts, long operationTimeoutNs,
+      long rpcTimeoutNs, int startLogErrorsCnt, ServerName serverName, Callable<T> callable) {
+    super(retryTimer, conn, priority, pauseNs, pauseForCQTBENs, maxAttempts, operationTimeoutNs,
+      rpcTimeoutNs, startLogErrorsCnt);
     this.serverName = serverName;
     this.callable = callable;
   }
@@ -60,7 +63,7 @@ public class AsyncAdminRequestRetryingCaller<T> extends AsyncRpcRetryingCaller<T
       return;
     }
     resetCallTimeout();
-    callable.call(controller, adminStub).whenComplete((result, error) -> {
+    addListener(callable.call(controller, adminStub), (result, error) -> {
       if (error != null) {
         onError(error, () -> "Call to admin stub failed", err -> {
         });
@@ -68,10 +71,5 @@ public class AsyncAdminRequestRetryingCaller<T> extends AsyncRpcRetryingCaller<T
       }
       future.complete(result);
     });
-  }
-
-  CompletableFuture<T> call() {
-    doCall();
-    return future;
   }
 }

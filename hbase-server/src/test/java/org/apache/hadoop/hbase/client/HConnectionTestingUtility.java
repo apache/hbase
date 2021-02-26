@@ -22,24 +22,24 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.util.Threads;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
 /**
- * {@link ClusterConnection} testing utility.
+ * {@link Connection} testing utility.
  */
 public class HConnectionTestingUtility {
   /*
@@ -48,11 +48,19 @@ public class HConnectionTestingUtility {
    * {@link ConnectionImplementation} innards to HBaseTestingUtility to give it access.
    */
   /**
+<<<<<<< HEAD
    * Get a Mocked {@link ClusterConnection} that goes with the passed <code>conf</code>
    * configuration instance.  Minimally the mock will return
-   * <code>conf</conf> when {@link ClusterConnection#getConfiguration()} is invoked.
+   * &lt;code>conf&lt;/conf> when {@link ClusterConnection#getConfiguration()} is invoked.
    * Be sure to shutdown the connection when done by calling
    * {@link Connection#close()} else it will stick around; this is probably not what you want.
+=======
+   * Get a Mocked {@link Connection} that goes with the passed <code>conf</code>
+   * configuration instance. Minimally the mock will return &lt;code>conf&lt;/conf> when
+   * {@link Connection#getConfiguration()} is invoked. Be sure to shutdown the
+   * connection when done by calling {@link Connection#close()} else it will stick around; this is
+   * probably not what you want.
+>>>>>>> fabf2b8282... HBASE-22572 Javadoc Warnings: @link reference not found (#306)
    * @param conf configuration
    * @return ClusterConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
@@ -116,18 +124,18 @@ public class HConnectionTestingUtility {
         .thenReturn(new RegionLocations(loc));
     if (admin != null) {
       // If a call to getAdmin, return this implementation.
-      Mockito.when(c.getAdmin(Mockito.any(ServerName.class))).
+      Mockito.when(c.getAdmin(Mockito.any())).
         thenReturn(admin);
     }
     if (client != null) {
       // If a call to getClient, return this client.
-      Mockito.when(c.getClient(Mockito.any(ServerName.class))).
+      Mockito.when(c.getClient(Mockito.any())).
         thenReturn(client);
     }
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(c.getNonceGenerator()).thenReturn(ng);
     Mockito.when(c.getAsyncProcess()).thenReturn(
-      new AsyncProcess(c, conf, RpcRetryingCallerFactory.instantiate(conf), false,
+      new AsyncProcess(c, conf, RpcRetryingCallerFactory.instantiate(conf),
           RpcControllerFactory.instantiate(conf)));
     Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(
         RpcRetryingCallerFactory.instantiate(conf,
@@ -148,7 +156,7 @@ public class HConnectionTestingUtility {
    * @param conf configuration
    * @return ClusterConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
-   * @see @link
+   * [Dead link]: See also
    * {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
    */
   public static ClusterConnection getSpiedConnection(final Configuration conf)

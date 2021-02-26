@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -86,7 +87,7 @@ public class ExpressionParser {
           // This could be costly. but do we have any alternative?
           // If we don't do this way then we may have to handle while checking the authorizations.
           // Better to do it here.
-          byte[] array = org.apache.hadoop.hbase.shaded.com.google.common.primitives.Bytes.toArray(list);
+          byte[] array = org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.toArray(list);
           String leafExp = Bytes.toString(array).trim();
           if (leafExp.isEmpty()) {
             throw new ParseException("Error parsing expression " + expS + " at column : " + index);
@@ -103,7 +104,8 @@ public class ExpressionParser {
             }
             index++;
           } while (index < endPos && !isEndOfLabel(exp[index]));
-          leafExp = new String(exp, labelOffset, index - labelOffset).trim();
+          leafExp =
+              new String(exp, labelOffset, index - labelOffset, StandardCharsets.UTF_8).trim();
           if (leafExp.isEmpty()) {
             throw new ParseException("Error parsing expression " + expS + " at column : " + index);
           }
@@ -304,7 +306,8 @@ public class ExpressionParser {
       return Operator.OR;
     case NOT:
       return Operator.NOT;
+    default:
+      return null;
     }
-    return null;
   }
 }

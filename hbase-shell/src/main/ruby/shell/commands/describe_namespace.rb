@@ -27,12 +27,24 @@ Describe the named namespace. For example:
 EOF
       end
 
+      # rubocop:disable Metrics/AbcSize
       def command(namespace)
         desc = admin.describe_namespace(namespace)
 
         formatter.header(['DESCRIPTION'], [64])
         formatter.row([desc], true, [64])
+        ns = namespace.to_s
+        if admin.exists?(::HBaseQuotasConstants::QUOTA_TABLE_NAME.to_s)
+          puts formatter.header(%w[QUOTAS])
+          count = quotas_admin.list_quotas(::HBaseConstants::NAMESPACE => ns) do |_, quota|
+            formatter.row([quota])
+          end
+          formatter.footer(count)
+        else
+          puts 'Quota is disabled'
+        end
       end
+      # rubocop:enable Metrics/AbcSize
     end
   end
 end

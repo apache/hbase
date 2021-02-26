@@ -22,53 +22,68 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 
 /**
- * Test the HFileLink Cleaner.
- * HFiles with links cannot be deleted until a link is present.
+ * Test the HFileLink Cleaner. HFiles with links cannot be deleted until a link is present.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestHFileLinkCleaner {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-      withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestHFileLinkCleaner.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  private static DirScanPool POOL;
 
   @Rule
   public TestName name = new TestName();
 
+  @BeforeClass
+  public static void setUp() {
+    POOL = new DirScanPool(TEST_UTIL.getConfiguration());
+  }
+
+  @AfterClass
+  public static void tearDown() {
+    POOL.shutdownNow();
+  }
+
   @Test
   public void testHFileLinkCleaning() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
+    CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, HFileLinkCleaner.class.getName());
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(conf);
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -76,14 +91,12 @@ public class TestHFileLinkCleaner {
     final String hfileName = "1234567890";
     final String familyName = "cf";
 
-    HRegionInfo hri = new HRegionInfo(tableName);
-    HRegionInfo hriLink = new HRegionInfo(tableLinkName);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
+    RegionInfo hriLink = RegionInfoBuilder.newBuilder(tableLinkName).build();
 
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
           tableName, hri.getEncodedName(), familyName);
-    Path archiveLinkStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
-          tableLinkName, hriLink.getEncodedName(), familyName);
 
     // Create hfile /hbase/table-link/region/cf/getEncodedName.HFILE(conf);
     Path familyPath = getFamilyDirPath(archiveDir, tableName, hri.getEncodedName(), familyName);
@@ -92,8 +105,8 @@ public class TestHFileLinkCleaner {
     fs.createNewFile(hfilePath);
 
     // Create link to hfile
-    Path familyLinkPath = getFamilyDirPath(rootDir, tableLinkName,
-                                        hriLink.getEncodedName(), familyName);
+    Path familyLinkPath =
+      getFamilyDirPath(rootDir, tableLinkName, hriLink.getEncodedName(), familyName);
     fs.mkdirs(familyLinkPath);
     HFileLink.create(conf, fs, familyLinkPath, hri, hfileName);
     Path linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
@@ -106,7 +119,7 @@ public class TestHFileLinkCleaner {
     final long ttl = 1000;
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     Server server = new DummyServer();
-    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archiveDir);
+    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archiveDir, POOL);
 
     // Link backref cannot be removed
     cleaner.chore();
@@ -114,8 +127,8 @@ public class TestHFileLinkCleaner {
     assertTrue(fs.exists(hfilePath));
 
     // Link backref can be removed
-    fs.rename(FSUtils.getTableDir(rootDir, tableLinkName),
-        FSUtils.getTableDir(archiveDir, tableLinkName));
+    fs.rename(CommonFSUtils.getTableDir(rootDir, tableLinkName),
+      CommonFSUtils.getTableDir(archiveDir, tableLinkName));
     cleaner.chore();
     assertFalse("Link should be deleted", fs.exists(linkBackRef));
 
@@ -129,13 +142,15 @@ public class TestHFileLinkCleaner {
       Thread.sleep(ttl * 2);
       cleaner.chore();
     }
-    assertFalse("HFile should be deleted", fs.exists(FSUtils.getTableDir(archiveDir, tableName)));
-    assertFalse("Link should be deleted", fs.exists(FSUtils.getTableDir(archiveDir, tableLinkName)));
+    assertFalse("HFile should be deleted",
+      fs.exists(CommonFSUtils.getTableDir(archiveDir, tableName)));
+    assertFalse("Link should be deleted",
+      fs.exists(CommonFSUtils.getTableDir(archiveDir, tableLinkName)));
   }
 
-  private static Path getFamilyDirPath (final Path rootDir, final TableName table,
+  private static Path getFamilyDirPath(final Path rootDir, final TableName table,
     final String region, final String family) {
-    return new Path(new Path(FSUtils.getTableDir(rootDir, table), region), family);
+    return new Path(new Path(CommonFSUtils.getTableDir(rootDir, table), region), family);
   }
 
   static class DummyServer implements Server {
@@ -146,9 +161,9 @@ public class TestHFileLinkCleaner {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       try {
-        return new ZooKeeperWatcher(getConfiguration(), "dummy server", this);
+        return new ZKWatcher(getConfiguration(), "dummy server", this);
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -162,11 +177,6 @@ public class TestHFileLinkCleaner {
 
     @Override
     public ClusterConnection getConnection() {
-      return null;
-    }
-
-    @Override
-    public MetaTableLocator getMetaTableLocator() {
       return null;
     }
 
@@ -199,6 +209,21 @@ public class TestHFileLinkCleaner {
     @Override
     public ClusterConnection getClusterConnection() {
       // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return false;
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
       return null;
     }
   }

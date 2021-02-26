@@ -18,52 +18,53 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
+import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
@@ -106,7 +107,7 @@ public class ServerManager {
   public static final String WAIT_ON_REGIONSERVERS_INTERVAL =
       "hbase.master.wait.on.regionservers.interval";
 
-  private static final Log LOG = LogFactory.getLog(ServerManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ServerManager.class);
 
   // Set if we are to shutdown the cluster.
   private AtomicBoolean clusterShutdown = new AtomicBoolean(false);
@@ -124,7 +125,8 @@ public class ServerManager {
     storeFlushedSequenceIdsByRegion = new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
 
   /** Map of registered servers to their current load */
-  private final ConcurrentNavigableMap<ServerName, ServerLoad> onlineServers = new ConcurrentSkipListMap<>();
+  private final ConcurrentNavigableMap<ServerName, ServerMetrics> onlineServers =
+    new ConcurrentSkipListMap<>();
 
   /**
    * Map of admin interfaces per registered regionserver; these interfaces we use to control
@@ -145,62 +147,19 @@ public class ServerManager {
 
   private final RpcControllerFactory rpcControllerFactory;
 
-  /**
-   * Set of region servers which are dead but not processed immediately. If one
-   * server died before master enables ServerShutdownHandler, the server will be
-   * added to this set and will be processed through calling
-   * {@link ServerManager#processQueuedDeadServers()} by master.
-   * <p>
-   * A dead server is a server instance known to be dead, not listed in the /hbase/rs
-   * znode any more. It may have not been submitted to ServerShutdownHandler yet
-   * because the handler is not enabled.
-   * <p>
-   * A dead server, which has been submitted to ServerShutdownHandler while the
-   * handler is not enabled, is queued up.
-   * <p>
-   * So this is a set of region servers known to be dead but not submitted to
-   * ServerShutdownHandler for processing yet.
-   */
-  private Set<ServerName> queuedDeadServers = new HashSet<>();
-
-  /**
-   * Set of region servers which are dead and submitted to ServerShutdownHandler to process but not
-   * fully processed immediately.
-   * <p>
-   * If one server died before assignment manager finished the failover cleanup, the server will be
-   * added to this set and will be processed through calling
-   * {@link ServerManager#processQueuedDeadServers()} by assignment manager.
-   * <p>
-   * The Boolean value indicates whether log split is needed inside ServerShutdownHandler
-   * <p>
-   * ServerShutdownHandler processes a dead server submitted to the handler after the handler is
-   * enabled. It may not be able to complete the processing because meta is not yet online or master
-   * is currently in startup mode. In this case, the dead server will be parked in this set
-   * temporarily.
-   */
-  private Map<ServerName, Boolean> requeuedDeadServers = new ConcurrentHashMap<>();
-
   /** Listeners that are called on server events. */
   private List<ServerListener> listeners = new CopyOnWriteArrayList<>();
 
   /**
    * Constructor.
-   * @param master
-   * @throws ZooKeeperConnectionException
    */
   public ServerManager(final MasterServices master) {
-    this(master, true);
-  }
-
-  ServerManager(final MasterServices master, final boolean connect) {
     this.master = master;
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
-    this.connection = connect ? master.getClusterConnection() : null;
-    this.rpcControllerFactory = this.connection == null
-        ? null
-        : connection.getRpcControllerFactory();
+    this.connection = master.getClusterConnection();
+    this.rpcControllerFactory = this.connection == null? null: connection.getRpcControllerFactory();
   }
 
   /**
@@ -222,29 +181,30 @@ public class ServerManager {
   /**
    * Let the server manager know a new regionserver has come online
    * @param request the startup request
+   * @param versionNumber the version number of the new regionserver
+   * @param version the version of the new regionserver, could contain strings like "SNAPSHOT"
    * @param ia the InetAddress from which request is received
    * @return The ServerName we know this server as.
    * @throws IOException
    */
-  ServerName regionServerStartup(RegionServerStartupRequest request, InetAddress ia)
-      throws IOException {
+  ServerName regionServerStartup(RegionServerStartupRequest request, int versionNumber,
+      String version, InetAddress ia) throws IOException {
     // Test for case where we get a region startup message from a regionserver
     // that has been quickly restarted but whose znode expiration handler has
     // not yet run, or from a server whose fail we are currently processing.
-    // Test its host+port combo is present in serverAddressToServerInfo.  If it
+    // Test its host+port combo is present in serverAddressToServerInfo. If it
     // is, reject the server and trigger its expiration. The next time it comes
     // in, it should have been removed from serverAddressToServerInfo and queued
     // for processing by ProcessServerShutdown.
 
-    final String hostname = request.hasUseThisHostnameInstead() ?
-        request.getUseThisHostnameInstead() :ia.getHostName();
-    ServerName sn = ServerName.valueOf(hostname, request.getPort(),
-      request.getServerStartCode());
+    final String hostname =
+      request.hasUseThisHostnameInstead() ? request.getUseThisHostnameInstead() : ia.getHostName();
+    ServerName sn = ServerName.valueOf(hostname, request.getPort(), request.getServerStartCode());
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");
-    if (!checkAndRecordNewServer(sn, ServerLoad.EMPTY_SERVERLOAD)) {
-      LOG.warn("THIS SHOULD NOT HAPPEN, RegionServerStartup"
-        + " could not record the server: " + sn);
+    if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn, versionNumber, version))) {
+      LOG.warn(
+        "THIS SHOULD NOT HAPPEN, RegionServerStartup" + " could not record the server: " + sn);
     }
     return sn;
   }
@@ -254,12 +214,11 @@ public class ServerManager {
    * @param sn
    * @param hsl
    */
-  private void updateLastFlushedSequenceIds(ServerName sn, ServerLoad hsl) {
-    Map<byte[], RegionLoad> regionsLoad = hsl.getRegionsLoad();
-    for (Entry<byte[], RegionLoad> entry : regionsLoad.entrySet()) {
+  private void updateLastFlushedSequenceIds(ServerName sn, ServerMetrics hsl) {
+    for (Entry<byte[], RegionMetrics> entry : hsl.getRegionMetrics().entrySet()) {
       byte[] encodedRegionName = Bytes.toBytes(RegionInfo.encodeRegionName(entry.getKey()));
       Long existingValue = flushedSequenceIdByRegion.get(encodedRegionName);
-      long l = entry.getValue().getCompleteSequenceId();
+      long l = entry.getValue().getCompletedSequenceId();
       // Don't let smaller sequence ids override greater sequence ids.
       if (LOG.isTraceEnabled()) {
         LOG.trace(Bytes.toString(encodedRegionName) + ", existingValue=" + existingValue +
@@ -275,10 +234,10 @@ public class ServerManager {
       ConcurrentNavigableMap<byte[], Long> storeFlushedSequenceId =
           computeIfAbsent(storeFlushedSequenceIdsByRegion, encodedRegionName,
             () -> new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR));
-      for (StoreSequenceId storeSeqId : entry.getValue().getStoreCompleteSequenceId()) {
-        byte[] family = storeSeqId.getFamilyName().toByteArray();
+      for (Entry<byte[], Long> storeSeqId : entry.getValue().getStoreSequenceId().entrySet()) {
+        byte[] family = storeSeqId.getKey();
         existingValue = storeFlushedSequenceId.get(family);
-        l = storeSeqId.getSequenceId();
+        l = storeSeqId.getValue();
         if (LOG.isTraceEnabled()) {
           LOG.trace(Bytes.toString(encodedRegionName) + ", family=" + Bytes.toString(family) +
             ", existingValue=" + existingValue + ", completeSequenceId=" + l);
@@ -291,9 +250,8 @@ public class ServerManager {
     }
   }
 
-  @VisibleForTesting
   public void regionServerReport(ServerName sn,
-      ServerLoad sl) throws YouAreDeadException {
+    ServerMetrics sl) throws YouAreDeadException {
     checkIsDead(sn, "REPORT");
     if (null == this.onlineServers.replace(sn, sl)) {
       // Already have this host+port combo and its just different start code?
@@ -318,8 +276,7 @@ public class ServerManager {
    * @param sl the server load on the server
    * @return true if the server is recorded, otherwise, false
    */
-  boolean checkAndRecordNewServer(
-      final ServerName serverName, final ServerLoad sl) {
+  boolean checkAndRecordNewServer(final ServerName serverName, final ServerMetrics sl) {
     ServerName existingServer = null;
     synchronized (this.onlineServers) {
       existingServer = findServerWithSameHostnamePortWithLock(serverName);
@@ -340,12 +297,33 @@ public class ServerManager {
 
     // Note that we assume that same ts means same server, and don't expire in that case.
     //  TODO: ts can theoretically collide due to clock shifts, so this is a bit hacky.
-    if (existingServer != null && (existingServer.getStartcode() < serverName.getStartcode())) {
+    if (existingServer != null &&
+        (existingServer.getStartcode() < serverName.getStartcode())) {
       LOG.info("Triggering server recovery; existingServer " +
           existingServer + " looks stale, new server:" + serverName);
       expireServer(existingServer);
     }
     return true;
+  }
+
+  /**
+   * Find out the region servers crashed between the crash of the previous master instance and the
+   * current master instance and schedule SCP for them.
+   * <p/>
+   * Since the {@code RegionServerTracker} has already helped us to construct the online servers set
+   * by scanning zookeeper, now we can compare the online servers with {@code liveServersFromWALDir}
+   * to find out whether there are servers which are already dead.
+   * <p/>
+   * Must be called inside the initialization method of {@code RegionServerTracker} to avoid
+   * concurrency issue.
+   * @param deadServersFromPE the region servers which already have a SCP associated.
+   * @param liveServersFromWALDir the live region servers from wal directory.
+   */
+  void findDeadServersAndProcess(Set<ServerName> deadServersFromPE,
+      Set<ServerName> liveServersFromWALDir) {
+    deadServersFromPE.forEach(deadservers::putIfAbsent);
+    liveServersFromWALDir.stream().filter(sn -> !onlineServers.containsKey(sn))
+      .forEach(this::expireServer);
   }
 
   /**
@@ -357,8 +335,8 @@ public class ServerManager {
    * @throws ClockOutOfSyncException if the skew exceeds the configured max value
    */
   private void checkClockSkew(final ServerName serverName, final long serverCurrentTime)
-  throws ClockOutOfSyncException {
-    long skew = Math.abs(System.currentTimeMillis() - serverCurrentTime);
+      throws ClockOutOfSyncException {
+    long skew = Math.abs(EnvironmentEdgeManager.currentTime() - serverCurrentTime);
     if (skew > maxSkew) {
       String message = "Server " + serverName + " has been " +
         "rejected; Reported time is too far out of sync with master.  " +
@@ -374,31 +352,30 @@ public class ServerManager {
   }
 
   /**
+   * Called when RegionServer first reports in for duty and thereafter each
+   * time it heartbeats to make sure it is has not been figured for dead.
    * If this server is on the dead list, reject it with a YouAreDeadException.
    * If it was dead but came back with a new start code, remove the old entry
    * from the dead list.
-   * @param serverName
    * @param what START or REPORT
-   * @throws org.apache.hadoop.hbase.YouAreDeadException
    */
   private void checkIsDead(final ServerName serverName, final String what)
       throws YouAreDeadException {
     if (this.deadservers.isDeadServer(serverName)) {
-      // host name, port and start code all match with existing one of the
-      // dead servers. So, this server must be dead.
+      // Exact match: host name, port and start code all match with existing one of the
+      // dead servers. So, this server must be dead. Tell it to kill itself.
       String message = "Server " + what + " rejected; currently processing " +
           serverName + " as dead server";
       LOG.debug(message);
       throw new YouAreDeadException(message);
     }
-    // remove dead server with same hostname and port of newly checking in rs after master
-    // initialization.See HBASE-5916 for more information.
-    if ((this.master == null || this.master.isInitialized())
-        && this.deadservers.cleanPreviousInstance(serverName)) {
+    // Remove dead server with same hostname and port of newly checking in rs after master
+    // initialization. See HBASE-5916 for more information.
+    if ((this.master == null || this.master.isInitialized()) &&
+        this.deadservers.cleanPreviousInstance(serverName)) {
       // This server has now become alive after we marked it as dead.
       // We removed it's previous entry from the dead list to reflect it.
-      LOG.debug(what + ":" + " Server " + serverName + " came back up," +
-          " removed it from the dead servers list");
+      LOG.debug("{} {} came back up, removed it from the dead servers list", what, serverName);
     }
   }
 
@@ -424,9 +401,8 @@ public class ServerManager {
    * Adds the onlineServers list. onlineServers should be locked.
    * @param serverName The remote servers name.
    */
-  @VisibleForTesting
-  void recordNewServerWithLock(final ServerName serverName, final ServerLoad sl) {
-    LOG.info("Registering server=" + serverName);
+  void recordNewServerWithLock(final ServerName serverName, final ServerMetrics sl) {
+    LOG.info("Registering regionserver=" + serverName);
     this.onlineServers.put(serverName, sl);
     this.rsAdmins.remove(serverName);
   }
@@ -449,9 +425,9 @@ public class ServerManager {
 
   /**
    * @param serverName
-   * @return ServerLoad if serverName is known else null
+   * @return ServerMetrics if serverName is known else null
    */
-  public ServerLoad getLoad(final ServerName serverName) {
+  public ServerMetrics getLoad(final ServerName serverName) {
     return this.onlineServers.get(serverName);
   }
 
@@ -464,9 +440,9 @@ public class ServerManager {
   public double getAverageLoad() {
     int totalLoad = 0;
     int numServers = 0;
-    for (ServerLoad sl: this.onlineServers.values()) {
-        numServers++;
-        totalLoad += sl.getNumberOfRegions();
+    for (ServerMetrics sl : this.onlineServers.values()) {
+      numServers++;
+      totalLoad += sl.getRegionMetrics().size();
     }
     return numServers == 0 ? 0 :
       (double)totalLoad / (double)numServers;
@@ -481,7 +457,7 @@ public class ServerManager {
   /**
    * @return Read-only map of servers to serverinfo
    */
-  public Map<ServerName, ServerLoad> getOnlineServers() {
+  public Map<ServerName, ServerMetrics> getOnlineServers() {
     // Presumption is that iterating the returned Map is OK.
     synchronized (this.onlineServers) {
       return Collections.unmodifiableMap(this.onlineServers);
@@ -503,7 +479,7 @@ public class ServerManager {
   void letRegionServersShutdown() {
     long previousLogTime = 0;
     ServerName sn = master.getServerName();
-    ZooKeeperWatcher zkw = master.getZooKeeper();
+    ZKWatcher zkw = master.getZooKeeper();
     int onlineServersCt;
     while ((onlineServersCt = onlineServers.size()) > 0){
 
@@ -523,7 +499,7 @@ public class ServerManager {
           }
           sb.append(key);
         }
-        LOG.info("Waiting on regionserver(s) to go down " + sb.toString());
+        LOG.info("Waiting on regionserver(s) " + sb.toString());
         previousLogTime = System.currentTimeMillis();
       }
 
@@ -550,121 +526,97 @@ public class ServerManager {
     }
   }
 
-  private List<String> getRegionServersInZK(final ZooKeeperWatcher zkw)
+  private List<String> getRegionServersInZK(final ZKWatcher zkw)
   throws KeeperException {
-    return ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
+    return ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
   }
 
-  /*
-   * Expire the passed server.  Add it to list of dead servers and queue a
-   * shutdown processing.
+  /**
+   * Expire the passed server. Add it to list of dead servers and queue a shutdown processing.
+   * @return pid if we queued a ServerCrashProcedure else {@link Procedure#NO_PROC_ID} if we did
+   *         not (could happen for many reasons including the fact that its this server that is
+   *         going down or we already have queued an SCP for this server or SCP processing is
+   *         currently disabled because we are in startup phase).
    */
-  public synchronized void expireServer(final ServerName serverName) {
+  // Redo test so we can make this protected.
+  public synchronized long expireServer(final ServerName serverName) {
+    return expireServer(serverName, false);
+
+  }
+
+  synchronized long expireServer(final ServerName serverName, boolean force) {
+    // THIS server is going down... can't handle our own expiration.
     if (serverName.equals(master.getServerName())) {
       if (!(master.isAborted() || master.isStopped())) {
         master.stop("We lost our znode?");
       }
-      return;
-    }
-    if (!master.isServerCrashProcessingEnabled()) {
-      LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
-          + "delay expiring server " + serverName);
-      this.queuedDeadServers.add(serverName);
-      return;
+      return Procedure.NO_PROC_ID;
     }
     if (this.deadservers.isDeadServer(serverName)) {
-      // TODO: Can this happen?  It shouldn't be online in this case?
-      LOG.warn("Expiration of " + serverName +
-          " but server shutdown already in progress");
-      return;
+      LOG.warn("Expiration called on {} but already in DeadServer", serverName);
+      return Procedure.NO_PROC_ID;
     }
     moveFromOnlineToDeadServers(serverName);
 
+    // If server is in draining mode, remove corresponding znode
+    // In some tests, the mocked HM may not have ZK Instance, hence null check
+    if (master.getZooKeeper() != null) {
+      String drainingZnode = ZNodePaths
+        .joinZNode(master.getZooKeeper().getZNodePaths().drainingZNode, serverName.getServerName());
+      try {
+        ZKUtil.deleteNodeFailSilent(master.getZooKeeper(), drainingZnode);
+      } catch (KeeperException e) {
+        LOG.warn("Error deleting the draining znode for stopping server " + serverName.getServerName(), e);
+      }
+    }
+    
     // If cluster is going down, yes, servers are going to be expiring; don't
     // process as a dead server
-    if (this.clusterShutdown.get()) {
+    if (isClusterShutdown()) {
       LOG.info("Cluster shutdown set; " + serverName +
         " expired; onlineServers=" + this.onlineServers.size());
       if (this.onlineServers.isEmpty()) {
         master.stop("Cluster shutdown set; onlineServer=0");
       }
-      return;
+      return Procedure.NO_PROC_ID;
     }
     LOG.info("Processing expiration of " + serverName + " on " + this.master.getServerName());
-    master.getAssignmentManager().submitServerCrash(serverName, true);
-
+    long pid = master.getAssignmentManager().submitServerCrash(serverName, true, force);
     // Tell our listeners that a server was removed
     if (!this.listeners.isEmpty()) {
-      for (ServerListener listener : this.listeners) {
-        listener.serverRemoved(serverName);
-      }
+      this.listeners.stream().forEach(l -> l.serverRemoved(serverName));
     }
-  }
-
-  @VisibleForTesting
-  public void moveFromOnlineToDeadServers(final ServerName sn) {
-    synchronized (onlineServers) {
-      if (!this.onlineServers.containsKey(sn)) {
-        LOG.warn("Expiration of " + sn + " but server not online");
-      }
-      // Remove the server from the known servers lists and update load info BUT
-      // add to deadservers first; do this so it'll show in dead servers list if
-      // not in online servers list.
-      this.deadservers.add(sn);
-      this.onlineServers.remove(sn);
-      onlineServers.notifyAll();
-    }
-    this.rsAdmins.remove(sn);
-  }
-
-  public synchronized void processDeadServer(final ServerName serverName, boolean shouldSplitWal) {
-    // When assignment manager is cleaning up the zookeeper nodes and rebuilding the
-    // in-memory region states, region servers could be down. Meta table can and
-    // should be re-assigned, log splitting can be done too. However, it is better to
-    // wait till the cleanup is done before re-assigning user regions.
-    //
-    // We should not wait in the server shutdown handler thread since it can clog
-    // the handler threads and meta table could not be re-assigned in case
-    // the corresponding server is down. So we queue them up here instead.
-    if (!master.getAssignmentManager().isFailoverCleanupDone()) {
-      requeuedDeadServers.put(serverName, shouldSplitWal);
-      return;
-    }
-
-    this.deadservers.add(serverName);
-    master.getAssignmentManager().submitServerCrash(serverName, shouldSplitWal);
+    return pid;
   }
 
   /**
-   * Process the servers which died during master's initialization. It will be
-   * called after HMaster#assignMeta and AssignmentManager#joinCluster.
-   * */
-  synchronized void processQueuedDeadServers() {
-    if (!master.isServerCrashProcessingEnabled()) {
-      LOG.info("Master hasn't enabled ServerShutdownHandler");
+   * Called when server has expired.
+   */
+  // Locking in this class needs cleanup.
+  public synchronized void moveFromOnlineToDeadServers(final ServerName sn) {
+    synchronized (this.onlineServers) {
+      boolean online = this.onlineServers.containsKey(sn);
+      if (online) {
+        // Remove the server from the known servers lists and update load info BUT
+        // add to deadservers first; do this so it'll show in dead servers list if
+        // not in online servers list.
+        this.deadservers.putIfAbsent(sn);
+        this.onlineServers.remove(sn);
+        onlineServers.notifyAll();
+      } else {
+        // If not online, that is odd but may happen if 'Unknown Servers' -- where meta
+        // has references to servers not online nor in dead servers list. If
+        // 'Unknown Server', don't add to DeadServers else will be there for ever.
+        LOG.trace("Expiration of {} but server not online", sn);
+      }
     }
-    Iterator<ServerName> serverIterator = queuedDeadServers.iterator();
-    while (serverIterator.hasNext()) {
-      ServerName tmpServerName = serverIterator.next();
-      expireServer(tmpServerName);
-      serverIterator.remove();
-      requeuedDeadServers.remove(tmpServerName);
-    }
-
-    if (!master.getAssignmentManager().isFailoverCleanupDone()) {
-      LOG.info("AssignmentManager hasn't finished failover cleanup; waiting");
-    }
-
-    for (Map.Entry<ServerName, Boolean> entry : requeuedDeadServers.entrySet()) {
-      processDeadServer(entry.getKey(), entry.getValue());
-    }
-    requeuedDeadServers.clear();
+    this.rsAdmins.remove(sn);
   }
 
   /*
    * Remove the server from the drain list.
    */
-  public boolean removeServerFromDrainList(final ServerName sn) {
+  public synchronized boolean removeServerFromDrainList(final ServerName sn) {
     // Warn if the server (sn) is not online.  ServerName is of the form:
     // <hostname> , <port> , <startcode>
 
@@ -676,10 +628,12 @@ public class ServerManager {
     return this.drainingServers.remove(sn);
   }
 
-  /*
+  /**
    * Add the server to the drain list.
+   * @param sn
+   * @return True if the server is added or the server is already on the drain list.
    */
-  public boolean addServerToDrainList(final ServerName sn) {
+  public synchronized boolean addServerToDrainList(final ServerName sn) {
     // Warn if the server (sn) is not online.  ServerName is of the form:
     // <hostname> , <port> , <startcode>
 
@@ -693,7 +647,7 @@ public class ServerManager {
     if (this.drainingServers.contains(sn)) {
       LOG.warn("Server " + sn + " is already in the draining server list." +
                "Ignoring request to add it again.");
-      return false;
+      return true;
     }
     LOG.info("Server " + sn + " added to draining server list.");
     return this.drainingServers.add(sn);
@@ -730,6 +684,7 @@ public class ServerManager {
   /**
    * Contacts a region server and waits up to timeout ms
    * to close the region.  This bypasses the active hmaster.
+   * Pass -1 as timeout if you do not want to wait on result.
    */
   public static void closeRegionSilentlyAndWait(ClusterConnection connection,
     ServerName server, RegionInfo region, long timeout) throws IOException, InterruptedException {
@@ -740,6 +695,9 @@ public class ServerManager {
     } catch (IOException e) {
       LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
     }
+    if (timeout < 0) {
+      return;
+    }
     long expiration = timeout + System.currentTimeMillis();
     while (System.currentTimeMillis() < expiration) {
       controller.reset();
@@ -748,8 +706,13 @@ public class ServerManager {
           ProtobufUtil.getRegionInfo(controller, rs, region.getRegionName());
         if (rsRegion == null) return;
       } catch (IOException ioe) {
-        if (ioe instanceof NotServingRegionException) // no need to retry again
+        if (ioe instanceof NotServingRegionException ||
+          (ioe instanceof RemoteWithExtrasException &&
+            ((RemoteWithExtrasException)ioe).unwrapRemoteException()
+              instanceof NotServingRegionException)) {
+          // no need to retry again
           return;
+        }
         LOG.warn("Exception when retrieving regioninfo from: "
           + region.getRegionNameAsString(), ioe);
       }
@@ -787,19 +750,22 @@ public class ServerManager {
    * RegionServers to check-in.
    */
   private int getMinToStart() {
-    // One server should be enough to get us off the ground.
-    int requiredMinToStart = 1;
-    if (LoadBalancer.isTablesOnMaster(master.getConfiguration())) {
-      if (LoadBalancer.isSystemTablesOnlyOnMaster(master.getConfiguration())) {
-        // If Master is carrying regions but NOT user-space regions, it
-        // still shows as a 'server'. We need at least one more server to check
-        // in before we can start up so set defaultMinToStart to 2.
-        requiredMinToStart = requiredMinToStart + 1;
-      }
+    if (master.isInMaintenanceMode()) {
+      // If in maintenance mode, then master hosting meta will be the only server available
+      return 1;
     }
+
+    int minimumRequired = 1;
+    if (LoadBalancer.isTablesOnMaster(master.getConfiguration()) &&
+        LoadBalancer.isSystemTablesOnlyOnMaster(master.getConfiguration())) {
+      // If Master is carrying regions it will show up as a 'server', but is not handling user-
+      // space regions, so we need a second server.
+      minimumRequired = 2;
+    }
+
     int minToStart = this.master.getConfiguration().getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
-    // Ensure we are never less than requiredMinToStart else stuff won't work.
-    return minToStart == -1 || minToStart < requiredMinToStart? requiredMinToStart: minToStart;
+    // Ensure we are never less than minimumRequired else stuff won't work.
+    return Math.max(minToStart, minimumRequired);
   }
 
   /**
@@ -848,13 +814,13 @@ public class ServerManager {
     for (ServerListener listener: this.listeners) {
       listener.waiting();
     }
-    while (!this.master.isStopped() && count < maxToStart &&
+    while (!this.master.isStopped() && !isClusterShutdown() && count < maxToStart &&
         ((lastCountChange + interval) > now || timeout > slept || count < minToStart)) {
       // Log some info at every interval time or if there is a change
       if (oldCount != count || lastLogTime + interval < now) {
         lastLogTime = now;
         String msg =
-            "Waiting on RegionServer count=" + count + " to settle; waited="+
+            "Waiting on regionserver count=" + count + "; waited="+
                 slept + "ms, expecting min=" + minToStart + " server(s), max="+ getStrForMax(maxToStart) +
                 " server(s), " + "timeout=" + timeout + "ms, lastChange=" + (lastCountChange - now) + "ms";
         LOG.info(msg);
@@ -873,7 +839,11 @@ public class ServerManager {
         lastCountChange = now;
       }
     }
-    LOG.info("Finished wait on RegionServer count=" + count + "; waited=" + slept + "ms," +
+    // Did we exit the loop because cluster is going down?
+    if (isClusterShutdown()) {
+      this.master.stop("Cluster shutdown");
+    }
+    LOG.info("Finished waiting on RegionServer count=" + count + "; waited=" + slept + "ms," +
         " expected min=" + minToStart + " server(s), max=" +  getStrForMax(maxToStart) + " server(s),"+
         " master is "+ (this.master.isStopped() ? "stopped.": "running"));
   }
@@ -897,11 +867,11 @@ public class ServerManager {
    * @return A copy of the internal list of online servers matched by the predicator
    */
   public List<ServerName> getOnlineServersListWithPredicator(List<ServerName> keys,
-    Predicate<ServerLoad> idleServerPredicator) {
+    Predicate<ServerMetrics> idleServerPredicator) {
     List<ServerName> names = new ArrayList<>();
     if (keys != null && idleServerPredicator != null) {
       keys.forEach(name -> {
-        ServerLoad load = onlineServers.get(name);
+        ServerMetrics load = onlineServers.get(name);
         if (load != null) {
           if (idleServerPredicator.test(load)) {
             names.add(name);
@@ -919,34 +889,42 @@ public class ServerManager {
     return new ArrayList<>(this.drainingServers);
   }
 
-  /**
-   * @return A copy of the internal set of deadNotExpired servers.
-   */
-  Set<ServerName> getDeadNotExpiredServers() {
-    return new HashSet<>(this.queuedDeadServers);
-  }
-
   public boolean isServerOnline(ServerName serverName) {
     return serverName != null && onlineServers.containsKey(serverName);
+  }
+
+  public enum ServerLiveState {
+    LIVE,
+    DEAD,
+    UNKNOWN
+  }
+
+  /**
+   * @return whether the server is online, dead, or unknown.
+   */
+  public synchronized ServerLiveState isServerKnownAndOnline(ServerName serverName) {
+    return onlineServers.containsKey(serverName) ? ServerLiveState.LIVE
+      : (deadservers.isDeadServer(serverName) ? ServerLiveState.DEAD : ServerLiveState.UNKNOWN);
   }
 
   /**
    * Check if a server is known to be dead.  A server can be online,
    * or known to be dead, or unknown to this manager (i.e, not online,
-   * not known to be dead either. it is simply not tracked by the
+   * not known to be dead either; it is simply not tracked by the
    * master any more, for example, a very old previous instance).
    */
   public synchronized boolean isServerDead(ServerName serverName) {
-    return serverName == null || deadservers.isDeadServer(serverName)
-      || queuedDeadServers.contains(serverName)
-      || requeuedDeadServers.containsKey(serverName);
+    return serverName == null || deadservers.isDeadServer(serverName);
   }
 
   public void shutdownCluster() {
     String statusStr = "Cluster shutdown requested of master=" + this.master.getServerName();
     LOG.info(statusStr);
     this.clusterShutdown.set(true);
-    this.master.stop(statusStr);
+    if (onlineServers.isEmpty()) {
+      // we do not synchronize here so this may cause a double stop, but not a big deal
+      master.stop("OnlineServer=0 right after cluster shutdown set");
+    }
   }
 
   public boolean isClusterShutdown() {
@@ -954,16 +932,10 @@ public class ServerManager {
   }
 
   /**
-   * Stop the ServerManager.  Currently closes the connection to the master.
+   * Stop the ServerManager.
    */
   public void stop() {
-    if (connection != null) {
-      try {
-        connection.close();
-      } catch (IOException e) {
-        LOG.error("Attempt to close connection to master failed", e);
-      }
-    }
+    // Nothing to do.
   }
 
   /**
@@ -982,8 +954,6 @@ public class ServerManager {
     final List<ServerName> drainingServersCopy = getDrainingServersList();
     destServers.removeAll(drainingServersCopy);
 
-    // Remove the deadNotExpired servers from the server list.
-    removeDeadNotExpiredServers(destServers);
     return destServers;
   }
 
@@ -992,23 +962,6 @@ public class ServerManager {
    */
   public List<ServerName> createDestinationServersList(){
     return createDestinationServersList(null);
-  }
-
-    /**
-    * Loop through the deadNotExpired server list and remove them from the
-    * servers.
-    * This function should be used carefully outside of this class. You should use a high level
-    *  method such as {@link #createDestinationServersList()} instead of managing you own list.
-    */
-  void removeDeadNotExpiredServers(List<ServerName> servers) {
-    Set<ServerName> deadNotExpiredServersCopy = this.getDeadNotExpiredServers();
-    if (!deadNotExpiredServersCopy.isEmpty()) {
-      for (ServerName server : deadNotExpiredServersCopy) {
-        LOG.debug("Removing dead but not expired server: " + server
-          + " from eligible server pool.");
-        servers.remove(server);
-      }
-    }
   }
 
   /**
@@ -1029,7 +982,6 @@ public class ServerManager {
     flushedSequenceIdByRegion.remove(encodedName);
   }
 
-  @VisibleForTesting
   public boolean isRegionInServerManagerStates(final RegionInfo hri) {
     final byte[] encodedName = hri.getEncodedNameAsBytes();
     return (storeFlushedSequenceIdsByRegion.containsKey(encodedName)
@@ -1043,5 +995,26 @@ public class ServerManager {
     for (RegionInfo hri: regions) {
       removeRegion(hri);
     }
+  }
+
+  /**
+   * May return 0 when server is not online.
+   */
+  public int getVersionNumber(ServerName serverName) {
+    ServerMetrics serverMetrics = onlineServers.get(serverName);
+    return serverMetrics != null ? serverMetrics.getVersionNumber() : 0;
+  }
+
+  /**
+   * May return "0.0.0" when server is not online
+   */
+  public String getVersion(ServerName serverName) {
+    ServerMetrics serverMetrics = onlineServers.get(serverName);
+    return serverMetrics != null ? serverMetrics.getVersion() : "0.0.0";
+  }
+
+  public int getInfoPort(ServerName serverName) {
+    ServerMetrics serverMetrics = onlineServers.get(serverName);
+    return serverMetrics != null ? serverMetrics.getInfoServerPort() : 0;
   }
 }

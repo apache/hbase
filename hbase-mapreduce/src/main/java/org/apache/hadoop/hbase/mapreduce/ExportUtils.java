@@ -21,26 +21,25 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Some helper methods are used by {@link org.apache.hadoop.hbase.mapreduce.Export}
@@ -48,7 +47,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
  */
 @InterfaceAudience.Private
 public final class ExportUtils {
-  private static final Log LOG = LogFactory.getLog(ExportUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExportUtils.class);
   public static final String RAW_SCAN = "hbase.mapreduce.include.deleted.rows";
   public static final String EXPORT_BATCHING = "hbase.export.scanner.batch";
   public static final String EXPORT_CACHING = "hbase.export.scanner.caching";
@@ -106,7 +105,6 @@ public final class ExportUtils {
     return new Triple<>(TableName.valueOf(args[0]), getScanFromCommandLine(conf, args), new Path(args[1]));
   }
 
-  @VisibleForTesting
   static Scan getScanFromCommandLine(Configuration conf, String[] args) throws IOException {
     Scan s = new Scan();
     // Optional arguments.

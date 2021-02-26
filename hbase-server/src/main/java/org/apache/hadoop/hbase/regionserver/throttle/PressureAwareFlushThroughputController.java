@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.throttle;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 
@@ -40,7 +40,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class PressureAwareFlushThroughputController extends PressureAwareThroughputController {
 
-  private static final Log LOG = LogFactory.getLog(PressureAwareFlushThroughputController.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PressureAwareFlushThroughputController.class);
 
   public static final String HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND =
       "hbase.hstore.flush.throughput.upper.bound";
@@ -126,11 +127,5 @@ public class PressureAwareFlushThroughputController extends PressureAwareThrough
   public String toString() {
     return "DefaultFlushController [maxThroughput=" + throughputDesc(getMaxThroughput())
         + ", activeFlushNumber=" + activeOperations.size() + "]";
-  }
-
-  @Override
-  protected boolean skipControl(long deltaSize, long controlSize) {
-    // for flush, we control the flow no matter whether the flush size is small
-    return false;
   }
 }

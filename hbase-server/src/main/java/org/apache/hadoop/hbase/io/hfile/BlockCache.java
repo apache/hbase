@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Iterator;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 
 /**
  * Block cache interface. Anything that implements the {@link Cacheable}
@@ -34,11 +33,8 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @param cacheKey The block's cache key.
    * @param buf The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory
-   * @param cacheDataInL1 If multi-tier block cache deploy -- i.e. has an L1 and L2 tier -- then
-   * if this flag is true, cache data blocks up in the L1 tier (meta blocks are probably being
-   * cached in L1 already).
    */
-  void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory, boolean cacheDataInL1);
+  void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory);
 
   /**
    * Add block to cache (defaults to not in-memory).
@@ -119,7 +115,7 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @return number of blocks in the cache
    */
   long getBlockCount();
- 
+
  /**
   * Returns the number of data blocks currently cached in the block cache.
   * @return number of blocks in the cache
@@ -129,22 +125,11 @@ public interface BlockCache extends Iterable<CachedBlock> {
   /**
    * @return Iterator over the blocks in the cache.
    */
+  @Override
   Iterator<CachedBlock> iterator();
 
   /**
    * @return The list of sub blockcaches that make up this one; returns null if no sub caches.
    */
   BlockCache [] getBlockCaches();
-
-  /**
-   * Called when the scanner using the block decides to return the block once its usage
-   * is over.
-   * This API should be called after the block is used, failing to do so may have adverse effects
-   * by preventing the blocks from being evicted because of which it will prevent new hot blocks
-   * from getting added to the block cache.  The implementation of the BlockCache will decide
-   * on what to be done with the block based on the memory type of the block's {@link MemoryType}.
-   * @param cacheKey the cache key of the block
-   * @param block the hfileblock to be returned
-   */
-  void returnBlock(BlockCacheKey cacheKey, Cacheable block);
 }

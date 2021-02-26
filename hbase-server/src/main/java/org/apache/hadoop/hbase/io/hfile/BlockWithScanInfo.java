@@ -18,11 +18,13 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * BlockWithScanInfo is wrapper class for HFileBlock with other attributes. These attributes are
  * supposed to be much cheaper to be maintained in each caller thread than in HFileBlock itself.
  */
+@InterfaceAudience.Private
 public class BlockWithScanInfo {
   private final HFileBlock hFileBlock;
   /**

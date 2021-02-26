@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertEquals;
+
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -28,25 +33,25 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.assertEquals;
-
-@Category({MiscTests.class, LargeTests.class})
+@Category({MiscTests.class, MediumTests.class})
 public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHBaseFsckMOB.class);
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
@@ -62,7 +67,8 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     TEST_UTIL.startMiniCluster(1);
 
     tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
-        new SynchronousQueue<>(), Threads.newDaemonThreadFactory("testhbck"));
+      new SynchronousQueue<>(), new ThreadFactoryBuilder().setNameFormat("testhbck-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 
@@ -96,7 +102,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
   /**
    * This creates a table and then corrupts a mob file.  Hbck should quarantine the file.
    */
-  @Test(timeout=180000)
+  @Test
   public void testQuarantineCorruptMobFile() throws Exception {
     TableName table = TableName.valueOf(name.getMethodName());
     try {
@@ -112,24 +118,24 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
       Path corrupt = new Path(mobFile.getParent(), corruptMobFile);
       TestHFile.truncateFile(fs, mobFile, corrupt);
       LOG.info("Created corrupted mob file " + corrupt);
-      HBaseFsck.debugLsr(conf, FSUtils.getRootDir(conf));
+      HBaseFsck.debugLsr(conf, CommonFSUtils.getRootDir(conf));
       HBaseFsck.debugLsr(conf, MobUtils.getMobHome(conf));
 
       // A corrupt mob file doesn't abort the start of regions, so we can enable the table.
       admin.enableTable(table);
       HBaseFsck res = HbckTestingUtil.doHFileQuarantine(conf, table);
-      assertEquals(res.getRetCode(), 0);
+      assertEquals(0, res.getRetCode());
       HFileCorruptionChecker hfcc = res.getHFilecorruptionChecker();
-      assertEquals(hfcc.getHFilesChecked(), 4);
-      assertEquals(hfcc.getCorrupted().size(), 0);
-      assertEquals(hfcc.getFailures().size(), 0);
-      assertEquals(hfcc.getQuarantined().size(), 0);
-      assertEquals(hfcc.getMissing().size(), 0);
-      assertEquals(hfcc.getMobFilesChecked(), 5);
-      assertEquals(hfcc.getCorruptedMobFiles().size(), 1);
-      assertEquals(hfcc.getFailureMobFiles().size(), 0);
-      assertEquals(hfcc.getQuarantinedMobFiles().size(), 1);
-      assertEquals(hfcc.getMissedMobFiles().size(), 0);
+      assertEquals(4, hfcc.getHFilesChecked());
+      assertEquals(0, hfcc.getCorrupted().size());
+      assertEquals(0, hfcc.getFailures().size());
+      assertEquals(0, hfcc.getQuarantined().size());
+      assertEquals(0, hfcc.getMissing().size());
+      assertEquals(5, hfcc.getMobFilesChecked());
+      assertEquals(1, hfcc.getCorruptedMobFiles().size());
+      assertEquals(0, hfcc.getFailureMobFiles().size());
+      assertEquals(1, hfcc.getQuarantinedMobFiles().size());
+      assertEquals(0, hfcc.getMissedMobFiles().size());
       String quarantinedMobFile = hfcc.getQuarantinedMobFiles().iterator().next().getName();
       assertEquals(corruptMobFile, quarantinedMobFile);
     } finally {

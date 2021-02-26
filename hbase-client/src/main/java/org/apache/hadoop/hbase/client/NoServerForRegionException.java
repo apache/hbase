@@ -25,7 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class NoServerForRegionException extends DoNotRetryRegionException {
-  private static final long serialVersionUID = 1L << 11 - 1L;
+  private static final long serialVersionUID = (1L << 11) - 1L;
 
   /** default constructor */
   public NoServerForRegionException() {

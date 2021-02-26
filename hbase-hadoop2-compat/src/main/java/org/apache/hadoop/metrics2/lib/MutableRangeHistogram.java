@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.hbase.metrics.Snapshot;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Extended histogram implementation with metric range counters.
  */
@@ -35,11 +36,7 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
   }
 
   public MutableRangeHistogram(String name, String description) {
-    this(name, description, Integer.MAX_VALUE << 2);
-  }
-
-  public MutableRangeHistogram(String name, String description, long expectedMax) {
-    super(name, description, expectedMax);
+    super(name, description);
   }
 
   /**
@@ -70,7 +67,7 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
 
     final long[] ranges = getRanges();
     final String rangeType = getRangeType();
-    for (int i = 0; i < ranges.length - 1; i++) {
+    for (int i = 0; i < ranges.length; i++) {
       long val = snapshot.getCountAtOrBelow(ranges[i]);
       if (val - cumNum > 0) {
         metricsRecordBuilder.addCounter(
@@ -80,11 +77,15 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
       priorRange = ranges[i];
       cumNum = val;
     }
-    long val = histogram.getCount();
+    long val = snapshot.getCount();
     if (val - cumNum > 0) {
       metricsRecordBuilder.addCounter(
-          Interns.info(name + "_" + rangeType + "_" + ranges[ranges.length - 1] + "-inf", desc),
+          Interns.info(name + "_" + rangeType + "_" + priorRange + "-inf", desc),
           val - cumNum);
     }
-  }  
+  }
+
+  @Override public long getCount() {
+    return histogram.getCount();
+  }
 }

@@ -20,17 +20,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.SortedSet;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
 
 /**
  * The CompositeImmutableSegments is created as a collection of ImmutableSegments and supports
@@ -42,28 +39,21 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 public class CompositeImmutableSegment extends ImmutableSegment {
 
   private final List<ImmutableSegment> segments;
-  // CompositeImmutableSegment is used for snapshots and snapshot should
-  // support getTimeRangeTracker() interface.
-  // Thus we hold a constant TRT build in the construction time from TRT of the given segments.
-  private final TimeRangeTracker timeRangeTracker;
-
   private long keySize = 0;
 
   public CompositeImmutableSegment(CellComparator comparator, List<ImmutableSegment> segments) {
-    super(comparator);
+    super(comparator, segments);
     this.segments = segments;
-    this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
     for (ImmutableSegment s : segments) {
       this.timeRangeTracker.includeTimestamp(s.getTimeRangeTracker().getMax());
       this.timeRangeTracker.includeTimestamp(s.getTimeRangeTracker().getMin());
-      this.keySize += s.keySize();
+      this.keySize += s.getDataSize();
     }
   }
 
-  @VisibleForTesting
   @Override
   public List<Segment> getAllSegments() {
-    return new LinkedList<>(segments);
+    return new ArrayList<>(segments);
   }
 
   @Override
@@ -95,14 +85,6 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   }
 
   /**
-   * @return the first cell in the segment that has equal or greater key than the given cell
-   */
-  @Override
-  public Cell getFirstAfter(Cell cell) {
-    throw new IllegalStateException("Not supported by CompositeImmutableScanner");
-  }
-
-  /**
    * Closing a segment before it is being discarded
    */
   @Override
@@ -118,17 +100,12 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * @return either the given cell or its clone
    */
   @Override
-  public Cell maybeCloneWithAllocator(Cell cell) {
+  public Cell maybeCloneWithAllocator(Cell cell, boolean forceCloneOfBigCell) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
   @Override
   public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS){
-    throw new IllegalStateException("Not supported by CompositeImmutableScanner");
-  }
-
-  @Override
-  public long getMinTimestamp(){
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
@@ -141,19 +118,11 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
-  /**
-   * Creates the scanner for the given read point, and a specific order in a list
-   * @return a scanner for the given read point
-   */
-  @Override
-  public KeyValueScanner getScanner(long readPoint, long order) {
-    throw new IllegalStateException("Not supported by CompositeImmutableScanner");
-  }
 
   @Override
-  public List<KeyValueScanner> getScanners(long readPoint, long order) {
+  public List<KeyValueScanner> getScanners(long readPoint) {
     List<KeyValueScanner> list = new ArrayList<>(segments.size());
-    AbstractMemStore.addToScanners(segments, readPoint, order, list);
+    AbstractMemStore.addToScanners(segments, readPoint, list);
     return list;
   }
 
@@ -199,7 +168,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * @return Sum of all cell sizes.
    */
   @Override
-  public long keySize() {
+  public long getDataSize() {
     return this.keySize;
   }
 
@@ -207,10 +176,10 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * @return The heap size of this segment.
    */
   @Override
-  public long heapSize() {
+  public long getHeapSize() {
     long result = 0;
     for (ImmutableSegment s : segments) {
-      result += s.heapSize();
+      result += s.getHeapSize();
     }
     return result;
   }
@@ -219,7 +188,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * Updates the heap size counter of the segment by the given delta
    */
   @Override
-  protected void incSize(long delta, long heapOverhead) {
+  public long incMemStoreSize(long delta, long heapOverhead, long offHeapOverhead, int cellsCount) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
@@ -268,13 +237,14 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   }
 
   @Override
-  protected void internalAdd(Cell cell, boolean mslabUsed, MemStoreSize memstoreSize) {
+  protected void internalAdd(Cell cell, boolean mslabUsed, MemStoreSizing memstoreSizing,
+      boolean sizeAddedPreOperation) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
   @Override
   protected void updateMetaInfo(Cell cellToAdd, boolean succ, boolean mslabUsed,
-      MemStoreSize memstoreSize) {
+      MemStoreSizing memstoreSizing, boolean sizeAddedPreOperation) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
@@ -292,7 +262,8 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   /**
    * Dumps all cells of the segment into the given log
    */
-  void dump(Log log) {
+  @Override
+  void dump(Logger log) {
     for (ImmutableSegment s : segments) {
       s.dump(log);
     }
@@ -306,5 +277,14 @@ public class CompositeImmutableSegment extends ImmutableSegment {
       sb.append(s.toString());
     }
     return sb.toString();
+  }
+
+  @Override
+  List<KeyValueScanner> getSnapshotScanners() {
+    List<KeyValueScanner> list = new ArrayList<>(this.segments.size());
+    for (ImmutableSegment segment: this.segments) {
+      list.add(new SnapshotSegmentScanner(segment));
+    }
+    return list;
   }
 }

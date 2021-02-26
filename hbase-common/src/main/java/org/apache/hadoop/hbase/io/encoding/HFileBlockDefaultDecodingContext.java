@@ -19,9 +19,7 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-
 import org.apache.commons.io.IOUtils;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -29,8 +27,10 @@ import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.util.BlockIOUtils;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A default implementation of {@link HFileBlockDecodingContext}. It assumes the
@@ -40,11 +40,10 @@ import org.apache.hadoop.hbase.util.Bytes;
  *
  */
 @InterfaceAudience.Private
-public class HFileBlockDefaultDecodingContext implements
-    HFileBlockDecodingContext {
+public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingContext {
   private final HFileContext fileContext;
   private TagCompressionContext tagCompressionContext;
-  
+
   public HFileBlockDefaultDecodingContext(HFileContext fileContext) {
     this.fileContext = fileContext;
   }
@@ -87,14 +86,12 @@ public class HFileBlockDefaultDecodingContext implements
       }
 
       Compression.Algorithm compression = fileContext.getCompression();
-      assert blockBufferWithoutHeader.hasArray();
       if (compression != Compression.Algorithm.NONE) {
-        Compression.decompress(blockBufferWithoutHeader.array(),
-            blockBufferWithoutHeader.arrayOffset(), dataInputStream, onDiskSizeWithoutHeader,
-            uncompressedSizeWithoutHeader, compression);
+        Compression.decompress(blockBufferWithoutHeader, dataInputStream,
+          uncompressedSizeWithoutHeader, compression);
       } else {
-        IOUtils.readFully(dataInputStream, blockBufferWithoutHeader.array(),
-            blockBufferWithoutHeader.arrayOffset(), onDiskSizeWithoutHeader);
+        BlockIOUtils.readFullyWithHeapBuffer(dataInputStream, blockBufferWithoutHeader,
+          onDiskSizeWithoutHeader);
       }
     } finally {
       byteBuffInputStream.close();

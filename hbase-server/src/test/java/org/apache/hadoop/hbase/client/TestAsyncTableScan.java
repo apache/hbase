@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.client;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -34,6 +34,10 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncTableScan.class);
+
   @Parameter(0)
   public String scanType;
 
@@ -42,8 +46,7 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
 
   @Parameters(name = "{index}: scan={0}")
   public static List<Object[]> params() {
-    return getScanCreater().stream().map(p -> new Object[] { p.getFirst(), p.getSecond() })
-        .collect(Collectors.toList());
+    return getScanCreatorParams();
   }
 
   @Override
@@ -53,7 +56,8 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
 
   @Override
   protected List<Result> doScan(Scan scan) throws Exception {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
+    AsyncTable<ScanResultConsumer> table =
+      ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
     SimpleScanResultConsumer consumer = new SimpleScanResultConsumer();
     table.scan(scan, consumer);
     List<Result> results = consumer.getAll();

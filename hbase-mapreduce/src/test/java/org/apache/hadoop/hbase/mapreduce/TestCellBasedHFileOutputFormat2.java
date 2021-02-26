@@ -39,9 +39,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,10 +46,10 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -92,9 +89,9 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -105,12 +102,13 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.junit.ClassRule;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple test for {@link HFileOutputFormat2}.
@@ -120,8 +118,11 @@ import org.mockito.Mockito;
  */
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestCellBasedHFileOutputFormat2  {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCellBasedHFileOutputFormat2.class);
+
   private final static int ROWSPERSPLIT = 1024;
 
   public static final byte[] FAMILY_NAME = TestHRegionFileSystem.FAMILY_NAME;
@@ -132,7 +133,7 @@ public class TestCellBasedHFileOutputFormat2  {
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
 
-  private static final Log LOG = LogFactory.getLog(TestCellBasedHFileOutputFormat2.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCellBasedHFileOutputFormat2.class);
 
   /**
    * Simple mapper that makes KeyValue output.
@@ -394,13 +395,12 @@ public class TestCellBasedHFileOutputFormat2  {
       // open as HFile Reader and pull out TIMERANGE FileInfo.
       HFile.Reader rd =
           HFile.createReader(fs, file[0].getPath(), new CacheConfig(conf), true, conf);
-      Map<byte[],byte[]> finfo = rd.loadFileInfo();
+      Map<byte[],byte[]> finfo = rd.getHFileInfo();
       byte[] range = finfo.get("TIMERANGE".getBytes("UTF-8"));
       assertNotNull(range);
 
       // unmarshall and check values.
-      TimeRangeTracker timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
-      Writables.copyWritable(range, timeRangeTracker);
+      TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(range);
       LOG.info(timeRangeTracker.getMin() +
           "...." + timeRangeTracker.getMax());
       assertEquals(1000, timeRangeTracker.getMin());
@@ -715,7 +715,7 @@ public class TestCellBasedHFileOutputFormat2  {
             assertEquals(FAMILIES.length, res.rawCells().length);
             Cell first = res.rawCells()[0];
             for (Cell kv : res.rawCells()) {
-              assertTrue(CellUtil.matchingRow(first, kv));
+              assertTrue(CellUtil.matchingRows(first, kv));
               assertTrue(Bytes.equals(CellUtil.cloneValue(first), CellUtil.cloneValue(kv)));
             }
           }
@@ -1151,7 +1151,7 @@ public class TestCellBasedHFileOutputFormat2  {
       // commit so that the filesystem has one directory per column family
       hof.getOutputCommitter(context).commitTask(context);
       hof.getOutputCommitter(context).commitJob(context);
-      FileStatus[] families = FSUtils.listStatus(fs, dir, new FSUtils.FamilyDirFilter(fs));
+      FileStatus[] families = CommonFSUtils.listStatus(fs, dir, new FSUtils.FamilyDirFilter(fs));
       assertEquals(htd.getFamilies().size(), families.length);
       for (FileStatus f : families) {
         String familyStr = f.getPath().getName();
@@ -1160,7 +1160,7 @@ public class TestCellBasedHFileOutputFormat2  {
         // compression
         Path dataFilePath = fs.listStatus(f.getPath())[0].getPath();
         Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf), true, conf);
-        Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
+        Map<byte[], byte[]> fileInfo = reader.getHFileInfo();
 
         byte[] bloomFilter = fileInfo.get(BLOOM_FILTER_TYPE_KEY);
         if (bloomFilter == null) bloomFilter = Bytes.toBytes("NONE");
@@ -1225,7 +1225,7 @@ public class TestCellBasedHFileOutputFormat2  {
 
       // deep inspection: get the StoreFile dir
       final Path storePath = new Path(
-        FSUtils.getTableDir(FSUtils.getRootDir(conf), TABLE_NAMES[0]),
+        CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), TABLE_NAMES[0]),
           new Path(admin.getTableRegions(TABLE_NAMES[0]).get(0).getEncodedName(),
             Bytes.toString(FAMILIES[0])));
       assertEquals(0, fs.listStatus(storePath).length);
@@ -1306,7 +1306,7 @@ public class TestCellBasedHFileOutputFormat2  {
 
       // deep inspection: get the StoreFile dir
       final Path storePath = new Path(
-        FSUtils.getTableDir(FSUtils.getRootDir(conf), TABLE_NAMES[0]),
+        CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), TABLE_NAMES[0]),
           new Path(admin.getTableRegions(TABLE_NAMES[0]).get(0).getEncodedName(),
             Bytes.toString(FAMILIES[0])));
       assertEquals(0, fs.listStatus(storePath).length);

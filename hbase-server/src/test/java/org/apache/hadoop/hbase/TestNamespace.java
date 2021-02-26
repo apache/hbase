@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,9 +26,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.Callable;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
@@ -44,16 +40,24 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({MiscTests.class, MediumTests.class})
 public class TestNamespace {
-  private static final Log LOG = LogFactory.getLog(TestNamespace.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNamespace.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestNamespace.class);
   private static HMaster master;
   protected final static int NUM_SLAVES_BASE = 4;
   private static HBaseTestingUtility TEST_UTIL;
@@ -110,6 +114,7 @@ public class TestNamespace {
     assertEquals(ns.getName(), NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
     assertNotNull(zkNamespaceManager.get(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR));
 
+    assertEquals(2, admin.listNamespaces().length);
     assertEquals(2, admin.listNamespaceDescriptors().length);
 
     //verify existence of system tables
@@ -130,7 +135,7 @@ public class TestNamespace {
     try {
       admin.createNamespace(NamespaceDescriptor.DEFAULT_NAMESPACE);
     } catch (IOException exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -140,7 +145,7 @@ public class TestNamespace {
     try {
       admin.createNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE);
     } catch (IOException exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -153,7 +158,7 @@ public class TestNamespace {
     try {
       admin.deleteNamespace(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR);
     } catch (IOException exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -162,7 +167,7 @@ public class TestNamespace {
     try {
       admin.deleteNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
     } catch (IOException exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -176,6 +181,7 @@ public class TestNamespace {
 
     //create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
+    assertEquals(3, admin.listNamespaces().length);
     assertEquals(3, admin.listNamespaceDescriptors().length);
     TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
       @Override
@@ -186,6 +192,7 @@ public class TestNamespace {
     assertNotNull(zkNamespaceManager.get(nsName));
     //remove namespace and verify
     admin.deleteNamespace(nsName);
+    assertEquals(2, admin.listNamespaces().length);
     assertEquals(2, admin.listNamespaceDescriptors().length);
     assertEquals(2, zkNamespaceManager.list().size());
     assertNull(zkNamespaceManager.get(nsName));
@@ -284,7 +291,7 @@ public class TestNamespace {
     admin.deleteTable(desc.getTableName());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testNamespaceOperations() throws IOException {
     admin.createNamespace(NamespaceDescriptor.create(prefix + "ns1").build());
     admin.createNamespace(NamespaceDescriptor.create(prefix + "ns2").build());

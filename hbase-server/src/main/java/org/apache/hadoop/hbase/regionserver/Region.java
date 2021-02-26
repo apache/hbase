@@ -22,17 +22,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -41,34 +41,18 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Service;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
-
 /**
- * Regions store data for a certain region of a table.  It stores all columns
- * for each row. A given table consists of one or more Regions.
- *
- * <p>An Region is defined by its table and its key extent.
- *
- * <p>Locking at the Region level serves only one purpose: preventing the
- * region from being closed (and consequently split) while other operations
- * are ongoing. Each row level operation obtains both a row lock and a region
- * read lock for the duration of the operation. While a scanner is being
- * constructed, getScanner holds a read lock. If the scanner is successfully
- * constructed, it holds a read lock until it is closed. A close takes out a
- * write lock and consequently will block for ongoing operations and will block
- * new operations from starting while the close is in progress.
+ * Region is a subset of HRegion with operations required for the {@link RegionCoprocessor
+ * Coprocessors}. The operations include ability to do mutations, requesting compaction, getting
+ * different counters/sizes, locking rows and getting access to {@linkplain Store}s.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -91,9 +75,6 @@ public interface Region extends ConfigurationObserver {
 
   /** @return True if closing process has started */
   boolean isClosing();
-
-  /** @return True if region is in recovering state */
-  boolean isRecovering();
 
   /** @return True if region is read only */
   boolean isReadOnly();
@@ -131,23 +112,10 @@ public interface Region extends ConfigurationObserver {
    */
   boolean refreshStoreFiles() throws IOException;
 
-  /** @return the latest sequence number that was read from storage when this region was opened */
-  long getOpenSeqNum();
-
   /** @return the max sequence id of flushed data on this region; no edit in memory will have
    * a sequence id that is less that what is returned here.
    */
   long getMaxFlushedSeqId();
-
-  /** @return the oldest flushed sequence id for the given family; can be beyond
-   * {@link #getMaxFlushedSeqId()} in case where we've flushed a subset of a regions column
-   * families
-   * @deprecated Since version 1.2.0. Exposes too much about our internals; shutting it down.
-   * Do not use.
-   */
-  @VisibleForTesting
-  @Deprecated
-  public long getOldestSeqIdOfStore(byte[] familyName);
 
   /**
    * This can be used to determine the last time all files of this region were major compacted.
@@ -162,19 +130,6 @@ public interface Region extends ConfigurationObserver {
    */
   public Map<byte[], Long> getMaxStoreSeqId();
 
-  /** @return true if loading column families on demand by default */
-  boolean isLoadingCfsOnDemandDefault();
-
-  /** @return readpoint considering given IsolationLevel; pass null for default*/
-  long getReadPoint(IsolationLevel isolationLevel);
-
-  /**
-   * @return readpoint considering given IsolationLevel
-   * @deprecated Since 1.2.0. Use {@link #getReadPoint(IsolationLevel)} instead.
-   */
-  @Deprecated
-  long getReadpoint(IsolationLevel isolationLevel);
-
   /**
    * @return The earliest time a store in the region was flushed. All
    *         other stores in the region would have been flushed either at, or
@@ -188,12 +143,6 @@ public interface Region extends ConfigurationObserver {
   /** @return read requests count for this region */
   long getReadRequestsCount();
 
-  /**
-   * Update the read request count for this region
-   * @param i increment
-   */
-  void updateReadRequestsCount(long i);
-
   /** @return filtered read requests count for this region */
   long getFilteredReadRequestsCount();
 
@@ -201,20 +150,25 @@ public interface Region extends ConfigurationObserver {
   long getWriteRequestsCount();
 
   /**
-   * Update the write request count for this region
-   * @param i increment
-   */
-  void updateWriteRequestsCount(long i);
-
-  /**
    * @return memstore size for this region, in bytes. It just accounts data size of cells added to
    *         the memstores of this Region. Means size in bytes for key, value and tags within Cells.
    *         It wont consider any java heap overhead for the cell objects or any other.
    */
-  long getMemStoreSize();
+  long getMemStoreDataSize();
 
-  /** @return store services for this region, to access services required by store level needs */
-  RegionServicesForStores getRegionServicesForStores();
+  /**
+   * @return memstore heap size for this region, in bytes. It accounts data size of cells
+   *         added to the memstores of this Region, as well as java heap overhead for the cell
+   *         objects or any other.
+   */
+  long getMemStoreHeapSize();
+
+  /**
+   * @return memstore off-heap size for this region, in bytes. It accounts data size of cells
+   *         added to the memstores of this Region, as well as overhead for the cell
+   *         objects or any other that is allocated off-heap.
+   */
+  long getMemStoreOffHeapSize();
 
   /** @return the number of mutations processed bypassing the WAL */
   long getNumMutationsWithoutWAL();
@@ -231,12 +185,6 @@ public interface Region extends ConfigurationObserver {
   /** @return the number of failed checkAndMutate guards */
   long getCheckAndMutateChecksFailed();
 
-  /** @return the MetricsRegion for this region */
-  MetricsRegion getMetrics();
-
-  /** @return the block distribution for all Stores managed by this region */
-  HDFSBlocksDistribution getHDFSBlocksDistribution();
-
   ///////////////////////////////////////////////////////////////////////////
   // Locking
 
@@ -248,7 +196,8 @@ public interface Region extends ConfigurationObserver {
    */
   enum Operation {
     ANY, GET, PUT, DELETE, SCAN, APPEND, INCREMENT, SPLIT_REGION, MERGE_REGION, BATCH_MUTATE,
-    REPLAY_BATCH_MUTATE, COMPACT_REGION, REPLAY_EVENT, SNAPSHOT
+    REPLAY_BATCH_MUTATE, COMPACT_REGION, REPLAY_EVENT, SNAPSHOT, COMPACT_SWITCH,
+    CHECK_AND_MUTATE
   }
 
   /**
@@ -259,6 +208,8 @@ public interface Region extends ConfigurationObserver {
    * the operation has completed, whether it succeeded or failed.
    * @throws IOException
    */
+  // TODO Exposing this and closeRegionOperation() as we have getRowLock() exposed.
+  // Remove if we get rid of exposing getRowLock().
   void startRegionOperation() throws IOException;
 
   /**
@@ -308,7 +259,9 @@ public interface Region extends ConfigurationObserver {
    *
    * Before calling this function make sure that a region operation has already been
    * started (the calling thread has already acquired the region-close-guard lock).
-   *
+   * <p>
+   * The obtained locks should be released after use by {@link RowLock#release()}
+   * <p>
    * NOTE: the boolean passed here has changed. It used to be a boolean that
    * stated whether or not to wait on the lock. Now it is whether it an exclusive
    * lock is requested.
@@ -319,12 +272,9 @@ public interface Region extends ConfigurationObserver {
    * @see #startRegionOperation()
    * @see #startRegionOperation(Operation)
    */
+  // TODO this needs to be exposed as we have RowProcessor now. If RowProcessor is removed, we can
+  // remove this too..
   RowLock getRowLock(byte[] row, boolean readLock) throws IOException;
-
-  /**
-   * If the given list of row locks is not null, releases all locks.
-   */
-  void releaseRowLocks(List<RowLock> rowLocks);
 
   ///////////////////////////////////////////////////////////////////////////
   // Region operations
@@ -332,36 +282,24 @@ public interface Region extends ConfigurationObserver {
   /**
    * Perform one or more append operations on a row.
    * @param append
-   * @param nonceGroup
-   * @param nonce
    * @return result of the operation
    * @throws IOException
    */
-  Result append(Append append, long nonceGroup, long nonce) throws IOException;
+  Result append(Append append) throws IOException;
 
   /**
    * Perform a batch of mutations.
    * <p>
-   * Note this supports only Put and Delete mutations and will ignore other types passed.
+   * Please do not operate on a same column of a single row in a batch, we will not consider the
+   * previous operation in the same batch when performing the operations in the batch.
+   *
    * @param mutations the list of mutations
-   * @param nonceGroup
-   * @param nonce
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
    * @throws IOException
    */
-  OperationStatus[] batchMutate(Mutation[] mutations, long nonceGroup, long nonce)
+  OperationStatus[] batchMutate(Mutation[] mutations)
       throws IOException;
-
-  /**
-   * Replay a batch of mutations.
-   * @param mutations mutations to replay.
-   * @param replaySeqId
-   * @return an array of OperationStatus which internally contains the
-   *         OperationStatusCode and the exceptionMessage if any.
-   * @throws IOException
-   */
-   OperationStatus[] batchReplay(MutationReplay[] mutations, long replaySeqId) throws IOException;
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected value and if it does,
@@ -372,14 +310,72 @@ public interface Region extends ConfigurationObserver {
    * @param family column family to check
    * @param qualifier column qualifier to check
    * @param op the comparison operator
-   * @param comparator
-   * @param mutation
-   * @param writeToWAL
+   * @param comparator the expected value
+   * @param mutation data to put if check succeeds
    * @return true if mutation was applied, false otherwise
-   * @throws IOException
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
+  default boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
+    ByteArrayComparable comparator, Mutation mutation) throws IOException {
+    return checkAndMutate(row, family, qualifier, op, comparator, TimeRange.allTime(), mutation);
+  }
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected value and if it does,
+   * it performs the mutation. If the passed value is null, the lack of column value
+   * (ie: non-existence) is used. See checkAndRowMutate to do many checkAndPuts at a time on a
+   * single row.
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param op the comparison operator
+   * @param comparator the expected value
+   * @param mutation data to put if check succeeds
+   * @param timeRange time range to check
+   * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   */
+  @Deprecated
   boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
-      ByteArrayComparable comparator, Mutation mutation, boolean writeToWAL) throws IOException;
+      ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException;
+
+  /**
+   * Atomically checks if a row matches the filter and if it does, it performs the mutation. See
+   * checkAndRowMutate to do many checkAndPuts at a time on a single row.
+   * @param row to check
+   * @param filter the filter
+   * @param mutation data to put if check succeeds
+   * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   */
+  @Deprecated
+  default boolean checkAndMutate(byte [] row, Filter filter, Mutation mutation)
+    throws IOException {
+    return checkAndMutate(row, filter, TimeRange.allTime(), mutation);
+  }
+
+  /**
+   * Atomically checks if a row value matches the filter and if it does, it performs the mutation.
+   * See checkAndRowMutate to do many checkAndPuts at a time on a single row.
+   * @param row to check
+   * @param filter the filter
+   * @param mutation data to put if check succeeds
+   * @param timeRange time range to check
+   * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   */
+  @Deprecated
+  boolean checkAndMutate(byte [] row, Filter filter, TimeRange timeRange, Mutation mutation)
+    throws IOException;
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected values and if it does,
@@ -390,15 +386,86 @@ public interface Region extends ConfigurationObserver {
    * @param family column family to check
    * @param qualifier column qualifier to check
    * @param op the comparison operator
-   * @param comparator
-   * @param mutations
-   * @param writeToWAL
+   * @param comparator the expected value
+   * @param mutations data to put if check succeeds
    * @return true if mutations were applied, false otherwise
-   * @throws IOException
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
+  default boolean checkAndRowMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+    ByteArrayComparable comparator, RowMutations mutations) throws IOException {
+    return checkAndRowMutate(row, family, qualifier, op, comparator, TimeRange.allTime(),
+      mutations);
+  }
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected values and if it does,
+   * it performs the row mutations. If the passed value is null, the lack of column value
+   * (ie: non-existence) is used. Use to do many mutations on a single row. Use checkAndMutate
+   * to do one checkAndMutate at a time.
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param op the comparison operator
+   * @param comparator the expected value
+   * @param mutations data to put if check succeeds
+   * @param timeRange time range to check
+   * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   */
+  @Deprecated
   boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
-      ByteArrayComparable comparator, RowMutations mutations, boolean writeToWAL)
+      ByteArrayComparable comparator, TimeRange timeRange, RowMutations mutations)
       throws IOException;
+
+  /**
+   * Atomically checks if a row matches the filter and if it does, it performs the row mutations.
+   * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
+   * time.
+   * @param row to check
+   * @param filter the filter
+   * @param mutations data to put if check succeeds
+   * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   */
+  @Deprecated
+  default boolean checkAndRowMutate(byte[] row, Filter filter, RowMutations mutations)
+    throws IOException {
+    return checkAndRowMutate(row, filter, TimeRange.allTime(), mutations);
+  }
+
+  /**
+   * Atomically checks if a row matches the filter and if it does, it performs the row mutations.
+   * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
+   * time.
+   * @param row to check
+   * @param filter the filter
+   * @param mutations data to put if check succeeds
+   * @param timeRange time range to check
+   * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   */
+  @Deprecated
+  boolean checkAndRowMutate(byte [] row, Filter filter, TimeRange timeRange,
+    RowMutations mutations) throws IOException;
+
+  /**
+   * Atomically checks if a row matches the conditions and if it does, it performs the actions.
+   * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
+   * time.
+   * @param checkAndMutate the CheckAndMutate object
+   * @return true if mutations were applied, false otherwise
+   * @throws IOException if an error occurred in this method
+   */
+  CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException;
 
   /**
    * Deletes the specified cells/row.
@@ -422,17 +489,6 @@ public interface Region extends ConfigurationObserver {
    * @return list of cells resulting from the operation
    */
   List<Cell> get(Get get, boolean withCoprocessor) throws IOException;
-
-  /**
-   * Do a get for duplicate non-idempotent operation.
-   * @param get query parameters.
-   * @param withCoprocessor
-   * @param nonceGroup Nonce group.
-   * @param nonce Nonce.
-   * @return list of cells resulting from the operation
-   * @throws IOException
-   */
-  List<Cell> get(Get get, boolean withCoprocessor, long nonceGroup, long nonce) throws IOException;
 
   /**
    * Return an iterator that scans over the HRegion, returning the indicated
@@ -467,21 +523,20 @@ public interface Region extends ConfigurationObserver {
   /**
    * Perform one or more increment operations on a row.
    * @param increment
-   * @param nonceGroup
-   * @param nonce
    * @return result of the operation
    * @throws IOException
    */
-  Result increment(Increment increment, long nonceGroup, long nonce) throws IOException;
+  Result increment(Increment increment) throws IOException;
 
   /**
-   * Performs multiple mutations atomically on a single row. Currently
-   * {@link Put} and {@link Delete} are supported.
+   * Performs multiple mutations atomically on a single row.
    *
    * @param mutations object that specifies the set of mutations to perform atomically
+   * @return results of Increment/Append operations. If no Increment/Append operations, it returns
+   *   null
    * @throws IOException
    */
-  void mutateRow(RowMutations mutations) throws IOException;
+  Result mutateRow(RowMutations mutations) throws IOException;
 
   /**
    * Perform atomic mutations within the region.
@@ -496,6 +551,8 @@ public interface Region extends ConfigurationObserver {
    * <code>rowsToLock</code> is sorted in order to avoid deadlocks.
    * @throws IOException
    */
+  // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
+  // Changing processRowsWithLocks and RowProcessor
   void mutateRowsWithLocks(Collection<Mutation> mutations, Collection<byte[]> rowsToLock,
       long nonceGroup, long nonce) throws IOException;
 
@@ -503,7 +560,10 @@ public interface Region extends ConfigurationObserver {
    * Performs atomic multiple reads and writes on a given row.
    *
    * @param processor The object defines the reads and writes to a row.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
+   * Coprocessors instead.
    */
+  @Deprecated
   void processRowsWithLocks(RowProcessor<?,?> processor) throws IOException;
 
   /**
@@ -512,7 +572,12 @@ public interface Region extends ConfigurationObserver {
    * @param processor The object defines the reads and writes to a row.
    * @param nonceGroup Optional nonce group of the operation (client Id)
    * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
+   * Coprocessors instead.
    */
+  // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
+  // Changing processRowsWithLocks and RowProcessor
+  @Deprecated
   void processRowsWithLocks(RowProcessor<?,?> processor, long nonceGroup, long nonce)
       throws IOException;
 
@@ -524,7 +589,12 @@ public interface Region extends ConfigurationObserver {
    *                Use a negative number to switch off the time bound
    * @param nonceGroup Optional nonce group of the operation (client Id)
    * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
+   * Coprocessors instead.
    */
+  // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
+  // Changing processRowsWithLocks and RowProcessor
+  @Deprecated
   void processRowsWithLocks(RowProcessor<?,?> processor, long timeout, long nonceGroup, long nonce)
       throws IOException;
 
@@ -535,224 +605,9 @@ public interface Region extends ConfigurationObserver {
    */
   void put(Put put) throws IOException;
 
-  /**
-   * Listener class to enable callers of
-   * bulkLoadHFile() to perform any necessary
-   * pre/post processing of a given bulkload call
-   */
-  interface BulkLoadListener {
-    /**
-     * Called before an HFile is actually loaded
-     * @param family family being loaded to
-     * @param srcPath path of HFile
-     * @return final path to be used for actual loading
-     * @throws IOException
-     */
-    String prepareBulkLoad(byte[] family, String srcPath, boolean copyFile)
-        throws IOException;
-
-    /**
-     * Called after a successful HFile load
-     * @param family family being loaded to
-     * @param srcPath path of HFile
-     * @throws IOException
-     */
-    void doneBulkLoad(byte[] family, String srcPath) throws IOException;
-
-    /**
-     * Called after a failed HFile load
-     * @param family family being loaded to
-     * @param srcPath path of HFile
-     * @throws IOException
-     */
-    void failedBulkLoad(byte[] family, String srcPath) throws IOException;
-  }
-
-  /**
-   * Attempts to atomically load a group of hfiles.  This is critical for loading
-   * rows with multiple column families atomically.
-   *
-   * @param familyPaths List of Pair&lt;byte[] column family, String hfilePath&gt;
-   * @param bulkLoadListener Internal hooks enabling massaging/preparation of a
-   * file about to be bulk loaded
-   * @param assignSeqId
-   * @return Map from family to List of store file paths if successful, null if failed recoverably
-   * @throws IOException if failed unrecoverably.
-   */
-  Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths,
-      boolean assignSeqId, BulkLoadListener bulkLoadListener) throws IOException;
-
-  /**
-   * Attempts to atomically load a group of hfiles.  This is critical for loading
-   * rows with multiple column families atomically.
-   *
-   * @param familyPaths List of Pair&lt;byte[] column family, String hfilePath&gt;
-   * @param assignSeqId
-   * @param bulkLoadListener Internal hooks enabling massaging/preparation of a
-   * file about to be bulk loaded
-   * @param copyFile always copy hfiles if true
-   * @return Map from family to List of store file paths if successful, null if failed recoverably
-   * @throws IOException if failed unrecoverably.
-   */
-  Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths,
-      boolean assignSeqId, BulkLoadListener bulkLoadListener, boolean copyFile) throws IOException;
-
-  ///////////////////////////////////////////////////////////////////////////
-  // Coprocessors
-
-  /** @return the coprocessor host */
-  RegionCoprocessorHost getCoprocessorHost();
-
-  /**
-   * Executes a single protocol buffer coprocessor endpoint {@link Service} method using
-   * the registered protocol handlers.  {@link Service} implementations must be registered via the
-   * {@link Region#registerService(com.google.protobuf.Service)}
-   * method before they are available.
-   *
-   * @param controller an {@code RpcContoller} implementation to pass to the invoked service
-   * @param call a {@code CoprocessorServiceCall} instance identifying the service, method,
-   *     and parameters for the method invocation
-   * @return a protocol buffer {@code Message} instance containing the method's result
-   * @throws IOException if no registered service handler is found or an error
-   *     occurs during the invocation
-   * @see org.apache.hadoop.hbase.regionserver.Region#registerService(com.google.protobuf.Service)
-   */
-  com.google.protobuf.Message execService(com.google.protobuf.RpcController controller,
-      CoprocessorServiceCall call)
-  throws IOException;
-
-  /**
-   * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to
-   * be available for handling Region#execService(com.google.protobuf.RpcController,
-   *    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall) calls.
-   *
-   * <p>
-   * Only a single instance may be registered per region for a given {@link Service} subclass (the
-   * instances are keyed on {@link com.google.protobuf.Descriptors.ServiceDescriptor#getFullName()}.
-   * After the first registration, subsequent calls with the same service name will fail with
-   * a return value of {@code false}.
-   * </p>
-   * @param instance the {@code Service} subclass instance to expose as a coprocessor endpoint
-   * @return {@code true} if the registration was successful, {@code false}
-   * otherwise
-   */
-  boolean registerService(com.google.protobuf.Service instance);
-
-  ///////////////////////////////////////////////////////////////////////////
-  // RowMutation processor support
-
-  /**
-   * Check the collection of families for validity.
-   * @param families
-   * @throws NoSuchColumnFamilyException
-   */
-  void checkFamilies(Collection<byte[]> families) throws NoSuchColumnFamilyException;
-
-  /**
-   * Check the collection of families for valid timestamps
-   * @param familyMap
-   * @param now current timestamp
-   * @throws FailedSanityCheckException
-   */
-  void checkTimestamps(Map<byte[], List<Cell>> familyMap, long now)
-      throws FailedSanityCheckException;
-
-  /**
-   * Prepare a delete for a row mutation processor
-   * @param delete The passed delete is modified by this method. WARNING!
-   * @throws IOException
-   */
-  void prepareDelete(Delete delete) throws IOException;
-
-  /**
-   * Set up correct timestamps in the KVs in Delete object.
-   * <p>Caller should have the row and region locks.
-   * @param mutation
-   * @param familyCellMap
-   * @param now
-   * @throws IOException
-   */
-  void prepareDeleteTimestamps(Mutation mutation, Map<byte[], List<Cell>> familyCellMap,
-      byte[] now) throws IOException;
-
-  /**
-   * Replace any cell timestamps set to {@link org.apache.hadoop.hbase.HConstants#LATEST_TIMESTAMP}
-   * provided current timestamp.
-   * @param values
-   * @param now
-   */
-  void updateCellTimestamps(final Iterable<List<Cell>> values, final byte[] now)
-      throws IOException;
-
   ///////////////////////////////////////////////////////////////////////////
   // Flushes, compactions, splits, etc.
   // Wizards only, please
-
-  interface FlushResult {
-    enum Result {
-      FLUSHED_NO_COMPACTION_NEEDED,
-      FLUSHED_COMPACTION_NEEDED,
-      // Special case where a flush didn't run because there's nothing in the memstores. Used when
-      // bulk loading to know when we can still load even if a flush didn't happen.
-      CANNOT_FLUSH_MEMSTORE_EMPTY,
-      CANNOT_FLUSH
-    }
-
-    /** @return the detailed result code */
-    Result getResult();
-
-    /** @return true if the memstores were flushed, else false */
-    boolean isFlushSucceeded();
-
-    /** @return True if the flush requested a compaction, else false */
-    boolean isCompactionNeeded();
-  }
-
-  /**
-   * Flush the cache.
-   *
-   * <p>When this method is called the cache will be flushed unless:
-   * <ol>
-   *   <li>the cache is empty</li>
-   *   <li>the region is closed.</li>
-   *   <li>a flush is already in progress</li>
-   *   <li>writes are disabled</li>
-   * </ol>
-   *
-   * <p>This method may block for some time, so it should not be called from a
-   * time-sensitive thread.
-   * @param force whether we want to force a flush of all stores
-   * @return FlushResult indicating whether the flush was successful or not and if
-   * the region needs compacting
-   *
-   * @throws IOException general io exceptions
-   * because a snapshot was not properly persisted.
-   */
-  FlushResult flush(boolean force) throws IOException;
-
-  /**
-   * Synchronously compact all stores in the region.
-   * <p>This operation could block for a long time, so don't call it from a
-   * time-sensitive thread.
-   * <p>Note that no locks are taken to prevent possible conflicts between
-   * compaction and splitting activities. The regionserver does not normally compact
-   * and split in parallel. However by calling this method you may introduce
-   * unexpected and unhandled concurrency. Don't do this unless you know what
-   * you are doing.
-   *
-   * @param majorCompaction True to force a major compaction regardless of thresholds
-   * @throws IOException
-   */
-  void compact(final boolean majorCompaction) throws IOException;
-
-  /**
-   * Trigger major compaction on all stores in the region.
-   * <p>
-   * Compaction will be performed asynchronously to this call by the RegionServer's
-   * CompactSplitThread.
-   * @throws IOException
-   */
-  void triggerMajorCompaction() throws IOException;
 
   /**
    * @return if a given region is in compaction now.
@@ -762,19 +617,26 @@ public interface Region extends ConfigurationObserver {
   /**
    * Request compaction on this region.
    */
-  void requestCompaction(String why, int priority, CompactionLifeCycleTracker tracker, User user)
-      throws IOException;
+  void requestCompaction(String why, int priority, boolean major,
+      CompactionLifeCycleTracker tracker) throws IOException;
 
   /**
    * Request compaction for the given family
    */
-  void requestCompaction(byte[] family, String why, int priority,
-      CompactionLifeCycleTracker tracker, User user) throws IOException;
+  void requestCompaction(byte[] family, String why, int priority, boolean major,
+      CompactionLifeCycleTracker tracker) throws IOException;
 
-  /** Wait for all current flushes and compactions of the region to complete */
-  void waitForFlushesAndCompactions();
-
-  /** Wait for all current flushes of the region to complete
+  /**
+   * Request flush on this region.
    */
-  void waitForFlushes();
+  void requestFlush(FlushLifeCycleTracker tracker) throws IOException;
+
+  /**
+   * Wait for all current flushes of the region to complete
+   *
+   * @param timeout The maximum time to wait in milliseconds.
+   * @return False when timeout elapsed but flushes are not over. True when flushes are over within
+   * max wait time period.
+   */
+  boolean waitForFlushes(long timeout);
 }

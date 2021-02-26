@@ -22,8 +22,6 @@ import static org.junit.Assert.assertFalse;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -35,12 +33,14 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests that verifies that the log is forced to be rolled every "hbase.regionserver.logroll.period"
  */
 public abstract class AbstractTestLogRollPeriod {
-  private static final Log LOG = LogFactory.getLog(AbstractTestLogRollPeriod.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestLogRollPeriod.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -85,7 +85,7 @@ public abstract class AbstractTestLogRollPeriod {
   /**
    * Tests that the LogRoller perform the roll with some data in the log
    */
-  @Test(timeout=60000)
+  @Test
   public void testWithEdits() throws Exception {
     final TableName tableName = TableName.valueOf("TestLogRollPeriodWithEdits");
     final String family = "cf";
@@ -110,7 +110,7 @@ public abstract class AbstractTestLogRollPeriod {
               Thread.sleep(LOG_ROLL_PERIOD / 16);
             }
           } catch (Exception e) {
-            LOG.warn(e);
+            LOG.warn(e.toString(), e);
           }
         }
       };
@@ -131,7 +131,7 @@ public abstract class AbstractTestLogRollPeriod {
   private void checkMinLogRolls(final WAL log, final int minRolls)
       throws Exception {
     final List<Path> paths = new ArrayList<>();
-    log.registerWALActionsListener(new WALActionsListener.Base() {
+    log.registerWALActionsListener(new WALActionsListener() {
       @Override
       public void postLogRoll(Path oldFile, Path newFile) {
         LOG.debug("postLogRoll: oldFile="+oldFile+" newFile="+newFile);

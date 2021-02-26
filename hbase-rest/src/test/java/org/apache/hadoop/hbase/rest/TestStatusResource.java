@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,15 +17,17 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -37,17 +38,22 @@ import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import static org.junit.Assert.*;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestStatusResource {
-  private static final Log LOG = LogFactory.getLog(TestStatusResource.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStatusResource.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestStatusResource.class);
 
   private static final byte[] META_REGION_NAME = Bytes.toBytes(TableName.META_TABLE_NAME + ",,1");
 
@@ -83,7 +89,7 @@ public class TestStatusResource {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    TEST_UTIL.startMiniCluster(1, 1);
+    TEST_UTIL.startMiniCluster();
     TEST_UTIL.createTable(TableName.valueOf("TestStatusResource"), Bytes.toBytes("D"));
     TEST_UTIL.createTable(TableName.valueOf("TestStatusResource2"), Bytes.toBytes("D"));
     REST_TEST_UTIL.startServletContainer(conf);
@@ -108,7 +114,7 @@ public class TestStatusResource {
   @Test
   public void testGetClusterStatusXML() throws IOException, JAXBException {
     Response response = client.get("/status/cluster", Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     StorageClusterStatusModel model = (StorageClusterStatusModel)
       context.createUnmarshaller().unmarshal(
@@ -119,13 +125,13 @@ public class TestStatusResource {
   @Test
   public void testGetClusterStatusPB() throws IOException {
     Response response = client.get("/status/cluster", Constants.MIMETYPE_PROTOBUF);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     StorageClusterStatusModel model = new StorageClusterStatusModel();
     model.getObjectFromMessage(response.getBody());
     validate(model);
     response = client.get("/status/cluster", Constants.MIMETYPE_PROTOBUF_IETF);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new StorageClusterStatusModel();
     model.getObjectFromMessage(response.getBody());

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.File;
@@ -33,8 +32,8 @@ import java.util.jar.JarInputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class that finds a set of classes that are locally accessible
@@ -42,34 +41,43 @@ import org.apache.commons.logging.LogFactory;
  * imposed by name and class filters provided by the user.
  */
 public class ClassFinder {
-  private static final Log LOG = LogFactory.getLog(ClassFinder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClassFinder.class);
   private static String CLASS_EXT = ".class";
 
   private ResourcePathFilter resourcePathFilter;
   private FileNameFilter fileNameFilter;
   private ClassFilter classFilter;
   private FileFilter fileFilter;
+  private ClassLoader classLoader;
 
   public interface ResourcePathFilter {
     boolean isCandidatePath(String resourcePath, boolean isJar);
-  };
+  }
 
   public interface FileNameFilter {
     boolean isCandidateFile(String fileName, String absFilePath);
-  };
+  }
 
   public interface ClassFilter {
     boolean isCandidateClass(Class<?> c);
-  };
+  }
 
   public static class Not implements ResourcePathFilter, FileNameFilter, ClassFilter {
     private ResourcePathFilter resourcePathFilter;
     private FileNameFilter fileNameFilter;
     private ClassFilter classFilter;
 
-    public Not(ResourcePathFilter resourcePathFilter){this.resourcePathFilter = resourcePathFilter;}
-    public Not(FileNameFilter fileNameFilter){this.fileNameFilter = fileNameFilter;}
-    public Not(ClassFilter classFilter){this.classFilter = classFilter;}
+    public Not(ResourcePathFilter resourcePathFilter) {
+      this.resourcePathFilter = resourcePathFilter;
+    }
+
+    public Not(FileNameFilter fileNameFilter) {
+      this.fileNameFilter = fileNameFilter;
+    }
+
+    public Not(ClassFilter classFilter) {
+      this.classFilter = classFilter;
+    }
 
     @Override
     public boolean isCandidatePath(String resourcePath, boolean isJar) {
@@ -89,7 +97,10 @@ public class ClassFinder {
     ClassFilter[] classFilters;
     ResourcePathFilter[] resourcePathFilters;
 
-    public And(ClassFilter...classFilters) { this.classFilters = classFilters; }
+    public And(ClassFilter...classFilters) {
+      this.classFilters = classFilters;
+    }
+
     public And(ResourcePathFilter... resourcePathFilters) {
       this.resourcePathFilters = resourcePathFilters;
     }
@@ -114,16 +125,23 @@ public class ClassFinder {
     }
   }
 
-  public ClassFinder() {
-    this(null, null, null);
+  // To control which classloader to use while trying to find jars/classes
+  public ClassFinder(ClassLoader classLoader) {
+    this(null, null, null, classLoader);
   }
 
-  public ClassFinder(ResourcePathFilter resourcePathFilter,
-      FileNameFilter fileNameFilter, ClassFilter classFilter) {
+  public ClassFinder(ResourcePathFilter resourcePathFilter, FileNameFilter fileNameFilter,
+      ClassFilter classFilter) {
+    this(resourcePathFilter, fileNameFilter, classFilter, ClassLoader.getSystemClassLoader());
+  }
+
+  public ClassFinder(ResourcePathFilter resourcePathFilter, FileNameFilter fileNameFilter,
+      ClassFilter classFilter, ClassLoader classLoader) {
     this.resourcePathFilter = resourcePathFilter;
     this.classFilter = classFilter;
     this.fileNameFilter = fileNameFilter;
     this.fileFilter = new FileFilterWithName(fileNameFilter);
+    this.classLoader = classLoader;
   }
 
   /**
@@ -147,7 +165,7 @@ public class ClassFinder {
     final String path = packageName.replace('.', '/');
     final Pattern jarResourceRe = Pattern.compile("^file:(.+\\.jar)!/" + path + "$");
 
-    Enumeration<URL> resources = ClassLoader.getSystemClassLoader().getResources(path);
+    Enumeration<URL> resources = this.classLoader.getResources(path);
     List<File> dirs = new ArrayList<>();
     List<String> jars = new ArrayList<>();
 
@@ -181,7 +199,7 @@ public class ClassFinder {
   private Set<Class<?>> findClassesFromJar(String jarFileName,
       String packageName, boolean proceedOnExceptions)
     throws IOException, ClassNotFoundException, LinkageError {
-    JarInputStream jarFile = null;
+    JarInputStream jarFile;
     try {
       jarFile = new JarInputStream(new FileInputStream(jarFileName));
     } catch (IOException ioEx) {
@@ -190,7 +208,7 @@ public class ClassFinder {
     }
 
     Set<Class<?>> classes = new HashSet<>();
-    JarEntry entry = null;
+    JarEntry entry;
     try {
       while (true) {
         try {
@@ -270,24 +288,19 @@ public class ClassFinder {
   private Class<?> makeClass(String className, boolean proceedOnExceptions)
     throws ClassNotFoundException, LinkageError {
     try {
-      Class<?> c = Class.forName(className, false, this.getClass().getClassLoader());
+      Class<?> c = Class.forName(className, false, classLoader);
       boolean isCandidateClass = null == classFilter || classFilter.isCandidateClass(c);
       return isCandidateClass ? c : null;
-    } catch (NoClassDefFoundError|ClassNotFoundException classNotFoundEx) {
+    } catch (ClassNotFoundException | LinkageError exception) {
       if (!proceedOnExceptions) {
-        throw classNotFoundEx;
+        throw exception;
       }
-      LOG.debug("Failed to instantiate or check " + className + ": " + classNotFoundEx);
-    } catch (LinkageError linkageEx) {
-      if (!proceedOnExceptions) {
-        throw linkageEx;
-      }
-      LOG.debug("Failed to instantiate or check " + className + ": " + linkageEx);
+      LOG.debug("Failed to instantiate or check " + className + ": " + exception);
     }
     return null;
   }
 
-  private class FileFilterWithName implements FileFilter {
+  private static class FileFilterWithName implements FileFilter {
     private FileNameFilter nameFilter;
 
     public FileFilterWithName(FileNameFilter nameFilter) {
@@ -301,5 +314,5 @@ public class ClassFinder {
               && (null == nameFilter
                 || nameFilter.isCandidateFile(file.getName(), file.getAbsolutePath())));
     }
-  };
-};
+  }
+}

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,17 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -29,32 +39,27 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test that a coprocessor can open a connection and write to another table, inside a hook.
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestOpenTableInCoprocessor {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestOpenTableInCoprocessor.class);
 
   private static final TableName otherTable = TableName.valueOf("otherTable");
   private static final TableName primaryTable = TableName.valueOf("primary");
@@ -74,10 +79,11 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      Table table = e.getEnvironment().getTable(otherTable);
-      table.put(put);
-      completed[0] = true;
-      table.close();
+      try (Table table = e.getEnvironment().getConnection().
+          getTable(otherTable)) {
+        table.put(put);
+        completed[0] = true;
+      }
     }
 
   }
@@ -89,16 +95,16 @@ public class TestOpenTableInCoprocessor {
   public static class CustomThreadPoolCoprocessor implements RegionCoprocessor, RegionObserver {
 
     /**
-     * Get a pool that has only ever one thread. A second action added to the pool (running
-     * concurrently), will cause an exception.
-     * @return
+     * @return a pool that has one thread only at every time. A second action added to the pool (
+     *         running concurrently), will cause an exception.
      */
     private ExecutorService getPool() {
       int maxThreads = 1;
       long keepAliveTime = 60;
-      ThreadPoolExecutor pool =
-          new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
-              new SynchronousQueue<>(), Threads.newDaemonThreadFactory("hbase-table"));
+      ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime,
+        TimeUnit.SECONDS, new SynchronousQueue<>(),
+        new ThreadFactoryBuilder().setNameFormat("hbase-table-pool-%d").setDaemon(true)
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       pool.allowCoreThreadTimeOut(true);
       return pool;
     }
@@ -111,16 +117,16 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      Table table = e.getEnvironment().getTable(otherTable, getPool());
-      Put p = new Put(new byte[] { 'a' });
-      p.addColumn(family, null, new byte[]{'a'});
-      try {
-        table.batch(Collections.singletonList(put), null);
-      } catch (InterruptedException e1) {
-        throw new IOException(e1);
+      try (Table table = e.getEnvironment().getConnection().getTable(otherTable, getPool())) {
+        Put p = new Put(new byte[]{'a'});
+        p.addColumn(family, null, new byte[]{'a'});
+        try {
+          table.batch(Collections.singletonList(put), null);
+        } catch (InterruptedException e1) {
+          throw new IOException(e1);
+        }
+        completedWithPool[0] = true;
       }
-      completedWithPool[0] = true;
-      table.close();
     }
   }
 

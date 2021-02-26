@@ -31,9 +31,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
@@ -57,25 +54,25 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
-import org.apache.hadoop.hbase.replication.BaseWALEntryFilter;
-import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.EntryBuffers;
+import org.apache.hadoop.hbase.wal.EntryBuffers.RegionEntryBuffer;
+import org.apache.hadoop.hbase.wal.OutputSink;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALSplitter.EntryBuffers;
-import org.apache.hadoop.hbase.wal.WALSplitter.OutputSink;
 import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
-import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
-import org.apache.hadoop.hbase.wal.WALSplitter.SinkWriter;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
-import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 
@@ -87,7 +84,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
 @InterfaceAudience.Private
 public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
-  private static final Log LOG = LogFactory.getLog(RegionReplicaReplicationEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionReplicaReplicationEndpoint.class);
 
   // Can be configured differently than hbase.client.retries.number
   private static String CLIENT_RETRIES_NUMBER
@@ -109,44 +106,6 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
   private ExecutorService pool;
 
-  /**
-   * Skips the entries which has original seqId. Only entries persisted via distributed log replay
-   * have their original seq Id fields set.
-   */
-  private static class SkipReplayedEditsFilter extends BaseWALEntryFilter {
-    @Override
-    public Entry filter(Entry entry) {
-      // if orig seq id is set, skip replaying the entry
-      if (entry.getKey().getOrigLogSeqNum() > 0) {
-        return null;
-      }
-      return entry;
-    }
-  }
-
-  @Override
-  public WALEntryFilter getWALEntryfilter() {
-    WALEntryFilter superFilter = super.getWALEntryfilter();
-    WALEntryFilter skipReplayedEditsFilter = getSkipReplayedEditsFilter();
-
-    if (superFilter == null) {
-      return skipReplayedEditsFilter;
-    }
-
-    if (skipReplayedEditsFilter == null) {
-      return superFilter;
-    }
-
-    ArrayList<WALEntryFilter> filters = Lists.newArrayList();
-    filters.add(superFilter);
-    filters.add(skipReplayedEditsFilter);
-    return new ChainWALEntryFilter(filters);
-  }
-
-  protected WALEntryFilter getSkipReplayedEditsFilter() {
-    return new SkipReplayedEditsFilter();
-  }
-
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
@@ -160,11 +119,12 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     int defaultNumRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     if (defaultNumRetries > 10) {
-      int mult = conf.getInt("hbase.client.serverside.retries.multiplier", 10);
+      int mult = conf.getInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER,
+        HConstants.DEFAULT_HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER);
       defaultNumRetries = defaultNumRetries / mult; // reset if HRS has multiplied this already
     }
 
-    conf.setInt("hbase.client.serverside.retries.multiplier", 1);
+    conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
     int numRetries = conf.getInt(CLIENT_RETRIES_NUMBER, defaultNumRetries);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, numRetries);
 
@@ -172,8 +132,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       "hbase.region.replica.replication.writer.threads", 3);
     controller = new PipelineController();
     entryBuffers = new EntryBuffers(controller,
-      this.conf.getInt("hbase.region.replica.replication.buffersize",
-          128*1024*1024));
+        this.conf.getLong("hbase.region.replica.replication.buffersize", 128 * 1024 * 1024));
 
     // use the regular RPC timeout for replica replication RPC's
     this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
@@ -199,10 +158,9 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   protected void doStop() {
     if (outputSink != null) {
       try {
-        outputSink.finishWritingAndClose();
+        outputSink.close();
       } catch (IOException ex) {
-        LOG.warn("Got exception while trying to close OutputSink");
-        LOG.warn(ex);
+        LOG.warn("Got exception while trying to close OutputSink", ex);
       }
     }
     if (this.pool != null) {
@@ -241,13 +199,11 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         new LinkedBlockingQueue<>(maxThreads *
             conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
               HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
-    ThreadPoolExecutor tpe = new ThreadPoolExecutor(
-      maxThreads,
-      maxThreads,
-      keepAliveTime,
-      TimeUnit.SECONDS,
-      workQueue,
-      Threads.newDaemonThreadFactory(this.getClass().getSimpleName() + "-rpc-shared-"));
+    ThreadPoolExecutor tpe =
+      new ThreadPoolExecutor(maxThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
+        new ThreadFactoryBuilder()
+          .setNameFormat(this.getClass().getSimpleName() + "-rpc-shared-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     tpe.allowCoreThreadTimeOut(true);
     return tpe;
   }
@@ -292,6 +248,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       } catch (IOException e) {
         LOG.warn("Received IOException while trying to replicate"
             + StringUtils.stringifyException(e));
+        outputSink.restartWriterThreadsIfNeeded();
       }
     }
 
@@ -318,7 +275,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         EntryBuffers entryBuffers, ClusterConnection connection, ExecutorService pool,
         int numWriters, int operationTimeout) {
       super(controller, entryBuffers, numWriters);
-      this.sinkWriter = new RegionReplicaSinkWriter(this, connection, pool, operationTimeout);
+      this.sinkWriter =
+          new RegionReplicaSinkWriter(this, connection, pool, operationTimeout, tableDescriptors);
       this.tableDescriptors = tableDescriptors;
 
       // A cache for the table "memstore replication enabled" flag.
@@ -336,7 +294,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
     @Override
     public void append(RegionEntryBuffer buffer) throws IOException {
-      List<Entry> entries = buffer.getEntryBuffer();
+      List<Entry> entries = buffer.getEntries();
 
       if (entries.isEmpty() || entries.get(0).getEdit().getCells().isEmpty()) {
         return;
@@ -352,12 +310,10 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         CellUtil.cloneRow(entries.get(0).getEdit().getCells().get(0)), entries);
     }
 
-    @Override
-    public boolean flush() throws IOException {
+    void flush() throws IOException {
       // nothing much to do for now. Wait for the Writer threads to finish up
       // append()'ing the data.
       entryBuffers.waitUntilDrained();
-      return super.flush();
     }
 
     @Override
@@ -366,13 +322,13 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     }
 
     @Override
-    public List<Path> finishWritingAndClose() throws IOException {
-      finishWriting(true);
+    public List<Path> close() throws IOException {
+      finishWriterThreads(true);
       return null;
     }
 
     @Override
-    public Map<byte[], Long> getOutputCounts() {
+    public Map<String, Long> getOutputCounts() {
       return null; // only used in tests
     }
 
@@ -382,7 +338,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     }
 
     AtomicLong getSkippedEditsCounter() {
-      return skippedEdits;
+      return totalSkippedEdits;
     }
 
     /**
@@ -418,13 +374,19 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
             skipEdits++;
           }
         }
-        skippedEdits.addAndGet(skipEdits);
+        totalSkippedEdits.addAndGet(skipEdits);
       }
       return requiresReplication;
     }
+
+    @Override
+    protected int getNumOpenWriters() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
   }
 
-  static class RegionReplicaSinkWriter extends SinkWriter {
+  static class RegionReplicaSinkWriter {
     RegionReplicaOutputSink sink;
     ClusterConnection connection;
     RpcControllerFactory rpcControllerFactory;
@@ -432,9 +394,10 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     int operationTimeout;
     ExecutorService pool;
     Cache<TableName, Boolean> disabledAndDroppedTables;
+    TableDescriptors tableDescriptors;
 
     public RegionReplicaSinkWriter(RegionReplicaOutputSink sink, ClusterConnection connection,
-        ExecutorService pool, int operationTimeout) {
+        ExecutorService pool, int operationTimeout, TableDescriptors tableDescriptors) {
       this.sink = sink;
       this.connection = connection;
       this.operationTimeout = operationTimeout;
@@ -442,6 +405,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         = RpcRetryingCallerFactory.instantiate(connection.getConfiguration());
       this.rpcControllerFactory = RpcControllerFactory.instantiate(connection.getConfiguration());
       this.pool = pool;
+      this.tableDescriptors = tableDescriptors;
 
       int nonExistentTableCacheExpiryMs = connection.getConfiguration()
         .getInt("hbase.region.replica.replication.cache.disabledAndDroppedTables.expiryMs", 5000);
@@ -480,10 +444,21 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         try {
           locations = RegionReplicaReplayCallable
               .getRegionLocations(connection, tableName, row, useCache, 0);
-
           if (locations == null) {
             throw new HBaseIOException("Cannot locate locations for "
                 + tableName + ", row:" + Bytes.toStringBinary(row));
+          }
+          // Replicas can take a while to come online. The cache may have only the primary. If we
+          // keep going to the cache, we will not learn of the replicas and their locations after
+          // they come online.
+          if (useCache && locations.size() == 1 && TableName.isMetaTableName(tableName)) {
+            if (tableDescriptors.get(tableName).getRegionReplication() > 1) {
+              // Make an obnoxious log here. See how bad this issue is. Add a timer if happening
+              // too much.
+              LOG.info("Skipping location cache; only one location found for {}", tableName);
+              useCache = false;
+              continue;
+            }
           }
         } catch (TableNotFoundException e) {
           if (LOG.isTraceEnabled()) {
@@ -503,7 +478,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         // entry is not coming from the primary region, filter it out.
         HRegionLocation primaryLocation = locations.getDefaultRegionLocation();
         if (!Bytes.equals(primaryLocation.getRegionInfo().getEncodedNameAsBytes(),
-          encodedRegionName)) {
+            encodedRegionName)) {
           if (useCache) {
             useCache = false;
             continue; // this will retry location lookup
@@ -548,13 +523,14 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       }
 
       boolean tasksCancelled = false;
-      for (Future<ReplicateWALEntryResponse> task : tasks) {
+      for (int replicaId = 0; replicaId < tasks.size(); replicaId++) {
         try {
-          task.get();
+          tasks.get(replicaId).get();
         } catch (InterruptedException e) {
           throw new InterruptedIOException(e.getMessage());
         } catch (ExecutionException e) {
           Throwable cause = e.getCause();
+          boolean canBeSkipped = false;
           if (cause instanceof IOException) {
             // The table can be disabled or dropped at this time. For disabled tables, we have no
             // cheap mechanism to detect this case because meta does not contain this information.
@@ -562,21 +538,34 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
             // RPC. So instead we start the replay RPC with retries and check whether the table is
             // dropped or disabled which might cause SocketTimeoutException, or
             // RetriesExhaustedException or similar if we get IOE.
-            if (cause instanceof TableNotFoundException || connection.isTableDisabled(tableName)) {
+            if (cause instanceof TableNotFoundException
+                || connection.isTableDisabled(tableName)) {
+              disabledAndDroppedTables.put(tableName, Boolean.TRUE); // put to cache for later.
+              canBeSkipped = true;
+            } else if (tableDescriptors != null) {
+              TableDescriptor tableDescriptor = tableDescriptors.get(tableName);
+              if (tableDescriptor != null
+                  //(replicaId + 1) as no task is added for primary replica for replication
+                  && tableDescriptor.getRegionReplication() <= (replicaId + 1)) {
+                canBeSkipped = true;
+              }
+            }
+            if (canBeSkipped) {
               if (LOG.isTraceEnabled()) {
                 LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
-                  + " because received exception for dropped or disabled table", cause);
+                    + " because received exception for dropped or disabled table",
+                  cause);
                 for (Entry entry : entries) {
                   LOG.trace("Skipping : " + entry);
                 }
               }
-              disabledAndDroppedTables.put(tableName, Boolean.TRUE); // put to cache for later.
               if (!tasksCancelled) {
                 sink.getSkippedEditsCounter().addAndGet(entries.size());
                 tasksCancelled = true; // so that we do not add to skipped counter again
               }
               continue;
             }
+
             // otherwise rethrow
             throw (IOException)cause;
           }
@@ -623,6 +612,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       this.initialEncodedRegionName = regionInfo.getEncodedNameAsBytes();
     }
 
+    @Override
     public ReplicateWALEntryResponse call(HBaseRpcController controller) throws Exception {
       // Check whether we should still replay this entry. If the regions are changed, or the
       // entry is not coming form the primary region, filter it out because we do not need it.

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,12 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -47,11 +42,14 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 
@@ -60,11 +58,17 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * from list of online regions. See HBASE-9593.
  */
 @Category({RegionServerTests.class, MediumTests.class})
+@Ignore("See HBASE-19515")
 public class TestRSKilledWhenInitializing {
-  private static final Log LOG = LogFactory.getLog(TestRSKilledWhenInitializing.class);
-  @Rule public TestName testName = new TestName();
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-    withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRSKilledWhenInitializing.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRSKilledWhenInitializing.class);
+
+  @Rule
+  public TestName testName = new TestName();
 
   // This boolean needs to be globally available. It is used below in our
   // mocked up regionserver so it knows when to die.
@@ -91,9 +95,8 @@ public class TestRSKilledWhenInitializing {
     TEST_UTIL.startMiniDFSCluster(3);
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.createRootDir();
-    final LocalHBaseCluster cluster =
-        new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS, HMaster.class,
-            RegisterAndDieRegionServer.class);
+    final LocalHBaseCluster cluster = new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS,
+        HMaster.class, RegisterAndDieRegionServer.class);
     final MasterThread master = startMaster(cluster.getMasters().get(0));
     try {
       // Master is up waiting on RegionServers to check in. Now start RegionServers.
@@ -141,6 +144,10 @@ public class TestRSKilledWhenInitializing {
       LOG.info("Move " + hri.getEncodedName() + " to " + killedRS.get());
       master.getMaster().move(hri.getEncodedNameAsBytes(),
           Bytes.toBytes(killedRS.get().toString()));
+
+      // TODO: This test could do more to verify fix. It could create a table
+      // and do round-robin assign. It should fail if zombie RS. HBASE-19515.
+
       // Wait until the RS no longer shows as registered in Master.
       while (onlineServersList.size() > (NUM_RS + 1)) {
         Thread.sleep(100);
@@ -191,9 +198,9 @@ public class TestRSKilledWhenInitializing {
    * notices and so removes the region from its set of online regionservers.
    */
   static class RegisterAndDieRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
-    public RegisterAndDieRegionServer(Configuration conf, CoordinatedStateManager cp)
+    public RegisterAndDieRegionServer(Configuration conf)
     throws IOException, InterruptedException {
-      super(conf, cp);
+      super(conf);
     }
 
     @Override

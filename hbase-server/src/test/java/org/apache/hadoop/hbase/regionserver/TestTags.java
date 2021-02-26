@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,21 +24,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -56,13 +56,14 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -73,6 +74,11 @@ import org.junit.rules.TestName;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestTags {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTags.class);
+
   static boolean useFilter = false;
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -86,7 +92,7 @@ public class TestTags {
     conf.setInt("hfile.format.version", 3);
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         TestCoprocessorForTags.class.getName());
-    TEST_UTIL.startMiniCluster(1, 2);
+    TEST_UTIL.startMiniCluster(2);
   }
 
   @AfterClass
@@ -116,8 +122,7 @@ public class TestTags {
       HTableDescriptor desc = new HTableDescriptor(tableName);
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setBlockCacheEnabled(true);
-      // colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
-      colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
+      colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
       desc.addFamily(colDesc);
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(desc);
@@ -183,7 +188,7 @@ public class TestTags {
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setBlockCacheEnabled(true);
       // colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
-      colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
+      // colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
       desc.addFamily(colDesc);
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(desc);
@@ -326,7 +331,7 @@ public class TestTags {
             CellScanner cellScanner = next.cellScanner();
             cellScanner.advance();
             Cell current = cellScanner.current();
-            if (CellUtil.matchingRow(current, row)) {
+            if (CellUtil.matchingRows(current, row)) {
               assertEquals(1, TestCoprocessorForTags.tags.size());
               Tag tag = TestCoprocessorForTags.tags.get(0);
               assertEquals(bigTagLen, tag.getValueLength());
@@ -351,7 +356,7 @@ public class TestTags {
             CellScanner cellScanner = next.cellScanner();
             cellScanner.advance();
             Cell current = cellScanner.current();
-            if (CellUtil.matchingRow(current, row)) {
+            if (CellUtil.matchingRows(current, row)) {
               assertEquals(1, TestCoprocessorForTags.tags.size());
               Tag tag = TestCoprocessorForTags.tags.get(0);
               assertEquals(bigTagLen, tag.getValueLength());
@@ -407,7 +412,7 @@ public class TestTags {
       List<Tag> tags = TestCoprocessorForTags.tags;
       assertEquals(3L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
       assertEquals(1, tags.size());
-      assertEquals("tag1", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
+      assertEquals("tag1", Bytes.toString(Tag.cloneValue(tags.get(0))));
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
 
@@ -425,7 +430,7 @@ public class TestTags {
       // We cannot assume the ordering of tags
       List<String> tagValues = new ArrayList<>();
       for (Tag tag: tags) {
-        tagValues.add(Bytes.toString(TagUtil.cloneValue(tag)));
+        tagValues.add(Bytes.toString(Tag.cloneValue(tag)));
       }
       assertTrue(tagValues.contains("tag1"));
       assertTrue(tagValues.contains("tag2"));
@@ -447,7 +452,7 @@ public class TestTags {
       tags = TestCoprocessorForTags.tags;
       assertEquals(4L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
       assertEquals(1, tags.size());
-      assertEquals("tag2", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
+      assertEquals("tag2", Bytes.toString(Tag.cloneValue(tags.get(0))));
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
 
@@ -466,7 +471,7 @@ public class TestTags {
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
       assertEquals(1, tags.size());
-      assertEquals("tag1", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
+      assertEquals("tag1", Bytes.toString(Tag.cloneValue(tags.get(0))));
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
 
@@ -483,7 +488,7 @@ public class TestTags {
       // We cannot assume the ordering of tags
       tagValues.clear();
       for (Tag tag: tags) {
-        tagValues.add(Bytes.toString(TagUtil.cloneValue(tag)));
+        tagValues.add(Bytes.toString(Tag.cloneValue(tag)));
       }
       assertTrue(tagValues.contains("tag1"));
       assertTrue(tagValues.contains("tag2"));
@@ -504,7 +509,7 @@ public class TestTags {
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
       assertEquals(1, tags.size());
-      assertEquals("tag2", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
+      assertEquals("tag2", Bytes.toString(Tag.cloneValue(tags.get(0))));
     } finally {
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
@@ -614,8 +619,7 @@ public class TestTags {
           CellScanner cellScanner = result.cellScanner();
           if (cellScanner.advance()) {
             Cell cell = cellScanner.current();
-            tags = TagUtil.asList(cell.getTagsArray(), cell.getTagsOffset(),
-                cell.getTagsLength());
+            tags = PrivateCellUtil.getTags(cell);
           }
         }
       }

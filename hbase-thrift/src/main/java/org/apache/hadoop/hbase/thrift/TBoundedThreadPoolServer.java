@@ -25,11 +25,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.thrift.TException;
 import org.apache.thrift.TProcessor;
@@ -40,8 +36,10 @@ import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A bounded thread pool server customized for HBase.
@@ -102,7 +100,7 @@ public class TBoundedThreadPoolServer extends TServer {
    */
   public static final int TIME_TO_WAIT_AFTER_SHUTDOWN_MS = 5000;
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TBoundedThreadPoolServer.class.getName());
 
   private final CallQueue callQueue;
@@ -163,6 +161,7 @@ public class TBoundedThreadPoolServer extends TServer {
     serverOptions = options;
   }
 
+  @Override
   public void serve() {
     try {
       serverTransport_.listen();
@@ -276,6 +275,7 @@ public class TBoundedThreadPoolServer extends TServer {
     /**
      * Loops on processing a client forever
      */
+    @Override
     public void run() {
       TProcessor processor = null;
       TTransport inputTransport = null;
@@ -290,7 +290,12 @@ public class TBoundedThreadPoolServer extends TServer {
         outputProtocol = outputProtocolFactory_.getProtocol(outputTransport);
         // we check stopped_ first to make sure we're not supposed to be shutting
         // down. this is necessary for graceful shutdown.
-        while (!stopped && processor.process(inputProtocol, outputProtocol)) {}
+        while (true) {
+          if (stopped) {
+            break;
+          }
+          processor.process(inputProtocol, outputProtocol);
+        }
       } catch (TTransportException ttx) {
         // Assume the client died and continue silently
       } catch (TException tx) {

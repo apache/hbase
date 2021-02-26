@@ -25,32 +25,32 @@
   import="java.util.Date"
   import="java.util.List"
   import="java.util.Set"
-  import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv"
-  import="org.apache.hadoop.hbase.master.procedure.ProcedureDescriber"
   import="org.apache.hadoop.hbase.procedure2.LockedResource"
   import="org.apache.hadoop.hbase.procedure2.Procedure"
   import="org.apache.hadoop.hbase.procedure2.ProcedureExecutor"
-  import="org.apache.hadoop.hbase.procedure2.ProcedureUtil"
-  import="org.apache.hadoop.hbase.procedure2.store.wal.ProcedureWALFile"
-  import="org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore"
   import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
-  import="org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos"
-  import="org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil"
+  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
 %>
+<%@ page import="org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.master.assignment.OpenRegionProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.master.assignment.CloseRegionProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.OperationMetrics" %>
+<%@ page import="java.util.Map" %>
+<%@ page import="java.util.HashMap" %>
+<%@ page import="org.apache.hadoop.hbase.master.MetricsAssignmentManagerSource" %>
+<%@ page import="org.apache.hadoop.hbase.master.MetricsAssignmentManager" %>
+<%@ page import="org.apache.hadoop.hbase.procedure2.ProcedureMetrics" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.Snapshot" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.Histogram" %>
+<%@ page import="java.util.TreeMap" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.impl.HistogramImpl" %>
 <%
-  HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
+  HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   ProcedureExecutor<MasterProcedureEnv> procExecutor = master.getMasterProcedureExecutor();
-  WALProcedureStore walStore = master.getWalProcedureStore();
-
-  ArrayList<WALProcedureStore.SyncMetrics> syncMetricsBuff = walStore.getSyncMetrics();
-  long millisToNextRoll = walStore.getMillisToNextPeriodicRoll();
-  long millisFromLastRoll = walStore.getMillisFromLastRoll();
-  ArrayList<ProcedureWALFile> procedureWALFiles = walStore.getActiveLogs();
-  Set<ProcedureWALFile> corruptedWALFiles = walStore.getCorruptedLogs();
-  List<Procedure<?>> procedures = procExecutor.getProcedures();
+  List<Procedure<MasterProcedureEnv>> procedures = procExecutor.getProcedures();
   Collections.sort(procedures, new Comparator<Procedure>() {
     @Override
     public int compare(Procedure lhs, Procedure rhs) {
@@ -61,56 +61,69 @@
   });
 
   List<LockedResource> lockedResources = master.getLocks();
+  pageContext.setAttribute("pageTitle", "HBase Master Procedures: " + master.getServerName());
 %>
-<!DOCTYPE html>
-<?xml version="1.0" encoding="UTF-8" ?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta charset="utf-8" />
-    <title>HBase Master Procedures: <%= master.getServerName() %></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="" />
-    <meta name="author" content="" />
+<jsp:include page="header.jsp">
+    <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
 
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet" />
-    <link href="/static/css/hbase.css" rel="stylesheet" />
-  </head>
-<body>
-<div class="navbar  navbar-fixed-top navbar-default">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-        </div>
-        <div class="collapse navbar-collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="/master-status">Home</a></li>
-                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-                <li><a href="/processMaster.jsp">Process Metrics</a></li>
-                <li><a href="/logs/">Local Logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/dump">Debug Dump</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
-                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                <li><a href="/conf">HBase Configuration</a></li>
-                <% } %>
-            </ul>
-        </div><!--/.nav-collapse -->
+<div class="container-fluid content">
+  <div class="row">
+    <div class="page-header">
+      <h1>Procedure Time Statistics</h1>
     </div>
+  </div>
+  <p>We list proceduces completed successfully of the following types only: ServerCrashProcedure, TransitRegionStateProcedure,
+    OpenRegionProcedure, CloseRegionProcedure.</p>
+  <table class="table table-striped" width="90%" >
+    <tr>
+      <th>Type</th>
+      <th>min(ms)</th>
+      <th>50-percentile(ms)</th>
+      <th>90-percentile(ms)</th>
+      <th>max(ms)</th>
+    </tr>
+    <%
+      Map<String, ProcedureMetrics> latencyMetrics = new TreeMap<>();
+      MetricsAssignmentManager metricsAssignmentManagerSource =
+        procExecutor.getEnvironment().getAssignmentManager().getAssignmentManagerMetrics();
+      latencyMetrics.put("OpenRegionProcedure", metricsAssignmentManagerSource.getOpenProcMetrics());
+      latencyMetrics.put("CloseRegionProcedure", metricsAssignmentManagerSource.getCloseProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#assignRegion", metricsAssignmentManagerSource.getAssignProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#unassignRegion", metricsAssignmentManagerSource.getUnassignProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#moveRegion", metricsAssignmentManagerSource.getMoveProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#reopenRegion", metricsAssignmentManagerSource.getReopenProcMetrics());
+      latencyMetrics.put("ServerCrashProcedure", master.getMasterMetrics().getServerCrashProcMetrics());
+
+      double[] percentiles = new double[] { 0.5, 0.9};
+      for (Map.Entry<String, ProcedureMetrics> e : latencyMetrics.entrySet()) {
+        Histogram histogram = e.getValue().getTimeHisto();
+        if (histogram.getCount() == 0 || !(histogram instanceof HistogramImpl)) {
+          continue;
+        }
+        HistogramImpl histogramImpl = (HistogramImpl)histogram;
+        long[] percentileLatencies = histogramImpl.getQuantiles(percentiles);
+
+    %>
+    <tr>
+      <td><%= e.getKey() %></td>
+      <td><%= histogramImpl.getMin() %></td>
+      <td><%= percentileLatencies[0] %></td>
+      <td><%= percentileLatencies[1] %></td>
+      <td><%= histogramImpl.getMax() %></td>
+    </tr>
+    <% } %>
+  </table>
 </div>
+<br />
 <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
           <h1>Procedures</h1>
       </div>
   </div>
-  <table class="table table-striped" width="90%" >
+  <p>We do not list procedures that have completed successfully; their number makes it hard to spot the problematics.</p>
+  <table class="table table-striped" id="tab_Procedures" width="90%" >
     <tr>
         <th>Id</th>
         <th>Parent</th>
@@ -122,132 +135,51 @@
         <th>Errors</th>
         <th>Parameters</th>
     </tr>
-    <% for (Procedure<?> proc : procedures) { %>
+    <%
+      int displayCount = 0;
+      for (Procedure<?> proc : procedures) {
+      // Don't show SUCCESS procedures.
+      if (proc.isSuccess()) {
+        continue;
+      }
+      displayCount++;
+    %>
       <tr>
         <td><%= proc.getProcId() %></td>
         <td><%= proc.hasParent() ? proc.getParentProcId() : "" %></td>
-        <td><%= escapeXml(proc.getState().toString()) %></td>
+        <td><%= escapeXml(proc.getState().toString() + (proc.isBypass() ? "(Bypass)" : "")) %></td>
         <td><%= proc.hasOwner() ? escapeXml(proc.getOwner()) : "" %></td>
         <td><%= escapeXml(proc.getProcName()) %></td>
         <td><%= new Date(proc.getSubmittedTime()) %></td>
         <td><%= new Date(proc.getLastUpdate()) %></td>
         <td><%= escapeXml(proc.isFailed() ? proc.getException().unwrapRemoteIOException().getMessage() : "") %></td>
-        <td><%= escapeXml(ProcedureDescriber.describeParameters(proc)) %></td>
+        <td><%= escapeXml(proc.toString()) %></td>
       </tr>
     <% } %>
+    <%
+    if (displayCount > 0) {
+    %>
+      <p><%= displayCount %> procedure(s).</p>
+    <%
+    }
+    %>
   </table>
 </div>
 <br />
-<div class="container-fluid content">
-  <div class="row">
-    <div class="page-header">
-      <h2>Procedure WAL State</h2>
-    </div>
-  </div>
-  <div class="tabbable">
-    <ul class="nav nav-pills">
-      <li class="active">
-        <a href="#tab_WALFiles" data-toggle="tab">WAL files</a>
-      </li>
-      <li class="">
-        <a href="#tab_WALFilesCorrupted" data-toggle="tab">Corrupted WAL files</a>
-      </li>
-      <li class="">
-        <a href="#tab_WALRollTime" data-toggle="tab">WAL roll time</a>
-      </li>
-      <li class="">
-        <a href="#tab_SyncStats" data-toggle="tab">Sync stats</a>
-      </li>
-    </ul>
-    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-      <div class="tab-pane active" id="tab_WALFiles">
-        <% if (procedureWALFiles != null && procedureWALFiles.size() > 0) { %>
-          <table class="table table-striped">
-            <tr>
-              <th>LogID</th>
-              <th>Size</th>
-              <th>Timestamp</th>
-              <th>Path</th>
-            </tr>
-            <% for (int i = procedureWALFiles.size() - 1; i >= 0; --i) { %>
-            <%    ProcedureWALFile pwf = procedureWALFiles.get(i); %>
-            <tr>
-              <td> <%= pwf.getLogId() %></td>
-              <td> <%= StringUtils.humanSize(pwf.getSize()) %> </td>
-              <td> <%= new Date(pwf.getTimestamp()) %> </td>
-              <td> <%= escapeXml(pwf.toString()) %> </td>
-            </tr>
-            <% } %>
-          </table>
-        <% } else {%>
-          <p> No WAL files</p>
-        <% } %>
-      </div>
-      <div class="tab-pane" id="tab_WALFilesCorrupted">
-      <% if (corruptedWALFiles != null && corruptedWALFiles.size() > 0) { %>
-        <table class="table table-striped">
-          <tr>
-            <th>LogID</th>
-            <th>Size</th>
-            <th>Timestamp</th>
-            <th>Path</th>
-          </tr>
-          <% for (ProcedureWALFile cwf:corruptedWALFiles) { %>
-          <tr>
-            <td> <%= cwf.getLogId() %></td>
-            <td> <%= StringUtils.humanSize(cwf.getSize()) %> </td>
-            <td> <%= new Date(cwf.getTimestamp()) %> </td>
-            <td> <%= escapeXml(cwf.toString()) %> </td>
-          </tr>
-          <% } %>
-          </table>
-      <% } else {%>
-        <p> No corrupted WAL files</p>
-      <% } %>
-      </div>
-      <div class="tab-pane" id="tab_WALRollTime">
-        <table class="table table-striped">
-          <tr>
-            <th> Milliseconds to next roll</th>
-            <th> Milliseconds from last roll</th>
-          </tr>
-          <tr>
-            <td> <%=StringUtils.humanTimeDiff(millisToNextRoll)  %></td>
-            <td> <%=StringUtils.humanTimeDiff(millisFromLastRoll) %></td>
-          </tr>
-        </table>
-      </div>
-      <div class="tab-pane" id="tab_SyncStats">
-        <table class="table table-striped">
-          <tr>
-            <th> Time</th>
-            <th> Sync Wait</th>
-            <th> Last num of synced entries</th>
-            <th> Total Synced</th>
-            <th> Synced per second</th>
-          </tr>
-          <% for (int i = syncMetricsBuff.size() - 1; i >= 0; --i) { %>
-          <%    WALProcedureStore.SyncMetrics syncMetrics = syncMetricsBuff.get(i); %>
-          <tr>
-            <td> <%= new Date(syncMetrics.getTimestamp()) %></td>
-            <td> <%= StringUtils.humanTimeDiff(syncMetrics.getSyncWaitMs()) %></td>
-            <td> <%= syncMetrics.getSyncedEntries() %></td>
-            <td> <%= StringUtils.humanSize(syncMetrics.getTotalSyncedBytes()) %></td>
-            <td> <%= StringUtils.humanSize(syncMetrics.getSyncedPerSec()) %></td>
-          </tr>
-          <%} %>
-        </table>
-        </div>
-      </div>
-  </div>
-</div>
-<br />
+
 <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
           <h1>Locks</h1>
       </div>
   </div>
+    <%
+    if (lockedResources.size() > 0) {
+    %>
+    <p><%= lockedResources.size() %> lock(s).</p>
+    <%
+    }
+    %>
   <% for (LockedResource lockedResource : lockedResources) { %>
     <h2><%= lockedResource.getResourceType() %>: <%= lockedResource.getResourceName() %></h2>
     <%
@@ -255,7 +187,7 @@
       case EXCLUSIVE:
     %>
     <p>Lock type: EXCLUSIVE</p>
-    <p>Owner procedure: <%= escapeXml(ProcedureDescriber.describe(lockedResource.getExclusiveLockOwnerProcedure())) %></p>
+    <p>Owner procedure: <%= escapeXml(lockedResource.getExclusiveLockOwnerProcedure().toStringDetails()) %></p>
     <%
         break;
       case SHARED:
@@ -270,19 +202,16 @@
 
       if (!waitingProcedures.isEmpty()) {
     %>
-	    <h3>Waiting procedures</h3>
-	    <table class="table table-striped" width="90%" >
+        <h3>Waiting procedures</h3>
+        <table class="table table-striped" width="90%" >
         <% for (Procedure<?> proc : procedures) { %>
          <tr>
-            <td><%= escapeXml(ProcedureDescriber.describe(proc)) %></td>
+            <td><%= escapeXml(proc.toStringDetails()) %></td>
           </tr>
         <% } %>
-	    </table>
+        </table>
     <% } %>
   <% } %>
 </div>
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
-
-</body>
-</html>
+<br />
+<jsp:include page="footer.jsp" />

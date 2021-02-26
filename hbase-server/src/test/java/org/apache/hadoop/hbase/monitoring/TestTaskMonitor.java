@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,8 +22,8 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Query;
@@ -32,53 +31,58 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestTaskMonitor {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTaskMonitor.class);
+
   @Test
   public void testTaskMonitorBasics() {
     TaskMonitor tm = new TaskMonitor(new Configuration());
     assertTrue("Task monitor should start empty",
         tm.getTasks().isEmpty());
-    
+
     // Make a task and fetch it back out
     MonitoredTask task = tm.createStatus("Test task");
     MonitoredTask taskFromTm = tm.getTasks().get(0);
-    
+
     // Make sure the state is reasonable.
     assertEquals(task.getDescription(), taskFromTm.getDescription());
     assertEquals(-1, taskFromTm.getCompletionTimestamp());
     assertEquals(MonitoredTask.State.RUNNING, taskFromTm.getState());
-    
+
     // Mark it as finished
     task.markComplete("Finished!");
     assertEquals(MonitoredTask.State.COMPLETE, task.getState());
-    
+
     // It should still show up in the TaskMonitor list
     assertEquals(1, tm.getTasks().size());
-    
+
     // If we mark its completion time back a few minutes, it should get gced
     task.expireNow();
     assertEquals(0, tm.getTasks().size());
 
     tm.shutdown();
   }
-  
+
   @Test
   public void testTasksGetAbortedOnLeak() throws InterruptedException {
     final TaskMonitor tm = new TaskMonitor(new Configuration());
     assertTrue("Task monitor should start empty",
         tm.getTasks().isEmpty());
-    
+
     final AtomicBoolean threadSuccess = new AtomicBoolean(false);
     // Make a task in some other thread and leak it
     Thread t = new Thread() {
       @Override
       public void run() {
-        MonitoredTask task = tm.createStatus("Test task");    
+        MonitoredTask task = tm.createStatus("Test task");
         assertEquals(MonitoredTask.State.RUNNING, task.getState());
         threadSuccess.set(true);
       }
@@ -87,19 +91,19 @@ public class TestTaskMonitor {
     t.join();
     // Make sure the thread saw the correct state
     assertTrue(threadSuccess.get());
-    
+
     // Make sure the leaked reference gets cleared
     System.gc();
     System.gc();
     System.gc();
-    
-    // Now it should be aborted 
+
+    // Now it should be aborted
     MonitoredTask taskFromTm = tm.getTasks().get(0);
     assertEquals(MonitoredTask.State.ABORTED, taskFromTm.getState());
 
     tm.shutdown();
   }
-  
+
   @Test
   public void testTaskLimit() throws Exception {
     TaskMonitor tm = new TaskMonitor(new Configuration());
@@ -136,16 +140,22 @@ public class TestTaskMonitor {
 
   @Test
   public void testWarnStuckTasks() throws Exception {
-    final int INTERVAL = 1000;
+    final int RPC_WARN_TIME = 1500;
+    final int MONITOR_INTERVAL = 500;
     Configuration conf = new Configuration();
-    conf.setLong(TaskMonitor.RPC_WARN_TIME_KEY, INTERVAL);
-    conf.setLong(TaskMonitor.MONITOR_INTERVAL_KEY, INTERVAL);
+    conf.setLong(TaskMonitor.RPC_WARN_TIME_KEY, RPC_WARN_TIME);
+    conf.setLong(TaskMonitor.MONITOR_INTERVAL_KEY, MONITOR_INTERVAL);
     final TaskMonitor tm = new TaskMonitor(conf);
     MonitoredRPCHandler t = tm.createRPCStatus("test task");
-    long then = EnvironmentEdgeManager.currentTime();
-    t.setRPC("testMethod", new Object[0], then);
-    Thread.sleep(INTERVAL * 2);
-    assertTrue("We did not warn", t.getWarnTime() > then);
+    long beforeSetRPC = EnvironmentEdgeManager.currentTime();
+    assertTrue("Validating initialization assumption", t.getWarnTime() <= beforeSetRPC);
+    Thread.sleep(MONITOR_INTERVAL * 2);
+    t.setRPC("testMethod", new Object[0], beforeSetRPC);
+    long afterSetRPC = EnvironmentEdgeManager.currentTime();
+    Thread.sleep(MONITOR_INTERVAL * 2);
+    assertTrue("Validating no warn after starting RPC", t.getWarnTime() <= afterSetRPC);
+    Thread.sleep(MONITOR_INTERVAL * 2);
+    assertTrue("Validating warn after RPC_WARN_TIME", t.getWarnTime() > afterSetRPC);
     tm.shutdown();
   }
 
@@ -189,6 +199,31 @@ public class TestTaskMonitor {
     List<MonitoredTask> operationTasks = tm.getTasks("operation");
     // Handler 3 doesn't handle Operation.
     assertEquals(3, operationTasks.size());
+    tm.shutdown();
+  }
+
+  @Test
+  public void testStatusJournal() {
+    TaskMonitor tm = new TaskMonitor(new Configuration());
+    MonitoredTask task = tm.createStatus("Test task");
+    assertTrue(task.getStatusJournal().isEmpty());
+    task.disableStatusJournal();
+    task.setStatus("status1");
+    // journal should be empty since it is disabled
+    assertTrue(task.getStatusJournal().isEmpty());
+    task.enableStatusJournal(true);
+    // check existing status entered in journal
+    assertEquals("status1", task.getStatusJournal().get(0).getStatus());
+    assertTrue(task.getStatusJournal().get(0).getTimeStamp() > 0);
+    task.disableStatusJournal();
+    task.setStatus("status2");
+    // check status 2 not added since disabled
+    assertEquals(1, task.getStatusJournal().size());
+    task.enableStatusJournal(false);
+    // size should still be 1 since we didn't include current status
+    assertEquals(1, task.getStatusJournal().size());
+    task.setStatus("status3");
+    assertEquals("status3", task.getStatusJournal().get(1).getStatus());
     tm.shutdown();
   }
 }

@@ -65,4 +65,9 @@ class ServerAndLoad implements Comparable<ServerAndLoad>, Serializable {
     }
     return false;
   }
+
+  @Override
+  public String toString() {
+    return "server=" + sn + " , load=" + load;
+  }
 }

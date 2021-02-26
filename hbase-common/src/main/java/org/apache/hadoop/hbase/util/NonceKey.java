@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
  /**
@@ -31,7 +30,6 @@ public class NonceKey {
   private long nonce;
 
   public NonceKey(long group, long nonce) {
-    assert nonce != HConstants.NO_NONCE;
     this.group = group;
     this.nonce = nonce;
   }

@@ -22,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -110,7 +111,8 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
       final Class<? extends StoreFileListGenerator> fileGenClass,
       final int inMmax,
       final int inMin,
-      final float inRatio) throws IllegalAccessException, InstantiationException {
+      final float inRatio) throws IllegalAccessException, InstantiationException,
+      NoSuchMethodException, InvocationTargetException {
     super(PerfTestCompactionPolicies.class);
     this.fileGenClass = fileGenClass;
     this.max = inMmax;
@@ -138,7 +140,7 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
         new Class[] {Configuration.class, StoreConfigInformation.class },
         new Object[] {configuration, store });
 
-    this.generator = fileGenClass.newInstance();
+    this.generator = fileGenClass.getDeclaredConstructor().newInstance();
     // Used for making paths
   }
 

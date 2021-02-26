@@ -22,21 +22,20 @@ module Shell
     class Unassign < Command
       def help
         <<-EOF
-Unassign a region. Unassign will close region in current location and then
-reopen it again.  Pass 'true' to force the unassignment ('force' will clear
-all in-memory state in master before the reassign. If results in
-double assignment use hbck -fix to resolve. To be used by experts).
-Use with caution.  For expert use only.  Examples:
+Unassign a region. It could be executed only when region in expected state(OPEN).
+In addition, you can use "unassigns" command available on HBCK2 tool to skip the state check.
+(For more info on HBCK2: https://github.com/apache/hbase-operator-tools/blob/master/hbase-hbck2/README.md)
+Use with caution. For experts only.
+Examples:
 
   hbase> unassign 'REGIONNAME'
-  hbase> unassign 'REGIONNAME', true
   hbase> unassign 'ENCODED_REGIONNAME'
-  hbase> unassign 'ENCODED_REGIONNAME', true
 EOF
       end
 
-      def command(region_name, force = 'false')
-        admin.unassign(region_name, force)
+      # the force parameter is deprecated, if it is specified, will be ignored.
+      def command(region_name, force = nil)
+        admin.unassign(region_name)
       end
     end
   end

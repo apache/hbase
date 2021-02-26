@@ -22,25 +22,55 @@ module Shell
     class SetQuota < Command
       def help
         <<-EOF
-Set a quota for a user, table, or namespace.
+Set a quota for a user, table, namespace or region server.
 Syntax : set_quota TYPE => <type>, <args>
 
 TYPE => THROTTLE
-User can either set quota on read, write or on both the requests together(i.e., read+write)
-The read, write, or read+write(default throttle type) request limit can be expressed using
-the form 100req/sec, 100req/min and the read, write, read+write(default throttle type) limit
-can be expressed using the form 100k/sec, 100M/min with (B, K, M, G, T, P) as valid size unit
-and (sec, min, hour, day) as valid time unit.
-Currently the throttle limit is per machine - a limit of 100req/min
-means that each machine can execute 100req/min.
+1. User can set throttle quota for user, namespace, table, region server, user over namespace,
+   user over table by USER, NAMESPACE, TABLE, REGIONSERVER keys.
+   Note: Setting specified region server quota isn't supported currently and using 'all' to
+   represent all region servers.
+2. User can set throttle quota type either on read, write or on both the requests together(
+   read+write, default throttle type) by THROTTLE_TYPE => READ, WRITE, REQUEST.
+3. The request limit can be expressed using the form 100req/sec, 100req/min; or can be expressed
+   using the form 100k/sec, 100M/min with (B, K, M, G, T, P) as valid size unit; or can be expressed
+   using the form 100CU/sec as capacity unit by LIMIT key.
+   The valid time units are (sec, min, hour, day).
+4. User can set throttle scope to be either MACHINE(default throttle scope) or CLUSTER by
+   SCOPE => MACHINE, CLUSTER. MACHINE scope quota means the throttle limit is used by single
+   region server, CLUSTER scope quota means the throttle limit is shared by all region servers.
+   Region server throttle quota must be MACHINE scope.
+   Note: because currently use [ClusterLimit / RsNum] to divide cluster limit to machine limit,
+   so it's better to do not use cluster scope quota when you use rs group feature.
 
 For example:
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10req/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ, USER => 'u1', LIMIT => '10req/sec'
+    Unthrottle number of requests:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => REQUEST_NUMBER, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle number of read requests:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ_NUMBER, USER => 'u1', LIMIT => NONE
+    Unthrottle number of write requests:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE_NUMBER, USER => 'u1', LIMIT => NONE
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10M/sec'
+    Unthrottle data size:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => REQUEST_SIZE, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle read data size:
+    hbase> set_quota TYPE => THROTTLE, USER => 'u1', THROTTLE_TYPE => READ_SIZE, LIMIT => 'NONE'
+    Unthrottle write data size:
+    hbase> set_quota TYPE => THROTTLE, USER => 'u1', THROTTLE_TYPE => WRITE_SIZE, LIMIT => 'NONE'
+
+    hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10CU/sec'
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10CU/sec'
+    Unthrottle capacity unit:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => REQUEST_CAPACITY_UNIT, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle read capacity unit:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ_CAPACITY_UNIT, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle write capacity unit:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE_CAPACITY_UNIT, USER => 'u1', LIMIT => 'NONE'
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 't2', LIMIT => '5K/min'
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns2', LIMIT => NONE
@@ -49,7 +79,13 @@ For example:
     hbase> set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, TABLE => 't1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => NONE
-    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => NONE
+
+    hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => '30000req/sec'
+    hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', THROTTLE_TYPE => WRITE, LIMIT => '20000req/sec'
+    hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => NONE
+
+    hbase> set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => '10req/sec', SCOPE => CLUSTER
+    hbase> set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => '10req/sec', SCOPE => MACHINE
 
     hbase> set_quota USER => 'u1', GLOBAL_BYPASS => true
 
@@ -87,31 +123,36 @@ EOF
       end
 
       def command(args = {})
-        if args.key?(TYPE)
-          qtype = args.delete(TYPE)
+        if args.key?(::HBaseConstants::TYPE)
+          qtype = args.delete(::HBaseConstants::TYPE)
           case qtype
-          when THROTTLE
-            if args[LIMIT].eql? NONE
-              args.delete(LIMIT)
+          when ::HBaseQuotasConstants::THROTTLE
+            if args[::HBaseConstants::LIMIT].eql? ::HBaseConstants::NONE
+              args.delete(::HBaseConstants::LIMIT)
               quotas_admin.unthrottle(args)
             else
               quotas_admin.throttle(args)
             end
-          when SPACE
-            if args[LIMIT].eql? NONE
-              args.delete(LIMIT)
+          when ::HBaseQuotasConstants::SPACE
+            if args[::HBaseConstants::LIMIT].eql? ::HBaseConstants::NONE
+              args.delete(::HBaseConstants::LIMIT)
               # Table/Namespace argument is verified in remove_space_limit
               quotas_admin.remove_space_limit(args)
             else
-              raise(ArgumentError, 'Expected a LIMIT to be provided') unless args.key?(LIMIT)
-              raise(ArgumentError, 'Expected a POLICY to be provided') unless args.key?(POLICY)
+              unless args.key?(::HBaseConstants::LIMIT)
+                raise(ArgumentError, 'Expected a LIMIT to be provided')
+              end
+              unless args.key?(::HBaseConstants::POLICY)
+                raise(ArgumentError, 'Expected a POLICY to be provided')
+              end
+
               quotas_admin.limit_space(args)
             end
           else
             raise 'Invalid TYPE argument. got ' + qtype
           end
-        elsif args.key?(GLOBAL_BYPASS)
-          quotas_admin.set_global_bypass(args.delete(GLOBAL_BYPASS), args)
+        elsif args.key?(::HBaseQuotasConstants::GLOBAL_BYPASS)
+          quotas_admin.set_global_bypass(args.delete(::HBaseQuotasConstants::GLOBAL_BYPASS), args)
         else
           raise 'Expected TYPE argument'
         end

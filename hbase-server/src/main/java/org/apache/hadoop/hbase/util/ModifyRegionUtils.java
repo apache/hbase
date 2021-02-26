@@ -28,12 +28,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,14 +38,17 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods for interacting with the regions.
  */
 @InterfaceAudience.Private
 public abstract class ModifyRegionUtils {
-  private static final Log LOG = LogFactory.getLog(ModifyRegionUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ModifyRegionUtils.class);
 
   private ModifyRegionUtils() {
   }
@@ -111,7 +111,7 @@ public abstract class ModifyRegionUtils {
     if (newRegions == null) return null;
     int regionNumber = newRegions.length;
     ThreadPoolExecutor exec = getRegionOpenAndInitThreadPool(conf,
-        "RegionOpenAndInitThread-" + tableDescriptor.getTableName(), regionNumber);
+        "RegionOpenAndInit-" + tableDescriptor.getTableName(), regionNumber);
     try {
       return createRegions(exec, conf, rootDir, tableDescriptor, newRegions, task);
     } finally {
@@ -219,9 +219,7 @@ public abstract class ModifyRegionUtils {
     } catch (InterruptedException e) {
       throw new InterruptedIOException(e.getMessage());
     } catch (ExecutionException e) {
-      IOException ex = new IOException();
-      ex.initCause(e.getCause());
-      throw ex;
+      throw new IOException(e.getCause());
     }
   }
 
@@ -230,19 +228,12 @@ public abstract class ModifyRegionUtils {
    * "hbase.hregion.open.and.init.threads.max" property.
    */
   static ThreadPoolExecutor getRegionOpenAndInitThreadPool(final Configuration conf,
-      final String threadNamePrefix, int regionNumber) {
-    int maxThreads = Math.min(regionNumber, conf.getInt(
-        "hbase.hregion.open.and.init.threads.max", 16));
-    ThreadPoolExecutor regionOpenAndInitThreadPool = Threads
-    .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-        new ThreadFactory() {
-          private int count = 1;
-
-          @Override
-          public Thread newThread(Runnable r) {
-            return new Thread(r, threadNamePrefix + "-" + count++);
-          }
-        });
+    final String threadNamePrefix, int regionNumber) {
+    int maxThreads =
+      Math.min(regionNumber, conf.getInt("hbase.hregion.open.and.init.threads.max", 16));
+    ThreadPoolExecutor regionOpenAndInitThreadPool = Threads.getBoundedCachedThreadPool(maxThreads,
+      30L, TimeUnit.SECONDS, new ThreadFactoryBuilder().setNameFormat(threadNamePrefix + "-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     return regionOpenAndInitThreadPool;
   }
 }

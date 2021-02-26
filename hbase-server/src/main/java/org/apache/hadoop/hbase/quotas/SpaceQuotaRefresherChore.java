@@ -21,18 +21,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link ScheduledChore} which periodically updates the {@link RegionServerSpaceQuotaManager}
@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class SpaceQuotaRefresherChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(SpaceQuotaRefresherChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SpaceQuotaRefresherChore.class);
 
   static final String POLICY_REFRESHER_CHORE_PERIOD_KEY =
       "hbase.regionserver.quotas.policy.refresher.chore.period";
@@ -60,6 +60,7 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
 
   private final RegionServerSpaceQuotaManager manager;
   private final Connection conn;
+  private boolean quotaTablePresent = false;
 
   public SpaceQuotaRefresherChore(RegionServerSpaceQuotaManager manager, Connection conn) {
     super(SpaceQuotaRefresherChore.class.getSimpleName(),
@@ -74,6 +75,13 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
+      // check whether quotaTable is present or not.
+      if (!quotaTablePresent && !checkQuotaTableExists()) {
+        LOG.info("Quota table not found, skipping quota manager cache refresh.");
+        return;
+      }
+      // since quotaTable is present so setting the flag as true.
+      quotaTablePresent = true;
       if (LOG.isTraceEnabled()) {
         LOG.trace("Reading current quota snapshots from hbase:quota.");
       }
@@ -96,19 +104,38 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
           LOG.trace(tableName + ": current=" + currentSnapshot + ", new=" + newSnapshot);
         }
         if (!newSnapshot.equals(currentSnapshot)) {
-          // We have a new snapshot. We might need to enforce it or disable the enforcement
-          if (!isInViolation(currentSnapshot) && newSnapshot.getQuotaStatus().isInViolation()) {
+          // We have a new snapshot.
+          // We might need to enforce it or disable the enforcement or switch policy
+          boolean currInViolation = isInViolation(currentSnapshot);
+          boolean newInViolation = newSnapshot.getQuotaStatus().isInViolation();
+          if (!currInViolation && newInViolation) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Enabling " + newSnapshot + " on " + tableName);
             }
             getManager().enforceViolationPolicy(tableName, newSnapshot);
-          }
-          if (isInViolation(currentSnapshot) && !newSnapshot.getQuotaStatus().isInViolation()) {
+          } else if (currInViolation && !newInViolation) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Removing quota violation policy on " + tableName);
             }
             getManager().disableViolationPolicyEnforcement(tableName);
+          } else if (currInViolation && newInViolation) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Switching quota violation policy on " + tableName + " from "
+                  + currentSnapshot + " to " + newSnapshot);
+            }
+            getManager().enforceViolationPolicy(tableName, newSnapshot);
           }
+        }
+      }
+
+      // Disable violation policy for all such tables which have been removed in new snapshot
+      for (TableName tableName : currentSnapshots.keySet()) {
+        // check whether table was removed in new snapshot
+        if (!newSnapshots.containsKey(tableName)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Removing quota violation policy on " + tableName);
+          }
+          getManager().disableViolationPolicyEnforcement(tableName);
         }
       }
 
@@ -122,6 +149,18 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
     } catch (IOException e) {
       LOG.warn(
           "Caught exception while refreshing enforced quota violation policies, will retry.", e);
+    }
+  }
+
+  /**
+   * Checks if hbase:quota exists in hbase:meta
+   *
+   * @return true if hbase:quota table is in meta, else returns false.
+   * @throws IOException throws IOException
+   */
+  boolean checkQuotaTableExists() throws IOException {
+    try (Admin admin = getConnection().getAdmin()) {
+      return admin.tableExists(QuotaUtil.QUOTA_TABLE_NAME);
     }
   }
 

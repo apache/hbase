@@ -15,29 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestMetricsRegion {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMetricsRegion.class);
+
 
   public MetricsAssertHelper HELPER = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   @Test
   public void testRegionWrapperMetrics() {
-    MetricsRegion mr = new MetricsRegion(new MetricsRegionWrapperStub());
+    MetricsRegion mr = new MetricsRegion(new MetricsRegionWrapperStub(), new Configuration());
     MetricsRegionAggregateSource agg = mr.getSource().getAggregateSource();
 
     HELPER.assertGauge(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeCount", 
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeCount",
       101, agg);
     HELPER.assertGauge(
       "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeFileCount",
@@ -62,15 +68,15 @@ public class TestMetricsRegion {
         "filteredReadRequestCount",
       107, agg);
     HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_replicaid", 
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_replicaid",
       0, agg);
     mr.close();
 
     // test region with replica id > 0
-    mr = new MetricsRegion(new MetricsRegionWrapperStub(1));
+    mr = new MetricsRegion(new MetricsRegionWrapperStub(1), new Configuration());
     agg = mr.getSource().getAggregateSource();
     HELPER.assertGauge(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeCount", 
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeCount",
       101, agg);
     HELPER.assertGauge(
       "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeFileCount",
@@ -83,7 +89,7 @@ public class TestMetricsRegion {
         "filteredReadRequestCount",
       107, agg);
     HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_replicaid", 
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_replicaid",
       1, agg);
     HELPER.assertCounter(
       "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_compactionsQueuedCount",

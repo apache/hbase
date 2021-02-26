@@ -16,28 +16,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
+
 import org.apache.hadoop.util.StringUtils;
+
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RowResultGenerator extends ResultGenerator {
-  private static final Log LOG = LogFactory.getLog(RowResultGenerator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RowResultGenerator.class);
 
   private Iterator<Cell> valuesI;
   private Cell cache;
@@ -45,11 +48,10 @@ public class RowResultGenerator extends ResultGenerator {
   public RowResultGenerator(final String tableName, final RowSpec rowspec,
       final Filter filter, final boolean cacheBlocks)
       throws IllegalArgumentException, IOException {
-    Table table = RESTServlet.getInstance().getTable(tableName);
-    try {
+    try (Table table = RESTServlet.getInstance().getTable(tableName)) {
       Get get = new Get(rowspec.getRow());
       if (rowspec.hasColumns()) {
-        for (byte[] col: rowspec.getColumns()) {
+        for (byte[] col : rowspec.getColumns()) {
           byte[][] split = CellUtil.parseColumn(col);
           if (split.length == 1) {
             get.addFamily(split[0]);
@@ -78,14 +80,18 @@ public class RowResultGenerator extends ResultGenerator {
       // help to avoid confusion by leaving a record of what happened here in
       // the log.
       LOG.warn(StringUtils.stringifyException(e));
-    } finally {
-      table.close();
+      // Lets get the exception rethrown to get a more meaningful error message than 404
+      if (e instanceof AccessDeniedException) {
+        throw e;
+      }
     }
   }
 
+  @Override
   public void close() {
   }
 
+  @Override
   public boolean hasNext() {
     if (cache != null) {
       return true;
@@ -96,6 +102,7 @@ public class RowResultGenerator extends ResultGenerator {
     return valuesI.hasNext();
   }
 
+  @Override
   public Cell next() {
     if (cache != null) {
       Cell kv = cache;
@@ -112,10 +119,12 @@ public class RowResultGenerator extends ResultGenerator {
     }
   }
 
+  @Override
   public void putBack(Cell kv) {
     this.cache = kv;
   }
 
+  @Override
   public void remove() {
     throw new UnsupportedOperationException("remove not supported");
   }

@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.metrics.OperationMetrics;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public interface MetricsAssignmentManagerSource extends BaseSource {
 
   /**
@@ -48,6 +50,8 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
   String RIT_OLDEST_AGE_NAME = "ritOldestAge";
   String RIT_DURATION_NAME = "ritDuration";
+  String DEAD_SERVER_OPEN_REGIONS = "deadServerOpenRegions";
+  String UNKNOWN_SERVER_OPEN_REGIONS = "unknownServerOpenRegions";
 
   String RIT_COUNT_DESC = "Current number of Regions In Transition (Gauge).";
   String RIT_COUNT_OVER_THRESHOLD_DESC =
@@ -58,6 +62,10 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
 
   String ASSIGN_METRIC_PREFIX = "assign";
   String UNASSIGN_METRIC_PREFIX = "unassign";
+  String MOVE_METRIC_PREFIX = "move";
+  String REOPEN_METRIC_PREFIX = "reopen";
+  String OPEN_METRIC_PREFIX = "open";
+  String CLOSE_METRIC_PREFIX = "close";
   String SPLIT_METRIC_PREFIX = "split";
   String MERGE_METRIC_PREFIX = "merge";
 
@@ -86,6 +94,10 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
 
   void updateRitDuration(long duration);
 
+  void updateDeadServerOpenRegions(int deadRegions);
+
+  void updateUnknownServerOpenRegions(int unknownRegions);
+
   /**
    * TODO: Remove. This may not be needed now as assign and unassign counts are tracked separately
    * Increment the count of operations (assign/unassign).
@@ -93,14 +105,34 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   void incrementOperationCounter();
 
   /**
-   * @return {@link OperationMetrics} containing common metrics for assign operation
+   * @return {@link OperationMetrics} containing common metrics for assign region operation
    */
   OperationMetrics getAssignMetrics();
 
   /**
-   * @return {@link OperationMetrics} containing common metrics for unassign operation
+   * @return {@link OperationMetrics} containing common metrics for unassign region operation
    */
   OperationMetrics getUnassignMetrics();
+
+  /**
+   * @return {@link OperationMetrics} containing common metrics for move region operation
+   */
+  OperationMetrics getMoveMetrics();
+
+  /**
+   * @return {@link OperationMetrics} containing common metrics for reopen region operation
+   */
+  OperationMetrics getReopenMetrics();
+
+  /**
+   * @return {@link OperationMetrics} containing common metrics for open region request
+   */
+  OperationMetrics getOpenMetrics();
+
+  /**
+   * @return {@link OperationMetrics} containing common metrics for close region request
+   */
+  OperationMetrics getCloseMetrics();
 
   /**
    * @return {@link OperationMetrics} containing common metrics for split operation

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Hadoop2 implementation of MetricsReplicationSource. This provides access to metrics gauges and

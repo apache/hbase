@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,10 +30,13 @@ import static org.mockito.Mockito.spy;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -42,7 +44,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
@@ -60,10 +61,13 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This tests the TableInputFormat and its recovery semantics
@@ -72,7 +76,11 @@ import org.mockito.stubbing.Answer;
 @Category(LargeTests.class)
 public class TestTableInputFormat {
 
-  private static final Log LOG = LogFactory.getLog(TestTableInputFormat.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableInputFormat.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableInputFormat.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static MiniMRCluster mrCluster;
@@ -101,7 +109,7 @@ public class TestTableInputFormat {
    * Setup a table with two rows and values.
    *
    * @param tableName
-   * @return
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public static Table createTable(byte[] tableName) throws IOException {
@@ -112,7 +120,7 @@ public class TestTableInputFormat {
    * Setup a table with two rows and values per column family.
    *
    * @param tableName
-   * @return
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public static Table createTable(byte[] tableName, byte[][] families) throws IOException {
@@ -133,11 +141,11 @@ public class TestTableInputFormat {
   /**
    * Verify that the result and key have expected values.
    *
-   * @param r
-   * @param key
-   * @param expectedKey
-   * @param expectedValue
-   * @return
+   * @param r single row result
+   * @param key the row key
+   * @param expectedKey the expected key
+   * @param expectedValue the expected value
+   * @return true if the result contains the expected key and value, false otherwise.
    */
   static boolean checkResult(Result r, ImmutableBytesWritable key,
       byte[] expectedKey, byte[] expectedValue) {

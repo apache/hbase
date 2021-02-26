@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +17,10 @@
  */
 package org.apache.hbase.archetypes.exemplars.client;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
@@ -29,8 +31,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
-import static org.junit.Assert.assertEquals;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -39,6 +41,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestHelloHBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHelloHBase.class);
 
   private static final HBaseTestingUtility TEST_UTIL
           = new HBaseTestingUtility();
@@ -64,8 +70,7 @@ public class TestHelloHBase {
     assertEquals("#namespaceExists failed: found nonexistent namespace.",
             false, exists);
 
-    admin.createNamespace
-        (NamespaceDescriptor.create(EXISTING_NAMESPACE).build());
+    admin.createNamespace(NamespaceDescriptor.create(EXISTING_NAMESPACE).build());
     exists = HelloHBase.namespaceExists(admin, EXISTING_NAMESPACE);
     assertEquals("#namespaceExists failed: did NOT find existing namespace.",
             true, exists);
@@ -94,11 +99,9 @@ public class TestHelloHBase {
   @Test
   public void testPutRowToTable() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
-    admin.createNamespace
-        (NamespaceDescriptor.create(HelloHBase.MY_NAMESPACE_NAME).build());
+    admin.createNamespace(NamespaceDescriptor.create(HelloHBase.MY_NAMESPACE_NAME).build());
     Table table
-            = TEST_UTIL.createTable
-                (HelloHBase.MY_TABLE_NAME, HelloHBase.MY_COLUMN_FAMILY_NAME);
+            = TEST_UTIL.createTable(HelloHBase.MY_TABLE_NAME, HelloHBase.MY_COLUMN_FAMILY_NAME);
 
     HelloHBase.putRowToTable(table);
     Result row = table.get(new Get(HelloHBase.MY_ROW_ID));
@@ -111,11 +114,9 @@ public class TestHelloHBase {
   @Test
   public void testDeleteRow() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
-    admin.createNamespace
-        (NamespaceDescriptor.create(HelloHBase.MY_NAMESPACE_NAME).build());
+    admin.createNamespace(NamespaceDescriptor.create(HelloHBase.MY_NAMESPACE_NAME).build());
     Table table
-            = TEST_UTIL.createTable
-                (HelloHBase.MY_TABLE_NAME, HelloHBase.MY_COLUMN_FAMILY_NAME);
+            = TEST_UTIL.createTable(HelloHBase.MY_TABLE_NAME, HelloHBase.MY_COLUMN_FAMILY_NAME);
 
     table.put(new Put(HelloHBase.MY_ROW_ID).
             addColumn(HelloHBase.MY_COLUMN_FAMILY_NAME,

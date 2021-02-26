@@ -24,12 +24,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.collect.Interner;
+import org.apache.hbase.thirdparty.com.google.common.collect.Interners;
+import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.net.InetAddresses;
 
 
 /**
@@ -98,6 +100,13 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    */
   private byte [] bytes;
   public static final List<ServerName> EMPTY_SERVER_LIST = new ArrayList<>(0);
+
+  /**
+   * Intern ServerNames. The Set of ServerNames is mostly-fixed changing slowly as Servers
+   * restart. Rather than create a new instance everytime, try and return existing instance
+   * if there is one.
+   */
+  private static final Interner<ServerName> INTERN_POOL = Interners.newWeakInterner();
 
   protected ServerName(final String hostname, final int port, final long startcode) {
     this(Address.fromParts(hostname, port), startcode);
@@ -176,7 +185,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String hostname, final int port, final long startcode) {
-    return new ServerName(hostname, port, startcode);
+    return INTERN_POOL.intern(new ServerName(hostname, port, startcode));
   }
 
   /**
@@ -185,7 +194,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String serverName) {
-    return new ServerName(serverName);
+    return INTERN_POOL.intern(new ServerName(serverName));
   }
 
   /**
@@ -194,7 +203,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String hostAndPort, final long startCode) {
-    return new ServerName(hostAndPort, startCode);
+    return INTERN_POOL.intern(new ServerName(hostAndPort, startCode));
   }
 
   @Override
@@ -231,6 +240,10 @@ public class ServerName implements Comparable<ServerName>, Serializable {
 
   public String getHostname() {
     return this.address.getHostname();
+  }
+
+  public String getHostnameLowerCase() {
+    return this.address.getHostname().toLowerCase(Locale.ROOT);
   }
 
   public int getPort() {
@@ -322,10 +335,27 @@ public class ServerName implements Comparable<ServerName>, Serializable {
 
   @Override
   public int compareTo(ServerName other) {
-    int compare = this.getHostname().compareToIgnoreCase(other.getHostname());
-    if (compare != 0) return compare;
+    int compare;
+    if (other == null) {
+      return -1;
+    }
+    if (this.getHostname() == null) {
+      if (other.getHostname() != null) {
+        return 1;
+      }
+    } else {
+      if (other.getHostname() == null) {
+        return -1;
+      }
+      compare = this.getHostname().compareToIgnoreCase(other.getHostname());
+      if (compare != 0) {
+        return compare;
+      }
+    }
     compare = this.getPort() - other.getPort();
-    if (compare != 0) return compare;
+    if (compare != 0) {
+      return compare;
+    }
     return Long.compare(this.getStartcode(), other.getStartcode());
   }
 

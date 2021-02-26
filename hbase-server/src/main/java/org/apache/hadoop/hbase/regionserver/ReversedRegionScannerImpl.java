@@ -22,12 +22,12 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ReversibleRegionScannerImpl extends from RegionScannerImpl, and is used to
@@ -36,15 +36,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 class ReversedRegionScannerImpl extends RegionScannerImpl {
 
-  /**
-   * @param scan
-   * @param additionalScanners
-   * @param region
-   * @throws IOException
-   */
-  ReversedRegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
-      throws IOException {
-    region.super(scan, additionalScanners, region);
+  ReversedRegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
+    long nonceGroup, long nonce) throws IOException {
+    super(scan, additionalScanners, region, nonceGroup, nonce);
   }
 
   @Override
@@ -52,8 +46,7 @@ class ReversedRegionScannerImpl extends RegionScannerImpl {
       List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
     this.storeHeap = new ReversedKeyValueHeap(scanners, comparator);
     if (!joinedScanners.isEmpty()) {
-      this.joinedHeap = new ReversedKeyValueHeap(joinedScanners,
-          comparator);
+      throw new DoNotRetryIOException("Reverse scan with loading CFs on demand is not supported");
     }
   }
 
@@ -73,7 +66,7 @@ class ReversedRegionScannerImpl extends RegionScannerImpl {
   protected boolean nextRow(ScannerContext scannerContext, Cell curRowCell)
       throws IOException {
     assert super.joinedContinuationRow == null : "Trying to go to next row during joinedHeap read.";
-    this.storeHeap.seekToPreviousRow(CellUtil.createFirstOnRow(curRowCell));
+    this.storeHeap.seekToPreviousRow(PrivateCellUtil.createFirstOnRow(curRowCell));
     resetFilters();
     // Calling the hook in CP which allows it to do a fast forward
     if (this.region.getCoprocessorHost() != null) {

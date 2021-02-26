@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,9 +30,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,6 +58,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Validate ImportTsv + LoadIncrementalHFiles on a distributed cluster.
@@ -66,7 +68,9 @@ import org.junit.rules.TestName;
 public class IntegrationTestImportTsv extends Configured implements Tool {
 
   private static final String NAME = IntegrationTestImportTsv.class.getSimpleName();
-  private static final Log LOG = LogFactory.getLog(IntegrationTestImportTsv.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestImportTsv.class);
+  private static final String GENERATED_HFILE_FOLDER_PARAM_KEY =
+    "IntegrationTestImportTsv.generatedHFileFolder";
 
   protected static final String simple_tsv =
       "row1\t1\tc1\tc2\n" +
@@ -84,7 +88,7 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
   public TestName name = new TestName();
 
   protected static final Set<KeyValue> simple_expected =
-      new TreeSet<KeyValue>(CellComparator.COMPARATOR) {
+      new TreeSet<KeyValue>(CellComparator.getInstance()) {
     private static final long serialVersionUID = 1L;
     {
       byte[] family = Bytes.toBytes("d");
@@ -160,10 +164,8 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
             "Ran out of expected values prematurely!",
             expectedIt.hasNext());
           KeyValue expected = expectedIt.next();
-          assertTrue(
-            format("Scan produced surprising result. expected: <%s>, actual: %s",
-              expected, actual),
-            CellComparator.COMPARATOR.compare(expected, actual) == 0);
+          assertEquals("Scan produced surprising result", 0,
+            CellComparator.getInstance().compare(expected, actual));
         }
       }
       assertFalse("Did not consume all expected values.", expectedIt.hasNext());
@@ -187,12 +189,14 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
 
   @Test
   public void testGenerateAndLoad() throws Exception {
-    LOG.info("Running test testGenerateAndLoad.");
-    final TableName table = TableName.valueOf(name.getMethodName());
-    String cf = "d";
-    Path hfiles = new Path(
-        util.getDataTestDirOnTestFS(table.getNameAsString()), "hfiles");
+    generateAndLoad(TableName.valueOf(name.getMethodName()));
+  }
 
+  void generateAndLoad(final TableName table) throws Exception {
+    LOG.info("Running test testGenerateAndLoad.");
+    String cf = "d";
+    Path hfiles = initGeneratedHFilePath(table);
+    LOG.info("The folder where the HFiles will be generated: {}", hfiles.toString());
 
     Map<String, String> args = new HashMap<>();
     args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles.toString());
@@ -221,6 +225,12 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
       System.err.println(format("%s [genericOptions]", NAME));
       System.err.println("  Runs ImportTsv integration tests against a distributed cluster.");
       System.err.println();
+      System.err.println("  Use '-D" + GENERATED_HFILE_FOLDER_PARAM_KEY + "=<path>' to define a");
+      System.err.println("  base folder for the generated HFiles. If HDFS Transparent Encryption");
+      System.err.println("  is configured, then make sure to set this parameter to a folder in");
+      System.err.println("  the same encryption zone in HDFS as the HBase root directory,");
+      System.err.println("  otherwise the bulkload will fail.");
+      System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
       return 1;
     }
@@ -228,10 +238,35 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
     // adding more test methods? Don't forget to add them here... or consider doing what
     // IntegrationTestsDriver does.
     provisionCluster();
-    testGenerateAndLoad();
+    TableName tableName = TableName.valueOf("IntegrationTestImportTsv");
+    if (util.getAdmin().tableExists(tableName)) {
+      util.deleteTable(tableName);
+    }
+    generateAndLoad(tableName);
     releaseCluster();
 
     return 0;
+  }
+
+  private Path initGeneratedHFilePath(final TableName table) throws IOException {
+    String folderParam = getConf().getTrimmed(GENERATED_HFILE_FOLDER_PARAM_KEY);
+    if (folderParam == null || folderParam.isEmpty()) {
+      // by default, fall back to the test data dir
+      return new Path(util.getDataTestDirOnTestFS(table.getNameAsString()), "hfiles");
+    }
+
+    Path hfiles = new Path(folderParam, UUID.randomUUID().toString());
+    FileSystem fs = util.getTestFileSystem();
+    String shouldPreserve = System.getProperty("hbase.testing.preserve.testdir", "false");
+    if (!Boolean.parseBoolean(shouldPreserve)) {
+      if (fs.getUri().getScheme().equals(FileSystem.getLocal(getConf()).getUri().getScheme())) {
+        File localFoler = new File(hfiles.toString());
+        localFoler.deleteOnExit();
+      } else {
+        fs.deleteOnExit(hfiles);
+      }
+    }
+    return hfiles;
   }
 
   public static void main(String[] args) throws Exception {

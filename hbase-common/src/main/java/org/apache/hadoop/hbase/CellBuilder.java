@@ -26,18 +26,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public interface CellBuilder {
 
-  /**
-   * The valid types for user to build the cell.
-   * Currently, This is subset of {@link KeyValue.Type}.
-   */
-  enum DataType {
-    Put,
-    Delete,
-    DeleteFamilyVersion,
-    DeleteColumn,
-    DeleteFamily
-  }
-
   CellBuilder setRow(final byte[] row);
   CellBuilder setRow(final byte[] row, final int rOffset, final int rLength);
 
@@ -49,7 +37,7 @@ public interface CellBuilder {
 
   CellBuilder setTimestamp(final long timestamp);
 
-  CellBuilder setType(final DataType type);
+  CellBuilder setType(final Cell.Type type);
 
   CellBuilder setValue(final byte[] value);
   CellBuilder setValue(final byte[] value, final int vOffset, final int vLength);

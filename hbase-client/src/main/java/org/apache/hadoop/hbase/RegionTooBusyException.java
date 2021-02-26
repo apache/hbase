@@ -24,21 +24,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Thrown by a region server if it will block and wait to serve a request.
  * For example, the client wants to insert something to a region while the
- * region is compacting.
+ * region is compacting. Keep variance in the passed 'msg' low because its msg is used as a key
+ * over in {@link org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException}
+ * grouping failure types.
  */
 @InterfaceAudience.Public
 public class RegionTooBusyException extends IOException {
   private static final long serialVersionUID = 1728345723728342L;
 
-  /** default constructor */
-  public RegionTooBusyException() {
-    super();
-  }
-
-  /**
-   * Constructor
-   * @param msg message
-   */
+  // Be careful. Keep variance in the passed 'msg' low because its msg is used as a key over in
+  // RetriesExhaustedWithDetailsException grouping failure types.
   public RegionTooBusyException(final String msg) {
     super(msg);
   }

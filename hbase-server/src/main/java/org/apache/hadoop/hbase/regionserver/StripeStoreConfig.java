@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 
@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
  */
 @InterfaceAudience.Private
 public class StripeStoreConfig {
-  private static final Log LOG = LogFactory.getLog(StripeStoreConfig.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StripeStoreConfig.class);
 
   /** The maximum number of files to compact within a stripe; same as for regular compaction. */
   public static final String MAX_FILES_KEY = "hbase.store.stripe.compaction.maxFiles";

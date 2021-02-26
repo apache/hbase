@@ -22,14 +22,14 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.random.RandomData;
 import org.apache.commons.math3.random.RandomDataImpl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.crypto.CryptoCipherProvider;
 import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
@@ -62,8 +62,8 @@ public class HFilePerformanceEvaluation {
       "WARN");
   }
   
-  private static final Log LOG =
-    LogFactory.getLog(HFilePerformanceEvaluation.class.getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(HFilePerformanceEvaluation.class.getName());
 
   static byte [] format(final int i) {
     String v = Integer.toString(i);
@@ -366,7 +366,6 @@ public class HFilePerformanceEvaluation {
       writer = HFile.getWriterFactoryNoCache(conf)
           .withPath(fs, mf)
           .withFileContext(hFileContext)
-          .withComparator(CellComparator.COMPARATOR)
           .create();
     }
     
@@ -404,7 +403,6 @@ public class HFilePerformanceEvaluation {
     @Override
     void setUp() throws Exception {
       reader = HFile.createReader(this.fs, this.mf, new CacheConfig(this.conf), true, this.conf);
-      this.reader.loadFileInfo();
     }
 
     @Override
@@ -435,7 +433,7 @@ public class HFilePerformanceEvaluation {
         // TODO: Fix. Make Scanner do Cells.
         Cell c = this.scanner.getCell();
         PerformanceEvaluationCommons.assertKey(format(i + 1), c);
-        PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
+        PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, c.getValueLength());
       }
     }
 
@@ -466,7 +464,7 @@ public class HFilePerformanceEvaluation {
       // TODO: Fix scanner so it does Cells
       Cell c = scanner.getCell();
       PerformanceEvaluationCommons.assertKey(b, c);
-      PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
+      PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, c.getValueLength());
     }
 
     private byte [] getRandomRow() {
@@ -503,7 +501,7 @@ public class HFilePerformanceEvaluation {
           return;
         }
         c = scanner.getCell();
-        PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
+        PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, c.getValueLength());
       }
     }
 

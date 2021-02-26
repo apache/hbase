@@ -81,11 +81,13 @@ public class ByteSlot extends OutputStream {
     buf[offset] = (byte)b;
   }
 
+  @Override
   public void write(int b) {
     ensureCapacity(size + 1);
     buf[size++] = (byte)b;
   }
 
+  @Override
   public void write(byte[] b, int off, int len) {
     ensureCapacity(size + len);
     System.arraycopy(b, off, buf, size, len);

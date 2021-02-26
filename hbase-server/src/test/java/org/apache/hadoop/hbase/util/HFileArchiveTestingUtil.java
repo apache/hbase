@@ -25,9 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,13 +32,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test helper for testing archiving of HFiles
  */
 public class HFileArchiveTestingUtil {
 
-  private static final Log LOG = LogFactory.getLog(HFileArchiveTestingUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileArchiveTestingUtil.class);
 
   private HFileArchiveTestingUtil() {
     // NOOP private ctor since this is just a utility class
@@ -140,7 +139,7 @@ public class HFileArchiveTestingUtil {
   }
 
   /**
-   * @return <expected, gotten, backup>, where each is sorted
+   * @return &lt;expected, gotten, backup&gt;, where each is sorted
    */
   private static List<List<String>> getFileLists(FileStatus[] previous, FileStatus[] archived) {
     List<List<String>> files = new ArrayList<>(3);
@@ -211,10 +210,8 @@ public class HFileArchiveTestingUtil {
    * @return {@link Path} to the archive directory for the given region
    */
   public static Path getRegionArchiveDir(Configuration conf, HRegion region) throws IOException {
-    return HFileArchiveUtil.getRegionArchiveDir(
-        FSUtils.getRootDir(conf),
-        region.getTableDescriptor().getTableName(),
-        region.getRegionInfo().getEncodedName());
+    return HFileArchiveUtil.getRegionArchiveDir(CommonFSUtils.getRootDir(conf),
+      region.getTableDescriptor().getTableName(), region.getRegionInfo().getEncodedName());
   }
 
   /**

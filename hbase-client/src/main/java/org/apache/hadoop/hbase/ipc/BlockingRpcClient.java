@@ -17,18 +17,14 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.net.SocketAddress;
-
 import javax.net.SocketFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Does RPC against a cluster. Manages connections per regionserver in the cluster.
@@ -44,7 +40,6 @@ public class BlockingRpcClient extends AbstractRpcClient<BlockingRpcConnection> 
    * Used in test only. Construct an IPC client for the cluster {@code clusterId} with the default
    * SocketFactory
    */
-  @VisibleForTesting
   BlockingRpcClient(Configuration conf) {
     this(conf, HConstants.CLUSTER_ID_DEFAULT, null, null);
   }
@@ -67,6 +62,7 @@ public class BlockingRpcClient extends AbstractRpcClient<BlockingRpcConnection> 
    * Creates a connection. Can be overridden by a subclass for testing.
    * @param remoteId - the ConnectionId to use for the connection creation.
    */
+  @Override
   protected BlockingRpcConnection createConnection(ConnectionId remoteId) throws IOException {
     return new BlockingRpcConnection(this, remoteId);
   }

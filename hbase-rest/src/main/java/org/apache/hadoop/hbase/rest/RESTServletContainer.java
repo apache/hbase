@@ -19,19 +19,19 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.yetus.audience.InterfaceAudience;
-
-import org.glassfish.jersey.servlet.ServletContainer;
-
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
+import static org.apache.hadoop.hbase.http.ProxyUserAuthenticationFilter.toLowerCase;
 
 /**
  * REST servlet container. It is used to get the remote request user
@@ -41,6 +41,10 @@ import org.apache.hadoop.conf.Configuration;
 public class RESTServletContainer extends ServletContainer {
   private static final long serialVersionUID = -2474255003443394314L;
 
+  public RESTServletContainer(ResourceConfig config) {
+    super(config);
+  }
+
   /**
    * This container is used only if authentication and
    * impersonation is enabled. The remote request user is used
@@ -49,7 +53,8 @@ public class RESTServletContainer extends ServletContainer {
   @Override
   public void service(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
-    final String doAsUserFromQuery = request.getParameter("doAs");
+    final HttpServletRequest lowerCaseRequest = toLowerCase(request);
+    final String doAsUserFromQuery = lowerCaseRequest.getParameter("doas");
     RESTServlet servlet = RESTServlet.getInstance();
     if (doAsUserFromQuery != null) {
       Configuration conf = servlet.getConfiguration();

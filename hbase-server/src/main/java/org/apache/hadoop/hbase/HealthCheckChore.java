@@ -17,17 +17,19 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HealthChecker.HealthCheckerExitStatus;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The Class HealthCheckChore for running health checker regularly.
  */
+@InterfaceAudience.Private
 public class HealthCheckChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(HealthCheckChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HealthCheckChore.class);
   private HealthChecker healthChecker;
   private Configuration config;
   private int threshold;

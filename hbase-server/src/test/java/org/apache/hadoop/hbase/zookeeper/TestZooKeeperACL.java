@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -25,33 +26,42 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.security.auth.login.AppConfigurationEntry;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TestZooKeeper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ ZKTests.class, MediumTests.class })
 public class TestZooKeeperACL {
-  private final static Log LOG = LogFactory.getLog(TestZooKeeperACL.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestZooKeeperACL.class);
+
+  private final static Logger LOG = LoggerFactory.getLogger(TestZooKeeperACL.class);
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
 
-  private static ZooKeeperWatcher zkw;
+  private static ZKWatcher zkw;
   private static boolean secureZKAvailable;
-  
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     File saslConfFile = File.createTempFile("tmp", "jaas.conf");
@@ -76,7 +86,7 @@ public class TestZooKeeperACL {
     TEST_UTIL.getConfiguration().setInt("hbase.zookeeper.property.maxClientCnxns", 1000);
 
     // If Hadoop is missing HADOOP-7070 the cluster will fail to start due to
-    // the JAAS configuration required by ZK being clobbered by Hadoop 
+    // the JAAS configuration required by ZK being clobbered by Hadoop
     try {
       TEST_UTIL.startMiniCluster();
     } catch (IOException e) {
@@ -84,14 +94,11 @@ public class TestZooKeeperACL {
       secureZKAvailable = false;
       return;
     }
-    zkw = new ZooKeeperWatcher(
+    zkw = new ZKWatcher(
       new Configuration(TEST_UTIL.getConfiguration()),
         TestZooKeeper.class.getName(), null);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     if (!secureZKAvailable) {
@@ -100,9 +107,6 @@ public class TestZooKeeperACL {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @Before
   public void setUp() throws Exception {
     if (!secureZKAvailable) {
@@ -112,7 +116,7 @@ public class TestZooKeeperACL {
   }
 
   /**
-   * Create a node and check its ACL. When authentication is enabled on 
+   * Create a node and check its ACL. When authentication is enabled on
    * ZooKeeper, all nodes (except /hbase/root-region-server, /hbase/master
    * and /hbase/hbaseid) should be created so that only the hbase server user
    * (master or region server user) that created them can access them, and
@@ -123,7 +127,7 @@ public class TestZooKeeperACL {
    * then check the subset of world-readable nodes in the three tests after
    * that.
    */
-  @Test (timeout=30000)
+  @Test
   public void testHBaseRootZNodeACL() throws Exception {
     if (!secureZKAvailable) {
       return;
@@ -131,10 +135,10 @@ public class TestZooKeeperACL {
 
     List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
         .getACL("/hbase", new Stat());
-    assertEquals(acls.size(),1);
-    assertEquals(acls.get(0).getId().getScheme(),"sasl");
-    assertEquals(acls.get(0).getId().getId(),"hbase");
-    assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.ALL);
+    assertEquals(1, acls.size());
+    assertEquals("sasl", acls.get(0).getId().getScheme());
+    assertEquals("hbase", acls.get(0).getId().getId());
+    assertEquals(ZooDefs.Perms.ALL, acls.get(0).getPerms());
   }
 
   /**
@@ -142,7 +146,7 @@ public class TestZooKeeperACL {
    * should be created with 2 ACLs: one specifies that the hbase user has
    * full access to the node; the other, that it is world-readable.
    */
-  @Test (timeout=30000)
+  @Test
   public void testHBaseRootRegionServerZNodeACL() throws Exception {
     if (!secureZKAvailable) {
       return;
@@ -150,20 +154,20 @@ public class TestZooKeeperACL {
 
     List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
         .getACL("/hbase/root-region-server", new Stat());
-    assertEquals(acls.size(),2);
+    assertEquals(2, acls.size());
 
     boolean foundWorldReadableAcl = false;
     boolean foundHBaseOwnerAcl = false;
     for(int i = 0; i < 2; i++) {
       if (acls.get(i).getId().getScheme().equals("world") == true) {
-        assertEquals(acls.get(0).getId().getId(),"anyone");
-        assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.READ);
+        assertEquals("anyone", acls.get(0).getId().getId());
+        assertEquals(ZooDefs.Perms.READ, acls.get(0).getPerms());
         foundWorldReadableAcl = true;
       }
       else {
         if (acls.get(i).getId().getScheme().equals("sasl") == true) {
-          assertEquals(acls.get(1).getId().getId(),"hbase");
-          assertEquals(acls.get(1).getId().getScheme(),"sasl");
+          assertEquals("hbase", acls.get(1).getId().getId());
+          assertEquals("sasl", acls.get(1).getId().getScheme());
           foundHBaseOwnerAcl = true;
         } else { // error: should not get here: test fails.
           assertTrue(false);
@@ -179,7 +183,7 @@ public class TestZooKeeperACL {
    * created with 2 ACLs: one specifies that the hbase user has full access
    * to the node; the other, that it is world-readable.
    */
-  @Test (timeout=30000)
+  @Test
   public void testHBaseMasterServerZNodeACL() throws Exception {
     if (!secureZKAvailable) {
       return;
@@ -187,19 +191,19 @@ public class TestZooKeeperACL {
 
     List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
         .getACL("/hbase/master", new Stat());
-    assertEquals(acls.size(),2);
+    assertEquals(2, acls.size());
 
     boolean foundWorldReadableAcl = false;
     boolean foundHBaseOwnerAcl = false;
     for(int i = 0; i < 2; i++) {
       if (acls.get(i).getId().getScheme().equals("world") == true) {
-        assertEquals(acls.get(0).getId().getId(),"anyone");
-        assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.READ);
+        assertEquals("anyone", acls.get(0).getId().getId());
+        assertEquals(ZooDefs.Perms.READ, acls.get(0).getPerms());
         foundWorldReadableAcl = true;
       } else {
         if (acls.get(i).getId().getScheme().equals("sasl") == true) {
-          assertEquals(acls.get(1).getId().getId(),"hbase");
-          assertEquals(acls.get(1).getId().getScheme(),"sasl");
+          assertEquals("hbase", acls.get(1).getId().getId());
+          assertEquals("sasl", acls.get(1).getId().getScheme());
           foundHBaseOwnerAcl = true;
         } else { // error: should not get here: test fails.
           assertTrue(false);
@@ -215,7 +219,7 @@ public class TestZooKeeperACL {
    * created with 2 ACLs: one specifies that the hbase user has full access
    * to the node; the other, that it is world-readable.
    */
-  @Test (timeout=30000)
+  @Test
   public void testHBaseIDZNodeACL() throws Exception {
     if (!secureZKAvailable) {
       return;
@@ -223,19 +227,19 @@ public class TestZooKeeperACL {
 
     List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
         .getACL("/hbase/hbaseid", new Stat());
-    assertEquals(acls.size(),2);
+    assertEquals(2, acls.size());
 
     boolean foundWorldReadableAcl = false;
     boolean foundHBaseOwnerAcl = false;
     for(int i = 0; i < 2; i++) {
       if (acls.get(i).getId().getScheme().equals("world") == true) {
-        assertEquals(acls.get(0).getId().getId(),"anyone");
-        assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.READ);
+        assertEquals("anyone", acls.get(0).getId().getId());
+        assertEquals(ZooDefs.Perms.READ, acls.get(0).getPerms());
         foundWorldReadableAcl = true;
       } else {
         if (acls.get(i).getId().getScheme().equals("sasl") == true) {
-          assertEquals(acls.get(1).getId().getId(),"hbase");
-          assertEquals(acls.get(1).getId().getScheme(),"sasl");
+          assertEquals("hbase", acls.get(1).getId().getId());
+          assertEquals("sasl", acls.get(1).getId().getScheme());
           foundHBaseOwnerAcl = true;
         } else { // error: should not get here: test fails.
           assertTrue(false);
@@ -259,10 +263,10 @@ public class TestZooKeeperACL {
     ZKUtil.createWithParents(zkw, "/testACLNode");
     List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
         .getACL("/testACLNode", new Stat());
-    assertEquals(acls.size(),1);
-    assertEquals(acls.get(0).getId().getScheme(),"sasl");
-    assertEquals(acls.get(0).getId().getId(),"hbase");
-    assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.ALL);
+    assertEquals(1, acls.size());
+    assertEquals("sasl", acls.get(0).getId().getScheme());
+    assertEquals("hbase", acls.get(0).getId().getId());
+    assertEquals(ZooDefs.Perms.ALL, acls.get(0).getPerms());
   }
 
   /**
@@ -270,7 +274,8 @@ public class TestZooKeeperACL {
    */
   @Test
   public void testIsZooKeeperSecure() throws Exception {
-    boolean testJaasConfig = ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
+    boolean testJaasConfig =
+        ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
     assertEquals(testJaasConfig, secureZKAvailable);
     // Define Jaas configuration without ZooKeeper Jaas config
     File saslConfFile = File.createTempFile("tmp", "fakeJaas.conf");
@@ -282,10 +287,10 @@ public class TestZooKeeperACL {
         saslConfFile.getAbsolutePath());
 
     testJaasConfig = ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
-    assertEquals(testJaasConfig, false);
+    assertFalse(testJaasConfig);
     saslConfFile.delete();
   }
-  
+
   /**
    * Check if Programmatic way of setting zookeeper security settings is valid.
    */
@@ -296,13 +301,13 @@ public class TestZooKeeperACL {
 
     Configuration config = new Configuration(HBaseConfiguration.create());
     boolean testJaasConfig = ZKUtil.isSecureZooKeeper(config);
-    assertEquals(testJaasConfig, false);
+    assertFalse(testJaasConfig);
 
     // Now set authentication scheme to Kerberos still it should return false
     // because no configuration set
     config.set("hbase.security.authentication", "kerberos");
     testJaasConfig = ZKUtil.isSecureZooKeeper(config);
-    assertEquals(testJaasConfig, false);
+    assertFalse(testJaasConfig);
 
     // Now set programmatic options related to security
     config.set(HConstants.ZK_CLIENT_KEYTAB_FILE, "/dummy/file");
@@ -310,7 +315,7 @@ public class TestZooKeeperACL {
     config.set(HConstants.ZK_SERVER_KEYTAB_FILE, "/dummy/file");
     config.set(HConstants.ZK_SERVER_KERBEROS_PRINCIPAL, "dummy");
     testJaasConfig = ZKUtil.isSecureZooKeeper(config);
-    assertEquals(true, testJaasConfig);
+    assertTrue(testJaasConfig);
   }
 
   private static class DummySecurityConfiguration extends javax.security.auth.login.Configuration {
@@ -320,24 +325,24 @@ public class TestZooKeeperACL {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testAdminDrainAllowedOnSecureZK() throws Exception {
     if (!secureZKAvailable) {
       return;
     }
-    List<ServerName> drainingServers = new ArrayList<>(1);
-    drainingServers.add(ServerName.parseServerName("ZZZ,123,123"));
+    List<ServerName> decommissionedServers = new ArrayList<>(1);
+    decommissionedServers.add(ServerName.parseServerName("ZZZ,123,123"));
 
     // If unable to connect to secure ZK cluster then this operation would fail.
-    TEST_UTIL.getAdmin().drainRegionServers(drainingServers);
+    TEST_UTIL.getAdmin().decommissionRegionServers(decommissionedServers, false);
 
-    drainingServers = TEST_UTIL.getAdmin().listDrainingRegionServers();
-    assertEquals(1, drainingServers.size());
-    assertEquals(ServerName.parseServerName("ZZZ,123,123"), drainingServers.get(0));
+    decommissionedServers = TEST_UTIL.getAdmin().listDecommissionedRegionServers();
+    assertEquals(1, decommissionedServers.size());
+    assertEquals(ServerName.parseServerName("ZZZ,123,123"), decommissionedServers.get(0));
 
-    TEST_UTIL.getAdmin().removeDrainFromRegionServers(drainingServers);
-    drainingServers = TEST_UTIL.getAdmin().listDrainingRegionServers();
-    assertEquals(0, drainingServers.size());
+    TEST_UTIL.getAdmin().recommissionRegionServer(decommissionedServers.get(0), null);
+    decommissionedServers = TEST_UTIL.getAdmin().listDecommissionedRegionServers();
+    assertEquals(0, decommissionedServers.size());
   }
 
 }

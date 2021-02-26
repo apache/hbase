@@ -16,7 +16,7 @@
 @rem * See the License for the specific language governing permissions and
 @rem * limitations under the License.
 @rem */
-@rem 
+@rem
 @rem The hbase command script.  Based on the hadoop command script putting
 @rem in hbase classes, libs and configurations ahead of hadoop's.
 @rem
@@ -57,6 +57,15 @@ for %%i in (%0) do (
 
 if "%HBASE_BIN_PATH:~-1%" == "\" (
   set HBASE_BIN_PATH=%HBASE_BIN_PATH:~0,-1%
+)
+
+if "%1" == "--help" (
+  goto :print_usage
+  exit /B 0
+)
+if "%1" == "-h" (
+  goto :print_usage
+  exit /B 0
 )
 
 rem This will set HBASE_HOME, etc.
@@ -103,7 +112,7 @@ if defined HBASE_OFFHEAPSIZE (
 set CLASSPATH=%HBASE_CONF_DIR%;%JAVA_HOME%\lib\tools.jar
 
 rem Add maven target directory
-set cached_classpath_filename=%HBASE_HOME%\target\cached_classpath.txt
+set cached_classpath_filename=%HBASE_HOME%\hbase-build-configuration\target\cached_classpath.txt
 if "%in_dev_env%"=="true" (
 
   rem adding maven main classes to classpath
@@ -197,7 +206,7 @@ if exist "%HBASE_HOME%\build\native" (
 rem This loop would set %hbase-command-arguments%
 set _hbasearguments=
 :MakeCmdArgsLoop
-  if [%1]==[] goto :EndLoop 
+  if [%1]==[] goto :EndLoop
 
   if not defined _hbasearguments (
     set _hbasearguments=%1
@@ -205,8 +214,8 @@ set _hbasearguments=
     set _hbasearguments=!_hbasearguments! %1
   )
   shift
-goto :MakeCmdArgsLoop 
-:EndLoop 
+goto :MakeCmdArgsLoop
+:EndLoop
 
 set hbase-command-arguments=%_hbasearguments%
 
@@ -288,7 +297,7 @@ if defined jruby-needed (
   if not defined JRUBY_HOME (
     @rem in dev environment
     if "%in_dev_env%"=="true" (
-      set cached_classpath_jruby_filename=%HBASE_HOME%\target\cached_classpath_jruby.txt
+      set cached_classpath_jruby_filename=%HBASE_HOME%\hbase-build-configuration\target\cached_classpath_jruby.txt
       if not exist "!cached_classpath_jruby_filename!" (
         echo "As this is a development environment, we need !cached_classpath_jruby_filename! to be generated from maven (command: mvn install -DskipTests)"
         goto :eof
@@ -424,7 +433,8 @@ goto :eof
   goto :eof
 
 :zkcli
-  set CLASS=org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer
+  set CLASS=org.apache.hadoop.hbase.zookeeper.ZKMainServer
+  set CLASSPATH=!CLASSPATH!;%HBASE_HOME%\lib\zkcli\*
   goto :eof
 
 :mapredcp
@@ -447,6 +457,7 @@ goto :eof
   echo where ^<command^> an option from one of these categories::
   echo Options:
   echo   --config DIR    Configuration direction to use. Default: ./conf
+  echo   --help or -h    Print this help message
   echo.
   echo Commands:
   echo Some commands take arguments. Pass no args or -h for usage."

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,18 +21,26 @@ package org.apache.hadoop.hbase.chaos.actions;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.zookeeper.ZKServerTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that restarts a random zookeeper node.
  */
 public class RestartRandomZKNodeAction extends RestartActionBaseAction {
+  private static final Logger LOG = LoggerFactory.getLogger(RestartRandomZKNodeAction.class);
+
   public RestartRandomZKNodeAction(long sleepTime) {
     super(sleepTime);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart random zookeeper node");
+    getLogger().info("Performing action: Restart random zookeeper node");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(
         ZKServerTool.readZKNodes(getConf()));
     restartZKNode(server, sleepTime);

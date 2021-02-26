@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.util.List;
+
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ArrayUtils;
 
 @InterfaceAudience.Private
 public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
@@ -43,7 +45,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setRow(final byte[] row) {
-    return setRow(row, 0, ArrayUtils.length(row));
+    return setRow(row, 0, ArrayUtils.getLength(row));
   }
 
   @Override
@@ -56,7 +58,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setFamily(final byte[] family) {
-    return setFamily(family, 0, ArrayUtils.length(family));
+    return setFamily(family, 0, ArrayUtils.getLength(family));
   }
 
   @Override
@@ -69,7 +71,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setQualifier(final byte[] qualifier) {
-    return setQualifier(qualifier, 0, ArrayUtils.length(qualifier));
+    return setQualifier(qualifier, 0, ArrayUtils.getLength(qualifier));
   }
 
   @Override
@@ -87,8 +89,8 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
   }
 
   @Override
-  public ExtendedCellBuilder setType(final DataType type) {
-    this.type = toKeyValueType(type);
+  public ExtendedCellBuilder setType(final Cell.Type type) {
+    this.type = PrivateCellUtil.toTypeByte(type);
     return this;
   }
 
@@ -100,7 +102,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setValue(final byte[] value) {
-    return setValue(value, 0, ArrayUtils.length(value));
+    return setValue(value, 0, ArrayUtils.getLength(value));
   }
 
   @Override
@@ -113,7 +115,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setTags(final byte[] tags) {
-    return setTags(tags, 0, ArrayUtils.length(tags));
+    return setTags(tags, 0, ArrayUtils.getLength(tags));
   }
 
   @Override
@@ -122,6 +124,12 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
     this.tagsOffset = tagsOffset;
     this.tagsLength = tagsLength;
     return this;
+  }
+
+  @Override
+  public ExtendedCellBuilder setTags(List<Tag> tags) {
+    byte[] tagBytes = TagUtil.fromList(tags);
+    return setTags(tagBytes);
   }
 
   @Override
@@ -165,16 +173,5 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
     tagsOffset = 0;
     tagsLength = 0;
     return this;
-  }
-
-  private static KeyValue.Type toKeyValueType(DataType type) {
-    switch (type) {
-      case Put: return KeyValue.Type.Put;
-      case Delete: return KeyValue.Type.Delete;
-      case DeleteColumn: return KeyValue.Type.DeleteColumn;
-      case DeleteFamilyVersion: return KeyValue.Type.DeleteFamilyVersion;
-      case DeleteFamily: return KeyValue.Type.DeleteFamily;
-      default: throw new UnsupportedOperationException("Unsupported data type:" + type);
-    }
   }
 }

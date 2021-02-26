@@ -26,11 +26,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -53,6 +48,9 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A base for {@link TableInputFormat}s. Receives a {@link Connection}, a {@link TableName},
@@ -109,7 +107,7 @@ import org.apache.hadoop.util.StringUtils;
 public abstract class TableInputFormatBase
     extends InputFormat<ImmutableBytesWritable, Result> {
 
-  private static final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableInputFormatBase.class);
 
   private static final String NOT_INITIALIZED = "The input format instance has not been properly " +
       "initialized. Ensure you call initializeTable either in your constructor or initialize " +
@@ -268,8 +266,9 @@ public abstract class TableInputFormatBase
       }
 
       //The default value of "hbase.mapreduce.input.autobalance" is false.
-      if (context.getConfiguration().getBoolean(MAPREDUCE_INPUT_AUTOBALANCE, false) != false) {
-        long maxAveRegionSize = context.getConfiguration().getInt(MAX_AVERAGE_REGION_SIZE, 8*1073741824);
+      if (context.getConfiguration().getBoolean(MAPREDUCE_INPUT_AUTOBALANCE, false)) {
+        long maxAveRegionSize = context.getConfiguration()
+            .getLong(MAX_AVERAGE_REGION_SIZE, 8L*1073741824); //8GB
         return calculateAutoBalancedSplits(splits, maxAveRegionSize);
       }
 
@@ -286,11 +285,11 @@ public abstract class TableInputFormatBase
    * Create one InputSplit per region
    *
    * @return The list of InputSplit for all the regions
-   * @throws IOException
+   * @throws IOException throws IOException
    */
   private List<InputSplit> oneInputSplitPerRegion() throws IOException {
     RegionSizeCalculator sizeCalculator =
-        new RegionSizeCalculator(getRegionLocator(), getAdmin());
+        createRegionSizeCalculator(getRegionLocator(), getAdmin());
 
     TableName tableName = getTable().getName();
 
@@ -304,7 +303,10 @@ public abstract class TableInputFormatBase
       }
       List<InputSplit> splits = new ArrayList<>(1);
       long regionSize = sizeCalculator.getRegionSize(regLoc.getRegionInfo().getRegionName());
-      TableSplit split = new TableSplit(tableName, scan,
+      // In the table input format for single table we do not need to
+      // store the scan object in table split because it can be memory intensive and redundant
+      // information to what is already stored in conf SCAN. See HBASE-25212
+      TableSplit split = new TableSplit(tableName, null,
           HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, regLoc
           .getHostnamePort().split(Addressing.HOSTNAME_PORT_SEPARATOR)[0], regionSize);
       splits.add(split);
@@ -344,7 +346,10 @@ public abstract class TableInputFormatBase
         byte[] regionName = location.getRegionInfo().getRegionName();
         String encodedRegionName = location.getRegionInfo().getEncodedName();
         long regionSize = sizeCalculator.getRegionSize(regionName);
-        TableSplit split = new TableSplit(tableName, scan,
+        // In the table input format for single table we do not need to
+        // store the scan object in table split because it can be memory intensive and redundant
+        // information to what is already stored in conf SCAN. See HBASE-25212
+        TableSplit split = new TableSplit(tableName, null,
             splitStart, splitStop, regionLocation, encodedRegionName, regionSize);
         splits.add(split);
         if (LOG.isDebugEnabled()) {
@@ -361,7 +366,7 @@ public abstract class TableInputFormatBase
    * @param n     Number of ranges after splitting.  Pass 1 means no split for the range
    *              Pass 2 if you want to split the range in two;
    * @return A list of TableSplit, the size of the list is n
-   * @throws IllegalArgumentIOException
+   * @throws IllegalArgumentIOException throws IllegalArgumentIOException
    */
   protected List<InputSplit> createNInputSplitsUniform(InputSplit split, int n)
       throws IllegalArgumentIOException {
@@ -408,9 +413,12 @@ public abstract class TableInputFormatBase
     // Split Region into n chunks evenly
     byte[][] splitKeys = Bytes.split(startRow, endRow, true, n-1);
     for (int i = 0; i < splitKeys.length - 1; i++) {
+      // In the table input format for single table we do not need to
+      // store the scan object in table split because it can be memory intensive and redundant
+      // information to what is already stored in conf SCAN. See HBASE-25212
       //notice that the regionSize parameter may be not very accurate
       TableSplit tsplit =
-          new TableSplit(tableName, scan, splitKeys[i], splitKeys[i + 1], regionLocation,
+          new TableSplit(tableName, null, splitKeys[i], splitKeys[i + 1], regionLocation,
               encodedRegionName, regionSize / n);
       res.add(tsplit);
     }
@@ -477,7 +485,8 @@ public abstract class TableInputFormatBase
         while (j < splits.size()) {
           TableSplit nextRegion = (TableSplit) splits.get(j);
           long nextRegionSize = nextRegion.getLength();
-          if (totalSize + nextRegionSize <= averageRegionSize) {
+          if (totalSize + nextRegionSize <= averageRegionSize
+              && Bytes.equals(splitEndKey, nextRegion.getStartRow())) {
             totalSize = totalSize + nextRegionSize;
             splitEndKey = nextRegion.getEndRow();
             j++;
@@ -486,7 +495,10 @@ public abstract class TableInputFormatBase
           }
         }
         i = j - 1;
-        TableSplit t = new TableSplit(tableName, scan, splitStartKey, splitEndKey, regionLocation,
+        // In the table input format for single table we do not need to
+        // store the scan object in table split because it can be memory intensive and redundant
+        // information to what is already stored in conf SCAN. See HBASE-25212
+        TableSplit t = new TableSplit(tableName, null, splitStartKey, splitEndKey, regionLocation,
             encodedRegionName, totalSize);
         resultList.add(t);
       }
@@ -506,7 +518,9 @@ public abstract class TableInputFormatBase
         // reverse DNS using jndi doesn't work well with ipv6 addresses.
         ipAddressString = InetAddress.getByName(ipAddress.getHostAddress()).getHostName();
       }
-      if (ipAddressString == null) throw new UnknownHostException("No host found for " + ipAddress);
+      if (ipAddressString == null) {
+        throw new UnknownHostException("No host found for " + ipAddress);
+      }
       hostName = Strings.domainNamePointerToHostName(ipAddressString);
       this.reverseDNSCacheMap.put(ipAddress, hostName);
     }
@@ -583,6 +597,12 @@ public abstract class TableInputFormatBase
     this.regionLocator = connection.getRegionLocator(tableName);
     this.admin = connection.getAdmin();
     this.connection = connection;
+  }
+
+  @InterfaceAudience.Private
+  protected RegionSizeCalculator createRegionSizeCalculator(RegionLocator locator, Admin admin)
+      throws IOException {
+    return new RegionSizeCalculator(locator, admin);
   }
 
   /**

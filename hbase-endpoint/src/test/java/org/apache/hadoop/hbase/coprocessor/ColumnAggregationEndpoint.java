@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +17,15 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -35,17 +36,15 @@ import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationP
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The aggregation implementation at a region.
  */
 public class ColumnAggregationEndpoint extends ColumnAggregationService
-implements RegionCoprocessor {
-  private static final Log LOG = LogFactory.getLog(ColumnAggregationEndpoint.class);
+        implements RegionCoprocessor {
+  private static final Logger LOG = LoggerFactory.getLogger(ColumnAggregationEndpoint.class);
   private RegionCoprocessorEnvironment env = null;
 
   @Override

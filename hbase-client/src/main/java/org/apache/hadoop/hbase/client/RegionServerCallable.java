@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -106,6 +106,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    * Override that changes call Exception from {@link Exception} to {@link IOException}.
    * Also does set up of the rpcController.
    */
+  @Override
   public T call(int callTimeout) throws IOException {
     try {
       // Iff non-null and an instance of a SHADED rpcController, do config! Unshaded -- i.e.
@@ -183,6 +184,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
 
   protected int getPriority() { return this.priority;}
 
+  @Override
   public void throwable(Throwable t, boolean retrying) {
     if (location != null) {
       getConnection().updateCachedLocations(tableName, location.getRegionInfo().getRegionName(),
@@ -190,10 +192,12 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
     }
   }
 
+  @Override
   public String getExceptionMessageAdditionalDetail() {
     return "row '" + Bytes.toString(row) + "' on table '" + tableName + "' at " + location;
   }
 
+  @Override
   public long sleep(long pause, int tries) {
     return ConnectionUtils.getPauseTime(pause, tries);
   }
@@ -208,6 +212,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
     return this.location.getRegionInfo();
   }
 
+  @Override
   public void prepare(final boolean reload) throws IOException {
     // check table state if this is a retry
     if (reload && tableName != null && !tableName.equals(TableName.META_TABLE_NAME)

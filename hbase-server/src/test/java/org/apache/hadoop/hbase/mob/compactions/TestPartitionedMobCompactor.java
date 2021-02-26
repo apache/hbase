@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,23 +31,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -77,19 +72,28 @@ import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestPartitionedMobCompactor {
-  private static final Log LOG = LogFactory.getLog(TestPartitionedMobCompactor.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestPartitionedMobCompactor.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestPartitionedMobCompactor.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static String family = "family";
   private final static String qf = "qf";
@@ -128,11 +132,11 @@ public class TestPartitionedMobCompactor {
 
   private void init(String tableName) throws Exception {
     fs = FileSystem.get(conf);
-    Path testDir = FSUtils.getRootDir(conf);
+    Path testDir = CommonFSUtils.getRootDir(conf);
     Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
     basePath = new Path(new Path(mobTestDir, tableName), family);
-    mobSuffix = UUID.randomUUID().toString().replaceAll("-", "");
-    delSuffix = UUID.randomUUID().toString().replaceAll("-", "") + "_del";
+    mobSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "");
+    delSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "") + "_del";
     allFiles.clear();
     mobFiles.clear();
     delFiles.clear();
@@ -365,7 +369,7 @@ public class TestPartitionedMobCompactor {
     String tableName = name.getMethodName();
     fs = FileSystem.get(conf);
     FaultyDistributedFileSystem faultyFs = (FaultyDistributedFileSystem)fs;
-    Path testDir = FSUtils.getRootDir(conf);
+    Path testDir = CommonFSUtils.getRootDir(conf);
     Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
     basePath = new Path(new Path(mobTestDir, tableName), family);
 
@@ -827,8 +831,8 @@ public class TestPartitionedMobCompactor {
       if (sameStartKey) {
         // When creating multiple files under one partition, suffix needs to be different.
         startRow = Bytes.toBytes(startKey);
-        mobSuffix = UUID.randomUUID().toString().replaceAll("-", "");
-        delSuffix = UUID.randomUUID().toString().replaceAll("-", "") + "_del";
+        mobSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "");
+        delSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "") + "_del";
       } else {
         startRow = Bytes.toBytes(startKey + i);
       }
@@ -882,7 +886,7 @@ public class TestPartitionedMobCompactor {
       false, true, false, false, HConstants.LATEST_TIMESTAMP));
     long timeToPurgeDeletes = Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
     long ttl = HStore.determineTTLFromFamily(hcd);
-    ScanInfo scanInfo = new ScanInfo(conf, hcd, ttl, timeToPurgeDeletes, CellComparator.COMPARATOR);
+    ScanInfo scanInfo = new ScanInfo(conf, hcd, ttl, timeToPurgeDeletes, CellComparatorImpl.COMPARATOR);
     StoreScanner scanner = new StoreScanner(scanInfo, ScanType.COMPACT_RETAIN_DELETES, scanners);
     List<Cell> results = new ArrayList<>();
     boolean hasMore = true;
@@ -900,20 +904,19 @@ public class TestPartitionedMobCompactor {
     int maxThreads = 10;
     long keepAliveTime = 60;
     final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
-    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime,
-      TimeUnit.SECONDS, queue, Threads.newDaemonThreadFactory("MobFileCompactionChore"),
-      new RejectedExecutionHandler() {
-        @Override
-        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+    ThreadPoolExecutor pool =
+      new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS, queue,
+        new ThreadFactoryBuilder().setNameFormat("MobFileCompactionChore-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+        (r, executor) -> {
           try {
             // waiting for a thread to pick up instead of throwing exceptions.
             queue.put(r);
           } catch (InterruptedException e) {
             throw new RejectedExecutionException(e);
           }
-        }
-      });
-    ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
+        });
+    pool.allowCoreThreadTimeOut(true);
     return pool;
   }
 

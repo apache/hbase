@@ -26,10 +26,19 @@
 # Presumes that dev-support/generate-hadoopX-poms.sh has already been run.
 # Presumes your settings.xml all set up so can sign artifacts published to mvn, etc.
 
-set -e
+set -e -x
 
-devsupport=`dirname "$0"`
-devsupport=`cd "$devsupport">/dev/null; pwd`
+# Script checks out a tag, cleans the checkout and then builds src and bin
+# tarballs. It then deploys to the apache maven repository.
+# Presumes run from git dir.
+
+# Need a git tag to build.
+if [ "$1" = "" ]
+then
+  echo -n "Usage: $0 TAG_TO_PACKAGE"
+  exit 1
+fi
+git_tag=$1
 
 # Set mvn and mvnopts
 mvn=mvn
@@ -41,45 +50,69 @@ if [ "$MAVEN_OPTS" != "" ]; then
   mvnopts="${MAVEN_OPTS}"
 fi
 
-# Make a dir to save tgzs in.
+# Ensure we are inside a git repo before making progress
+# The below will fail if outside git.
+git -C . rev-parse
+
+# Checkout git_tag
+git checkout "${git_tag}"
+
+# Get mvn protject version
+#shellcheck disable=SC2016
+version=$(${mvn} -q -N -Dexec.executable="echo" -Dexec.args='${project.version}' exec:exec)
+hbase_name="hbase-${version}"
+
+# Make a dir to save tgzs into.
 d=`date -u +"%Y%m%dT%H%M%SZ"`
-archivedir="$(pwd)/../`basename $0`.$d"
-echo "Archive dir ${archivedir}"
-mkdir -p "${archivedir}"
+output_dir="/${TMPDIR}/$hbase_name.$d"
+mkdir -p "${output_dir}"
 
-function tgz_mover {
-  mv ./hbase-assembly/target/hbase-*.tar.gz "${archivedir}"
+
+# Build src tgz.
+function build_src {
+  git archive --format=tar.gz --output="${output_dir}/${hbase_name}-src.tar.gz" --prefix="${hbase_name}/" "${git_tag}"
 }
 
-function deploy {
-  MAVEN_OPTS="${mvnopts}" ${mvn} clean install -DskipTests -Prelease \
-    -Dmaven.repo.local=${archivedir}/repository
-  MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests post-site assembly:single -Prelease \
-    -Dmaven.repo.local=${archivedir}/repository
-  tgz_mover
-  MAVEN_OPTS="${mvnopts}" ${mvn} deploy -DskipTests -Papache-release -Prelease \
-    -Dmaven.repo.local=${archivedir}/repository
+# Build bin tgz
+function build_bin {
+  MAVEN_OPTS="${mvnopts}" ${mvn} clean install -DskipTests \
+    -Papache-release -Prelease \
+    -Dmaven.repo.local=${output_dir}/repository
+  MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests \
+    -Dcheckstyle.skip=true site assembly:single \
+    -Papache-release -Prelease \
+    -Dmaven.repo.local=${output_dir}/repository
+  mv ./hbase-assembly/target/hbase-*.tar.gz "${output_dir}"
 }
 
-# Build src tarball
-# run clean separate from assembly:single because it fails to clean shaded modules correctly
+# Make sure all clean.
+git clean -f -x -d
 MAVEN_OPTS="${mvnopts}" ${mvn} clean
-MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests assembly:single \
-  -Dassembly.file="$(pwd)/hbase-assembly/src/main/assembly/src.xml" \
-  -Prelease -Dmaven.repo.local=${archivedir}/repository
-
-tgz_mover
 
 # Now do the two builds,  one for hadoop1, then hadoop2
-deploy
+# Run a rat check.
+${mvn} apache-rat:check
 
-echo "DONE"
-echo "Check the content of ${archivedir}.  If good, sign and push to dist.apache.org"
-echo " cd ${archivedir}"
-echo ' for i in *.tar.gz; do echo $i; gpg --print-mds $i > $i.mds ; done'
-echo ' for i in *.tar.gz; do echo $i; gpg --print-md MD5 $i > $i.md5 ; done'
-echo ' for i in *.tar.gz; do echo $i; gpg --print-md SHA512 $i > $i.sha ; done'
+#Build src.
+build_src
+
+# Build bin product
+build_bin
+
+# Deploy to mvn repository
+# Depends on build_bin having populated the local repository
+# If the below upload fails, you will probably have to clean the partial
+# upload from repository.apache.org by 'drop'ping it from the staging
+# repository before restart.
+MAVEN_OPTS="${mvnopts}" ${mvn} deploy -DskipTests -Papache-release -Prelease \
+    -Dmaven.repo.local=${output_dir}/repository
+
+# Do sha512 and md5
+cd ${output_dir}
+for i in *.tar.gz; do echo $i; gpg --print-md SHA512 $i > $i.sha512 ; done
+
+echo "Check the content of ${output_dir}.  If good, sign and push to dist.apache.org"
+echo " cd ${output_dir}"
 echo ' for i in *.tar.gz; do echo $i; gpg --armor --output $i.asc --detach-sig $i  ; done'
-echo ' rsync -av ${archivedir}/*.gz ${archivedir}/*.mds ${archivedir}/*.asc ~/repos/dist-dev/hbase-VERSION/'
+echo " rsync -av ${output_dir}/*.gz ${output_dir}/*.sha512 ${output_dir}/*.asc ${APACHE_HBASE_DIST_DEV_DIR}/${hbase_name}/"
 echo "Check the content deployed to maven.  If good, close the repo and record links of temporary staging repo"
-echo "If all good tag the RC"

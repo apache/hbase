@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSource;
 import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface of a class that will export metrics about Thrift to hadoop's metrics2.
  */
+@InterfaceAudience.Private
 public interface MetricsThriftServerSource extends ExceptionTrackingSource, JvmPauseMonitorSource {
 
   String BATCH_GET_KEY = "batchGet";

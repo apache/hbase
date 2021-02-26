@@ -15,40 +15,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
-import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Int64Value;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, LargeTests.class})
+import org.apache.hbase.thirdparty.com.google.protobuf.Int64Value;
+
+/**
+ * For now we do not guarantee this, we will restore the locks when restarting ProcedureExecutor so
+ * we should use lock to obtain the correct order. Ignored.
+ */
+@Ignore
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureReplayOrder {
-  private static final Log LOG = LogFactory.getLog(TestProcedureReplayOrder.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedureReplayOrder.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureReplayOrder.class);
 
   private static final int NUM_THREADS = 16;
 
-  private ProcedureExecutor<Void> procExecutor;
+  private ProcedureExecutor<TestProcedureEnv> procExecutor;
   private TestProcedureEnv procEnv;
   private ProcedureStore procStore;
 
@@ -68,10 +77,10 @@ public class TestProcedureReplayOrder {
 
     logDir = new Path(testDir, "proc-logs");
     procEnv = new TestProcedureEnv();
-    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
-    procExecutor = new ProcedureExecutor(htu.getConfiguration(), procEnv, procStore);
+    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
+    procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), procEnv, procStore);
     procStore.start(NUM_THREADS);
-    procExecutor.start(1, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, 1, true);
   }
 
   @After
@@ -81,7 +90,7 @@ public class TestProcedureReplayOrder {
     fs.delete(logDir, true);
   }
 
-  @Test(timeout=90000)
+  @Test
   public void testSingleStepReplayOrder() throws Exception {
     final int NUM_PROC_XTHREAD = 32;
     final int NUM_PROCS = NUM_THREADS * NUM_PROC_XTHREAD;
@@ -102,7 +111,7 @@ public class TestProcedureReplayOrder {
     procEnv.assertSortedExecList(NUM_PROCS);
   }
 
-  @Test(timeout=90000)
+  @Test
   public void testMultiStepReplayOrder() throws Exception {
     final int NUM_PROC_XTHREAD = 24;
     final int NUM_PROCS = NUM_THREADS * (NUM_PROC_XTHREAD * 2);
@@ -132,8 +141,9 @@ public class TestProcedureReplayOrder {
         public void run() {
           for (int i = 0; i < nprocPerThread; ++i) {
             try {
-              procExecutor.submitProcedure((Procedure)procClazz.newInstance());
-            } catch (InstantiationException|IllegalAccessException e) {
+              procExecutor.submitProcedure((Procedure)
+                procClazz.getDeclaredConstructor().newInstance());
+            } catch (Exception e) {
               LOG.error("unable to instantiate the procedure", e);
               fail("failure during the proc.newInstance(): " + e.getMessage());
             }
@@ -190,7 +200,9 @@ public class TestProcedureReplayOrder {
     protected void rollback(TestProcedureEnv env) { }
 
     @Override
-    protected boolean abort(TestProcedureEnv env) { return true; }
+    protected boolean abort(TestProcedureEnv env) {
+      return true;
+    }
 
     @Override
     protected void serializeStateData(ProcedureStateSerializer serializer)

@@ -1,38 +1,45 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.RPC_CODEC_CONF_KEY;
+import static org.apache.hadoop.hbase.client.TestFromClientSide3.generateHugeValue;
+import static org.apache.hadoop.hbase.ipc.RpcClient.DEFAULT_CODEC_CLASS;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,55 +48,64 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
+import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * A client-side test, mostly testing scanners with various parameters.
+ * A client-side test, mostly testing scanners with various parameters. Parameterized on different
+ * registry implementations.
  */
 @Category({MediumTests.class, ClientTests.class})
+@RunWith(Parameterized.class)
 public class TestScannersFromClientSide {
-  private static final Log LOG = LogFactory.getLog(TestScannersFromClientSide.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestScannersFromClientSide.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestScannersFromClientSide.class);
+
+  private static HBaseTestingUtility TEST_UTIL;
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
 
-  @Rule
-  public TestName name = new TestName();
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 10 * 1024 * 1024);
-    TEST_UTIL.startMiniCluster(3);
-  }
+  @Rule public TableNameTestRule name = new TableNameTestRule();
 
   /**
    * @throws java.lang.Exception
    */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
+    if (TEST_UTIL != null) {
+      TEST_UTIL.shutdownMiniCluster();
+    }
   }
 
   /**
@@ -100,12 +116,59 @@ public class TestScannersFromClientSide {
     // Nothing to do.
   }
 
+  @Parameterized.Parameters
+  public static Collection<Object[]> parameters() {
+    return Arrays.asList(new Object[][] {
+        { MasterRegistry.class, 1},
+        { MasterRegistry.class, 2},
+        { ZKConnectionRegistry.class, 1}
+    });
+  }
+
   /**
-   * @throws java.lang.Exception
+   * JUnit does not provide an easy way to run a hook after each parameterized run. Without that
+   * there is no easy way to restart the test cluster after each parameterized run. Annotation
+   * BeforeParam does not work either because it runs before parameterization and hence does not
+   * have access to the test parameters (which is weird).
+   *
+   * This *hack* checks if the current instance of test cluster configuration has the passed
+   * parameterized configs. In such a case, we can just reuse the cluster for test and do not need
+   * to initialize from scratch. While this is a hack, it saves a ton of time for the full
+   * test and de-flakes it.
    */
-  @After
-  public void tearDown() throws Exception {
-    // Nothing to do.
+  private static boolean isSameParameterizedCluster(Class<?> registryImpl, int numHedgedReqs) {
+    // initialize() is called for every unit test, however we only want to reset the cluster state
+    // at the end of every parameterized run.
+    if (TEST_UTIL == null) {
+      return false;
+    }
+    Configuration conf = TEST_UTIL.getConfiguration();
+    Class<?> confClass = conf.getClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+      ZKConnectionRegistry.class);
+    int hedgedReqConfig = conf.getInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY,
+      MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_DEFAULT);
+    return confClass.getName().equals(registryImpl.getName()) && numHedgedReqs == hedgedReqConfig;
+  }
+
+  public TestScannersFromClientSide(Class<?> registryImpl, int numHedgedReqs) throws Exception {
+    if (isSameParameterizedCluster(registryImpl, numHedgedReqs)) {
+      return;
+    }
+    if (TEST_UTIL != null) {
+      // We reached the end of a parameterized run, clean up the cluster.
+      TEST_UTIL.shutdownMiniCluster();
+    }
+    TEST_UTIL = new HBaseTestingUtility();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 10 * 1024 * 1024);
+    conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, registryImpl,
+        ConnectionRegistry.class);
+    Preconditions.checkArgument(numHedgedReqs > 0);
+    conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
+    StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
+    // Multiple masters needed only when hedged reads for master registry are enabled.
+    builder.numMasters(numHedgedReqs > 1 ? 3 : 1).numRegionServers(3);
+    TEST_UTIL.startMiniCluster(builder.build());
   }
 
   /**
@@ -115,7 +178,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanBatch() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 8);
 
     Table ht = TEST_UTIL.createTable(tableName, FAMILY);
@@ -185,7 +248,7 @@ public class TestScannersFromClientSide {
 
   @Test
   public void testMaxResultSizeIsSetToDefault() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
     // The max result size we expect the scan to use by default.
@@ -233,9 +296,30 @@ public class TestScannersFromClientSide {
       clientScanner.getCacheSize() <= 1);
   }
 
+  /**
+   * Scan on not existing table should throw the exception with correct message
+   */
+  @Test
+  public void testScannerForNotExistingTable() {
+    String[] tableNames = {"A", "Z", "A:A", "Z:Z"};
+    for(String tableName : tableNames) {
+      try {
+        Table table = TEST_UTIL.getConnection().getTable(TableName.valueOf(tableName));
+        testSmallScan(table, true, 1, 5);
+        fail("TableNotFoundException was not thrown");
+      } catch (TableNotFoundException e) {
+        // We expect that the message for TableNotFoundException would have only the table name only
+        // Otherwise that would mean that localeRegionInMeta doesn't work properly
+        assertEquals(e.getMessage(), tableName);
+      } catch (Exception e) {
+        fail("Unexpected exception " + e.getMessage());
+      }
+    }
+  }
+
   @Test
   public void testSmallScan() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
 
     int numRows = 10;
     byte[][] ROWS = HTestConst.makeNAscii(ROW, numRows);
@@ -273,7 +357,8 @@ public class TestScannersFromClientSide {
    * @param columns
    * @throws Exception
    */
-  private void testSmallScan(Table table, boolean reversed, int rows, int columns) throws Exception {
+  private void testSmallScan(
+      Table table, boolean reversed, int rows, int columns) throws Exception {
     Scan baseScan = new Scan();
     baseScan.setReversed(reversed);
     baseScan.setSmall(true);
@@ -317,7 +402,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testGetMaxResults() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
@@ -391,8 +476,8 @@ public class TestScannersFromClientSide {
       kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE));
     }
     for (int i=0; i < 2; i++) {
-        kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
-      }
+      kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
+    }
     for (int i=10; i < 20; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[i], 1, VALUE));
     }
@@ -437,7 +522,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanMaxResults() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     byte [][] ROWS = HTestConst.makeNAscii(ROW, 2);
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 10);
@@ -487,7 +572,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testGetRowOffset() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
@@ -506,7 +591,9 @@ public class TestScannersFromClientSide {
       KeyValue kv = new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE);
       put.add(kv);
       // skipping first two kvs
-      if (i < 2) continue;
+      if (i < 2) {
+        continue;
+      }
       kvListExp.add(kv);
     }
     ht.put(put);
@@ -575,6 +662,30 @@ public class TestScannersFromClientSide {
        "Testing offset + multiple CFs + maxResults");
   }
 
+  @Test
+  public void testScanRawDeleteFamilyVersion() throws Exception {
+    TableName tableName = name.getTableName();
+    TEST_UTIL.createTable(tableName, FAMILY);
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.set(RPC_CODEC_CONF_KEY, "");
+    conf.set(DEFAULT_CODEC_CLASS, "");
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+        Table table = connection.getTable(tableName)) {
+      Delete delete = new Delete(ROW);
+      delete.addFamilyVersion(FAMILY, 0L);
+      table.delete(delete);
+      Scan scan = new Scan(ROW).setRaw(true);
+      ResultScanner scanner = table.getScanner(scan);
+      int count = 0;
+      while (scanner.next() != null) {
+        count++;
+      }
+      assertEquals(1, count);
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
   /**
    * Test from client side for scan while the region is reopened
    * on the same region server.
@@ -583,7 +694,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanOnReopenedRegion() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 2);
 
     Table ht = TEST_UTIL.createTable(tableName, FAMILY);
@@ -654,7 +765,7 @@ public class TestScannersFromClientSide {
 
   @Test
   public void testAsyncScannerWithSmallData() throws Exception {
-    testAsyncScanner(TableName.valueOf(name.getMethodName()),
+    testAsyncScanner(name.getTableName(),
       2,
       3,
       10,
@@ -664,7 +775,7 @@ public class TestScannersFromClientSide {
 
   @Test
   public void testAsyncScannerWithManyRows() throws Exception {
-    testAsyncScanner(TableName.valueOf(name.getMethodName()),
+    testAsyncScanner(name.getTableName(),
       30000,
       1,
       1,
@@ -674,7 +785,7 @@ public class TestScannersFromClientSide {
 
   @Test
   public void testAsyncScannerWithoutCaching() throws Exception {
-    testAsyncScanner(TableName.valueOf(name.getMethodName()),
+    testAsyncScanner(name.getTableName(),
       5,
       1,
       1,
@@ -777,8 +888,9 @@ public class TestScannersFromClientSide {
     LOG.info(msg);
     LOG.info("Expected count: " + expKvList.size());
     LOG.info("Actual count: " + result.size());
-    if (expKvList.isEmpty())
+    if (expKvList.isEmpty()) {
       return;
+    }
 
     int i = 0;
     for (Cell kv : result.rawCells()) {
@@ -799,7 +911,7 @@ public class TestScannersFromClientSide {
 
   @Test
   public void testReadExpiredDataForRawScan() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = name.getTableName();
     long ts = System.currentTimeMillis() - 10000;
     byte[] value = Bytes.toBytes("expired");
     try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
@@ -814,6 +926,179 @@ public class TestScannersFromClientSide {
         assertArrayEquals(value, scanner.next().getValue(FAMILY, QUALIFIER));
         assertNull(scanner.next());
       }
+    }
+  }
+
+  @Test
+  public void testScanWithColumnsAndFilterAndVersion() throws IOException {
+    TableName tableName = name.getTableName();
+    long now = System.currentTimeMillis();
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY, 4)) {
+      for (int i = 0; i < 4; i++) {
+        Put put = new Put(ROW);
+        put.addColumn(FAMILY, QUALIFIER, now + i, VALUE);
+        table.put(put);
+      }
+
+      Scan scan = new Scan();
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setFilter(new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(QUALIFIER)));
+      scan.readVersions(3);
+
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        Result result = scanner.next();
+        assertEquals(3, result.size());
+      }
+    }
+  }
+
+  @Test
+  public void testScanWithSameStartRowStopRow() throws IOException {
+    TableName tableName = name.getTableName();
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+      table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE));
+
+      Scan scan = new Scan().withStartRow(ROW).withStopRow(ROW);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        assertNull(scanner.next());
+      }
+
+      scan = new Scan().withStartRow(ROW, true).withStopRow(ROW, true);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        Result result = scanner.next();
+        assertNotNull(result);
+        assertArrayEquals(ROW, result.getRow());
+        assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
+        assertNull(scanner.next());
+      }
+
+      scan = new Scan().withStartRow(ROW, true).withStopRow(ROW, false);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        assertNull(scanner.next());
+      }
+
+      scan = new Scan().withStartRow(ROW, false).withStopRow(ROW, false);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        assertNull(scanner.next());
+      }
+
+      scan = new Scan().withStartRow(ROW, false).withStopRow(ROW, true);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        assertNull(scanner.next());
+      }
+    }
+  }
+
+  @Test
+  public void testReverseScanWithFlush() throws Exception {
+    TableName tableName = name.getTableName();
+    final int BATCH_SIZE = 10;
+    final int ROWS_TO_INSERT = 100;
+    final byte[] LARGE_VALUE = generateHugeValue(128 * 1024);
+
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY);
+      Admin admin = TEST_UTIL.getAdmin()) {
+      List<Put> putList = new ArrayList<>();
+      for (long i = 0; i < ROWS_TO_INSERT; i++) {
+        Put put = new Put(Bytes.toBytes(i));
+        put.addColumn(FAMILY, QUALIFIER, LARGE_VALUE);
+        putList.add(put);
+
+        if (putList.size() >= BATCH_SIZE) {
+          table.put(putList);
+          admin.flush(tableName);
+          putList.clear();
+        }
+      }
+
+      if (!putList.isEmpty()) {
+        table.put(putList);
+        admin.flush(tableName);
+        putList.clear();
+      }
+
+      Scan scan = new Scan();
+      scan.setReversed(true);
+      int count = 0;
+
+      try (ResultScanner results = table.getScanner(scan)) {
+        for (Result result : results) {
+          count++;
+        }
+      }
+      assertEquals("Expected " + ROWS_TO_INSERT + " rows in the table but it is " + count,
+        ROWS_TO_INSERT, count);
+    }
+  }
+
+  @Test
+  public void testScannerWithPartialResults() throws Exception {
+    TableName tableName = TableName.valueOf("testScannerWithPartialResults");
+    try (Table table = TEST_UTIL.createMultiRegionTable(tableName,
+      Bytes.toBytes("c"), 4)) {
+      List<Put> puts = new ArrayList<>();
+      byte[] largeArray = new byte[10000];
+      Put put = new Put(Bytes.toBytes("aaaa0"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("1"), Bytes.toBytes("1"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("2"), Bytes.toBytes("2"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("3"), Bytes.toBytes("3"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("4"), Bytes.toBytes("4"));
+      puts.add(put);
+      put = new Put(Bytes.toBytes("aaaa1"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("1"), Bytes.toBytes("1"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("2"), largeArray);
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("3"), largeArray);
+      puts.add(put);
+      table.put(puts);
+      Scan scan = new Scan();
+      scan.addFamily(Bytes.toBytes("c"));
+      scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, tableName.getName());
+      scan.setMaxResultSize(10001);
+      scan.setStopRow(Bytes.toBytes("bbbb"));
+      scan.setFilter(new LimitKVsReturnFilter());
+      ResultScanner rs = table.getScanner(scan);
+      Result result;
+      int expectedKvNumber = 6;
+      int returnedKvNumber = 0;
+      while((result = rs.next()) != null) {
+        returnedKvNumber += result.listCells().size();
+      }
+      rs.close();
+      assertEquals(expectedKvNumber, returnedKvNumber);
+    }
+  }
+
+  public static class LimitKVsReturnFilter extends FilterBase {
+
+    private int cellCount = 0;
+
+    @Override
+    public ReturnCode filterCell(Cell v) throws IOException {
+      if (cellCount >= 6) {
+        cellCount++;
+        return ReturnCode.SKIP;
+      }
+      cellCount++;
+      return ReturnCode.INCLUDE;
+    }
+
+    @Override
+    public boolean filterAllRemaining() throws IOException {
+      if (cellCount < 7) {
+        return false;
+      }
+      cellCount++;
+      return true;
+    }
+
+    @Override
+    public String toString() {
+      return this.getClass().getSimpleName();
+    }
+
+    public static LimitKVsReturnFilter parseFrom(final byte [] pbBytes)
+        throws DeserializationException {
+      return new LimitKVsReturnFilter();
     }
   }
 }

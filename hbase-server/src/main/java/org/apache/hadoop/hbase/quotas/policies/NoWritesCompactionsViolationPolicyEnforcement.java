@@ -18,9 +18,9 @@ package org.apache.hadoop.hbase.quotas.policies;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
 
@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
 @InterfaceAudience.Private
 public class NoWritesCompactionsViolationPolicyEnforcement
     extends NoWritesViolationPolicyEnforcement {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       NoWritesCompactionsViolationPolicyEnforcement.class);
 
   private AtomicBoolean disableCompactions = new AtomicBoolean(false);

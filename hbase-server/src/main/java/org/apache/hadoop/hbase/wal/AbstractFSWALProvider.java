@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,27 +21,34 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.FailedCloseWALAfterInitializedErrorException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Base class of a WAL Provider that returns a single thread safe WAL that writes to Hadoop FS. By
@@ -57,7 +64,11 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceStability.Evolving
 public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implements WALProvider {
 
-  private static final Log LOG = LogFactory.getLog(AbstractFSWALProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractFSWALProvider.class);
+
+  /** Separate old log into different dir by regionserver name **/
+  public static final String SEPARATE_OLDLOGDIR = "hbase.separate.oldlogdir.by.regionserver";
+  public static final boolean DEFAULT_SEPARATE_OLDLOGDIR = false;
 
   // Only public so classes back in regionserver.wal can access
   public interface Reader extends WAL.Reader {
@@ -71,35 +82,35 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   protected volatile T wal;
-  protected WALFactory factory = null;
-  protected Configuration conf = null;
-  protected List<WALActionsListener> listeners = null;
-  protected String providerId = null;
+  protected WALFactory factory;
+  protected Configuration conf;
+  protected List<WALActionsListener> listeners = new ArrayList<>();
+  protected String providerId;
   protected AtomicBoolean initialized = new AtomicBoolean(false);
   // for default wal provider, logPrefix won't change
-  protected String logPrefix = null;
+  protected String logPrefix;
+  protected Abortable abortable;
 
   /**
-   * we synchronized on walCreateLock to prevent wal recreation in different threads
+   * We use walCreateLock to prevent wal recreation in different threads, and also prevent getWALs
+   * missing the newly created WAL, see HBASE-21503 for more details.
    */
-  private final Object walCreateLock = new Object();
+  private final ReadWriteLock walCreateLock = new ReentrantReadWriteLock();
 
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
-   * @param listeners may be null
    * @param providerId differentiate between providers from one factory, used for FS layout. may be
    *          null
    */
   @Override
-  public void init(WALFactory factory, Configuration conf, List<WALActionsListener> listeners,
-      String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+      throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
     this.factory = factory;
     this.conf = conf;
-    this.listeners = listeners;
     this.providerId = providerId;
     // get log prefix
     StringBuilder sb = new StringBuilder().append(factory.factoryId);
@@ -111,34 +122,59 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       }
     }
     logPrefix = sb.toString();
+    this.abortable = abortable;
     doInit(conf);
   }
 
   @Override
   public List<WAL> getWALs() {
-    if (wal == null) {
-      return Collections.emptyList();
+    if (wal != null) {
+      return Lists.newArrayList(wal);
     }
-    List<WAL> wals = new ArrayList<>(1);
-    wals.add(wal);
-    return wals;
+    walCreateLock.readLock().lock();
+    try {
+      if (wal == null) {
+        return Collections.emptyList();
+      } else {
+        return Lists.newArrayList(wal);
+      }
+    } finally {
+      walCreateLock.readLock().unlock();
+    }
   }
 
   @Override
-  public T getWAL(byte[] identifier, byte[] namespace) throws IOException {
+  public T getWAL(RegionInfo region) throws IOException {
     T walCopy = wal;
-    if (walCopy == null) {
-      // only lock when need to create wal, and need to lock since
-      // creating hlog on fs is time consuming
-      synchronized (walCreateLock) {
-        walCopy = wal;
-        if (walCopy == null) {
-          walCopy = createWAL();
-          wal = walCopy;
+    if (walCopy != null) {
+      return walCopy;
+    }
+    walCreateLock.writeLock().lock();
+    try {
+      walCopy = wal;
+      if (walCopy != null) {
+        return walCopy;
+      }
+      walCopy = createWAL();
+      boolean succ = false;
+      try {
+        walCopy.init();
+        succ = true;
+      } finally {
+        if (!succ) {
+          try {
+            walCopy.close();
+          } catch (Throwable t) {
+            throw new FailedCloseWALAfterInitializedErrorException(
+              "Failed close after init wal failed.", t);
+          }
         }
       }
+      wal = walCopy;
+      return walCopy;
+    } finally {
+      walCreateLock.writeLock().unlock();
     }
-    return walCopy;
   }
 
   protected abstract T createWAL() throws IOException;
@@ -184,7 +220,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   /**
    * returns the number of rolled WAL files.
    */
-  @VisibleForTesting
   public static int getNumRolledLogFiles(WAL wal) {
     return ((AbstractFSWAL<?>) wal).getNumRolledLogFiles();
   }
@@ -192,7 +227,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   /**
    * returns the size of rolled WAL files.
    */
-  @VisibleForTesting
   public static long getLogFileSize(WAL wal) {
     return ((AbstractFSWAL<?>) wal).getLogFileSize();
   }
@@ -200,7 +234,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   /**
    * return the current filename from the current wal.
    */
-  @VisibleForTesting
   public static Path getCurrentFileName(final WAL wal) {
     return ((AbstractFSWAL<?>) wal).getCurrentFileName();
   }
@@ -208,7 +241,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   /**
    * request a log roll, but don't actually do it.
    */
-  @VisibleForTesting
   static void requestLogRoll(final WAL wal) {
     ((AbstractFSWAL<?>) wal).requestLogRoll();
   }
@@ -216,7 +248,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   // should be package private; more visible for use in AbstractFSWAL
   public static final String WAL_FILE_NAME_DELIMITER = ".";
   /** The hbase:meta region's WAL filename extension */
-  @VisibleForTesting
   public static final String META_WAL_PROVIDER_ID = ".meta";
   static final String DEFAULT_PROVIDER_ID = "default";
 
@@ -230,7 +261,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @param wal must not be null
    * @return the file number that is part of the WAL file name
    */
-  @VisibleForTesting
   public static long extractFileNumFromWAL(final WAL wal) {
     final Path walName = ((AbstractFSWAL<?>) wal).getCurrentFileName();
     if (walName == null) {
@@ -244,8 +274,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * Pattern used to validate a WAL file name see {@link #validateWALFilename(String)} for
    * description.
    */
-  private static final Pattern pattern = Pattern
-      .compile(".*\\.\\d*(" + META_WAL_PROVIDER_ID + ")*");
+  private static final Pattern pattern =
+    Pattern.compile(".*\\.\\d*(" + META_WAL_PROVIDER_ID + ")*");
 
   /**
    * A WAL file name is of the format: &lt;wal-name&gt;{@link #WAL_FILE_NAME_DELIMITER}
@@ -259,8 +289,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Construct the directory name for all WALs on a given server. Dir names currently look like
-   * this for WALs: <code>hbase//WALs/kalashnikov.att.net,61634,1486865297088</code>.
+   * Construct the directory name for all WALs on a given server. Dir names currently look like this
+   * for WALs: <code>hbase//WALs/kalashnikov.att.net,61634,1486865297088</code>.
    * @param serverName Server name formatted as described in {@link ServerName}
    * @return the relative WAL directory name, e.g. <code>.logs/1.example.org,60030,12345</code> if
    *         <code>serverName</code> passed is <code>1.example.org,60030,12345</code>
@@ -269,6 +299,22 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     StringBuilder dirName = new StringBuilder(HConstants.HREGION_LOGDIR_NAME);
     dirName.append("/");
     dirName.append(serverName);
+    return dirName.toString();
+  }
+
+  /**
+   * Construct the directory name for all old WALs on a given server. The default old WALs dir looks
+   * like: <code>hbase/oldWALs</code>. If you config hbase.separate.oldlogdir.by.regionserver to
+   * true, it looks like <code>hbase//oldWALs/kalashnikov.att.net,61634,1486865297088</code>.
+   * @param serverName Server name formatted as described in {@link ServerName}
+   * @return the relative WAL directory name
+   */
+  public static String getWALArchiveDirectoryName(Configuration conf, final String serverName) {
+    StringBuilder dirName = new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME);
+    if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
+      dirName.append(Path.SEPARATOR);
+      dirName.append(serverName);
+    }
     return dirName.toString();
   }
 
@@ -350,7 +396,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
     try {
       serverName = ServerName.parseServerName(logDirName);
-    } catch (IllegalArgumentException|IllegalStateException ex) {
+    } catch (IllegalArgumentException | IllegalStateException ex) {
       serverName = null;
       LOG.warn("Cannot parse a server name from path=" + logFile + "; " + ex.getMessage());
     }
@@ -365,12 +411,37 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return isMetaFile(p.getName());
   }
 
+  /**
+   * @return True if String ends in {@link #META_WAL_PROVIDER_ID}
+   */
   public static boolean isMetaFile(String p) {
-    if (p != null && p.endsWith(META_WAL_PROVIDER_ID)) {
-      return true;
-    }
-    return false;
+    return p != null && p.endsWith(META_WAL_PROVIDER_ID);
   }
+
+  /**
+   * Comparator used to compare WAL files together based on their start time.
+   * Just compares start times and nothing else.
+   */
+  public static class WALStartTimeComparator implements Comparator<Path> {
+    @Override
+    public int compare(Path o1, Path o2) {
+      return Long.compare(getTS(o1), getTS(o2));
+    }
+
+    /**
+     * Split a path to get the start time
+     * For example: 10.20.20.171%3A60020.1277499063250
+     * Could also be a meta WAL which adds a '.meta' suffix or a synchronous replication WAL
+     * which adds a '.syncrep' suffix. Check.
+     * @param p path to split
+     * @return start time
+     */
+    public static long getTS(Path p) {
+      return WAL.getTimestamp(p.getName());
+    }
+  }
+
+
 
   public static boolean isArchivedLogFile(Path p) {
     String oldLog = Path.SEPARATOR + HConstants.HREGION_OLDLOGDIR_NAME + Path.SEPARATOR;
@@ -385,10 +456,18 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @throws IOException exception
    */
   public static Path getArchivedLogPath(Path path, Configuration conf) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getWALRootDir(conf);
     Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
+      ServerName serverName = getServerNameFromWALDirectoryName(path);
+      if (serverName == null) {
+        LOG.error("Couldn't locate log: " + path);
+        return path;
+      }
+      oldLogDir = new Path(oldLogDir, serverName.getServerName());
+    }
     Path archivedLogLocation = new Path(oldLogDir, path.getName());
-    final FileSystem fs = FSUtils.getCurrentFileSystem(conf);
+    final FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
 
     if (fs.exists(archivedLogLocation)) {
       LOG.info("Log " + path + " was moved to " + archivedLogLocation);
@@ -400,18 +479,13 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Opens WAL reader with retries and
-   * additional exception handling
+   * Opens WAL reader with retries and additional exception handling
    * @param path path to WAL file
    * @param conf configuration
    * @return WAL Reader instance
-   * @throws IOException
    */
-  public static org.apache.hadoop.hbase.wal.WAL.Reader
-    openReader(Path path, Configuration conf)
-        throws IOException
-
-  {
+  public static org.apache.hadoop.hbase.wal.WAL.Reader openReader(Path path, Configuration conf)
+      throws IOException {
     long retryInterval = 2000; // 2 sec
     int maxAttempts = 30;
     int attempt = 0;
@@ -426,7 +500,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       } catch (FileNotFoundException fnfe) {
         // If the log was archived, continue reading from there
         Path archivedLog = AbstractFSWALProvider.getArchivedLogPath(path, conf);
-        if (path != archivedLog) {
+        if (!Objects.equals(path, archivedLog)) {
           return openReader(archivedLog, conf);
         } else {
           throw fnfe;
@@ -459,9 +533,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   // For HBASE-15019
   private static void recoverLease(final Configuration conf, final Path path) {
     try {
-      final FileSystem dfs = FSUtils.getCurrentFileSystem(conf);
-      FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
-      fsUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
+      final FileSystem dfs = CommonFSUtils.getCurrentFileSystem(conf);
+      RecoverLeaseFSUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
         @Override
         public boolean progress() {
           LOG.debug("Still trying to recover WAL lease: " + path);
@@ -473,6 +546,10 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
   }
 
+  @Override
+  public void addWALActionsListener(WALActionsListener listener) {
+    listeners.add(listener);
+  }
 
   /**
    * Get prefix of the log from its name, assuming WAL name in format of

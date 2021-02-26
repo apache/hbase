@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,34 +17,35 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.master.HMaster;
-
 import java.io.IOException;
+import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Chore that will call {@link org.apache.hadoop.hbase.master.HMaster#normalizeRegions()}
- * when needed.
+ * Chore that will periodically call
+ * {@link HMaster#normalizeRegions(NormalizeTableFilterParams, boolean)}.
  */
 @InterfaceAudience.Private
-public class RegionNormalizerChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(RegionNormalizerChore.class);
+class RegionNormalizerChore extends ScheduledChore {
+  private static final Logger LOG = LoggerFactory.getLogger(RegionNormalizerChore.class);
 
-  private final HMaster master;
+  private final MasterServices master;
 
-  public RegionNormalizerChore(HMaster master) {
+  public RegionNormalizerChore(MasterServices master) {
     super(master.getServerName() + "-RegionNormalizerChore", master,
-      master.getConfiguration().getInt("hbase.normalizer.period", 300000));
+      master.getConfiguration().getInt("hbase.normalizer.period", 300_000));
     this.master = master;
   }
 
   @Override
   protected void chore() {
     try {
-      master.normalizeRegions();
+      master.normalizeRegions(new NormalizeTableFilterParams.Builder().build(), false);
     } catch (IOException e) {
       LOG.error("Failed to normalize regions.", e);
     }

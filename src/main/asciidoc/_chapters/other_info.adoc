@@ -32,16 +32,14 @@
 === HBase Videos
 
 .Introduction to HBase
-* link:http://www.cloudera.com/content/cloudera/en/resources/library/presentation/chicago_data_summit_apache_hbase_an_introduction_todd_lipcon.html[Introduction to HBase] by Todd Lipcon (Chicago Data Summit 2011).
-* link:http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon[Introduction to HBase] by Todd Lipcon (2010).
-link:http://www.cloudera.com/videos/hadoop-world-2011-presentation-video-building-realtime-big-data-services-at-facebook-with-hadoop-and-hbase[Building Real Time Services at Facebook with HBase] by Jonathan Gray (Hadoop World 2011).
-
-link:http://www.cloudera.com/videos/hw10_video_how_stumbleupon_built_and_advertising_platform_using_hbase_and_hadoop[HBase and Hadoop, Mixing Real-Time and Batch Processing at StumbleUpon] by JD Cryans (Hadoop World 2010).
+* link:https://vimeo.com/23400732[Introduction to HBase] by Todd Lipcon (Chicago Data Summit 2011).
+* link:https://vimeo.com/26804675[Building Real Time Services at Facebook with HBase] by Jonathan Gray (Berlin buzzwords 2011)
+* link:http://www.cloudera.com/videos/hw10_video_how_stumbleupon_built_and_advertising_platform_using_hbase_and_hadoop[The Multiple Uses Of HBase] by Jean-Daniel Cryans(Berlin buzzwords 2011).
 
 [[other.info.pres]]
 === HBase Presentations (Slides)
 
-link:http://www.cloudera.com/content/cloudera/en/resources/library/hadoopworld/hadoop-world-2011-presentation-video-advanced-hbase-schema-design.html[Advanced HBase Schema Design] by Lars George (Hadoop World 2011).
+link:https://www.slideshare.net/cloudera/hadoop-world-2011-advanced-hbase-schema-design-lars-george-cloudera[Advanced HBase Schema Design] by Lars George (Hadoop World 2011).
 
 link:http://www.slideshare.net/cloudera/chicago-data-summit-apache-hbase-an-introduction[Introduction to HBase] by Todd Lipcon (Chicago Data Summit 2011).
 
@@ -61,9 +59,7 @@ link:http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf[No Rela
 
 link:https://blog.cloudera.com/blog/category/hbase/[Cloudera's HBase Blog] has a lot of links to useful HBase information.
 
-* link:https://blog.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/[CAP Confusion] is a relevant entry for background information on distributed storage systems.
-
-link:http://wiki.apache.org/hadoop/HBase/HBasePresentations[HBase Wiki] has a page with a number of presentations.
+link:https://blog.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/[CAP Confusion] is a relevant entry for background information on distributed storage systems.
 
 link:http://refcardz.dzone.com/refcardz/hbase[HBase RefCard] from DZone.
 

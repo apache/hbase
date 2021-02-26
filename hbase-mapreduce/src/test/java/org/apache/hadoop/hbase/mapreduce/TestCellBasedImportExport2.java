@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -34,18 +34,17 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -69,7 +68,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
-import org.apache.hadoop.hbase.util.MapReduceCell;
+import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -81,12 +80,15 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests the table import and table export MR job functionality
@@ -94,7 +96,11 @@ import org.mockito.stubbing.Answer;
 @Category({VerySlowMapReduceTests.class, MediumTests.class})
 public class TestCellBasedImportExport2 {
 
-  private static final Log LOG = LogFactory.getLog(TestCellBasedImportExport2.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCellBasedImportExport2.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCellBasedImportExport2.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] ROW1 = Bytes.toBytesBinary("\\x32row1");
   private static final byte[] ROW2 = Bytes.toBytesBinary("\\x32row2");
@@ -291,7 +297,7 @@ public class TestCellBasedImportExport2 {
    public void testExportScannerBatching() throws Throwable {
     TableDescriptor desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(1)
               .build())
             .build();
@@ -322,7 +328,7 @@ public class TestCellBasedImportExport2 {
   public void testWithDeletes() throws Throwable {
     TableDescriptor desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .setKeepDeletedCells(KeepDeletedCells.TRUE)
               .build())
@@ -356,7 +362,7 @@ public class TestCellBasedImportExport2 {
     final String IMPORT_TABLE = name.getMethodName() + "import";
     desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(IMPORT_TABLE))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .setKeepDeletedCells(KeepDeletedCells.TRUE)
               .build())
@@ -375,7 +381,7 @@ public class TestCellBasedImportExport2 {
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();
       Cell[] res = r.rawCells();
-      assertTrue(CellUtil.isDeleteFamily(res[0]));
+      assertTrue(PrivateCellUtil.isDeleteFamily(res[0]));
       assertEquals(now+4, res[1].getTimestamp());
       assertEquals(now+3, res[2].getTimestamp());
       assertTrue(CellUtil.isDelete(res[3]));
@@ -391,7 +397,7 @@ public class TestCellBasedImportExport2 {
     final TableName exportTable = TableName.valueOf(name.getMethodName());
     TableDescriptor desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .setKeepDeletedCells(KeepDeletedCells.TRUE)
               .build())
@@ -429,7 +435,7 @@ public class TestCellBasedImportExport2 {
     final String importTable = name.getMethodName() + "import";
     desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(importTable))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .setKeepDeletedCells(KeepDeletedCells.TRUE)
               .build())
@@ -471,7 +477,7 @@ public class TestCellBasedImportExport2 {
     // Create simple table to export
     TableDescriptor desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .build())
             .build();
@@ -499,7 +505,7 @@ public class TestCellBasedImportExport2 {
     final String IMPORT_TABLE = name.getMethodName() + "import";
     desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(IMPORT_TABLE))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .build())
             .build();
@@ -675,12 +681,12 @@ public class TestCellBasedImportExport2 {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
-        MapReduceCell key = (MapReduceCell) invocation.getArguments()[1];
+        MapReduceExtendedCell key = (MapReduceExtendedCell) invocation.getArguments()[1];
         assertEquals("Key", Bytes.toString(writer.get()));
         assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
-    }).when(ctx).write(any(ImmutableBytesWritable.class), any(MapReduceCell.class));
+    }).when(ctx).write(any(ImmutableBytesWritable.class), any(MapReduceExtendedCell.class));
 
     importer.setup(ctx);
     Result value = mock(Result.class);
@@ -777,7 +783,7 @@ public class TestCellBasedImportExport2 {
    * This listens to the {@link #visitLogEntryBeforeWrite(RegionInfo, WALKey, WALEdit)} to
    * identify that an entry is written to the Write Ahead Log for the given table.
    */
-  private static class TableWALActionListener extends WALActionsListener.Base {
+  private static class TableWALActionListener implements WALActionsListener {
 
     private RegionInfo regionInfo;
     private boolean isVisited = false;
@@ -788,7 +794,7 @@ public class TestCellBasedImportExport2 {
 
     @Override
     public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) {
-      if (logKey.getTablename().getNameAsString().equalsIgnoreCase(
+      if (logKey.getTableName().getNameAsString().equalsIgnoreCase(
           this.regionInfo.getTable().getNameAsString()) && (!logEdit.isMetaEdit())) {
         isVisited = true;
       }

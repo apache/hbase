@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public interface MetricsReplicationSourceSource extends BaseSource {
 
   public static final String SOURCE_SIZE_OF_LOG_QUEUE = "source.sizeOfLogQueue";
@@ -49,6 +51,9 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   public static final String SOURCE_REPEATED_LOG_FILE_BYTES = "source.repeatedLogFileBytes";
   public static final String SOURCE_COMPLETED_LOGS = "source.completedLogs";
   public static final String SOURCE_COMPLETED_RECOVERY_QUEUES = "source.completedRecoverQueues";
+  public static final String SOURCE_FAILED_RECOVERY_QUEUES = "source.failedRecoverQueues";
+  /* Used to track the age of oldest wal in ms since its creation time */
+  String OLDEST_WAL_AGE = "source.oldestWalAge";
 
   void setLastShippedAge(long age);
   void incrSizeOfLogQueue(int size);
@@ -72,4 +77,10 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   void incrRepeatedFileBytes(final long bytes);
   void incrCompletedWAL();
   void incrCompletedRecoveryQueue();
+  void incrFailedRecoveryQueue();
+  long getWALEditsRead();
+  long getShippedOps();
+  long getEditsFiltered();
+  void setOldestWalAge(long age);
+  long getOldestWalAge();
 }

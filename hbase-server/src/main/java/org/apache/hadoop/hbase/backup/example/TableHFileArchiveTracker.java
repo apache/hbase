@@ -20,15 +20,15 @@ package org.apache.hadoop.hbase.backup.example;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Track HFile archiving state changes in ZooKeeper. Keeps track of the tables whose HFiles should
@@ -38,14 +38,14 @@ import org.apache.zookeeper.KeeperException;
  * archive.
  */
 @InterfaceAudience.Private
-public class TableHFileArchiveTracker extends ZooKeeperListener {
-  private static final Log LOG = LogFactory.getLog(TableHFileArchiveTracker.class);
+public final class TableHFileArchiveTracker extends ZKListener {
+  private static final Logger LOG = LoggerFactory.getLogger(TableHFileArchiveTracker.class);
   public static final String HFILE_ARCHIVE_ZNODE_PARENT = "hfilearchive";
   private HFileArchiveTableMonitor monitor;
   private String archiveHFileZNode;
   private boolean stopped = false;
 
-  private TableHFileArchiveTracker(ZooKeeperWatcher watcher, HFileArchiveTableMonitor monitor) {
+  private TableHFileArchiveTracker(ZKWatcher watcher, HFileArchiveTableMonitor monitor) {
     super(watcher);
     watcher.registerListener(this);
     this.monitor = monitor;
@@ -67,7 +67,9 @@ public class TableHFileArchiveTracker extends ZooKeeperListener {
   @Override
   public void nodeCreated(String path) {
     // if it is the archive path
-    if (!path.startsWith(archiveHFileZNode)) return;
+    if (!path.startsWith(archiveHFileZNode)) {
+      return;
+    }
 
     LOG.debug("Archive node: " + path + " created");
     // since we are already enabled, just update a single table
@@ -75,7 +77,6 @@ public class TableHFileArchiveTracker extends ZooKeeperListener {
 
     // the top level node has come up, so read in all the tables
     if (table.length() == 0) {
-
       checkEnabledAndUpdate();
       return;
     }
@@ -90,7 +91,9 @@ public class TableHFileArchiveTracker extends ZooKeeperListener {
 
   @Override
   public void nodeChildrenChanged(String path) {
-    if (!path.startsWith(archiveHFileZNode)) return;
+    if (!path.startsWith(archiveHFileZNode)) {
+      return;
+    }
 
     LOG.debug("Archive node: " + path + " children changed.");
     // a table was added to the archive
@@ -134,7 +137,9 @@ public class TableHFileArchiveTracker extends ZooKeeperListener {
 
   @Override
   public void nodeDeleted(String path) {
-    if (!path.startsWith(archiveHFileZNode)) return;
+    if (!path.startsWith(archiveHFileZNode)) {
+      return;
+    }
 
     LOG.debug("Archive node: " + path + " deleted");
     String table = path.substring(archiveHFileZNode.length());
@@ -235,7 +240,7 @@ public class TableHFileArchiveTracker extends ZooKeeperListener {
    */
   public static TableHFileArchiveTracker create(Configuration conf)
       throws ZooKeeperConnectionException, IOException {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "hfileArchiveCleaner", null);
+    ZKWatcher zkw = new ZKWatcher(conf, "hfileArchiveCleaner", null);
     return create(zkw, new HFileArchiveTableMonitor());
   }
 
@@ -247,12 +252,12 @@ public class TableHFileArchiveTracker extends ZooKeeperListener {
    * @return ZooKeeper tracker to monitor for this server if this server should archive hfiles for a
    *         given table
    */
-  private static TableHFileArchiveTracker create(ZooKeeperWatcher zkw,
+  private static TableHFileArchiveTracker create(ZKWatcher zkw,
       HFileArchiveTableMonitor monitor) {
     return new TableHFileArchiveTracker(zkw, monitor);
   }
 
-  public ZooKeeperWatcher getZooKeeperWatcher() {
+  public ZKWatcher getZooKeeperWatcher() {
     return this.watcher;
   }
 
@@ -260,7 +265,10 @@ public class TableHFileArchiveTracker extends ZooKeeperListener {
    * Stop this tracker and the passed zookeeper
    */
   public void stop() {
-    if (this.stopped) return;
+    if (this.stopped) {
+      return;
+    }
+
     this.stopped = true;
     this.watcher.close();
   }

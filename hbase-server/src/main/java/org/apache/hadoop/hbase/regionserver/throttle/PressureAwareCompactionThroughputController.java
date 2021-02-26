@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.throttle;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 
@@ -42,20 +42,20 @@ import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class PressureAwareCompactionThroughputController extends PressureAwareThroughputController {
 
-  private final static Log LOG = LogFactory
-      .getLog(PressureAwareCompactionThroughputController.class);
+  private final static Logger LOG = LoggerFactory
+      .getLogger(PressureAwareCompactionThroughputController.class);
 
   public static final String HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND =
       "hbase.hstore.compaction.throughput.higher.bound";
 
   private static final long DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND =
-      20L * 1024 * 1024;
+      100L * 1024 * 1024;
 
   public static final String HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND =
       "hbase.hstore.compaction.throughput.lower.bound";
 
   private static final long DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND =
-      10L * 1024 * 1024;
+      50L * 1024 * 1024;
 
   public static final String HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_OFFPEAK =
       "hbase.hstore.compaction.throughput.offpeak";
@@ -99,11 +99,14 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
           maxThroughputLowerBound + (maxThroughputUpperBound - maxThroughputLowerBound)
               * compactionPressure;
     }
-    if (LOG.isTraceEnabled()) {
-      // TODO: FIX!!! Don't log unless some activity or a change in config. Making TRACE
-      // in the meantime.
-      LOG.trace("CompactionPressure is " + compactionPressure + ", tune throughput to "
-          + throughputDesc(maxThroughputToSet));
+    if (LOG.isDebugEnabled()) {
+      if (Math.abs(maxThroughputToSet - getMaxThroughput()) < .0000001) {
+        LOG.debug("CompactionPressure is " + compactionPressure + ", tune throughput to "
+            + throughputDesc(maxThroughputToSet));
+      } else if (LOG.isTraceEnabled()) {
+        LOG.trace("CompactionPressure is " + compactionPressure + ", keep throughput throttling to "
+            + throughputDesc(maxThroughputToSet));
+      }
     }
     this.setMaxThroughput(maxThroughputToSet);
   }
@@ -142,14 +145,5 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
     return "DefaultCompactionThroughputController [maxThroughput="
         + throughputDesc(getMaxThroughput()) + ", activeCompactions=" + activeOperations.size()
         + "]";
-  }
-
-  @Override
-  protected boolean skipControl(long deltaSize, long controlSize) {
-    if (deltaSize < controlSize) {
-      return true;
-    } else {
-      return false;
-    }
   }
 }

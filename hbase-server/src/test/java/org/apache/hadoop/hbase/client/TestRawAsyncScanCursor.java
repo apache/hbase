@@ -20,19 +20,25 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Category({ LargeTests.class, ClientTests.class })
 public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRawAsyncScanCursor.class);
 
   private static AsyncConnection CONN;
 
@@ -52,9 +58,9 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
   private void doTest(boolean reversed)
       throws InterruptedException, ExecutionException, IOException {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    RawAsyncTable table = CONN.getRawTable(TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> table = CONN.getTable(TABLE_NAME);
     table.scan(reversed ? createReversedScanWithSparseFilter() : createScanWithSparseFilter(),
-      new RawScanResultConsumer() {
+      new AdvancedScanResultConsumer() {
 
         private int count;
 
@@ -79,12 +85,9 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
             assertEquals(1, results.length);
             assertEquals(NUM_ROWS - 1, count / NUM_FAMILIES / NUM_QUALIFIERS);
             // we will always provide a scan cursor if time limit is reached.
-            if (count == NUM_ROWS * NUM_FAMILIES * NUM_QUALIFIERS - 1) {
-              assertFalse(controller.cursor().isPresent());
-            } else {
-              assertArrayEquals(ROWS[reversed ? 0 : NUM_ROWS - 1],
-                controller.cursor().get().getRow());
-            }
+            assertTrue(controller.cursor().isPresent());
+            assertArrayEquals(ROWS[reversed ? 0 : NUM_ROWS - 1],
+              controller.cursor().get().getRow());
             assertArrayEquals(ROWS[reversed ? 0 : NUM_ROWS - 1], results[0].getRow());
             count++;
           } catch (Throwable e) {
@@ -121,8 +124,8 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
   @Test
   public void testSizeLimit() throws InterruptedException, ExecutionException {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    RawAsyncTable table = CONN.getRawTable(TABLE_NAME);
-    table.scan(createScanWithSizeLimit(), new RawScanResultConsumer() {
+    AsyncTable<AdvancedScanResultConsumer> table = CONN.getTable(TABLE_NAME);
+    table.scan(createScanWithSizeLimit(), new AdvancedScanResultConsumer() {
 
       private int count;
 

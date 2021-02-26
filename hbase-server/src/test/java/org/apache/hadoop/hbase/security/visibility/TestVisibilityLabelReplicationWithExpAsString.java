@@ -24,20 +24,17 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -52,14 +49,22 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilityLabelsReplication {
-  private static final Log LOG = LogFactory
-      .getLog(TestVisibilityLabelReplicationWithExpAsString.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestVisibilityLabelReplicationWithExpAsString.class);
+
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestVisibilityLabelReplicationWithExpAsString.class);
 
   @Override
   @Before
@@ -77,7 +82,6 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
         + "\\\"" + "\u0027&\\\\" + "\")";
     // setup configuration
     conf = HBaseConfiguration.create();
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     conf.setInt("hfile.format.version", 3);
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     conf.setInt("replication.source.size.capacity", 10240);
@@ -110,8 +114,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = TEST_UTIL.getZkCluster();
-    zkw1 = new ZooKeeperWatcher(conf, "cluster1", null, true);
-    admin = TEST_UTIL.getAdmin();
+    zkw1 = new ZKWatcher(conf, "cluster1", null, true);
 
     // Base conf2 on conf1 so it gets the right zk cluster.
     conf1 = HBaseConfiguration.create(conf);
@@ -125,12 +128,13 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     setVisibilityLabelServiceImpl(conf1, ExpAsStringVisibilityLabelServiceImpl.class);
     TEST_UTIL1 = new HBaseTestingUtility(conf1);
     TEST_UTIL1.setZkCluster(miniZK);
-    zkw2 = new ZooKeeperWatcher(conf1, "cluster2", null, true);
+    zkw2 = new ZKWatcher(conf1, "cluster2", null, true);
 
     TEST_UTIL.startMiniCluster(1);
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
     TEST_UTIL1.startMiniCluster(1);
+    admin = TEST_UTIL.getAdmin();
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(TEST_UTIL1.getClusterKey());
@@ -162,6 +166,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
       InterruptedException {
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
 
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf1);
              Table table2 = connection.getTable(TABLE_NAME)) {
@@ -182,7 +187,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
           boolean foundNonVisTag = false;
           for(Tag t : TestCoprocessorForTagsAtSink.tags) {
             if(t.getType() == NON_VIS_TAG_TYPE) {
-              assertEquals(TEMP, Bytes.toString(TagUtil.cloneValue(t)));
+              assertEquals(TEMP, Bytes.toString(Tag.cloneValue(t)));
               foundNonVisTag = true;
               break;
             }

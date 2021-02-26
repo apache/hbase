@@ -15,18 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.List;
 import java.util.regex.Pattern;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,18 +46,20 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test to verify that the cloned table is independent of the table from which it was cloned
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestSnapshotCloneIndependence {
-  private static final Log LOG = LogFactory.getLog(TestSnapshotCloneIndependence.class);
 
   @ClassRule
-  public static final TestRule timeout =
-      CategoryBasedTimeout.forClass(TestSnapshotCloneIndependence.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSnapshotCloneIndependence.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotCloneIndependence.class);
 
   @Rule
   public TestName testName = new TestName();
@@ -309,7 +307,7 @@ public class TestSnapshotCloneIndependence {
       originalRegionCount, cloneTableRegionCount);
 
     // Split a region on the parent table
-    admin.splitRegion(originalTableHRegions.get(0).getRegionName());
+    admin.splitRegionAsync(originalTableHRegions.get(0).getRegionName()).get();
     waitOnSplit(UTIL.getConnection(), originalTable, originalRegionCount);
 
     // Verify that the cloned table region is not split

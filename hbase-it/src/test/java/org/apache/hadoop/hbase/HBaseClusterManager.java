@@ -22,11 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseClusterManager.CommandProvider.Operation;
@@ -35,6 +31,9 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounter.RetryConfig;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.util.Shell;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A default cluster manager for HBase. Uses SSH, and hbase shell scripts
@@ -45,11 +44,14 @@ import org.apache.hadoop.util.Shell;
  */
 @InterfaceAudience.Private
 public class HBaseClusterManager extends Configured implements ClusterManager {
-  private static final String SIGKILL = "SIGKILL";
-  private static final String SIGSTOP = "SIGSTOP";
-  private static final String SIGCONT = "SIGCONT";
 
-  protected static final Log LOG = LogFactory.getLog(HBaseClusterManager.class);
+  protected enum Signal {
+    SIGKILL,
+    SIGSTOP,
+    SIGCONT,
+  }
+
+  protected static final Logger LOG = LoggerFactory.getLogger(HBaseClusterManager.class);
   private String sshUserName;
   private String sshOptions;
 
@@ -62,11 +64,20 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       "timeout 30 /usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo -u %6$s %5$s\"";
   private String tunnelCmd;
 
-  private static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";
-  private static final int DEFAULT_RETRY_ATTEMPTS = 5;
+  /**
+   * The command format that is used to execute the remote command with sudo. Arguments:
+   * 1 SSH options, 2 user name , 3 "@" if username is set, 4 host,
+   * 5 original command, 6 timeout.
+   */
+  private static final String DEFAULT_TUNNEL_SUDO_CMD =
+      "timeout %6$s /usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo %5$s\"";
+  private String tunnelSudoCmd;
 
-  private static final String RETRY_SLEEP_INTERVAL_KEY = "hbase.it.clustermanager.retry.sleep.interval";
-  private static final int DEFAULT_RETRY_SLEEP_INTERVAL = 1000;
+  static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";
+  static final int DEFAULT_RETRY_ATTEMPTS = 5;
+
+  static final String RETRY_SLEEP_INTERVAL_KEY = "hbase.it.clustermanager.retry.sleep.interval";
+  static final int DEFAULT_RETRY_SLEEP_INTERVAL = 1000;
 
   protected RetryCounterFactory retryCounterFactory;
 
@@ -86,6 +97,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     sshOptions = (sshOptions == null) ? "" : sshOptions;
     sshUserName = (sshUserName == null) ? "" : sshUserName;
     tunnelCmd = conf.get("hbase.it.clustermanager.ssh.cmd", DEFAULT_TUNNEL_CMD);
+    tunnelSudoCmd = conf.get("hbase.it.clustermanager.ssh.sudo.cmd", DEFAULT_TUNNEL_SUDO_CMD);
     // Print out ssh special config if any.
     if ((sshUserName != null && sshUserName.length() > 0) ||
         (sshOptions != null && sshOptions.length() > 0)) {
@@ -97,10 +109,11 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
         .setSleepInterval(conf.getLong(RETRY_SLEEP_INTERVAL_KEY, DEFAULT_RETRY_SLEEP_INTERVAL)));
   }
 
-  private String getServiceUser(ServiceType service) {
+  protected String getServiceUser(ServiceType service) {
     Configuration conf = getConf();
     switch (service) {
       case HADOOP_DATANODE:
+      case HADOOP_NAMENODE:
         return conf.get("hbase.it.clustermanager.hadoop.hdfs.user", "hdfs");
       case ZOOKEEPER_SERVER:
         return conf.get("hbase.it.clustermanager.zookeeper.user", "zookeeper");
@@ -151,10 +164,32 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       LOG.info("Executing full command [" + cmd + "]");
       return new String[] { "/usr/bin/env", "bash", "-c", cmd };
     }
+  }
+
+  /**
+   * Executes commands over SSH
+   */
+  protected class RemoteSudoShell extends Shell.ShellCommandExecutor {
+    private String hostname;
+
+    public RemoteSudoShell(String hostname, String[] execString, long timeout) {
+      this(hostname, execString, null, null, timeout);
+    }
+
+    public RemoteSudoShell(String hostname, String[] execString, File dir, Map<String, String> env,
+        long timeout) {
+      super(execString, dir, env, timeout);
+      this.hostname = hostname;
+    }
 
     @Override
-    public void execute() throws IOException {
-      super.execute();
+    public String[] getExecString() {
+      String at = sshUserName.isEmpty() ? "" : "@";
+      String remoteCmd = StringUtils.join(super.getExecString(), " ");
+      String cmd = String.format(tunnelSudoCmd, sshOptions, sshUserName, at, hostname, remoteCmd,
+          timeOutInterval/1000f);
+      LOG.info("Executing full command [" + cmd + "]");
+      return new String[] { "/usr/bin/env", "bash", "-c", cmd };
     }
   }
 
@@ -282,6 +317,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
   protected CommandProvider getCommandProvider(ServiceType service) throws IOException {
     switch (service) {
       case HADOOP_DATANODE:
+      case HADOOP_NAMENODE:
         return new HadoopShellCommandProvider(getConf());
       case ZOOKEEPER_SERVER:
         return new ZookeeperShellCommandProvider(getConf());
@@ -295,9 +331,10 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
    * @return pair of exit code and command output
    * @throws IOException if something goes wrong.
    */
-  private Pair<Integer, String> exec(String hostname, ServiceType service, String... cmd)
+  protected Pair<Integer, String> exec(String hostname, ServiceType service, String... cmd)
     throws IOException {
-    LOG.info("Executing remote command: " + StringUtils.join(cmd, " ") + " , hostname:" + hostname);
+    LOG.info("Executing remote command: {}, hostname:{}", StringUtils.join(cmd, " "),
+        hostname);
 
     RemoteShell shell = new RemoteShell(hostname, getServiceUser(service), cmd);
     try {
@@ -310,8 +347,8 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
         + ", stdout: " + output);
     }
 
-    LOG.info("Executed remote command, exit code:" + shell.getExitCode()
-        + " , output:" + shell.getOutput());
+    LOG.info("Executed remote command, exit code:{} , output:{}", shell.getExitCode(),
+        shell.getOutput());
 
     return new Pair<>(shell.getExitCode(), shell.getOutput());
   }
@@ -329,7 +366,52 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
         retryCounter.sleepUntilNextRetry();
       } catch (InterruptedException ex) {
         // ignore
-        LOG.warn("Sleep Interrupted:" + ex);
+        LOG.warn("Sleep Interrupted:", ex);
+      }
+    }
+  }
+
+  /**
+   * Execute the given command on the host using SSH
+   * @return pair of exit code and command output
+   * @throws IOException if something goes wrong.
+   */
+  public Pair<Integer, String> execSudo(String hostname, long timeout, String... cmd)
+      throws IOException {
+    LOG.info("Executing remote command: {} , hostname:{}", StringUtils.join(cmd, " "),
+        hostname);
+
+    RemoteSudoShell shell = new RemoteSudoShell(hostname, cmd, timeout);
+    try {
+      shell.execute();
+    } catch (Shell.ExitCodeException ex) {
+      // capture the stdout of the process as well.
+      String output = shell.getOutput();
+      // add output for the ExitCodeException.
+      throw new Shell.ExitCodeException(ex.getExitCode(), "stderr: " + ex.getMessage()
+          + ", stdout: " + output);
+    }
+
+    LOG.info("Executed remote command, exit code:{} , output:{}", shell.getExitCode(),
+        shell.getOutput());
+
+    return new Pair<>(shell.getExitCode(), shell.getOutput());
+  }
+
+  public Pair<Integer, String> execSudoWithRetries(String hostname, long timeout, String... cmd)
+      throws IOException {
+    RetryCounter retryCounter = retryCounterFactory.create();
+    while (true) {
+      try {
+        return execSudo(hostname, timeout, cmd);
+      } catch (IOException e) {
+        retryOrThrow(retryCounter, e, hostname, cmd);
+      }
+      try {
+        retryCounter.sleepUntilNextRetry();
+      } catch (InterruptedException ex) {
+        // ignore
+        LOG.warn("Sleep Interrupted:", ex);
       }
     }
   }
@@ -364,8 +446,9 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     exec(hostname, service, Operation.RESTART);
   }
 
-  public void signal(ServiceType service, String signal, String hostname) throws IOException {
-    execWithRetries(hostname, service, getCommandProvider(service).signalCommand(service, signal));
+  public void signal(ServiceType service, Signal signal, String hostname) throws IOException {
+    execWithRetries(hostname, service,
+      getCommandProvider(service).signalCommand(service, signal.toString()));
   }
 
   @Override
@@ -377,16 +460,16 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
 
   @Override
   public void kill(ServiceType service, String hostname, int port) throws IOException {
-    signal(service, SIGKILL, hostname);
+    signal(service, Signal.SIGKILL, hostname);
   }
 
   @Override
   public void suspend(ServiceType service, String hostname, int port) throws IOException {
-    signal(service, SIGSTOP, hostname);
+    signal(service, Signal.SIGSTOP, hostname);
   }
 
   @Override
   public void resume(ServiceType service, String hostname, int port) throws IOException {
-    signal(service, SIGCONT, hostname);
+    signal(service, Signal.SIGCONT, hostname);
   }
 }

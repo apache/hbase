@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,33 +23,38 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 @Category({MapReduceTests.class, SmallTests.class})
 public class TestGroupingTableMap {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestGroupingTableMap.class);
 
   @Test
   @SuppressWarnings({ "deprecation", "unchecked" })
@@ -107,7 +111,7 @@ public class TestGroupingTableMap {
       gTableMap.map(null, result, outputCollectorMock, reporter);
       verify(result).listCells();
       verify(outputCollectorMock, times(1))
-        .collect(any(ImmutableBytesWritable.class), any(Result.class));
+        .collect(any(), any());
       verifyNoMoreInteractions(outputCollectorMock);
     } finally {
       if (gTableMap != null)
@@ -142,7 +146,7 @@ public class TestGroupingTableMap {
           new OutputCollector<ImmutableBytesWritable, Result>() {
         @Override
         public void collect(ImmutableBytesWritable arg, Result result) throws IOException {
-          assertArrayEquals(org.apache.hadoop.hbase.shaded.com.google.common.primitives.
+          assertArrayEquals(org.apache.hbase.thirdparty.com.google.common.primitives.
             Bytes.concat(firstPartKeyValue, bSeparator,
               secondPartKeyValue), arg.copyBytes());
           outputCollected.set(true);
@@ -157,7 +161,7 @@ public class TestGroupingTableMap {
       final byte[] secondPartValue = Bytes.toBytes("4678456942345");
       byte[][] data = { firstPartValue, secondPartValue };
       ImmutableBytesWritable byteWritable = gTableMap.createGroupKey(data);
-      assertArrayEquals(org.apache.hadoop.hbase.shaded.com.google.common.primitives.
+      assertArrayEquals(org.apache.hbase.thirdparty.com.google.common.primitives.
         Bytes.concat(firstPartValue,
           bSeparator, secondPartValue), byteWritable.get());
     } finally {

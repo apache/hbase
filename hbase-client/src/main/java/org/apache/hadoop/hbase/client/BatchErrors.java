@@ -19,15 +19,15 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 class BatchErrors {
-  private static final Log LOG = LogFactory.getLog(BatchErrors.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BatchErrors.class);
   final List<Throwable> throwables = new ArrayList<>();
   final List<Row> actions = new ArrayList<>();
   final List<String> addresses = new ArrayList<>();

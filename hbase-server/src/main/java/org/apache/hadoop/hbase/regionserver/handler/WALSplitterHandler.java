@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.regionserver.handler;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
@@ -31,29 +31,31 @@ import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor.Status;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 
 /**
  * Handles log splitting a wal
- */
+ * Used by the zk-based distributed log splitting. Created by ZKSplitLogWorkerCoordination.
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+  *   distributed WAL splitter, see SplitWALManager
+  */
+@Deprecated
 @InterfaceAudience.Private
 public class WALSplitterHandler extends EventHandler {
-  private static final Log LOG = LogFactory.getLog(WALSplitterHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALSplitterHandler.class);
   private final ServerName serverName;
   private final CancelableProgressable reporter;
   private final AtomicInteger inProgressTasks;
   private final TaskExecutor splitTaskExecutor;
-  private final RecoveryMode mode;
   private final SplitLogWorkerCoordination.SplitTaskDetails splitTaskDetails;
   private final SplitLogWorkerCoordination coordination;
 
 
   public WALSplitterHandler(final Server server, SplitLogWorkerCoordination coordination,
       SplitLogWorkerCoordination.SplitTaskDetails splitDetails, CancelableProgressable reporter,
-      AtomicInteger inProgressTasks, TaskExecutor splitTaskExecutor, RecoveryMode mode) {
+      AtomicInteger inProgressTasks, TaskExecutor splitTaskExecutor) {
     super(server, EventType.RS_LOG_REPLAY);
     this.splitTaskDetails = splitDetails;
     this.coordination = coordination;
@@ -62,17 +64,17 @@ public class WALSplitterHandler extends EventHandler {
     this.inProgressTasks.incrementAndGet();
     this.serverName = server.getServerName();
     this.splitTaskExecutor = splitTaskExecutor;
-    this.mode = mode;
   }
 
   @Override
   public void process() throws IOException {
     long startTime = System.currentTimeMillis();
+    Status status = null;
     try {
-      Status status = this.splitTaskExecutor.exec(splitTaskDetails.getWALFile(), mode, reporter);
+      status = this.splitTaskExecutor.exec(splitTaskDetails.getWALFile(), reporter);
       switch (status) {
       case DONE:
-        coordination.endTask(new SplitLogTask.Done(this.serverName,this.mode),
+        coordination.endTask(new SplitLogTask.Done(this.serverName),
           SplitLogCounters.tot_wkr_task_done, splitTaskDetails);
         break;
       case PREEMPTED:
@@ -81,7 +83,7 @@ public class WALSplitterHandler extends EventHandler {
         break;
       case ERR:
         if (server != null && !server.isStopped()) {
-          coordination.endTask(new SplitLogTask.Err(this.serverName, this.mode),
+          coordination.endTask(new SplitLogTask.Err(this.serverName),
             SplitLogCounters.tot_wkr_task_err, splitTaskDetails);
           break;
         }
@@ -93,13 +95,13 @@ public class WALSplitterHandler extends EventHandler {
           LOG.info("task execution interrupted because worker is exiting "
               + splitTaskDetails.toString());
         }
-        coordination.endTask(new SplitLogTask.Resigned(this.serverName, this.mode),
+        coordination.endTask(new SplitLogTask.Resigned(this.serverName),
           SplitLogCounters.tot_wkr_task_resigned, splitTaskDetails);
         break;
       }
     } finally {
-      LOG.info("worker " + serverName + " done with task " + splitTaskDetails.toString() + " in "
-          + (System.currentTimeMillis() - startTime) + "ms");
+      LOG.info("Worker " + serverName + " done with task " + splitTaskDetails.toString() + " in "
+          + (System.currentTimeMillis() - startTime) + "ms. Status = " + status);
       this.inProgressTasks.decrementAndGet();
     }
   }

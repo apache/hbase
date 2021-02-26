@@ -22,7 +22,7 @@ HMaster master;
 <%import>
 java.util.*;
 org.apache.hadoop.hbase.ServerName;
-org.apache.hadoop.hbase.ClusterStatus;
+org.apache.hadoop.hbase.ClusterMetrics;
 org.apache.hadoop.hbase.master.HMaster;
 org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </%import>
@@ -54,7 +54,8 @@ MasterAddressTracker masterAddressTracker = master.getMasterAddressTracker();
         <th>Start Time</th>
     </tr>
     <%java>
-    Collection<ServerName> backup_masters = master.getClusterStatus().getBackupMasters();
+    Collection<ServerName> backup_masters = master.getClusterMetricsWithoutCoprocessor(
+        EnumSet.of(ClusterMetrics.Option.BACKUP_MASTERS)).getBackupMasterNames();
     ServerName [] backupServerNames = backup_masters.toArray(new ServerName[backup_masters.size()]);
     Arrays.sort(backupServerNames);
     for (ServerName serverName : backupServerNames) {

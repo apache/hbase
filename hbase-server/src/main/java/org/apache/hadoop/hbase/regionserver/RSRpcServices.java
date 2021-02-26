@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +19,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,28 +44,31 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.commons.lang3.mutable.MutableObject;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ByteBufferCell;
+import org.apache.hadoop.hbase.ByteBufferExtendedCell;
+import org.apache.hadoop.hbase.CacheEvictionStats;
+import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -74,7 +79,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
@@ -82,20 +87,33 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
-import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
+import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcCallback;
+import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
+import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
+import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
+import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
+import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.quotas.ActivePolicyEnforcement;
 import org.apache.hadoop.hbase.quotas.OperationQuota;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
@@ -103,50 +121,65 @@ import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
-import org.apache.hadoop.hbase.regionserver.Leases.Lease;
-import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.regionserver.LeaseManager.Lease;
+import org.apache.hadoop.hbase.regionserver.LeaseManager.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.handler.AssignRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
+import org.apache.hadoop.hbase.regionserver.handler.UnassignRegionHandler;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.NoopAccessChecker;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.wal.WALSplitter;
-import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
+import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
-import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -165,10 +198,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RemoteProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponseRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
@@ -207,6 +243,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -216,6 +253,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
@@ -229,11 +267,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
 public class RSRpcServices implements HBaseRPCErrorHandler,
     AdminService.BlockingInterface, ClientService.BlockingInterface, PriorityFunction,
     ConfigurationObserver {
-  protected static final Log LOG = LogFactory.getLog(RSRpcServices.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(RSRpcServices.class);
 
   /** RPC scheduler to use for the region server. */
   public static final String REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS =
     "hbase.region.server.rpc.scheduler.factory.class";
+
+  /** RPC scheduler to use for the master. */
+  public static final String MASTER_RPC_SCHEDULER_FACTORY_CLASS =
+    "hbase.master.rpc.scheduler.factory.class";
 
   /**
    * Minimum allowable time limit delta (in milliseconds) that can be enforced during scans. This
@@ -247,28 +289,30 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private static final long DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA = 10;
 
-  /**
-   * Number of rows in a batch operation above which a warning will be logged.
+  /*
+   * Whether to reject rows with size > threshold defined by
+   * {@link RSRpcServices#BATCH_ROWS_THRESHOLD_NAME}
    */
-  static final String BATCH_ROWS_THRESHOLD_NAME = "hbase.rpc.rows.warning.threshold";
-  /**
-   * Default value of {@link RSRpcServices#BATCH_ROWS_THRESHOLD_NAME}
+  private static final String REJECT_BATCH_ROWS_OVER_THRESHOLD =
+    "hbase.rpc.rows.size.threshold.reject";
+
+  /*
+   * Default value of config {@link RSRpcServices#REJECT_BATCH_ROWS_OVER_THRESHOLD}
    */
-  static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
+  private static final boolean DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD = false;
 
   // Request counter. (Includes requests that are not serviced by regions.)
   // Count only once for requests with multiple actions like multi/caching-scan/replayBatch
   final LongAdder requestCount = new LongAdder();
-
-  // Request counter. (Excludes requests that are not serviced by regions.)
-  // Count rows for requests with multiple actions like multi/caching-scan/replayBatch
-  final LongAdder requestRowActionCount = new LongAdder();
 
   // Request counter for rpc get
   final LongAdder rpcGetRequestCount = new LongAdder();
 
   // Request counter for rpc scan
   final LongAdder rpcScanRequestCount = new LongAdder();
+  
+  // Request counter for scans that might end up in full scans
+  final LongAdder rpcFullScanRequestCount = new LongAdder();
 
   // Request counter for rpc multi
   final LongAdder rpcMultiRequestCount = new LongAdder();
@@ -280,7 +324,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   final RpcServerInterface rpcServer;
   final InetSocketAddress isa;
 
-  private final HRegionServer regionServer;
+  protected final HRegionServer regionServer;
   private final long maxScannerResultSize;
 
   // The reference to the priority extraction function
@@ -311,8 +355,26 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * Row size threshold for multi requests above which a warning is logged
    */
   private final int rowSizeWarnThreshold;
+  /*
+   * Whether we should reject requests with very high no of rows i.e. beyond threshold
+   * defined by rowSizeWarnThreshold
+   */
+  private final boolean rejectRowsWithSizeOverThreshold;
 
   final AtomicBoolean clearCompactionQueues = new AtomicBoolean(false);
+
+  private AccessChecker accessChecker;
+  private ZKPermissionWatcher zkPermissionWatcher;
+
+  /**
+   * Services launched in RSRpcServices. By default they are on but you can use the below
+   * booleans to selectively enable/disable either Admin or Client Service (Rare is the case
+   * where you would ever turn off one or the other).
+   */
+  public static final String REGIONSERVER_ADMIN_SERVICE_CONFIG =
+      "hbase.regionserver.admin.executorService";
+  public static final String REGIONSERVER_CLIENT_SERVICE_CONFIG =
+      "hbase.regionserver.client.executorService";
 
   /**
    * An Rpc callback for closing a RegionScanner.
@@ -335,24 +397,25 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * An Rpc callback for doing shipped() call on a RegionScanner.
    */
   private class RegionScannerShippedCallBack implements RpcCallback {
-
     private final String scannerName;
-    private final RegionScanner scanner;
+    private final Shipper shipper;
     private final Lease lease;
 
-    public RegionScannerShippedCallBack(String scannerName, RegionScanner scanner, Lease lease) {
+    public RegionScannerShippedCallBack(String scannerName, Shipper shipper, Lease lease) {
       this.scannerName = scannerName;
-      this.scanner = scanner;
+      this.shipper = shipper;
       this.lease = lease;
     }
 
     @Override
     public void run() throws IOException {
-      this.scanner.shipped();
+      this.shipper.shipped();
       // We're done. On way out re-add the above removed lease. The lease was temp removed for this
       // Rpc call and we are at end of the call now. Time to add it back.
       if (scanners.containsKey(scannerName)) {
-        if (lease != null) regionServer.leases.addLease(lease);
+        if (lease != null) {
+          regionServer.getLeaseManager().addLease(lease);
+        }
       }
     }
   }
@@ -383,40 +446,48 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   /**
    * Holder class which holds the RegionScanner, nextCallSeq and RpcCallbacks together.
    */
-  private static final class RegionScannerHolder {
-
+  static final class RegionScannerHolder {
     private final AtomicLong nextCallSeq = new AtomicLong(0);
-    private final String scannerName;
     private final RegionScanner s;
-    private final Region r;
+    private final HRegion r;
     private final RpcCallback closeCallBack;
     private final RpcCallback shippedCallback;
     private byte[] rowOfLastPartialResult;
     private boolean needCursor;
+    private boolean fullRegionScan;
+    private final String clientIPAndPort;
 
-    public RegionScannerHolder(String scannerName, RegionScanner s, Region r,
-        RpcCallback closeCallBack, RpcCallback shippedCallback, boolean needCursor) {
-      this.scannerName = scannerName;
+    RegionScannerHolder(RegionScanner s, HRegion r,
+        RpcCallback closeCallBack, RpcCallback shippedCallback, boolean needCursor,
+        boolean fullRegionScan, String clientIPAndPort) {
       this.s = s;
       this.r = r;
       this.closeCallBack = closeCallBack;
       this.shippedCallback = shippedCallback;
       this.needCursor = needCursor;
+      this.fullRegionScan = fullRegionScan;
+      this.clientIPAndPort = clientIPAndPort;
     }
 
-    public long getNextCallSeq() {
+    long getNextCallSeq() {
       return nextCallSeq.get();
     }
 
-    public boolean incNextCallSeq(long currentSeq) {
+    boolean incNextCallSeq(long currentSeq) {
       // Use CAS to prevent multiple scan request running on the same scanner.
       return nextCallSeq.compareAndSet(currentSeq, currentSeq + 1);
+    }
+
+    // Should be called only when we need to print lease expired messages otherwise
+    // cache the String once made.
+    @Override
+    public String toString() {
+      return this.clientIPAndPort + ", " + this.r.getRegionInfo().getRegionNameAsString();
     }
   }
 
   /**
-   * Instantiated as a scanner lease. If the lease times out, the scanner is
-   * closed
+   * Instantiated as a scanner lease. If the lease times out, the scanner is closed
    */
   private class ScannerListener implements LeaseListener {
     private final String scannerName;
@@ -428,31 +499,32 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     @Override
     public void leaseExpired() {
       RegionScannerHolder rsh = scanners.remove(this.scannerName);
-      if (rsh != null) {
-        RegionScanner s = rsh.s;
-        LOG.info("Scanner " + this.scannerName + " lease expired on region "
-          + s.getRegionInfo().getRegionNameAsString());
-        Region region = null;
+      if (rsh == null) {
+        LOG.warn("Scanner lease {} expired but no outstanding scanner", this.scannerName);
+        return;
+      }
+      LOG.info("Scanner lease {} expired {}, user={}", this.scannerName, rsh,
+        RpcServer.getRequestUserName().orElse(null));
+      RegionScanner s = rsh.s;
+      HRegion region = null;
+      try {
+        region = regionServer.getRegion(s.getRegionInfo().getRegionName());
+        if (region != null && region.getCoprocessorHost() != null) {
+          region.getCoprocessorHost().preScannerClose(s);
+        }
+      } catch (IOException e) {
+        LOG.error("Closing scanner {} {}, user={}", this.scannerName, rsh, e,
+          RpcServer.getRequestUserName().orElse(null));
+      } finally {
         try {
-          region = regionServer.getRegion(s.getRegionInfo().getRegionName());
+          s.close();
           if (region != null && region.getCoprocessorHost() != null) {
-            region.getCoprocessorHost().preScannerClose(s);
+            region.getCoprocessorHost().postScannerClose(s);
           }
         } catch (IOException e) {
-          LOG.error("Closing scanner for " + s.getRegionInfo().getRegionNameAsString(), e);
-        } finally {
-          try {
-            s.close();
-            if (region != null && region.getCoprocessorHost() != null) {
-              region.getCoprocessorHost().postScannerClose(s);
-            }
-          } catch (IOException e) {
-            LOG.error("Closing scanner for " + s.getRegionInfo().getRegionNameAsString(), e);
-          }
+          LOG.error("Closing scanner {} {}, user={}", this.scannerName, rsh, e,
+            RpcServer.getRequestUserName().orElse(null));
         }
-      } else {
-        LOG.warn("Scanner " + this.scannerName + " lease expired, but no related" +
-          " scanner found, hence no chance to close that related scanner!");
       }
     }
   }
@@ -472,34 +544,20 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   /**
-   * Starts the nonce operation for a mutation, if needed.
-   * @param mutation Mutation.
-   * @param nonceGroup Nonce group from the request.
-   * @returns whether to proceed this mutation.
+   * Checks for the following pre-checks in order:
+   * <ol>
+   *   <li>RegionServer is running</li>
+   *   <li>If authorization is enabled, then RPC caller has ADMIN permissions</li>
+   * </ol>
+   * @param requestName name of rpc request. Used in reporting failures to provide context.
+   * @throws ServiceException If any of the above listed pre-check fails.
    */
-  private boolean startNonceOperation(final MutationProto mutation, long nonceGroup)
-      throws IOException {
-    if (regionServer.nonceManager == null || !mutation.hasNonce()) return true;
-    boolean canProceed = false;
+  private void rpcPreCheck(String requestName) throws ServiceException {
     try {
-      canProceed = regionServer.nonceManager.startOperation(
-        nonceGroup, mutation.getNonce(), regionServer);
-    } catch (InterruptedException ex) {
-      throw new InterruptedIOException("Nonce start operation interrupted");
-    }
-    return canProceed;
-  }
-
-  /**
-   * Ends nonce operation for a mutation, if needed.
-   * @param mutation Mutation.
-   * @param nonceGroup Nonce group from the request. Always 0 in initial implementation.
-   * @param success Whether the operation for this nonce has succeeded.
-   */
-  private void endNonceOperation(final MutationProto mutation,
-      long nonceGroup, boolean success) {
-    if (regionServer.nonceManager != null && mutation.hasNonce()) {
-      regionServer.nonceManager.endOperation(nonceGroup, mutation.getNonce(), success);
+      checkOpen();
+      requirePermission(requestName, Permission.Action.ADMIN);
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
   }
 
@@ -539,124 +597,86 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  /**
-   * Mutate a list of rows atomically.
-   *
-   * @param region
-   * @param actions
-   * @param cellScanner if non-null, the mutation data -- the Cell content.
-   * @throws IOException
-   */
-  private void mutateRows(final Region region,
-      final List<ClientProtos.Action> actions,
-      final CellScanner cellScanner, RegionActionResult.Builder builder) throws IOException {
-    if (!region.getRegionInfo().isMetaTable()) {
-      regionServer.cacheFlusher.reclaimMemStoreMemory();
-    }
-    RowMutations rm = null;
-    int i = 0;
-    ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
-        ClientProtos.ResultOrException.newBuilder();
-    for (ClientProtos.Action action: actions) {
-      if (action.hasGet()) {
-        throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
-          action.getGet());
+  private CheckAndMutateResult checkAndMutate(HRegion region, List<ClientProtos.Action> actions,
+    CellScanner cellScanner, Condition condition, ActivePolicyEnforcement spaceQuotaEnforcement)
+    throws IOException {
+    int countOfCompleteMutation = 0;
+    try {
+      if (!region.getRegionInfo().isMetaRegion()) {
+        regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
-      MutationType type = action.getMutation().getMutateType();
-      if (rm == null) {
-        rm = new RowMutations(action.getMutation().getRow().toByteArray(), actions.size());
-      }
-      switch (type) {
-        case PUT:
-          Put put = ProtobufUtil.toPut(action.getMutation(), cellScanner);
-          checkCellSizeLimit(region, put);
-          rm.add(put);
-          break;
-        case DELETE:
-          rm.add(ProtobufUtil.toDelete(action.getMutation(), cellScanner));
-          break;
-        default:
-          throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
-      }
-      // To unify the response format with doNonAtomicRegionMutation and read through client's
-      // AsyncProcess we have to add an empty result instance per operation
-      resultOrExceptionOrBuilder.clear();
-      resultOrExceptionOrBuilder.setIndex(i++);
-      builder.addResultOrException(
-          resultOrExceptionOrBuilder.build());
-    }
-    region.mutateRow(rm);
-  }
-
-  /**
-   * Mutate a list of rows atomically.
-   *
-   * @param region
-   * @param actions
-   * @param cellScanner if non-null, the mutation data -- the Cell content.
-   * @param row
-   * @param family
-   * @param qualifier
-   * @param compareOp
-   * @param comparator @throws IOException
-   */
-  private boolean checkAndRowMutate(final Region region, final List<ClientProtos.Action> actions,
-                                    final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
-                                    CompareOperator op, ByteArrayComparable comparator, RegionActionResult.Builder builder,
-                                    ActivePolicyEnforcement spaceQuotaEnforcement) throws IOException {
-    if (!region.getRegionInfo().isMetaTable()) {
-      regionServer.cacheFlusher.reclaimMemStoreMemory();
-    }
-    RowMutations rm = null;
-    int i = 0;
-    ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
-        ClientProtos.ResultOrException.newBuilder();
-    for (ClientProtos.Action action: actions) {
-      if (action.hasGet()) {
-        throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
+      List<Mutation> mutations = new ArrayList<>();
+      for (ClientProtos.Action action: actions) {
+        if (action.hasGet()) {
+          throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
             action.getGet());
+        }
+        MutationType type = action.getMutation().getMutateType();
+        switch (type) {
+          case PUT:
+            Put put = ProtobufUtil.toPut(action.getMutation(), cellScanner);
+            ++countOfCompleteMutation;
+            checkCellSizeLimit(region, put);
+            spaceQuotaEnforcement.getPolicyEnforcement(region).check(put);
+            mutations.add(put);
+            break;
+          case DELETE:
+            Delete del = ProtobufUtil.toDelete(action.getMutation(), cellScanner);
+            ++countOfCompleteMutation;
+            spaceQuotaEnforcement.getPolicyEnforcement(region).check(del);
+            mutations.add(del);
+            break;
+          case INCREMENT:
+            Increment increment = ProtobufUtil.toIncrement(action.getMutation(), cellScanner);
+            ++countOfCompleteMutation;
+            checkCellSizeLimit(region, increment);
+            spaceQuotaEnforcement.getPolicyEnforcement(region).check(increment);
+            mutations.add(increment);
+            break;
+          case APPEND:
+            Append append = ProtobufUtil.toAppend(action.getMutation(), cellScanner);
+            ++countOfCompleteMutation;
+            checkCellSizeLimit(region, append);
+            spaceQuotaEnforcement.getPolicyEnforcement(region).check(append);
+            mutations.add(append);
+            break;
+          default:
+            throw new DoNotRetryIOException("invalid mutation type : " + type);
+        }
       }
-      MutationType type = action.getMutation().getMutateType();
-      if (rm == null) {
-        rm = new RowMutations(action.getMutation().getRow().toByteArray(), actions.size());
+
+      if (mutations.size() == 0) {
+        return new CheckAndMutateResult(true, null);
+      } else {
+        CheckAndMutate checkAndMutate = ProtobufUtil.toCheckAndMutate(condition, mutations);
+        CheckAndMutateResult result = null;
+        if (region.getCoprocessorHost() != null) {
+          result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
+        }
+        if (result == null) {
+          result = region.checkAndMutate(checkAndMutate);
+          if (region.getCoprocessorHost() != null) {
+            result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
+          }
+        }
+        return result;
       }
-      switch (type) {
-        case PUT:
-          Put put = ProtobufUtil.toPut(action.getMutation(), cellScanner);
-          checkCellSizeLimit(region, put);
-          spaceQuotaEnforcement.getPolicyEnforcement(region).check(put);
-          rm.add(put);
-          break;
-        case DELETE:
-          Delete del = ProtobufUtil.toDelete(action.getMutation(), cellScanner);
-          spaceQuotaEnforcement.getPolicyEnforcement(region).check(del);
-          rm.add(del);
-          break;
-        default:
-          throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
+    } finally {
+      // Currently, the checkAndMutate isn't supported by batch so it won't mess up the cell scanner
+      // even if the malformed cells are not skipped.
+      for (int i = countOfCompleteMutation; i < actions.size(); ++i) {
+        skipCellsForMutation(actions.get(i), cellScanner);
       }
-      // To unify the response format with doNonAtomicRegionMutation and read through client's
-      // AsyncProcess we have to add an empty result instance per operation
-      resultOrExceptionOrBuilder.clear();
-      resultOrExceptionOrBuilder.setIndex(i++);
-      builder.addResultOrException(
-          resultOrExceptionOrBuilder.build());
     }
-    return region.checkAndRowMutate(row, family, qualifier, op,
-        comparator, rm, Boolean.TRUE);
   }
 
   /**
    * Execute an append mutation.
    *
-   * @param region
-   * @param m
-   * @param cellScanner
    * @return result to return to client if default operation should be
    * bypassed as indicated by RegionObserver, null otherwise
-   * @throws IOException
    */
-  private Result append(final Region region, final OperationQuota quota,
+  private Result append(final HRegion region, final OperationQuota quota,
       final MutationProto mutation, final CellScanner cellScanner, long nonceGroup,
       ActivePolicyEnforcement spaceQuota)
       throws IOException {
@@ -665,49 +685,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     checkCellSizeLimit(region, append);
     spaceQuota.getPolicyEnforcement(region).check(append);
     quota.addMutation(append);
-    Result r = null;
-    if (region.getCoprocessorHost() != null) {
-      r = region.getCoprocessorHost().preAppend(append);
-    }
-    if (r == null) {
-      boolean canProceed = startNonceOperation(mutation, nonceGroup);
-      boolean success = false;
-      try {
-        long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
-        if (canProceed) {
-          r = region.append(append, nonceGroup, nonce);
-        } else {
-          // convert duplicate append to get
-          List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cellScanner), false,
-            nonceGroup, nonce);
-          r = Result.create(results);
-        }
-        success = true;
-      } finally {
-        if (canProceed) {
-          endNonceOperation(mutation, nonceGroup, success);
-        }
-      }
-      if (region.getCoprocessorHost() != null) {
-        r = region.getCoprocessorHost().postAppend(append, r);
-      }
-    }
-    if (regionServer.metricsRegionServer != null) {
-      regionServer.metricsRegionServer.updateAppend(
+    long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
+    Result r = region.append(append, nonceGroup, nonce);
+    if (regionServer.getMetrics() != null) {
+      regionServer.getMetrics().updateAppend(region.getTableDescriptor().getTableName(),
         EnvironmentEdgeManager.currentTime() - before);
     }
-    return r;
+    return r == null ? Result.EMPTY_RESULT : r;
   }
 
   /**
    * Execute an increment mutation.
-   *
-   * @param region
-   * @param mutation
-   * @return the Result
-   * @throws IOException
    */
-  private Result increment(final Region region, final OperationQuota quota,
+  private Result increment(final HRegion region, final OperationQuota quota,
       final MutationProto mutation, final CellScanner cells, long nonceGroup,
       ActivePolicyEnforcement spaceQuota)
       throws IOException {
@@ -716,54 +706,26 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     checkCellSizeLimit(region, increment);
     spaceQuota.getPolicyEnforcement(region).check(increment);
     quota.addMutation(increment);
-    Result r = null;
-    if (region.getCoprocessorHost() != null) {
-      r = region.getCoprocessorHost().preIncrement(increment);
-    }
-    if (r == null) {
-      boolean canProceed = startNonceOperation(mutation, nonceGroup);
-      boolean success = false;
-      try {
-        long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
-        if (canProceed) {
-          r = region.increment(increment, nonceGroup, nonce);
-        } else {
-          // convert duplicate increment to get
-          List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cells), false, nonceGroup,
-            nonce);
-          r = Result.create(results);
-        }
-        success = true;
-      } finally {
-        if (canProceed) {
-          endNonceOperation(mutation, nonceGroup, success);
-        }
-      }
-      if (region.getCoprocessorHost() != null) {
-        r = region.getCoprocessorHost().postIncrement(increment, r);
-      }
-    }
-    if (regionServer.metricsRegionServer != null) {
-      regionServer.metricsRegionServer.updateIncrement(
+    long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
+    Result r = region.increment(increment, nonceGroup, nonce);
+    final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+    if (metricsRegionServer != null) {
+      metricsRegionServer.updateIncrement(region.getTableDescriptor().getTableName(),
         EnvironmentEdgeManager.currentTime() - before);
     }
-    return r;
+    return r == null ? Result.EMPTY_RESULT : r;
   }
 
   /**
    * Run through the regionMutation <code>rm</code> and per Mutation, do the work, and then when
    * done, add an instance of a {@link ResultOrException} that corresponds to each Mutation.
-   * @param region
-   * @param actions
-   * @param cellScanner
-   * @param builder
    * @param cellsToReturn  Could be null. May be allocated in this method.  This is what this
    * method returns as a 'result'.
    * @param closeCallBack the callback to be used with multigets
    * @param context the current RpcCallContext
    * @return Return the <code>cellScanner</code> passed
    */
-  private List<CellScannable> doNonAtomicRegionMutation(final Region region,
+  private List<CellScannable> doNonAtomicRegionMutation(final HRegion region,
       final OperationQuota quota, final RegionAction actions, final CellScanner cellScanner,
       final RegionActionResult.Builder builder, List<CellScannable> cellsToReturn, long nonceGroup,
       final RegionScannersCloseCallBack closeCallBack, RpcCallContext context,
@@ -771,7 +733,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // Gather up CONTIGUOUS Puts and Deletes in this mutations List.  Idea is that rather than do
     // one at a time, we instead pass them in batch.  Be aware that the corresponding
     // ResultOrException instance that matches each Put or Delete is then added down in the
-    // doBatchOp call.  We should be staying aligned though the Put and Delete are deferred/batched
+    // doNonAtomicBatchOp call.  We should be staying aligned though the Put and Delete are
+    // deferred/batched
     List<ClientProtos.Action> mutations = null;
     long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getReadAvailable());
     IOException sizeIOE = null;
@@ -810,57 +773,60 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // use it for the response.
           //
           // This will create a copy in the builder.
-          hasResultOrException = true;
           NameBytesPair pair = ResponseConverter.buildException(sizeIOE);
           resultOrExceptionBuilder.setException(pair);
           context.incrementResponseExceptionSize(pair.getSerializedSize());
           resultOrExceptionBuilder.setIndex(action.getIndex());
           builder.addResultOrException(resultOrExceptionBuilder.build());
-          if (cellScanner != null) {
-            skipCellsForMutation(action, cellScanner);
-          }
+          skipCellsForMutation(action, cellScanner);
           continue;
         }
         if (action.hasGet()) {
           long before = EnvironmentEdgeManager.currentTime();
+          ClientProtos.Get pbGet = action.getGet();
+          // An asynchbase client, https://github.com/OpenTSDB/asynchbase, starts by trying to do
+          // a get closest before. Throwing the UnknownProtocolException signals it that it needs
+          // to switch and do hbase2 protocol (HBase servers do not tell clients what versions
+          // they are; its a problem for non-native clients like asynchbase. HBASE-20225.
+          if (pbGet.hasClosestRowBefore() && pbGet.getClosestRowBefore()) {
+            throw new UnknownProtocolException("Is this a pre-hbase-1.0.0 or asynchbase client? " +
+                "Client is invoking getClosestRowBefore removed in hbase-2.0.0 replaced by " +
+                "reverse Scan.");
+          }
           try {
-            Get get = ProtobufUtil.toGet(action.getGet());
+            Get get = ProtobufUtil.toGet(pbGet);
             if (context != null) {
-              r = get(get, ((HRegion) region), closeCallBack, context);
+              r = get(get, (region), closeCallBack, context);
             } else {
               r = region.get(get);
             }
           } finally {
-            if (regionServer.metricsRegionServer != null) {
-              regionServer.metricsRegionServer.updateGet(
-                EnvironmentEdgeManager.currentTime() - before);
+            final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+            if (metricsRegionServer != null) {
+              metricsRegionServer.updateGet(
+                  region.getTableDescriptor().getTableName(),
+                  EnvironmentEdgeManager.currentTime() - before);
             }
           }
         } else if (action.hasServiceCall()) {
           hasResultOrException = true;
-          try {
-            com.google.protobuf.Message result =
-                execServiceOnRegion(region, action.getServiceCall());
-            ClientProtos.CoprocessorServiceResult.Builder serviceResultBuilder =
-                ClientProtos.CoprocessorServiceResult.newBuilder();
-            resultOrExceptionBuilder.setServiceResult(
-                serviceResultBuilder.setValue(
-                  serviceResultBuilder.getValueBuilder()
-                    .setName(result.getClass().getName())
-                    // TODO: Copy!!!
-                    .setValue(UnsafeByteOperations.unsafeWrap(result.toByteArray()))));
-          } catch (IOException ioe) {
-            rpcServer.getMetrics().exception(ioe);
-            NameBytesPair pair = ResponseConverter.buildException(ioe);
-            resultOrExceptionBuilder.setException(pair);
-            context.incrementResponseExceptionSize(pair.getSerializedSize());
-          }
+          com.google.protobuf.Message result =
+            execServiceOnRegion(region, action.getServiceCall());
+          ClientProtos.CoprocessorServiceResult.Builder serviceResultBuilder =
+            ClientProtos.CoprocessorServiceResult.newBuilder();
+          resultOrExceptionBuilder.setServiceResult(
+            serviceResultBuilder.setValue(
+              serviceResultBuilder.getValueBuilder()
+                .setName(result.getClass().getName())
+                // TODO: Copy!!!
+                .setValue(UnsafeByteOperations.unsafeWrap(result.toByteArray()))));
         } else if (action.hasMutation()) {
           MutationType type = action.getMutation().getMutateType();
           if (type != MutationType.PUT && type != MutationType.DELETE && mutations != null &&
               !mutations.isEmpty()) {
             // Flush out any Puts or Deletes already collected.
-            doBatchOp(builder, region, quota, mutations, cellScanner, spaceQuotaEnforcement);
+            doNonAtomicBatchOp(builder, region, quota, mutations, cellScanner,
+              spaceQuotaEnforcement);
             mutations.clear();
           }
           switch (type) {
@@ -905,7 +871,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // Could get to here and there was no result and no exception.  Presumes we added
         // a Put or Delete to the collecting Mutations List for adding later.  In this
         // case the corresponding ResultOrException instance for the Put or Delete will be added
-        // down in the doBatchOp method call rather than up here.
+        // down in the doNonAtomicBatchOp method call rather than up here.
       } catch (IOException ie) {
         rpcServer.getMetrics().exception(ie);
         hasResultOrException = true;
@@ -920,42 +886,64 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
     }
     // Finish up any outstanding mutations
-    if (mutations != null && !mutations.isEmpty()) {
-      doBatchOp(builder, region, quota, mutations, cellScanner, spaceQuotaEnforcement);
+    if (!CollectionUtils.isEmpty(mutations)) {
+      doNonAtomicBatchOp(builder, region, quota, mutations, cellScanner, spaceQuotaEnforcement);
     }
     return cellsToReturn;
   }
 
-  private void checkCellSizeLimit(final Region region, final Mutation m) throws IOException {
-    if (!(region instanceof HRegion)) {
-      return;
-    }
-    HRegion r = (HRegion)region;
+  private void checkCellSizeLimit(final HRegion r, final Mutation m) throws IOException {
     if (r.maxCellSize > 0) {
       CellScanner cells = m.cellScanner();
       while (cells.advance()) {
-        int size = CellUtil.estimatedSerializedSizeOf(cells.current());
+        int size = PrivateCellUtil.estimatedSerializedSizeOf(cells.current());
         if (size > r.maxCellSize) {
           String msg = "Cell with size " + size + " exceeds limit of " + r.maxCellSize + " bytes";
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(msg);
-          }
+          LOG.debug(msg);
           throw new DoNotRetryIOException(msg);
         }
       }
     }
   }
 
+  private void doAtomicBatchOp(final RegionActionResult.Builder builder, final HRegion region,
+    final OperationQuota quota, final List<ClientProtos.Action> mutations,
+    final CellScanner cells, ActivePolicyEnforcement spaceQuotaEnforcement)
+    throws IOException {
+    // Just throw the exception. The exception will be caught and then added to region-level
+    // exception for RegionAction. Leaving the null to action result is ok since the null
+    // result is viewed as failure by hbase client. And the region-lever exception will be used
+    // to replaced the null result. see AsyncRequestFutureImpl#receiveMultiAction and
+    // AsyncBatchRpcRetryingCaller#onComplete for more details.
+    doBatchOp(builder, region, quota, mutations, cells, spaceQuotaEnforcement, true);
+  }
+
+  private void doNonAtomicBatchOp(final RegionActionResult.Builder builder, final HRegion region,
+    final OperationQuota quota, final List<ClientProtos.Action> mutations,
+    final CellScanner cells, ActivePolicyEnforcement spaceQuotaEnforcement) {
+    try {
+      doBatchOp(builder, region, quota, mutations, cells, spaceQuotaEnforcement, false);
+    } catch (IOException e) {
+      // Set the exception for each action. The mutations in same RegionAction are group to
+      // different batch and then be processed individually. Hence, we don't set the region-level
+      // exception here for whole RegionAction.
+      for (Action mutation : mutations) {
+        builder.addResultOrException(getResultOrException(e, mutation.getIndex()));
+      }
+    }
+  }
+
   /**
-   * Execute a list of Put/Delete mutations.
+   * Execute a list of mutations.
    *
    * @param builder
    * @param region
    * @param mutations
    */
-  private void doBatchOp(final RegionActionResult.Builder builder, final Region region,
+  private void doBatchOp(final RegionActionResult.Builder builder, final HRegion region,
       final OperationQuota quota, final List<ClientProtos.Action> mutations,
-      final CellScanner cells, ActivePolicyEnforcement spaceQuotaEnforcement) {
+      final CellScanner cells, ActivePolicyEnforcement spaceQuotaEnforcement, boolean atomic)
+      throws IOException {
     Mutation[] mArray = new Mutation[mutations.size()];
     long before = EnvironmentEdgeManager.currentTime();
     boolean batchContainsPuts = false, batchContainsDelete = false;
@@ -967,17 +955,36 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
        * is the mutation belong to. We can't sort ClientProtos.Action array, since they
        * are bonded to cellscanners.
        */
-      Map<Mutation, ClientProtos.Action> mutationActionMap = new HashMap<Mutation, ClientProtos.Action>();
+      Map<Mutation, ClientProtos.Action> mutationActionMap = new HashMap<>();
       int i = 0;
       for (ClientProtos.Action action: mutations) {
+        if (action.hasGet()) {
+          throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
+            action.getGet());
+        }
         MutationProto m = action.getMutation();
         Mutation mutation;
-        if (m.getMutateType() == MutationType.PUT) {
-          mutation = ProtobufUtil.toPut(m, cells);
-          batchContainsPuts = true;
-        } else {
-          mutation = ProtobufUtil.toDelete(m, cells);
-          batchContainsDelete = true;
+        switch (m.getMutateType()) {
+          case PUT:
+            mutation = ProtobufUtil.toPut(m, cells);
+            batchContainsPuts = true;
+            break;
+
+          case DELETE:
+            mutation = ProtobufUtil.toDelete(m, cells);
+            batchContainsDelete = true;
+            break;
+
+          case INCREMENT:
+            mutation = ProtobufUtil.toIncrement(m, cells);
+            break;
+
+          case APPEND:
+            mutation = ProtobufUtil.toAppend(m, cells);
+            break;
+
+          default:
+            throw new DoNotRetryIOException("Invalid mutation type : " + m.getMutateType());
         }
         mutationActionMap.put(mutation, action);
         mArray[i++] = mutation;
@@ -987,21 +994,63 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         quota.addMutation(mutation);
       }
 
-      if (!region.getRegionInfo().isMetaTable()) {
-        regionServer.cacheFlusher.reclaimMemStoreMemory();
+      if (!region.getRegionInfo().isMetaRegion()) {
+        regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
 
       // HBASE-17924
-      // sort to improve lock efficiency
-      Arrays.sort(mArray);
+      // Sort to improve lock efficiency for non-atomic batch of operations. If atomic
+      // order is preserved as its expected from the client
+      if (!atomic) {
+        Arrays.sort(mArray, (v1, v2) -> Row.COMPARATOR.compare(v1, v2));
+      }
 
-      OperationStatus[] codes = region.batchMutate(mArray, HConstants.NO_NONCE,
-        HConstants.NO_NONCE);
+      OperationStatus[] codes = region.batchMutate(mArray, atomic);
+
+      // When atomic is true, it indicates that the mutateRow API or the batch API with
+      // RowMutations is called. In this case, we need to merge the results of the
+      // Increment/Append operations if the mutations include those operations, and set the merged
+      // result to the first element of the ResultOrException list
+      if (atomic) {
+        List<ResultOrException> resultOrExceptions = new ArrayList<>();
+        List<Result> results = new ArrayList<>();
+        for (i = 0; i < codes.length; i++) {
+          if (codes[i].getResult() != null) {
+            results.add(codes[i].getResult());
+          }
+          if (i != 0) {
+            resultOrExceptions.add(getResultOrException(
+              ClientProtos.Result.getDefaultInstance(), i));
+          }
+        }
+
+        if (results.isEmpty()) {
+          builder.addResultOrException(getResultOrException(
+            ClientProtos.Result.getDefaultInstance(), 0));
+        } else {
+          // Merge the results of the Increment/Append operations
+          List<Cell> cellList = new ArrayList<>();
+          for (Result result : results) {
+            if (result.rawCells() != null) {
+              cellList.addAll(Arrays.asList(result.rawCells()));
+            }
+          }
+          Result result = Result.create(cellList);
+
+          // Set the merged result of the Increment/Append operations to the first element of the
+          // ResultOrException list
+          builder.addResultOrException(getResultOrException(ProtobufUtil.toResult(result), 0));
+        }
+
+        builder.addAllResultOrException(resultOrExceptions);
+        return;
+      }
+
       for (i = 0; i < codes.length; i++) {
         Mutation currentMutation = mArray[i];
         ClientProtos.Action currentAction = mutationActionMap.get(currentMutation);
-        int index = currentAction.getIndex();
-        Exception e = null;
+        int index = currentAction.hasIndex() ? currentAction.getIndex() : i;
+        Exception e;
         switch (codes[i].getOperationStatusCode()) {
           case BAD_FAMILY:
             e = new NoSuchColumnFamilyException(codes[i].getExceptionMsg());
@@ -1022,20 +1071,37 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             builder.addResultOrException(getResultOrException(
               ClientProtos.Result.getDefaultInstance(), index));
             break;
+
+          case STORE_TOO_BUSY:
+            e = new RegionTooBusyException(codes[i].getExceptionMsg());
+            builder.addResultOrException(getResultOrException(e, index));
+            break;
         }
       }
-    } catch (IOException ie) {
-      for (int i = 0; i < mutations.size(); i++) {
-        builder.addResultOrException(getResultOrException(ie, mutations.get(i).getIndex()));
+    } finally {
+      int processedMutationIndex = 0;
+      for (Action mutation : mutations) {
+        // The non-null mArray[i] means the cell scanner has been read.
+        if (mArray[processedMutationIndex++] == null) {
+          skipCellsForMutation(mutation, cells);
+        }
       }
+      updateMutationMetrics(region, before, batchContainsPuts, batchContainsDelete);
     }
-    if (regionServer.metricsRegionServer != null) {
+  }
+
+  private void updateMutationMetrics(HRegion region, long starttime, boolean batchContainsPuts,
+    boolean batchContainsDelete) {
+    final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+    if (metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();
       if (batchContainsPuts) {
-        regionServer.metricsRegionServer.updatePutBatch(after - before);
+        metricsRegionServer.updatePutBatch(
+            region.getTableDescriptor().getTableName(), after - starttime);
       }
       if (batchContainsDelete) {
-        regionServer.metricsRegionServer.updateDeleteBatch(after - before);
+        metricsRegionServer.updateDeleteBatch(
+            region.getTableDescriptor().getTableName(), after - starttime);
       }
     }
   }
@@ -1050,15 +1116,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    *         exceptionMessage if any
    * @throws IOException
    */
-  private OperationStatus [] doReplayBatchOp(final Region region,
-      final List<WALSplitter.MutationReplay> mutations, long replaySeqId) throws IOException {
+  private OperationStatus [] doReplayBatchOp(final HRegion region,
+      final List<MutationReplay> mutations, long replaySeqId) throws IOException {
     long before = EnvironmentEdgeManager.currentTime();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
-      for (Iterator<WALSplitter.MutationReplay> it = mutations.iterator(); it.hasNext();) {
-        WALSplitter.MutationReplay m = it.next();
+      for (Iterator<MutationReplay> it = mutations.iterator(); it.hasNext();) {
+        MutationReplay m = it.next();
 
-        if (m.type == MutationType.PUT) {
+        if (m.getType() == MutationType.PUT) {
           batchContainsPuts = true;
         } else {
           batchContainsDelete = true;
@@ -1070,7 +1136,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           for (Cell metaCell : metaCells) {
             CompactionDescriptor compactionDesc = WALEdit.getCompaction(metaCell);
             boolean isDefaultReplica = RegionReplicaUtil.isDefaultReplica(region.getRegionInfo());
-            HRegion hRegion = (HRegion)region;
+            HRegion hRegion = region;
             if (compactionDesc != null) {
               // replay the compaction. Remove the files from stores only if we are the primary
               // region replica (thus own the files)
@@ -1098,22 +1164,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
       requestCount.increment();
-      requestRowActionCount.add(mutations.size());
-      if (!region.getRegionInfo().isMetaTable()) {
-        regionServer.cacheFlusher.reclaimMemStoreMemory();
+      if (!region.getRegionInfo().isMetaRegion()) {
+        regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
       return region.batchReplay(mutations.toArray(
-        new WALSplitter.MutationReplay[mutations.size()]), replaySeqId);
+        new MutationReplay[mutations.size()]), replaySeqId);
     } finally {
-      if (regionServer.metricsRegionServer != null) {
-        long after = EnvironmentEdgeManager.currentTime();
-          if (batchContainsPuts) {
-          regionServer.metricsRegionServer.updatePutBatch(after - before);
-        }
-        if (batchContainsDelete) {
-          regionServer.metricsRegionServer.updateDeleteBatch(after - before);
-        }
-      }
+      updateMutationMetrics(region, before, batchContainsPuts, batchContainsDelete);
     }
   }
 
@@ -1129,97 +1186,70 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  // Exposed for testing
-  static interface LogDelegate {
-    void logBatchWarning(String firstRegionName, int sum, int rowSizeWarnThreshold);
-  }
-
-  private static LogDelegate DEFAULT_LOG_DELEGATE = new LogDelegate() {
-    @Override
-    public void logBatchWarning(String firstRegionName, int sum, int rowSizeWarnThreshold) {
-      if (LOG.isWarnEnabled()) {
-        LOG.warn("Large batch operation detected (greater than " + rowSizeWarnThreshold
-            + ") (HBASE-18023)." + " Requested Number of Rows: " + sum + " Client: "
-            + RpcServer.getRequestUserName() + "/" + RpcServer.getRemoteAddress()
-            + " first region in multi=" + firstRegionName);
-      }
-    }
-  };
-
-  private final LogDelegate ld;
-
-  public RSRpcServices(HRegionServer rs) throws IOException {
-    this(rs, DEFAULT_LOG_DELEGATE);
-  }
-
   // Directly invoked only for testing
-  RSRpcServices(HRegionServer rs, LogDelegate ld) throws IOException {
-    this.ld = ld;
+  public RSRpcServices(final HRegionServer rs) throws IOException {
+    final Configuration conf = rs.getConfiguration();
     regionServer = rs;
-    rowSizeWarnThreshold = rs.conf.getInt(BATCH_ROWS_THRESHOLD_NAME, BATCH_ROWS_THRESHOLD_DEFAULT);
-    RpcSchedulerFactory rpcSchedulerFactory;
+    rowSizeWarnThreshold = conf.getInt(
+      HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
+    rejectRowsWithSizeOverThreshold =
+      conf.getBoolean(REJECT_BATCH_ROWS_OVER_THRESHOLD, DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD);
+
+    final RpcSchedulerFactory rpcSchedulerFactory;
     try {
-      Class<?> rpcSchedulerFactoryClass = rs.conf.getClass(
-          REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
-          SimpleRpcSchedulerFactory.class);
-      rpcSchedulerFactory = ((RpcSchedulerFactory) rpcSchedulerFactoryClass.newInstance());
-    } catch (InstantiationException e) {
-      throw new IllegalArgumentException(e);
-    } catch (IllegalAccessException e) {
+      rpcSchedulerFactory = getRpcSchedulerFactoryClass().asSubclass(RpcSchedulerFactory.class)
+          .getDeclaredConstructor().newInstance();
+    } catch (NoSuchMethodException | InvocationTargetException |
+        InstantiationException | IllegalAccessException e) {
       throw new IllegalArgumentException(e);
     }
     // Server to handle client requests.
-    InetSocketAddress initialIsa;
-    InetSocketAddress bindAddress;
+    final InetSocketAddress initialIsa;
+    final InetSocketAddress bindAddress;
     if(this instanceof MasterRpcServices) {
-      String hostname = getHostname(rs.conf, true);
-      int port = rs.conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
+      String hostname = DNS.getHostname(conf, DNS.ServerType.MASTER);
+      int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
       // Creation of a HSA will force a resolve.
       initialIsa = new InetSocketAddress(hostname, port);
-      bindAddress = new InetSocketAddress(rs.conf.get("hbase.master.ipc.address", hostname), port);
+      bindAddress = new InetSocketAddress(conf.get("hbase.master.ipc.address", hostname), port);
     } else {
-      String hostname = getHostname(rs.conf, false);
-      int port = rs.conf.getInt(HConstants.REGIONSERVER_PORT,
+      String hostname = DNS.getHostname(conf, DNS.ServerType.REGIONSERVER);
+      int port = conf.getInt(HConstants.REGIONSERVER_PORT,
         HConstants.DEFAULT_REGIONSERVER_PORT);
       // Creation of a HSA will force a resolve.
       initialIsa = new InetSocketAddress(hostname, port);
-      bindAddress = new InetSocketAddress(
-        rs.conf.get("hbase.regionserver.ipc.address", hostname), port);
+      bindAddress =
+          new InetSocketAddress(conf.get("hbase.regionserver.ipc.address", hostname), port);
     }
     if (initialIsa.getAddress() == null) {
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
     }
     priority = createPriority();
-    String name = rs.getProcessName() + "/" + initialIsa.toString();
+    // Using Address means we don't get the IP too. Shorten it more even to just the host name
+    // w/o the domain.
+    final String name = rs.getProcessName() + "/" +
+        Address.fromParts(initialIsa.getHostName(), initialIsa.getPort()).toStringWithoutDomain();
     // Set how many times to retry talking to another server over Connection.
-    ConnectionUtils.setServerSideHConnectionRetriesConfig(rs.conf, name, LOG);
-    try {
-      rpcServer = RpcServerFactory.createRpcServer(rs, name, getServices(),
-          bindAddress, // use final bindAddress for this server.
-          rs.conf,
-          rpcSchedulerFactory.create(rs.conf, this, rs));
-      rpcServer.setRsRpcServices(this);
-    } catch (BindException be) {
-      String configName = (this instanceof MasterRpcServices) ? HConstants.MASTER_PORT :
-          HConstants.REGIONSERVER_PORT;
-      throw new IOException(be.getMessage() + ". To switch ports use the '" + configName +
-          "' configuration property.", be.getCause() != null ? be.getCause() : be);
+    ConnectionUtils.setServerSideHConnectionRetriesConfig(conf, name, LOG);
+    rpcServer = createRpcServer(rs, rpcSchedulerFactory, bindAddress, name);
+    rpcServer.setRsRpcServices(this);
+    if (!(rs instanceof HMaster)) {
+      rpcServer.setNamedQueueRecorder(rs.getNamedQueueRecorder());
     }
-
-    scannerLeaseTimeoutPeriod = rs.conf.getInt(
+    scannerLeaseTimeoutPeriod = conf.getInt(
       HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
-    maxScannerResultSize = rs.conf.getLong(
+    maxScannerResultSize = conf.getLong(
       HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
       HConstants.DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE);
-    rpcTimeout = rs.conf.getInt(
+    rpcTimeout = conf.getInt(
       HConstants.HBASE_RPC_TIMEOUT_KEY,
       HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-    minimumScanTimeLimitDelta = rs.conf.getLong(
+    minimumScanTimeLimitDelta = conf.getLong(
       REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA,
       DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA);
 
-    InetSocketAddress address = rpcServer.getListenerAddress();
+    final InetSocketAddress address = rpcServer.getListenerAddress();
     if (address == null) {
       throw new IOException("Listener channel is closed");
     }
@@ -1230,6 +1260,31 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     closedScanners = CacheBuilder.newBuilder()
         .expireAfterAccess(scannerLeaseTimeoutPeriod, TimeUnit.MILLISECONDS).build();
+  }
+
+  protected RpcServerInterface createRpcServer(
+      final Server server,
+      final RpcSchedulerFactory rpcSchedulerFactory,
+      final InetSocketAddress bindAddress,
+      final String name
+  ) throws IOException {
+    final Configuration conf = server.getConfiguration();
+    boolean reservoirEnabled = conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true);
+    try {
+      return RpcServerFactory.createRpcServer(server, name, getServices(),
+          bindAddress, // use final bindAddress for this server.
+          conf, rpcSchedulerFactory.create(conf, this, server), reservoirEnabled);
+    } catch (BindException be) {
+      throw new IOException(be.getMessage() + ". To switch ports use the '"
+          + HConstants.REGIONSERVER_PORT + "' configuration property.",
+          be.getCause() != null ? be.getCause() : be);
+    }
+  }
+
+  protected Class<?> getRpcSchedulerFactoryClass() {
+    final Configuration conf = regionServer.getConfiguration();
+    return conf.getClass(REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
+      SimpleRpcSchedulerFactory.class);
   }
 
   @Override
@@ -1243,34 +1298,29 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return new AnnotationReadingPriorityFunction(this);
   }
 
-  public static String getHostname(Configuration conf, boolean isMaster)
-      throws UnknownHostException {
-    String hostname = conf.get(isMaster? HRegionServer.MASTER_HOSTNAME_KEY :
-      HRegionServer.RS_HOSTNAME_KEY);
-    if (hostname == null || hostname.isEmpty()) {
-      String masterOrRS = isMaster ? "master" : "regionserver";
-      return Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-        conf.get("hbase." + masterOrRS + ".dns.interface", "default"),
-        conf.get("hbase." + masterOrRS + ".dns.nameserver", "default")));
-    } else {
-      LOG.info("hostname is configured to be " + hostname);
-      return hostname;
+  protected void requirePermission(String request, Permission.Action perm) throws IOException {
+    if (accessChecker != null) {
+      accessChecker.requirePermission(RpcServer.getRequestUser().orElse(null), request, null, perm);
     }
   }
 
-  @VisibleForTesting
   public int getScannersCount() {
     return scanners.size();
   }
 
-  public
+  /**
+   * @return The outstanding RegionScanner for <code>scannerId</code> or null if none found.
+   */
   RegionScanner getScanner(long scannerId) {
-    String scannerIdString = Long.toString(scannerId);
-    RegionScannerHolder scannerHolder = scanners.get(scannerIdString);
-    if (scannerHolder != null) {
-      return scannerHolder.s;
-    }
-    return null;
+    RegionScannerHolder rsh = getRegionScannerHolder(scannerId);
+    return rsh == null? null: rsh.s;
+  }
+
+  /**
+   * @return The associated RegionScannerHolder for <code>scannerId</code> or null.
+   */
+  private RegionScannerHolder getRegionScannerHolder(long scannerId) {
+    return scanners.get(toScannerName(scannerId));
   }
 
   public String getScanDetailsWithId(long scannerId) {
@@ -1284,33 +1334,47 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return builder.toString();
   }
 
+  public String getScanDetailsWithRequest(ScanRequest request) {
+    try {
+      if (!request.hasRegion()) {
+        return null;
+      }
+      Region region = getRegion(request.getRegion());
+      StringBuilder builder = new StringBuilder();
+      builder.append("table: ").append(region.getRegionInfo().getTable().getNameAsString());
+      builder.append(" region: ").append(region.getRegionInfo().getRegionNameAsString());
+      return builder.toString();
+    } catch (IOException ignored) {
+      return null;
+    }
+  }
+
   /**
    * Get the vtime associated with the scanner.
    * Currently the vtime is the number of "next" calls.
    */
   long getScannerVirtualTime(long scannerId) {
-    String scannerIdString = Long.toString(scannerId);
-    RegionScannerHolder scannerHolder = scanners.get(scannerIdString);
-    if (scannerHolder != null) {
-      return scannerHolder.getNextCallSeq();
-    }
-    return 0L;
+    RegionScannerHolder rsh = getRegionScannerHolder(scannerId);
+    return rsh == null? 0L: rsh.getNextCallSeq();
   }
 
   /**
    * Method to account for the size of retained cells and retained data blocks.
+   * @param context rpc call context
+   * @param r result to add size.
+   * @param lastBlock last block to check whether we need to add the block size in context.
    * @return an object that represents the last referenced block from this response.
    */
   Object addSize(RpcCallContext context, Result r, Object lastBlock) {
     if (context != null && r != null && !r.isEmpty()) {
       for (Cell c : r.rawCells()) {
-        context.incrementResponseCellSize(CellUtil.estimatedSerializedSizeOf(c));
+        context.incrementResponseCellSize(PrivateCellUtil.estimatedSerializedSizeOf(c));
 
         // Since byte buffers can point all kinds of crazy places it's harder to keep track
         // of which blocks are kept alive by what byte buffer.
         // So we make a guess.
-        if (c instanceof ByteBufferCell) {
-          ByteBufferCell bbCell = (ByteBufferCell) c;
+        if (c instanceof ByteBufferExtendedCell) {
+          ByteBufferExtendedCell bbCell = (ByteBufferExtendedCell) c;
           ByteBuffer bb = bbCell.getValueByteBuffer();
           if (bb != lastBlock) {
             context.incrementResponseBlockSize(bb.capacity());
@@ -1335,23 +1399,51 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return lastBlock;
   }
 
-  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Region r,
-      boolean needCursor) throws LeaseStillHeldException {
-    Lease lease = regionServer.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
-      new ScannerListener(scannerName));
-    RpcCallback shippedCallback = new RegionScannerShippedCallBack(scannerName, s, lease);
-    RpcCallback closeCallback;
-    if (s instanceof RpcCallback) {
-      closeCallback = (RpcCallback) s;
-    } else {
-      closeCallback = new RegionScannerCloseCallBack(s);
+  /**
+   * @return Remote client's ip and port else null if can't be determined.
+   */
+  static String getRemoteClientIpAndPort() {
+    RpcCall rpcCall = RpcServer.getCurrentCall().orElse(null);
+    if (rpcCall == null) {
+      return HConstants.EMPTY_STRING;
     }
-    RegionScannerHolder rsh =
-        new RegionScannerHolder(scannerName, s, r, closeCallback, shippedCallback, needCursor);
+    InetAddress address = rpcCall.getRemoteAddress();
+    if (address == null) {
+      return HConstants.EMPTY_STRING;
+    }
+    // Be careful here with InetAddress. Do InetAddress#getHostAddress. It will not do a name
+    // resolution. Just use the IP. It is generally a smaller amount of info to keep around while
+    // scanning than a hostname anyways.
+    return Address.fromParts(address.getHostAddress(), rpcCall.getRemotePort()).toString();
+  }
+
+  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Shipper shipper,
+      HRegion r, boolean needCursor, boolean fullRegionScan) throws LeaseStillHeldException {
+    Lease lease = regionServer.getLeaseManager().createLease(
+        scannerName, this.scannerLeaseTimeoutPeriod, new ScannerListener(scannerName));
+    RpcCallback shippedCallback = new RegionScannerShippedCallBack(scannerName, shipper, lease);
+    RpcCallback closeCallback = s instanceof RpcCallback?
+      (RpcCallback)s: new RegionScannerCloseCallBack(s);
+    RegionScannerHolder rsh = new RegionScannerHolder(s, r, closeCallback, shippedCallback,
+      needCursor, fullRegionScan, getRemoteClientIpAndPort());
     RegionScannerHolder existing = scanners.putIfAbsent(scannerName, rsh);
     assert existing == null : "scannerId must be unique within regionserver's whole lifecycle! " +
-      scannerName;
+      scannerName + ", " + existing;
     return rsh;
+  }
+
+  private boolean isFullRegionScan(Scan scan, HRegion region) {
+    // If the scan start row equals or less than the start key of the region
+    // and stop row greater than equals end key (if stop row present)
+    // or if the stop row is empty
+    // account this as a full region scan
+    if (Bytes.compareTo(scan.getStartRow(), region.getRegionInfo().getStartKey())  <= 0
+      && (Bytes.compareTo(scan.getStopRow(), region.getRegionInfo().getEndKey()) >= 0 &&
+      !Bytes.equals(region.getRegionInfo().getEndKey(), HConstants.EMPTY_END_ROW)
+      || Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW))) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -1362,30 +1454,36 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws IOException if the specifier is not null,
    *    but failed to find the region
    */
-  @VisibleForTesting
-  public Region getRegion(
+  public HRegion getRegion(
       final RegionSpecifier regionSpecifier) throws IOException {
-    ByteString value = regionSpecifier.getValue();
-    RegionSpecifierType type = regionSpecifier.getType();
-    switch (type) {
-      case REGION_NAME:
-        byte[] regionName = value.toByteArray();
-        String encodedRegionName = RegionInfo.encodeRegionName(regionName);
-        return regionServer.getRegionByEncodedName(regionName, encodedRegionName);
-      case ENCODED_REGION_NAME:
-        return regionServer.getRegionByEncodedName(value.toStringUtf8());
-      default:
-        throw new DoNotRetryIOException(
-          "Unsupported region specifier type: " + type);
-    }
+    return regionServer.getRegion(regionSpecifier.getValue().toByteArray());
   }
 
-  @VisibleForTesting
+  /**
+   * Find the List of HRegions based on a list of region specifiers
+   *
+   * @param regionSpecifiers the list of region specifiers
+   * @return the corresponding list of regions
+   * @throws IOException if any of the specifiers is not null,
+   *    but failed to find the region
+   */
+  private List<HRegion> getRegions(final List<RegionSpecifier> regionSpecifiers,
+      final CacheEvictionStatsBuilder stats) {
+    List<HRegion> regions = Lists.newArrayListWithCapacity(regionSpecifiers.size());
+    for (RegionSpecifier regionSpecifier: regionSpecifiers) {
+      try {
+        regions.add(regionServer.getRegion(regionSpecifier.getValue().toByteArray()));
+      } catch (NotServingRegionException e) {
+        stats.addException(regionSpecifier.getValue().toByteArray(), e);
+      }
+    }
+    return regions;
+  }
+
   public PriorityFunction getPriority() {
     return priority;
   }
 
-  @VisibleForTesting
   public Configuration getConfiguration() {
     return regionServer.getConfiguration();
   }
@@ -1398,21 +1496,35 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return regionServer.getRegionServerSpaceQuotaManager();
   }
 
-  void start() {
+  void start(ZKWatcher zkWatcher) {
+    if (AccessChecker.isAuthorizationSupported(getConfiguration())) {
+      accessChecker = new AccessChecker(getConfiguration());
+    } else {
+      accessChecker = new NoopAccessChecker(getConfiguration());
+    }
+    zkPermissionWatcher =
+      new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
+    try {
+      zkPermissionWatcher.start();
+    } catch (KeeperException e) {
+      LOG.error("ZooKeeper permission watcher initialization failed", e);
+    }
     this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.serverName);
     rpcServer.start();
   }
 
   void stop() {
+    if (zkPermissionWatcher != null) {
+      zkPermissionWatcher.close();
+    }
     closeAllScanners();
     rpcServer.stop();
   }
 
   /**
    * Called to verify that this server is up and running.
-   *
-   * @throws IOException
    */
+  // TODO : Rename this and HMaster#checkInitialized to isRunning() (or a better name).
   protected void checkOpen() throws IOException {
     if (regionServer.isAborted()) {
       throw new RegionServerAbortedException("Server " + regionServer.serverName + " aborting");
@@ -1420,7 +1532,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (regionServer.isStopped()) {
       throw new RegionServerStoppedException("Server " + regionServer.serverName + " stopping");
     }
-    if (!regionServer.fsOk) {
+    if (!regionServer.isDataFileSystemOk()) {
       throw new RegionServerStoppedException("File system not available");
     }
     if (!regionServer.isOnline()) {
@@ -1430,17 +1542,31 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   /**
-   * @return list of blocking services and their security info classes that this server supports
+   * By default, put up an Admin and a Client Service.
+   * Set booleans <code>hbase.regionserver.admin.executorService</code> and
+   * <code>hbase.regionserver.client.executorService</code> if you want to enable/disable services.
+   * Default is that both are enabled.
+   * @return immutable list of blocking services and the security info classes that this server
+   * supports
    */
   protected List<BlockingServiceAndInterface> getServices() {
-    List<BlockingServiceAndInterface> bssi = new ArrayList<>(2);
-    bssi.add(new BlockingServiceAndInterface(
+    boolean admin =
+      getConfiguration().getBoolean(REGIONSERVER_ADMIN_SERVICE_CONFIG, true);
+    boolean client =
+      getConfiguration().getBoolean(REGIONSERVER_CLIENT_SERVICE_CONFIG, true);
+    List<BlockingServiceAndInterface> bssi = new ArrayList<>();
+    if (client) {
+      bssi.add(new BlockingServiceAndInterface(
       ClientService.newReflectiveBlockingService(this),
       ClientService.BlockingInterface.class));
-    bssi.add(new BlockingServiceAndInterface(
+    }
+    if (admin) {
+      bssi.add(new BlockingServiceAndInterface(
       AdminService.newReflectiveBlockingService(this),
       AdminService.BlockingInterface.class));
-    return bssi;
+    }
+    return new org.apache.hbase.thirdparty.com.google.common.collect.
+        ImmutableList.Builder<BlockingServiceAndInterface>().addAll(bssi).build();
   }
 
   public InetSocketAddress getSocketAddress() {
@@ -1477,8 +1603,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           || (e.getMessage() != null && e.getMessage().contains(
               "java.lang.OutOfMemoryError"))) {
         stop = true;
-        LOG.fatal("Run out of memory; " + RSRpcServices.class.getSimpleName()
-          + " will abort itself immediately", e);
+        LOG.error(HBaseMarkers.FATAL, "Run out of memory; "
+          + RSRpcServices.class.getSimpleName() + " will abort itself immediately",
+          e);
       }
     } finally {
       if (stop) {
@@ -1504,15 +1631,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     try {
       checkOpen();
-      if (request.hasServerStartCode()) {
-        // check that we are the same server that this RPC is intended for.
-        long serverStartCode = request.getServerStartCode();
-        if (regionServer.serverName.getStartcode() !=  serverStartCode) {
-          throw new ServiceException(new DoNotRetryIOException("This RPC was intended for a " +
-              "different server with startCode: " + serverStartCode + ", this server is: "
-              + regionServer.serverName));
-        }
-      }
+      throwOnWrongStartCode(request);
       final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
 
       requestCount.increment();
@@ -1537,13 +1656,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HConstants.ADMIN_QOS)
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public CompactRegionResponse compactRegion(final RpcController controller,
       final CompactRegionRequest request) throws ServiceException {
     try {
       checkOpen();
       requestCount.increment();
-      HRegion region = (HRegion) getRegion(request.getRegion());
+      HRegion region = getRegion(request.getRegion());
       // Quota support is enabled, the requesting user is not system/super user
       // and a quota policy is enforced that disables compactions.
       if (QuotaUtil.isQuotaEnabled(getConfiguration()) &&
@@ -1555,43 +1674,42 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       region.startRegionOperation(Operation.COMPACT_REGION);
       LOG.info("Compacting " + region.getRegionInfo().getRegionNameAsString());
-      boolean major = false;
-      byte [] family = null;
-      HStore store = null;
+      boolean major = request.hasMajor() && request.getMajor();
       if (request.hasFamily()) {
-        family = request.getFamily().toByteArray();
-        store = region.getStore(family);
-        if (store == null) {
-          throw new ServiceException(new DoNotRetryIOException("column family " +
-              Bytes.toString(family) + " does not exist in region " +
-              region.getRegionInfo().getRegionNameAsString()));
-        }
-      }
-      if (request.hasMajor()) {
-        major = request.getMajor();
-      }
-      if (major) {
-        if (family != null) {
-          store.triggerMajorCompaction();
-        } else {
-          region.triggerMajorCompaction();
-        }
-      }
-
-      String familyLogMsg = (family != null)?" for column family: " + Bytes.toString(family):"";
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("User-triggered compaction requested for region "
-          + region.getRegionInfo().getRegionNameAsString() + familyLogMsg);
-      }
-      String log = "User-triggered " + (major ? "major " : "") + "compaction" + familyLogMsg;
-      if (family != null) {
-        regionServer.compactSplitThread.requestCompaction(region, store, log, Store.PRIORITY_USER,
-          CompactionLifeCycleTracker.DUMMY, RpcServer.getRequestUser().orElse(null));
+        byte[] family = request.getFamily().toByteArray();
+        String log = "User-triggered " + (major ? "major " : "") + "compaction for region " +
+            region.getRegionInfo().getRegionNameAsString() + " and family " +
+            Bytes.toString(family);
+        LOG.trace(log);
+        region.requestCompaction(family, log, Store.PRIORITY_USER, major,
+          CompactionLifeCycleTracker.DUMMY);
       } else {
-        regionServer.compactSplitThread.requestCompaction(region, log, Store.PRIORITY_USER,
-          CompactionLifeCycleTracker.DUMMY, RpcServer.getRequestUser().orElse(null));
+        String log = "User-triggered " + (major ? "major " : "") + "compaction for region " +
+            region.getRegionInfo().getRegionNameAsString();
+        LOG.trace(log);
+        region.requestCompaction(log, Store.PRIORITY_USER, major, CompactionLifeCycleTracker.DUMMY);
       }
       return CompactRegionResponse.newBuilder().build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  public CompactionSwitchResponse compactionSwitch(RpcController controller,
+      CompactionSwitchRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.increment();
+      boolean prevState = regionServer.compactSplitThread.isCompactionsEnabled();
+      CompactionSwitchResponse response =
+          CompactionSwitchResponse.newBuilder().setPrevState(prevState).build();
+      if (prevState == request.getEnabled()) {
+        // passed in requested state is same as current state. No action required
+        return response;
+      }
+      regionServer.compactSplitThread.switchCompaction(request.getEnabled());
+      return response;
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
@@ -1611,7 +1729,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
-      HRegion region = (HRegion) getRegion(request.getRegion());
+      HRegion region = getRegion(request.getRegion());
       LOG.info("Flushing " + region.getRegionInfo().getRegionNameAsString());
       boolean shouldFlush = true;
       if (request.hasIfOlderThanTs()) {
@@ -1622,7 +1740,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         boolean writeFlushWalMarker =  request.hasWriteFlushWalMarker() ?
             request.getWriteFlushWalMarker() : false;
         // Go behind the curtain so we can manage writing of the flush WAL marker
-        HRegion.FlushResultImpl flushResult = region.flushcache(true, writeFlushWalMarker);
+        HRegion.FlushResultImpl flushResult = null;
+        if (request.hasFamily()) {
+          List families = new ArrayList();
+          families.add(request.getFamily().toByteArray());
+          flushResult =
+            region.flushcache(families, writeFlushWalMarker, FlushLifeCycleTracker.DUMMY);
+        } else {
+          flushResult = region.flushcache(true, writeFlushWalMarker, FlushLifeCycleTracker.DUMMY);
+        }
         boolean compactionNeeded = flushResult.isCompactionNeeded();
         if (compactionNeeded) {
           regionServer.compactSplitThread.requestSystemCompaction(region,
@@ -1652,49 +1778,49 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
-      Map<String, Region> onlineRegions = regionServer.onlineRegions;
+      Map<String, HRegion> onlineRegions = regionServer.getOnlineRegions();
       List<RegionInfo> list = new ArrayList<>(onlineRegions.size());
-      for (Region region: onlineRegions.values()) {
+      for (HRegion region: onlineRegions.values()) {
         list.add(region.getRegionInfo());
       }
-      Collections.sort(list, RegionInfo.COMPARATOR);
+      list.sort(RegionInfo.COMPARATOR);
       return ResponseConverter.buildGetOnlineRegionResponse(list);
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
   }
 
+  // Master implementation of this Admin Service differs given it is not
+  // able to supply detail only known to RegionServer. See note on
+  // MasterRpcServers#getRegionInfo.
   @Override
   @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,
-      final GetRegionInfoRequest request) throws ServiceException {
+    final GetRegionInfoRequest request) throws ServiceException {
     try {
       checkOpen();
       requestCount.increment();
-      Region region = getRegion(request.getRegion());
+      HRegion region = getRegion(request.getRegion());
       RegionInfo info = region.getRegionInfo();
-      byte[] bestSplitRow = null;
+      byte[] bestSplitRow;
       if (request.hasBestSplitRow() && request.getBestSplitRow()) {
-        HRegion r = (HRegion) region;
-        region.startRegionOperation(Operation.SPLIT_REGION);
-        r.forceSplit(null);
-        bestSplitRow = r.checkSplit();
+        bestSplitRow = region.checkSplit(true).orElse(null);
         // when all table data are in memstore, bestSplitRow = null
         // try to flush region first
-        if(bestSplitRow == null) {
-          r.flush(true);
-          bestSplitRow = r.checkSplit();
+        if (bestSplitRow == null) {
+          region.flush(true);
+          bestSplitRow = region.checkSplit(true).orElse(null);
         }
-        r.clearSplit();
+      } else {
+        bestSplitRow = null;
       }
       GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
       builder.setRegionInfo(ProtobufUtil.toRegionInfo(info));
       if (request.hasCompactionState() && request.getCompactionState()) {
-        builder.setCompactionState(region.getCompactionState());
+        builder.setCompactionState(ProtobufUtil.createCompactionState(region.getCompactionState()));
       }
       builder.setSplittable(region.isSplittable());
       builder.setMergeable(region.isMergeable());
-      builder.setIsRecovering(region.isRecovering());
       if (request.hasBestSplitRow() && request.getBestSplitRow() && bestSplitRow != null) {
         builder.setBestSplitRow(UnsafeByteOperations.unsafeWrap(bestSplitRow));
       }
@@ -1709,7 +1835,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public GetRegionLoadResponse getRegionLoad(RpcController controller,
       GetRegionLoadRequest request) throws ServiceException {
 
-    List<Region> regions;
+    List<HRegion> regions;
     if (request.hasTableName()) {
       TableName tableName = ProtobufUtil.toTableName(request.getTableName());
       regions = regionServer.getRegions(tableName);
@@ -1721,7 +1847,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     RegionSpecifier.Builder regionSpecifier = RegionSpecifier.newBuilder();
 
     try {
-      for (Region region : regions) {
+      for (HRegion region : regions) {
         rLoads.add(regionServer.createRegionLoad(region, regionLoadBuilder, regionSpecifier));
       }
     } catch (IOException e) {
@@ -1736,8 +1862,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @QosPriority(priority=HConstants.ADMIN_QOS)
   public ClearCompactionQueuesResponse clearCompactionQueues(RpcController controller,
     ClearCompactionQueuesRequest request) throws ServiceException {
-    LOG.debug("Client=" + RpcServer.getRequestUserName() + "/" + RpcServer.getRemoteAddress()
-            + " clear compactions queue");
+    LOG.debug("Client=" + RpcServer.getRequestUserName().orElse(null) + "/"
+        + RpcServer.getRemoteAddress().orElse(null) + " clear compactions queue");
     ClearCompactionQueuesResponse.Builder respBuilder = ClearCompactionQueuesResponse.newBuilder();
     requestCount.increment();
     if (clearCompactionQueues.compareAndSet(false,true)) {
@@ -1797,7 +1923,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final GetStoreFileRequest request) throws ServiceException {
     try {
       checkOpen();
-      Region region = getRegion(request.getRegion());
+      HRegion region = getRegion(request.getRegion());
       requestCount.increment();
       Set<byte[]> columnFamilies;
       if (request.getFamilyCount() == 0) {
@@ -1816,6 +1942,44 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
+    }
+  }
+
+  private void throwOnWrongStartCode(OpenRegionRequest request) throws ServiceException {
+    if (!request.hasServerStartCode()) {
+      LOG.warn("OpenRegionRequest for {} does not have a start code", request.getOpenInfoList());
+      return;
+    }
+    throwOnWrongStartCode(request.getServerStartCode());
+  }
+
+  private void throwOnWrongStartCode(CloseRegionRequest request) throws ServiceException {
+    if (!request.hasServerStartCode()) {
+      LOG.warn("CloseRegionRequest for {} does not have a start code", request.getRegion());
+      return;
+    }
+    throwOnWrongStartCode(request.getServerStartCode());
+  }
+
+  private void throwOnWrongStartCode(long serverStartCode) throws ServiceException {
+    // check that we are the same server that this RPC is intended for.
+    if (regionServer.serverName.getStartcode() != serverStartCode) {
+      throw new ServiceException(new DoNotRetryIOException(
+        "This RPC was intended for a " + "different server with startCode: " + serverStartCode +
+          ", this server is: " + regionServer.serverName));
+    }
+  }
+
+  private void throwOnWrongStartCode(ExecuteProceduresRequest req) throws ServiceException {
+    if (req.getOpenRegionCount() > 0) {
+      for (OpenRegionRequest openReq : req.getOpenRegionList()) {
+        throwOnWrongStartCode(openReq);
+      }
+    }
+    if (req.getCloseRegionCount() > 0) {
+      for (CloseRegionRequest closeReq : req.getCloseRegionList()) {
+        throwOnWrongStartCode(closeReq);
+      }
     }
   }
 
@@ -1847,15 +2011,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public OpenRegionResponse openRegion(final RpcController controller,
       final OpenRegionRequest request) throws ServiceException {
     requestCount.increment();
-    if (request.hasServerStartCode()) {
-      // check that we are the same server that this RPC is intended for.
-      long serverStartCode = request.getServerStartCode();
-      if (regionServer.serverName.getStartcode() !=  serverStartCode) {
-        throw new ServiceException(new DoNotRetryIOException("This RPC was intended for a " +
-            "different server with startCode: " + serverStartCode + ", this server is: "
-            + regionServer.serverName));
-      }
-    }
+    throwOnWrongStartCode(request);
 
     OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
     final int regionCount = request.getOpenInfoCount();
@@ -1875,7 +2031,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         throw new ServiceException(ie);
       }
       // We are assigning meta, wait a little for regionserver to finish initialization.
-      int timeout = regionServer.conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+      int timeout = regionServer.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT) >> 2; // Quarter of RPC timeout
       long endTime = System.currentTimeMillis() + timeout;
       synchronized (regionServer.online) {
@@ -1902,7 +2058,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       try {
         String encodedName = region.getEncodedName();
         byte[] encodedNameBytes = region.getEncodedNameAsBytes();
-        final Region onlineRegion = regionServer.getRegion(encodedName);
+        final HRegion onlineRegion = regionServer.getRegion(encodedName);
         if (onlineRegion != null) {
           // The region is already online. This should not happen any more.
           String error = "Received OPEN for the region:"
@@ -1915,7 +2071,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         LOG.info("Open " + region.getRegionNameAsString());
 
-        final Boolean previous = regionServer.regionsInTransitionInRS.putIfAbsent(
+        final Boolean previous = regionServer.getRegionsInTransitionInRS().putIfAbsent(
           encodedNameBytes, Boolean.TRUE);
 
         if (Boolean.FALSE.equals(previous)) {
@@ -1926,7 +2082,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             regionServer.abort(error);
             throw new IOException(error);
           }
-          regionServer.regionsInTransitionInRS.put(encodedNameBytes, Boolean.TRUE);
+          regionServer.getRegionsInTransitionInRS().put(encodedNameBytes, Boolean.TRUE);
         }
 
         if (Boolean.TRUE.equals(previous)) {
@@ -1941,23 +2097,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         regionServer.removeFromMovedRegions(region.getEncodedName());
 
         if (previous == null || !previous.booleanValue()) {
-          // check if the region to be opened is marked in recovering state in ZK
-          if (ZKSplitLog.isRegionMarkedRecoveringInZK(regionServer.getZooKeeper(),
-              region.getEncodedName())) {
-            // Check if current region open is for distributedLogReplay. This check is to support
-            // rolling restart/upgrade where we want to Master/RS see same configuration
-            if (!regionOpenInfo.hasOpenForDistributedLogReplay()
-                  || regionOpenInfo.getOpenForDistributedLogReplay()) {
-              regionServer.recoveringRegions.put(region.getEncodedName(), null);
-            } else {
-              // Remove stale recovery region from ZK when we open region not for recovering which
-              // could happen when turn distributedLogReplay off from on.
-              List<String> tmpRegions = new ArrayList<>();
-              tmpRegions.add(region.getEncodedName());
-              ZKSplitLog.deleteRecoveringRegionZNodes(regionServer.getZooKeeper(),
-                tmpRegions);
-            }
-          }
           htd = htds.get(region.getTable());
           if (htd == null) {
             htd = regionServer.tableDescriptors.get(region.getTable());
@@ -1968,29 +2107,29 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
           // If there is no action in progress, we can submit a specific handler.
           // Need to pass the expected version in the constructor.
-          if (region.isMetaRegion()) {
-            regionServer.service.submit(new OpenMetaHandler(
-              regionServer, regionServer, region, htd, masterSystemTime));
+          if (regionServer.executorService == null) {
+            LOG.info("No executor executorService; skipping open request");
           } else {
-            if (regionOpenInfo.getFavoredNodesCount() > 0) {
-              regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
-                  regionOpenInfo.getFavoredNodesList());
-            }
-            if (htd.getPriority() >= HConstants.ADMIN_QOS || region.getTable().isSystemTable()) {
-              regionServer.service.submit(new OpenPriorityRegionHandler(
-                regionServer, regionServer, region, htd, masterSystemTime));
+            if (region.isMetaRegion()) {
+              regionServer.executorService.submit(new OpenMetaHandler(
+              regionServer, regionServer, region, htd, masterSystemTime));
             } else {
-              regionServer.service.submit(new OpenRegionHandler(
+              if (regionOpenInfo.getFavoredNodesCount() > 0) {
+                regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
+                regionOpenInfo.getFavoredNodesList());
+              }
+              if (htd.getPriority() >= HConstants.ADMIN_QOS || region.getTable().isSystemTable()) {
+                regionServer.executorService.submit(new OpenPriorityRegionHandler(
                 regionServer, regionServer, region, htd, masterSystemTime));
+              } else {
+                regionServer.executorService.submit(new OpenRegionHandler(
+                regionServer, regionServer, region, htd, masterSystemTime));
+              }
             }
           }
         }
 
         builder.addOpeningState(RegionOpeningState.OPENED);
-
-      } catch (KeeperException zooKeeperEx) {
-        LOG.error("Can't retrieve recovering state from zookeeper", zooKeeperEx);
-        throw new ServiceException(zooKeeperEx);
       } catch (IOException ie) {
         LOG.warn("Failed opening region " + region.getRegionNameAsString(), ie);
         if (isBulkAssign) {
@@ -2004,51 +2143,34 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   /**
-   *  Wamrmup a region on this server.
-   *
-   * This method should only be called by Master. It synchrnously opens the region and
+   * Warmup a region on this server.
+   * This method should only be called by Master. It synchronously opens the region and
    * closes the region bringing the most important pages in cache.
-   * <p>
-   *
-   * @param controller the RPC controller
-   * @param request the request
-   * @throws ServiceException
    */
   @Override
   public WarmupRegionResponse warmupRegion(final RpcController controller,
       final WarmupRegionRequest request) throws ServiceException {
-
     final RegionInfo region = ProtobufUtil.toRegionInfo(request.getRegionInfo());
-    TableDescriptor htd;
     WarmupRegionResponse response = WarmupRegionResponse.getDefaultInstance();
-
     try {
       checkOpen();
       String encodedName = region.getEncodedName();
       byte[] encodedNameBytes = region.getEncodedNameAsBytes();
-      final Region onlineRegion = regionServer.getRegion(encodedName);
-
+      final HRegion onlineRegion = regionServer.getRegion(encodedName);
       if (onlineRegion != null) {
-        LOG.info("Region already online. Skipping warming up " + region);
+        LOG.info("{} is online; skipping warmup", region);
         return response;
       }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Warming up Region " + region.getRegionNameAsString());
-      }
-
-      htd = regionServer.tableDescriptors.get(region.getTable());
-
+      TableDescriptor htd = regionServer.tableDescriptors.get(region.getTable());
       if (regionServer.getRegionsInTransitionInRS().containsKey(encodedNameBytes)) {
-        LOG.info("Region is in transition. Skipping warmup " + region);
+        LOG.info("{} is in transition; skipping warmup", region);
         return response;
       }
-
+      LOG.info("Warmup {}", region.getRegionNameAsString());
       HRegion.warmupHRegion(region, htd, regionServer.getWAL(region),
           regionServer.getConfiguration(), regionServer, null);
-
     } catch (IOException ie) {
-      LOG.error("Failed warming up region " + region.getRegionNameAsString(), ie);
+      LOG.error("Failed warmup of {}", region.getRegionNameAsString(), ie);
       throw new ServiceException(ie);
     }
 
@@ -2077,7 +2199,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         return ReplicateWALEntryResponse.newBuilder().build();
       }
       ByteString regionName = entries.get(0).getKey().getEncodedRegionName();
-      Region region = regionServer.getRegionByEncodedName(regionName.toStringUtf8());
+      HRegion region = regionServer.getRegionByEncodedName(regionName.toStringUtf8());
       RegionCoprocessorHost coprocessorHost =
           ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())
             ? region.getCoprocessorHost()
@@ -2104,7 +2226,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               entry.getKey().getWriteTime());
         }
         Pair<WALKey, WALEdit> walEntry = (coprocessorHost == null) ? null : new Pair<>();
-        List<WALSplitter.MutationReplay> edits = WALSplitter.getMutationsFromWALEntry(entry,
+        List<MutationReplay> edits = WALSplitUtil.getMutationsFromWALEntry(entry,
           cells, walEntry, durability);
         if (coprocessorHost != null) {
           // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
@@ -2119,7 +2241,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         if(edits!=null && !edits.isEmpty()) {
           // HBASE-17924
           // sort to improve lock efficiency
-          Collections.sort(edits);
+          Collections.sort(edits, (v1, v2) -> Row.COMPARATOR.compare(v1.mutation, v2.mutation));
           long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ?
             entry.getKey().getOrigSequenceNumber() : entry.getKey().getLogSequenceNumber();
           OperationStatus[] result = doReplayBatchOp(region, edits, replaySeqId);
@@ -2133,7 +2255,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
 
       //sync wal at the end because ASYNC_WAL is used above
-      WAL wal = getWAL(region);
+      WAL wal = region.getWAL();
       if (wal != null) {
         wal.sync();
       }
@@ -2148,15 +2270,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
-      if (regionServer.metricsRegionServer != null) {
-        regionServer.metricsRegionServer.updateReplay(
-          EnvironmentEdgeManager.currentTime() - before);
+      final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+      if (metricsRegionServer != null) {
+        metricsRegionServer.updateReplay(EnvironmentEdgeManager.currentTime() - before);
       }
     }
-  }
-
-  WAL getWAL(Region region) {
-    return ((HRegion)region).getWAL();
   }
 
   /**
@@ -2164,7 +2282,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    *
    * @param controller the RPC controller
    * @param request the request
-   * @throws ServiceException
    */
   @Override
   @QosPriority(priority=HConstants.REPLICATION_QOS)
@@ -2172,12 +2289,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final ReplicateWALEntryRequest request) throws ServiceException {
     try {
       checkOpen();
-      if (regionServer.replicationSinkHandler != null) {
+      if (regionServer.getReplicationSinkService() != null) {
         requestCount.increment();
         List<WALEntry> entries = request.getEntryList();
         CellScanner cellScanner = ((HBaseRpcController)controller).cellScanner();
         regionServer.getRegionServerCoprocessorHost().preReplicateLogEntries();
-        regionServer.replicationSinkHandler.replicateLogEntries(entries, cellScanner,
+        regionServer.getReplicationSinkService().replicateLogEntries(entries, cellScanner,
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
           request.getSourceHFileArchiveDirPath());
         regionServer.getRegionServerCoprocessorHost().postReplicateLogEntries();
@@ -2203,7 +2320,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       regionServer.getRegionServerCoprocessorHost().preRollWALWriterRequest();
-      regionServer.walRoller.requestRollAll();
+      regionServer.getWalRoller().requestRollAll();
       regionServer.getRegionServerCoprocessorHost().postRollWALWriterRequest();
       RollWALWriterResponse.Builder builder = RollWALWriterResponse.newBuilder();
       return builder.build();
@@ -2224,6 +2341,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @QosPriority(priority=HConstants.ADMIN_QOS)
   public StopServerResponse stopServer(final RpcController controller,
       final StopServerRequest request) throws ServiceException {
+    rpcPreCheck("stopServer");
     requestCount.increment();
     String reason = request.getReason();
     regionServer.stop(reason);
@@ -2233,6 +2351,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public UpdateFavoredNodesResponse updateFavoredNodes(RpcController controller,
       UpdateFavoredNodesRequest request) throws ServiceException {
+    rpcPreCheck("updateFavoredNodes");
     List<UpdateFavoredNodesRequest.RegionUpdateInfo> openInfoList = request.getUpdateInfoList();
     UpdateFavoredNodesResponse.Builder respBuilder = UpdateFavoredNodesResponse.newBuilder();
     for (UpdateFavoredNodesRequest.RegionUpdateInfo regionUpdateInfo : openInfoList) {
@@ -2255,16 +2374,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public BulkLoadHFileResponse bulkLoadHFile(final RpcController controller,
       final BulkLoadHFileRequest request) throws ServiceException {
     long start = EnvironmentEdgeManager.currentTime();
+    List<String> clusterIds = new ArrayList<>(request.getClusterIdsList());
+    if(clusterIds.contains(this.regionServer.clusterId)){
+      return BulkLoadHFileResponse.newBuilder().setLoaded(true).build();
+    } else {
+      clusterIds.add(this.regionServer.clusterId);
+    }
     try {
       checkOpen();
       requestCount.increment();
-      Region region = getRegion(request.getRegion());
-      boolean bypass = false;
-      boolean loaded = false;
+      HRegion region = getRegion(request.getRegion());
       Map<byte[], List<Path>> map = null;
+      final boolean spaceQuotaEnabled = QuotaUtil.isQuotaEnabled(getConfiguration());
+      long sizeToBeLoaded = -1;
 
       // Check to see if this bulk load would exceed the space quota for this table
-      if (QuotaUtil.isQuotaEnabled(getConfiguration())) {
+      if (spaceQuotaEnabled) {
         ActivePolicyEnforcement activeSpaceQuotas = getSpaceQuotaManager().getActiveEnforcements();
         SpaceViolationPolicyEnforcement enforcement = activeSpaceQuotas.getPolicyEnforcement(
             region);
@@ -2275,48 +2400,52 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             filePaths.add(familyPath.getPath());
           }
           // Check if the batch of files exceeds the current quota
-          enforcement.checkBulkLoad(regionServer.getFileSystem(), filePaths);
+          sizeToBeLoaded = enforcement.computeBulkLoadSize(regionServer.getFileSystem(), filePaths);
         }
       }
 
+      List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
+      for (FamilyPath familyPath : request.getFamilyPathList()) {
+        familyPaths.add(new Pair<>(familyPath.getFamily().toByteArray(), familyPath.getPath()));
+      }
       if (!request.hasBulkToken()) {
-        // Old style bulk load. This will not be supported in future releases
-        List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
-        for (FamilyPath familyPath : request.getFamilyPathList()) {
-          familyPaths.add(new Pair<>(familyPath.getFamily().toByteArray(), familyPath.getPath()));
-        }
         if (region.getCoprocessorHost() != null) {
-          bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
+          region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
         }
         try {
-          if (!bypass) {
-            map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
-                request.getCopyFile());
-            if (map != null) {
-              loaded = true;
-            }
-          }
+          map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
+              request.getCopyFile(), clusterIds, request.getReplicate());
         } finally {
           if (region.getCoprocessorHost() != null) {
-            loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map, loaded);
+            region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map);
           }
         }
       } else {
         // secure bulk load
-        map = regionServer.secureBulkLoadManager.secureBulkLoadHFiles(region, request);
+        map = regionServer.getSecureBulkLoadManager().secureBulkLoadHFiles(region, request, clusterIds);
       }
       BulkLoadHFileResponse.Builder builder = BulkLoadHFileResponse.newBuilder();
+      builder.setLoaded(map != null);
       if (map != null) {
-        loaded = true;
+        // Treat any negative size as a flag to "ignore" updating the region size as that is
+        // not possible to occur in real life (cannot bulk load a file with negative size)
+        if (spaceQuotaEnabled && sizeToBeLoaded > 0) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Incrementing space use of " + region.getRegionInfo() + " by "
+                + sizeToBeLoaded + " bytes");
+          }
+          // Inform space quotas of the new files for this region
+          getSpaceQuotaManager().getRegionSizeStore().incrementRegionSize(
+              region.getRegionInfo(), sizeToBeLoaded);
+        }
       }
-      builder.setLoaded(loaded);
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
-      if (regionServer.metricsRegionServer != null) {
-        regionServer.metricsRegionServer.updateBulkLoad(
-            EnvironmentEdgeManager.currentTime() - start);
+      final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+      if (metricsRegionServer != null) {
+        metricsRegionServer.updateBulkLoad(EnvironmentEdgeManager.currentTime() - start);
       }
     }
   }
@@ -2328,9 +2457,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
 
-      Region region = getRegion(request.getRegion());
+      HRegion region = getRegion(request.getRegion());
 
-      String bulkToken = regionServer.secureBulkLoadManager.prepareBulkLoad(region, request);
+      String bulkToken = regionServer.getSecureBulkLoadManager().prepareBulkLoad(region, request);
       PrepareBulkLoadResponse.Builder builder = PrepareBulkLoadResponse.newBuilder();
       builder.setBulkToken(bulkToken);
       return builder.build();
@@ -2346,11 +2475,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
 
-      Region region = getRegion(request.getRegion());
+      HRegion region = getRegion(request.getRegion());
 
-      regionServer.secureBulkLoadManager.cleanupBulkLoad(region, request);
-      CleanupBulkLoadResponse response = CleanupBulkLoadResponse.newBuilder().build();
-      return response;
+      regionServer.getSecureBulkLoadManager().cleanupBulkLoad(region, request);
+      return CleanupBulkLoadResponse.newBuilder().build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
@@ -2362,14 +2490,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
-      Region region = getRegion(request.getRegion());
+      HRegion region = getRegion(request.getRegion());
       com.google.protobuf.Message result = execServiceOnRegion(region, request.getCall());
       CoprocessorServiceResponse.Builder builder = CoprocessorServiceResponse.newBuilder();
       builder.setRegion(RequestConverter.buildRegionSpecifier(
         RegionSpecifierType.REGION_NAME, region.getRegionInfo().getRegionName()));
       // TODO: COPIES!!!!!!
       builder.setValue(builder.getValueBuilder().setName(result.getClass().getName()).
-        setValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.
+        setValue(org.apache.hbase.thirdparty.com.google.protobuf.ByteString.
             copyFrom(result.toByteArray())));
       return builder.build();
     } catch (IOException ie) {
@@ -2377,7 +2505,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  private com.google.protobuf.Message execServiceOnRegion(Region region,
+  private com.google.protobuf.Message execServiceOnRegion(HRegion region,
       final ClientProtos.CoprocessorServiceCall serviceCall) throws IOException {
     // ignore the passed in controller (from the serialized call)
     ServerRpcController execController = new ServerRpcController();
@@ -2396,15 +2524,24 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final GetRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTime();
     OperationQuota quota = null;
+    HRegion region = null;
     try {
       checkOpen();
       requestCount.increment();
-      requestRowActionCount.increment();
       rpcGetRequestCount.increment();
-      Region region = getRegion(request.getRegion());
+      region = getRegion(request.getRegion());
 
       GetResponse.Builder builder = GetResponse.newBuilder();
       ClientProtos.Get get = request.getGet();
+      // An asynchbase client, https://github.com/OpenTSDB/asynchbase, starts by trying to do
+      // a get closest before. Throwing the UnknownProtocolException signals it that it needs
+      // to switch and do hbase2 protocol (HBase servers do not tell clients what versions
+      // they are; its a problem for non-native clients like asynchbase. HBASE-20225.
+      if (get.hasClosestRowBefore() && get.getClosestRowBefore()) {
+        throw new UnknownProtocolException("Is this a pre-hbase-1.0.0 or asynchbase client? " +
+            "Client is invoking getClosestRowBefore removed in hbase-2.0.0 replaced by " +
+            "reverse Scan.");
+      }
       Boolean existence = null;
       Result r = null;
       RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
@@ -2416,7 +2553,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       if (existence == null) {
         if (context != null) {
-          r = get(clientGet, ((HRegion) region), null, context);
+          r = get(clientGet, (region), null, context);
         } else {
           // for test purpose
           r = region.get(clientGet);
@@ -2446,15 +2583,21 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         builder.setResult(pbr);
       }
-      if (r != null) {
+      //r.cells is null when an table.exists(get) call
+      if (r != null && r.rawCells() != null) {
         quota.addGetResult(r);
       }
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
-      if (regionServer.metricsRegionServer != null) {
-        regionServer.metricsRegionServer.updateGet(EnvironmentEdgeManager.currentTime() - before);
+      final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+      if (metricsRegionServer != null) {
+        TableDescriptor td = region != null? region.getTableDescriptor(): null;
+        if (td != null) {
+          metricsRegionServer.updateGet(
+              td.getTableName(), EnvironmentEdgeManager.currentTime() - before);
+        }
       }
       if (quota != null) {
         quota.close();
@@ -2465,21 +2608,24 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private Result get(Get get, HRegion region, RegionScannersCloseCallBack closeCallBack,
       RpcCallContext context) throws IOException {
     region.prepareGet(get);
-    List<Cell> results = new ArrayList<>();
     boolean stale = region.getRegionInfo().getReplicaId() != 0;
+
+    // This method is almost the same as HRegion#get.
+    List<Cell> results = new ArrayList<>();
+    long before = EnvironmentEdgeManager.currentTime();
     // pre-get CP hook
     if (region.getCoprocessorHost() != null) {
       if (region.getCoprocessorHost().preGet(get, results)) {
+        region.metricsUpdateForGet(results, before);
         return Result
             .create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
       }
     }
-    long before = EnvironmentEdgeManager.currentTime();
     Scan scan = new Scan(get);
     if (scan.getLoadColumnFamiliesOnDemandValue() == null) {
       scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
     }
-    RegionScanner scanner = null;
+    RegionScannerImpl scanner = null;
     try {
       scanner = region.getScanner(scan);
       scanner.next(results);
@@ -2490,8 +2636,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // RpcCallContext. The rpc callback will take care of closing the
           // scanner, for eg in case
           // of get()
-          assert scanner instanceof org.apache.hadoop.hbase.ipc.RpcCallback;
-          context.setCallBack((RegionScannerImpl) scanner);
+          context.setCallBack(scanner);
         } else {
           // The call is from multi() where the results from the get() are
           // aggregated and then send out to the
@@ -2507,10 +2652,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       region.getCoprocessorHost().postGet(get, results);
     }
     region.metricsUpdateForGet(results, before);
+
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
 
-  private void checkBatchSizeAndLogLargeSize(MultiRequest request) {
+  private void checkBatchSizeAndLogLargeSize(MultiRequest request) throws ServiceException {
     int sum = 0;
     String firstRegionName = null;
     for (RegionAction regionAction : request.getRegionActionList()) {
@@ -2520,7 +2666,30 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       sum += regionAction.getActionCount();
     }
     if (sum > rowSizeWarnThreshold) {
-      ld.logBatchWarning(firstRegionName, sum, rowSizeWarnThreshold);
+      LOG.warn("Large batch operation detected (greater than " + rowSizeWarnThreshold +
+        ") (HBASE-18023)." + " Requested Number of Rows: " + sum + " Client: " +
+        RpcServer.getRequestUserName().orElse(null) + "/" +
+        RpcServer.getRemoteAddress().orElse(null) + " first region in multi=" + firstRegionName);
+      if (rejectRowsWithSizeOverThreshold) {
+        throw new ServiceException(
+          "Rejecting large batch operation for current batch with firstRegionName: " +
+            firstRegionName + " , Requested Number of Rows: " + sum + " , Size Threshold: " +
+            rowSizeWarnThreshold);
+      }
+    }
+  }
+
+  private void failRegionAction(MultiResponse.Builder responseBuilder,
+    RegionActionResult.Builder regionActionResultBuilder, RegionAction regionAction,
+    CellScanner cellScanner, Throwable error) {
+    rpcServer.getMetrics().exception(error);
+    regionActionResultBuilder.setException(ResponseConverter.buildException(error));
+    responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
+    // All Mutations in this RegionAction not executed as we can not see the Region online here
+    // in this RS. Will be retried from Client. Skipping all the Cells in CellScanner
+    // corresponding to these Mutations.
+    if (cellScanner != null) {
+      skipCellsForMutations(regionAction.getActionList(), cellScanner);
     }
   }
 
@@ -2552,82 +2721,163 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
 
-    // this will contain all the cells that we need to return. It's created later, if needed.
-    List<CellScannable> cellsToReturn = null;
     MultiResponse.Builder responseBuilder = MultiResponse.newBuilder();
     RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
-    Boolean processed = null;
-    RegionScannersCloseCallBack closeCallBack = null;
-    RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
     this.rpcMultiRequestCount.increment();
     this.requestCount.increment();
-    Map<RegionSpecifier, ClientProtos.RegionLoadStats> regionStats = new HashMap<>(request
-      .getRegionActionCount());
     ActivePolicyEnforcement spaceQuotaEnforcement = getSpaceQuotaManager().getActiveEnforcements();
-    for (RegionAction regionAction : request.getRegionActionList()) {
-      this.requestRowActionCount.add(regionAction.getActionCount());
+
+    // We no longer use MultiRequest#condition. Instead, we use RegionAction#condition. The
+    // following logic is for backward compatibility as old clients still use
+    // MultiRequest#condition in case of checkAndMutate with RowMutations.
+    if (request.hasCondition()) {
+      if (request.getRegionActionList().isEmpty()) {
+        // If the region action list is empty, do nothing.
+        responseBuilder.setProcessed(true);
+        return responseBuilder.build();
+      }
+
+      RegionAction regionAction = request.getRegionAction(0);
+
+      // When request.hasCondition() is true, regionAction.getAtomic() should be always true. So
+      // we can assume regionAction.getAtomic() is true here.
+      assert regionAction.getAtomic();
+
       OperationQuota quota;
-      Region region;
-      regionActionResultBuilder.clear();
+      HRegion region;
       RegionSpecifier regionSpecifier = regionAction.getRegion();
+
       try {
         region = getRegion(regionSpecifier);
         quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList());
       } catch (IOException e) {
-        rpcServer.getMetrics().exception(e);
-        regionActionResultBuilder.setException(ResponseConverter.buildException(e));
-        responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
-        // All Mutations in this RegionAction not executed as we can not see the Region online here
-        // in this RS. Will be retried from Client. Skipping all the Cells in CellScanner
-        // corresponding to these Mutations.
-        if (cellScanner != null) {
-          skipCellsForMutations(regionAction.getActionList(), cellScanner);
+        failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
+        return responseBuilder.build();
+      }
+
+      try {
+        CheckAndMutateResult result = checkAndMutate(region, regionAction.getActionList(),
+          cellScanner, request.getCondition(), spaceQuotaEnforcement);
+        responseBuilder.setProcessed(result.isSuccess());
+        ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
+          ClientProtos.ResultOrException.newBuilder();
+        for (int i = 0; i < regionAction.getActionCount(); i++) {
+          // To unify the response format with doNonAtomicRegionMutation and read through
+          // client's AsyncProcess we have to add an empty result instance per operation
+          resultOrExceptionOrBuilder.clear();
+          resultOrExceptionOrBuilder.setIndex(i);
+          regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder.build());
         }
+      } catch (IOException e) {
+        rpcServer.getMetrics().exception(e);
+        // As it's an atomic operation with a condition, we may expect it's a global failure.
+        regionActionResultBuilder.setException(ResponseConverter.buildException(e));
+      } finally {
+        quota.close();
+      }
+
+      responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
+      ClientProtos.RegionLoadStats regionLoadStats = region.getLoadStatistics();
+      if (regionLoadStats != null) {
+        responseBuilder.setRegionStatistics(MultiRegionLoadStats.newBuilder()
+          .addRegion(regionSpecifier).addStat(regionLoadStats).build());
+      }
+      return responseBuilder.build();
+    }
+
+    // this will contain all the cells that we need to return. It's created later, if needed.
+    List<CellScannable> cellsToReturn = null;
+    RegionScannersCloseCallBack closeCallBack = null;
+    RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
+    Map<RegionSpecifier, ClientProtos.RegionLoadStats> regionStats = new HashMap<>(request
+      .getRegionActionCount());
+
+    for (RegionAction regionAction : request.getRegionActionList()) {
+      OperationQuota quota;
+      HRegion region;
+      RegionSpecifier regionSpecifier = regionAction.getRegion();
+      regionActionResultBuilder.clear();
+
+      try {
+        region = getRegion(regionSpecifier);
+        quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList());
+      } catch (IOException e) {
+        failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
         continue;  // For this region it's a failure.
       }
 
-      if (regionAction.hasAtomic() && regionAction.getAtomic()) {
-        // How does this call happen?  It may need some work to play well w/ the surroundings.
-        // Need to return an item per Action along w/ Action index.  TODO.
-        try {
-          if (request.hasCondition()) {
-            Condition condition = request.getCondition();
-            byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.getFamily().toByteArray();
-            byte[] qualifier = condition.getQualifier().toByteArray();
-            CompareOperator op =
-              CompareOperator.valueOf(condition.getCompareType().name());
-            ByteArrayComparable comparator =
-                ProtobufUtil.toComparator(condition.getComparator());
-            processed = checkAndRowMutate(region, regionAction.getActionList(),
-                  cellScanner, row, family, qualifier, op,
-                  comparator, regionActionResultBuilder, spaceQuotaEnforcement);
-          } else {
-            mutateRows(region, regionAction.getActionList(), cellScanner,
-                regionActionResultBuilder);
-            processed = Boolean.TRUE;
+      try {
+        if (regionAction.hasCondition()) {
+          try {
+            ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
+              ClientProtos.ResultOrException.newBuilder();
+            if (regionAction.getActionCount() == 1) {
+              CheckAndMutateResult result = checkAndMutate(region, quota,
+                regionAction.getAction(0).getMutation(), cellScanner,
+                regionAction.getCondition(), spaceQuotaEnforcement);
+              regionActionResultBuilder.setProcessed(result.isSuccess());
+              resultOrExceptionOrBuilder.setIndex(0);
+              if (result.getResult() != null) {
+                resultOrExceptionOrBuilder.setResult(ProtobufUtil.toResult(result.getResult()));
+              }
+              regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder.build());
+            } else {
+              CheckAndMutateResult result = checkAndMutate(region, regionAction.getActionList(),
+                cellScanner, regionAction.getCondition(), spaceQuotaEnforcement);
+              regionActionResultBuilder.setProcessed(result.isSuccess());
+              for (int i = 0; i < regionAction.getActionCount(); i++) {
+                if (i == 0 && result.getResult() != null) {
+                  // Set the result of the Increment/Append operations to the first element of the
+                  // ResultOrException list
+                  resultOrExceptionOrBuilder.setIndex(i);
+                  regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder
+                    .setResult(ProtobufUtil.toResult(result.getResult())).build());
+                  continue;
+                }
+                // To unify the response format with doNonAtomicRegionMutation and read through
+                // client's AsyncProcess we have to add an empty result instance per operation
+                resultOrExceptionOrBuilder.clear();
+                resultOrExceptionOrBuilder.setIndex(i);
+                regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder.build());
+              }
+            }
+          } catch (IOException e) {
+            rpcServer.getMetrics().exception(e);
+            // As it's an atomic operation with a condition, we may expect it's a global failure.
+            regionActionResultBuilder.setException(ResponseConverter.buildException(e));
           }
-        } catch (IOException e) {
-          rpcServer.getMetrics().exception(e);
-          // As it's atomic, we may expect it's a global failure.
-          regionActionResultBuilder.setException(ResponseConverter.buildException(e));
-        }
-      } else {
-        // doNonAtomicRegionMutation manages the exception internally
-        if (context != null && closeCallBack == null) {
-          // An RpcCallBack that creates a list of scanners that needs to perform callBack
-          // operation on completion of multiGets.
-          // Set this only once
-          closeCallBack = new RegionScannersCloseCallBack();
-          context.setCallBack(closeCallBack);
-        }
-        cellsToReturn = doNonAtomicRegionMutation(region, quota, regionAction, cellScanner,
+        } else if (regionAction.hasAtomic() && regionAction.getAtomic()) {
+          try {
+            doAtomicBatchOp(regionActionResultBuilder, region, quota, regionAction.getActionList(),
+              cellScanner, spaceQuotaEnforcement);
+            regionActionResultBuilder.setProcessed(true);
+            // We no longer use MultiResponse#processed. Instead, we use
+            // RegionActionResult#processed. This is for backward compatibility for old clients.
+            responseBuilder.setProcessed(true);
+          } catch (IOException e) {
+            rpcServer.getMetrics().exception(e);
+            // As it's atomic, we may expect it's a global failure.
+            regionActionResultBuilder.setException(ResponseConverter.buildException(e));
+          }
+        } else {
+          // doNonAtomicRegionMutation manages the exception internally
+          if (context != null && closeCallBack == null) {
+            // An RpcCallBack that creates a list of scanners that needs to perform callBack
+            // operation on completion of multiGets.
+            // Set this only once
+            closeCallBack = new RegionScannersCloseCallBack();
+            context.setCallBack(closeCallBack);
+          }
+          cellsToReturn = doNonAtomicRegionMutation(region, quota, regionAction, cellScanner,
             regionActionResultBuilder, cellsToReturn, nonceGroup, closeCallBack, context,
             spaceQuotaEnforcement);
+        }
+      } finally {
+        quota.close();
       }
+
       responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
-      quota.close();
-      ClientProtos.RegionLoadStats regionLoadStats = ((HRegion)region).getLoadStatistics();
+      ClientProtos.RegionLoadStats regionLoadStats = region.getLoadStatistics();
       if(regionLoadStats != null) {
         regionStats.put(regionSpecifier, regionLoadStats);
       }
@@ -2635,10 +2885,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // Load the controller with the Cells to return.
     if (cellsToReturn != null && !cellsToReturn.isEmpty() && controller != null) {
       controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
-    }
-
-    if (processed != null) {
-      responseBuilder.setProcessed(processed);
     }
 
     MultiRegionLoadStats.Builder builder = MultiRegionLoadStats.newBuilder();
@@ -2651,12 +2897,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   private void skipCellsForMutations(List<Action> actions, CellScanner cellScanner) {
+    if (cellScanner == null) {
+      return;
+    }
     for (Action action : actions) {
       skipCellsForMutation(action, cellScanner);
     }
   }
 
   private void skipCellsForMutation(Action action, CellScanner cellScanner) {
+    if (cellScanner == null) {
+      return;
+    }
     try {
       if (action.hasMutation()) {
         MutationProto m = action.getMutation();
@@ -2679,7 +2931,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    *
    * @param rpcc the RPC controller
    * @param request the mutate request
-   * @throws ServiceException
    */
   @Override
   public MutateResponse mutate(final RpcController rpcc,
@@ -2690,9 +2941,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     CellScanner cellScanner = controller != null ? controller.cellScanner() : null;
     OperationQuota quota = null;
     RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
-    ActivePolicyEnforcement spaceQuotaEnforcement = null;
-    MutationType type = null;
-    long before = EnvironmentEdgeManager.currentTime();
     // Clear scanner so we are not holding on to reference across call.
     if (controller != null) {
       controller.setCellScanner(null);
@@ -2700,106 +2948,59 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
-      requestRowActionCount.increment();
       rpcMutateRequestCount.increment();
-      Region region = getRegion(request.getRegion());
+      HRegion region = getRegion(request.getRegion());
       MutateResponse.Builder builder = MutateResponse.newBuilder();
       MutationProto mutation = request.getMutation();
-      if (!region.getRegionInfo().isMetaTable()) {
-        regionServer.cacheFlusher.reclaimMemStoreMemory();
+      if (!region.getRegionInfo().isMetaRegion()) {
+        regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
       long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
-      Result r = null;
-      Boolean processed = null;
-      type = mutation.getMutateType();
-
       quota = getRpcQuotaManager().checkQuota(region, OperationQuota.OperationType.MUTATE);
-      spaceQuotaEnforcement = getSpaceQuotaManager().getActiveEnforcements();
+      ActivePolicyEnforcement spaceQuotaEnforcement = getSpaceQuotaManager()
+        .getActiveEnforcements();
 
-      switch (type) {
-      case APPEND:
-        // TODO: this doesn't actually check anything.
-        r = append(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
-        break;
-      case INCREMENT:
-        // TODO: this doesn't actually check anything.
-        r = increment(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
-        break;
-      case PUT:
-        Put put = ProtobufUtil.toPut(mutation, cellScanner);
-        checkCellSizeLimit(region, put);
-        // Throws an exception when violated
-        spaceQuotaEnforcement.getPolicyEnforcement(region).check(put);
-        quota.addMutation(put);
-        if (request.hasCondition()) {
-          Condition condition = request.getCondition();
-          byte[] row = condition.getRow().toByteArray();
-          byte[] family = condition.getFamily().toByteArray();
-          byte[] qualifier = condition.getQualifier().toByteArray();
-          CompareOperator compareOp =
-            CompareOperator.valueOf(condition.getCompareType().name());
-          ByteArrayComparable comparator =
-            ProtobufUtil.toComparator(condition.getComparator());
-          if (region.getCoprocessorHost() != null) {
-            processed = region.getCoprocessorHost().preCheckAndPut(
-              row, family, qualifier, compareOp, comparator, put);
-          }
-          if (processed == null) {
-            boolean result = region.checkAndMutate(row, family,
-              qualifier, compareOp, comparator, put, true);
-            if (region.getCoprocessorHost() != null) {
-              result = region.getCoprocessorHost().postCheckAndPut(row, family,
-                qualifier, compareOp, comparator, put, result);
-            }
-            processed = result;
-          }
-        } else {
-          region.put(put);
-          processed = Boolean.TRUE;
+      if (request.hasCondition()) {
+        CheckAndMutateResult result = checkAndMutate(region, quota, mutation, cellScanner,
+          request.getCondition(), spaceQuotaEnforcement);
+        builder.setProcessed(result.isSuccess());
+        boolean clientCellBlockSupported = isClientCellBlockSupport(context);
+        addResult(builder, result.getResult(), controller, clientCellBlockSupported);
+        if (clientCellBlockSupported) {
+          addSize(context, result.getResult(), null);
         }
-        break;
-      case DELETE:
-        Delete delete = ProtobufUtil.toDelete(mutation, cellScanner);
-        checkCellSizeLimit(region, delete);
-        spaceQuotaEnforcement.getPolicyEnforcement(region).check(delete);
-        quota.addMutation(delete);
-        if (request.hasCondition()) {
-          Condition condition = request.getCondition();
-          byte[] row = condition.getRow().toByteArray();
-          byte[] family = condition.getFamily().toByteArray();
-          byte[] qualifier = condition.getQualifier().toByteArray();
-          CompareOperator op = CompareOperator.valueOf(condition.getCompareType().name());
-          ByteArrayComparable comparator =
-            ProtobufUtil.toComparator(condition.getComparator());
-          if (region.getCoprocessorHost() != null) {
-            processed = region.getCoprocessorHost().preCheckAndDelete(
-              row, family, qualifier, op, comparator, delete);
-          }
-          if (processed == null) {
-            boolean result = region.checkAndMutate(row, family,
-              qualifier, op, comparator, delete, true);
-            if (region.getCoprocessorHost() != null) {
-              result = region.getCoprocessorHost().postCheckAndDelete(row, family,
-                qualifier, op, comparator, delete, result);
-            }
-            processed = result;
-          }
-        } else {
-          region.delete(delete);
-          processed = Boolean.TRUE;
+      } else {
+        Result r = null;
+        Boolean processed = null;
+        MutationType type = mutation.getMutateType();
+        switch (type) {
+          case APPEND:
+            // TODO: this doesn't actually check anything.
+            r = append(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
+            break;
+          case INCREMENT:
+            // TODO: this doesn't actually check anything.
+            r = increment(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
+            break;
+          case PUT:
+            put(region, quota, mutation, cellScanner, spaceQuotaEnforcement);
+            processed = Boolean.TRUE;
+            break;
+          case DELETE:
+            delete(region, quota, mutation, cellScanner, spaceQuotaEnforcement);
+            processed = Boolean.TRUE;
+            break;
+          default:
+            throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
         }
-        break;
-      default:
-          throw new DoNotRetryIOException(
-            "Unsupported mutate type: " + type.name());
-      }
-      if (processed != null) {
-        builder.setProcessed(processed.booleanValue());
-      }
-      boolean clientCellBlockSupported = isClientCellBlockSupport(context);
-      addResult(builder, r, controller, clientCellBlockSupported);
-      if (clientCellBlockSupported) {
-        addSize(context, r, null);
+        if (processed != null) {
+          builder.setProcessed(processed);
+        }
+        boolean clientCellBlockSupported = isClientCellBlockSupport(context);
+        addResult(builder, r, controller, clientCellBlockSupported);
+        if (clientCellBlockSupported) {
+          addSize(context, r, null);
+        }
       }
       return builder.build();
     } catch (IOException ie) {
@@ -2809,30 +3010,82 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (quota != null) {
         quota.close();
       }
-      // Update metrics
-      if (regionServer.metricsRegionServer != null && type != null) {
-        long after = EnvironmentEdgeManager.currentTime();
-        switch (type) {
-        case DELETE:
-          if (request.hasCondition()) {
-            regionServer.metricsRegionServer.updateCheckAndDelete(after - before);
-          } else {
-            regionServer.metricsRegionServer.updateDelete(after - before);
-          }
-          break;
+    }
+  }
+
+  private void put(HRegion region, OperationQuota quota, MutationProto mutation,
+    CellScanner cellScanner, ActivePolicyEnforcement spaceQuota) throws IOException {
+    long before = EnvironmentEdgeManager.currentTime();
+    Put put = ProtobufUtil.toPut(mutation, cellScanner);
+    checkCellSizeLimit(region, put);
+    spaceQuota.getPolicyEnforcement(region).check(put);
+    quota.addMutation(put);
+    region.put(put);
+
+    MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+    if (metricsRegionServer != null) {
+      long after = EnvironmentEdgeManager.currentTime();
+      metricsRegionServer.updatePut(region.getRegionInfo().getTable(), after - before);
+    }
+  }
+
+  private void delete(HRegion region, OperationQuota quota, MutationProto mutation,
+    CellScanner cellScanner, ActivePolicyEnforcement spaceQuota) throws IOException {
+    long before = EnvironmentEdgeManager.currentTime();
+    Delete delete = ProtobufUtil.toDelete(mutation, cellScanner);
+    checkCellSizeLimit(region, delete);
+    spaceQuota.getPolicyEnforcement(region).check(delete);
+    quota.addMutation(delete);
+    region.delete(delete);
+
+    MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+    if (metricsRegionServer != null) {
+      long after = EnvironmentEdgeManager.currentTime();
+      metricsRegionServer.updateDelete(region.getRegionInfo().getTable(), after - before);
+    }
+  }
+
+  private CheckAndMutateResult checkAndMutate(HRegion region, OperationQuota quota,
+    MutationProto mutation, CellScanner cellScanner, Condition condition,
+    ActivePolicyEnforcement spaceQuota) throws IOException {
+    long before = EnvironmentEdgeManager.currentTime();
+    CheckAndMutate checkAndMutate = ProtobufUtil.toCheckAndMutate(condition, mutation,
+      cellScanner);
+    checkCellSizeLimit(region, (Mutation) checkAndMutate.getAction());
+    spaceQuota.getPolicyEnforcement(region).check((Mutation) checkAndMutate.getAction());
+    quota.addMutation((Mutation) checkAndMutate.getAction());
+
+    CheckAndMutateResult result = null;
+    if (region.getCoprocessorHost() != null) {
+      result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
+    }
+    if (result == null) {
+      result = region.checkAndMutate(checkAndMutate);
+      if (region.getCoprocessorHost() != null) {
+        result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
+      }
+    }
+    MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+    if (metricsRegionServer != null) {
+      long after = EnvironmentEdgeManager.currentTime();
+      metricsRegionServer.updateCheckAndMutate(
+        region.getRegionInfo().getTable(), after - before);
+
+      MutationType type = mutation.getMutateType();
+      switch (type) {
         case PUT:
-          if (request.hasCondition()) {
-            regionServer.metricsRegionServer.updateCheckAndPut(after - before);
-          } else {
-            regionServer.metricsRegionServer.updatePut(after - before);
-          }
+          metricsRegionServer.updateCheckAndPut(
+            region.getRegionInfo().getTable(), after - before);
+          break;
+        case DELETE:
+          metricsRegionServer.updateCheckAndDelete(
+            region.getRegionInfo().getTable(), after - before);
           break;
         default:
           break;
-
-        }
       }
     }
+    return result;
   }
 
   // This is used to keep compatible with the old client implementation. Consider remove it if we
@@ -2844,14 +3097,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     private static final long serialVersionUID = -4305297078988180130L;
 
     @Override
-    public Throwable fillInStackTrace() {
+    public synchronized Throwable fillInStackTrace() {
       return this;
     }
   };
 
   private RegionScannerHolder getRegionScanner(ScanRequest request) throws IOException {
-    String scannerName = Long.toString(request.getScannerId());
-    RegionScannerHolder rsh = scanners.get(scannerName);
+    String scannerName = toScannerName(request.getScannerId());
+    RegionScannerHolder rsh = this.scanners.get(scannerName);
     if (rsh == null) {
       // just ignore the next or close request if scanner does not exists.
       if (closedScanners.getIfPresent(scannerName) != null) {
@@ -2880,7 +3133,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         LOG.warn("Getting exception closing " + scannerName, e);
       } finally {
         try {
-          regionServer.leases.cancelLease(scannerName);
+          regionServer.getLeaseManager().cancelLease(scannerName);
         } catch (LeaseException e) {
           LOG.warn("Getting exception closing " + scannerName, e);
         }
@@ -2890,9 +3143,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return rsh;
   }
 
-  private RegionScannerHolder newRegionScanner(ScanRequest request, ScanResponse.Builder builder)
-      throws IOException {
-    Region region = getRegion(request.getRegion());
+  /**
+   * @return Pair with scannerName key to use with this new Scanner and its RegionScannerHolder
+   *    value.
+   */
+  private Pair<String, RegionScannerHolder> newRegionScanner(ScanRequest request,
+      ScanResponse.Builder builder) throws IOException {
+    HRegion region = getRegion(request.getRegion());
     ClientProtos.Scan protoScan = request.getScan();
     boolean isLoadingCfsOnDemandSet = protoScan.hasLoadColumnFamiliesOnDemand();
     Scan scan = ProtobufUtil.toScan(protoScan);
@@ -2907,13 +3164,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         scan.addFamily(family);
       }
     }
-    RegionScanner scanner = null;
     if (region.getCoprocessorHost() != null) {
-      scanner = region.getCoprocessorHost().preScannerOpen(scan);
+      // preScannerOpen is not allowed to return a RegionScanner. Only post hook can create a
+      // wrapper for the core created RegionScanner
+      region.getCoprocessorHost().preScannerOpen(scan);
     }
-    if (scanner == null) {
-      scanner = region.getScanner(scan);
-    }
+    RegionScannerImpl coreScanner = region.getScanner(scan);
+    Shipper shipper = coreScanner;
+    RegionScanner scanner = coreScanner;
     if (region.getCoprocessorHost() != null) {
       scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
     }
@@ -2921,8 +3179,24 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     builder.setScannerId(scannerId);
     builder.setMvccReadPoint(scanner.getMvccReadPoint());
     builder.setTtl(scannerLeaseTimeoutPeriod);
-    String scannerName = String.valueOf(scannerId);
-    return addScanner(scannerName, scanner, region, scan.isNeedCursorResult());
+    String scannerName = toScannerName(scannerId);
+
+    boolean fullRegionScan = !region.getRegionInfo().getTable().isSystemTable() &&
+      isFullRegionScan(scan, region);
+
+    return new Pair<String, RegionScannerHolder>(scannerName,
+      addScanner(scannerName, scanner, shipper, region, scan.isNeedCursorResult(),
+      fullRegionScan));
+  }
+
+  /**
+   * The returned String is used as key doing look up of outstanding Scanners in this Servers'
+   * this.scanners, the Map of outstanding scanners and their current state.
+   * @param scannerId A scanner long id.
+   * @return The long id as a String.
+   */
+  private static String toScannerName(long scannerId) {
+    return Long.toString(scannerId);
   }
 
   private void checkScanNextCallSeq(ScanRequest request, RegionScannerHolder rsh)
@@ -2940,9 +3214,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  private void addScannerLeaseBack(Leases.Lease lease) {
+  private void addScannerLeaseBack(LeaseManager.Lease lease) {
     try {
-      regionServer.leases.addLease(lease);
+      regionServer.getLeaseManager().addLease(lease);
     } catch (LeaseStillHeldException e) {
       // should not happen as the scanner id is unique.
       throw new AssertionError(e);
@@ -2990,9 +3264,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // return whether we have more results in region.
   private void scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
       long maxQuotaResultSize, int maxResults, int limitOfRows, List<Result> results,
-      ScanResponse.Builder builder, MutableObject lastBlock, RpcCallContext context)
+      ScanResponse.Builder builder, MutableObject<Object> lastBlock, RpcCallContext context)
       throws IOException {
-    Region region = rsh.r;
+    HRegion region = rsh.r;
     RegionScanner scanner = rsh.s;
     long maxResultSize;
     if (scanner.getMaxResultSize() > 0) {
@@ -3071,7 +3345,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               // so then we need to increase the numOfCompleteRows.
               if (results.isEmpty()) {
                 if (rsh.rowOfLastPartialResult != null &&
-                    !CellUtil.matchingRow(values.get(0), rsh.rowOfLastPartialResult)) {
+                    !CellUtil.matchingRows(values.get(0), rsh.rowOfLastPartialResult)) {
                   numOfCompleteRows++;
                   checkLimitOfRows(numOfCompleteRows, limitOfRows, moreRows, scannerContext,
                     builder);
@@ -3079,7 +3353,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               } else {
                 Result lastResult = results.get(results.size() - 1);
                 if (lastResult.mayHaveMoreCellsInRow() &&
-                    !CellUtil.matchingRow(values.get(0), lastResult.getRow())) {
+                    !CellUtil.matchingRows(values.get(0), lastResult.getRow())) {
                   numOfCompleteRows++;
                   checkLimitOfRows(numOfCompleteRows, limitOfRows, moreRows, scannerContext,
                     builder);
@@ -3101,6 +3375,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 break;
               }
             }
+          } else if (!moreRows && !results.isEmpty()) {
+            // No more cells for the scan here, we need to ensure that the mayHaveMoreCellsInRow of
+            // last result is false. Otherwise it's possible that: the first nextRaw returned
+            // because BATCH_LIMIT_REACHED (BTW it happen to exhaust all cells of the scan),so the
+            // last result's mayHaveMoreCellsInRow will be true. while the following nextRaw will
+            // return with moreRows=false, which means moreResultsInRegion would be false, it will
+            // be a contradictory state (HBASE-21206).
+            int lastIdx = results.size() - 1;
+            Result r = results.get(lastIdx);
+            if (r.mayHaveMoreCellsInRow()) {
+              results.set(lastIdx, Result.create(r.rawCells(), r.getExists(), r.isStale(), false));
+            }
           }
           boolean sizeLimitReached = scannerContext.checkSizeLimit(LimitScope.BETWEEN_ROWS);
           boolean timeLimitReached = scannerContext.checkTimeLimit(LimitScope.BETWEEN_ROWS);
@@ -3108,20 +3394,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           limitReached = sizeLimitReached || timeLimitReached || resultsLimitReached;
 
           if (limitReached || !moreRows) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Done scanning. limitReached: " + limitReached + " moreRows: " + moreRows
-                  + " scannerContext: " + scannerContext);
-            }
             // We only want to mark a ScanResponse as a heartbeat message in the event that
             // there are more values to be read server side. If there aren't more values,
             // marking it as a heartbeat is wasteful because the client will need to issue
             // another ScanRequest only to realize that they already have all the values
-            if (moreRows) {
+            if (moreRows && timeLimitReached) {
               // Heartbeat messages occur when the time limit has been reached.
-              builder.setHeartbeatMessage(timeLimitReached);
-              if (timeLimitReached && rsh.needCursor) {
+              builder.setHeartbeatMessage(true);
+              if (rsh.needCursor) {
                 Cell cursorCell = scannerContext.getLastPeekedCell();
-                if (cursorCell != null ) {
+                if (cursorCell != null) {
                   builder.setCursor(ProtobufUtil.toCursor(cursorCell));
                 }
               }
@@ -3147,14 +3429,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           builder.setScanMetrics(metricBuilder.build());
         }
       }
-      region.updateReadRequestsCount(numOfResults);
-      requestRowActionCount.add(numOfResults);
       long end = EnvironmentEdgeManager.currentTime();
       long responseCellSize = context != null ? context.getResponseCellSize() : 0;
       region.getMetrics().updateScanTime(end - before);
-      if (regionServer.metricsRegionServer != null) {
-        regionServer.metricsRegionServer.updateScanSize(responseCellSize);
-        regionServer.metricsRegionServer.updateScanTime(end - before);
+      final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+      if (metricsRegionServer != null) {
+        metricsRegionServer.updateScanSize(
+            region.getTableDescriptor().getTableName(), responseCellSize);
+        metricsRegionServer.updateScanTime(
+            region.getTableDescriptor().getTableName(), end - before);
       }
     } finally {
       region.closeRegionOperation();
@@ -3187,14 +3470,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
     } catch (IOException e) {
       if (request.hasScannerId()) {
-        String scannerName = Long.toString(request.getScannerId());
+        String scannerName = toScannerName(request.getScannerId());
         if (LOG.isDebugEnabled()) {
           LOG.debug(
             "Server shutting down and client tried to access missing scanner " + scannerName);
         }
-        if (regionServer.leases != null) {
+        final LeaseManager leaseManager = regionServer.getLeaseManager();
+        if (leaseManager != null) {
           try {
-            regionServer.leases.cancelLease(scannerName);
+            leaseManager.cancelLease(scannerName);
           } catch (LeaseException le) {
             // No problem, ignore
             if (LOG.isTraceEnabled()) {
@@ -3209,14 +3493,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     rpcScanRequestCount.increment();
     RegionScannerHolder rsh;
     ScanResponse.Builder builder = ScanResponse.newBuilder();
+    String scannerName;
     try {
       if (request.hasScannerId()) {
         // The downstream projects such as AsyncHBase in OpenTSDB need this value. See HBASE-18000
         // for more details.
-        builder.setScannerId(request.getScannerId());
+        long scannerId = request.getScannerId();
+        builder.setScannerId(scannerId);
+        scannerName = toScannerName(scannerId);
         rsh = getRegionScanner(request);
       } else {
-        rsh = newRegionScanner(request, builder);
+        Pair<String, RegionScannerHolder> scannerNameAndRSH = newRegionScanner(request, builder);
+        scannerName = scannerNameAndRSH.getFirst();
+        rsh = scannerNameAndRSH.getSecond();
       }
     } catch (IOException e) {
       if (e == SCANNER_ALREADY_CLOSED) {
@@ -3226,13 +3515,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       throw new ServiceException(e);
     }
-    Region region = rsh.r;
-    String scannerName = rsh.scannerName;
-    Leases.Lease lease;
+    if (rsh.fullRegionScan) {
+      rpcFullScanRequestCount.increment();
+    }
+    HRegion region = rsh.r;
+    LeaseManager.Lease lease;
     try {
       // Remove lease while its being processed in server; protects against case
-      // where processing of request takes > lease expiration time.
-      lease = regionServer.leases.removeLease(scannerName);
+      // where processing of request takes > lease expiration time. or null if none found.
+      lease = regionServer.getLeaseManager().removeLease(scannerName);
     } catch (LeaseException e) {
       throw new ServiceException(e);
     }
@@ -3252,7 +3543,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException e) {
       addScannerLeaseBack(lease);
       throw new ServiceException(e);
-    };
+    }
     try {
       checkScanNextCallSeq(request, rsh);
     } catch (OutOfOrderScannerNextException e) {
@@ -3284,7 +3575,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     MutableObject<Object> lastBlock = new MutableObject<>();
     boolean scannerClosed = false;
     try {
-      List<Result> results = new ArrayList<>();
+      List<Result> results = new ArrayList<>(Math.min(rows, 512));
       if (rows > 0) {
         boolean done = false;
         // Call coprocessor. Get region info from scanner.
@@ -3407,7 +3698,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  private void closeScanner(Region region, RegionScanner scanner, String scannerName,
+  private void closeScanner(HRegion region, RegionScanner scanner, String scannerName,
       RpcCallContext context) throws IOException {
     if (region.getCoprocessorHost() != null) {
       if (region.getCoprocessorHost().preScannerClose(scanner)) {
@@ -3432,6 +3723,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public CoprocessorServiceResponse execRegionServerService(RpcController controller,
       CoprocessorServiceRequest request) throws ServiceException {
+    rpcPreCheck("execRegionServerService");
     return regionServer.execRegionServerService(controller, request);
   }
 
@@ -3440,6 +3732,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       RpcController controller, UpdateConfigurationRequest request)
       throws ServiceException {
     try {
+      requirePermission("updateConfiguration", Permission.Action.ADMIN);
       this.regionServer.updateConfiguration();
     } catch (Exception e) {
       throw new ServiceException(e);
@@ -3471,19 +3764,214 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   @Override
-  public ExecuteProceduresResponse executeProcedures(RpcController controller,
-       ExecuteProceduresRequest request) throws ServiceException {
-    ExecuteProceduresResponse.Builder builder = ExecuteProceduresResponse.newBuilder();
-    if (request.getOpenRegionCount() > 0) {
-      for (OpenRegionRequest req: request.getOpenRegionList()) {
-        builder.addOpenRegion(openRegion(controller, req));
+  public ClearRegionBlockCacheResponse clearRegionBlockCache(RpcController controller,
+      ClearRegionBlockCacheRequest request) throws ServiceException {
+    rpcPreCheck("clearRegionBlockCache");
+    ClearRegionBlockCacheResponse.Builder builder =
+        ClearRegionBlockCacheResponse.newBuilder();
+    CacheEvictionStatsBuilder stats = CacheEvictionStats.builder();
+    List<HRegion> regions = getRegions(request.getRegionList(), stats);
+    for (HRegion region : regions) {
+      try {
+        stats = stats.append(this.regionServer.clearRegionBlockCache(region));
+      } catch (Exception e) {
+        stats.addException(region.getRegionInfo().getRegionName(), e);
       }
-     }
-     if (request.getCloseRegionCount() > 0) {
-       for (CloseRegionRequest req: request.getCloseRegionList()) {
-         builder.addCloseRegion(closeRegion(controller, req));
-       }
-     }
-     return builder.build();
+    }
+    stats.withMaxCacheSize(regionServer.getBlockCache().map(BlockCache::getMaxSize).orElse(0L));
+    return builder.setStats(ProtobufUtil.toCacheEvictionStats(stats.build())).build();
+  }
+
+  private void executeOpenRegionProcedures(OpenRegionRequest request,
+      Map<TableName, TableDescriptor> tdCache) {
+    long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
+    for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
+      RegionInfo regionInfo = ProtobufUtil.toRegionInfo(regionOpenInfo.getRegion());
+      TableDescriptor tableDesc = tdCache.get(regionInfo.getTable());
+      if (tableDesc == null) {
+        try {
+          tableDesc = regionServer.getTableDescriptors().get(regionInfo.getTable());
+        } catch (IOException e) {
+          // Here we do not fail the whole method since we also need deal with other
+          // procedures, and we can not ignore this one, so we still schedule a
+          // AssignRegionHandler and it will report back to master if we still can not get the
+          // TableDescriptor.
+          LOG.warn("Failed to get TableDescriptor of {}, will try again in the handler",
+            regionInfo.getTable(), e);
+        }
+      }
+      if (regionOpenInfo.getFavoredNodesCount() > 0) {
+        regionServer.updateRegionFavoredNodesMapping(regionInfo.getEncodedName(),
+          regionOpenInfo.getFavoredNodesList());
+      }
+      long procId = regionOpenInfo.getOpenProcId();
+      if (regionServer.submitRegionProcedure(procId)) {
+        regionServer.executorService.submit(AssignRegionHandler
+            .create(regionServer, regionInfo, procId, tableDesc,
+                masterSystemTime));
+      }
+    }
+  }
+
+  private void executeCloseRegionProcedures(CloseRegionRequest request) {
+    String encodedName;
+    try {
+      encodedName = ProtobufUtil.getRegionEncodedName(request.getRegion());
+    } catch (DoNotRetryIOException e) {
+      throw new UncheckedIOException("Should not happen", e);
+    }
+    ServerName destination = request.hasDestinationServer() ?
+        ProtobufUtil.toServerName(request.getDestinationServer()) :
+        null;
+    long procId = request.getCloseProcId();
+    if (regionServer.submitRegionProcedure(procId)) {
+      regionServer.executorService.submit(UnassignRegionHandler
+          .create(regionServer, encodedName, procId, false, destination));
+    }
+  }
+
+  private void executeProcedures(RemoteProcedureRequest request) {
+    RSProcedureCallable callable;
+    try {
+      callable = Class.forName(request.getProcClass()).asSubclass(RSProcedureCallable.class)
+        .getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
+      LOG.warn("Failed to instantiating remote procedure {}, pid={}", request.getProcClass(),
+        request.getProcId(), e);
+      regionServer.remoteProcedureComplete(request.getProcId(), e);
+      return;
+    }
+    callable.init(request.getProcData().toByteArray(), regionServer);
+    LOG.debug("Executing remote procedure {}, pid={}", callable.getClass(), request.getProcId());
+    regionServer.executeProcedure(request.getProcId(), callable);
+  }
+
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public ExecuteProceduresResponse executeProcedures(RpcController controller,
+      ExecuteProceduresRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      throwOnWrongStartCode(request);
+      regionServer.getRegionServerCoprocessorHost().preExecuteProcedures();
+      if (request.getOpenRegionCount() > 0) {
+        // Avoid reading from the TableDescritor every time(usually it will read from the file
+        // system)
+        Map<TableName, TableDescriptor> tdCache = new HashMap<>();
+        request.getOpenRegionList().forEach(req -> executeOpenRegionProcedures(req, tdCache));
+      }
+      if (request.getCloseRegionCount() > 0) {
+        request.getCloseRegionList().forEach(this::executeCloseRegionProcedures);
+      }
+      if (request.getProcCount() > 0) {
+        request.getProcList().forEach(this::executeProcedures);
+      }
+      regionServer.getRegionServerCoprocessorHost().postExecuteProcedures();
+      return ExecuteProceduresResponse.getDefaultInstance();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public SlowLogResponses getSlowLogResponses(final RpcController controller,
+      final SlowLogResponseRequest request) {
+    final NamedQueueRecorder namedQueueRecorder =
+      this.regionServer.getNamedQueueRecorder();
+    final List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request, namedQueueRecorder);
+    SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
+      .addAllSlowLogPayloads(slowLogPayloads)
+      .build();
+    return slowLogResponses;
+  }
+
+  private List<SlowLogPayload> getSlowLogPayloads(SlowLogResponseRequest request,
+      NamedQueueRecorder namedQueueRecorder) {
+    if (namedQueueRecorder == null) {
+      return Collections.emptyList();
+    }
+    List<SlowLogPayload> slowLogPayloads;
+    NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
+    namedQueueGetRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
+    namedQueueGetRequest.setSlowLogResponseRequest(request);
+    NamedQueueGetResponse namedQueueGetResponse =
+      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+    slowLogPayloads = namedQueueGetResponse != null ?
+      namedQueueGetResponse.getSlowLogPayloads() :
+      Collections.emptyList();
+    return slowLogPayloads;
+  }
+
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public SlowLogResponses getLargeLogResponses(final RpcController controller,
+      final SlowLogResponseRequest request) {
+    final NamedQueueRecorder namedQueueRecorder =
+      this.regionServer.getNamedQueueRecorder();
+    final List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request, namedQueueRecorder);
+    SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
+      .addAllSlowLogPayloads(slowLogPayloads)
+      .build();
+    return slowLogResponses;
+  }
+
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public ClearSlowLogResponses clearSlowLogsResponses(final RpcController controller,
+    final ClearSlowLogResponseRequest request) throws ServiceException {
+    rpcPreCheck("clearSlowLogsResponses");
+    final NamedQueueRecorder namedQueueRecorder =
+      this.regionServer.getNamedQueueRecorder();
+    boolean slowLogsCleaned = Optional.ofNullable(namedQueueRecorder)
+      .map(queueRecorder ->
+        queueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG))
+      .orElse(false);
+    ClearSlowLogResponses clearSlowLogResponses = ClearSlowLogResponses.newBuilder()
+      .setIsCleaned(slowLogsCleaned)
+      .build();
+    return clearSlowLogResponses;
+  }
+
+  @Override
+  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+      HBaseProtos.LogRequest request) throws ServiceException {
+    try {
+      final String logClassName = request.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName)
+        .asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("SlowLogResponseRequest")) {
+        SlowLogResponseRequest slowLogResponseRequest =
+          (SlowLogResponseRequest) method.invoke(null, request.getLogMessage());
+        final NamedQueueRecorder namedQueueRecorder =
+          this.regionServer.getNamedQueueRecorder();
+        final List<SlowLogPayload> slowLogPayloads =
+          getSlowLogPayloads(slowLogResponseRequest, namedQueueRecorder);
+        SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
+          .addAllSlowLogPayloads(slowLogPayloads)
+          .build();
+        return HBaseProtos.LogEntry.newBuilder()
+          .setLogClassName(slowLogResponses.getClass().getName())
+          .setLogMessage(slowLogResponses.toByteString()).build();
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+        | InvocationTargetException e) {
+      LOG.error("Error while retrieving log entries.", e);
+      throw new ServiceException(e);
+    }
+    throw new ServiceException("Invalid request params");
+  }
+
+  public RpcScheduler getRpcScheduler() {
+    return rpcServer.getScheduler();
+  }
+
+  protected AccessChecker getAccessChecker() {
+    return accessChecker;
+  }
+
+  protected ZKPermissionWatcher getZkPermissionWatcher() {
+    return zkPermissionWatcher;
   }
 }

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +16,9 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
-
-import static org.junit.Assert.*;
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -27,32 +26,34 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-import org.apache.hadoop.hbase.shaded.com.google.common.primitives.Ints;
-
 import org.junit.experimental.categories.Category;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestMemStoreLAB {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMemStoreLAB.class);
 
   private final static Configuration conf = new Configuration();
 
@@ -62,8 +63,8 @@ public class TestMemStoreLAB {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    ChunkCreator.initialize(1 * 1024, false, 50*1024000l, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
-      null);
+    ChunkCreator.initialize(1 * 1024, false, 50 * 1024000L, 0.2f,
+      MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
   @AfterClass
@@ -72,7 +73,7 @@ public class TestMemStoreLAB {
         (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()
             * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, globalMemStoreLimit, 0.2f,
-      MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
+      MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
   /**
@@ -91,7 +92,7 @@ public class TestMemStoreLAB {
     for (int i = 0; i < 100000; i++) {
       int valSize = rand.nextInt(3);
       KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
-      int size = KeyValueUtil.length(kv);
+      int size = kv.getSerializedSize();
       ByteBufferKeyValue newKv = (ByteBufferKeyValue) mslab.copyCellInto(kv);
       if (newKv.getBuffer() != lastBuffer) {
         // since we add the chunkID at the 0th offset of the chunk and the
@@ -126,23 +127,23 @@ public class TestMemStoreLAB {
     Configuration conf = new Configuration();
     MultithreadedTestUtil.TestContext ctx =
       new MultithreadedTestUtil.TestContext(conf);
-    
+
     final AtomicInteger totalAllocated = new AtomicInteger();
-    
+
     final MemStoreLAB mslab = new MemStoreLABImpl();
     List<List<AllocRecord>> allocations = Lists.newArrayList();
-    
+
     for (int i = 0; i < 10; i++) {
       final List<AllocRecord> allocsByThisThread = Lists.newLinkedList();
       allocations.add(allocsByThisThread);
-      
+
       TestThread t = new MultithreadedTestUtil.RepeatingTestThread(ctx) {
         private Random r = new Random();
         @Override
         public void doAnAction() throws Exception {
           int valSize = r.nextInt(3);
           KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
-          int size = KeyValueUtil.length(kv);
+          int size = kv.getSerializedSize();
           ByteBufferKeyValue newCell = (ByteBufferKeyValue) mslab.copyCellInto(kv);
           totalAllocated.addAndGet(size);
           allocsByThisThread.add(new AllocRecord(newCell.getBuffer(), newCell.getOffset(), size));
@@ -164,7 +165,9 @@ public class TestMemStoreLAB {
     int sizeCounted = 0;
     for (AllocRecord rec : Iterables.concat(allocations)) {
       sizeCounted += rec.size;
-      if (rec.size == 0) continue;
+      if (rec.size == 0) {
+        continue;
+      }
       Map<Integer, AllocRecord> mapForThisByteArray =
         mapsByChunk.get(rec.alloc);
       if (mapForThisByteArray == null) {
@@ -176,7 +179,7 @@ public class TestMemStoreLAB {
           oldVal);
     }
     assertEquals("Sanity check test", sizeCounted, totalAllocated.get());
-    
+
     // Now check each byte array to make sure allocations don't overlap
     for (Map<Integer, AllocRecord> allocsInChunk : mapsByChunk.values()) {
       // since we add the chunkID at the 0th offset of the chunk and the
@@ -203,8 +206,8 @@ public class TestMemStoreLAB {
       MemStoreLABImpl mslab = new MemStoreLABImpl();
       // by default setting, there should be no chunks initialized in the pool
       assertTrue(mslab.getPooledChunks().isEmpty());
-      oldInstance = ChunkCreator.INSTANCE;
-      ChunkCreator.INSTANCE = null;
+      oldInstance = ChunkCreator.instance;
+      ChunkCreator.instance = null;
       // reset mslab with chunk pool
       Configuration conf = HBaseConfiguration.create();
       conf.setDouble(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.1);
@@ -214,7 +217,8 @@ public class TestMemStoreLAB {
       long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
           .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
       ChunkCreator.initialize(MemStoreLABImpl.MAX_ALLOC_DEFAULT, false,
-        globalMemStoreLimit, 0.1f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
+        globalMemStoreLimit, 0.1f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
+        null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
       ChunkCreator.clearDisableFlag();
       mslab = new MemStoreLABImpl(conf);
       // launch multiple threads to trigger frequent chunk retirement
@@ -248,7 +252,7 @@ public class TestMemStoreLAB {
       }
       // none of the chunkIds would have been returned back
       assertTrue("All the chunks must have been cleared",
-          ChunkCreator.INSTANCE.numberOfMappedChunks() != 0);
+          ChunkCreator.instance.numberOfMappedChunks() != 0);
       int pooledChunksNum = mslab.getPooledChunks().size();
       // close the mslab
       mslab.close();
@@ -258,7 +262,7 @@ public class TestMemStoreLAB {
           + " after mslab closed but actually: " + (pooledChunksNum-queueLength),
           pooledChunksNum-queueLength == 0);
     } finally {
-      ChunkCreator.INSTANCE = oldInstance;
+      ChunkCreator.instance = oldInstance;
     }
   }
 
@@ -304,7 +308,7 @@ public class TestMemStoreLAB {
       }
       return Ints.compare(this.offset, e.offset);
     }
-    
+
     @Override
     public String toString() {
       return "AllocRecord(offset=" + this.offset + ", size=" + size + ")";

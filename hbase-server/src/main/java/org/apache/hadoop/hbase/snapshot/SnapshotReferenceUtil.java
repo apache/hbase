@@ -29,8 +29,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,7 +40,8 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -52,7 +51,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
  */
 @InterfaceAudience.Private
 public final class SnapshotReferenceUtil {
-  private static final Log LOG = LogFactory.getLog(SnapshotReferenceUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotReferenceUtil.class);
 
   public interface StoreFileVisitor {
     void storeFile(final RegionInfo regionInfo, final String familyName,
@@ -232,9 +231,7 @@ public final class SnapshotReferenceUtil {
         throw new CorruptedSnapshotException(e.getCause().getMessage(),
             ProtobufUtil.createSnapshotDesc(snapshotDesc));
       } else {
-        IOException ex = new IOException();
-        ex.initCause(e.getCause());
-        throw ex;
+        throw new IOException(e.getCause());
       }
     }
   }
@@ -353,6 +350,16 @@ public final class SnapshotReferenceUtil {
         String hfile = storeFile.getName();
         if (HFileLink.isHFileLink(hfile)) {
           names.add(HFileLink.getReferencedHFileName(hfile));
+        } else if (StoreFileInfo.isReference(hfile)) {
+          Path refPath = StoreFileInfo.getReferredToFile(new Path(new Path(
+              new Path(new Path(regionInfo.getTable().getNamespaceAsString(),
+                  regionInfo.getTable().getQualifierAsString()), regionInfo.getEncodedName()),
+              family), hfile));
+          names.add(hfile);
+          names.add(refPath.getName());
+          if (HFileLink.isHFileLink(refPath.getName())) {
+            names.add(HFileLink.getReferencedHFileName(refPath.getName()));
+          }
         } else {
           names.add(hfile);
         }

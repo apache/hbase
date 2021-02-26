@@ -21,21 +21,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * The storage engine that implements the stripe-based store/compaction scheme.
@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
   StripeCompactionPolicy, StripeCompactor, StripeStoreFileManager> {
-  private static final Log LOG = LogFactory.getLog(StripeStoreEngine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StripeStoreEngine.class);
   private StripeStoreConfig config;
 
   @Override

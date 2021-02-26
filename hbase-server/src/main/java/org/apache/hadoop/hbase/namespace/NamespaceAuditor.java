@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.namespace;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -30,6 +28,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The Class NamespaceAuditor performs checks to ensure operations like table creation
@@ -38,7 +38,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class NamespaceAuditor {
-  private static final Log LOG = LogFactory.getLog(NamespaceAuditor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NamespaceAuditor.class);
   private NamespaceStateManager stateManager;
   private MasterServices masterServices;
 
@@ -66,7 +66,7 @@ public class NamespaceAuditor {
   public void checkQuotaToCreateTable(TableName tName, int regions) throws IOException {
     if (stateManager.isInitialized()) {
       // We do this check to fail fast.
-      if (MetaTableAccessor.tableExists(this.masterServices.getConnection(), tName)) {
+      if (masterServices.getTableDescriptors().exists(tName)) {
         throw new TableExistsException(tName);
       }
       stateManager.checkAndUpdateNamespaceTableCount(tName, regions);

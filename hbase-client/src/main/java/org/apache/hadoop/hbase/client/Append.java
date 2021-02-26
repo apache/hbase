@@ -17,19 +17,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Performs Append operations on a single row.
@@ -44,12 +46,50 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 public class Append extends Mutation {
+  private static final Logger LOG = LoggerFactory.getLogger(Append.class);
+  private static final long HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
+  private TimeRange tr = TimeRange.allTime();
+
+  /**
+   * Sets the TimeRange to be used on the Get for this append.
+   * <p>
+   * This is useful for when you have counters that only last for specific
+   * periods of time (ie. counters that are partitioned by time).  By setting
+   * the range of valid times for this append, you can potentially gain
+   * some performance with a more optimal Get operation.
+   * Be careful adding the time range to this class as you will update the old cell if the
+   * time range doesn't include the latest cells.
+   * <p>
+   * This range is used as [minStamp, maxStamp).
+   * @param minStamp minimum timestamp value, inclusive
+   * @param maxStamp maximum timestamp value, exclusive
+   * @return this
+   */
+  public Append setTimeRange(long minStamp, long maxStamp) {
+    tr = new TimeRange(minStamp, maxStamp);
+    return this;
+  }
+
+  /**
+   * Gets the TimeRange used for this append.
+   * @return TimeRange
+   */
+  public TimeRange getTimeRange() {
+    return this.tr;
+  }
+
+  @Override
+  protected long extraHeapSize(){
+    return HEAP_OVERHEAD;
+  }
+
   /**
    * @param returnResults
    *          True (default) if the append operation should return the results.
    *          A client that is not interested in the result can save network
    *          bandwidth setting this to false.
    */
+  @Override
   public Append setReturnResults(boolean returnResults) {
     super.setReturnResults(returnResults);
     return this;
@@ -59,6 +99,7 @@ public class Append extends Mutation {
    * @return current setting for returnResults
    */
   // This method makes public the superclasses's protected method.
+  @Override
   public boolean isReturnResults() {
     return super.isReturnResults();
   }
@@ -74,16 +115,11 @@ public class Append extends Mutation {
   }
   /**
    * Copy constructor
-   * @param a
+   * @param appendToCopy append to copy
    */
-  public Append(Append a) {
-    this.row = a.getRow();
-    this.ts = a.getTimeStamp();
-    this.familyMap.putAll(a.getFamilyCellMap());
-    for (Map.Entry<String, byte[]> entry : a.getAttributesMap().entrySet()) {
-      this.setAttribute(entry.getKey(), entry.getValue());
-    }
-    this.setPriority(a.getPriority());
+  public Append(Append appendToCopy) {
+    super(appendToCopy);
+    this.tr = appendToCopy.getTimeRange();
   }
 
   /** Create a Append operation for the specified row.
@@ -96,6 +132,18 @@ public class Append extends Mutation {
   public Append(final byte [] rowArray, final int rowOffset, final int rowLength) {
     checkRow(rowArray, rowOffset, rowLength);
     this.row = Bytes.copy(rowArray, rowOffset, rowLength);
+  }
+
+  /**
+   * Construct the Append with user defined data. NOTED:
+   * 1) all cells in the familyMap must have the Type.Put
+   * 2) the row of each cell must be same with passed row.
+   * @param row row. CAN'T be null
+   * @param ts timestamp
+   * @param familyMap the map to collect all cells internally. CAN'T be null
+   */
+  public Append(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+    super(row, ts, familyMap);
   }
 
   /**
@@ -131,14 +179,18 @@ public class Append extends Mutation {
    */
   @SuppressWarnings("unchecked")
   public Append add(final Cell cell) {
-    // Presume it is KeyValue for now.
-    byte [] family = CellUtil.cloneFamily(cell);
+    try {
+      super.add(cell);
+    } catch (IOException e) {
+      // we eat the exception of wrong row for BC..
+      LOG.error(e.toString(), e);
+    }
+    return this;
+  }
 
-    // Get cell list for the family
-    List<Cell> list = getCellList(family);
-
-    // find where the new entry should be placed in the List
-    list.add(cell);
+  @Override
+  public Append setTimestamp(long timestamp) {
+    super.setTimestamp(timestamp);
     return this;
   }
 
@@ -157,6 +209,12 @@ public class Append extends Mutation {
     return (Append) super.setDurability(d);
   }
 
+  /**
+   * Method for setting the Append's familyMap
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Append#Append(byte[], long, NavigableMap)} instead
+   */
+  @Deprecated
   @Override
   public Append setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Append) super.setFamilyCellMap(map);

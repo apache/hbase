@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.client.rsgroup;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -33,27 +34,27 @@ import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 //Separate Shell test class for Groups
 //Since we need to use a different balancer and run more than 1 RS
 @Category({ClientTests.class, LargeTests.class})
-@Ignore
 public class TestShellRSGroups {
-  final Log LOG = LogFactory.getLog(getClass());
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestShellRSGroups.class);
+
+  final Logger LOG = LoggerFactory.getLogger(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static ScriptingContainer jruby = new ScriptingContainer();
-  private static String basePath;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    basePath = System.getProperty("basedir");
 
     // Start mini cluster
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
@@ -73,12 +74,11 @@ public class TestShellRSGroups {
         CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         RSGroupAdminEndpoint.class.getName());
 
-    TEST_UTIL.startMiniCluster(1,4);
+    TEST_UTIL.startMiniCluster(4);
 
     // Configure jruby runtime
     List<String> loadPaths = new ArrayList<>(2);
-    loadPaths.add(basePath+"/src/main/ruby");
-    loadPaths.add(basePath+"/src/test/ruby");
+    loadPaths.add("src/test/ruby");
     jruby.setLoadPaths(loadPaths);
     jruby.put("$TEST_CLUSTER", TEST_UTIL);
     System.setProperty("jruby.jit.logging.verbose", "true");
@@ -96,8 +96,7 @@ public class TestShellRSGroups {
     try {
       // Start only GroupShellTest
       System.setProperty("shell.test", "Hbase::RSGroupShellTest");
-      jruby.runScriptlet(PathType.ABSOLUTE,
-          basePath + "/src/test/ruby/tests_runner.rb");
+      jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
     } finally {
       System.clearProperty("shell.test");
     }

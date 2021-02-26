@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,16 +25,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -55,25 +50,30 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test of a long-lived scanner validating as we go.
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestScanner {
-  @Rule public TestName name = new TestName();
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
 
-  private static final Log LOG = LogFactory.getLog(TestScanner.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestScanner.class);
+
+  @Rule public TestName name = new TestName();
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestScanner.class);
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   private static final byte [] FIRST_ROW = HConstants.EMPTY_START_ROW;
@@ -117,13 +117,13 @@ public class TestScanner {
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
-    thirdRowBytes[START_KEY_BYTES.length - 1] += 2;
+    thirdRowBytes[START_KEY_BYTES.length - 1] =
+        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
     col1 = Bytes.toBytes("column1");
   }
 
   /**
    * Test basic stop row filter works.
-   * @throws Exception
    */
   @Test
   public void testStopRow() throws Exception {
@@ -155,7 +155,7 @@ public class TestScanner {
       for (boolean first = true; s.next(results);) {
         kv = results.get(0);
         if (first) {
-          assertTrue(CellUtil.matchingRow(kv,  startrow));
+          assertTrue(CellUtil.matchingRows(kv,  startrow));
           first = false;
         }
         count++;
@@ -225,7 +225,6 @@ public class TestScanner {
   /**
    * Test that closing a scanner while a client is using it doesn't throw
    * NPEs but instead a UnknownScannerException. HBASE-2503
-   * @throws Exception
    */
   @Test
   public void testRaceBetweenClientAndTimeout() throws Exception {
@@ -250,7 +249,6 @@ public class TestScanner {
   }
 
   /** The test!
-   * @throws IOException
    */
   @Test
   public void testScanner() throws IOException {
@@ -373,15 +371,11 @@ public class TestScanner {
 
   /** Use a scanner to get the region info and then validate the results */
   private void scan(boolean validateStartcode, String serverName)
-  throws IOException {
+      throws IOException {
     InternalScanner scanner = null;
     Scan scan = null;
     List<Cell> results = new ArrayList<>();
-    byte [][][] scanColumns = {
-        COLS,
-        EXPLICIT_COLS
-    };
-
+    byte [][][] scanColumns = {COLS, EXPLICIT_COLS};
     for(int i = 0; i < scanColumns.length; i++) {
       try {
         scan = new Scan(FIRST_ROW);
@@ -461,16 +455,15 @@ public class TestScanner {
    * Tests to do a sync flush during the middle of a scan. This is testing the StoreScanner
    * update readers code essentially.  This is not highly concurrent, since its all 1 thread.
    * HBase-910.
-   * @throws Exception
    */
   @Test
   public void testScanAndSyncFlush() throws Exception {
     this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
     Table hri = new RegionAsTable(region);
     try {
-        LOG.info("Added: " +
-          HBaseTestCase.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
-            Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
+      LOG.info("Added: " +
+        HBaseTestCase.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
+          Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
       int count = count(hri, -1, false);
       assertEquals(count, count(hri, 100, false)); // do a sync flush.
     } catch (Exception e) {
@@ -484,17 +477,15 @@ public class TestScanner {
   /**
    * Tests to do a concurrent flush (using a 2nd thread) while scanning.  This tests both
    * the StoreScanner update readers and the transition from memstore -> snapshot -> store file.
-   *
-   * @throws Exception
    */
   @Test
   public void testScanAndRealConcurrentFlush() throws Exception {
     this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
     Table hri = new RegionAsTable(region);
     try {
-        LOG.info("Added: " +
-          HBaseTestCase.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
-            Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
+      LOG.info("Added: " +
+        HBaseTestCase.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
+          Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
       int count = count(hri, -1, false);
       assertEquals(count, count(hri, 100, true)); // do a true concurrent background thread flush
     } catch (Exception e) {
@@ -508,8 +499,6 @@ public class TestScanner {
   /**
    * Make sure scanner returns correct result when we run a major compaction
    * with deletes.
-   *
-   * @throws Exception
    */
   @Test
   @SuppressWarnings("deprecation")
@@ -546,7 +535,7 @@ public class TestScanner {
       // make sure returns column2 of firstRow
       assertTrue("result is not correct, keyValues : " + results,
           results.size() == 1);
-      assertTrue(CellUtil.matchingRow(results.get(0), firstRowBytes)); 
+      assertTrue(CellUtil.matchingRows(results.get(0), firstRowBytes)); 
       assertTrue(CellUtil.matchingFamily(results.get(0), fam2));
 
       results = new ArrayList<>();
@@ -554,7 +543,7 @@ public class TestScanner {
 
       // get secondRow
       assertTrue(results.size() == 2);
-      assertTrue(CellUtil.matchingRow(results.get(0), secondRowBytes));
+      assertTrue(CellUtil.matchingRows(results.get(0), secondRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam1));
       assertTrue(CellUtil.matchingFamily(results.get(1), fam2));
     } finally {
@@ -571,7 +560,7 @@ public class TestScanner {
    * @throws IOException
    */
   private int count(final Table countTable, final int flushIndex, boolean concurrent)
-  throws IOException {
+      throws IOException {
     LOG.info("Taking out counting scan");
     Scan scan = new Scan();
     for (byte [] qualifier: EXPLICIT_COLS) {
@@ -589,6 +578,7 @@ public class TestScanner {
       if (flushIndex == count) {
         LOG.info("Starting flush at flush index " + flushIndex);
         Thread t = new Thread() {
+          @Override
           public void run() {
             try {
               region.flush(true);

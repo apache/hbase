@@ -27,13 +27,13 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.NoTagsKeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Codec that does KeyValue version 1 serialization.
- * 
+ *
  * <p>Encodes Cell as serialized in KeyValue with total length prefix.
  * This is how KVs were serialized in Puts, Deletes and Results pre-0.96.  Its what would
  * happen if you called the Writable#write KeyValue implementation.  This encoder will fail
@@ -69,9 +69,10 @@ public class KeyValueCodec implements Codec {
       super(in);
     }
 
+    @Override
     protected Cell parseCell() throws IOException {
       // No tags here
-      return KeyValueUtil.iscreate(in, false);
+      return KeyValueUtil.createKeyValueFromInputStream(in, false);
     }
   }
 
@@ -113,7 +114,6 @@ public class KeyValueCodec implements Codec {
       // We know there is not going to be any tags.
       return new NoTagsByteBufferKeyValue(bb, pos, len);
     }
-
   }
 
   /**

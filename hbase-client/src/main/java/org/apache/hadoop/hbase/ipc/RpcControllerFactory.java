@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  */
 @InterfaceAudience.Private
 public class RpcControllerFactory {
-  private static final Log LOG = LogFactory.getLog(RpcControllerFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RpcControllerFactory.class);
 
   /**
    * Custom RPC Controller factory allows frameworks to change the RPC controller. If the configured

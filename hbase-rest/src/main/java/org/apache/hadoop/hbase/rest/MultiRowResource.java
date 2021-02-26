@@ -27,18 +27,19 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MultiRowResource extends ResourceBase implements Constants {
-  private static final Log LOG = LogFactory.getLog(MultiRowResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiRowResource.class);
 
   TableResource tableResource;
   Integer versions = null;
@@ -83,7 +84,7 @@ public class MultiRowResource extends ResourceBase implements Constants {
 
         if (this.columns != null) {
           for (int i = 0; i < this.columns.length; i++) {
-            rowSpec.addColumn(this.columns[i].getBytes());
+            rowSpec.addColumn(Bytes.toBytes(this.columns[i]));
           }
         }
 
@@ -91,7 +92,7 @@ public class MultiRowResource extends ResourceBase implements Constants {
           ResultGenerator.fromRowSpec(this.tableResource.getName(), rowSpec, null,
             !params.containsKey(NOCACHE_PARAM_NAME));
         Cell value = null;
-        RowModel rowModel = new RowModel(rk);
+        RowModel rowModel = new RowModel(rowSpec.getRow());
         if (generator.hasNext()) {
           while ((value = generator.next()) != null) {
             rowModel.addCell(new CellModel(CellUtil.cloneFamily(value), CellUtil

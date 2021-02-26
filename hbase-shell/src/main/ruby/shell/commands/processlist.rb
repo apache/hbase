@@ -27,9 +27,13 @@ Show regionserver task list.
 
   hbase> processlist
   hbase> processlist 'all'
+  # list non-RPC Tasks, such as compact, flush etc
   hbase> processlist 'general'
+  # list RPC Handler Tasks
   hbase> processlist 'handler'
+  # list RPC Handler Tasks which state is RUNNING
   hbase> processlist 'rpc'
+  # list RPC Handler Tasks which state is RUNNING and from client
   hbase> processlist 'operation'
   hbase> processlist 'all','host187.example.com'
   hbase> processlist 'all','host187.example.com,16020'
@@ -49,7 +53,7 @@ EOF
           hosts = args
         end
 
-        hosts = admin.getServerNames(hosts)
+        hosts = admin.getServerNames(hosts, true)
 
         if hosts.nil?
           puts 'No regionservers available.'

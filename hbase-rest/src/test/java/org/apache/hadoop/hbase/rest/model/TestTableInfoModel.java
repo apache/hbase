@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,19 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
-import java.util.Iterator;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
+import java.util.Iterator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestTableInfoModel extends TestModelBase<TableInfoModel> {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableInfoModel.class);
+
   private static final String TABLE = "testtable";
   private static final byte[] START_KEY = Bytes.toBytes("abracadbra");
   private static final byte[] END_KEY = Bytes.toBytes("zzyzx");
@@ -55,6 +62,7 @@ public class TestTableInfoModel extends TestModelBase<TableInfoModel> {
       "startKey\":\"YWJyYWNhZGJyYQ==\"}]}";
   }
 
+  @Override
   protected TableInfoModel buildTestModel() {
     TableInfoModel model = new TableInfoModel();
     model.setName(TABLE);
@@ -62,25 +70,29 @@ public class TestTableInfoModel extends TestModelBase<TableInfoModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(TableInfoModel model) {
-    assertEquals(model.getName(), TABLE);
+    assertEquals(TABLE, model.getName());
     Iterator<TableRegionModel> regions = model.getRegions().iterator();
     TableRegionModel region = regions.next();
     assertTrue(Bytes.equals(region.getStartKey(), START_KEY));
     assertTrue(Bytes.equals(region.getEndKey(), END_KEY));
-    assertEquals(region.getId(), ID);
-    assertEquals(region.getLocation(), LOCATION);
+    assertEquals(ID, region.getId());
+    assertEquals(LOCATION, region.getLocation());
     assertFalse(regions.hasNext());
   }
 
+  @Override
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
+  @Override
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
+  @Override
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }

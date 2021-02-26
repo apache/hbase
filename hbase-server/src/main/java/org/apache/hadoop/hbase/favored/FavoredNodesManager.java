@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,11 +30,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -45,10 +41,12 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * FavoredNodesManager is responsible for maintaining favored nodes info in internal cache and
@@ -56,22 +54,21 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
  * should be done through this class. There should only be one instance of
  * {@link FavoredNodesManager} in Master. {@link FavoredNodesPlan} and favored node information
  * from {@link SnapshotOfRegionAssignmentFromMeta} should not be used outside this class (except
- * for may be tools that only read or test cases). All other classes including Favored balancers
+ * for tools that only read or fortest cases). All other classes including Favored balancers
  * and {@link FavoredNodeAssignmentHelper} should use {@link FavoredNodesManager} for any
  * read/write/deletes to favored nodes.
  */
 @InterfaceAudience.Private
 public class FavoredNodesManager {
+  private static final Logger LOG = LoggerFactory.getLogger(FavoredNodesManager.class);
 
-  private static final Log LOG = LogFactory.getLog(FavoredNodesManager.class);
+  private final FavoredNodesPlan globalFavoredNodesAssignmentPlan;
+  private final Map<ServerName, List<RegionInfo>> primaryRSToRegionMap;
+  private final Map<ServerName, List<RegionInfo>> secondaryRSToRegionMap;
+  private final Map<ServerName, List<RegionInfo>> teritiaryRSToRegionMap;
 
-  private FavoredNodesPlan globalFavoredNodesAssignmentPlan;
-  private Map<ServerName, List<RegionInfo>> primaryRSToRegionMap;
-  private Map<ServerName, List<RegionInfo>> secondaryRSToRegionMap;
-  private Map<ServerName, List<RegionInfo>> teritiaryRSToRegionMap;
-
-  private MasterServices masterServices;
-  private RackManager rackManager;
+  private final MasterServices masterServices;
+  private final RackManager rackManager;
 
   /**
    * Datanode port to be used for Favored Nodes.
@@ -87,13 +84,16 @@ public class FavoredNodesManager {
     this.rackManager = new RackManager(masterServices.getConfiguration());
   }
 
-  public void initialize(SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment)
-      throws HBaseIOException {
-    globalFavoredNodesAssignmentPlan = snapshotOfRegionAssignment.getExistingAssignmentPlan();
-    primaryRSToRegionMap = snapshotOfRegionAssignment.getPrimaryToRegionInfoMap();
-    secondaryRSToRegionMap = snapshotOfRegionAssignment.getSecondaryToRegionInfoMap();
-    teritiaryRSToRegionMap = snapshotOfRegionAssignment.getTertiaryToRegionInfoMap();
-    datanodeDataTransferPort = getDataNodePort();
+  public synchronized void initialize(SnapshotOfRegionAssignmentFromMeta snapshot) {
+    // Add snapshot to structures made on creation. Current structures may have picked
+    // up data between construction and the scan of meta needed before this method
+    // is called.  See HBASE-23737 "[Flakey Tests] TestFavoredNodeTableImport fails 30% of the time"
+    this.globalFavoredNodesAssignmentPlan.
+      updateFavoredNodesMap(snapshot.getExistingAssignmentPlan());
+    primaryRSToRegionMap.putAll(snapshot.getPrimaryToRegionInfoMap());
+    secondaryRSToRegionMap.putAll(snapshot.getSecondaryToRegionInfoMap());
+    teritiaryRSToRegionMap.putAll(snapshot.getTertiaryToRegionInfoMap());
+    datanodeDataTransferPort= getDataNodePort();
   }
 
   public int getDataNodePort() {
@@ -117,23 +117,15 @@ public class FavoredNodesManager {
    * we apply any favored nodes logic on a region.
    */
   public static boolean isFavoredNodeApplicable(RegionInfo regionInfo) {
-    return !regionInfo.isSystemTable();
+    return !regionInfo.getTable().isSystemTable();
   }
 
   /**
    * Filter and return regions for which favored nodes is not applicable.
-   *
-   * @param regions - collection of regions
    * @return set of regions for which favored nodes is not applicable
    */
   public static Set<RegionInfo> filterNonFNApplicableRegions(Collection<RegionInfo> regions) {
-    Set<RegionInfo> fnRegions = Sets.newHashSet();
-    for (RegionInfo regionInfo : regions) {
-      if (!isFavoredNodeApplicable(regionInfo)) {
-        fnRegions.add(regionInfo);
-      }
-    }
-    return fnRegions;
+    return regions.stream().filter(r -> !isFavoredNodeApplicable(r)).collect(Collectors.toSet());
   }
 
   /*
@@ -194,8 +186,7 @@ public class FavoredNodesManager {
     }
 
     // Lets do a bulk update to meta since that reduces the RPC's
-    FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(
-        regionToFavoredNodes,
+    FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes,
         masterServices.getConnection());
     deleteFavoredNodesForRegions(regionToFavoredNodes.keySet());
 
@@ -208,8 +199,8 @@ public class FavoredNodesManager {
   }
 
   private synchronized void addToReplicaLoad(RegionInfo hri, List<ServerName> servers) {
-    ServerName serverToUse = ServerName.valueOf(servers.get(PRIMARY.ordinal()).getHostAndPort(),
-        NON_STARTCODE);
+    ServerName serverToUse =
+      ServerName.valueOf(servers.get(PRIMARY.ordinal()).getAddress().toString(), NON_STARTCODE);
     List<RegionInfo> regionList = primaryRSToRegionMap.get(serverToUse);
     if (regionList == null) {
       regionList = new ArrayList<>();
@@ -269,22 +260,42 @@ public class FavoredNodesManager {
     return result;
   }
 
-  public synchronized void deleteFavoredNodesForRegions(Collection<RegionInfo> regionInfoList) {
-    for (RegionInfo hri : regionInfoList) {
-      List<ServerName> favNodes = getFavoredNodes(hri);
-      if (favNodes != null) {
-        if (primaryRSToRegionMap.containsKey(favNodes.get(PRIMARY.ordinal()))) {
-          primaryRSToRegionMap.get(favNodes.get(PRIMARY.ordinal())).remove(hri);
-        }
-        if (secondaryRSToRegionMap.containsKey(favNodes.get(SECONDARY.ordinal()))) {
-          secondaryRSToRegionMap.get(favNodes.get(SECONDARY.ordinal())).remove(hri);
-        }
-        if (teritiaryRSToRegionMap.containsKey(favNodes.get(TERTIARY.ordinal()))) {
-          teritiaryRSToRegionMap.get(favNodes.get(TERTIARY.ordinal())).remove(hri);
-        }
-        globalFavoredNodesAssignmentPlan.removeFavoredNodes(hri);
+  public synchronized void deleteFavoredNodesForRegion(RegionInfo regionInfo) {
+    List<ServerName> favNodes = getFavoredNodes(regionInfo);
+    if (favNodes != null) {
+      if (primaryRSToRegionMap.containsKey(favNodes.get(PRIMARY.ordinal()))) {
+        primaryRSToRegionMap.get(favNodes.get(PRIMARY.ordinal())).remove(regionInfo);
       }
+      if (secondaryRSToRegionMap.containsKey(favNodes.get(SECONDARY.ordinal()))) {
+        secondaryRSToRegionMap.get(favNodes.get(SECONDARY.ordinal())).remove(regionInfo);
+      }
+      if (teritiaryRSToRegionMap.containsKey(favNodes.get(TERTIARY.ordinal()))) {
+        teritiaryRSToRegionMap.get(favNodes.get(TERTIARY.ordinal())).remove(regionInfo);
+      }
+      globalFavoredNodesAssignmentPlan.removeFavoredNodes(regionInfo);
     }
+  }
+
+  public synchronized void deleteFavoredNodesForRegions(Collection<RegionInfo> regionInfoList) {
+    for (RegionInfo regionInfo : regionInfoList) {
+      deleteFavoredNodesForRegion(regionInfo);
+    }
+  }
+
+  public synchronized Set<RegionInfo> getRegionsOfFavoredNode(ServerName serverName) {
+    Set<RegionInfo> regionInfos = Sets.newHashSet();
+
+    ServerName serverToUse = ServerName.valueOf(serverName.getHostAndPort(), NON_STARTCODE);
+    if (primaryRSToRegionMap.containsKey(serverToUse)) {
+      regionInfos.addAll(primaryRSToRegionMap.get(serverToUse));
+    }
+    if (secondaryRSToRegionMap.containsKey(serverToUse)) {
+      regionInfos.addAll(secondaryRSToRegionMap.get(serverToUse));
+    }
+    if (teritiaryRSToRegionMap.containsKey(serverToUse)) {
+      regionInfos.addAll(teritiaryRSToRegionMap.get(serverToUse));
+    }
+    return regionInfos;
   }
 
   public RackManager getRackManager() {

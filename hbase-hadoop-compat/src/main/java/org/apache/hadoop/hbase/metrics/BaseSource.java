@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.hbase.metrics;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  *   BaseSource for dynamic metrics to announce to Metrics2.
  *   In hbase-hadoop{1|2}-compat there is an implementation of this interface.
  */
+@InterfaceAudience.Private
 public interface BaseSource {
 
   String HBASE_METRICS_SYSTEM_NAME = "HBase";

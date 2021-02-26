@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables.size;
+import static org.apache.hbase.thirdparty.com.google.common.collect.Iterables.size;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
@@ -27,8 +28,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
@@ -55,6 +56,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
  */
 @Category(SmallTests.class)
 public class TestNamespaceQuotaViolationStore {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNamespaceQuotaViolationStore.class);
+
   private static final long ONE_MEGABYTE = 1024L * 1024L;
 
   private Connection conn;
@@ -73,7 +79,7 @@ public class TestNamespaceQuotaViolationStore {
   @Test
   public void testGetSpaceQuota() throws Exception {
     NamespaceQuotaSnapshotStore mockStore = mock(NamespaceQuotaSnapshotStore.class);
-    when(mockStore.getSpaceQuota(any(String.class))).thenCallRealMethod();
+    when(mockStore.getSpaceQuota(any())).thenCallRealMethod();
 
     Quotas quotaWithSpace = Quotas.newBuilder().setSpace(
         SpaceQuota.newBuilder()
@@ -84,7 +90,7 @@ public class TestNamespaceQuotaViolationStore {
     Quotas quotaWithoutSpace = Quotas.newBuilder().build();
 
     AtomicReference<Quotas> quotaRef = new AtomicReference<>();
-    when(mockStore.getQuotaForNamespace(any(String.class))).then(new Answer<Quotas>() {
+    when(mockStore.getQuotaForNamespace(any())).then(new Answer<Quotas>() {
       @Override
       public Quotas answer(InvocationOnMock invocation) throws Throwable {
         return quotaRef.get();
@@ -147,8 +153,8 @@ public class TestNamespaceQuotaViolationStore {
 
     // Exceeds the quota, should be in violation
     assertEquals(true, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
-    assertEquals(
-        SpaceViolationPolicy.DISABLE, store.getTargetState(NS, quota).getQuotaStatus().getPolicy());
+    assertEquals(SpaceViolationPolicy.DISABLE,
+      store.getTargetState(NS, quota).getQuotaStatus().getPolicy().get());
   }
 
   @Test

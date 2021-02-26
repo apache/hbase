@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
@@ -25,27 +24,31 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.ParsedLine;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Splitter;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Tests for {@link TsvParser}.
  */
 @Category({MapReduceTests.class, SmallTests.class})
 public class TestImportTsvParser {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestImportTsvParser.class);
 
   private void assertBytesEquals(byte[] a, byte[] b) {
     assertEquals(Bytes.toStringBinary(a), Bytes.toStringBinary(b));
@@ -161,7 +164,7 @@ public class TestImportTsvParser {
 
     byte[] line = Bytes.toBytes("rowkey\t1234\tval_a");
     ParsedLine parsed = parser.parse(line, line.length);
-    assertEquals(1234l, parsed.getTimestamp(-1));
+    assertEquals(1234L, parsed.getTimestamp(-1));
     checkParsing(parsed, Splitter.on("\t").split(Bytes.toString(line)));
   }
 
@@ -226,9 +229,9 @@ public class TestImportTsvParser {
       line = Bytes.toBytes("\t\tval_a\t1234");
       parser.parseRowKey(line, line.length);
       fail("Should get BadTsvLineException on empty rowkey.");
-    } catch (BadTsvLineException b) {
-
+    } catch (BadTsvLineException ignored) {
     }
+
     parser = new TsvParser("col_a,HBASE_ROW_KEY,HBASE_TS_KEY", "\t");
     assertEquals(1, parser.getRowKeyColumnIndex());
     line = Bytes.toBytes("val_a\trowkey\t1234");
@@ -239,9 +242,9 @@ public class TestImportTsvParser {
       line = Bytes.toBytes("val_a");
       rowKeyOffsets = parser.parseRowKey(line, line.length);
       fail("Should get BadTsvLineException when number of columns less than rowkey position.");
-    } catch (BadTsvLineException b) {
-
+    } catch (BadTsvLineException ignored) {
     }
+
     parser = new TsvParser("col_a,HBASE_TS_KEY,HBASE_ROW_KEY", "\t");
     assertEquals(2, parser.getRowKeyColumnIndex());
     line = Bytes.toBytes("val_a\t1234\trowkey");
@@ -258,15 +261,15 @@ public class TestImportTsvParser {
     ParsedLine parse = parser.parse(line, line.length);
     assertEquals(18, parse.getAttributeKeyOffset());
     assertEquals(3, parser.getAttributesKeyColumnIndex());
-    String attributes[] = parse.getIndividualAttributes();
-    assertEquals(attributes[0], "key=>value");
+    String[] attributes = parse.getIndividualAttributes();
+    assertEquals("key=>value", attributes[0]);
     try {
       line = Bytes.toBytes("rowkey\tval_a\t1234");
       parser.parse(line, line.length);
       fail("Should get BadTsvLineException on empty rowkey.");
-    } catch (BadTsvLineException b) {
-
+    } catch (BadTsvLineException ignored) {
     }
+
     parser = new TsvParser("HBASE_ATTRIBUTES_KEY,col_a,HBASE_ROW_KEY,HBASE_TS_KEY", "\t");
     assertEquals(2, parser.getRowKeyColumnIndex());
     line = Bytes.toBytes("key=>value\tval_a\trowkey\t1234");
@@ -274,14 +277,14 @@ public class TestImportTsvParser {
     assertEquals(0, parse.getAttributeKeyOffset());
     assertEquals(0, parser.getAttributesKeyColumnIndex());
     attributes = parse.getIndividualAttributes();
-    assertEquals(attributes[0], "key=>value");
+    assertEquals("key=>value", attributes[0]);
     try {
       line = Bytes.toBytes("val_a");
       ParsedLine parse2 = parser.parse(line, line.length);
       fail("Should get BadTsvLineException when number of columns less than rowkey position.");
-    } catch (BadTsvLineException b) {
-
+    } catch (BadTsvLineException ignored) {
     }
+
     parser = new TsvParser("col_a,HBASE_ATTRIBUTES_KEY,HBASE_TS_KEY,HBASE_ROW_KEY", "\t");
     assertEquals(3, parser.getRowKeyColumnIndex());
     line = Bytes.toBytes("val_a\tkey0=>value0,key1=>value1,key2=>value2\t1234\trowkey");
@@ -290,8 +293,8 @@ public class TestImportTsvParser {
     assertEquals(6, parse.getAttributeKeyOffset());
     String[] attr = parse.getIndividualAttributes();
     int i = 0;
-    for(String str :  attr) {
-      assertEquals(("key"+i+"=>"+"value"+i), str );
+    for (String str :  attr) {
+      assertEquals(("key" + i + "=>" + "value" + i), str);
       i++;
     }
   }
@@ -306,9 +309,8 @@ public class TestImportTsvParser {
     ParsedLine parse = parser.parse(line, line.length);
     assertEquals(18, parse.getAttributeKeyOffset());
     assertEquals(3, parser.getAttributesKeyColumnIndex());
-    String attributes[] = parse.getIndividualAttributes();
-    assertEquals(attributes[0], "key=>value");
+    String[] attributes = parse.getIndividualAttributes();
+    assertEquals("key=>value", attributes[0]);
     assertEquals(29, parse.getCellVisibilityColumnOffset());
   }
-
 }

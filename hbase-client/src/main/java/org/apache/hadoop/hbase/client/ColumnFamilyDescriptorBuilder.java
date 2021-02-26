@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,21 +24,23 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 
 /**
  * @since 2.0.0
@@ -98,14 +99,6 @@ public class ColumnFamilyDescriptorBuilder {
   @InterfaceAudience.Private
   public static final String EVICT_BLOCKS_ON_CLOSE = "EVICT_BLOCKS_ON_CLOSE";
   private static final Bytes EVICT_BLOCKS_ON_CLOSE_BYTES = new Bytes(Bytes.toBytes(EVICT_BLOCKS_ON_CLOSE));
-  /**
-   * Key for cache data into L1 if cache is set up with more than one tier. To
-   * set in the shell, do something like this:      <code>hbase(main):003:0&gt; create 't',
-   *    {NAME =&gt; 't', CONFIGURATION =&gt; {CACHE_DATA_IN_L1 =&gt; 'true'}}</code>
-   */
-  @InterfaceAudience.Private
-  public static final String CACHE_DATA_IN_L1 = "CACHE_DATA_IN_L1";
-  private static final Bytes CACHE_DATA_IN_L1_BYTES = new Bytes(Bytes.toBytes(CACHE_DATA_IN_L1));
 
   /**
    * Key for the PREFETCH_BLOCKS_ON_OPEN attribute. If set, all INDEX, BLOOM,
@@ -137,7 +130,6 @@ public class ColumnFamilyDescriptorBuilder {
   private static final Bytes BLOOMFILTER_BYTES = new Bytes(Bytes.toBytes(BLOOMFILTER));
   @InterfaceAudience.Private
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
-  private static final Bytes REPLICATION_SCOPE_BYTES = new Bytes(Bytes.toBytes(REPLICATION_SCOPE));
   @InterfaceAudience.Private
   public static final String MAX_VERSIONS = HConstants.VERSIONS;
   private static final Bytes MAX_VERSIONS_BYTES = new Bytes(Bytes.toBytes(MAX_VERSIONS));
@@ -229,13 +221,6 @@ public class ColumnFamilyDescriptorBuilder {
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
 
   /**
-   * Default setting for whether to cache data blocks in L1 tier. Only makes
-   * sense if more than one tier in operations: i.e. if we have an L1 and a L2.
-   * This will be the cases if we are using BucketCache.
-   */
-  public static final boolean DEFAULT_CACHE_DATA_IN_L1 = false;
-
-  /**
    * Default setting for whether to cache index blocks on write if block caching
    * is enabled.
    */
@@ -309,13 +294,11 @@ public class ColumnFamilyDescriptorBuilder {
     DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
     DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
     DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
-    DEFAULT_VALUES.put(CACHE_DATA_ON_WRITE, String.valueOf(DEFAULT_CACHE_DATA_ON_WRITE));
-    DEFAULT_VALUES.put(CACHE_DATA_IN_L1, String.valueOf(DEFAULT_CACHE_DATA_IN_L1));
-    DEFAULT_VALUES.put(CACHE_INDEX_ON_WRITE, String.valueOf(DEFAULT_CACHE_INDEX_ON_WRITE));
-    DEFAULT_VALUES.put(CACHE_BLOOMS_ON_WRITE, String.valueOf(DEFAULT_CACHE_BLOOMS_ON_WRITE));
-    DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE, String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
-    DEFAULT_VALUES.put(PREFETCH_BLOCKS_ON_OPEN, String.valueOf(DEFAULT_PREFETCH_BLOCKS_ON_OPEN));
-    DEFAULT_VALUES.put(NEW_VERSION_BEHAVIOR, String.valueOf(DEFAULT_NEW_VERSION_BEHAVIOR));
+    // Do NOT add this key/value by default. NEW_VERSION_BEHAVIOR is NOT defined in hbase1 so
+    // it is not possible to make an hbase1 HCD the same as an hbase2 HCD and so the replication
+    // compare of schemas will fail. It is OK not adding the below to the initial map because of
+    // fetch of this value, we will check for null and if null will return the default.
+    // DEFAULT_VALUES.put(NEW_VERSION_BEHAVIOR, String.valueOf(DEFAULT_NEW_VERSION_BEHAVIOR));
     DEFAULT_VALUES.keySet().forEach(s -> RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(s))));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY)));
@@ -329,6 +312,8 @@ public class ColumnFamilyDescriptorBuilder {
     switch (key) {
       case TTL:
         return Unit.TIME_INTERVAL;
+      case BLOCKSIZE:
+        return Unit.BYTE;
       default:
         return Unit.NONE;
     }
@@ -434,6 +419,11 @@ public class ColumnFamilyDescriptorBuilder {
     return this;
   }
 
+  public ColumnFamilyDescriptorBuilder setBlocksize(String value) throws HBaseException {
+    desc.setBlocksize(value);
+    return this;
+  }
+
   public ColumnFamilyDescriptorBuilder setBloomFilterType(final BloomType value) {
     desc.setBloomFilterType(value);
     return this;
@@ -441,11 +431,6 @@ public class ColumnFamilyDescriptorBuilder {
 
   public ColumnFamilyDescriptorBuilder setCacheBloomsOnWrite(boolean value) {
     desc.setCacheBloomsOnWrite(value);
-    return this;
-  }
-
-  public ColumnFamilyDescriptorBuilder setCacheDataInL1(boolean value) {
-    desc.setCacheDataInL1(value);
     return this;
   }
 
@@ -573,6 +558,11 @@ public class ColumnFamilyDescriptorBuilder {
     return this;
   }
 
+  public ColumnFamilyDescriptorBuilder setNewVersionBehavior(final boolean value) {
+    desc.setNewVersionBehavior(value);
+    return this;
+  }
+
   public ColumnFamilyDescriptorBuilder setValue(final Bytes key, final Bytes value) {
     desc.setValue(key, value);
     return this;
@@ -585,6 +575,12 @@ public class ColumnFamilyDescriptorBuilder {
 
   public ColumnFamilyDescriptorBuilder setValue(final String key, final String value) {
     desc.setValue(key, value);
+    return this;
+  }
+
+  public ColumnFamilyDescriptorBuilder setVersionsWithTimeToLive(final int retentionInterval,
+      final int versionAfterInterval) {
+    desc.setVersionsWithTimeToLive(retentionInterval, versionAfterInterval);
     return this;
   }
 
@@ -690,7 +686,7 @@ public class ColumnFamilyDescriptorBuilder {
      * @return this (for chained invocation)
      */
     private ModifyableColumnFamilyDescriptor setValue(Bytes key, Bytes value) {
-      if (value == null) {
+      if (value == null || value.getLength() == 0) {
         values.remove(key);
       } else {
         values.put(key, value);
@@ -791,11 +787,15 @@ public class ColumnFamilyDescriptorBuilder {
       return setValue(BLOCKSIZE_BYTES, Integer.toString(s));
     }
 
+    public ModifyableColumnFamilyDescriptor setBlocksize(String blocksize) throws HBaseException {
+      return setBlocksize(Integer.parseInt(PrettyPrinter.
+        valueOf(blocksize, PrettyPrinter.Unit.BYTE)));
+    }
+
     @Override
     public Compression.Algorithm getCompressionType() {
       return getStringOrDefault(COMPRESSION_BYTES,
-              Compression.Algorithm::valueOf,
-              DEFAULT_COMPRESSION);
+        n -> Compression.Algorithm.valueOf(n.toUpperCase()), DEFAULT_COMPRESSION);
     }
 
     /**
@@ -815,8 +815,7 @@ public class ColumnFamilyDescriptorBuilder {
     @Override
     public DataBlockEncoding getDataBlockEncoding() {
       return getStringOrDefault(DATA_BLOCK_ENCODING_BYTES,
-              DataBlockEncoding::valueOf,
-              DataBlockEncoding.NONE);
+        n -> DataBlockEncoding.valueOf(n.toUpperCase()), DataBlockEncoding.NONE);
     }
 
     /**
@@ -849,8 +848,7 @@ public class ColumnFamilyDescriptorBuilder {
     @Override
     public Compression.Algorithm getCompactionCompressionType() {
       return getStringOrDefault(COMPRESSION_COMPACT_BYTES,
-              Compression.Algorithm::valueOf,
-              getCompressionType());
+        n -> Compression.Algorithm.valueOf(n.toUpperCase()), getCompressionType());
     }
 
     /**
@@ -884,7 +882,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public MemoryCompactionPolicy getInMemoryCompaction() {
-      return getStringOrDefault(IN_MEMORY_COMPACTION_BYTES, MemoryCompactionPolicy::valueOf, null);
+      return getStringOrDefault(IN_MEMORY_COMPACTION_BYTES,
+        n -> MemoryCompactionPolicy.valueOf(n.toUpperCase()), null);
     }
 
     /**
@@ -898,7 +897,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public KeepDeletedCells getKeepDeletedCells() {
-      return getStringOrDefault(KEEP_DELETED_CELLS_BYTES, KeepDeletedCells::valueOf, DEFAULT_KEEP_DELETED);
+      return getStringOrDefault(KEEP_DELETED_CELLS_BYTES,
+          KeepDeletedCells::getValue, DEFAULT_KEEP_DELETED);
     }
 
     /**
@@ -915,6 +915,7 @@ public class ColumnFamilyDescriptorBuilder {
      * will mask a later Put with lower ts. Set this to true to enable new semantics of versions.
      * We will also consider mvcc in versions. See HBASE-15968 for details.
      */
+    @Override
     public boolean isNewVersionBehavior() {
       return getStringOrDefault(NEW_VERSION_BEHAVIOR_BYTES,
           Boolean::parseBoolean, DEFAULT_NEW_VERSION_BEHAVIOR);
@@ -960,6 +961,23 @@ public class ColumnFamilyDescriptorBuilder {
       return setValue(MIN_VERSIONS_BYTES, Integer.toString(minVersions));
     }
 
+    /**
+     * Retain all versions for a given TTL(retentionInterval), and then only a specific number
+     * of versions(versionAfterInterval) after that interval elapses.
+     *
+     * @param retentionInterval Retain all versions for this interval
+     * @param versionAfterInterval Retain no of versions to retain after retentionInterval
+     * @return this (for chained invocation)
+     */
+    public ModifyableColumnFamilyDescriptor setVersionsWithTimeToLive(
+        final int retentionInterval, final int versionAfterInterval) {
+      ModifyableColumnFamilyDescriptor modifyableColumnFamilyDescriptor =
+        setVersions(versionAfterInterval, Integer.MAX_VALUE);
+      modifyableColumnFamilyDescriptor.setTimeToLive(retentionInterval);
+      modifyableColumnFamilyDescriptor.setKeepDeletedCells(KeepDeletedCells.TTL);
+      return modifyableColumnFamilyDescriptor;
+    }
+
     @Override
     public boolean isBlockCacheEnabled() {
       return getStringOrDefault(BLOCKCACHE_BYTES, Boolean::valueOf, DEFAULT_BLOCKCACHE);
@@ -976,7 +994,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public BloomType getBloomFilterType() {
-      return getStringOrDefault(BLOOMFILTER_BYTES, BloomType::valueOf, DEFAULT_BLOOMFILTER);
+      return getStringOrDefault(BLOOMFILTER_BYTES, n -> BloomType.valueOf(n.toUpperCase()),
+        DEFAULT_BLOOMFILTER);
     }
 
     public ModifyableColumnFamilyDescriptor setBloomFilterType(final BloomType bt) {
@@ -1007,21 +1026,6 @@ public class ColumnFamilyDescriptorBuilder {
      */
     public ModifyableColumnFamilyDescriptor setCacheDataOnWrite(boolean value) {
       return setValue(CACHE_DATA_ON_WRITE_BYTES, Boolean.toString(value));
-    }
-
-    @Override
-    public boolean isCacheDataInL1() {
-      return getStringOrDefault(CACHE_DATA_IN_L1_BYTES, Boolean::valueOf, DEFAULT_CACHE_DATA_IN_L1);
-    }
-
-    /**
-     * @param value true if we should cache data blocks in the L1 cache (if
-     * block cache deploy has more than one tier; e.g. we are using
-     * CombinedBlockCache).
-     * @return this (for chained invocation)
-     */
-    public ModifyableColumnFamilyDescriptor setCacheDataInL1(boolean value) {
-      return setValue(CACHE_DATA_IN_L1_BYTES, Boolean.toString(value));
     }
 
     @Override
@@ -1249,7 +1253,7 @@ public class ColumnFamilyDescriptorBuilder {
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setConfiguration(String key, String value) {
-      if (value == null) {
+      if (value == null || value.length() == 0) {
         configuration.remove(key);
       } else {
         configuration.put(key, value);
@@ -1331,7 +1335,8 @@ public class ColumnFamilyDescriptorBuilder {
     @Override
     public MobCompactPartitionPolicy getMobCompactPartitionPolicy() {
       return getStringOrDefault(MOB_COMPACT_PARTITION_POLICY_BYTES,
-              MobCompactPartitionPolicy::valueOf, DEFAULT_MOB_COMPACT_PARTITION_POLICY);
+        n -> MobCompactPartitionPolicy.valueOf(n.toUpperCase()),
+        DEFAULT_MOB_COMPACT_PARTITION_POLICY);
     }
 
     /**

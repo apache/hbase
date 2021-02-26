@@ -15,19 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertFalse;
+
+import java.io.IOException;
+import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Result;
@@ -38,22 +39,18 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.Rule;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.TestRule;
-
-import static org.junit.Assert.assertFalse;
-
-import java.io.IOException;
-import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class TableSnapshotInputFormatTestBase {
-  private static final Log LOG = LogFactory.getLog(TableSnapshotInputFormatTestBase.class);
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+  private static final Logger LOG = LoggerFactory.getLogger(TableSnapshotInputFormatTestBase.class);
   protected final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected static final int NUM_REGION_SERVERS = 2;
   protected static final byte[][] FAMILIES = {Bytes.toBytes("f1"), Bytes.toBytes("f2")};
@@ -61,13 +58,18 @@ public abstract class TableSnapshotInputFormatTestBase {
   protected FileSystem fs;
   protected Path rootDir;
 
+  @Before
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    UTIL.startMiniCluster(NUM_REGION_SERVERS, true);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(NUM_REGION_SERVERS).numDataNodes(NUM_REGION_SERVERS)
+        .createRootDir(true).build();
+    UTIL.startMiniCluster(option);
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
 
+  @After
   public void tearDownCluster() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -78,11 +80,12 @@ public abstract class TableSnapshotInputFormatTestBase {
   }
 
   protected abstract void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
-    int numRegions, int numSplitsPerRegion, int expectedNumSplits) throws Exception;
+    int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo)
+    throws Exception;
 
   protected abstract void testWithMapReduceImpl(HBaseTestingUtility util, TableName tableName,
-    String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion, int expectedNumSplits,
-    boolean shutdownCluster) throws Exception;
+    String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion,
+    int expectedNumSplits, boolean shutdownCluster) throws Exception;
 
   protected abstract byte[] getStartRow();
 
@@ -90,12 +93,12 @@ public abstract class TableSnapshotInputFormatTestBase {
 
   @Test
   public void testWithMockedMapReduceSingleRegion() throws Exception {
-    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceSingleRegion", 1, 1, 1);
+    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceSingleRegion", 1, 1, 1, true);
   }
 
   @Test
   public void testWithMockedMapReduceMultiRegion() throws Exception {
-    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceMultiRegion", 10, 1, 8);
+    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceMultiRegion", 10, 1, 8, false);
   }
 
   @Test
@@ -109,11 +112,6 @@ public abstract class TableSnapshotInputFormatTestBase {
   }
 
   @Test
-  public void testWithMapReduceMultipleMappersPerRegion() throws Exception {
-    testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 5, 50, false);
-  }
-
-  @Test
   // run the MR job while HBase is offline
   public void testWithMapReduceAndOfflineHBaseMultiRegion() throws Exception {
     testWithMapReduce(UTIL, "testWithMapReduceAndOfflineHBaseMultiRegion", 10, 1, 8, true);
@@ -122,7 +120,6 @@ public abstract class TableSnapshotInputFormatTestBase {
   // Test that snapshot restore does not create back references in the HBase root dir.
   @Test
   public void testRestoreSnapshotDoesNotCreateBackRefLinks() throws Exception {
-    setupCluster();
     TableName tableName = TableName.valueOf("testRestoreSnapshotDoesNotCreateBackRefLinks");
     String snapshotName = "foo";
 
@@ -133,8 +130,9 @@ public abstract class TableSnapshotInputFormatTestBase {
 
       testRestoreSnapshotDoesNotCreateBackRefLinksInit(tableName, snapshotName,tmpTableDir);
 
-      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
-      for (Path regionDir : FSUtils.getRegionDirs(fs, FSUtils.getTableDir(rootDir, tableName))) {
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
+      for (Path regionDir : FSUtils.getRegionDirs(fs,
+        CommonFSUtils.getTableDir(rootDir, tableName))) {
         for (Path storeDir : FSUtils.getFamilyDirs(fs, regionDir)) {
           for (FileStatus status : fs.listStatus(storeDir)) {
             System.out.println(status.getPath());
@@ -156,24 +154,18 @@ public abstract class TableSnapshotInputFormatTestBase {
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   public abstract void testRestoreSnapshotDoesNotCreateBackRefLinksInit(TableName tableName,
       String snapshotName, Path tmpTableDir) throws Exception;
 
-  protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName,
-      int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
-    setupCluster();
-    try {
-      Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
-      TableName tableName = TableName.valueOf("testWithMapReduce");
-      testWithMapReduceImpl(util, tableName, snapshotName, tableDir, numRegions,
-              numSplitsPerRegion, expectedNumSplits, shutdownCluster);
-    } finally {
-      tearDownCluster();
-    }
+  protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName, int numRegions,
+      int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
+    Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
+    TableName tableName = TableName.valueOf("testWithMapReduce");
+    testWithMapReduceImpl(util, tableName, snapshotName, tableDir, numRegions, numSplitsPerRegion,
+      expectedNumSplits, shutdownCluster);
   }
 
   protected static void verifyRowFromMap(ImmutableBytesWritable key, Result result)
@@ -188,10 +180,11 @@ public abstract class TableSnapshotInputFormatTestBase {
         cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
     }
 
-    for (int j = 0; j < FAMILIES.length; j++) {
-      byte[] actual = result.getValue(FAMILIES[j], FAMILIES[j]);
-      Assert.assertArrayEquals("Row in snapshot does not match, expected:" + Bytes.toString(row)
-        + " ,actual:" + Bytes.toString(actual), row, actual);
+    for (byte[] family : FAMILIES) {
+      byte[] actual = result.getValue(family, family);
+      Assert.assertArrayEquals(
+        "Row in snapshot does not match, expected:" + Bytes.toString(row) + " ,actual:" + Bytes
+          .toString(actual), row, actual);
     }
   }
 
@@ -217,7 +210,7 @@ public abstract class TableSnapshotInputFormatTestBase {
     Table table = util.getConnection().getTable(tableName);
     util.loadTable(table, FAMILIES);
 
-    Path rootDir = FSUtils.getRootDir(util.getConfiguration());
+    Path rootDir = CommonFSUtils.getRootDir(util.getConfiguration());
     FileSystem fs = rootDir.getFileSystem(util.getConfiguration());
 
     LOG.info("snapshot");
@@ -232,5 +225,4 @@ public abstract class TableSnapshotInputFormatTestBase {
     admin.flush(tableName);
     table.close();
   }
-
 }

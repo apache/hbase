@@ -17,22 +17,26 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.Map.Entry;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
 /**
  * A manager for filesystem space quotas in the RegionServer.
@@ -46,27 +50,30 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Private
 public class RegionServerSpaceQuotaManager {
-  private static final Log LOG = LogFactory.getLog(RegionServerSpaceQuotaManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionServerSpaceQuotaManager.class);
 
   private final RegionServerServices rsServices;
 
   private SpaceQuotaRefresherChore spaceQuotaRefresher;
   private AtomicReference<Map<TableName, SpaceQuotaSnapshot>> currentQuotaSnapshots;
   private boolean started = false;
-  private ConcurrentHashMap<TableName,SpaceViolationPolicyEnforcement> enforcedPolicies;
+  private final ConcurrentHashMap<TableName,SpaceViolationPolicyEnforcement> enforcedPolicies;
   private SpaceViolationPolicyEnforcementFactory factory;
+  private RegionSizeStore regionSizeStore;
+  private RegionSizeReportingChore regionSizeReporter;
 
   public RegionServerSpaceQuotaManager(RegionServerServices rsServices) {
     this(rsServices, SpaceViolationPolicyEnforcementFactory.getInstance());
   }
 
-  @VisibleForTesting
   RegionServerSpaceQuotaManager(
       RegionServerServices rsServices, SpaceViolationPolicyEnforcementFactory factory) {
     this.rsServices = Objects.requireNonNull(rsServices);
     this.factory = factory;
     this.enforcedPolicies = new ConcurrentHashMap<>();
     this.currentQuotaSnapshots = new AtomicReference<>(new HashMap<>());
+    // Initialize the size store to not track anything -- create the real one if we're start()'ed
+    this.regionSizeStore = NoOpRegionSizeStore.getInstance();
   }
 
   public synchronized void start() throws IOException {
@@ -79,15 +86,24 @@ public class RegionServerSpaceQuotaManager {
       LOG.warn("RegionServerSpaceQuotaManager has already been started!");
       return;
     }
+    // Start the chores
     this.spaceQuotaRefresher = new SpaceQuotaRefresherChore(this, rsServices.getClusterConnection());
     rsServices.getChoreService().scheduleChore(spaceQuotaRefresher);
+    this.regionSizeReporter = new RegionSizeReportingChore(rsServices);
+    rsServices.getChoreService().scheduleChore(regionSizeReporter);
+    // Instantiate the real RegionSizeStore
+    this.regionSizeStore = RegionSizeStoreFactory.getInstance().createStore();
     started = true;
   }
 
   public synchronized void stop() {
     if (spaceQuotaRefresher != null) {
-      spaceQuotaRefresher.cancel();
+      spaceQuotaRefresher.shutdown();
       spaceQuotaRefresher = null;
+    }
+    if (regionSizeReporter != null) {
+      regionSizeReporter.shutdown();
+      regionSizeReporter = null;
     }
     started = false;
   }
@@ -209,6 +225,43 @@ public class RegionServerSpaceQuotaManager {
       return enforcement.areCompactionsDisabled();
     }
     return false;
+  }
+
+  /**
+   * Returns the {@link RegionSizeStore} tracking filesystem utilization by each region.
+   *
+   * @return A {@link RegionSizeStore} implementation.
+   */
+  public RegionSizeStore getRegionSizeStore() {
+    return regionSizeStore;
+  }
+
+  /**
+   * Builds the protobuf message to inform the Master of files being archived.
+   *
+   * @param tn The table the files previously belonged to.
+   * @param archivedFiles The files and their size in bytes that were archived.
+   * @return The protobuf representation
+   */
+  public RegionServerStatusProtos.FileArchiveNotificationRequest buildFileArchiveRequest(
+      TableName tn, Collection<Entry<String,Long>> archivedFiles) {
+    RegionServerStatusProtos.FileArchiveNotificationRequest.Builder builder =
+        RegionServerStatusProtos.FileArchiveNotificationRequest.newBuilder();
+    HBaseProtos.TableName protoTn = ProtobufUtil.toProtoTableName(tn);
+    for (Entry<String,Long> archivedFile : archivedFiles) {
+      RegionServerStatusProtos.FileArchiveNotificationRequest.FileWithSize fws =
+          RegionServerStatusProtos.FileArchiveNotificationRequest.FileWithSize.newBuilder()
+              .setName(archivedFile.getKey())
+              .setSize(archivedFile.getValue())
+              .setTableName(protoTn)
+              .build();
+      builder.addArchivedFiles(fws);
+    }
+    final RegionServerStatusProtos.FileArchiveNotificationRequest request = builder.build();
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Reporting file archival to Master: " + TextFormat.shortDebugString(request));
+    }
+    return request;
   }
 
   /**

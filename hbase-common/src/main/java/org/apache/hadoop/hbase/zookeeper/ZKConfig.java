@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.Properties;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -84,7 +84,7 @@ public final class ZKConfig {
     // If clientPort is not set, assign the default.
     if (zkProperties.getProperty(HConstants.CLIENT_PORT_STR) == null) {
       zkProperties.put(HConstants.CLIENT_PORT_STR,
-          HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT);
+          HConstants.DEFAULT_ZOOKEEPER_CLIENT_PORT);
     }
 
     // Create the server.X properties.
@@ -118,7 +118,7 @@ public final class ZKConfig {
    */
   private static String getZKQuorumServersStringFromHbaseConfig(Configuration conf) {
     String defaultClientPort = Integer.toString(
-        conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT));
+        conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, HConstants.DEFAULT_ZOOKEEPER_CLIENT_PORT));
 
     // Build the ZK quorum server string with "server:clientport" list, separated by ','
     final String[] serverHosts =
@@ -272,7 +272,6 @@ public final class ZKConfig {
    * @param clientPort the default client port
    * @return the string for a list of "server:port" separated by ","
    */
-  @VisibleForTesting
   public static String standardizeZKQuorumServerString(String quorumStringInput,
       String clientPort) {
     String[] serverHosts = quorumStringInput.split(",");
@@ -285,7 +284,6 @@ public final class ZKConfig {
   //      in this case, the clientPort would be ignored)
   // (3). s1:p1,s2,s3:p3 (mix of (1) and (2) - if port is not specified in a server, it would use
   //      the clientPort; otherwise, it would use the specified port)
-  @VisibleForTesting
   public static class ZKClusterKey {
     private String quorumString;
     private int clientPort;
@@ -308,5 +306,24 @@ public final class ZKConfig {
     public String getZnodeParent() {
       return znodeParent;
     }
+  }
+
+  /**
+   * Get the client ZK Quorum servers string
+   * @param conf the configuration to read
+   * @return Client quorum servers, or null if not specified
+   */
+  public static String getClientZKQuorumServersString(Configuration conf) {
+    String clientQuromServers = conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM);
+    if (clientQuromServers == null) {
+      return null;
+    }
+    int defaultClientPort =
+        conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, HConstants.DEFAULT_ZOOKEEPER_CLIENT_PORT);
+    String clientZkClientPort =
+        Integer.toString(conf.getInt(HConstants.CLIENT_ZOOKEEPER_CLIENT_PORT, defaultClientPort));
+    // Build the ZK quorum server string with "server:clientport" list, separated by ','
+    final String[] serverHosts = StringUtils.getStrings(clientQuromServers);
+    return buildZKQuorumServerString(serverHosts, clientZkClientPort);
   }
 }

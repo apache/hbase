@@ -18,17 +18,16 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Collections;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.Iterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -47,23 +46,30 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterators;
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
+@InterfaceAudience.Private
 public class SyncTable extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(SyncTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SyncTable.class);
 
   static final String SOURCE_HASH_DIR_CONF_KEY = "sync.table.source.hash.dir";
   static final String SOURCE_TABLE_CONF_KEY = "sync.table.source.table.name";
   static final String TARGET_TABLE_CONF_KEY = "sync.table.target.table.name";
   static final String SOURCE_ZK_CLUSTER_CONF_KEY = "sync.table.source.zk.cluster";
   static final String TARGET_ZK_CLUSTER_CONF_KEY = "sync.table.target.zk.cluster";
-  static final String DRY_RUN_CONF_KEY="sync.table.dry.run";
+  static final String DRY_RUN_CONF_KEY = "sync.table.dry.run";
+  static final String DO_DELETES_CONF_KEY = "sync.table.do.deletes";
+  static final String DO_PUTS_CONF_KEY = "sync.table.do.puts";
+  static final String IGNORE_TIMESTAMPS = "sync.table.ignore.timestamps";
 
   Path sourceHashDir;
   String sourceTableName;
@@ -72,6 +78,9 @@ public class SyncTable extends Configured implements Tool {
   String sourceZkCluster;
   String targetZkCluster;
   boolean dryRun;
+  boolean doDeletes = true;
+  boolean doPuts = true;
+  boolean ignoreTimestamps;
 
   Counters counters;
 
@@ -79,10 +88,26 @@ public class SyncTable extends Configured implements Tool {
     super(conf);
   }
 
+  private void initCredentialsForHBase(String zookeeper, Job job) throws IOException {
+    Configuration peerConf = HBaseConfiguration.createClusterConf(job
+            .getConfiguration(), zookeeper);
+    if("kerberos".equalsIgnoreCase(peerConf.get("hbase.security.authentication"))){
+      TableMapReduceUtil.initCredentialsForCluster(job, peerConf);
+    }
+  }
+
   public Job createSubmittableJob(String[] args) throws IOException {
     FileSystem fs = sourceHashDir.getFileSystem(getConf());
     if (!fs.exists(sourceHashDir)) {
       throw new IOException("Source hash dir not found: " + sourceHashDir);
+    }
+
+    Job job = Job.getInstance(getConf(),getConf().get("mapreduce.job.name",
+        "syncTable_" + sourceTableName + "-" + targetTableName));
+    Configuration jobConf = job.getConfiguration();
+    if ("kerberos".equalsIgnoreCase(jobConf.get("hadoop.security.authentication"))) {
+      TokenCache.obtainTokensForNamenodes(job.getCredentials(), new
+          Path[] { sourceHashDir }, getConf());
     }
 
     HashTable.TableHash tableHash = HashTable.TableHash.read(getConf(), sourceHashDir);
@@ -114,20 +139,22 @@ public class SyncTable extends Configured implements Tool {
           + " found in the partitions file is " + tableHash.partitions.size());
     }
 
-    Job job = Job.getInstance(getConf(),getConf().get("mapreduce.job.name",
-        "syncTable_" + sourceTableName + "-" + targetTableName));
-    Configuration jobConf = job.getConfiguration();
     job.setJarByClass(HashTable.class);
     jobConf.set(SOURCE_HASH_DIR_CONF_KEY, sourceHashDir.toString());
     jobConf.set(SOURCE_TABLE_CONF_KEY, sourceTableName);
     jobConf.set(TARGET_TABLE_CONF_KEY, targetTableName);
     if (sourceZkCluster != null) {
       jobConf.set(SOURCE_ZK_CLUSTER_CONF_KEY, sourceZkCluster);
+      initCredentialsForHBase(sourceZkCluster, job);
     }
     if (targetZkCluster != null) {
       jobConf.set(TARGET_ZK_CLUSTER_CONF_KEY, targetZkCluster);
+      initCredentialsForHBase(targetZkCluster, job);
     }
     jobConf.setBoolean(DRY_RUN_CONF_KEY, dryRun);
+    jobConf.setBoolean(DO_DELETES_CONF_KEY, doDeletes);
+    jobConf.setBoolean(DO_PUTS_CONF_KEY, doPuts);
+    jobConf.setBoolean(IGNORE_TIMESTAMPS, ignoreTimestamps);
 
     TableMapReduceUtil.initTableMapperJob(targetTableName, tableHash.initScan(),
         SyncMapper.class, null, null, job);
@@ -162,6 +189,9 @@ public class SyncTable extends Configured implements Tool {
     Table sourceTable;
     Table targetTable;
     boolean dryRun;
+    boolean doDeletes = true;
+    boolean doPuts = true;
+    boolean ignoreTimestamp;
 
     HashTable.TableHash sourceTableHash;
     HashTable.TableHash.Reader sourceHashReader;
@@ -185,7 +215,10 @@ public class SyncTable extends Configured implements Tool {
           TableOutputFormat.OUTPUT_CONF_PREFIX);
       sourceTable = openTable(sourceConnection, conf, SOURCE_TABLE_CONF_KEY);
       targetTable = openTable(targetConnection, conf, TARGET_TABLE_CONF_KEY);
-      dryRun = conf.getBoolean(SOURCE_TABLE_CONF_KEY, false);
+      dryRun = conf.getBoolean(DRY_RUN_CONF_KEY, false);
+      doDeletes = conf.getBoolean(DO_DELETES_CONF_KEY, true);
+      doPuts = conf.getBoolean(DO_PUTS_CONF_KEY, true);
+      ignoreTimestamp = conf.getBoolean(IGNORE_TIMESTAMPS, false);
 
       sourceTableHash = HashTable.TableHash.read(conf, sourceHashDir);
       LOG.info("Read source hash manifest: " + sourceTableHash);
@@ -201,6 +234,7 @@ public class SyncTable extends Configured implements Tool {
       // instead, find the first hash batch at or after the start row
       // and skip any rows that come before.  they will be caught by the previous task
       targetHasher = new HashTable.ResultHasher();
+      targetHasher.ignoreTimestamps = ignoreTimestamp;
     }
 
     private static Connection openConnection(Configuration conf, String zkClusterConfKey,
@@ -329,16 +363,16 @@ public class SyncTable extends Configured implements Tool {
         boolean rowMatched;
         int rowComparison = compareRowKeys(nextSourceRow, nextTargetRow);
         if (rowComparison < 0) {
-          if (LOG.isInfoEnabled()) {
-            LOG.info("Target missing row: " + Bytes.toHex(nextSourceRow));
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Target missing row: " + Bytes.toString(nextSourceRow));
           }
           context.getCounter(Counter.TARGETMISSINGROWS).increment(1);
 
           rowMatched = syncRowCells(context, nextSourceRow, sourceCells, EMPTY_CELL_SCANNER);
           nextSourceRow = sourceCells.nextRow();  // advance only source to next row
         } else if (rowComparison > 0) {
-          if (LOG.isInfoEnabled()) {
-            LOG.info("Source missing row: " + Bytes.toHex(nextTargetRow));
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Source missing row: " + Bytes.toString(nextTargetRow));
           }
           context.getCounter(Counter.SOURCEMISSINGROWS).increment(1);
 
@@ -448,6 +482,23 @@ public class SyncTable extends Configured implements Tool {
       }
     }
 
+    private Cell checkAndResetTimestamp(Cell sourceCell){
+      if (ignoreTimestamp) {
+        sourceCell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+          .setType(sourceCell.getType())
+          .setRow(sourceCell.getRowArray(),
+            sourceCell.getRowOffset(), sourceCell.getRowLength())
+          .setFamily(sourceCell.getFamilyArray(),
+            sourceCell.getFamilyOffset(), sourceCell.getFamilyLength())
+          .setQualifier(sourceCell.getQualifierArray(),
+            sourceCell.getQualifierOffset(), sourceCell.getQualifierLength())
+          .setTimestamp(System.currentTimeMillis())
+          .setValue(sourceCell.getValueArray(),
+            sourceCell.getValueOffset(), sourceCell.getValueLength()).build();
+      }
+      return sourceCell;
+    }
+
     /**
      * Compare the cells for the given row from the source and target tables.
      * Count and log any differences.
@@ -472,10 +523,11 @@ public class SyncTable extends Configured implements Tool {
           context.getCounter(Counter.TARGETMISSINGCELLS).increment(1);
           matchingRow = false;
 
-          if (!dryRun) {
+          if (!dryRun && doPuts) {
             if (put == null) {
               put = new Put(rowKey);
             }
+            sourceCell = checkAndResetTimestamp(sourceCell);
             put.add(sourceCell);
           }
 
@@ -487,7 +539,7 @@ public class SyncTable extends Configured implements Tool {
           context.getCounter(Counter.SOURCEMISSINGCELLS).increment(1);
           matchingRow = false;
 
-          if (!dryRun) {
+          if (!dryRun && doDeletes) {
             if (delete == null) {
               delete = new Delete(rowKey);
             }
@@ -505,20 +557,21 @@ public class SyncTable extends Configured implements Tool {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Different values: ");
               LOG.debug("  source cell: " + sourceCell
-                  + " value: " + Bytes.toHex(sourceCell.getValueArray(),
+                  + " value: " + Bytes.toString(sourceCell.getValueArray(),
                       sourceCell.getValueOffset(), sourceCell.getValueLength()));
               LOG.debug("  target cell: " + targetCell
-                  + " value: " + Bytes.toHex(targetCell.getValueArray(),
+                  + " value: " + Bytes.toString(targetCell.getValueArray(),
                       targetCell.getValueOffset(), targetCell.getValueLength()));
             }
             context.getCounter(Counter.DIFFERENTCELLVALUES).increment(1);
             matchingRow = false;
 
-            if (!dryRun) {
+            if (!dryRun && doPuts) {
               // overwrite target cell
               if (put == null) {
                 put = new Put(rowKey);
               }
+              sourceCell = checkAndResetTimestamp(sourceCell);
               put.add(sourceCell);
             }
           }
@@ -580,7 +633,7 @@ public class SyncTable extends Configured implements Tool {
      * They are assumed to be of the same row.
      * Nulls are after non-nulls.
      */
-     private static int compareCellKeysWithinRow(Cell c1, Cell c2) {
+     private int compareCellKeysWithinRow(Cell c1, Cell c2) {
       if (c1 == null) {
         return 1; // source missing cell
       }
@@ -588,18 +641,22 @@ public class SyncTable extends Configured implements Tool {
         return -1; // target missing cell
       }
 
-      int result = CellComparator.compareFamilies(c1, c2);
+      int result = CellComparator.getInstance().compareFamilies(c1, c2);
       if (result != 0) {
         return result;
       }
 
-      result = CellComparator.compareQualifiers(c1, c2);
+      result = CellComparator.getInstance().compareQualifiers(c1, c2);
       if (result != 0) {
         return result;
       }
 
-      // note timestamp comparison is inverted - more recent cells first
-      return CellComparator.compareTimestamps(c1, c2);
+      if (this.ignoreTimestamp) {
+        return 0;
+      } else {
+        // note timestamp comparison is inverted - more recent cells first
+        return CellComparator.getInstance().compareTimestamps(c1, c2);
+      }
     }
 
     @Override
@@ -695,6 +752,14 @@ public class SyncTable extends Configured implements Tool {
     System.err.println("                  (defaults to cluster in classpath's config)");
     System.err.println(" dryrun           if true, output counters but no writes");
     System.err.println("                  (defaults to false)");
+    System.err.println(" doDeletes        if false, does not perform deletes");
+    System.err.println("                  (defaults to true)");
+    System.err.println(" doPuts           if false, does not perform puts");
+    System.err.println("                  (defaults to true)");
+    System.err.println(" ignoreTimestamps if true, ignores cells timestamps while comparing ");
+    System.err.println("                  cell values. Any missing cell on target then gets");
+    System.err.println("                  added with current time as timestamp ");
+    System.err.println("                  (defaults to false)");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" sourcehashdir    path to HashTable output dir for source table");
@@ -743,6 +808,24 @@ public class SyncTable extends Configured implements Tool {
         final String dryRunKey = "--dryrun=";
         if (cmd.startsWith(dryRunKey)) {
           dryRun = Boolean.parseBoolean(cmd.substring(dryRunKey.length()));
+          continue;
+        }
+
+        final String doDeletesKey = "--doDeletes=";
+        if (cmd.startsWith(doDeletesKey)) {
+          doDeletes = Boolean.parseBoolean(cmd.substring(doDeletesKey.length()));
+          continue;
+        }
+
+        final String doPutsKey = "--doPuts=";
+        if (cmd.startsWith(doPutsKey)) {
+          doPuts = Boolean.parseBoolean(cmd.substring(doPutsKey.length()));
+          continue;
+        }
+
+        final String ignoreTimestampsKey = "--ignoreTimestamps=";
+        if (cmd.startsWith(ignoreTimestampsKey)) {
+          ignoreTimestamps = Boolean.parseBoolean(cmd.substring(ignoreTimestampsKey.length()));
           continue;
         }
 

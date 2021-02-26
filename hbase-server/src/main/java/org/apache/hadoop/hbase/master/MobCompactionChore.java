@@ -22,11 +22,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.procedure2.LockType;
 @InterfaceAudience.Private
 public class MobCompactionChore extends ScheduledChore {
 
-  private static final Log LOG = LogFactory.getLog(MobCompactionChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MobCompactionChore.class);
   private HMaster master;
   private ExecutorService pool;
 
@@ -89,7 +89,7 @@ public class MobCompactionChore extends ScheduledChore {
   }
 
   @Override
-  protected void cleanup() {
+  protected synchronized void cleanup() {
     super.cleanup();
     pool.shutdown();
   }

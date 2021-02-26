@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,7 +26,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -35,9 +35,7 @@ import org.apache.hadoop.hbase.util.HashKey;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -67,7 +65,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  *
  */
 @InterfaceAudience.Public
-public interface RegionInfo {
+public interface RegionInfo extends Comparable<RegionInfo> {
+  /**
+   * @deprecated since 2.3.2/3.0.0; to be removed in 4.0.0 with no replacement (for internal use).
+   */
+  @Deprecated
+  @InterfaceAudience.Private
+  // Not using RegionInfoBuilder intentionally to avoid a static loading deadlock: HBASE-24896
+  RegionInfo UNDEFINED = new MutableRegionInfo(0, TableName.valueOf("__UNDEFINED__"),
+    RegionInfo.DEFAULT_REPLICA_ID);
+
   /**
    * Separator used to demarcate the encodedName in a region name
    * in the new format. See description on new format above.
@@ -137,11 +144,16 @@ public interface RegionInfo {
       }
 
       int replicaDiff = lhs.getReplicaId() - rhs.getReplicaId();
-      if (replicaDiff != 0) return replicaDiff;
+      if (replicaDiff != 0) {
+        return replicaDiff;
+      }
 
-      if (lhs.isOffline() == rhs.isOffline())
+      if (lhs.isOffline() == rhs.isOffline()) {
         return 0;
-      if (lhs.isOffline() == true) return -1;
+      }
+      if (lhs.isOffline()) {
+        return -1;
+      }
 
       return 1;
   };
@@ -206,23 +218,19 @@ public interface RegionInfo {
 
   /**
    * @return True if this region is offline.
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-25210">HBASE-25210</a>
    */
+  @Deprecated
   boolean isOffline();
 
   /**
    * @return True if this is a split parent region.
+   * @deprecated since 3.0.0 and will be removed in 4.0.0, Use {@link #isSplit()} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-25210">HBASE-25210</a>
    */
+  @Deprecated
   boolean isSplitParent();
-
-  /**
-   * @return true if this region is from hbase:meta.
-   */
-  boolean isMetaTable();
-
-  /**
-   * @return true if this region is from a system table.
-   */
-  boolean isSystemTable();
 
   /**
    * @return true if this region is a meta region.
@@ -230,8 +238,6 @@ public interface RegionInfo {
   boolean isMetaRegion();
 
   /**
-   * @param rangeStartKey
-   * @param rangeEndKey
    * @return true if the given inclusive range of rows is fully contained
    * by this region. For example, if the region is foo,a,g and this is
    * passed ["b","c"] or ["a","c"] it will return true, but if this is passed
@@ -241,7 +247,6 @@ public interface RegionInfo {
   boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey);
 
   /**
-   * @param row
    * @return true if the given row falls in this region.
    */
   boolean containsRow(byte[] row);
@@ -281,6 +286,26 @@ public interface RegionInfo {
     return encodedName;
   }
 
+  @InterfaceAudience.Private
+  static String getRegionNameAsString(byte[] regionName) {
+    return getRegionNameAsString(null, regionName);
+  }
+
+  @InterfaceAudience.Private
+  static String getRegionNameAsString(@CheckForNull RegionInfo ri, byte[] regionName) {
+    if (RegionInfo.hasEncodedName(regionName)) {
+      // new format region names already have their encoded name.
+      return Bytes.toStringBinary(regionName);
+    }
+
+    // old format. regionNameStr doesn't have the region name.
+    if (ri == null) {
+      return Bytes.toStringBinary(regionName) + "." + RegionInfo.encodeRegionName(regionName);
+    } else {
+      return Bytes.toStringBinary(regionName) + "." + ri.getEncodedName();
+    }
+  }
+
   /**
    * @return Return a String of short, printable names for <code>hris</code>
    * (usually encoded name) for us logging.
@@ -290,12 +315,11 @@ public interface RegionInfo {
   }
 
   /**
-   * @return Return a String of short, printable names for <code>hris</code>
-   * (usually encoded name) for us logging.
+   * @return Return a String of short, printable names for <code>hris</code> (usually encoded name)
+   *   for us logging.
    */
   static String getShortNameToLog(final List<RegionInfo> ris) {
-    return ris.stream().map(ri -> ri.getShortNameToLog()).
-    collect(Collectors.toList()).toString();
+    return ris.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()).toString();
   }
 
   /**
@@ -315,6 +339,9 @@ public interface RegionInfo {
         break;
       }
     }
+    if (offset <= 0) {
+      throw new IllegalArgumentException("offset=" + offset);
+    }
     byte[] buff  = new byte[offset];
     System.arraycopy(regionName, 0, buff, 0, offset);
     return TableName.valueOf(buff);
@@ -322,30 +349,24 @@ public interface RegionInfo {
 
   /**
    * Gets the start key from the specified region name.
-   * @param regionName
    * @return Start key.
-   * @throws java.io.IOException
    */
   static byte[] getStartKey(final byte[] regionName) throws IOException {
     return parseRegionName(regionName)[1];
   }
 
-  @InterfaceAudience.Private
-  static boolean isEncodedRegionName(byte[] regionName) throws IOException {
-    try {
-      parseRegionName(regionName);
-      return false;
-    } catch (IOException e) {
-      if (StringUtils.stringifyException(e)
-      .contains(INVALID_REGION_NAME_FORMAT_MESSAGE)) {
-        return true;
-      }
-      throw e;
-    }
+  /**
+   * Figure if the passed bytes represent an encoded region name or not.
+   * @param regionName A Region name either encoded or not.
+   * @return True if <code>regionName</code> represents an encoded name.
+   */
+  @InterfaceAudience.Private // For use by internals only.
+  public static boolean isEncodedRegionName(byte[] regionName) {
+    // If not parseable as region name, presume encoded. TODO: add stringency; e.g. if hex.
+    return parseRegionNameOrReturnNull(regionName) == null && regionName.length <= MD5_HEX_LENGTH;
   }
 
   /**
-   * @param bytes
    * @return A deserialized {@link RegionInfo}
    * or null if we failed deserialize or passed bytes null
    */
@@ -356,9 +377,6 @@ public interface RegionInfo {
   }
 
   /**
-   * @param bytes
-   * @param offset
-   * @param len
    * @return A deserialized {@link RegionInfo} or null
    *  if we failed deserialize or passed bytes null
    */
@@ -375,7 +393,6 @@ public interface RegionInfo {
   /**
    * @param bytes A pb RegionInfo serialized with a pb magic prefix.
    * @return A deserialized {@link RegionInfo}
-   * @throws DeserializationException
    */
   @InterfaceAudience.Private
   static RegionInfo parseFrom(final byte [] bytes) throws DeserializationException {
@@ -388,7 +405,6 @@ public interface RegionInfo {
    * @param offset starting point in the byte array
    * @param len length to read on the byte array
    * @return A deserialized {@link RegionInfo}
-   * @throws DeserializationException
    */
   @InterfaceAudience.Private
   static RegionInfo parseFrom(final byte [] bytes, int offset, int len)
@@ -408,10 +424,23 @@ public interface RegionInfo {
     }
   }
 
+  static boolean isMD5Hash(String encodedRegionName) {
+    if (encodedRegionName.length() != MD5_HEX_LENGTH) {
+      return false;
+    }
+
+    for (int i = 0; i < encodedRegionName.length(); i++) {
+      char c = encodedRegionName.charAt(i);
+      if (!((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9'))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /**
-   * Check whether two regions are adjacent
-   * @param regionA
-   * @param regionB
+   * Check whether two regions are adjacent; i.e. lies just before or just
+   * after in a table.
    * @return true if two regions are adjacent
    */
   static boolean areAdjacent(RegionInfo regionA, RegionInfo regionB) {
@@ -419,20 +448,19 @@ public interface RegionInfo {
       throw new IllegalArgumentException(
       "Can't check whether adjacent for null region");
     }
+    if (!regionA.getTable().equals(regionB.getTable())) {
+      return false;
+    }
     RegionInfo a = regionA;
     RegionInfo b = regionB;
     if (Bytes.compareTo(a.getStartKey(), b.getStartKey()) > 0) {
       a = regionB;
       b = regionA;
     }
-    if (Bytes.compareTo(a.getEndKey(), b.getStartKey()) == 0) {
-      return true;
-    }
-    return false;
+    return Bytes.equals(a.getEndKey(), b.getStartKey());
   }
 
   /**
-   * @param ri
    * @return This instance serialized as protobuf w/ a magic pb prefix.
    * @see #parseFrom(byte[])
    */
@@ -456,7 +484,6 @@ public interface RegionInfo {
 
   /**
    * Make a region name of passed parameters.
-   * @param tableName
    * @param startKey Can be null
    * @param regionid Region id (Usually timestamp from when region was created).
    * @param newFormat should we create the region name in the new format
@@ -470,7 +497,6 @@ public interface RegionInfo {
 
   /**
    * Make a region name of passed parameters.
-   * @param tableName
    * @param startKey Can be null
    * @param id Region id (Usually timestamp from when region was created).
    * @param newFormat should we create the region name in the new format
@@ -484,10 +510,8 @@ public interface RegionInfo {
 
   /**
    * Make a region name of passed parameters.
-   * @param tableName
    * @param startKey Can be null
    * @param regionid Region id (Usually timestamp from when region was created).
-   * @param replicaId
    * @param newFormat should we create the region name in the new format
    *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey, id and replicaId
@@ -500,7 +524,6 @@ public interface RegionInfo {
 
   /**
    * Make a region name of passed parameters.
-   * @param tableName
    * @param startKey Can be null
    * @param id Region id (Usually timestamp from when region was created).
    * @param newFormat should we create the region name in the new format
@@ -514,10 +537,8 @@ public interface RegionInfo {
 
   /**
    * Make a region name of passed parameters.
-   * @param tableName
    * @param startKey Can be null
    * @param id Region id (Usually timestamp from when region was created).
-   * @param replicaId
    * @param newFormat should we create the region name in the new format
    * @return Region name made of passed tableName, startKey, id and replicaId
    */
@@ -576,25 +597,48 @@ public interface RegionInfo {
       b[offset++] = ENC_SEPARATOR;
       System.arraycopy(md5HashBytes, 0, b, offset, MD5_HEX_LENGTH);
       offset += MD5_HEX_LENGTH;
-      b[offset++] = ENC_SEPARATOR;
+      b[offset] = ENC_SEPARATOR;
     }
 
     return b;
   }
 
   /**
-   * Separate elements of a regionName.
-   * @param regionName
-   * @return Array of byte[] containing tableName, startKey and id
-   * @throws IOException
+   * Creates a RegionInfo object for MOB data.
+   *
+   * @param tableName the name of the table
+   * @return the MOB {@link RegionInfo}.
    */
-  static byte [][] parseRegionName(final byte[] regionName)
-  throws IOException {
-    // Region name is of the format:
-    // tablename,startkey,regionIdTimestamp[_replicaId][.encodedName.]
-    // startkey can contain the delimiter (',') so we parse from the start and end
+  static RegionInfo createMobRegionInfo(TableName tableName) {
+    // Skipping reference to RegionInfoBuilder in this class.
+    return new MutableRegionInfo(tableName, Bytes.toBytes(".mob"),
+      HConstants.EMPTY_END_ROW, false, 0, DEFAULT_REPLICA_ID, false);
+  }
 
-    // parse from start
+  /**
+   * Separate elements of a regionName.
+   * @return Array of byte[] containing tableName, startKey and id OR null if
+   *   not parseable as a region name.
+   * @throws IOException if not parseable as regionName.
+   */
+  static byte [][] parseRegionName(final byte[] regionName) throws IOException {
+    byte [][] result = parseRegionNameOrReturnNull(regionName);
+    if (result == null) {
+      throw new IOException(INVALID_REGION_NAME_FORMAT_MESSAGE + ": " + Bytes.toStringBinary(regionName));
+    }
+    return result;
+  }
+
+  /**
+   * Separate elements of a regionName.
+   * Region name is of the format:
+   * <code>tablename,startkey,regionIdTimestamp[_replicaId][.encodedName.]</code>.
+   * Startkey can contain the delimiter (',') so we parse from the start and then parse from
+   * the end.
+   * @return Array of byte[] containing tableName, startKey and id OR null if not parseable
+   * as a region name.
+   */
+  static byte [][] parseRegionNameOrReturnNull(final byte[] regionName) {
     int offset = -1;
     for (int i = 0; i < regionName.length; i++) {
       if (regionName[i] == HConstants.DELIMITER) {
@@ -603,8 +647,7 @@ public interface RegionInfo {
       }
     }
     if (offset == -1) {
-      throw new IOException(INVALID_REGION_NAME_FORMAT_MESSAGE
-      + ": " + Bytes.toStringBinary(regionName));
+      return null;
     }
     byte[] tableName = new byte[offset];
     System.arraycopy(regionName, 0, tableName, 0, offset);
@@ -612,9 +655,9 @@ public interface RegionInfo {
 
     int endOffset = regionName.length;
     // check whether regionName contains encodedName
-    if (regionName.length > MD5_HEX_LENGTH + 2
-    && regionName[regionName.length-1] == ENC_SEPARATOR
-    && regionName[regionName.length-MD5_HEX_LENGTH-2] == ENC_SEPARATOR) {
+    if (regionName.length > MD5_HEX_LENGTH + 2 &&
+        regionName[regionName.length-1] == ENC_SEPARATOR &&
+        regionName[regionName.length-MD5_HEX_LENGTH-2] == ENC_SEPARATOR) {
       endOffset = endOffset - MD5_HEX_LENGTH - 2;
     }
 
@@ -635,8 +678,7 @@ public interface RegionInfo {
       }
     }
     if (offset == -1) {
-      throw new IOException(INVALID_REGION_NAME_FORMAT_MESSAGE
-      + ": " + Bytes.toStringBinary(regionName));
+      return null;
     }
     byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
     if(offset != tableName.length + 1) {
@@ -665,7 +707,6 @@ public interface RegionInfo {
    * be used to read back the instances.
    * @param infos RegionInfo objects to serialize
    * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
-   * @throws IOException
    */
   static byte[] toDelimitedByteArray(RegionInfo... infos) throws IOException {
     byte[][] bytes = new byte[infos.length][];
@@ -687,9 +728,7 @@ public interface RegionInfo {
   /**
    * Use this instead of {@link RegionInfo#toByteArray(RegionInfo)} when writing to a stream and you want to use
    * the pb mergeDelimitedFrom (w/o the delimiter, pb reads to EOF which may not be what you want).
-   * @param ri
    * @return This instance serialized as a delimied protobuf w/ a magic pb prefix.
-   * @throws IOException
    */
   static byte [] toDelimitedByteArray(RegionInfo ri) throws IOException {
     return ProtobufUtil.toDelimitedByteArray(ProtobufUtil.toRegionInfo(ri));
@@ -699,9 +738,7 @@ public interface RegionInfo {
    * Parses an RegionInfo instance from the passed in stream.
    * Presumes the RegionInfo was serialized to the stream with
    * {@link #toDelimitedByteArray(RegionInfo)}.
-   * @param in
    * @return An instance of RegionInfo.
-   * @throws IOException
    */
   static RegionInfo parseFrom(final DataInputStream in) throws IOException {
     // I need to be able to move back in the stream if this is not a pb
@@ -729,24 +766,89 @@ public interface RegionInfo {
    * @param offset the start offset into the byte[] buffer
    * @param length how far we should read into the byte[] buffer
    * @return All the RegionInfos that are in the byte array. Keeps reading till we hit the end.
-   * @throws IOException
    */
   static List<RegionInfo> parseDelimitedFrom(final byte[] bytes, final int offset,
                                              final int length) throws IOException {
     if (bytes == null) {
       throw new IllegalArgumentException("Can't build an object with empty bytes array");
     }
-    DataInputBuffer in = new DataInputBuffer();
     List<RegionInfo> ris = new ArrayList<>();
-    try {
+    try (DataInputBuffer in = new DataInputBuffer()) {
       in.reset(bytes, offset, length);
       while (in.available() > 0) {
         RegionInfo ri = parseFrom(in);
         ris.add(ri);
       }
-    } finally {
-      in.close();
     }
     return ris;
+  }
+
+  /**
+   * @return True if this is first Region in Table
+   */
+  default boolean isFirst() {
+    return Bytes.equals(getStartKey(), HConstants.EMPTY_START_ROW);
+  }
+
+  /**
+   * @return True if this is last Region in Table
+   */
+  default boolean isLast() {
+    return Bytes.equals(getEndKey(), HConstants.EMPTY_END_ROW);
+  }
+
+  /**
+   * @return True if region is next, adjacent but 'after' this one.
+   * @see #isAdjacent(RegionInfo)
+   * @see #areAdjacent(RegionInfo, RegionInfo)
+   */
+  default boolean isNext(RegionInfo after) {
+    return getTable().equals(after.getTable()) && Bytes.equals(getEndKey(), after.getStartKey());
+  }
+
+  /**
+   * @return True if region is adjacent, either just before or just after this one.
+   * @see #isNext(RegionInfo)
+   */
+  default boolean isAdjacent(RegionInfo other) {
+    return getTable().equals(other.getTable()) && areAdjacent(this, other);
+  }
+
+  /**
+   * @return True if RegionInfo is degenerate... if startKey > endKey.
+   */
+  default boolean isDegenerate() {
+    return !isLast() && Bytes.compareTo(getStartKey(), getEndKey()) > 0;
+  }
+
+  /**
+   * @return True if an overlap in region range.
+   * @see #isDegenerate()
+   */
+  default boolean isOverlap(RegionInfo other) {
+    if (other == null) {
+      return false;
+    }
+    if (!getTable().equals(other.getTable())) {
+      return false;
+    }
+    int startKeyCompare = Bytes.compareTo(getStartKey(), other.getStartKey());
+    if (startKeyCompare == 0) {
+      return true;
+    }
+    if (startKeyCompare < 0) {
+      if (isLast()) {
+        return true;
+      }
+      return Bytes.compareTo(getEndKey(), other.getStartKey()) > 0;
+    }
+    if (other.isLast()) {
+      return true;
+    }
+    return Bytes.compareTo(getStartKey(), other.getEndKey()) < 0;
+  }
+
+  default int compareTo(RegionInfo other) {
+    return RegionInfo.COMPARATOR.compare(this, other);
   }
 }

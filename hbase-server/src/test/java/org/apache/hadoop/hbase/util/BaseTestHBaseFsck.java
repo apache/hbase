@@ -29,25 +29,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
+import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -57,7 +52,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -71,12 +65,11 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
-import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
-import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.zookeeper.KeeperException;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -92,7 +85,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
  */
 public class BaseTestHBaseFsck {
   static final int POOL_SIZE = 7;
-  protected static final Log LOG = LogFactory.getLog(BaseTestHBaseFsck.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(BaseTestHBaseFsck.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected final static Configuration conf = TEST_UTIL.getConfiguration();
   protected final static String FAM_STR = "fam";
@@ -114,23 +107,6 @@ public class BaseTestHBaseFsck {
     Bytes.toBytes("00"), Bytes.toBytes("50"), Bytes.toBytes("A0"), Bytes.toBytes("A5"),
     Bytes.toBytes("B0"), Bytes.toBytes("B5"), Bytes.toBytes("C0"), Bytes.toBytes("C5") };
 
-
-  /**
-   * Create a new region in META.
-   */
-  protected RegionInfo createRegion(final HTableDescriptor
-      htd, byte[] startKey, byte[] endKey)
-      throws IOException {
-    Table meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
-    RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName())
-        .setStartKey(startKey)
-        .setEndKey(endKey)
-        .build();
-    MetaTableAccessor.addRegionToMeta(meta, hri);
-    meta.close();
-    return hri;
-  }
-
   /**
    * Debugging method to dump the contents of meta.
    */
@@ -149,7 +125,7 @@ public class BaseTestHBaseFsck {
       RegionInfo hri) throws IOException, InterruptedException {
     try {
       HBaseFsckRepair.closeRegionSilentlyAndWait(conn, sn, hri);
-      if (!hri.isMetaTable()) {
+      if (!hri.isMetaRegion()) {
         admin.offline(hri.getRegionName());
       }
     } catch (IOException ioe) {
@@ -207,9 +183,9 @@ public class BaseTestHBaseFsck {
 
         if (regionInfoOnly) {
           LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
-          Path rootDir = FSUtils.getRootDir(conf);
+          Path rootDir = CommonFSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
+          Path p = new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()),
               hri.getEncodedName());
           Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
           fs.delete(hriPath, true);
@@ -217,9 +193,9 @@ public class BaseTestHBaseFsck {
 
         if (hdfs) {
           LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
-          Path rootDir = FSUtils.getRootDir(conf);
+          Path rootDir = CommonFSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
+          Path p = new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()),
               hri.getEncodedName());
           HBaseFsck.debugLsr(conf, p);
           boolean success = fs.delete(p, true);
@@ -329,7 +305,7 @@ public class BaseTestHBaseFsck {
       tbl = null;
     }
 
-    ((ClusterConnection) connection).clearRegionCache();
+    ((ClusterConnection) connection).clearRegionLocationCache();
     deleteTable(TEST_UTIL, tablename);
   }
 
@@ -337,8 +313,8 @@ public class BaseTestHBaseFsck {
    * Get region info from local cluster.
    */
   Map<ServerName, List<String>> getDeployedHRIs(final Admin admin) throws IOException {
-    ClusterStatus status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
-    Collection<ServerName> regionServers = status.getServers();
+    ClusterMetrics status = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
+    Collection<ServerName> regionServers = status.getLiveServerMetrics().keySet();
     Map<ServerName, List<String>> mm = new HashMap<>();
     for (ServerName hsi : regionServers) {
       AdminProtos.AdminService.BlockingInterface server = connection.getAdmin(hsi);
@@ -367,9 +343,9 @@ public class BaseTestHBaseFsck {
   }
 
   public void deleteTableDir(TableName table) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
-    Path p = FSUtils.getTableDir(rootDir, table);
+    Path p = CommonFSUtils.getTableDir(rootDir, table);
     HBaseFsck.debugLsr(conf, p);
     boolean success = fs.delete(p, true);
     LOG.info("Deleted " + p + " sucessfully? " + success);
@@ -384,7 +360,7 @@ public class BaseTestHBaseFsck {
    * @throws IOException
    */
   Path getFlushedHFile(FileSystem fs, TableName table) throws IOException {
-    Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+    Path tableDir= CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), table);
     Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
     Path famDir = new Path(regionDir, FAM_STR);
 
@@ -435,7 +411,8 @@ public class BaseTestHBaseFsck {
     MobFileName mobFileName = MobFileName.create(oldFileName);
     String startKey = mobFileName.getStartKey();
     String date = mobFileName.getDate();
-    return MobFileName.create(startKey, date, UUID.randomUUID().toString().replaceAll("-", ""))
+    return MobFileName.create(startKey, date,
+                              TEST_UTIL.getRandomUUID().toString().replaceAll("-", ""))
       .getFileName();
   }
 
@@ -482,7 +459,7 @@ public class BaseTestHBaseFsck {
   }
 
 
-  static class MockErrorReporter implements ErrorReporter {
+  static class MockErrorReporter implements HbckErrorReporter {
     static int calledCount = 0;
 
     @Override
@@ -506,19 +483,19 @@ public class BaseTestHBaseFsck {
     }
 
     @Override
-    public void reportError(ERROR_CODE errorCode, String message, TableInfo table) {
+    public void reportError(ERROR_CODE errorCode, String message, HbckTableInfo table) {
       calledCount++;
     }
 
     @Override
     public void reportError(ERROR_CODE errorCode,
-        String message, TableInfo table, HbckInfo info) {
+        String message, HbckTableInfo table, HbckRegionInfo info) {
       calledCount++;
     }
 
     @Override
     public void reportError(ERROR_CODE errorCode, String message,
-        TableInfo table, HbckInfo info1, HbckInfo info2) {
+        HbckTableInfo table, HbckRegionInfo info1, HbckRegionInfo info2) {
       calledCount++;
     }
 
@@ -554,7 +531,7 @@ public class BaseTestHBaseFsck {
     }
 
     @Override
-    public boolean tableHasErrors(TableInfo table) {
+    public boolean tableHasErrors(HbckTableInfo table) {
       calledCount++;
       return false;
     }
@@ -576,7 +553,7 @@ public class BaseTestHBaseFsck {
 
     if (regionInfoOnly) {
       LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());
@@ -586,7 +563,7 @@ public class BaseTestHBaseFsck {
 
     if (hdfs) {
       LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());

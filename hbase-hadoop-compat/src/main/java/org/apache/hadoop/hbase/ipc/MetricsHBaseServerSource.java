@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String AUTHORIZATION_SUCCESSES_NAME = "authorizationSuccesses";
   String AUTHORIZATION_SUCCESSES_DESC =
@@ -58,10 +60,12 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String GENERAL_QUEUE_DESC = "Number of calls in the general call queue; " +
     "parsed requests waiting in scheduler to be executed";
   String PRIORITY_QUEUE_NAME = "numCallsInPriorityQueue";
+  String METAPRIORITY_QUEUE_NAME = "numCallsInMetaPriorityQueue";
   String REPLICATION_QUEUE_NAME = "numCallsInReplicationQueue";
   String REPLICATION_QUEUE_DESC =
       "Number of calls in the replication call queue waiting to be run";
   String PRIORITY_QUEUE_DESC = "Number of calls in the priority call queue waiting to be run";
+  String METAPRIORITY_QUEUE_DESC = "Number of calls in the priority call queue waiting to be run";
   String WRITE_QUEUE_NAME = "numCallsInWriteQueue";
   String WRITE_QUEUE_DESC = "Number of calls in the write call queue; " +
     "parsed requests waiting in scheduler to be executed";
@@ -74,7 +78,13 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String NUM_OPEN_CONNECTIONS_NAME = "numOpenConnections";
   String NUM_OPEN_CONNECTIONS_DESC = "Number of open connections.";
   String NUM_ACTIVE_HANDLER_NAME = "numActiveHandler";
-  String NUM_ACTIVE_HANDLER_DESC = "Number of active rpc handlers.";
+  String NUM_ACTIVE_HANDLER_DESC = "Total number of active rpc handlers.";
+  String NUM_ACTIVE_GENERAL_HANDLER_NAME = "numActiveGeneralHandler";
+  String NUM_ACTIVE_GENERAL_HANDLER_DESC = "Number of active general rpc handlers.";
+  String NUM_ACTIVE_PRIORITY_HANDLER_NAME = "numActivePriorityHandler";
+  String NUM_ACTIVE_PRIORITY_HANDLER_DESC = "Number of active priority rpc handlers.";
+  String NUM_ACTIVE_REPLICATION_HANDLER_NAME = "numActiveReplicationHandler";
+  String NUM_ACTIVE_REPLICATION_HANDLER_DESC = "Number of active replication rpc handlers.";
   String NUM_ACTIVE_WRITE_HANDLER_NAME = "numActiveWriteHandler";
   String NUM_ACTIVE_WRITE_HANDLER_DESC = "Number of active write rpc handlers.";
   String NUM_ACTIVE_READ_HANDLER_NAME = "numActiveReadHandler";
@@ -87,6 +97,11 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String NUM_LIFO_MODE_SWITCHES_NAME = "numLifoModeSwitches";
   String NUM_LIFO_MODE_SWITCHES_DESC = "Total number of calls in general queue which " +
     "were served from the tail of the queue";
+  // Direct Memory Usage metrics
+  String NETTY_DM_USAGE_NAME = "nettyDirectMemoryUsage";
+
+  String NETTY_DM_USAGE_DESC = "Current Netty direct memory usage.";
+
 
   void authorizationSuccess();
 

@@ -186,7 +186,7 @@ To implement an Endpoint, you need to:
 </ul>
 <p>
 For a more detailed discussion of how to implement a coprocessor Endpoint, along with some sample
-code, see the {@link org.apache.hadoop.hbase.client.coprocessor} package documentation.
+code, see the {@code org.apache.hadoop.hbase.client.coprocessor} package documentation.
 </p>
 
 <h2><a name="load">Coprocessor loading</a></h2>
@@ -256,7 +256,7 @@ policy implementations, perhaps) ahead of observers.
   // create a table that references the jar
   TableDescriptor htd = TableDescriptorBuilder
                         .newBuilder(TableName.valueOf(getClass().getTableName()))
-                        .addColumnFamily(ColumnFamilyDescriptorBuilder.of("test"))
+                        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("test"))
                         .setValue(Bytes.toBytes("Coprocessor$1", path.toString()+
                           ":" + classFullName +
                           ":" + Coprocessor.Priority.USER))

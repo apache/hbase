@@ -188,11 +188,9 @@ It is useful for tuning the IO impact of prefetching versus the time before all 
 To enable prefetching on a given column family, you can use HBase Shell or use the API.
 
 .Enable Prefetch Using HBase Shell
-====
 ----
 hbase> create 'MyTable', { NAME => 'myCF', PREFETCH_BLOCKS_ON_OPEN => 'true' }
 ----
-====
 
 .Enable Prefetch Using the API
 ====
@@ -259,12 +257,12 @@ The following examples illustrate some of the possibilities.
 Note that you always have at least one write queue, no matter what setting you use.
 
 * The default value of `0` does not split the queue.
-* A value of `.3` uses 30% of the queues for reading and 60% for writing.
+* A value of `.3` uses 30% of the queues for reading and 70% for writing.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 3 queues would be used for reads and 7 for writes.
 * A value of `.5` uses the same number of read queues and write queues.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 5 queues would be used for reads and 5 for writes.
-* A value of `.6` uses 60% of the queues for reading and 30% for reading.
-  Given a value of `10` for `hbase.ipc.server.num.callqueue`, 7 queues would be used for reads and 3 for writes.
+* A value of `.6` uses 60% of the queues for reading and 40% for reading.
+  Given a value of `10` for `hbase.ipc.server.num.callqueue`, 6 queues would be used for reads and 4 for writes.
 * A value of `1.0` uses one queue to process write requests, and all other queues process read requests.
   A value higher than `1.0` has the same effect as a value of `1.0`.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 9 queues would be used for reads and 1 for writes.
@@ -275,11 +273,11 @@ More queues are used for Gets if the value is below `.5` and more are used for s
 No matter what setting you use, at least one read queue is used for Get operations.
 
 * A value of `0` does not split the read queue.
-* A value of `.3` uses 60% of the read queues for Gets and 30% for Scans.
+* A value of `.3` uses 70% of the read queues for Gets and 30% for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 7 would be used for Gets and 3 for Scans.
 * A value of `.5` uses half the read queues for Gets and half for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 5 would be used for Gets and 5 for Scans.
-* A value of `.6` uses 30% of the read queues for Gets and 60% for Scans.
+* A value of `.7` uses 30% of the read queues for Gets and 70% for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 3 would be used for Gets and 7 for Scans.
 * A value of `1.0` uses all but one of the read queues for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of`.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 1 would be used for Gets and 9 for Scans.
@@ -320,7 +318,7 @@ See also <<perf.compression.however>> for compression caveats.
 [[schema.regionsize]]
 === Table RegionSize
 
-The regionsize can be set on a per-table basis via `setFileSize` on link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor] in the event where certain tables require different regionsizes than the configured default regionsize.
+The regionsize can be set on a per-table basis via `setFileSize` on link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor] in the event where certain tables require different regionsizes than the configured default regionsize.
 
 See <<ops.capacity.regions>> for more information.
 
@@ -372,7 +370,7 @@ Bloom filters are enabled on a Column Family.
 You can do this by using the setBloomFilterType method of HColumnDescriptor or using the HBase API.
 Valid values are `NONE`, `ROW` (default), or `ROWCOL`.
 See <<bloom.filters.when>> for more information on `ROW` versus `ROWCOL`.
-See also the API documentation for link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
+See also the API documentation for link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 
 The following example creates a table and enables a ROWCOL Bloom filter on the `colfam1` column family.
 
@@ -431,7 +429,7 @@ The blocksize can be configured for each ColumnFamily in a table, and defaults t
 Larger cell values require larger blocksizes.
 There is an inverse relationship between blocksize and the resulting StoreFile indexes (i.e., if the blocksize is doubled then the resulting indexes should be roughly halved).
 
-See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] and <<store>>for more information.
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] and <<store>>for more information.
 
 [[cf.in.memory]]
 === In-Memory ColumnFamilies
@@ -440,7 +438,7 @@ ColumnFamilies can optionally be defined as in-memory.
 Data is still persisted to disk, just like any other ColumnFamily.
 In-memory blocks have the highest priority in the <<block.cache>>, but it is not a guarantee that the entire table will be in memory.
 
-See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] for more information.
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] for more information.
 
 [[perf.compression]]
 === Compression
@@ -549,18 +547,8 @@ If deferred log flush is used, WAL edits are kept in memory until the flush peri
 The benefit is aggregated and asynchronous `WAL`- writes, but the potential downside is that if the RegionServer goes down the yet-to-be-flushed edits are lost.
 This is safer, however, than not using WAL at all with Puts.
 
-Deferred log flush can be configured on tables via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor].
+Deferred log flush can be configured on tables via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor].
 The default value of `hbase.regionserver.optionallogflushinterval` is 1000ms.
-
-[[perf.hbase.client.autoflush]]
-=== HBase Client: AutoFlush
-
-When performing a lot of Puts, make sure that setAutoFlush is set to false on your link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table] instance.
-Otherwise, the Puts will be sent one at a time to the RegionServer.
-Puts added via `table.add(Put)` and `table.add( <List> Put)` wind up in the same write buffer.
-If `autoFlush = false`, these messages are not sent until the write-buffer is filled.
-To explicitly flush the messages, call `flushCommits`.
-Calling `close` on the `Table` instance will invoke `flushCommits`.
 
 [[perf.hbase.client.putwal]]
 === HBase Client: Turn off WAL on Puts
@@ -584,7 +572,7 @@ There is a utility `HTableUtil` currently on MASTER that does this, but you can 
 [[perf.hbase.write.mr.reducer]]
 === MapReduce: Skip The Reducer
 
-When writing a lot of data to an HBase table from a MR job (e.g., with link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html[TableOutputFormat]), and specifically where Puts are being emitted from the Mapper, skip the Reducer step.
+When writing a lot of data to an HBase table from a MR job (e.g., with link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html[TableOutputFormat]), and specifically where Puts are being emitted from the Mapper, skip the Reducer step.
 When a Reducer step is used, all of the output (Puts) from the Mapper will get spooled to disk, then sorted/shuffled to other Reducers that will most likely be off-node.
 It's far more efficient to just write directly to HBase.
 
@@ -597,7 +585,7 @@ If all your data is being written to one region at a time, then re-read the sect
 
 Also, if you are pre-splitting regions and all your data is _still_ winding up in a single region even though your keys aren't monotonically increasing, confirm that your keyspace actually works with the split strategy.
 There are a variety of reasons that regions may appear "well split" but won't work with your data.
-As the HBase client communicates directly with the RegionServers, this can be obtained via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#getRegionLocation(byte%5B%5D)[Table.getRegionLocation].
+As the HBase client communicates directly with the RegionServers, this can be obtained via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/RegionLocator.html#getRegionLocation-byte:A-[RegionLocator.getRegionLocation].
 
 See <<precreate.regions>>, as well as <<perf.configurations>>
 
@@ -605,12 +593,11 @@ See <<precreate.regions>>, as well as <<perf.configurations>>
 == Reading from HBase
 
 The mailing list can help if you are having performance issues.
-For example, here is a good general thread on what to look at addressing read-time issues: link:http://search-hadoop.com/m/qOo2yyHtCC1[HBase Random Read latency > 100ms]
 
 [[perf.hbase.client.caching]]
 === Scan Caching
 
-If HBase is used as an input source for a MapReduce job, for example, make sure that the input link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instance to the MapReduce job has `setCaching` set to something greater than the default (which is 1). Using the default value means that the map-task will make call back to the region-server for every record processed.
+If HBase is used as an input source for a MapReduce job, for example, make sure that the input link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instance to the MapReduce job has `setCaching` set to something greater than the default (which is 1). Using the default value means that the map-task will make call back to the region-server for every record processed.
 Setting this value to 500, for example, will transfer 500 rows at a time to the client to be processed.
 There is a cost/benefit to have the cache value be large because it costs more in memory for both client and RegionServer, so bigger isn't always better.
 
@@ -659,7 +646,7 @@ For MapReduce jobs that use HBase tables as a source, if there a pattern where t
 === Close ResultScanners
 
 This isn't so much about improving performance but rather _avoiding_ performance problems.
-If you forget to close link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ResultScanner.html[ResultScanners] you can cause problems on the RegionServers.
+If you forget to close link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ResultScanner.html[ResultScanners] you can cause problems on the RegionServers.
 Always have ResultScanner processing enclosed in try/catch blocks.
 
 [source,java]
@@ -679,7 +666,7 @@ table.close();
 [[perf.hbase.client.blockcache]]
 === Block Cache
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instances can be set to use the block cache in the RegionServer via the `setCacheBlocks` method.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instances can be set to use the block cache in the RegionServer via the `setCacheBlocks` method.
 For input Scans to MapReduce jobs, this should be `false`.
 For frequently accessed rows, it is advisable to use the block cache.
 
@@ -689,8 +676,8 @@ See <<offheap.blockcache>>
 [[perf.hbase.client.rowkeyonly]]
 === Optimal Loading of Row Keys
 
-When performing a table link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[scan] where only the row keys are needed (no families, qualifiers, values or timestamps), add a FilterList with a `MUST_PASS_ALL` operator to the scanner using `setFilter`.
-The filter list should include both a link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html[FirstKeyOnlyFilter] and a link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/KeyOnlyFilter.html[KeyOnlyFilter].
+When performing a table link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[scan] where only the row keys are needed (no families, qualifiers, values or timestamps), add a FilterList with a `MUST_PASS_ALL` operator to the scanner using `setFilter`.
+The filter list should include both a link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html[FirstKeyOnlyFilter] and a link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/KeyOnlyFilter.html[KeyOnlyFilter].
 Using this filter combination will result in a worst case scenario of a RegionServer reading a single value from disk and minimal network traffic to the client for a single row.
 
 [[perf.hbase.read.dist]]
@@ -709,7 +696,7 @@ Enabling Bloom Filters can save your having to go to disk and can help improve r
 link:http://en.wikipedia.org/wiki/Bloom_filter[Bloom filters] were developed over in link:https://issues.apache.org/jira/browse/HBASE-1200[HBase-1200 Add bloomfilters].
 For description of the development process -- why static blooms rather than dynamic -- and for an overview of the unique properties that pertain to blooms in HBase, as well as possible future directions, see the _Development Process_ section of the document link:https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf[BloomFilters in HBase] attached to link:https://issues.apache.org/jira/browse/HBASE-1200[HBASE-1200].
 The bloom filters described here are actually version two of blooms in HBase.
-In versions up to 0.19.x, HBase had a dynamic bloom option based on work done by the link:http://www.one-lab.org/[European Commission One-Lab Project 034819].
+In versions up to 0.19.x, HBase had a dynamic bloom option based on work done by the link:http://www.onelab.org[European Commission One-Lab Project 034819].
 The core of the HBase bloom work was later pulled up into Hadoop to implement org.apache.hadoop.io.BloomMapFile.
 Version 1 of HBase blooms never worked that well.
 Version 2 is a rewrite from scratch though again it starts with the one-lab work.
@@ -813,6 +800,8 @@ See <<hbase_metrics>>  for more information.
   This could indicate that read requests are often slow, or that hedged reads are triggered too quickly.
 * hedgeReadOpsWin - the number of times the hedged read thread was faster than the original thread.
   This could indicate that a given RegionServer is having trouble servicing requests.
+* hedgedReadOpsInCurThread - the number of times hedged read was rejected from executor and needed to fallback to be executed in current thread.
+  This could indicate that current hedged read thread pool size is not appropriate.
 
 
 [[perf.deleting]]
@@ -826,7 +815,7 @@ In this case, special care must be taken to regularly perform major compactions 
 As is documented in <<datamodel>>, marking rows as deleted creates additional StoreFiles which then need to be processed on reads.
 Tombstones only get cleaned up with major compactions.
 
-See also <<compaction>> and link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact%28java.lang.String%29[Admin.majorCompact].
+See also <<compaction>> and link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact-org.apache.hadoop.hbase.TableName-[Admin.majorCompact].
 
 [[perf.deleting.rpc]]
 === Delete RPC Behavior
@@ -835,8 +824,7 @@ Be aware that `Table.delete(Delete)` doesn't use the writeBuffer.
 It will execute an RegionServer RPC with each invocation.
 For a large number of deletes, consider `Table.delete(List)`.
 
-See
-+++<a href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete%28org.apache.hadoop.hbase.client.Delete%29">hbase.client.Delete</a>+++.
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete-org.apache.hadoop.hbase.client.Delete-[hbase.client.Delete]
 
 [[perf.hdfs]]
 == HDFS
@@ -857,7 +845,7 @@ See the link:https://issues.apache.org/jira/browse/HDFS-1599[Umbrella Jira Ticke
 Since Hadoop 1.0.0 (also 0.22.1, 0.23.1, CDH3u3 and HDP 1.0) via link:https://issues.apache.org/jira/browse/HDFS-2246[HDFS-2246], it is possible for the DFSClient to take a "short circuit" and read directly from the disk instead of going through the DataNode when the data is local.
 What this means for HBase is that the RegionServers can read directly off their machine's disks instead of having to open a socket to talk to the DataNode, the former being generally much faster.
 See JD's link:http://files.meetup.com/1350427/hug_ebay_jdcryans.pdf[Performance Talk].
-Also see link:http://search-hadoop.com/m/zV6dKrLCVh1[HBase, mail # dev - read short circuit] thread for more discussion around short circuit reads.
+Also see link:https://lists.apache.org/thread.html/ce2ce3a3bbd20806d0c017b2e7528e78a46ccb87c063831db051949d%401347548325%40%3Cdev.hbase.apache.org%3E[HBase, mail # dev - read short circuit] thread for more discussion around short circuit reads.
 
 To enable "short circuit" reads, it will depend on your version of Hadoop.
 The original shortcircuit read patch was much improved upon in Hadoop 2 in link:https://issues.apache.org/jira/browse/HDFS-347[HDFS-347].

@@ -1,0 +1,93 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+pipeline {
+  parameters {
+    string(name: 'tests', description: 'space separated list of tests to run. e.g. ' +
+        'TestLogRollingNoCluster TestMetricRegistryImpl TestConstraints')
+    string(name: 'node', defaultValue: 'Hadoop',
+        description: 'the node label that should be used to run the test.')
+    string(name: 'repeat_count', defaultValue: '100',
+        description: 'number of iterations to run looking for a failure.')
+    string(name: 'fork_count', defaultValue: '0.5C', description: '''
+        Given to surefire to set the number of parallel forks for a given test attempt (i.e. one
+        maven invocation that has all of the specified tests. The default tries to use half of the
+        available cores on the system.
+
+        For more information see
+        <a href="http://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html#forkCount">
+        the surefire docs on the forkCount parameter</a>
+''')
+  }
+  agent {
+    node {
+      label "${params.node}"
+    }
+  }
+  options {
+    timeout (time: 6, unit: 'HOURS')
+    timestamps()
+  }
+  environment {
+    // where we check out to across stages
+    BASEDIR = "${env.WORKSPACE}/component"
+    OUTPUT_RELATIVE = 'output'
+    OUTPUTDIR = "${env.WORKSPACE}/output"
+    BRANCH_SPECIFIC_DOCKERFILE = "${env.BASEDIR}/dev-support/docker/Dockerfile"
+  }
+  stages {
+    stage ('run tests') {
+      tools {
+        maven 'maven_latest'
+        // this needs to be set to the jdk that ought to be used to build releases on the branch
+        // the Jenkinsfile is stored in.
+        jdk "jdk_1.8_latest"
+      }
+      steps {
+        sh """#!/bin/bash -e
+          echo "Setting up directories"
+          rm -rf "${env.OUTPUTDIR}" && mkdir "${env.OUTPUTDIR}"
+          rm -rf ".m2-repo" && mkdir ".m2-repo"
+          mkdir "${env.OUTPUTDIR}/machine"
+"""
+        sh """#!/bin/bash -e
+          "${env.BASEDIR}/dev-support/gather_machine_environment.sh" \
+              "${OUTPUT_RELATIVE}/machine"
+"""
+        dir ("component") {
+          sh '''#!/bin/bash -e
+            ./dev-support/adhoc_run_tests/adhoc_run_tests.sh \
+                --force-timeout 1800 \
+                --maven-local-repo ".m2-repo" \
+                --log-output "${OUTPUTDIR}" \
+                --surefire-fork-count "${fork_count}" \
+                --repeat "${repeat_count}" \
+                "${tests}"
+'''
+        }
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'output/*'
+          archiveArtifacts artifacts: 'output/**/*'
+        }
+        failure {
+          archiveArtifacts artifacts: 'component/**/target/surefire-reports/*'
+        }
+      }
+    }
+  }
+}

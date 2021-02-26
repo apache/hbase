@@ -22,8 +22,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -32,13 +30,15 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * MultiThreadedWriter that helps in testing ACL
  */
 public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
 
-  private static final Log LOG = LogFactory.getLog(MultiThreadedWriterWithACL.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedWriterWithACL.class);
   private User userOwner;
 
   public MultiThreadedWriterWithACL(LoadTestDataGenerator dataGen, Configuration conf,

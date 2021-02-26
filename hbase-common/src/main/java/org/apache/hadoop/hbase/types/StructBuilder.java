@@ -38,15 +38,23 @@ public class StructBuilder {
   /**
    * Append {@code field} to the sequence of accumulated fields.
    */
-  public StructBuilder add(DataType<?> field) { fields.add(field); return this; }
+  public StructBuilder add(DataType<?> field) {
+    fields.add(field);
+    return this;
+  }
 
   /**
    * Retrieve the {@link Struct} represented by {@code this}.
    */
-  public Struct toStruct() { return new Struct(fields.toArray(new DataType<?>[fields.size()])); }
+  public Struct toStruct() {
+    return new Struct(fields.toArray(new DataType<?>[fields.size()]));
+  }
 
   /**
    * Reset the sequence of accumulated fields.
    */
-  public StructBuilder reset() { fields.clear(); return this; }
+  public StructBuilder reset() {
+    fields.clear();
+    return this;
+  }
 }

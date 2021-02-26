@@ -18,19 +18,21 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * Stores minimum and maximum timestamp values, it is [minimumTimestamp, maximumTimestamp] in
@@ -44,7 +46,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  * at read time via an instance of {@link TimeRange} to test if Cells fit the StoreFile TimeRange.
  */
 @InterfaceAudience.Private
-public abstract class TimeRangeTracker implements Writable {
+public abstract class TimeRangeTracker {
 
   public enum Type {
     // thread-unsafe
@@ -101,7 +103,7 @@ public abstract class TimeRangeTracker implements Writable {
    */
   public void includeTimestamp(final Cell cell) {
     includeTimestamp(cell.getTimestamp());
-    if (CellUtil.isDeleteColumnOrFamily(cell)) {
+    if (PrivateCellUtil.isDeleteColumnOrFamily(cell)) {
       includeTimestamp(0);
     }
   }
@@ -175,42 +177,53 @@ public abstract class TimeRangeTracker implements Writable {
    */
   public abstract long getMax();
 
-  public void write(final DataOutput out) throws IOException {
-    out.writeLong(getMin());
-    out.writeLong(getMax());
-  }
-
-  public void readFields(final DataInput in) throws IOException {
-    setMin(in.readLong());
-    setMax(in.readLong());
-  }
-
   @Override
   public String toString() {
     return "[" + getMin() + "," + getMax() + "]";
   }
 
   /**
+   * @param data the serialization data. It can't be null!
    * @return An instance of NonSyncTimeRangeTracker filled w/ the content of serialized
    * NonSyncTimeRangeTracker in <code>timeRangeTrackerBytes</code>.
    * @throws IOException
    */
-  public static TimeRangeTracker getTimeRangeTracker(final byte [] timeRangeTrackerBytes)
-  throws IOException {
-    if (timeRangeTrackerBytes == null) return null;
-    TimeRangeTracker trt = TimeRangeTracker.create(Type.NON_SYNC);
-    Writables.copyWritable(timeRangeTrackerBytes, trt);
-    return trt;
+  public static TimeRangeTracker parseFrom(final byte[] data) throws IOException {
+    return parseFrom(data, Type.NON_SYNC);
+  }
+
+  public static TimeRangeTracker parseFrom(final byte[] data, Type type) throws IOException {
+    Preconditions.checkNotNull(data, "input data is null!");
+    if (ProtobufUtil.isPBMagicPrefix(data)) {
+      int pblen = ProtobufUtil.lengthOfPBMagic();
+      HBaseProtos.TimeRangeTracker.Builder builder = HBaseProtos.TimeRangeTracker.newBuilder();
+      ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
+      return TimeRangeTracker.create(type, builder.getFrom(), builder.getTo());
+    } else {
+      try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(data))) {
+        return TimeRangeTracker.create(type, in.readLong(), in.readLong());
+      }
+    }
   }
 
   /**
-   * @return An instance of a TimeRange made from the serialized TimeRangeTracker passed in
-   * <code>timeRangeTrackerBytes</code>.
-   * @throws IOException
+   * This method used to serialize TimeRangeTracker (TRT) by protobuf while this breaks the
+   * forward compatibility on HFile.(See HBASE-21008) In previous hbase version ( < 2.0.0 ) we use
+   * DataOutput to serialize TRT, these old versions don't have capability to deserialize TRT
+   * which is serialized by protobuf. So we need to revert the change of serializing
+   * TimeRangeTracker back to DataOutput. For more information, please check HBASE-21012.
+   * @param tracker TimeRangeTracker needed to be serialized.
+   * @return byte array filled with serialized TimeRangeTracker.
+   * @throws IOException if something goes wrong in writeLong.
    */
-  static TimeRange getTimeRange(final byte [] timeRangeTrackerBytes) throws IOException {
-    TimeRangeTracker trt = getTimeRangeTracker(timeRangeTrackerBytes);
-    return trt == null? null: trt.toTimeRange();
+  public static byte[] toByteArray(TimeRangeTracker tracker) throws IOException {
+    try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+      try (DataOutputStream dos = new DataOutputStream(bos)) {
+        dos.writeLong(tracker.getMin());
+        dos.writeLong(tracker.getMax());
+        return bos.toByteArray();
+      }
+    }
   }
 
   /**
@@ -229,7 +242,8 @@ public abstract class TimeRangeTracker implements Writable {
     return new TimeRange(min, max);
   }
 
-  private static class NonSyncTimeRangeTracker extends TimeRangeTracker {
+  //In order to estimate the heap size, this inner class need to be accessible to TestHeapSize.
+  public static class NonSyncTimeRangeTracker extends TimeRangeTracker {
     private long minimumTimestamp = INITIAL_MIN_TIMESTAMP;
     private long maximumTimestamp = INITIAL_MAX_TIMESTAMP;
 
@@ -285,7 +299,6 @@ public abstract class TimeRangeTracker implements Writable {
     }
   }
 
-  @VisibleForTesting
   //In order to estimate the heap size, this inner class need to be accessible to TestHeapSize.
   public static class SyncTimeRangeTracker extends TimeRangeTracker {
     private final AtomicLong minimumTimestamp = new AtomicLong(INITIAL_MIN_TIMESTAMP);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.CompactType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that queues a table compaction.
@@ -31,6 +33,7 @@ public class CompactMobAction extends Action {
   private final TableName tableName;
   private final int majorRatio;
   private final long sleepTime;
+  private static final Logger LOG = LoggerFactory.getLogger(CompactMobAction.class);
 
   public CompactMobAction(TableName tableName, float majorRatio) {
     this(-1, tableName, majorRatio);
@@ -41,6 +44,10 @@ public class CompactMobAction extends Action {
     this.tableName = tableName;
     this.majorRatio = (int) (100 * majorRatio);
     this.sleepTime = sleepTime;
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override
@@ -54,7 +61,7 @@ public class CompactMobAction extends Action {
       return;
     }
 
-    LOG.info("Performing action: Compact mob of table " + tableName + ", major=" + major);
+    getLogger().info("Performing action: Compact mob of table " + tableName + ", major=" + major);
     try {
       if (major) {
         admin.majorCompact(tableName, CompactType.MOB);
@@ -62,7 +69,7 @@ public class CompactMobAction extends Action {
         admin.compact(tableName, CompactType.MOB);
       }
     } catch (Exception ex) {
-      LOG.warn("Mob Compaction failed, might be caused by other chaos: " + ex.getMessage());
+      getLogger().warn("Mob Compaction failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

@@ -21,9 +21,8 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
+import org.apache.yetus.audience.InterfaceAudience;
 
 
 /**
@@ -100,13 +99,13 @@ public class CacheStats {
   /** The number of metrics periods to include in window */
   private final int numPeriodsInWindow;
   /** Hit counts for each period in window */
-  private final long [] hitCounts;
+  private final long[] hitCounts;
   /** Caching hit counts for each period in window */
-  private final long [] hitCachingCounts;
+  private final long[] hitCachingCounts;
   /** Access counts for each period in window */
-  private final long [] requestCounts;
+  private final long[] requestCounts;
   /** Caching access counts for each period in window */
-  private final long [] requestCachingCounts;
+  private final long[] requestCachingCounts;
   /** Last hit count read */
   private long lastHitCount = 0;
   /** Last hit caching count read */
@@ -388,23 +387,53 @@ public class CacheStats {
   }
 
   public double getHitRatio() {
-    return ((double) getHitCount() / (double) getRequestCount());
+    double requestCount = getRequestCount();
+
+    if (requestCount == 0) {
+      return 0;
+    }
+
+    return getHitCount() / requestCount;
   }
 
   public double getHitCachingRatio() {
-    return ((double) getHitCachingCount() / (double) getRequestCachingCount());
+    double requestCachingCount = getRequestCachingCount();
+
+    if (requestCachingCount == 0) {
+      return 0;
+    }
+
+    return getHitCachingCount() / requestCachingCount;
   }
 
   public double getMissRatio() {
-    return ((double) getMissCount() / (double) getRequestCount());
+    double requestCount = getRequestCount();
+
+    if (requestCount == 0) {
+      return 0;
+    }
+
+    return getMissCount() / requestCount;
   }
 
   public double getMissCachingRatio() {
-    return ((double) getMissCachingCount() / (double) getRequestCachingCount());
+    double requestCachingCount = getRequestCachingCount();
+
+    if (requestCachingCount == 0) {
+      return 0;
+    }
+
+    return getMissCachingCount() / requestCachingCount;
   }
 
   public double evictedPerEviction() {
-    return ((double) getEvictedCount() / (double) getEvictionCount());
+    double evictionCount = getEvictionCount();
+
+    if (evictionCount == 0) {
+      return 0;
+    }
+
+    return getEvictedCount() / evictionCount;
   }
 
   public long getFailedInserts() {

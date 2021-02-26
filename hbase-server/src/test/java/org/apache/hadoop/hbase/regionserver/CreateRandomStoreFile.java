@@ -22,14 +22,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,7 +34,16 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.io.BytesWritable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 
 /**
  * Creates an HFile with random key/value pairs.
@@ -55,8 +56,8 @@ public class CreateRandomStoreFile {
    */
   private static final int LEN_VARIATION = 5;
 
-  private static final Log LOG =
-      LogFactory.getLog(CreateRandomStoreFile.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CreateRandomStoreFile.class);
   private static final String OUTPUT_DIR_OPTION = "o";
   private static final String NUM_KV_OPTION = "n";
   private static final String HFILE_VERSION_OPTION = "h";
@@ -64,6 +65,7 @@ public class CreateRandomStoreFile {
   private static final String VALUE_SIZE_OPTION = "v";
   private static final String COMPRESSION_OPTION = "c";
   private static final String BLOOM_FILTER_OPTION = "bf";
+  private static final String BLOOM_FILTER_PARAM_OPTION = "bfp";
   private static final String BLOCK_SIZE_OPTION = "bs";
   private static final String BLOOM_BLOCK_SIZE_OPTION = "bfbs";
   private static final String INDEX_BLOCK_SIZE_OPTION = "ibs";
@@ -103,6 +105,8 @@ public class CreateRandomStoreFile {
     options.addOption(BLOOM_FILTER_OPTION, "bloom_filter", true,
         "Bloom filter type, one of "
             + Arrays.toString(BloomType.values()));
+    options.addOption(BLOOM_FILTER_PARAM_OPTION, "bloom_param", true,
+        "the parameter of the bloom filter");
     options.addOption(BLOCK_SIZE_OPTION, "block_size", true,
         "HFile block size");
     options.addOption(BLOOM_BLOCK_SIZE_OPTION, "bloom_block_size", true,
@@ -122,7 +126,7 @@ public class CreateRandomStoreFile {
     try {
       cmdLine = parser.parse(options, args);
     } catch (ParseException ex) {
-      LOG.error(ex);
+      LOG.error(ex.toString(), ex);
       return false;
     }
 
@@ -169,15 +173,25 @@ public class CreateRandomStoreFile {
           BLOOM_FILTER_OPTION));
     }
 
+    if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+      if (!cmdLine.hasOption(BLOOM_FILTER_PARAM_OPTION)) {
+        LOG.error("the parameter of bloom filter is not specified");
+        return false;
+      } else {
+        conf.set(BloomFilterUtil.PREFIX_LENGTH_KEY,
+            cmdLine.getOptionValue(BLOOM_FILTER_PARAM_OPTION));
+      }
+    }
+
     int blockSize = HConstants.DEFAULT_BLOCKSIZE;
     if (cmdLine.hasOption(BLOCK_SIZE_OPTION))
       blockSize = Integer.valueOf(cmdLine.getOptionValue(BLOCK_SIZE_OPTION));
-    
+
     if (cmdLine.hasOption(BLOOM_BLOCK_SIZE_OPTION)) {
       conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
           Integer.valueOf(cmdLine.getOptionValue(BLOOM_BLOCK_SIZE_OPTION)));
     }
-    
+
     if (cmdLine.hasOption(INDEX_BLOCK_SIZE_OPTION)) {
       conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY,
           Integer.valueOf(cmdLine.getOptionValue(INDEX_BLOCK_SIZE_OPTION)));
@@ -209,7 +223,7 @@ public class CreateRandomStoreFile {
 
     Path storeFilePath = sfw.getPath();
     long fileSize = fs.getFileStatus(storeFilePath).getLen();
-    LOG.info("Created " + storeFilePath + ", " + fileSize + " bytes");
+    LOG.info("Created {}, {} bytes, compression={}", storeFilePath, fileSize, compr.toString());
 
     return true;
   }
@@ -299,7 +313,7 @@ public class CreateRandomStoreFile {
       if (!app.run(args))
         System.exit(EXIT_FAILURE);
     } catch (IOException ex) {
-      LOG.error(ex);
+      LOG.error(ex.toString(), ex);
       System.exit(EXIT_FAILURE);
     }
 

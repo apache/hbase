@@ -18,60 +18,58 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.EnumSet;
 import java.util.concurrent.ArrayBlockingQueue;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
+import javax.servlet.DispatcherType;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.http.ClickjackingPreventionFilter;
+import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.http.SecurityHeadersFilter;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.rest.filter.RestCsrfPreventionFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.DNS;
-import org.apache.hadoop.hbase.util.HttpServerUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
-
-import org.eclipse.jetty.http.HttpVersion;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.SslConnectionFactory;
-import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.SecureRequestCustomizer;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.jmx.MBeanContainer;
-import org.eclipse.jetty.servlet.FilterHolder;
-
-import org.glassfish.jersey.jackson1.Jackson1Feature;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
-
-import javax.servlet.DispatcherType;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.jmx.MBeanContainer;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 
 /**
  * Main class for launching REST gateway as a servlet hosted by Jetty.
@@ -84,46 +82,49 @@ import javax.servlet.DispatcherType;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class RESTServer implements Constants {
-  static Log LOG = LogFactory.getLog("RESTServer");
+  static Logger LOG = LoggerFactory.getLogger("RESTServer");
 
-  static String REST_CSRF_ENABLED_KEY = "hbase.rest.csrf.enabled";
-  static boolean REST_CSRF_ENABLED_DEFAULT = false;
-  static boolean restCSRFEnabled = false;
-  static String REST_CSRF_CUSTOM_HEADER_KEY ="hbase.rest.csrf.custom.header";
-  static String REST_CSRF_CUSTOM_HEADER_DEFAULT = "X-XSRF-HEADER";
-  static String REST_CSRF_METHODS_TO_IGNORE_KEY = "hbase.rest.csrf.methods.to.ignore";
-  static String REST_CSRF_METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
+  static final String REST_CSRF_ENABLED_KEY = "hbase.rest.csrf.enabled";
+  static final boolean REST_CSRF_ENABLED_DEFAULT = false;
+  boolean restCSRFEnabled = false;
+  static final String REST_CSRF_CUSTOM_HEADER_KEY ="hbase.rest.csrf.custom.header";
+  static final String REST_CSRF_CUSTOM_HEADER_DEFAULT = "X-XSRF-HEADER";
+  static final String REST_CSRF_METHODS_TO_IGNORE_KEY = "hbase.rest.csrf.methods.to.ignore";
+  static final String REST_CSRF_METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
+  public static final String SKIP_LOGIN_KEY = "hbase.rest.skip.login";
+  static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
 
   private static final String PATH_SPEC_ANY = "/*";
+
+  static final String REST_HTTP_ALLOW_OPTIONS_METHOD = "hbase.rest.http.allow.options.method";
+  // HTTP OPTIONS method is commonly used in REST APIs for negotiation. So it is enabled by default.
+  private static boolean REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT = true;
+  static final String REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY =
+    "hbase.rest-csrf.browser-useragents-regex";
+
+  // HACK, making this static for AuthFilter to get at our configuration. Necessary for unit tests.
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value={"ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD", "MS_CANNOT_BE_FINAL"},
+    justification="For testing")
+  public static Configuration conf = null;
+  private final UserProvider userProvider;
+  private Server server;
+  private InfoServer infoServer;
+
+  public RESTServer(Configuration conf) {
+    RESTServer.conf = conf;
+    this.userProvider = UserProvider.instantiate(conf);
+  }
 
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("hbase rest start", "", options,
       "\nTo run the REST server as a daemon, execute " +
-      "hbase-daemon.sh start|stop rest [--infoport <port>] [-p <port>] [-ro]\n", true);
+      "hbase-daemon.sh start|stop rest [-i <port>] [-p <port>] [-ro]\n", true);
     System.exit(exitCode);
   }
 
-  /**
-   * Returns a list of strings from a comma-delimited configuration value.
-   *
-   * @param conf configuration to check
-   * @param name configuration property name
-   * @param defaultValue default value if no value found for name
-   * @return list of strings from comma-delimited configuration value, or an
-   *     empty list if not found
-   */
-  private static List<String> getTrimmedStringList(Configuration conf,
-    String name, String defaultValue) {
-    String valueString = conf.get(name, defaultValue);
-    if (valueString == null) {
-      return new ArrayList<>();
-    }
-    return new ArrayList<>(StringUtils.getTrimmedStringCollection(valueString));
-  }
-
-  static String REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY = "hbase.rest-csrf.browser-useragents-regex";
-  static void addCSRFFilter(ServletContextHandler ctxHandler, Configuration conf) {
+  void addCSRFFilter(ServletContextHandler ctxHandler, Configuration conf) {
     restCSRFEnabled = conf.getBoolean(REST_CSRF_ENABLED_KEY, REST_CSRF_ENABLED_DEFAULT);
     if (restCSRFEnabled) {
       Map<String, String> restCsrfParams = RestCsrfPreventionFilter
@@ -134,6 +135,23 @@ public class RESTServer implements Constants {
       holder.setInitParameters(restCsrfParams);
       ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
     }
+  }
+
+  private void addClickjackingPreventionFilter(ServletContextHandler ctxHandler,
+      Configuration conf) {
+    FilterHolder holder = new FilterHolder();
+    holder.setName("clickjackingprevention");
+    holder.setClassName(ClickjackingPreventionFilter.class.getName());
+    holder.setInitParameters(ClickjackingPreventionFilter.getDefaultParameters(conf));
+    ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
+  }
+
+  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler, Configuration conf) {
+    FilterHolder holder = new FilterHolder();
+    holder.setName("securityheaders");
+    holder.setClassName(SecurityHeadersFilter.class.getName());
+    holder.setInitParameters(SecurityHeadersFilter.getDefaultParameters(conf));
+    ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
   }
 
   // login the server principal (if using secure Hadoop)
@@ -150,7 +168,10 @@ public class RESTServer implements Constants {
       String principalConfig = conf.get(REST_KERBEROS_PRINCIPAL);
       Preconditions.checkArgument(principalConfig != null && !principalConfig.isEmpty(),
         REST_KERBEROS_PRINCIPAL + " should be set if security is enabled");
-      userProvider.login(REST_KEYTAB_FILE, REST_KERBEROS_PRINCIPAL, machineName);
+      // Hook for unit tests, this will log out any other user and mess up tests.
+      if (!conf.getBoolean(SKIP_LOGIN_KEY, false)) {
+        userProvider.login(REST_KEYTAB_FILE, REST_KERBEROS_PRINCIPAL, machineName);
+      }
       if (conf.get(REST_AUTHENTICATION_TYPE) != null) {
         containerClass = RESTServletContainer.class;
         FilterHolder authFilter = new FilterHolder();
@@ -162,12 +183,12 @@ public class RESTServer implements Constants {
     return new Pair<>(null, containerClass);
   }
 
-  private static void parseCommandLine(String[] args, RESTServlet servlet) {
+  private static void parseCommandLine(String[] args, Configuration conf) {
     Options options = new Options();
     options.addOption("p", "port", true, "Port to bind to [default: " + DEFAULT_LISTEN_PORT + "]");
     options.addOption("ro", "readonly", false, "Respond only to GET HTTP " +
       "method requests [default: false]");
-    options.addOption(null, "infoport", true, "Port for web UI");
+    options.addOption("i", "infoport", true, "Port for WEB UI");
 
     CommandLine commandLine = null;
     try {
@@ -180,7 +201,7 @@ public class RESTServer implements Constants {
     // check for user-defined port setting, if so override the conf
     if (commandLine != null && commandLine.hasOption("port")) {
       String val = commandLine.getOptionValue("port");
-      servlet.getConfiguration().setInt("hbase.rest.port", Integer.parseInt(val));
+      conf.setInt("hbase.rest.port", Integer.parseInt(val));
       if (LOG.isDebugEnabled()) {
         LOG.debug("port set to " + val);
       }
@@ -188,7 +209,7 @@ public class RESTServer implements Constants {
 
     // check if server should only process GET requests, if so override the conf
     if (commandLine != null && commandLine.hasOption("readonly")) {
-      servlet.getConfiguration().setBoolean("hbase.rest.readonly", true);
+      conf.setBoolean("hbase.rest.readonly", true);
       if (LOG.isDebugEnabled()) {
         LOG.debug("readonly set to true");
       }
@@ -197,13 +218,19 @@ public class RESTServer implements Constants {
     // check for user-defined info server port setting, if so override the conf
     if (commandLine != null && commandLine.hasOption("infoport")) {
       String val = commandLine.getOptionValue("infoport");
-      servlet.getConfiguration().setInt("hbase.rest.info.port", Integer.parseInt(val));
+      conf.setInt("hbase.rest.info.port", Integer.parseInt(val));
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Web UI port set to " + val);
+        LOG.debug("WEB UI port set to " + val);
       }
     }
 
-    @SuppressWarnings("unchecked")
+    if (commandLine != null && commandLine.hasOption("skipLogin")) {
+      conf.setBoolean(SKIP_LOGIN_KEY, true);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skipping Kerberos login for REST server");
+      }
+    }
+
     List<String> remainingArgs = commandLine != null ? commandLine.getArgList() : new ArrayList<>();
     if (remainingArgs.size() != 1) {
       printUsageAndExit(options, 1);
@@ -219,29 +246,27 @@ public class RESTServer implements Constants {
     }
   }
 
+
   /**
-   * The main method for the HBase rest server.
-   * @param args command-line arguments
-   * @throws Exception exception
+   * Runs the REST server.
    */
-  public static void main(String[] args) throws Exception {
-    LOG.info("***** STARTING service '" + RESTServer.class.getSimpleName() + "' *****");
-    VersionInfo.logVersion();
-    Configuration conf = HBaseConfiguration.create();
-    UserProvider userProvider = UserProvider.instantiate(conf);
+  public synchronized void run() throws Exception {
     Pair<FilterHolder, Class<? extends ServletContainer>> pair = loginServerPrincipal(
       userProvider, conf);
     FilterHolder authFilter = pair.getFirst();
+    Class<? extends ServletContainer> containerClass = pair.getSecond();
     RESTServlet servlet = RESTServlet.getInstance(conf, userProvider);
 
-    parseCommandLine(args, servlet);
 
     // Set up the Jersey servlet container for Jetty
     // The Jackson1Feature is a signal to Jersey that it should use jackson doing json.
     // See here: https://stackoverflow.com/questions/39458230/how-register-jacksonfeature-on-clientconfig
     ResourceConfig application = new ResourceConfig().
-        packages("org.apache.hadoop.hbase.rest").register(Jackson1Feature.class);
-    ServletHolder sh = new ServletHolder(new ServletContainer(application));
+        packages("org.apache.hadoop.hbase.rest").register(JacksonJaxbJsonProvider.class);
+    // Using our custom ServletContainer is tremendously important. This is what makes sure the
+    // UGI.doAs() is done for the remoteUser, and calls are not made as the REST server itself.
+    ServletContainer servletContainer = ReflectionUtils.newInstance(containerClass, application);
+    ServletHolder sh = new ServletHolder(servletContainer);
 
     // Set the default max thread number to 100 to limit
     // the number of concurrent requests so that REST server doesn't OOM easily.
@@ -258,7 +283,7 @@ public class RESTServer implements Constants {
         new QueuedThreadPool(maxThreads, minThreads, idleTimeout, new ArrayBlockingQueue<>(queueSize)) :
         new QueuedThreadPool(maxThreads, minThreads, idleTimeout);
 
-    Server server = new Server(threadPool);
+    this.server = new Server(threadPool);
 
     // Setup JMX
     MBeanContainer mbContainer=new MBeanContainer(ManagementFactory.getPlatformMBeanServer());
@@ -271,6 +296,9 @@ public class RESTServer implements Constants {
     HttpConfiguration httpConfig = new HttpConfiguration();
     httpConfig.setSecureScheme("https");
     httpConfig.setSecurePort(servicePort);
+    httpConfig.setHeaderCacheSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setRequestHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setResponseHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
     httpConfig.setSendServerVersion(false);
     httpConfig.setSendDateHeader(false);
 
@@ -281,13 +309,31 @@ public class RESTServer implements Constants {
 
       SslContextFactory sslCtxFactory = new SslContextFactory();
       String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
+      String keystoreType = conf.get(REST_SSL_KEYSTORE_TYPE);
       String password = HBaseConfiguration.getPassword(conf,
           REST_SSL_KEYSTORE_PASSWORD, null);
       String keyPassword = HBaseConfiguration.getPassword(conf,
           REST_SSL_KEYSTORE_KEYPASSWORD, password);
       sslCtxFactory.setKeyStorePath(keystore);
+      if(StringUtils.isNotBlank(keystoreType)) {
+        sslCtxFactory.setKeyStoreType(keystoreType);
+      }
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
+
+      String trustStore = conf.get(REST_SSL_TRUSTSTORE_STORE);
+      if(StringUtils.isNotBlank(trustStore)) {
+        sslCtxFactory.setTrustStorePath(trustStore);
+      }
+      String trustStorePassword =
+        HBaseConfiguration.getPassword(conf, REST_SSL_TRUSTSTORE_PASSWORD, null);
+      if(StringUtils.isNotBlank(trustStorePassword)) {
+        sslCtxFactory.setTrustStorePassword(trustStorePassword);
+      }
+      String trustStoreType = conf.get(REST_SSL_TRUSTSTORE_TYPE);
+      if(StringUtils.isNotBlank(trustStoreType)) {
+        sslCtxFactory.setTrustStoreType(trustStoreType);
+      }
 
       String[] excludeCiphers = servlet.getConfiguration().getStrings(
           REST_SSL_EXCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
@@ -344,25 +390,79 @@ public class RESTServer implements Constants {
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
     addCSRFFilter(ctxHandler, conf);
-    HttpServerUtil.constrainHttpMethods(ctxHandler);
+    addClickjackingPreventionFilter(ctxHandler, conf);
+    addSecurityHeadersFilter(ctxHandler, conf);
+    HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
+        .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
     if (port >= 0) {
       conf.setLong("startcode", System.currentTimeMillis());
       String a = conf.get("hbase.rest.info.bindAddress", "0.0.0.0");
-      InfoServer infoServer = new InfoServer("rest", a, port, false, conf);
-      infoServer.setAttribute("hbase.conf", conf);
-      infoServer.start();
+      this.infoServer = new InfoServer("rest", a, port, false, conf);
+      this.infoServer.setAttribute("hbase.conf", conf);
+      this.infoServer.start();
     }
+    // start server
+    server.start();
+  }
+
+  public synchronized void join() throws Exception {
+    if (server == null) {
+      throw new IllegalStateException("Server is not running");
+    }
+    server.join();
+  }
+
+  public synchronized void stop() throws Exception {
+    if (server == null) {
+      throw new IllegalStateException("Server is not running");
+    }
+    server.stop();
+    server = null;
+    RESTServlet.stop();
+  }
+
+  public synchronized int getPort() {
+    if (server == null) {
+      throw new IllegalStateException("Server is not running");
+    }
+    return ((ServerConnector) server.getConnectors()[0]).getLocalPort();
+  }
+
+  @SuppressWarnings("deprecation")
+  public synchronized int getInfoPort() {
+    if (infoServer == null) {
+      throw new IllegalStateException("InfoServer is not running");
+    }
+    return infoServer.getPort();
+  }
+
+  public Configuration getConf() {
+    return conf;
+  }
+
+  /**
+   * The main method for the HBase rest server.
+   * @param args command-line arguments
+   * @throws Exception exception
+   */
+  public static void main(String[] args) throws Exception {
+    LOG.info("***** STARTING service '" + RESTServer.class.getSimpleName() + "' *****");
+    VersionInfo.logVersion();
+    final Configuration conf = HBaseConfiguration.create();
+    parseCommandLine(args, conf);
+    RESTServer server = new RESTServer(conf);
+
     try {
-      // start server
-      server.start();
+      server.run();
       server.join();
     } catch (Exception e) {
-      LOG.fatal("Failed to start server", e);
+      LOG.error(HBaseMarkers.FATAL, "Failed to start server", e);
       System.exit(1);
     }
+
     LOG.info("***** STOPPING service '" + RESTServer.class.getSimpleName() + "' *****");
   }
 }

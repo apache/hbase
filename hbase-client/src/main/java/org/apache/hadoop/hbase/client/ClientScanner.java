@@ -21,33 +21,30 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createScanResultCache;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRegionCountMetrics;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
-
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.regionserver.LeaseException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements the scanner interface for the HBase client. If there are multiple regions in a table,
@@ -56,7 +53,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public abstract class ClientScanner extends AbstractClientScanner {
 
-  private static final Log LOG = LogFactory.getLog(ClientScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClientScanner.class);
 
   protected final Scan scan;
   protected boolean closed = false;
@@ -118,10 +115,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
       this.maxScannerResultSize = conf.getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
     }
-    this.scannerTimeout =
-        HBaseConfiguration.getInt(conf, HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
-          HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
-          HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
+    this.scannerTimeout = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
 
     // check if application wants to collect scan metrics
     initScanMetrics(scan);
@@ -141,6 +136,11 @@ public abstract class ClientScanner extends AbstractClientScanner {
 
     this.scanResultCache = createScanResultCache(scan);
     initCache();
+  }
+
+  protected final int getScanReplicaId() {
+    return scan.getReplicaId() >= RegionReplicaUtil.DEFAULT_REPLICA_ID ? scan.getReplicaId() :
+      RegionReplicaUtil.DEFAULT_REPLICA_ID;
   }
 
   protected ClusterConnection getConnection() {
@@ -183,7 +183,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return lastNext;
   }
 
-  @VisibleForTesting
   protected long getMaxResultSize() {
     return maxScannerResultSize;
   }
@@ -216,7 +215,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
    * Marked as protected only because TestClientScanner need to override this method.
    * @return false if we should terminate the scan. Otherwise
    */
-  @VisibleForTesting
   protected boolean moveToNextRegion() {
     // Close the previous scanner if it's open
     try {
@@ -253,7 +251,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return true;
   }
 
-  @VisibleForTesting
   boolean isAnyRPCcancelled() {
     return callable.isAnyRPCcancelled();
   }
@@ -294,28 +291,32 @@ public abstract class ClientScanner extends AbstractClientScanner {
   }
 
   protected void initSyncCache() {
-    cache = new LinkedList<>();
+    cache = new ArrayDeque<>();
   }
 
   protected Result nextWithSyncCache() throws IOException {
-    // If the scanner is closed and there's nothing left in the cache, next is a no-op.
-    if (cache.isEmpty() && this.closed) {
+    Result result = cache.poll();
+    if (result != null) {
+      return result;
+    }
+    // If there is nothing left in the cache and the scanner is closed,
+    // return a no-op
+    if (this.closed) {
       return null;
     }
-    if (cache.isEmpty()) {
-      loadCache();
-    }
 
-    if (cache.size() > 0) {
-      return cache.poll();
-    }
+    loadCache();
+
+    // try again to load from cache
+    result = cache.poll();
 
     // if we exhausted this scanner before calling close, write out the scan metrics
-    writeScanMetrics();
-    return null;
+    if (result == null) {
+      writeScanMetrics();
+    }
+    return result;
   }
 
-  @VisibleForTesting
   public int getCacheSize() {
     return cache != null ? cache.size() : 0;
   }
@@ -363,7 +364,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     if ((cause != null && cause instanceof NotServingRegionException) ||
         (cause != null && cause instanceof RegionServerStoppedException) ||
         e instanceof OutOfOrderScannerNextException || e instanceof UnknownScannerException ||
-        e instanceof ScannerResetException) {
+        e instanceof ScannerResetException || e instanceof LeaseException) {
       // Pass. It is easier writing the if loop test as list of what is allowed rather than
       // as a list of what is not allowed... so if in here, it means we do not throw.
       if (retriesLeft <= 0) {
@@ -410,11 +411,9 @@ public abstract class ClientScanner extends AbstractClientScanner {
     long remainingResultSize = maxScannerResultSize;
     int countdown = this.caching;
     // This is possible if we just stopped at the boundary of a region in the previous call.
-    if (callable == null) {
-      if (!moveToNextRegion()) {
-        closed = true;
-        return;
-      }
+    if (callable == null && !moveToNextRegion()) {
+      closed = true;
+      return;
     }
     // This flag is set when we want to skip the result returned. We do
     // this when we reset scanner because it split under us.
@@ -463,15 +462,13 @@ public abstract class ClientScanner extends AbstractClientScanner {
           scanResultCache.addAndGet(values, callable.isHeartbeatMessage());
       int numberOfCompleteRows =
           scanResultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
-      if (resultsToAddToCache.length > 0) {
-        for (Result rs : resultsToAddToCache) {
-          cache.add(rs);
-          long estimatedHeapSizeOfResult = calcEstimatedSize(rs);
-          countdown--;
-          remainingResultSize -= estimatedHeapSizeOfResult;
-          addEstimatedSize(estimatedHeapSizeOfResult);
-          this.lastResult = rs;
-        }
+      for (Result rs : resultsToAddToCache) {
+        cache.add(rs);
+        long estimatedHeapSizeOfResult = calcEstimatedSize(rs);
+        countdown--;
+        remainingResultSize -= estimatedHeapSizeOfResult;
+        addEstimatedSize(estimatedHeapSizeOfResult);
+        this.lastResult = rs;
       }
 
       if (scan.getLimit() > 0) {
@@ -491,10 +488,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
           // processing of the scan is taking a long time server side. Rather than continue to
           // loop until a limit (e.g. size or caching) is reached, break out early to avoid causing
           // unnecesary delays to the caller
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Heartbeat message received and cache contains Results." +
-                " Breaking out of scan loop");
-          }
+          LOG.trace("Heartbeat message received and cache contains Results. " +
+            "Breaking out of scan loop");
           // we know that the region has not been exhausted yet so just break without calling
           // closeScannerIfExhausted
           break;
@@ -544,7 +539,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return;
   }
 
-  @VisibleForTesting
   public int getCacheCount() {
     return cache != null ? cache.size() : 0;
   }
@@ -560,9 +554,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
         // We used to catch this error, interpret, and rethrow. However, we
         // have since decided that it's not nice for a scanner's close to
         // throw exceptions. Chances are it was just due to lease time out.
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("scanner failed to close", e);
-        }
+        LOG.debug("scanner failed to close", e);
       } catch (IOException e) {
         /* An exception other than UnknownScanner is unexpected. */
         LOG.warn("scanner failed to close.", e);
@@ -574,19 +566,20 @@ public abstract class ClientScanner extends AbstractClientScanner {
 
   @Override
   public boolean renewLease() {
-    if (callable != null) {
-      // do not return any rows, do not advance the scanner
-      callable.setRenew(true);
-      try {
-        this.caller.callWithoutRetries(callable, this.scannerTimeout);
-      } catch (Exception e) {
-        return false;
-      } finally {
-        callable.setRenew(false);
-      }
-      return true;
+    if (callable == null) {
+      return false;
     }
-    return false;
+    // do not return any rows, do not advance the scanner
+    callable.setRenew(true);
+    try {
+      this.caller.callWithoutRetries(callable, this.scannerTimeout);
+      return true;
+    } catch (Exception e) {
+      LOG.debug("scanner failed to renew lease", e);
+      return false;
+    } finally {
+      callable.setRenew(false);
+    }
   }
 
   protected void initCache() {

@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,18 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -40,14 +40,23 @@ import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 
 /**
  * Tests for global coprocessor loading configuration
  */
 @Category({CoprocessorTests.class, SmallTests.class})
 public class TestCoprocessorConfiguration {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCoprocessorConfiguration.class);
+
+  @Rule public ExpectedException thrown = ExpectedException.none();
 
   private static final Configuration CONF = HBaseConfiguration.create();
   static {
@@ -106,12 +115,10 @@ public class TestCoprocessorConfiguration {
     tableCoprocessorLoaded.set(false);
     new RegionCoprocessorHost(region, rsServices, conf);
     assertEquals("System coprocessors loading default was not honored",
-      systemCoprocessorLoaded.get(),
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED);
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
     assertEquals("Table coprocessors loading default was not honored",
-      tableCoprocessorLoaded.get(),
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED &&
-      CoprocessorHost.DEFAULT_USER_COPROCESSORS_ENABLED);
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED &&
+        CoprocessorHost.DEFAULT_USER_COPROCESSORS_ENABLED, tableCoprocessorLoaded.get());
   }
 
   @Test
@@ -121,8 +128,7 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     new RegionServerCoprocessorHost(rsServices, conf);
     assertEquals("System coprocessors loading default was not honored",
-      systemCoprocessorLoaded.get(),
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED);
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
   }
 
   @Test
@@ -132,8 +138,7 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     new MasterCoprocessorHost(masterServices, conf);
     assertEquals("System coprocessors loading default was not honored",
-      systemCoprocessorLoaded.get(),
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED);
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
   }
 
   @Test
@@ -169,5 +174,30 @@ public class TestCoprocessorConfiguration {
       systemCoprocessorLoaded.get());
     assertFalse("Table coprocessors should not have been loaded",
       tableCoprocessorLoaded.get());
+  }
+
+  /**
+   * Rough test that Coprocessor Environment is Read-Only.
+   * Just check a random CP and see that it returns a read-only config.
+   */
+  @Test
+  public void testReadOnlyConfiguration() throws Exception {
+    Configuration conf = new Configuration(CONF);
+    HRegion region = mock(HRegion.class);
+    when(region.getRegionInfo()).thenReturn(REGIONINFO);
+    when(region.getTableDescriptor()).thenReturn(TABLEDESC);
+    RegionServerServices rsServices = mock(RegionServerServices.class);
+    RegionCoprocessorHost rcp = new RegionCoprocessorHost(region, rsServices, conf);
+    boolean found = false;
+    for (String cpStr: rcp.getCoprocessors()) {
+      CoprocessorEnvironment cpenv = rcp.findCoprocessorEnvironment(cpStr);
+      if (cpenv != null) {
+        found = true;
+      }
+      Configuration c = cpenv.getConfiguration();
+      thrown.expect(UnsupportedOperationException.class);
+      c.set("one.two.three", "four.five.six");
+    }
+    assertTrue("Should be at least one CP found", found);
   }
 }

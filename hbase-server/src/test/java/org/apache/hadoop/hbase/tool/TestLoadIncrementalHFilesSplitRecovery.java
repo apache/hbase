@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.tool;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -32,14 +32,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -64,23 +61,29 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -90,7 +93,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHF
  */
 @Category({ MiscTests.class, LargeTests.class })
 public class TestLoadIncrementalHFilesSplitRecovery {
-  private static final Log LOG = LogFactory.getLog(TestHRegionServerBulkLoad.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestLoadIncrementalHFilesSplitRecovery.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
 
   static HBaseTestingUtility util;
   // used by secure subclass
@@ -136,7 +144,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   private TableDescriptor createTableDesc(TableName name, int cfs) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name);
     IntStream.range(0, cfs).mapToObj(i -> ColumnFamilyDescriptorBuilder.of(family(i)))
-        .forEachOrdered(builder::addColumnFamily);
+        .forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 
@@ -269,7 +277,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * Test that shows that exception thrown from the RS side will result in an exception on the
    * LIHFile client.
    */
-  @Test(expected = IOException.class, timeout = 120000)
+  @Test(expected = IOException.class)
   public void testBulkLoadPhaseFailure() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     final AtomicInteger attmptedCalls = new AtomicInteger();
@@ -279,24 +287,23 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       setupTable(connection, table, 10);
       LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
         @Override
-        protected List<LoadQueueItem> tryAtomicRegionLoad(
-            ClientServiceCallable<byte[]> serviceCallable, TableName tableName, final byte[] first,
-            Collection<LoadQueueItem> lqis) throws IOException {
+        protected List<LoadQueueItem> tryAtomicRegionLoad(Connection connection,
+            TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis,
+            boolean copyFile) throws IOException {
           int i = attmptedCalls.incrementAndGet();
           if (i == 1) {
             Connection errConn;
             try {
               errConn = getMockedConnection(util.getConfiguration());
-              serviceCallable = this.buildClientServiceCallable(errConn, table, first, lqis, true);
             } catch (Exception e) {
-              LOG.fatal("mocking cruft, should never happen", e);
+              LOG.error(HBaseMarkers.FATAL, "mocking cruft, should never happen", e);
               throw new RuntimeException("mocking cruft, should never happen");
             }
             failedCalls.incrementAndGet();
-            return super.tryAtomicRegionLoad(serviceCallable, tableName, first, lqis);
+            return super.tryAtomicRegionLoad(errConn, tableName, first, lqis, true);
           }
 
-          return super.tryAtomicRegionLoad(serviceCallable, tableName, first, lqis);
+          return super.tryAtomicRegionLoad(connection, tableName, first, lqis, true);
         }
       };
       try {
@@ -323,41 +330,39 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   @Test
   public void testRetryOnIOException() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
-    final AtomicInteger calls = new AtomicInteger(1);
+    final AtomicInteger calls = new AtomicInteger(0);
     final Connection conn = ConnectionFactory.createConnection(util.getConfiguration());
     util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     util.getConfiguration().setBoolean(LoadIncrementalHFiles.RETRY_ON_IO_EXCEPTION, true);
     final LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
       @Override
-      protected List<LoadQueueItem> tryAtomicRegionLoad(
-          ClientServiceCallable<byte[]> serverCallable, TableName tableName, final byte[] first,
-          Collection<LoadQueueItem> lqis) throws IOException {
-        if (calls.getAndIncrement() < util.getConfiguration().getInt(
-          HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER) -
-            1) {
-          ClientServiceCallable<byte[]> newServerCallable = new ClientServiceCallable<byte[]>(conn,
-              tableName, first, new RpcControllerFactory(util.getConfiguration()).newController(),
+      protected ClientServiceCallable<byte[]> buildClientServiceCallable(Connection conn,
+          TableName tableName, byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) {
+        if (calls.get() < util.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+          HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
+          calls.getAndIncrement();
+          return new ClientServiceCallable<byte[]>(conn, tableName, first,
+              new RpcControllerFactory(util.getConfiguration()).newController(),
               HConstants.PRIORITY_UNSET) {
             @Override
             public byte[] rpcCall() throws Exception {
               throw new IOException("Error calling something on RegionServer");
             }
           };
-          return super.tryAtomicRegionLoad(newServerCallable, tableName, first, lqis);
         } else {
-          return super.tryAtomicRegionLoad(serverCallable, tableName, first, lqis);
+          return super.buildClientServiceCallable(conn, tableName, first, lqis, true);
         }
       }
     };
     setupTable(conn, table, 10);
     Path dir = buildBulkFiles(table, 1);
     lih.doBulkLoad(dir, conn.getAdmin(), conn.getTable(table), conn.getRegionLocator(table));
+    assertEquals(calls.get(), 2);
     util.getConfiguration().setBoolean(LoadIncrementalHFiles.RETRY_ON_IO_EXCEPTION, false);
-
   }
 
   private ClusterConnection getMockedConnection(final Configuration conf)
-      throws IOException, org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+      throws IOException, org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     ClusterConnection c = Mockito.mock(ClusterConnection.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);
     Mockito.doNothing().when(c).close();
@@ -374,7 +379,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
         .when(
           hri.bulkLoadHFile((RpcController) Mockito.any(), (BulkLoadHFileRequest) Mockito.any()))
         .thenThrow(new ServiceException(new IOException("injecting bulk load error")));
-    Mockito.when(c.getClient(Mockito.any(ServerName.class))).thenReturn(hri);
+    Mockito.when(c.getClient(Mockito.any())).thenReturn(hri);
     return c;
   }
 
@@ -383,7 +388,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * atomic bulk load call. We cannot use presplitting to test this path, so we actually inject a
    * split just before the atomic region load.
    */
-  @Test(timeout = 120000)
+  @Test
   public void testSplitWhileBulkLoadPhase() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
@@ -420,7 +425,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       // check that data was loaded
       // The three expected attempts are 1) failure because need to split, 2)
       // load of split top 3) load of split bottom
-      assertEquals(attemptedCalls.get(), 3);
+      assertEquals(3, attemptedCalls.get());
       assertExpectedTable(table, ROWCOUNT, 2);
     }
   }
@@ -429,7 +434,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * This test splits a table and attempts to bulk load. The bulk import files should be split
    * before atomically importing.
    */
-  @Test(timeout = 120000)
+  @Test
   public void testGroupOrSplitPresplit() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
@@ -465,11 +470,39 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     }
   }
 
+  @Test
+  public void testCorrectSplitPoint() throws Exception {
+    final TableName table = TableName.valueOf(name.getMethodName());
+    byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
+        Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
+        Bytes.toBytes("row_00000050"), Bytes.toBytes("row_00000060"),
+        Bytes.toBytes("row_00000070") };
+    setupTableWithSplitkeys(table, NUM_CFS, SPLIT_KEYS);
+
+    final AtomicInteger bulkloadRpcTimes = new AtomicInteger();
+    BulkLoadHFilesTool loader = new BulkLoadHFilesTool(util.getConfiguration()) {
+
+      @Override
+      protected void bulkLoadPhase(Table table, Connection conn, ExecutorService pool,
+          Deque<LoadIncrementalHFiles.LoadQueueItem> queue,
+          Multimap<ByteBuffer, LoadIncrementalHFiles.LoadQueueItem> regionGroups, boolean copyFile,
+          Map<LoadIncrementalHFiles.LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        bulkloadRpcTimes.addAndGet(1);
+        super.bulkLoadPhase(table, conn, pool, queue, regionGroups, copyFile, item2RegionMap);
+      }
+    };
+
+    Path dir = buildBulkFiles(table, 1);
+    loader.bulkLoad(table, dir);
+    // before HBASE-25281 we need invoke bulkload rpc 8 times
+    assertEquals(4, bulkloadRpcTimes.get());
+  }
+
   /**
    * This test creates a table with many small regions. The bulk load files would be splitted
    * multiple times before all of them can be loaded successfully.
    */
-  @Test(timeout = 120000)
+  @Test
   public void testSplitTmpFileCleanUp() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
@@ -496,7 +529,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       assertTrue(fs.exists(tmpPath));
       // TMP_DIR should have been cleaned-up
       assertNull(LoadIncrementalHFiles.TMP_DIR + " should be empty.",
-        FSUtils.listStatus(fs, tmpPath));
+        CommonFSUtils.listStatus(fs, tmpPath));
       assertExpectedTable(connection, table, ROWCOUNT, 2);
     }
   }
@@ -504,7 +537,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   /**
    * This simulates an remote exception which should cause LIHF to exit with an exception.
    */
-  @Test(expected = IOException.class, timeout = 120000)
+  @Test(expected = IOException.class)
   public void testGroupOrSplitFailure() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
@@ -538,7 +571,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     fail("doBulkLoad should have thrown an exception");
   }
 
-  @Test(timeout = 120000)
+  @Test
   public void testGroupOrSplitWhenRegionHoleExistsInMeta() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000100") };
@@ -584,7 +617,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     List<RegionInfo> regionInfos = MetaTableAccessor.getTableRegions(connection, tableName);
     for (RegionInfo regionInfo : regionInfos) {
       if (Bytes.equals(regionInfo.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
-        MetaTableAccessor.deleteRegion(connection, regionInfo);
+        MetaTableAccessor.deleteRegionInfo(connection, regionInfo);
         break;
       }
     }

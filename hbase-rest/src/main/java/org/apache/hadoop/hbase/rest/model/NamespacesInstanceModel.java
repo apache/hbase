@@ -166,4 +166,5 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
     }
     return this;
   }
+
 }

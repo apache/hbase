@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.metrics2;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Metrics Histogram interface.  Implementing classes will expose computed
  * quartile values through the metrics system.
  */
+@InterfaceAudience.Private
 public interface MetricHistogram {
 
   //Strings used to create metrics names.
@@ -43,5 +46,11 @@ public interface MetricHistogram {
    * @param value
    */
   void add(long value);
+
+  /**
+   * Return the total number of values added to the histogram.
+   * @return the total number of values.
+   */
+  long getCount();
 
 }

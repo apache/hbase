@@ -31,15 +31,12 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -60,19 +57,25 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 @Category({ClientTests.class, MediumTests.class})
 public class TestTableFavoredNodes {
 
-  private static final Log LOG = LogFactory.getLog(TestTableFavoredNodes.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableFavoredNodes.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableFavoredNodes.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static int WAIT_TIMEOUT = 60000;
@@ -243,7 +246,7 @@ public class TestTableFavoredNodes {
     LOG.info("regionA: " + regionA.getEncodedName() + " with FN: " + fnm.getFavoredNodes(regionA));
     LOG.info("regionB: " + regionA.getEncodedName() + " with FN: " + fnm.getFavoredNodes(regionB));
 
-    int countOfRegions = MetaTableAccessor.getRegionCount(TEST_UTIL.getConfiguration(), tableName);
+    int countOfRegions = TEST_UTIL.getMiniHBaseCluster().getRegions(tableName).size();
     admin.mergeRegionsAsync(regionA.getEncodedNameAsBytes(),
         regionB.getEncodedNameAsBytes(), false).get(60, TimeUnit.SECONDS);
 
@@ -389,7 +392,9 @@ public class TestTableFavoredNodes {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return MetaTableAccessor.getRegionCount(TEST_UTIL.getConfiguration(), tableName) == numRegions;
+        try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+          return locator.getAllRegionLocations().size() == numRegions;
+        }
       }
     });
   }

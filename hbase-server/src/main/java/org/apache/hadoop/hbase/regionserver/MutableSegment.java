@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,17 +20,16 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Iterator;
 import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.ClassSize;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A mutable segment in memstore, specifically the active segment.
@@ -38,29 +37,40 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceAudience.Private
 public class MutableSegment extends Segment {
 
-  public final static long DEEP_OVERHEAD = Segment.DEEP_OVERHEAD + ClassSize.CONCURRENT_SKIPLISTMAP;
+  private final AtomicBoolean flushed = new AtomicBoolean(false);
 
-  protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
-    super(cellSet, comparator, memStoreLAB);
-    incSize(0,DEEP_OVERHEAD); // update the mutable segment metadata
+  public final static long DEEP_OVERHEAD = ClassSize.align(Segment.DEEP_OVERHEAD
+      + ClassSize.CONCURRENT_SKIPLISTMAP
+      + ClassSize.SYNC_TIMERANGE_TRACKER
+      + ClassSize.REFERENCE
+      + ClassSize.ATOMIC_BOOLEAN);
+
+  protected MutableSegment(CellSet cellSet, CellComparator comparator,
+      MemStoreLAB memStoreLAB, MemStoreSizing memstoreSizing) {
+    super(cellSet, comparator, memStoreLAB, TimeRangeTracker.create(TimeRangeTracker.Type.SYNC));
+    incMemStoreSize(0, DEEP_OVERHEAD, 0, 0); // update the mutable segment metadata
+    if (memstoreSizing != null) {
+      memstoreSizing.incMemStoreSize(0, DEEP_OVERHEAD, 0, 0);
+    }
   }
 
   /**
    * Adds the given cell into the segment
    * @param cell the cell to add
    * @param mslabUsed whether using MSLAB
-   * @param memstoreSize
    */
-  public void add(Cell cell, boolean mslabUsed, MemStoreSize memstoreSize) {
-    internalAdd(cell, mslabUsed, memstoreSize);
+  public void add(Cell cell, boolean mslabUsed, MemStoreSizing memStoreSizing,
+      boolean sizeAddedPreOperation) {
+    internalAdd(cell, mslabUsed, memStoreSizing, sizeAddedPreOperation);
   }
 
-  public void upsert(Cell cell, long readpoint, MemStoreSize memstoreSize) {
-    internalAdd(cell, false, memstoreSize);
+  public void upsert(Cell cell, long readpoint, MemStoreSizing memStoreSizing,
+      boolean sizeAddedPreOperation) {
+    internalAdd(cell, false, memStoreSizing, sizeAddedPreOperation);
 
     // Get the Cells for the row/family/qualifier regardless of timestamp.
     // For this case we want to clean up any other puts
-    Cell firstCell = CellUtil.createFirstOnRowColTS(cell, HConstants.LATEST_TIMESTAMP);
+    Cell firstCell = PrivateCellUtil.createFirstOnRowColTS(cell, HConstants.LATEST_TIMESTAMP);
     SortedSet<Cell> ss = this.tailSet(firstCell);
     Iterator<Cell> it = ss.iterator();
     // versions visible to oldest scanner
@@ -87,9 +97,10 @@ public class MutableSegment extends Segment {
             // removed cell is from MSLAB or not. Will do once HBASE-16438 is in
             int cellLen = getCellLength(cur);
             long heapSize = heapSizeChange(cur, true);
-            this.incSize(-cellLen, -heapSize);
-            if (memstoreSize != null) {
-              memstoreSize.decMemStoreSize(cellLen, heapSize);
+            long offHeapSize = offHeapSizeChange(cur, true);
+            incMemStoreSize(-cellLen, -heapSize, -offHeapSize, -1);
+            if (memStoreSizing != null) {
+              memStoreSizing.decMemStoreSize(cellLen, heapSize, offHeapSize, 1);
             }
             it.remove();
           } else {
@@ -103,24 +114,16 @@ public class MutableSegment extends Segment {
     }
   }
 
+  public boolean setInMemoryFlushed() {
+    return flushed.compareAndSet(false, true);
+  }
+
   /**
    * Returns the first cell in the segment
    * @return the first cell in the segment
    */
-  @VisibleForTesting
   Cell first() {
     return this.getCellSet().first();
-  }
-
-  @Override
-  public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS) {
-    return (this.timeRangeTracker.includesTimeRange(tr)
-        && (this.timeRangeTracker.getMax() >= oldestUnexpiredTS));
-  }
-
-  @Override
-  public long getMinTimestamp() {
-    return this.timeRangeTracker.getMin();
   }
 
   @Override protected long indexEntrySize() {

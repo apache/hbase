@@ -21,21 +21,17 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.util.List;
-
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.Encoded;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.UriInfo;
-
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -48,7 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TableResource extends ResourceBase {
 
   String table;
-  private static final Log LOG = LogFactory.getLog(TableResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableResource.class);
 
   /**
    * Constructor
@@ -128,7 +124,7 @@ public class TableResource extends ResourceBase {
       @QueryParam(Constants.SCAN_LIMIT) int userRequestedLimit,
       @DefaultValue("") @QueryParam(Constants.SCAN_START_ROW) String startRow,
       @DefaultValue("") @QueryParam(Constants.SCAN_END_ROW) String endRow,
-      @DefaultValue("") @QueryParam(Constants.SCAN_COLUMN) List<String> column,
+      @QueryParam(Constants.SCAN_COLUMN) List<String> column,
       @DefaultValue("1") @QueryParam(Constants.SCAN_MAX_VERSIONS) int maxVersions,
       @DefaultValue("-1") @QueryParam(Constants.SCAN_BATCH_SIZE) int batchSize,
       @DefaultValue("0") @QueryParam(Constants.SCAN_START_TIME) long startTime,
@@ -161,26 +157,21 @@ public class TableResource extends ResourceBase {
         tableScan.setStartRow(Bytes.toBytes(startRow));
       }
       tableScan.setStopRow(Bytes.toBytes(endRow));
-      for (String csplit : column) {
-        String[] familysplit = csplit.trim().split(":");
-        if (familysplit.length == 2) {
-          if (familysplit[1].length() > 0) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Scan family and column : " + familysplit[0] + "  " + familysplit[1]);
-            }
-            tableScan.addColumn(Bytes.toBytes(familysplit[0]), Bytes.toBytes(familysplit[1]));
-          } else {
-            tableScan.addFamily(Bytes.toBytes(familysplit[0]));
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Scan family : " + familysplit[0] + " and empty qualifier.");
-            }
-            tableScan.addColumn(Bytes.toBytes(familysplit[0]), null);
-          }
-        } else if (StringUtils.isNotEmpty(familysplit[0])) {
+      for (String col : column) {
+        byte [][] parts = CellUtil.parseColumn(Bytes.toBytes(col.trim()));
+        if (parts.length == 1) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Scan family : " + familysplit[0]);
+            LOG.trace("Scan family : " + Bytes.toStringBinary(parts[0]));
           }
-          tableScan.addFamily(Bytes.toBytes(familysplit[0]));
+          tableScan.addFamily(parts[0]);
+        } else if (parts.length == 2) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Scan family and column : " + Bytes.toStringBinary(parts[0])
+                + "  " + Bytes.toStringBinary(parts[1]));
+          }
+          tableScan.addColumn(parts[0], parts[1]);
+        } else {
+          throw new IllegalArgumentException("Invalid column specifier.");
         }
       }
       FilterList filterList = new FilterList();
@@ -206,7 +197,7 @@ public class TableResource extends ResourceBase {
     } catch (IOException exp) {
       servlet.getMetrics().incrementFailedScanRequests(1);
       processException(exp);
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       return null;
     }
   }

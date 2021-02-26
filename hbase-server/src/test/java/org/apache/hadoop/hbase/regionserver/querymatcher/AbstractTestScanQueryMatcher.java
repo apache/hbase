@@ -72,6 +72,6 @@ public class AbstractTestScanQueryMatcher {
     get.addColumn(fam2, col5);
     this.scan = new Scan(get);
 
-    rowComparator = CellComparator.COMPARATOR;
+    rowComparator = CellComparator.getInstance();
   }
 }

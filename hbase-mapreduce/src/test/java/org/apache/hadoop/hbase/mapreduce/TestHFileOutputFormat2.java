@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,9 +38,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,10 +45,10 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -62,10 +58,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -92,9 +89,9 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -105,12 +102,13 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.junit.ClassRule;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple test for {@link HFileOutputFormat2}.
@@ -121,8 +119,11 @@ import org.mockito.Mockito;
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 //TODO : Remove this in 3.0
 public class TestHFileOutputFormat2  {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHFileOutputFormat2.class);
+
   private final static int ROWSPERSPLIT = 1024;
 
   public static final byte[] FAMILY_NAME = TestHRegionFileSystem.FAMILY_NAME;
@@ -133,7 +134,7 @@ public class TestHFileOutputFormat2  {
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
 
-  private static final Log LOG = LogFactory.getLog(TestHFileOutputFormat2.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileOutputFormat2.class);
 
   /**
    * Simple mapper that makes KeyValue output.
@@ -395,13 +396,12 @@ public class TestHFileOutputFormat2  {
       // open as HFile Reader and pull out TIMERANGE FileInfo.
       HFile.Reader rd =
           HFile.createReader(fs, file[0].getPath(), new CacheConfig(conf), true, conf);
-      Map<byte[],byte[]> finfo = rd.loadFileInfo();
-      byte[] range = finfo.get("TIMERANGE".getBytes("UTF-8"));
+      Map<byte[],byte[]> finfo = rd.getHFileInfo();
+      byte[] range = finfo.get(Bytes.toBytes("TIMERANGE"));
       assertNotNull(range);
 
       // unmarshall and check values.
-      TimeRangeTracker timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
-      Writables.copyWritable(range, timeRangeTracker);
+      TimeRangeTracker timeRangeTracker =TimeRangeTracker.parseFrom(range);
       LOG.info(timeRangeTracker.getMin() +
           "...." + timeRangeTracker.getMax());
       assertEquals(1000, timeRangeTracker.getMin());
@@ -425,7 +425,8 @@ public class TestHFileOutputFormat2  {
     // Set down this value or we OOME in eclipse.
     conf.setInt("mapreduce.task.io.sort.mb", 20);
     // Write a few files.
-    conf.setLong(HConstants.HREGION_MAX_FILESIZE, 64 * 1024);
+    long hregionMaxFilesize = 10 * 1024;
+    conf.setLong(HConstants.HREGION_MAX_FILESIZE, hregionMaxFilesize);
 
     Job job = new Job(conf, "testWritingPEData");
     setupRandomGeneratorMapper(job, false);
@@ -452,6 +453,26 @@ public class TestHFileOutputFormat2  {
     assertTrue(job.waitForCompletion(false));
     FileStatus [] files = fs.listStatus(testDir);
     assertTrue(files.length > 0);
+
+    //check output file num and size.
+    for (byte[] family : FAMILIES) {
+      long kvCount= 0;
+      RemoteIterator<LocatedFileStatus> iterator =
+              fs.listFiles(testDir.suffix("/" + new String(family)), true);
+      while (iterator.hasNext()) {
+        LocatedFileStatus keyFileStatus = iterator.next();
+        HFile.Reader reader =
+                HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
+        HFileScanner scanner = reader.getScanner(false, false, false);
+
+        kvCount += reader.getEntries();
+        scanner.seekTo();
+        long perKVSize = scanner.getCell().getSerializedSize();
+        assertTrue("Data size of each file should not be too large.",
+                perKVSize * reader.getEntries() <= hregionMaxFilesize);
+      }
+      assertEquals("Should write expected data in output file.", ROWSPERSPLIT, kvCount);
+    }
   }
 
   /**
@@ -494,8 +515,7 @@ public class TestHFileOutputFormat2  {
         HFileScanner scanner = reader.getScanner(false, false, false);
         scanner.seekTo();
         Cell cell = scanner.getCell();
-        List<Tag> tagsFromCell = TagUtil.asList(cell.getTagsArray(), cell.getTagsOffset(),
-            cell.getTagsLength());
+        List<Tag> tagsFromCell = PrivateCellUtil.getTags(cell);
         assertTrue(tagsFromCell.size() > 0);
         for (Tag tag : tagsFromCell) {
           assertTrue(tag.getType() == TagType.TTL_TAG_TYPE);
@@ -610,7 +630,9 @@ public class TestHFileOutputFormat2  {
     for (int i = 0; i < hostCount; ++i) {
       hostnames[i] = "datanode_" + i;
     }
-    util.startMiniCluster(1, hostCount, hostnames);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(hostCount).dataNodeHosts(hostnames).build();
+    util.startMiniCluster(option);
 
     Map<String, Table> allTables = new HashMap<>(tableStr.size());
     List<HFileOutputFormat2.TableInfo> tableInfo = new ArrayList<>(tableStr.size());
@@ -716,7 +738,7 @@ public class TestHFileOutputFormat2  {
             assertEquals(FAMILIES.length, res.rawCells().length);
             Cell first = res.rawCells()[0];
             for (Cell kv : res.rawCells()) {
-              assertTrue(CellUtil.matchingRow(first, kv));
+              assertTrue(CellUtil.matchingRows(first, kv));
               assertTrue(Bytes.equals(CellUtil.cloneValue(first), CellUtil.cloneValue(kv)));
             }
           }
@@ -790,9 +812,8 @@ public class TestHFileOutputFormat2  {
   }
 
   /**
-   * Test for {@link HFileOutputFormat2#configureCompression(Configuration, HTableDescriptor)} and
-   * {@link HFileOutputFormat2#createFamilyCompressionMap(Configuration)}.
-   * Tests that the compression map is correctly serialized into
+   * Test for {@link HFileOutputFormat2#createFamilyCompressionMap(Configuration)}.
+   * Tests that the family compression map is correctly serialized into
    * and deserialized from configuration
    *
    * @throws IOException
@@ -862,9 +883,8 @@ public class TestHFileOutputFormat2  {
 
 
   /**
-   * Test for {@link HFileOutputFormat2#configureBloomType(HTableDescriptor, Configuration)} and
-   * {@link HFileOutputFormat2#createFamilyBloomTypeMap(Configuration)}.
-   * Tests that the compression map is correctly serialized into
+   * Test for {@link HFileOutputFormat2#createFamilyBloomTypeMap(Configuration)}.
+   * Tests that the family bloom type map is correctly serialized into
    * and deserialized from configuration
    *
    * @throws IOException
@@ -933,9 +953,8 @@ public class TestHFileOutputFormat2  {
   }
 
   /**
-   * Test for {@link HFileOutputFormat2#configureBlockSize(HTableDescriptor, Configuration)} and
-   * {@link HFileOutputFormat2#createFamilyBlockSizeMap(Configuration)}.
-   * Tests that the compression map is correctly serialized into
+   * Test for {@link HFileOutputFormat2#createFamilyBlockSizeMap(Configuration)}.
+   * Tests that the family block size map is correctly serialized into
    * and deserialized from configuration
    *
    * @throws IOException
@@ -1010,9 +1029,8 @@ public class TestHFileOutputFormat2  {
   }
 
   /**
-   * Test for {@link HFileOutputFormat2#configureDataBlockEncoding(HTableDescriptor, Configuration)}
-   * and {@link HFileOutputFormat2#createFamilyDataBlockEncodingMap(Configuration)}.
-   * Tests that the compression map is correctly serialized into
+   * Test for {@link HFileOutputFormat2#createFamilyDataBlockEncodingMap(Configuration)}.
+   * Tests that the family data block encoding map is correctly serialized into
    * and deserialized from configuration
    *
    * @throws IOException
@@ -1152,7 +1170,7 @@ public class TestHFileOutputFormat2  {
       // commit so that the filesystem has one directory per column family
       hof.getOutputCommitter(context).commitTask(context);
       hof.getOutputCommitter(context).commitJob(context);
-      FileStatus[] families = FSUtils.listStatus(fs, dir, new FSUtils.FamilyDirFilter(fs));
+      FileStatus[] families = CommonFSUtils.listStatus(fs, dir, new FSUtils.FamilyDirFilter(fs));
       assertEquals(htd.getFamilies().size(), families.length);
       for (FileStatus f : families) {
         String familyStr = f.getPath().getName();
@@ -1161,15 +1179,16 @@ public class TestHFileOutputFormat2  {
         // compression
         Path dataFilePath = fs.listStatus(f.getPath())[0].getPath();
         Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf), true, conf);
-        Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
+        Map<byte[], byte[]> fileInfo = reader.getHFileInfo();
 
         byte[] bloomFilter = fileInfo.get(BLOOM_FILTER_TYPE_KEY);
         if (bloomFilter == null) bloomFilter = Bytes.toBytes("NONE");
         assertEquals("Incorrect bloom filter used for column family " + familyStr +
           "(reader: " + reader + ")",
           hcd.getBloomFilterType(), BloomType.valueOf(Bytes.toString(bloomFilter)));
-        assertEquals("Incorrect compression used for column family " + familyStr +
-          "(reader: " + reader + ")", hcd.getCompressionType(), reader.getFileContext().getCompression());
+        assertEquals(
+          "Incorrect compression used for column family " + familyStr + "(reader: " + reader + ")",
+          hcd.getCompressionType(), reader.getFileContext().getCompression());
       }
     } finally {
       dir.getFileSystem(conf).delete(dir, true);
@@ -1226,7 +1245,7 @@ public class TestHFileOutputFormat2  {
 
       // deep inspection: get the StoreFile dir
       final Path storePath = new Path(
-        FSUtils.getTableDir(FSUtils.getRootDir(conf), TABLE_NAMES[0]),
+        CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), TABLE_NAMES[0]),
           new Path(admin.getTableRegions(TABLE_NAMES[0]).get(0).getEncodedName(),
             Bytes.toString(FAMILIES[0])));
       assertEquals(0, fs.listStatus(storePath).length);
@@ -1307,7 +1326,7 @@ public class TestHFileOutputFormat2  {
 
       // deep inspection: get the StoreFile dir
       final Path storePath = new Path(
-        FSUtils.getTableDir(FSUtils.getRootDir(conf), TABLE_NAMES[0]),
+        CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), TABLE_NAMES[0]),
           new Path(admin.getTableRegions(TABLE_NAMES[0]).get(0).getEncodedName(),
             Bytes.toString(FAMILIES[0])));
       assertEquals(0, fs.listStatus(storePath).length);
@@ -1492,6 +1511,49 @@ public class TestHFileOutputFormat2  {
     }
 
     return null;
+  }
+
+  @Test
+  public void TestConfigureCompression() throws Exception {
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    RecordWriter<ImmutableBytesWritable, Cell> writer = null;
+    TaskAttemptContext context = null;
+    Path dir = util.getDataTestDir("TestConfigureCompression");
+    String hfileoutputformatCompression = "gz";
+
+    try {
+      conf.set(HFileOutputFormat2.OUTPUT_TABLE_NAME_CONF_KEY, TABLE_NAMES[0].getNameAsString());
+      conf.setBoolean(HFileOutputFormat2.LOCALITY_SENSITIVE_CONF_KEY, false);
+
+      conf.set(HFileOutputFormat2.COMPRESSION_OVERRIDE_CONF_KEY, hfileoutputformatCompression);
+
+      Job job = Job.getInstance(conf);
+      FileOutputFormat.setOutputPath(job, dir);
+      context = createTestTaskAttemptContext(job);
+      HFileOutputFormat2 hof = new HFileOutputFormat2();
+      writer = hof.getRecordWriter(context);
+      final byte[] b = Bytes.toBytes("b");
+
+      KeyValue kv = new KeyValue(b, b, b, HConstants.LATEST_TIMESTAMP, b);
+      writer.write(new ImmutableBytesWritable(), kv);
+      writer.close(context);
+      writer = null;
+      FileSystem fs = dir.getFileSystem(conf);
+      RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(dir, true);
+      while (iterator.hasNext()) {
+        LocatedFileStatus keyFileStatus = iterator.next();
+        HFile.Reader reader =
+            HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
+        assertEquals(reader.getTrailer().getCompressionCodec().getName(),
+            hfileoutputformatCompression);
+      }
+    } finally {
+      if (writer != null && context != null) {
+        writer.close(context);
+      }
+      dir.getFileSystem(conf).delete(dir, true);
+    }
+
   }
 }
 

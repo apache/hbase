@@ -19,12 +19,14 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -34,12 +36,16 @@ import org.junit.experimental.categories.Category;
 @Category({ MasterTests.class, MediumTests.class })
 public class TestGetInfoPort {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestGetInfoPort.class);
+
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
   @Before
   public void setUp() throws Exception {
     testUtil.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, 0);
-    testUtil.startMiniCluster(1, 1);
+    testUtil.startMiniCluster();
   }
 
   @After

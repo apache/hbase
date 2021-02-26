@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -35,6 +34,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Sample Uploader MapReduce
@@ -58,20 +58,17 @@ import org.apache.hadoop.util.ToolRunner;
  * <p>
  * This code was written against HBase 0.21 trunk.
  */
+@InterfaceAudience.Private
 public class SampleUploader extends Configured implements Tool {
 
   private static final String NAME = "SampleUploader";
 
-  static class Uploader
-  extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put> {
-
+  static class Uploader extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put> {
     private long checkpoint = 100;
     private long count = 0;
 
     @Override
-    public void map(LongWritable key, Text line, Context context)
-    throws IOException {
-
+    public void map(LongWritable key, Text line, Context context) throws IOException {
       // Input is a CSV file
       // Each map() is a single line, where the key is the line number
       // Each line is comma-delimited; row,family,qualifier,value
@@ -112,8 +109,7 @@ public class SampleUploader extends Configured implements Tool {
   /**
    * Job configuration.
    */
-  public static Job configureJob(Configuration conf, String [] args)
-  throws IOException {
+  public static Job configureJob(Configuration conf, String [] args) throws IOException {
     Path inputPath = new Path(args[0]);
     String tableName = args[1];
     Job job = new Job(conf, NAME + "_" + tableName);

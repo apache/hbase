@@ -21,17 +21,23 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Writables;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestSimpleTimeRangeTracker {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSimpleTimeRangeTracker.class);
 
   protected TimeRangeTracker getTimeRangeTracker() {
     return TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
@@ -43,13 +49,13 @@ public class TestSimpleTimeRangeTracker {
 
   @Test
   public void testExtreme() {
-    TimeRange tr = new TimeRange();
-    assertTrue(tr.includesTimeRange(new TimeRange()));
+    TimeRange tr = TimeRange.allTime();
+    assertTrue(tr.includesTimeRange(TimeRange.allTime()));
     TimeRangeTracker trt = getTimeRangeTracker();
-    assertFalse(trt.includesTimeRange(new TimeRange()));
+    assertFalse(trt.includesTimeRange(TimeRange.allTime()));
     trt.includeTimestamp(1);
     trt.includeTimestamp(10);
-    assertTrue(trt.includesTimeRange(new TimeRange()));
+    assertTrue(trt.includesTimeRange(TimeRange.allTime()));
   }
 
   @Test
@@ -62,8 +68,8 @@ public class TestSimpleTimeRangeTracker {
   @Test
   public void testTimeRangeTrackerNullIsSameAsTimeRangeNull() throws IOException {
     TimeRangeTracker src = getTimeRangeTracker(1, 2);
-    byte [] bytes = Writables.getBytes(src);
-    TimeRange tgt = TimeRangeTracker.getTimeRange(bytes);
+    byte[] bytes = TimeRangeTracker.toByteArray(src);
+    TimeRange tgt = TimeRangeTracker.parseFrom(bytes).toTimeRange();
     assertEquals(src.getMin(), tgt.getMin());
     assertEquals(src.getMax(), tgt.getMax());
   }
@@ -71,10 +77,20 @@ public class TestSimpleTimeRangeTracker {
   @Test
   public void testSerialization() throws IOException {
     TimeRangeTracker src = getTimeRangeTracker(1, 2);
-    TimeRangeTracker tgt = getTimeRangeTracker();
-    Writables.copyWritable(src, tgt);
+    TimeRangeTracker tgt = TimeRangeTracker.parseFrom(TimeRangeTracker.toByteArray(src));
     assertEquals(src.getMin(), tgt.getMin());
     assertEquals(src.getMax(), tgt.getMax());
+  }
+
+  @Test
+  public void testLegacySerialization() throws IOException {
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    DataOutputStream output = new DataOutputStream(data);
+    output.writeLong(100);
+    output.writeLong(200);
+    TimeRangeTracker tgt = TimeRangeTracker.parseFrom(data.toByteArray());
+    assertEquals(100, tgt.getMin());
+    assertEquals(200, tgt.getMax());
   }
 
   @Test
@@ -97,7 +113,7 @@ public class TestSimpleTimeRangeTracker {
 
   @Test
   public void testRangeConstruction() throws IOException {
-    TimeRange defaultRange = new TimeRange();
+    TimeRange defaultRange = TimeRange.allTime();
     assertEquals(0L, defaultRange.getMin());
     assertEquals(Long.MAX_VALUE, defaultRange.getMax());
     assertTrue(defaultRange.isAllTime());

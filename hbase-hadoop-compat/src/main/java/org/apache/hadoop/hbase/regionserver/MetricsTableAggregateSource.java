@@ -19,11 +19,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This interface will be implemented by a MetricsSource that will export metrics from
  * multiple regions of a table into the hadoop metrics system.
  */
+@InterfaceAudience.Private
 public interface MetricsTableAggregateSource extends BaseSource {
 
   /**
@@ -50,18 +52,16 @@ public interface MetricsTableAggregateSource extends BaseSource {
   String NUMBER_OF_TABLES_DESC = "Number of tables in the metrics system";
 
   /**
-   * Register a MetricsTableSource as being open.
-   *
+   * Returns MetricsTableSource registered for the table. Creates one if not defined.
    * @param table The table name
-   * @param source the source for the table being opened.
    */
-  void register(String table, MetricsTableSource source);
+  MetricsTableSource getOrCreateTableSource(String table, MetricsTableWrapperAggregate wrapper);
 
   /**
    * Remove a table's source. This is called when regions of a table are closed.
    *
    * @param table The table name
    */
-  void deregister(String table);
+  void deleteTableSource(String table);
 
 }

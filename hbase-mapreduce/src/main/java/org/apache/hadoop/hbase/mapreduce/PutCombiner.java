@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -39,7 +39,7 @@ import org.apache.hadoop.mapreduce.Reducer;
  */
 @InterfaceAudience.Public
 public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
-  private static final Log LOG = LogFactory.getLog(PutCombiner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PutCombiner.class);
 
   @Override
   protected void reduce(K row, Iterable<Put> vals, Context context)

@@ -30,4 +30,14 @@ public class CallTimeoutException extends HBaseIOException {
   public CallTimeoutException(final String msg) {
     super(msg);
   }
+
+  /**
+   * CallTimeoutException with cause
+   *
+   * @param message the message for this exception
+   * @param cause the cause for this exception
+   */
+  public CallTimeoutException(final String message, final Throwable cause) {
+    super(message, cause);
+  }
 }

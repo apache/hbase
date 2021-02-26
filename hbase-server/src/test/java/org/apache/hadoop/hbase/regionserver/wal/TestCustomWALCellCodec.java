@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -30,6 +32,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestCustomWALCellCodec {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCustomWALCellCodec.class);
 
   public static class CustomWALCellCodec extends WALCellCodec {
     public Configuration conf;
@@ -57,5 +63,16 @@ public class TestCustomWALCellCodec {
       codec.conf);
     assertEquals("Custom codec didn't get initialized with the right compression context!", null,
       codec.context);
+  }
+
+  /**
+   * Test that a custom {@link WALCellCodec} will fail if provided an invalid
+   * code class.
+   */
+  @Test(expected = RuntimeException.class)
+  public void testCreatePreparesCodecInvalidClass() throws Exception {
+    Configuration conf = new Configuration(false);
+    conf.setStrings(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, "org.apache.hbase.wal.NoSuchClass");
+    WALCellCodec.create(conf, null, null);
   }
 }

@@ -17,24 +17,31 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertNotNull;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertNotNull;
 
 /**
  * Unit test version of rs metrics tests.
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestMetricsRegionServer {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMetricsRegionServer.class);
+
   public static MetricsAssertHelper HELPER =
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
@@ -50,7 +57,7 @@ public class TestMetricsRegionServer {
   @Before
   public void setUp() {
     wrapper = new MetricsRegionServerWrapperStub();
-    rsm = new MetricsRegionServer(wrapper);
+    rsm = new MetricsRegionServer(wrapper, new Configuration(false), null);
     serverSource = rsm.getMetricsSource();
   }
 
@@ -119,31 +126,34 @@ public class TestMetricsRegionServer {
   @Test
   public void testSlowCount() {
     for (int i=0; i < 12; i ++) {
-      rsm.updateAppend(12);
-      rsm.updateAppend(1002);
+      rsm.updateAppend(null, 12);
+      rsm.updateAppend(null, 1002);
     }
     for (int i=0; i < 13; i ++) {
-      rsm.updateDeleteBatch(13);
-      rsm.updateDeleteBatch(1003);
+      rsm.updateDeleteBatch(null, 13);
+      rsm.updateDeleteBatch(null, 1003);
     }
     for (int i=0; i < 14; i ++) {
-      rsm.updateGet(14);
-      rsm.updateGet(1004);
+      rsm.updateGet(null, 14);
+      rsm.updateGet(null, 1004);
     }
     for (int i=0; i < 15; i ++) {
-      rsm.updateIncrement(15);
-      rsm.updateIncrement(1005);
+      rsm.updateIncrement(null, 15);
+      rsm.updateIncrement(null, 1005);
     }
     for (int i=0; i < 16; i ++) {
-      rsm.updatePutBatch(16);
-      rsm.updatePutBatch(1006);
+      rsm.updatePutBatch(null, 16);
+      rsm.updatePutBatch(null, 1006);
     }
 
     for (int i=0; i < 17; i ++) {
-      rsm.updatePut(17);
-      rsm.updateDelete(17);
-      rsm.updateCheckAndDelete(17);
-      rsm.updateCheckAndPut(17);
+      rsm.updatePut(null, 17);
+      rsm.updateDelete(null, 17);
+      rsm.updatePut(null, 1006);
+      rsm.updateDelete(null, 1003);
+      rsm.updateCheckAndDelete(null, 17);
+      rsm.updateCheckAndPut(null, 17);
+      rsm.updateCheckAndMutate(null, 17);
     }
 
     HELPER.assertCounter("appendNumOps", 24, serverSource);
@@ -151,40 +161,29 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("getNumOps", 28, serverSource);
     HELPER.assertCounter("incrementNumOps", 30, serverSource);
     HELPER.assertCounter("putBatchNumOps", 32, serverSource);
-    HELPER.assertCounter("putNumOps", 17, serverSource);
-    HELPER.assertCounter("deleteNumOps", 17, serverSource);
+    HELPER.assertCounter("putNumOps", 34, serverSource);
+    HELPER.assertCounter("deleteNumOps", 34, serverSource);
     HELPER.assertCounter("checkAndDeleteNumOps", 17, serverSource);
     HELPER.assertCounter("checkAndPutNumOps", 17, serverSource);
-
+    HELPER.assertCounter("checkAndMutateNumOps", 17, serverSource);
 
     HELPER.assertCounter("slowAppendCount", 12, serverSource);
-    HELPER.assertCounter("slowDeleteCount", 13, serverSource);
+    HELPER.assertCounter("slowDeleteCount", 17, serverSource);
     HELPER.assertCounter("slowGetCount", 14, serverSource);
     HELPER.assertCounter("slowIncrementCount", 15, serverSource);
-    HELPER.assertCounter("slowPutCount", 16, serverSource);
+    HELPER.assertCounter("slowPutCount", 17, serverSource);
   }
-
-  String FLUSH_TIME = "flushTime";
-  String FLUSH_TIME_DESC = "Histogram for the time in millis for memstore flush";
-  String FLUSH_MEMSTORE_SIZE = "flushMemstoreSize";
-  String FLUSH_MEMSTORE_SIZE_DESC = "Histogram for number of bytes in the memstore for a flush";
-  String FLUSH_FILE_SIZE = "flushFileSize";
-  String FLUSH_FILE_SIZE_DESC = "Histogram for number of bytes in the resulting file for a flush";
-  String FLUSHED_OUTPUT_BYTES = "flushedOutputBytes";
-  String FLUSHED_OUTPUT_BYTES_DESC = "Total number of bytes written from flush";
-  String FLUSHED_MEMSTORE_BYTES = "flushedMemstoreBytes";
-  String FLUSHED_MEMSTORE_BYTES_DESC = "Total number of bytes of cells in memstore from flush";
 
   @Test
   public void testFlush() {
-    rsm.updateFlush(1, 2, 3);
+    rsm.updateFlush(null, 1, 2, 3);
     HELPER.assertCounter("flushTime_num_ops", 1, serverSource);
     HELPER.assertCounter("flushMemstoreSize_num_ops", 1, serverSource);
     HELPER.assertCounter("flushOutputSize_num_ops", 1, serverSource);
     HELPER.assertCounter("flushedMemstoreBytes", 2, serverSource);
     HELPER.assertCounter("flushedOutputBytes", 3, serverSource);
 
-    rsm.updateFlush(10, 20, 30);
+    rsm.updateFlush(null, 10, 20, 30);
     HELPER.assertCounter("flushTimeNumOps", 2, serverSource);
     HELPER.assertCounter("flushMemstoreSize_num_ops", 2, serverSource);
     HELPER.assertCounter("flushOutputSize_num_ops", 2, serverSource);
@@ -194,7 +193,7 @@ public class TestMetricsRegionServer {
 
   @Test
   public void testCompaction() {
-    rsm.updateCompaction(false, 1, 2, 3, 4, 5);
+    rsm.updateCompaction(null, false, 1, 2, 3, 4, 5);
     HELPER.assertCounter("compactionTime_num_ops", 1, serverSource);
     HELPER.assertCounter("compactionInputFileCount_num_ops", 1, serverSource);
     HELPER.assertCounter("compactionInputSize_num_ops", 1, serverSource);
@@ -202,7 +201,7 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("compactedInputBytes", 4, serverSource);
     HELPER.assertCounter("compactedoutputBytes", 5, serverSource);
 
-    rsm.updateCompaction(false, 10, 20, 30, 40, 50);
+    rsm.updateCompaction(null, false, 10, 20, 30, 40, 50);
     HELPER.assertCounter("compactionTime_num_ops", 2, serverSource);
     HELPER.assertCounter("compactionInputFileCount_num_ops", 2, serverSource);
     HELPER.assertCounter("compactionInputSize_num_ops", 2, serverSource);
@@ -211,7 +210,7 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("compactedoutputBytes", 55, serverSource);
 
     // do major compaction
-    rsm.updateCompaction(true, 100, 200, 300, 400, 500);
+    rsm.updateCompaction(null, true, 100, 200, 300, 400, 500);
 
     HELPER.assertCounter("compactionTime_num_ops", 3, serverSource);
     HELPER.assertCounter("compactionInputFileCount_num_ops", 3, serverSource);

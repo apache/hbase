@@ -18,9 +18,9 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A generator of random keys and values for load testing. Keys are generated
@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class LoadTestKVGenerator {
 
-  private static final Log LOG = LogFactory.getLog(LoadTestKVGenerator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LoadTestKVGenerator.class);
   private static int logLimit = 10;
 
   /** A random number generator for determining value size */

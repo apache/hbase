@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Wraps an existing {@code DataType} implementation as a terminated
@@ -40,8 +40,9 @@ public class TerminatedWrapper<T> implements DataType<T> {
    * @throws IllegalArgumentException when {@code term} is null or empty.
    */
   public TerminatedWrapper(DataType<T> wrapped, byte[] term) {
-    if (null == term || term.length == 0)
+    if (null == term || term.length == 0) {
       throw new IllegalArgumentException("terminator must be non-null and non-empty.");
+    }
     this.wrapped = wrapped;
     wrapped.getOrder().apply(term);
     this.term = term;
@@ -58,16 +59,24 @@ public class TerminatedWrapper<T> implements DataType<T> {
   }
 
   @Override
-  public boolean isOrderPreserving() { return wrapped.isOrderPreserving(); }
+  public boolean isOrderPreserving() {
+    return wrapped.isOrderPreserving();
+  }
 
   @Override
-  public Order getOrder() { return wrapped.getOrder(); }
+  public Order getOrder() {
+    return wrapped.getOrder();
+  }
 
   @Override
-  public boolean isNullable() { return wrapped.isNullable(); }
+  public boolean isNullable() {
+    return wrapped.isNullable();
+  }
 
   @Override
-  public boolean isSkippable() { return true; }
+  public boolean isSkippable() {
+    return true;
+  }
 
   @Override
   public int encodedLength(T val) {
@@ -75,7 +84,9 @@ public class TerminatedWrapper<T> implements DataType<T> {
   }
 
   @Override
-  public Class<T> encodedClass() { return wrapped.encodedClass(); }
+  public Class<T> encodedClass() {
+    return wrapped.encodedClass();
+  }
 
   /**
    * Return the position at which {@code term} begins within {@code src},
@@ -86,12 +97,18 @@ public class TerminatedWrapper<T> implements DataType<T> {
     final int offset = src.getOffset();
     int i;
     SKIP: for (i = src.getPosition(); i < src.getLength(); i++) {
-      if (a[offset + i] != term[0]) continue;
+      if (a[offset + i] != term[0]) {
+        continue;
+      }
       int j;
       for (j = 1; j < term.length && offset + j < src.getLength(); j++) {
-        if (a[offset + i + j] != term[j]) continue SKIP;
+        if (a[offset + i + j] != term[j]) {
+          continue SKIP;
+        }
       }
-      if (j == term.length) return i; // success
+      if (j == term.length) {
+        return i; // success
+      }
     }
     return -1;
   }
@@ -112,7 +129,9 @@ public class TerminatedWrapper<T> implements DataType<T> {
       // find the terminator position
       final int start = src.getPosition();
       int skipped = terminatorPosition(src);
-      if (-1 == skipped) throw new IllegalArgumentException("Terminator sequence not found.");
+      if (-1 == skipped) {
+        throw new IllegalArgumentException("Terminator sequence not found.");
+      }
       skipped += term.length;
       src.setPosition(skipped);
       return skipped - start;
@@ -128,7 +147,9 @@ public class TerminatedWrapper<T> implements DataType<T> {
     } else {
       // find the terminator position
       int term = terminatorPosition(src);
-      if (-1 == term) throw new IllegalArgumentException("Terminator sequence not found.");
+      if (-1 == term) {
+        throw new IllegalArgumentException("Terminator sequence not found.");
+      }
       byte[] b = new byte[term - src.getPosition()];
       src.get(b);
       // TODO: should we assert that b.position == b.length?

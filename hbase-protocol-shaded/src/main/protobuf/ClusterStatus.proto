@@ -52,6 +52,10 @@ message RegionState {
     MERGING_NEW = 14;  // new region to be created when RS merges two
                        // daughter regions but hasn't be created yet, or
                        // master doesn't know it's already created
+    ABNORMALLY_CLOSED = 15;// the region is CLOSED because of a RS crash. Usually it is the same
+                       // with CLOSED, but for some operations such as merge/split, we can not
+                       // apply it to a region in this state, as it may lead to data loss as we
+                       // may have some data in recovered edits.
   }
 }
 
@@ -139,6 +143,63 @@ message RegionLoad {
 
   /** the current total filtered read requests made to region */
   optional uint64 filtered_read_requests_count = 19;
+
+  /** master defines cp_requests_count = 20, the current total coprocessor
+      requests made to region */
+
+  /** the number of references active on the store */
+  optional int32 store_ref_count = 21 [default = 0];
+
+  /**
+   *  The max number of references active on single store file among all compacted store files
+   *  that belong to given region
+   */
+  optional int32 max_compacted_store_file_ref_count = 22 [default = 0];
+
+  /** The current data locality for ssd for region in the regionserver */
+  optional float data_locality_for_ssd = 23;
+
+  /** The current blocks local weight for region in the regionserver */
+  optional uint64 blocks_local_weight = 24;
+
+  /** The current blocks local weight with ssd for region in the regionserver */
+  optional uint64 blocks_local_with_ssd_weight = 25;
+
+  /** The current blocks total weight for region in the regionserver */
+  optional uint64 blocks_total_weight = 26;
+
+  /** The compaction state for region */
+  optional CompactionState compaction_state = 27;
+
+  enum CompactionState {
+    NONE = 0;
+    MINOR = 1;
+    MAJOR = 2;
+    MAJOR_AND_MINOR = 3;
+  }
+}
+
+message UserLoad {
+
+  /** short user name */
+  required string userName = 1;
+
+  /** Metrics for all clients of a user */
+  repeated ClientMetrics clientMetrics = 2;
+}
+
+message ClientMetrics {
+  /** client host name */
+  required string hostName = 1;
+
+  /** the current total read requests made from a client */
+  optional uint64 read_requests_count = 2;
+
+  /** the current total write requests made from a client */
+  optional uint64 write_requests_count = 3;
+
+  /** the current total filtered requests made from a client */
+  optional uint64 filtered_requests_count = 4;
 }
 
 /* Server-level protobufs */
@@ -146,6 +207,11 @@ message RegionLoad {
 message ReplicationLoadSink {
   required uint64 ageOfLastAppliedOp = 1;
   required uint64 timeStampsOfLastAppliedOp = 2;
+  // The below two were added after hbase-2.0.0 went out. They have to be added as 'optional' else
+  // we break upgrades; old RegionServers reporting in w/ old forms of this message will fail to
+  // deserialize on the new Master. See HBASE-25234
+  optional uint64 timestampStarted = 3;
+  optional uint64 totalOpsProcessed = 4;
 }
 
 message ReplicationLoadSource {
@@ -154,6 +220,13 @@ message ReplicationLoadSource {
   required uint32 sizeOfLogQueue = 3;
   required uint64 timeStampOfLastShippedOp = 4;
   required uint64 replicationLag = 5;
+  optional uint64 timeStampOfNextToReplicate=6;
+  optional string queueId = 7;
+  optional bool recovered = 8;
+  optional bool running = 9;
+  optional bool editsSinceRestart = 10;
+  optional uint64 editsRead = 11;
+  optional uint64 oPsShipped = 12;
 }
 
 message ServerLoad {
@@ -207,11 +280,29 @@ message ServerLoad {
    * The replicationLoadSink for the replication Sink status of this region server.
    */
   optional ReplicationLoadSink replLoadSink = 11;
+
+  /**
+   * The metrics for each user on this region server
+   */
+  repeated UserLoad userLoads = 12;
 }
 
 message LiveServerInfo {
   required ServerName server = 1;
   required ServerLoad server_load = 2;
+}
+
+message RegionStatesCount {
+  required uint32 open_regions = 1;
+  required uint32 split_regions = 2;
+  required uint32 closed_regions = 3;
+  required uint32 regions_in_transition = 4;
+  required uint32 total_regions = 5;
+}
+
+message TableRegionStatesCount {
+  required TableName table_name = 1;
+  required RegionStatesCount region_states_count = 2;
 }
 
 message ClusterStatus {
@@ -224,6 +315,9 @@ message ClusterStatus {
   optional ServerName master = 7;
   repeated ServerName backup_masters = 8;
   optional bool balancer_on = 9;
+  optional int32 master_info_port = 10 [default = -1];
+  repeated ServerName servers_name = 11;
+  repeated TableRegionStatesCount table_region_states_count = 12;
 }
 
 enum Option {
@@ -236,4 +330,7 @@ enum Option {
   MASTER_COPROCESSORS = 6;
   REGIONS_IN_TRANSITION = 7;
   BALANCER_ON = 8;
+  MASTER_INFO_PORT = 9;
+  SERVERS_NAME = 10;
+  TABLE_TO_REGIONS_COUNT = 11;
 }

@@ -19,11 +19,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This interface will be implemented by a MetricsSource that will export metrics from
  * multiple regions into the hadoop metrics system.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionAggregateSource extends BaseSource {
 
   /**
@@ -46,7 +48,6 @@ public interface MetricsRegionAggregateSource extends BaseSource {
    */
   String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
-  String NUM_REGIONS = "numRegions";
   String NUMBER_OF_REGIONS_DESC = "Number of regions in the metrics system";
 
   /**

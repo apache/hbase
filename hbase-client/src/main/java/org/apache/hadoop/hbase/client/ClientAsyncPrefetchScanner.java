@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,28 +17,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ClientAsyncPrefetchScanner implements async scanner behaviour.
@@ -56,9 +51,7 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   private long maxCacheSize;
   private AtomicLong cacheSizeInBytes;
   // exception queue (from prefetch to main scan execution)
-  private Queue<Exception> exceptionsQueue;
-  // prefetch thread to be executed asynchronously
-  private Thread prefetcher;
+  private final Queue<Exception> exceptionsQueue;
   // used for testing
   private Consumer<Boolean> prefetchListener;
 
@@ -72,22 +65,20 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
       int replicaCallTimeoutMicroSecondScan) throws IOException {
     super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
         replicaCallTimeoutMicroSecondScan);
+    exceptionsQueue = new ConcurrentLinkedQueue<>();
+    Threads.setDaemonThreadRunning(new Thread(new PrefetchRunnable()), name + ".asyncPrefetcher");
   }
 
-  @VisibleForTesting
   void setPrefetchListener(Consumer<Boolean> prefetchListener) {
     this.prefetchListener = prefetchListener;
   }
 
   @Override
   protected void initCache() {
-    // concurrent cache
-    maxCacheSize = resultSize2CacheSize(maxScannerResultSize);
+    // Override to put a different cache in place of the super's -- a concurrent one.
     cache = new LinkedBlockingQueue<>();
+    maxCacheSize = resultSize2CacheSize(maxScannerResultSize);
     cacheSizeInBytes = new AtomicLong(0);
-    exceptionsQueue = new ConcurrentLinkedQueue<>();
-    prefetcher = new Thread(new PrefetchRunnable());
-    Threads.setDaemonThreadRunning(prefetcher, tableName + ".asyncPrefetcher");
   }
 
   private long resultSize2CacheSize(long maxResultSize) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,18 +20,26 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that restarts a random HRegionServer
  */
 public class RestartRandomRsAction extends RestartActionBaseAction {
+  private static final Logger LOG = LoggerFactory.getLogger(RestartRandomRsAction.class);
+
   public RestartRandomRsAction(long sleepTime) {
     super(sleepTime);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart random region server");
+    getLogger().info("Performing action: Restart random region server");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
 
     restartRs(server, sleepTime);

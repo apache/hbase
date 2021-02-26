@@ -23,17 +23,18 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
+import org.apache.hadoop.hbase.util.GsonUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
+import org.apache.hbase.thirdparty.com.google.gson.TypeAdapter;
+import org.apache.hbase.thirdparty.com.google.gson.stream.JsonReader;
+import org.apache.hbase.thirdparty.com.google.gson.stream.JsonWriter;
 
 /**
  * Utilty for aggregating counts in CachedBlocks and toString/toJSON CachedBlocks and BlockCaches.
@@ -42,18 +43,36 @@ import org.codehaus.jackson.map.SerializationConfig;
 @InterfaceAudience.Private
 public class BlockCacheUtil {
 
+  private static final Logger LOG = LoggerFactory.getLogger(BlockCacheUtil.class);
 
   public static final long NANOS_PER_SECOND = 1000000000;
 
   /**
    * Needed generating JSON.
    */
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-  static {
-    MAPPER.configure(SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false);
-    MAPPER.configure(SerializationConfig.Feature.FLUSH_AFTER_WRITE_VALUE, true);
-    MAPPER.configure(SerializationConfig.Feature.INDENT_OUTPUT, true);
-  }
+  private static final Gson GSON = GsonUtil.createGson()
+    .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
+
+      @Override
+      public void write(JsonWriter out, FastLongHistogram value) throws IOException {
+        AgeSnapshot snapshot = new AgeSnapshot(value);
+        out.beginObject();
+        out.name("mean").value(snapshot.getMean());
+        out.name("min").value(snapshot.getMin());
+        out.name("max").value(snapshot.getMax());
+        out.name("75thPercentile").value(snapshot.get75thPercentile());
+        out.name("95thPercentile").value(snapshot.get95thPercentile());
+        out.name("98thPercentile").value(snapshot.get98thPercentile());
+        out.name("99thPercentile").value(snapshot.get99thPercentile());
+        out.name("999thPercentile").value(snapshot.get999thPercentile());
+        out.endObject();
+      }
+
+      @Override
+      public FastLongHistogram read(JsonReader in) throws IOException {
+        throw new UnsupportedOperationException();
+      }
+    }).setPrettyPrinting().create();
 
   /**
    * @param cb
@@ -100,17 +119,12 @@ public class BlockCacheUtil {
   }
 
   /**
-   * @param filename
-   * @param blocks
    * @return A JSON String of <code>filename</code> and counts of <code>blocks</code>
-   * @throws JsonGenerationException
-   * @throws JsonMappingException
-   * @throws IOException
    */
-  public static String toJSON(final String filename, final NavigableSet<CachedBlock> blocks)
-  throws JsonGenerationException, JsonMappingException, IOException {
+  public static String toJSON(String filename, NavigableSet<CachedBlock> blocks)
+      throws IOException {
     CachedBlockCountsPerFile counts = new CachedBlockCountsPerFile(filename);
-    for (CachedBlock cb: blocks) {
+    for (CachedBlock cb : blocks) {
       counts.count++;
       counts.size += cb.getSize();
       BlockType bt = cb.getBlockType();
@@ -119,31 +133,21 @@ public class BlockCacheUtil {
         counts.sizeData += cb.getSize();
       }
     }
-    return MAPPER.writeValueAsString(counts);
+    return GSON.toJson(counts);
   }
 
   /**
-   * @param cbsbf
    * @return JSON string of <code>cbsf</code> aggregated
-   * @throws JsonGenerationException
-   * @throws JsonMappingException
-   * @throws IOException
    */
-  public static String toJSON(final CachedBlocksByFile cbsbf)
-  throws JsonGenerationException, JsonMappingException, IOException {
-    return MAPPER.writeValueAsString(cbsbf);
+  public static String toJSON(CachedBlocksByFile cbsbf) throws IOException {
+    return GSON.toJson(cbsbf);
   }
 
   /**
-   * @param bc
    * @return JSON string of <code>bc</code> content.
-   * @throws JsonGenerationException
-   * @throws JsonMappingException
-   * @throws IOException
    */
-  public static String toJSON(final BlockCache bc)
-  throws JsonGenerationException, JsonMappingException, IOException {
-    return MAPPER.writeValueAsString(bc);
+  public static String toJSON(BlockCache bc) throws IOException {
+    return GSON.toJson(bc);
   }
 
   /**
@@ -174,13 +178,81 @@ public class BlockCacheUtil {
     return cbsbf;
   }
 
-  public static int compareCacheBlock(Cacheable left, Cacheable right) {
+  private static int compareCacheBlock(Cacheable left, Cacheable right,
+                                       boolean includeNextBlockMetadata) {
     ByteBuffer l = ByteBuffer.allocate(left.getSerializedLength());
-    left.serialize(l);
+    left.serialize(l, includeNextBlockMetadata);
     ByteBuffer r = ByteBuffer.allocate(right.getSerializedLength());
-    right.serialize(r);
+    right.serialize(r, includeNextBlockMetadata);
     return Bytes.compareTo(l.array(), l.arrayOffset(), l.limit(),
 	      r.array(), r.arrayOffset(), r.limit());
+  }
+
+  /**
+   * Validate that the existing and newBlock are the same without including the nextBlockMetadata,
+   * if not, throw an exception. If they are the same without the nextBlockMetadata,
+   * return the comparison.
+   *
+   * @param existing block that is existing in the cache.
+   * @param newBlock block that is trying to be cached.
+   * @param cacheKey the cache key of the blocks.
+   * @return comparison of the existing block to the newBlock.
+   */
+  public static int validateBlockAddition(Cacheable existing, Cacheable newBlock,
+                                          BlockCacheKey cacheKey) {
+    int comparison = compareCacheBlock(existing, newBlock, false);
+    if (comparison != 0) {
+      throw new RuntimeException("Cached block contents differ, which should not have happened."
+                                 + "cacheKey:" + cacheKey);
+    }
+    if ((existing instanceof HFileBlock) && (newBlock instanceof HFileBlock)) {
+      comparison = ((HFileBlock) existing).getNextBlockOnDiskSize()
+          - ((HFileBlock) newBlock).getNextBlockOnDiskSize();
+    }
+    return comparison;
+  }
+
+  /**
+   * Because of the region splitting, it's possible that the split key locate in the middle of a
+   * block. So it's possible that both the daughter regions load the same block from their parent
+   * HFile. When pread, we don't force the read to read all of the next block header. So when two
+   * threads try to cache the same block, it's possible that one thread read all of the next block
+   * header but the other one didn't. if the already cached block hasn't next block header but the
+   * new block to cache has, then we can replace the existing block with the new block for better
+   * performance.(HBASE-20447)
+   * @param blockCache BlockCache to check
+   * @param cacheKey the block cache key
+   * @param newBlock the new block which try to put into the block cache.
+   * @return true means need to replace existing block with new block for the same block cache key.
+   *         false means just keep the existing block.
+   */
+  public static boolean shouldReplaceExistingCacheBlock(BlockCache blockCache,
+      BlockCacheKey cacheKey, Cacheable newBlock) {
+    // NOTICE: The getBlock has retained the existingBlock inside.
+    Cacheable existingBlock = blockCache.getBlock(cacheKey, false, false, false);
+    if (existingBlock == null) {
+      return true;
+    }
+    try {
+      int comparison = BlockCacheUtil.validateBlockAddition(existingBlock, newBlock, cacheKey);
+      if (comparison < 0) {
+        LOG.warn("Cached block contents differ by nextBlockOnDiskSize, the new block has "
+            + "nextBlockOnDiskSize set. Caching new block.");
+        return true;
+      } else if (comparison > 0) {
+        LOG.warn("Cached block contents differ by nextBlockOnDiskSize, the existing block has "
+            + "nextBlockOnDiskSize set, Keeping cached block.");
+        return false;
+      } else {
+        LOG.warn("Caching an already cached block: {}. This is harmless and can happen in rare "
+            + "cases (see HBASE-8547)",
+          cacheKey);
+        return false;
+      }
+    } finally {
+      // Release this block to decrement the reference count.
+      existingBlock.release();
+    }
   }
 
   /**
@@ -188,7 +260,6 @@ public class BlockCacheUtil {
    * This is different than metrics in that it is stats on current state of a cache.
    * See getLoadedCachedBlocksByFile
    */
-  @JsonIgnoreProperties({"cachedBlockStatsByFile"})
   public static class CachedBlocksByFile {
     private int count;
     private int dataBlockCount;
@@ -216,7 +287,8 @@ public class BlockCacheUtil {
     /**
      * Map by filename. use concurent utils because we want our Map and contained blocks sorted.
      */
-    private NavigableMap<String, NavigableSet<CachedBlock>> cachedBlockByFile = new ConcurrentSkipListMap<>();
+    private transient NavigableMap<String, NavigableSet<CachedBlock>> cachedBlockByFile =
+      new ConcurrentSkipListMap<>();
     FastLongHistogram hist = new FastLongHistogram();
 
     /**

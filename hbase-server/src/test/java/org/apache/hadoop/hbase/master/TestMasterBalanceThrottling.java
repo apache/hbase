@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -41,6 +41,11 @@ import org.junit.experimental.categories.Category;
 @Ignore // SimpleLoadBalancer seems borked whether AMv2 or not. Disabling till gets attention.
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterBalanceThrottling {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMasterBalanceThrottling.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
 
@@ -59,7 +64,7 @@ public class TestMasterBalanceThrottling {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testThrottlingByBalanceInterval() throws Exception {
     // Use default config and start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
@@ -83,7 +88,7 @@ public class TestMasterBalanceThrottling {
     TEST_UTIL.deleteTable(tableName);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testThrottlingByMaxRitPercent() throws Exception {
     // Set max balancing time to 500 ms and max percent of regions in transition to 0.05
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_BALANCER_MAX_BALANCING, 500);
@@ -123,8 +128,7 @@ public class TestMasterBalanceThrottling {
       public void run() {
         while (!stop.get()) {
           maxCount.set(Math.max(maxCount.get(),
-              master.getAssignmentManager().getRegionStates()
-              .getRegionsInTransition().size()));
+              master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount()));
           try {
             Thread.sleep(10);
           } catch (InterruptedException e) {
@@ -139,7 +143,7 @@ public class TestMasterBalanceThrottling {
   }
 
   private void unbalance(HMaster master, TableName tableName) throws Exception {
-    while (master.getAssignmentManager().getRegionStates().getRegionsInTransition().size() > 0) {
+    while (master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() > 0) {
       Thread.sleep(100);
     }
     HRegionServer biasedServer = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
@@ -147,7 +151,7 @@ public class TestMasterBalanceThrottling {
       master.move(regionInfo.getEncodedNameAsBytes(),
         Bytes.toBytes(biasedServer.getServerName().getServerName()));
     }
-    while (master.getAssignmentManager().getRegionStates().getRegionsInTransition().size() > 0) {
+    while (master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() > 0) {
       Thread.sleep(100);
     }
   }

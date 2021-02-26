@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,8 @@ package org.apache.hadoop.hbase.testclassification;
 
 /**
  * Tag a test as 'integration/system' test, meaning that the test class has the following
- * characteristics: <ul>
+ * characteristics:
+ * <ul>
  *  <li> Possibly takes hours to complete</li>
  *  <li> Can be run on a mini cluster or an actual cluster</li>
  *  <li> Can make changes to the given cluster (starting stopping daemons, etc)</li>

@@ -23,8 +23,6 @@ import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Simple scheduler for procedures
  */
@@ -47,7 +45,6 @@ public class SimpleProcedureScheduler extends AbstractProcedureScheduler {
     return runnables.poll();
   }
 
-  @VisibleForTesting
   @Override
   public void clear() {
     schedLock();

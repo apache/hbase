@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 
+import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collections;
@@ -28,23 +30,23 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
 
 /**
  * Caller that goes to replica if the primary region does no answer within a configurable
@@ -54,7 +56,9 @@ import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
  */
 @InterfaceAudience.Private
 public class RpcRetryingCallerWithReadReplicas {
-  private static final Log LOG = LogFactory.getLog(RpcRetryingCallerWithReadReplicas.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RpcRetryingCallerWithReadReplicas.class);
+
   protected final ExecutorService pool;
   protected final ClusterConnection cConnection;
   protected final Configuration conf;
@@ -277,6 +281,7 @@ public class RpcRetryingCallerWithReadReplicas {
       throws RetriesExhaustedException, DoNotRetryIOException {
     Throwable t = e.getCause();
     assert t != null; // That's what ExecutionException is about: holding an exception
+    t.printStackTrace();
 
     if (t instanceof RetriesExhaustedException) {
       throw (RetriesExhaustedException) t;
@@ -327,10 +332,12 @@ public class RpcRetryingCallerWithReadReplicas {
     } catch (DoNotRetryIOException | InterruptedIOException | RetriesExhaustedException e) {
       throw e;
     } catch (IOException e) {
-      throw new RetriesExhaustedException("Can't get the location for replica " + replicaId, e);
+      throw new RetriesExhaustedException("Cannot get the location for replica" + replicaId
+          + " of region for " + Bytes.toStringBinary(row) + " in " + tableName, e);
     }
     if (rl == null) {
-      throw new RetriesExhaustedException("Can't get the location for replica " + replicaId);
+      throw new RetriesExhaustedException("Cannot get the location for replica" + replicaId
+          + " of region for " + Bytes.toStringBinary(row) + " in " + tableName);
     }
 
     return rl;

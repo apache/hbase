@@ -19,17 +19,19 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.security.PrivilegedAction;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
@@ -37,7 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  */
 @InterfaceAudience.Private
 class SplitRequest implements Runnable {
-  private static final Log LOG = LogFactory.getLog(SplitRequest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SplitRequest.class);
   private final RegionInfo parent;
   private final byte[] midKey;
   private final HRegionServer server;
@@ -57,14 +59,11 @@ class SplitRequest implements Runnable {
   }
 
   private void doSplitting() {
-    server.metricsRegionServer.incrSplitRequest();
+    server.getMetrics().incrSplitRequest();
     if (user != null && user.getUGI() != null) {
-      user.getUGI().doAs (new PrivilegedAction<Void>() {
-        @Override
-        public Void run() {
-          requestRegionSplit();
-          return null;
-        }
+      user.getUGI().doAs((PrivilegedAction<Void>) () -> {
+        requestRegionSplit();
+        return null;
       });
     } else {
       requestRegionSplit();
@@ -85,7 +84,8 @@ class SplitRequest implements Runnable {
     // The parent region will be unassigned and the two new regions will be assigned.
     // hri_a and hri_b objects may not reflect the regions that will be created, those objects
     // are created just to pass the information to the reportRegionStateTransition().
-    if (!server.reportRegionStateTransition(TransitionCode.READY_TO_SPLIT, parent, hri_a, hri_b)) {
+    if (!server.reportRegionStateTransition(new RegionStateTransitionContext(
+      TransitionCode.READY_TO_SPLIT, HConstants.NO_SEQNUM, -1, parent, hri_a, hri_b))) {
       LOG.error("Unable to ask master to split " + parent.getRegionNameAsString());
     }
   }

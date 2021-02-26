@@ -19,18 +19,19 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CreateNamespaceState;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * The procedure to create a new namespace.
@@ -38,7 +39,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 @InterfaceAudience.Private
 public class CreateNamespaceProcedure
     extends AbstractStateMachineNamespaceProcedure<CreateNamespaceState> {
-  private static final Log LOG = LogFactory.getLog(CreateNamespaceProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CreateNamespaceProcedure.class);
 
   private NamespaceDescriptor nsDescriptor;
   private Boolean traceEnabled;
@@ -49,7 +50,12 @@ public class CreateNamespaceProcedure
 
   public CreateNamespaceProcedure(final MasterProcedureEnv env,
       final NamespaceDescriptor nsDescriptor) {
-    super(env);
+    this(env, nsDescriptor, null);
+  }
+
+  public CreateNamespaceProcedure(final MasterProcedureEnv env,
+      final NamespaceDescriptor nsDescriptor, ProcedurePrepareLatch latch) {
+    super(env, latch);
     this.nsDescriptor = nsDescriptor;
     this.traceEnabled = null;
   }
@@ -63,7 +69,12 @@ public class CreateNamespaceProcedure
     try {
       switch (state) {
       case CREATE_NAMESPACE_PREPARE:
-        prepareCreate(env);
+        boolean success = prepareCreate(env);
+        releaseSyncLatch();
+        if (!success) {
+          assert isFailed() : "createNamespace should have an exception here";
+          return Flow.NO_MORE_STATE;
+        }
         setNextState(CreateNamespaceState.CREATE_NAMESPACE_CREATE_DIRECTORY);
         break;
       case CREATE_NAMESPACE_CREATE_DIRECTORY:
@@ -101,6 +112,7 @@ public class CreateNamespaceProcedure
     if (state == CreateNamespaceState.CREATE_NAMESPACE_PREPARE) {
       // nothing to rollback, pre-create is just state checks.
       // TODO: coprocessor rollback semantic is still undefined.
+      releaseSyncLatch();
       return;
     }
     // The procedure doesn't have a rollback. The execution will succeed, at some point.
@@ -119,7 +131,7 @@ public class CreateNamespaceProcedure
 
   @Override
   protected CreateNamespaceState getState(final int stateId) {
-    return CreateNamespaceState.valueOf(stateId);
+    return CreateNamespaceState.forNumber(stateId);
   }
 
   @Override
@@ -159,15 +171,18 @@ public class CreateNamespaceProcedure
   }
 
   @Override
-  protected LockState acquireLock(final MasterProcedureEnv env) {
-    if (!env.getMasterServices().isInitialized()) {
-      // Namespace manager might not be ready if master is not fully initialized,
-      // return false to reject user namespace creation; return true for default
-      // and system namespace creation (this is part of master initialization).
-      if (!isBootstrapNamespace() && env.waitInitialized(this)) {
-        return LockState.LOCK_EVENT_WAIT;
-      }
+  protected boolean waitInitialized(MasterProcedureEnv env) {
+    // Namespace manager might not be ready if master is not fully initialized,
+    // return false to reject user namespace creation; return true for default
+    // and system namespace creation (this is part of master initialization).
+    if (isBootstrapNamespace()) {
+      return false;
     }
+    return env.waitInitialized(this);
+  }
+
+  @Override
+  protected LockState acquireLock(final MasterProcedureEnv env) {
     if (env.getProcedureScheduler().waitNamespaceExclusiveLock(this, getNamespaceName())) {
       return LockState.LOCK_EVENT_WAIT;
     }
@@ -189,11 +204,14 @@ public class CreateNamespaceProcedure
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private void prepareCreate(final MasterProcedureEnv env) throws IOException {
+  private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
     if (getTableNamespaceManager(env).doesNamespaceExist(nsDescriptor.getName())) {
-      throw new NamespaceExistException(nsDescriptor.getName());
+      setFailure("master-create-namespace",
+          new NamespaceExistException("Namespace " + nsDescriptor.getName() + " already exists"));
+      return false;
     }
     getTableNamespaceManager(env).validateTableAndRegionCount(nsDescriptor);
+    return true;
   }
 
   /**
@@ -207,7 +225,7 @@ public class CreateNamespaceProcedure
       final NamespaceDescriptor nsDescriptor) throws IOException {
     MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     mfs.getFileSystem().mkdirs(
-      FSUtils.getNamespaceDir(mfs.getRootDir(), nsDescriptor.getName()));
+      CommonFSUtils.getNamespaceDir(mfs.getRootDir(), nsDescriptor.getName()));
   }
 
   /**
@@ -245,20 +263,6 @@ public class CreateNamespaceProcedure
       final NamespaceDescriptor nsDescriptor) throws IOException {
     if (env.getMasterServices().isInitialized()) {
       env.getMasterServices().getMasterQuotaManager().setNamespaceQuota(nsDescriptor);
-    }
-  }
-
-  /**
-   * remove quota for the namespace if exists
-   * @param env MasterProcedureEnv
-   * @throws IOException
-   **/
-  private void rollbackSetNamespaceQuota(final MasterProcedureEnv env) throws IOException {
-    try {
-      DeleteNamespaceProcedure.removeNamespaceQuota(env, nsDescriptor.getName());
-    } catch (Exception e) {
-      // Ignore exception
-      LOG.debug("Rollback of setNamespaceQuota throws exception: " + e);
     }
   }
 

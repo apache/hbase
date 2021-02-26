@@ -1,12 +1,19 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.client.replication;
 
@@ -19,15 +26,19 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
@@ -35,6 +46,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -45,6 +57,10 @@ import org.junit.rules.TestName;
  */
 @Category({ MediumTests.class, ClientTests.class })
 public class TestReplicationAdminWithClusters extends TestReplicationBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicationAdminWithClusters.class);
 
   static Connection connection1;
   static Connection connection2;
@@ -58,11 +74,11 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestReplicationBase.setUpBeforeClass();
-    connection1 = ConnectionFactory.createConnection(conf1);
-    connection2 = ConnectionFactory.createConnection(conf2);
+    connection1 = ConnectionFactory.createConnection(CONF1);
+    connection2 = ConnectionFactory.createConnection(CONF2);
     admin1 = connection1.getAdmin();
     admin2 = connection2.getAdmin();
-    adminExt = new ReplicationAdmin(conf1);
+    adminExt = new ReplicationAdmin(CONF1);
   }
 
   @AfterClass
@@ -75,7 +91,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     TestReplicationBase.tearDownAfterClass();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void disableNotFullReplication() throws Exception {
     HTableDescriptor table = new HTableDescriptor(admin2.getTableDescriptor(tableName));
     HColumnDescriptor f = new HColumnDescriptor("notReplicatedFamily");
@@ -84,15 +100,16 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin1.modifyTable(tableName, table);
     admin1.enableTable(tableName);
 
-
     admin1.disableTableReplication(tableName);
     table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
-      assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_LOCAL);
+      assertEquals(HConstants.REPLICATION_SCOPE_LOCAL, fam.getScope());
     }
+
+    admin1.deleteColumnFamily(table.getTableName(), f.getName());
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testEnableReplicationWhenSlaveClusterDoesntHaveTable() throws Exception {
     admin1.disableTableReplication(tableName);
     admin2.disableTable(tableName);
@@ -102,7 +119,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     assertTrue(admin2.tableExists(tableName));
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testEnableReplicationWhenReplicationNotEnabled() throws Exception {
     HTableDescriptor table = new HTableDescriptor(admin1.getTableDescriptor(tableName));
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
@@ -119,11 +136,11 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin1.enableTableReplication(tableName);
     table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
-      assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_GLOBAL);
+      assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testEnableReplicationWhenTableDescriptorIsNotSameInClusters() throws Exception {
     HTableDescriptor table = new HTableDescriptor(admin2.getTableDescriptor(tableName));
     HColumnDescriptor f = new HColumnDescriptor("newFamily");
@@ -144,40 +161,65 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin1.enableTableReplication(tableName);
     table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
-      assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_GLOBAL);
+      assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
     }
+
+    admin1.deleteColumnFamily(tableName, f.getName());
+    admin2.deleteColumnFamily(tableName, f.getName());
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testDisableAndEnableReplication() throws Exception {
     admin1.disableTableReplication(tableName);
     HTableDescriptor table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
-      assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_LOCAL);
+      assertEquals(HConstants.REPLICATION_SCOPE_LOCAL, fam.getScope());
     }
     admin1.enableTableReplication(tableName);
     table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
-      assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_GLOBAL);
+      assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
     }
   }
 
-  @Test(timeout = 300000, expected = TableNotFoundException.class)
+  @Test
+  public void testEnableReplicationForTableWithRegionReplica() throws Exception {
+    TableName tn = TableName.valueOf(name.getMethodName());
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tn)
+        .setRegionReplication(5)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(noRepfamName).build())
+        .build();
+
+    admin1.createTable(td);
+
+    try {
+      admin1.enableTableReplication(tn);
+      td = admin1.getDescriptor(tn);
+      for (ColumnFamilyDescriptor fam : td.getColumnFamilies()) {
+        assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
+      }
+    } finally {
+      UTIL1.deleteTable(tn);
+      UTIL2.deleteTable(tn);
+    }
+  }
+
+  @Test(expected = TableNotFoundException.class)
   public void testDisableReplicationForNonExistingTable() throws Exception {
     admin1.disableTableReplication(TableName.valueOf(name.getMethodName()));
   }
 
-  @Test(timeout = 300000, expected = TableNotFoundException.class)
+  @Test(expected = TableNotFoundException.class)
   public void testEnableReplicationForNonExistingTable() throws Exception {
     admin1.enableTableReplication(TableName.valueOf(name.getMethodName()));
   }
 
-  @Test(timeout = 300000, expected = IllegalArgumentException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testDisableReplicationWhenTableNameAsNull() throws Exception {
     admin1.disableTableReplication(null);
   }
 
-  @Test(timeout = 300000, expected = IllegalArgumentException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testEnableReplicationWhenTableNameAsNull() throws Exception {
     admin1.enableTableReplication(null);
   }
@@ -186,7 +228,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
    * Test enable table replication should create table only in user explicit specified table-cfs.
    * HBASE-14717
    */
-  @Test(timeout = 300000)
+  @Test
   public void testEnableReplicationForExplicitSetTableCfs() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     String peerId = "2";
@@ -194,7 +236,13 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
       admin2.disableTable(TestReplicationBase.tableName);
       admin2.deleteTable(TestReplicationBase.tableName);
     }
-    assertFalse("Table should not exists in the peer cluster", admin2.isTableAvailable(TestReplicationBase.tableName));
+    assertFalse("Table should not exists in the peer cluster",
+      admin2.isTableAvailable(TestReplicationBase.tableName));
+
+    // update peer config
+    ReplicationPeerConfig rpc = admin1.getReplicationPeerConfig(peerId);
+    rpc.setReplicateAllUserTables(false);
+    admin1.updateReplicationPeerConfig(peerId, rpc);
 
     Map<TableName, ? extends Collection<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName, null);
@@ -214,14 +262,18 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     } finally {
       adminExt.removePeerTableCFs(peerId, adminExt.getPeerTableCFs(peerId));
       admin1.disableTableReplication(TestReplicationBase.tableName);
+
+      rpc = admin1.getReplicationPeerConfig(peerId);
+      rpc.setReplicateAllUserTables(true);
+      admin1.updateReplicationPeerConfig(peerId, rpc);
     }
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testReplicationPeerConfigUpdateCallback() throws Exception {
     String peerId = "1";
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(utility2.getClusterKey());
+    rpc.setClusterKey(UTIL2.getClusterKey());
     rpc.setReplicationEndpointImpl(TestUpdatableReplicationEndpoint.class.getName());
     rpc.getConfiguration().put("key1", "value1");
 
@@ -230,12 +282,14 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     rpc.getConfiguration().put("key1", "value2");
     admin.updatePeerConfig(peerId, rpc);
     if (!TestUpdatableReplicationEndpoint.hasCalledBack()) {
-      synchronized(TestUpdatableReplicationEndpoint.class) {
+      synchronized (TestUpdatableReplicationEndpoint.class) {
         TestUpdatableReplicationEndpoint.class.wait(2000L);
       }
     }
 
     assertEquals(true, TestUpdatableReplicationEndpoint.hasCalledBack());
+
+    admin.removePeer(peerId);
   }
 
   public static class TestUpdatableReplicationEndpoint extends BaseReplicationEndpoint {
@@ -269,10 +323,9 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
       notifyStopped();
     }
 
-
     @Override
     public UUID getPeerUUID() {
-      return UUID.randomUUID();
+      return UTIL1.getRandomUUID();
     }
 
     @Override

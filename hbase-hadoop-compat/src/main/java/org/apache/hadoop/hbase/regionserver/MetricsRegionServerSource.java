@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface for classes that expose metrics about the regionserver.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSource {
 
   /**
@@ -83,6 +85,12 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
    * @param t time it took
    */
   void updateCheckAndPut(long t);
+
+  /**
+   * Update checkAndMutate histogram
+   * @param t time it took
+   */
+  void updateCheckAndMutate(long t);
 
   /**
    * Update the Get time histogram .
@@ -229,6 +237,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String WALFILE_SIZE_DESC = "Size of all WAL Files";
   String STOREFILE_COUNT = "storeFileCount";
   String STOREFILE_COUNT_DESC = "Number of Store Files";
+  String STORE_REF_COUNT = "storeRefCount";
+  String STORE_REF_COUNT_DESC = "Store reference count";
+  String MAX_COMPACTED_STORE_FILE_REF_COUNT = "maxCompactedStoreFileRefCount";
   String MEMSTORE_SIZE = "memStoreSize";
   String MEMSTORE_SIZE_DESC = "Size of the memstore";
   String STOREFILE_SIZE = "storeFileSize";
@@ -236,26 +247,36 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String MIN_STORE_FILE_AGE = "minStoreFileAge";
   String AVG_STORE_FILE_AGE = "avgStoreFileAge";
   String NUM_REFERENCE_FILES = "numReferenceFiles";
-  String MAX_STORE_FILE_AGE_DESC = "Max age of store files hosted on this region server";
-  String MIN_STORE_FILE_AGE_DESC = "Min age of store files hosted on this region server";
-  String AVG_STORE_FILE_AGE_DESC = "Average age of store files hosted on this region server";
-  String NUM_REFERENCE_FILES_DESC = "Number of reference file on this region server";
+  String MAX_STORE_FILE_AGE_DESC = "Max age of store files hosted on this RegionServer";
+  String MIN_STORE_FILE_AGE_DESC = "Min age of store files hosted on this RegionServer";
+  String AVG_STORE_FILE_AGE_DESC = "Average age of store files hosted on this RegionServer";
+  String NUM_REFERENCE_FILES_DESC = "Number of reference file on this RegionServer";
   String STOREFILE_SIZE_DESC = "Size of storefiles being served.";
   String TOTAL_REQUEST_COUNT = "totalRequestCount";
   String TOTAL_REQUEST_COUNT_DESC =
-      "Total number of requests this RegionServer has answered.";
+      "Total number of requests this RegionServer has answered; increments the count once for " +
+          "EVERY access whether an admin operation, a Scan, a Put or Put of 1M rows, or a Get " +
+          "of a non-existent row";
   String TOTAL_ROW_ACTION_REQUEST_COUNT = "totalRowActionRequestCount";
   String TOTAL_ROW_ACTION_REQUEST_COUNT_DESC =
-      "Total number of region requests this RegionServer has answered, count by row-level action";
+      "Total number of region requests this RegionServer has answered; counts by row-level " +
+          "action at the RPC Server (Sums 'readRequestsCount' and 'writeRequestsCount'); counts" +
+          "once per access whether a Put of 1M rows or a Get that returns 1M Results";
   String READ_REQUEST_COUNT = "readRequestCount";
-  String READ_REQUEST_COUNT_DESC =
-      "Number of read requests this region server has answered.";
   String FILTERED_READ_REQUEST_COUNT = "filteredReadRequestCount";
   String FILTERED_READ_REQUEST_COUNT_DESC =
-    "Number of filtered read requests this region server has answered.";
+      "Number of read requests this region server has answered.";
+  String READ_REQUEST_COUNT_DESC =
+      "Number of read requests with non-empty Results that this RegionServer has answered.";
+  String READ_REQUEST_RATE_PER_SECOND = "readRequestRatePerSecond";
+  String READ_REQUEST_RATE_DESC =
+      "Rate of answering the read requests by this region server per second.";
   String WRITE_REQUEST_COUNT = "writeRequestCount";
   String WRITE_REQUEST_COUNT_DESC =
-      "Number of mutation requests this region server has answered.";
+      "Number of mutation requests this RegionServer has answered.";
+  String WRITE_REQUEST_RATE_PER_SECOND = "writeRequestRatePerSecond";
+  String WRITE_REQUEST_RATE_DESC =
+      "Rate of answering the mutation requests by this region server per second.";
   String CHECK_MUTATE_FAILED_COUNT = "checkMutateFailedCount";
   String CHECK_MUTATE_FAILED_COUNT_DESC =
       "Number of Check and Mutate calls that failed the checks.";
@@ -378,6 +399,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String DELETE_KEY = "delete";
   String CHECK_AND_DELETE_KEY = "checkAndDelete";
   String CHECK_AND_PUT_KEY = "checkAndPut";
+  String CHECK_AND_MUTATE_KEY = "checkAndMutate";
   String DELETE_BATCH_KEY = "deleteBatch";
   String GET_SIZE_KEY = "getSize";
   String GET_KEY = "get";
@@ -458,6 +480,20 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String HEDGED_READ_WINS = "hedgedReadWins";
   String HEDGED_READ_WINS_DESC =
       "The number of times we started a hedged read and a hedged read won";
+  String HEDGED_READ_IN_CUR_THREAD = "hedgedReadOpsInCurThread";
+  String HEDGED_READ_IN_CUR_THREAD_DESC =
+    "The number of times we execute a hedged read in current thread as a fallback for task rejection";
+
+  String TOTAL_BYTES_READ = "totalBytesRead";
+  String TOTAL_BYTES_READ_DESC = "The total number of bytes read from HDFS";
+  String LOCAL_BYTES_READ = "localBytesRead";
+  String LOCAL_BYTES_READ_DESC =
+      "The number of bytes read from the local HDFS DataNode";
+  String SHORTCIRCUIT_BYTES_READ = "shortCircuitBytesRead";
+  String SHORTCIRCUIT_BYTES_READ_DESC = "The number of bytes read through HDFS short circuit read";
+  String ZEROCOPY_BYTES_READ = "zeroCopyBytesRead";
+  String ZEROCOPY_BYTES_READ_DESC =
+      "The number of bytes read through HDFS zero copy";
 
   String BLOCKED_REQUESTS_COUNT = "blockedRequestCount";
   String BLOCKED_REQUESTS_COUNT_DESC = "The number of blocked requests because of memstore size is "
@@ -525,17 +561,35 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
     = "Total number of bytes that is output from compaction, major only";
 
   String RPC_GET_REQUEST_COUNT = "rpcGetRequestCount";
-  String RPC_GET_REQUEST_COUNT_DESC = "Number of rpc get requests this region server has answered.";
+  String RPC_GET_REQUEST_COUNT_DESC = "Number of rpc get requests this RegionServer has answered.";
   String RPC_SCAN_REQUEST_COUNT = "rpcScanRequestCount";
   String RPC_SCAN_REQUEST_COUNT_DESC =
-      "Number of rpc scan requests this region server has answered.";
+      "Number of rpc scan requests this RegionServer has answered.";
+  String RPC_FULL_SCAN_REQUEST_COUNT = "rpcFullScanRequestCount";
+  String RPC_FULL_SCAN_REQUEST_COUNT_DESC =
+      "Number of rpc scan requests that were possible full region scans.";
   String RPC_MULTI_REQUEST_COUNT = "rpcMultiRequestCount";
   String RPC_MULTI_REQUEST_COUNT_DESC =
-      "Number of rpc multi requests this region server has answered.";
+      "Number of rpc multi requests this RegionServer has answered.";
   String RPC_MUTATE_REQUEST_COUNT = "rpcMutateRequestCount";
   String RPC_MUTATE_REQUEST_COUNT_DESC =
-      "Number of rpc mutation requests this region server has answered.";
+      "Number of rpc mutation requests this RegionServer has answered.";
   String AVERAGE_REGION_SIZE = "averageRegionSize";
   String AVERAGE_REGION_SIZE_DESC =
-      "Average region size over the region server including memstore and storefile sizes.";
+      "Average region size over the RegionServer including memstore and storefile sizes.";
+
+  /** Metrics for {@link org.apache.hadoop.hbase.io.ByteBuffAllocator} **/
+  String BYTE_BUFF_ALLOCATOR_HEAP_ALLOCATION_BYTES = "ByteBuffAllocatorHeapAllocationBytes";
+  String BYTE_BUFF_ALLOCATOR_HEAP_ALLOCATION_BYTES_DESC =
+      "Bytes of heap allocation from ByteBuffAllocator";
+  String BYTE_BUFF_ALLOCATOR_POOL_ALLOCATION_BYTES = "ByteBuffAllocatorPoolAllocationBytes";
+  String BYTE_BUFF_ALLOCATOR_POOL_ALLOCATION_BYTES_DESC =
+      "Bytes of pool allocation from ByteBuffAllocator";
+  String BYTE_BUFF_ALLOCATOR_HEAP_ALLOCATION_RATIO = "ByteBuffAllocatorHeapAllocationRatio";
+  String BYTE_BUFF_ALLOCATOR_HEAP_ALLOCATION_RATIO_DESC =
+      "Ratio of heap allocation from ByteBuffAllocator, means heapAllocation/totalAllocation";
+  String BYTE_BUFF_ALLOCATOR_TOTAL_BUFFER_COUNT = "ByteBuffAllocatorTotalBufferCount";
+  String BYTE_BUFF_ALLOCATOR_TOTAL_BUFFER_COUNT_DESC = "Total buffer count in ByteBuffAllocator";
+  String BYTE_BUFF_ALLOCATOR_USED_BUFFER_COUNT = "ByteBuffAllocatorUsedBufferCount";
+  String BYTE_BUFF_ALLOCATOR_USED_BUFFER_COUNT_DESC = "Used buffer count in ByteBuffAllocator";
 }

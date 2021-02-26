@@ -24,8 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -89,8 +88,8 @@ public class CellSerialization implements Serialization<Cell> {
 
     @Override
     public void serialize(Cell kv) throws IOException {
-      dos.writeInt(CellUtil.estimatedSerializedSizeOf(kv) - Bytes.SIZEOF_INT);
-      CellUtil.writeCell(kv, dos, true);
+      dos.writeInt(PrivateCellUtil.estimatedSerializedSizeOf(kv) - Bytes.SIZEOF_INT);
+      PrivateCellUtil.writeCell(kv, dos, true);
     }
   }
 }

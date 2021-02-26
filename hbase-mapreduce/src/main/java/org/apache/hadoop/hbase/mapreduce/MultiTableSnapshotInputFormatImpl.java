@@ -18,40 +18,40 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
-import org.apache.hadoop.hbase.util.ConfigurationUtil;
-import org.apache.hadoop.hbase.util.FSUtils;
-
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Shared implementation of mapreduce code over multiple table snapshots.
- * Utilized by both mapreduce ({@link org.apache.hadoop.hbase.mapreduce
- * .MultiTableSnapshotInputFormat} and mapred
- * ({@link org.apache.hadoop.hbase.mapred.MultiTableSnapshotInputFormat} implementations.
+ * Utilized by both mapreduce
+ * {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormat} and mapred
+ * {@link org.apache.hadoop.hbase.mapred.MultiTableSnapshotInputFormat} implementations.
  */
 @InterfaceAudience.LimitedPrivate({ "HBase" })
 @InterfaceStability.Evolving
 public class MultiTableSnapshotInputFormatImpl {
-
-  private static final Log LOG = LogFactory.getLog(MultiTableSnapshotInputFormatImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MultiTableSnapshotInputFormatImpl.class);
 
   public static final String RESTORE_DIRS_KEY =
       "hbase.MultiTableSnapshotInputFormat.restore.snapshotDirMapping";
@@ -61,16 +61,12 @@ public class MultiTableSnapshotInputFormatImpl {
   /**
    * Configure conf to read from snapshotScans, with snapshots restored to a subdirectory of
    * restoreDir.
+   * <p/>
    * Sets: {@link #RESTORE_DIRS_KEY}, {@link #SNAPSHOT_TO_SCANS_KEY}
-   *
-   * @param conf
-   * @param snapshotScans
-   * @param restoreDir
-   * @throws IOException
    */
   public void setInput(Configuration conf, Map<String, Collection<Scan>> snapshotScans,
       Path restoreDir) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
     setSnapshotToScans(conf, snapshotScans);
@@ -91,7 +87,7 @@ public class MultiTableSnapshotInputFormatImpl {
    */
   public List<TableSnapshotInputFormatImpl.InputSplit> getSplits(Configuration conf)
       throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
     List<TableSnapshotInputFormatImpl.InputSplit> rtn = Lists.newArrayList();
@@ -228,12 +224,11 @@ public class MultiTableSnapshotInputFormatImpl {
    * @param conf          configuration to restore with
    * @param snapshotToDir mapping from snapshot names to restore directories
    * @param fs            filesystem to do snapshot restoration on
-   * @throws IOException
    */
   public void restoreSnapshots(Configuration conf, Map<String, Path> snapshotToDir, FileSystem fs)
       throws IOException {
     // TODO: restore from record readers to parallelize.
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
 
     for (Map.Entry<String, Path> entry : snapshotToDir.entrySet()) {
       String snapshotName = entry.getKey();

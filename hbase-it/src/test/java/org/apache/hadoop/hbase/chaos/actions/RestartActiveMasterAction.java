@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,19 +19,28 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.ServerName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to restart the active master.
 */
 public class RestartActiveMasterAction extends RestartActionBaseAction {
+  private static final Logger LOG = LoggerFactory.getLogger(RestartActiveMasterAction.class);
+
   public RestartActiveMasterAction(long sleepTime) {
     super(sleepTime);
   }
+
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart active master");
+    getLogger().info("Performing action: Restart active master");
 
-    ServerName master = cluster.getClusterStatus().getMaster();
+    ServerName master = cluster.getClusterMetrics().getMasterName();
     restartMaster(master, sleepTime);
   }
 }

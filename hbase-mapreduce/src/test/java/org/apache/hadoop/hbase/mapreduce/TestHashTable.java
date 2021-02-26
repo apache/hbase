@@ -21,12 +21,10 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -38,21 +36,27 @@ import org.apache.hadoop.io.MapFile;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Basic test for the HashTable M/R tool
  */
 @Category(LargeTests.class)
 public class TestHashTable {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHashTable.class);
 
-  private static final Log LOG = LogFactory.getLog(TestHashTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHashTable.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -104,11 +108,12 @@ public class TestHashTable {
 
     long batchSize = 300;
     int code = hashTable.run(new String[] {
-        "--batchsize=" + batchSize,
-        "--numhashfiles=" + numHashFiles,
-        "--scanbatch=2",
-        tableName.getNameAsString(),
-        testDir.toString()});
+      "--batchsize=" + batchSize,
+      "--numhashfiles=" + numHashFiles,
+      "--scanbatch=2",
+      tableName.getNameAsString(),
+      testDir.toString()
+    });
     assertEquals("test job failed", 0, code);
 
     FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -154,7 +159,7 @@ public class TestHashTable {
       MapFile.Reader reader = new MapFile.Reader(hashPath, fs.getConf());
       ImmutableBytesWritable key = new ImmutableBytesWritable();
       ImmutableBytesWritable hash = new ImmutableBytesWritable();
-      while(reader.next(key, hash)) {
+      while (reader.next(key, hash)) {
         String keyString = Bytes.toHex(key.get(), key.getOffset(), key.getLength());
         LOG.debug("Key: " + (keyString.isEmpty() ? "-1" : Integer.parseInt(keyString, 16))
             + " Hash: " + Bytes.toHex(hash.get(), hash.getOffset(), hash.getLength()));
@@ -189,6 +194,4 @@ public class TestHashTable {
     TEST_UTIL.deleteTable(tableName);
     TEST_UTIL.cleanupDataTestDirOnTestFS();
   }
-
-
 }

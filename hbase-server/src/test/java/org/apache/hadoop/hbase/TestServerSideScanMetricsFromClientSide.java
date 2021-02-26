@@ -1,22 +1,27 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -26,7 +31,6 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
@@ -34,15 +38,25 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestServerSideScanMetricsFromClientSide {
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestServerSideScanMetricsFromClientSide.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestServerSideScanMetricsFromClientSide.class);
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static Table TABLE = null;
@@ -98,12 +112,12 @@ public class TestServerSideScanMetricsFromClientSide {
 
   /**
    * Make puts to put the input value into each combination of row, family, and qualifier
-   * @param rows
-   * @param families
-   * @param qualifiers
-   * @param value
-   * @return
-   * @throws IOException
+   * @param rows the rows to use
+   * @param families the column families to use
+   * @param qualifiers the column qualifiers to use
+   * @param value the value to put
+   * @return the putted input values added in puts
+   * @throws IOException If an IO problem is encountered
    */
   static ArrayList<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
       byte[] value) throws IOException {
@@ -128,7 +142,7 @@ public class TestServerSideScanMetricsFromClientSide {
    * @return The approximate heap size of a cell in the test table. All cells should have
    *         approximately the same heap size, so the value is cached to avoid repeating the
    *         calculation
-   * @throws Exception
+   * @throws Exception on unexpected failure
    */
   private long getCellHeapSize() throws Exception {
     if (CELL_HEAP_SIZE == -1) {
@@ -144,7 +158,7 @@ public class TestServerSideScanMetricsFromClientSide {
       assertTrue(result.rawCells() != null);
       assertTrue(result.rawCells().length == 1);
 
-      CELL_HEAP_SIZE = CellUtil.estimatedHeapSizeOf(result.rawCells()[0]);
+      CELL_HEAP_SIZE = result.rawCells()[0].heapSize();
       scanner.close();
     }
 
@@ -167,22 +181,27 @@ public class TestServerSideScanMetricsFromClientSide {
     baseScan = new Scan();
     baseScan.setScanMetricsEnabled(true);
     baseScan.setAsyncPrefetch(async);
-    testRowsSeenMetric(baseScan);
+    try {
+      testRowsSeenMetric(baseScan);
 
-    // Test case that only a single result will be returned per RPC to the serer
-    baseScan.setCaching(1);
-    testRowsSeenMetric(baseScan);
+      // Test case that only a single result will be returned per RPC to the serer
+      baseScan.setCaching(1);
+      testRowsSeenMetric(baseScan);
 
-    // Test case that partial results are returned from the server. At most one cell will be
-    // contained in each response
-    baseScan.setMaxResultSize(1);
-    testRowsSeenMetric(baseScan);
+      // Test case that partial results are returned from the server. At most one cell will be
+      // contained in each response
+      baseScan.setMaxResultSize(1);
+      testRowsSeenMetric(baseScan);
 
-    // Test case that size limit is set such that a few cells are returned per partial result from
-    // the server
-    baseScan.setCaching(NUM_ROWS);
-    baseScan.setMaxResultSize(getCellHeapSize() * (NUM_COLS - 1));
-    testRowsSeenMetric(baseScan);
+      // Test case that size limit is set such that a few cells are returned per partial result from
+      // the server
+      baseScan.setCaching(NUM_ROWS);
+      baseScan.setMaxResultSize(getCellHeapSize() * (NUM_COLS - 1));
+      testRowsSeenMetric(baseScan);
+    } catch (Throwable t) {
+      LOG.error("FAIL", t);
+      throw t;
+    }
   }
 
   public void testRowsSeenMetric(Scan baseScan) throws Exception {
@@ -201,11 +220,13 @@ public class TestServerSideScanMetricsFromClientSide {
       scan = new Scan(baseScan);
       scan.withStartRow(ROWS[i - 1]);
       scan.withStopRow(ROWS[ROWS.length - 1]);
-      testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length - i);
+      testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME,
+        ROWS.length - i);
     }
 
     // The filter should filter out all rows, but we still expect to see every row.
-    Filter filter = new RowFilter(CompareOperator.EQUAL, new BinaryComparator("xyz".getBytes()));
+    Filter filter =
+        new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("xyz")));
     scan = new Scan(baseScan);
     scan.setFilter(filter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
@@ -255,7 +276,8 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, null, 0);
 
     // Row filter doesn't match any row key. All rows should be filtered
-    Filter filter = new RowFilter(CompareOperator.EQUAL, new BinaryComparator("xyz".getBytes()));
+    Filter filter =
+        new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("xyz")));
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     // Filter will return results containing only the first key. Number of entire rows filtered
@@ -269,7 +291,7 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, filter, 0);
 
     // Column prefix will NOT find any matching qualifier on any row. All rows should be filtered
-    filter = new ColumnPrefixFilter("xyz".getBytes());
+    filter = new ColumnPrefixFilter(Bytes.toBytes("xyz"));
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     // Matching column value should exist in each row. No rows should be filtered.
@@ -305,23 +327,26 @@ public class TestServerSideScanMetricsFromClientSide {
   public void testRowsFilteredMetric(Scan baseScan, Filter filter, int expectedNumFiltered)
       throws Exception {
     Scan scan = new Scan(baseScan);
-    if (filter != null) scan.setFilter(filter);
-    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME, expectedNumFiltered);
+    if (filter != null) {
+      scan.setFilter(filter);
+    }
+    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME,
+      expectedNumFiltered);
   }
 
   /**
-   * Run the scan to completetion and check the metric against the specified value
-   * @param scan
-   * @param metricKey
-   * @param expectedValue
-   * @throws Exception
+   * Run the scan to completion and check the metric against the specified value
+   * @param scan The scan instance to use to record metrics
+   * @param metricKey The metric key name
+   * @param expectedValue The expected value of metric
+   * @throws Exception on unexpected failure
    */
   public void testMetric(Scan scan, String metricKey, long expectedValue) throws Exception {
     assertTrue("Scan should be configured to record metrics", scan.isScanMetricsEnabled());
     ResultScanner scanner = TABLE.getScanner(scan);
     // Iterate through all the results
     while (scanner.next() != null) {
-
+      continue;
     }
     scanner.close();
     ScanMetrics metrics = scanner.getScanMetrics();

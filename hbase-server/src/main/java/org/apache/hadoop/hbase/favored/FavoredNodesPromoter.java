@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,6 +33,6 @@ public interface FavoredNodesPromoter {
   void generateFavoredNodesForDaughter(List<ServerName> servers,
       RegionInfo parent, RegionInfo hriA, RegionInfo hriB) throws IOException;
 
-  void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo hriA,
-      RegionInfo hriB) throws IOException;
+  void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo [] mergeParents)
+      throws IOException;
 }

@@ -23,15 +23,18 @@
   import="org.apache.hadoop.hbase.util.VersionInfo"
   import="java.util.Date"
 %>
+<%@ page import="org.apache.hadoop.hbase.thrift.ImplType" %>
+<%@ page import="org.apache.hadoop.hbase.util.JvmVersion" %>
 
 <%
 Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf");
+String serverType = (String)getServletContext().getAttribute("hbase.thrift.server.type");
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
 String listenPort = conf.get("hbase.regionserver.thrift.port", "9090");
-String serverInfo = listenPort + "," + String.valueOf(startcode);
-String implType = conf.get("hbase.regionserver.thrift.server.type", "threadpool");
+ImplType implType = ImplType.getServerImpl(conf);
+String framed = implType.isAlwaysFramed()
+    ? "true" : conf.get("hbase.regionserver.thrift.framed", "false");
 String compact = conf.get("hbase.regionserver.thrift.compact", "false");
-String framed = conf.get("hbase.regionserver.thrift.framed", "false");
 %>
 <!DOCTYPE html>
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -64,14 +67,14 @@ String framed = conf.get("hbase.regionserver.thrift.framed", "false");
                 <li><a href="/logs/">Local logs</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/jmx">Metrics Dump</a></li>
+                <li><a href="/prof">Profiler</a></li>
                 <% if (HBaseConfiguration.isShowConfInServlet()) { %>
                 <li><a href="/conf">HBase Configuration</a></li>
                 <% } %>
             </ul>
           </div><!--/.nav-collapse -->
-        </div>
       </div>
-    </div>
+  </div>
 
 <div class="container-fluid content">
     <div class="row inner_header">
@@ -89,6 +92,11 @@ String framed = conf.get("hbase.regionserver.thrift.framed", "false");
             <th>Value</th>
             <th>Description</th>
         </tr>
+      <tr>
+        <td>JVM Version</td>
+        <td><%= JvmVersion.getVersion() %></td>
+        <td>JVM vendor and version information</td>
+      </tr>
         <tr>
             <td>HBase Version</td>
             <td><%= VersionInfo.getVersion() %>, r<%= VersionInfo.getRevision() %></td>
@@ -106,7 +114,7 @@ String framed = conf.get("hbase.regionserver.thrift.framed", "false");
         </tr>
         <tr>
             <td>Thrift Impl Type</td>
-            <td><%= implType %></td>
+            <td><%= implType.getOption() %></td>
             <td>Thrift RPC engine implementation type chosen by this Thrift server</td>
         </tr>
         <tr>
@@ -118,6 +126,11 @@ String framed = conf.get("hbase.regionserver.thrift.framed", "false");
             <td>Framed Transport</td>
             <td><%= framed %></td>
             <td>Thrift RPC engine uses framed transport</td>
+        </tr>
+        <tr>
+            <td>Thrift Server Type</td>
+            <td><%= serverType %></td>
+            <td>The type of this Thrift server</td>
         </tr>
     </table>
     </section>

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,17 +26,15 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -46,6 +43,9 @@ import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateReque
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A concrete AggregateProtocol implementation. Its system level coprocessor
@@ -61,8 +61,8 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
  */
 @InterfaceAudience.Private
 public class AggregateImplementation<T, S, P extends Message, Q extends Message, R extends Message>
-extends AggregateService implements RegionCoprocessor {
-  protected static final Log log = LogFactory.getLog(AggregateImplementation.class);
+  extends AggregateService implements RegionCoprocessor {
+  protected static final Logger log = LoggerFactory.getLogger(AggregateImplementation.class);
   private RegionCoprocessorEnvironment env;
 
   /**
@@ -74,7 +74,7 @@ extends AggregateService implements RegionCoprocessor {
    */
   @Override
   public void getMax(RpcController controller, AggregateRequest request,
-      RpcCallback<AggregateResponse> done) {
+          RpcCallback<AggregateResponse> done) {
     InternalScanner scanner = null;
     AggregateResponse response = null;
     T max = null;
@@ -129,7 +129,7 @@ extends AggregateService implements RegionCoprocessor {
    */
   @Override
   public void getMin(RpcController controller, AggregateRequest request,
-      RpcCallback<AggregateResponse> done) {
+          RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
     T min = null;
@@ -182,10 +182,10 @@ extends AggregateService implements RegionCoprocessor {
    */
   @Override
   public void getSum(RpcController controller, AggregateRequest request,
-      RpcCallback<AggregateResponse> done) {
+          RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
-    long sum = 0l;
+    long sum = 0L;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null;
@@ -205,8 +205,9 @@ extends AggregateService implements RegionCoprocessor {
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
           temp = ci.getValue(colFamily, qualifier, results.get(i));
-          if (temp != null)
+          if (temp != null) {
             sumVal = ci.add(sumVal, ci.castToReturnType(temp));
+          }
         }
         results.clear();
       } while (hasMoreRows);
@@ -234,9 +235,9 @@ extends AggregateService implements RegionCoprocessor {
    */
   @Override
   public void getRowNum(RpcController controller, AggregateRequest request,
-      RpcCallback<AggregateResponse> done) {
+          RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
-    long counter = 0l;
+    long counter = 0L;
     List<Cell> results = new ArrayList<>();
     InternalScanner scanner = null;
     try {
@@ -249,8 +250,9 @@ extends AggregateService implements RegionCoprocessor {
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();
       }
-      if (scan.getFilter() == null && qualifier == null)
+      if (scan.getFilter() == null && qualifier == null) {
         scan.setFilter(new FirstKeyOnlyFilter());
+      }
       scanner = env.getRegion().getScanner(scan);
       boolean hasMoreRows = false;
       do {
@@ -293,13 +295,13 @@ extends AggregateService implements RegionCoprocessor {
    */
   @Override
   public void getAvg(RpcController controller, AggregateRequest request,
-      RpcCallback<AggregateResponse> done) {
+          RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null;
-      Long rowCountVal = 0l;
+      Long rowCountVal = 0L;
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
       byte[] colFamily = scan.getFamilies()[0];
@@ -353,13 +355,13 @@ extends AggregateService implements RegionCoprocessor {
    */
   @Override
   public void getStd(RpcController controller, AggregateRequest request,
-      RpcCallback<AggregateResponse> done) {
+          RpcCallback<AggregateResponse> done) {
     InternalScanner scanner = null;
     AggregateResponse response = null;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null, sumSqVal = null, tempVal = null;
-      long rowCountVal = 0l;
+      long rowCountVal = 0L;
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
       byte[] colFamily = scan.getFamilies()[0];
@@ -418,7 +420,7 @@ extends AggregateService implements RegionCoprocessor {
    */
   @Override
   public void getMedian(RpcController controller, AggregateRequest request,
-      RpcCallback<AggregateResponse> done) {
+          RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
     try {
@@ -480,21 +482,19 @@ extends AggregateService implements RegionCoprocessor {
   ColumnInterpreter<T,S,P,Q,R> constructColumnInterpreterFromRequest(
       AggregateRequest request) throws IOException {
     String className = request.getInterpreterClassName();
-    Class<?> cls;
     try {
-      cls = Class.forName(className);
-      ColumnInterpreter<T,S,P,Q,R> ci = (ColumnInterpreter<T, S, P, Q, R>) cls.newInstance();
+      ColumnInterpreter<T,S,P,Q,R> ci;
+      Class<?> cls = Class.forName(className);
+      ci = (ColumnInterpreter<T, S, P, Q, R>) cls.getDeclaredConstructor().newInstance();
+
       if (request.hasInterpreterSpecificBytes()) {
         ByteString b = request.getInterpreterSpecificBytes();
         P initMsg = getParsedGenericInstance(ci.getClass(), 2, b);
         ci.initialize(initMsg);
       }
       return ci;
-    } catch (ClassNotFoundException e) {
-      throw new IOException(e);
-    } catch (InstantiationException e) {
-      throw new IOException(e);
-    } catch (IllegalAccessException e) {
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+        NoSuchMethodException | InvocationTargetException e) {
       throw new IOException(e);
     }
   }
@@ -527,5 +527,4 @@ extends AggregateService implements RegionCoprocessor {
   public void stop(CoprocessorEnvironment env) throws IOException {
     // nothing to do
   }
-
 }

@@ -21,20 +21,21 @@ package org.apache.hadoop.hbase.snapshot;
 import java.util.Arrays;
 import java.util.Locale;
 
-import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * This is a command line class that will snapshot a given table.
  */
+@InterfaceAudience.Private
 public class CreateSnapshot extends AbstractHBaseTool {
     private SnapshotType snapshotType = SnapshotType.FLUSH;
     private TableName tableName = null;
@@ -66,24 +67,13 @@ public class CreateSnapshot extends AbstractHBaseTool {
 
     @Override
     protected int doWork() throws Exception {
-        Connection connection = null;
-        Admin admin = null;
-        try {
-            connection = ConnectionFactory.createConnection(getConf());
-            admin = connection.getAdmin();
-            admin.snapshot(new SnapshotDescription(snapshotName, tableName, snapshotType));
+        try (Connection connection = ConnectionFactory.createConnection(getConf());
+              Admin admin = connection.getAdmin()) {
+          admin.snapshot(new SnapshotDescription(snapshotName, tableName, snapshotType));
         } catch (Exception e) {
-            System.err.println("failed to take the snapshot: " + e.getMessage());
-            return -1;
-        } finally {
-            if (admin != null) {
-                admin.close();
-            }
-            if (connection != null) {
-                connection.close();
-            }
+          System.err.println("failed to take the snapshot: " + e.getMessage());
+          return -1;
         }
-        return 0;
+      return 0;
     }
-
 }

@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
-import java.util.Iterator;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
+import java.util.Iterator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestTableListModel extends TestModelBase<TableListModel> {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableListModel.class);
+
   private static final String TABLE1 = "table1";
   private static final String TABLE2 = "table2";
   private static final String TABLE3 = "table3";
@@ -44,6 +50,7 @@ public class TestTableListModel extends TestModelBase<TableListModel> {
       "{\"table\":[{\"name\":\"table1\"},{\"name\":\"table2\"},{\"name\":\"table3\"}]}";
   }
 
+  @Override
   protected TableListModel buildTestModel() {
     TableListModel model = new TableListModel();
     model.add(new TableModel(TABLE1));
@@ -52,14 +59,15 @@ public class TestTableListModel extends TestModelBase<TableListModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(TableListModel model) {
     Iterator<TableModel> tables = model.getTables().iterator();
     TableModel table = tables.next();
-    assertEquals(table.getName(), TABLE1);
+    assertEquals(TABLE1, table.getName());
     table = tables.next();
-    assertEquals(table.getName(), TABLE2);
+    assertEquals(TABLE2, table.getName());
     table = tables.next();
-    assertEquals(table.getName(), TABLE3);
+    assertEquals(TABLE3, table.getName());
     assertFalse(tables.hasNext());
   }
 }

@@ -24,41 +24,45 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithTTLs implements Configurable {
 
-  protected static final Log LOG = LogFactory.getLog(TestImportTSVWithTTLs.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestImportTSVWithTTLs.class);
+
+  protected static final Logger LOG = LoggerFactory.getLogger(TestImportTSVWithTTLs.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -106,7 +110,7 @@ public class TestImportTSVWithTTLs implements Configurable {
 
   @Test
   public void testMROnTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -169,7 +173,7 @@ public class TestImportTSVWithTTLs implements Configurable {
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
         Durability durability) throws IOException {
       Region region = e.getEnvironment().getRegion();
-      if (!region.getRegionInfo().isMetaTable()
+      if (!region.getRegionInfo().isMetaRegion()
           && !region.getRegionInfo().getTable().isSystemTable()) {
         // The put carries the TTL attribute
         if (put.getTTL() != Long.MAX_VALUE) {

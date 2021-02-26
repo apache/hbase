@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,15 +21,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -62,10 +61,14 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.map.ObjectMapper;
+import org.apache.hadoop.hbase.util.GsonUtil;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.reflect.TypeToken;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**
  * Run tests that use the functionality of the Operation superclass for
@@ -73,71 +76,66 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ClientTests.class, SmallTests.class})
 public class TestOperation {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestOperation.class);
+
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
 
-  private static ObjectMapper mapper = new ObjectMapper();
+  private static Gson GSON = GsonUtil.createGson().create();
 
   private static List<Long> TS_LIST = Arrays.asList(2L, 3L, 5L);
   private static TimestampsFilter TS_FILTER = new TimestampsFilter(TS_LIST);
-  private static String STR_TS_FILTER =
-      TS_FILTER.getClass().getSimpleName() + " (3/3): [2, 3, 5]";
+  private static String STR_TS_FILTER = TS_FILTER.getClass().getSimpleName() + " (3/3): [2, 3, 5]";
 
-  private static List<Long> L_TS_LIST =
-      Arrays.asList(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L);
-  private static TimestampsFilter L_TS_FILTER =
-      new TimestampsFilter(L_TS_LIST);
+  private static List<Long> L_TS_LIST = Arrays.asList(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L);
+  private static TimestampsFilter L_TS_FILTER = new TimestampsFilter(L_TS_LIST);
   private static String STR_L_TS_FILTER =
       L_TS_FILTER.getClass().getSimpleName() + " (5/11): [0, 1, 2, 3, 4]";
 
   private static String COL_NAME_1 = "col1";
   private static ColumnPrefixFilter COL_PRE_FILTER =
-      new ColumnPrefixFilter(COL_NAME_1.getBytes());
+      new ColumnPrefixFilter(Bytes.toBytes(COL_NAME_1));
   private static String STR_COL_PRE_FILTER =
       COL_PRE_FILTER.getClass().getSimpleName() + " " + COL_NAME_1;
 
   private static String COL_NAME_2 = "col2";
-  private static ColumnRangeFilter CR_FILTER = new ColumnRangeFilter(
-      COL_NAME_1.getBytes(), true, COL_NAME_2.getBytes(), false);
+  private static ColumnRangeFilter CR_FILTER =
+      new ColumnRangeFilter(Bytes.toBytes(COL_NAME_1), true, Bytes.toBytes(COL_NAME_2), false);
   private static String STR_CR_FILTER = CR_FILTER.getClass().getSimpleName()
       + " [" + COL_NAME_1 + ", " + COL_NAME_2 + ")";
 
   private static int COL_COUNT = 9;
-  private static ColumnCountGetFilter CCG_FILTER =
-      new ColumnCountGetFilter(COL_COUNT);
-  private static String STR_CCG_FILTER =
-      CCG_FILTER.getClass().getSimpleName() + " " + COL_COUNT;
+  private static ColumnCountGetFilter CCG_FILTER = new ColumnCountGetFilter(COL_COUNT);
+  private static String STR_CCG_FILTER = CCG_FILTER.getClass().getSimpleName() + " " + COL_COUNT;
 
   private static int LIMIT = 3;
   private static int OFFSET = 4;
-  private static ColumnPaginationFilter CP_FILTER =
-      new ColumnPaginationFilter(LIMIT, OFFSET);
+  private static ColumnPaginationFilter CP_FILTER = new ColumnPaginationFilter(LIMIT, OFFSET);
   private static String STR_CP_FILTER = CP_FILTER.getClass().getSimpleName()
       + " (" + LIMIT + ", " + OFFSET + ")";
 
   private static String STOP_ROW_KEY = "stop";
   private static InclusiveStopFilter IS_FILTER =
-      new InclusiveStopFilter(STOP_ROW_KEY.getBytes());
+      new InclusiveStopFilter(Bytes.toBytes(STOP_ROW_KEY));
   private static String STR_IS_FILTER =
       IS_FILTER.getClass().getSimpleName() + " " + STOP_ROW_KEY;
 
   private static String PREFIX = "prefix";
-  private static PrefixFilter PREFIX_FILTER =
-      new PrefixFilter(PREFIX.getBytes());
+  private static PrefixFilter PREFIX_FILTER = new PrefixFilter(Bytes.toBytes(PREFIX));
   private static String STR_PREFIX_FILTER = "PrefixFilter " + PREFIX;
 
-  private static byte[][] PREFIXES = {
-      "0".getBytes(), "1".getBytes(), "2".getBytes()};
-  private static MultipleColumnPrefixFilter MCP_FILTER =
-      new MultipleColumnPrefixFilter(PREFIXES);
+  private static byte[][] PREFIXES = { Bytes.toBytes("0"), Bytes.toBytes("1"), Bytes.toBytes("2") };
+  private static MultipleColumnPrefixFilter MCP_FILTER = new MultipleColumnPrefixFilter(PREFIXES);
   private static String STR_MCP_FILTER =
       MCP_FILTER.getClass().getSimpleName() + " (3/3): [0, 1, 2]";
 
   private static byte[][] L_PREFIXES = {
-    "0".getBytes(), "1".getBytes(), "2".getBytes(), "3".getBytes(),
-    "4".getBytes(), "5".getBytes(), "6".getBytes(), "7".getBytes()};
+    Bytes.toBytes("0"), Bytes.toBytes("1"), Bytes.toBytes("2"), Bytes.toBytes("3"),
+    Bytes.toBytes("4"), Bytes.toBytes("5"), Bytes.toBytes("6"), Bytes.toBytes("7") };
   private static MultipleColumnPrefixFilter L_MCP_FILTER =
       new MultipleColumnPrefixFilter(L_PREFIXES);
   private static String STR_L_MCP_FILTER =
@@ -145,29 +143,25 @@ public class TestOperation {
 
   private static int PAGE_SIZE = 9;
   private static PageFilter PAGE_FILTER = new PageFilter(PAGE_SIZE);
-  private static String STR_PAGE_FILTER =
-      PAGE_FILTER.getClass().getSimpleName() + " " + PAGE_SIZE;
+  private static String STR_PAGE_FILTER = PAGE_FILTER.getClass().getSimpleName() + " " + PAGE_SIZE;
 
   private static SkipFilter SKIP_FILTER = new SkipFilter(L_TS_FILTER);
   private static String STR_SKIP_FILTER =
       SKIP_FILTER.getClass().getSimpleName() + " " + STR_L_TS_FILTER;
 
-  private static WhileMatchFilter WHILE_FILTER =
-      new WhileMatchFilter(L_TS_FILTER);
+  private static WhileMatchFilter WHILE_FILTER = new WhileMatchFilter(L_TS_FILTER);
   private static String STR_WHILE_FILTER =
       WHILE_FILTER.getClass().getSimpleName() + " " + STR_L_TS_FILTER;
 
   private static KeyOnlyFilter KEY_ONLY_FILTER = new KeyOnlyFilter();
-  private static String STR_KEY_ONLY_FILTER =
-      KEY_ONLY_FILTER.getClass().getSimpleName();
+  private static String STR_KEY_ONLY_FILTER = KEY_ONLY_FILTER.getClass().getSimpleName();
 
-  private static FirstKeyOnlyFilter FIRST_KEY_ONLY_FILTER =
-      new FirstKeyOnlyFilter();
+  private static FirstKeyOnlyFilter FIRST_KEY_ONLY_FILTER = new FirstKeyOnlyFilter();
   private static String STR_FIRST_KEY_ONLY_FILTER =
       FIRST_KEY_ONLY_FILTER.getClass().getSimpleName();
 
   private static CompareOp CMP_OP = CompareOp.EQUAL;
-  private static byte[] CMP_VALUE = "value".getBytes();
+  private static byte[] CMP_VALUE = Bytes.toBytes("value");
   private static BinaryComparator BC = new BinaryComparator(CMP_VALUE);
   private static DependentColumnFilter DC_FILTER =
       new DependentColumnFilter(FAMILY, QUALIFIER, true, CMP_OP, BC);
@@ -180,14 +174,12 @@ public class TestOperation {
   private static String STR_FAMILY_FILTER =
       FAMILY_FILTER.getClass().getSimpleName() + " (EQUAL, value)";
 
-  private static QualifierFilter QUALIFIER_FILTER =
-      new QualifierFilter(CMP_OP, BC);
+  private static QualifierFilter QUALIFIER_FILTER = new QualifierFilter(CMP_OP, BC);
   private static String STR_QUALIFIER_FILTER =
       QUALIFIER_FILTER.getClass().getSimpleName() + " (EQUAL, value)";
 
   private static RowFilter ROW_FILTER = new RowFilter(CMP_OP, BC);
-  private static String STR_ROW_FILTER =
-      ROW_FILTER.getClass().getSimpleName() + " (EQUAL, value)";
+  private static String STR_ROW_FILTER = ROW_FILTER.getClass().getSimpleName() + " (EQUAL, value)";
 
   private static ValueFilter VALUE_FILTER = new ValueFilter(CMP_OP, BC);
   private static String STR_VALUE_FILTER =
@@ -204,19 +196,16 @@ public class TestOperation {
       new SingleColumnValueExcludeFilter(FAMILY, QUALIFIER, CMP_OP, CMP_VALUE);
   private static String STR_SCVE_FILTER = String.format("%s (%s, %s, %s, %s)",
       SCVE_FILTER.getClass().getSimpleName(), Bytes.toStringBinary(FAMILY),
-      Bytes.toStringBinary(QUALIFIER), CMP_OP.name(),
-      Bytes.toStringBinary(CMP_VALUE));
+      Bytes.toStringBinary(QUALIFIER), CMP_OP.name(), Bytes.toStringBinary(CMP_VALUE));
 
   private static FilterList AND_FILTER_LIST = new FilterList(
-      Operator.MUST_PASS_ALL, Arrays.asList((Filter) TS_FILTER, L_TS_FILTER,
-          CR_FILTER));
+      Operator.MUST_PASS_ALL, Arrays.asList((Filter) TS_FILTER, L_TS_FILTER, CR_FILTER));
   private static String STR_AND_FILTER_LIST = String.format(
       "%s AND (3/3): [%s, %s, %s]", AND_FILTER_LIST.getClass().getSimpleName(),
       STR_TS_FILTER, STR_L_TS_FILTER, STR_CR_FILTER);
 
   private static FilterList OR_FILTER_LIST = new FilterList(
-      Operator.MUST_PASS_ONE, Arrays.asList((Filter) TS_FILTER, L_TS_FILTER,
-          CR_FILTER));
+      Operator.MUST_PASS_ONE, Arrays.asList((Filter) TS_FILTER, L_TS_FILTER, CR_FILTER));
   private static String STR_OR_FILTER_LIST = String.format(
       "%s OR (3/3): [%s, %s, %s]", AND_FILTER_LIST.getClass().getSimpleName(),
       STR_TS_FILTER, STR_L_TS_FILTER, STR_CR_FILTER);
@@ -294,17 +283,19 @@ public class TestOperation {
   /**
    * Test the client Operations' JSON encoding to ensure that produced JSON is
    * parseable and that the details are present and not corrupted.
-   * @throws IOException
+   *
+   * @throws IOException if the JSON conversion fails
    */
   @Test
-  public void testOperationJSON()
-      throws IOException {
+  public void testOperationJSON() throws IOException {
     // produce a Scan Operation
     Scan scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     // get its JSON representation, and parse it
     String json = scan.toJSON();
-    Map<String, Object> parsedJSON = mapper.readValue(json, HashMap.class);
+    Type typeOfHashMap = new TypeToken<Map<String, Object>>() {
+    }.getType();
+    Map<String, Object> parsedJSON = GSON.fromJson(json, typeOfHashMap);
     // check for the row
     assertEquals("startRow incorrect in Scan.toJSON()",
         Bytes.toStringBinary(ROW), parsedJSON.get("startRow"));
@@ -322,7 +313,7 @@ public class TestOperation {
     get.addColumn(FAMILY, QUALIFIER);
     // get its JSON representation, and parse it
     json = get.toJSON();
-    parsedJSON = mapper.readValue(json, HashMap.class);
+    parsedJSON = GSON.fromJson(json, typeOfHashMap);
     // check for the row
     assertEquals("row incorrect in Get.toJSON()",
         Bytes.toStringBinary(ROW), parsedJSON.get("row"));
@@ -340,7 +331,7 @@ public class TestOperation {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     // get its JSON representation, and parse it
     json = put.toJSON();
-    parsedJSON = mapper.readValue(json, HashMap.class);
+    parsedJSON = GSON.fromJson(json, typeOfHashMap);
     // check for the row
     assertEquals("row absent in Put.toJSON()",
         Bytes.toStringBinary(ROW), parsedJSON.get("row"));
@@ -353,15 +344,15 @@ public class TestOperation {
     assertEquals("Qualifier incorrect in Put.toJSON()",
         Bytes.toStringBinary(QUALIFIER),
         kvMap.get("qualifier"));
-    assertEquals("Value length incorrect in Put.toJSON()",
-        VALUE.length, kvMap.get("vlen"));
+    assertEquals("Value length incorrect in Put.toJSON()", VALUE.length,
+      ((Number) kvMap.get("vlen")).intValue());
 
     // produce a Delete operation
     Delete delete = new Delete(ROW);
     delete.addColumn(FAMILY, QUALIFIER);
     // get its JSON representation, and parse it
     json = delete.toJSON();
-    parsedJSON = mapper.readValue(json, HashMap.class);
+    parsedJSON = GSON.fromJson(json, typeOfHashMap);
     // check for the row
     assertEquals("row absent in Delete.toJSON()",
         Bytes.toStringBinary(ROW), parsedJSON.get("row"));
@@ -380,15 +371,15 @@ public class TestOperation {
     Put p = new Put(ROW);
     List<Cell> c = p.get(FAMILY, QUALIFIER);
     Assert.assertEquals(0, c.size());
-    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
+    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
 
     p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 1984L, ByteBuffer.wrap(VALUE));
     c = p.get(FAMILY, QUALIFIER);
     Assert.assertEquals(1, c.size());
     Assert.assertEquals(1984L, c.get(0).getTimestamp());
     Assert.assertArrayEquals(VALUE, CellUtil.cloneValue(c.get(0)));
-    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
-    Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
+    Assert.assertEquals(0, CellComparatorImpl.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
 
     p = new Put(ROW);
     p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 2013L, null);
@@ -396,8 +387,8 @@ public class TestOperation {
     Assert.assertEquals(1, c.size());
     Assert.assertEquals(2013L, c.get(0).getTimestamp());
     Assert.assertArrayEquals(new byte[]{}, CellUtil.cloneValue(c.get(0)));
-    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
-    Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
+    Assert.assertEquals(0, CellComparatorImpl.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
 
     p = new Put(ByteBuffer.wrap(ROW));
     p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
@@ -406,8 +397,8 @@ public class TestOperation {
     Assert.assertEquals(2001L, c.get(0).getTimestamp());
     Assert.assertArrayEquals(new byte[]{}, CellUtil.cloneValue(c.get(0)));
     Assert.assertArrayEquals(ROW, CellUtil.cloneRow(c.get(0)));
-    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
-    Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+    Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimestamp());
+    Assert.assertEquals(0, CellComparatorImpl.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
 
     p = new Put(ByteBuffer.wrap(ROW), 1970L);
     p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
@@ -416,8 +407,8 @@ public class TestOperation {
     Assert.assertEquals(2001L, c.get(0).getTimestamp());
     Assert.assertArrayEquals(new byte[]{}, CellUtil.cloneValue(c.get(0)));
     Assert.assertArrayEquals(ROW, CellUtil.cloneRow(c.get(0)));
-    Assert.assertEquals(1970L, p.getTimeStamp());
-    Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+    Assert.assertEquals(1970L, p.getTimestamp());
+    Assert.assertEquals(0, CellComparatorImpl.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
   }
 
   @Test
@@ -436,19 +427,17 @@ public class TestOperation {
 
     // TODO: We should ensure all subclasses of Operation is checked.
     Class[] classes = new Class[] {
-        Operation.class,
-        OperationWithAttributes.class,
-        Mutation.class,
-        Query.class,
-        Delete.class,
-        Increment.class,
-        Append.class,
-        Put.class,
-        Get.class,
-        Scan.class};
+      Operation.class,
+      OperationWithAttributes.class,
+      Mutation.class,
+      Query.class,
+      Delete.class,
+      Increment.class,
+      Append.class,
+      Put.class,
+      Get.class,
+      Scan.class};
 
     BuilderStyleTest.assertClassesAreBuilderStyle(classes);
   }
-
 }
-

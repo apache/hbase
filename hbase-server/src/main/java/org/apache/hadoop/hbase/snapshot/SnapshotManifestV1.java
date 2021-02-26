@@ -27,9 +27,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,10 +35,14 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -57,7 +58,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
  */
 @InterfaceAudience.Private
 public final class SnapshotManifestV1 {
-  private static final Log LOG = LogFactory.getLog(SnapshotManifestV1.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotManifestV1.class);
 
   public static final int DESCRIPTOR_VERSION = 0;
 
@@ -68,44 +69,52 @@ public final class SnapshotManifestV1 {
                                                           HRegionFileSystem, Path> {
     private final Configuration conf;
     private final Path snapshotDir;
-    private final FileSystem fs;
+    private final FileSystem rootFs;
+    private final FileSystem workingDirFs;
 
-    public ManifestBuilder(final Configuration conf, final FileSystem fs, final Path snapshotDir) {
+    public ManifestBuilder(final Configuration conf, final FileSystem rootFs,
+        final Path snapshotDir) throws IOException {
       this.snapshotDir = snapshotDir;
       this.conf = conf;
-      this.fs = fs;
+      this.rootFs = rootFs;
+      this.workingDirFs = snapshotDir.getFileSystem(conf);
     }
 
+    @Override
     public HRegionFileSystem regionOpen(final RegionInfo regionInfo) throws IOException {
       HRegionFileSystem snapshotRegionFs = HRegionFileSystem.createRegionOnFileSystem(conf,
-        fs, snapshotDir, regionInfo);
+        workingDirFs, snapshotDir, regionInfo);
       return snapshotRegionFs;
     }
 
+    @Override
     public void regionClose(final HRegionFileSystem region) {
     }
 
+    @Override
     public Path familyOpen(final HRegionFileSystem snapshotRegionFs, final byte[] familyName) {
       Path familyDir = snapshotRegionFs.getStoreDir(Bytes.toString(familyName));
       return familyDir;
     }
 
+    @Override
     public void familyClose(final HRegionFileSystem region, final Path family) {
     }
 
+    @Override
     public void storeFile(final HRegionFileSystem region, final Path familyDir,
         final StoreFileInfo storeFile) throws IOException {
       Path referenceFile = new Path(familyDir, storeFile.getPath().getName());
       boolean success = true;
       if (storeFile.isReference()) {
         // write the Reference object to the snapshot
-        storeFile.getReference().write(fs, referenceFile);
+        storeFile.getReference().write(workingDirFs, referenceFile);
       } else {
         // create "reference" to this store file.  It is intentionally an empty file -- all
         // necessary information is captured by its fs location and filename.  This allows us to
         // only figure out what needs to be done via a single nn operation (instead of having to
         // open and read the files as well).
-        success = fs.createNewFile(referenceFile);
+        success = workingDirFs.createNewFile(referenceFile);
       }
       if (!success) {
         throw new IOException("Failed to create reference file:" + referenceFile);
@@ -116,7 +125,8 @@ public final class SnapshotManifestV1 {
   static List<SnapshotRegionManifest> loadRegionManifests(final Configuration conf,
       final Executor executor,final FileSystem fs, final Path snapshotDir,
       final SnapshotDescription desc) throws IOException {
-    FileStatus[] regions = FSUtils.listStatus(fs, snapshotDir, new FSUtils.RegionDirFilter(fs));
+    FileStatus[] regions =
+      CommonFSUtils.listStatus(fs, snapshotDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
       LOG.debug("No regions under directory:" + snapshotDir);
       return null;
@@ -142,9 +152,7 @@ public final class SnapshotManifestV1 {
     } catch (InterruptedException e) {
       throw new InterruptedIOException(e.getMessage());
     } catch (ExecutionException e) {
-      IOException ex = new IOException();
-      ex.initCause(e.getCause());
-      throw ex;
+      throw new IOException(e.getCause());
     }
     return regionsManifest;
   }

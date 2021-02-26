@@ -20,21 +20,20 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods for interacting with the hbase.root file system.
  */
 @InterfaceAudience.Private
 public final class FSVisitor {
-  private static final Log LOG = LogFactory.getLog(FSVisitor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FSVisitor.class);
 
   public interface StoreFileVisitor {
     void storeFile(final String region, final String family, final String hfileName)
@@ -92,7 +91,7 @@ public final class FSVisitor {
       String familyName = familyDir.getName();
 
       // get all the storeFiles in the family
-      FileStatus[] storeFiles = FSUtils.listStatus(fs, familyDir, fileFilter);
+      FileStatus[] storeFiles = CommonFSUtils.listStatus(fs, familyDir, fileFilter);
       if (storeFiles == null) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("No hfiles found for family: " + familyDir + ", skipping.");

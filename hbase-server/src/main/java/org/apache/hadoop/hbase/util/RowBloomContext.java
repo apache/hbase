@@ -37,6 +37,7 @@ public class RowBloomContext extends BloomContext {
     super(bloomFilterWriter, comparator);
   }
 
+  @Override
   public void addLastBloomKey(Writer writer) throws IOException {
     if (this.getLastCell() != null) {
       byte[] key = CellUtil.copyRow(this.getLastCell());

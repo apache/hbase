@@ -64,23 +64,7 @@ public class RegionReplicaUtil {
     if (regionInfo.getReplicaId() == replicaId) {
       return regionInfo;
     }
-
-    if (regionInfo.isMetaRegion()) {
-      return RegionInfoBuilder.newBuilder(regionInfo.getTable())
-          .setRegionId(regionInfo.getRegionId())
-          .setReplicaId(replicaId)
-          .setOffline(regionInfo.isOffline())
-          .build();
-    } else {
-      return RegionInfoBuilder.newBuilder(regionInfo.getTable())
-              .setStartKey(regionInfo.getStartKey())
-              .setEndKey(regionInfo.getEndKey())
-              .setSplit(regionInfo.isSplit())
-              .setRegionId(regionInfo.getRegionId())
-              .setReplicaId(replicaId)
-              .setOffline(regionInfo.isOffline())
-              .build();
-    }
+    return RegionInfoBuilder.newBuilder(regionInfo).setReplicaId(replicaId).build();
   }
 
   /**
@@ -163,24 +147,24 @@ public class RegionReplicaUtil {
   /**
    * Create any replicas for the regions (the default replicas that was already created is passed to
    * the method)
-   * @param tableDescriptor descriptor to use
    * @param regions existing regions
    * @param oldReplicaCount existing replica count
    * @param newReplicaCount updated replica count due to modify table
    * @return the combined list of default and non-default replicas
    */
-  public static List<RegionInfo> addReplicas(final TableDescriptor tableDescriptor,
-      final List<RegionInfo> regions, int oldReplicaCount, int newReplicaCount) {
+  public static List<RegionInfo> addReplicas(final List<RegionInfo> regions, int oldReplicaCount,
+    int newReplicaCount) {
     if ((newReplicaCount - 1) <= 0) {
       return regions;
     }
     List<RegionInfo> hRegionInfos = new ArrayList<>((newReplicaCount) * regions.size());
-    for (int i = 0; i < regions.size(); i++) {
-      if (RegionReplicaUtil.isDefaultReplica(regions.get(i))) {
+    for (RegionInfo ri : regions) {
+      if (RegionReplicaUtil.isDefaultReplica(ri) &&
+        (!ri.isOffline() || (!ri.isSplit() && !ri.isSplitParent()))) {
         // region level replica index starts from 0. So if oldReplicaCount was 2 then the max replicaId for
         // the existing regions would be 1
         for (int j = oldReplicaCount; j < newReplicaCount; j++) {
-          hRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(i), j));
+          hRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(ri, j));
         }
       }
     }

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
@@ -34,14 +32,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,12 +49,13 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
-import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -66,17 +63,23 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
 
-@Category({CoprocessorTests.class, SmallTests.class})
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorInterface {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCoprocessorInterface.class);
+
   @Rule public TestName name = new TestName();
-  private static final Log LOG = LogFactory.getLog(TestCoprocessorInterface.class);
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
   private static class CustomScanner implements RegionScanner {
@@ -144,11 +147,6 @@ public class TestCoprocessorInterface {
     public int getBatch() {
       return delegate.getBatch();
     }
-
-    @Override
-    public void shipped() throws IOException {
-      this.delegate.shipped();
-    }
   }
 
   public static class CoprocessorImpl implements RegionCoprocessor, RegionObserver {
@@ -213,12 +211,16 @@ public class TestCoprocessorInterface {
         CompactionRequest request) {
       postCompactCalled = true;
     }
+
     @Override
-    public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) {
+    public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+        FlushLifeCycleTracker tracker) {
       preFlushCalled = true;
     }
+
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) {
+    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+        FlushLifeCycleTracker tracker) {
       postFlushCalled = true;
     }
 
@@ -271,9 +273,7 @@ public class TestCoprocessorInterface {
         @Override
         public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
             final Get get, final List<Cell> results) throws IOException {
-          if (1/0 == 1) {
-            e.complete();
-          }
+          throw new RuntimeException();
         }
       });
     }
@@ -289,7 +289,7 @@ public class TestCoprocessorInterface {
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initConfig();
-    Region region = initHRegion(tableName, name.getMethodName(), hc, new Class<?>[]{}, families);
+    HRegion region = initHRegion(tableName, name.getMethodName(), hc, new Class<?>[]{}, families);
 
     for (int i = 0; i < 3; i++) {
       HBaseTestCase.addContent(region, fam3);
@@ -351,7 +351,7 @@ public class TestCoprocessorInterface {
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initConfig();
-    Region region = initHRegion(tableName, name.getMethodName(), hc,
+    HRegion region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{CoprocessorImpl.class}, families);
     for (int i = 0; i < 3; i++) {
       HBaseTestCase.addContent(region, fam3);
@@ -378,21 +378,22 @@ public class TestCoprocessorInterface {
     assertTrue(((CoprocessorImpl)c).wasCompacted());
   }
 
-  Region reopenRegion(final Region closedRegion, Class<?> ... implClasses)
+  HRegion reopenRegion(final HRegion closedRegion, Class<?> ... implClasses)
       throws IOException {
     //RegionInfo info = new RegionInfo(tableName, null, null, false);
-    Region r = HRegion.openHRegion(closedRegion, null);
+    HRegion r = HRegion.openHRegion(closedRegion, null);
 
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
     // and set it to region.
     Configuration conf = TEST_UTIL.getConfiguration();
-    RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
-    ((HRegion)r).setCoprocessorHost(host);
+    RegionCoprocessorHost host = new RegionCoprocessorHost(r,
+        Mockito.mock(RegionServerServices.class), conf);
+    r.setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
-      host.load((Class<? extends RegionCoprocessor>) implClass, Coprocessor.PRIORITY_USER, conf);
+      host.load(implClass.asSubclass(RegionCoprocessor.class), Coprocessor.PRIORITY_USER, conf);
     }
     // we need to manually call pre- and postOpen here since the
     // above load() is not the real case for CP loading. A CP is
@@ -405,28 +406,30 @@ public class TestCoprocessorInterface {
     return r;
   }
 
-  Region initHRegion (TableName tableName, String callingMethod,
+  HRegion initHRegion (TableName tableName, String callingMethod,
       Configuration conf, Class<?> [] implClasses, byte [][] families)
       throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName)
         .setStartKey(null)
         .setEndKey(null)
         .setSplit(false)
         .build();
     Path path = new Path(DIR + callingMethod);
-    Region r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
 
     // this following piece is a hack.
-    RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
-    ((HRegion)r).setCoprocessorHost(host);
+    RegionCoprocessorHost host =
+        new RegionCoprocessorHost(r, Mockito.mock(RegionServerServices.class), conf);
+    r.setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
-      host.load((Class<? extends RegionCoprocessor>) implClass, Coprocessor.PRIORITY_USER, conf);
+      host.load(implClass.asSubclass(RegionCoprocessor.class), Coprocessor.PRIORITY_USER, conf);
       Coprocessor c = host.findCoprocessor(implClass.getName());
       assertNotNull(c);
     }
@@ -447,8 +450,6 @@ public class TestCoprocessorInterface {
     // below.  After adding all data, the first region is 1.3M
     TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE,
         1024 * 128);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster",
-        true);
     TEST_UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
 
     return TEST_UTIL.getConfiguration();

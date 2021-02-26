@@ -24,12 +24,16 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility functions for region server storage layer.
@@ -37,7 +41,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class StoreUtils {
 
-  private static final Log LOG = LogFactory.getLog(StoreUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StoreUtils.class);
 
   /**
    * Creates a deterministic hash code for store file collection.
@@ -52,7 +56,7 @@ public class StoreUtils {
    */
   public static boolean hasReferences(Collection<HStoreFile> files) {
     // TODO: make sure that we won't pass null here in the future.
-    return files != null ? files.stream().anyMatch(HStoreFile::isReference) : false;
+    return files != null && files.stream().anyMatch(HStoreFile::isReference);
   }
 
   /**
@@ -61,7 +65,7 @@ public class StoreUtils {
   public static long getLowestTimestamp(Collection<HStoreFile> candidates) throws IOException {
     long minTs = Long.MAX_VALUE;
     for (HStoreFile storeFile : candidates) {
-      minTs = Math.min(minTs, storeFile.getModificationTimeStamp());
+      minTs = Math.min(minTs, storeFile.getModificationTimestamp());
     }
     return minTs;
   }
@@ -120,7 +124,7 @@ public class StoreUtils {
     if (comparator.compareRows(midKey, firstKey) == 0 ||
         comparator.compareRows(midKey, lastKey) == 0) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("cannot split because midkey is the same as first or last row");
+        LOG.debug("cannot split {} because midkey is the same as first or last row", file);
       }
       return Optional.empty();
     }
@@ -136,4 +140,25 @@ public class StoreUtils {
     return largestFile.isPresent() ? StoreUtils.getFileSplitPoint(largestFile.get(), comparator)
         : Optional.empty();
   }
+
+  /**
+   * Returns the configured checksum algorithm.
+   * @param conf The configuration
+   * @return The checksum algorithm that is set in the configuration
+   */
+  public static ChecksumType getChecksumType(Configuration conf) {
+    return ChecksumType.nameToType(
+      conf.get(HConstants.CHECKSUM_TYPE_NAME, ChecksumType.getDefaultChecksumType().getName()));
+  }
+
+  /**
+   * Returns the configured bytesPerChecksum value.
+   * @param conf The configuration
+   * @return The bytesPerChecksum that is set in the configuration
+   */
+  public static int getBytesPerChecksum(Configuration conf) {
+    return conf.getInt(HConstants.BYTES_PER_CHECKSUM,
+        HFile.DEFAULT_BYTES_PER_CHECKSUM);
+  }
+
 }

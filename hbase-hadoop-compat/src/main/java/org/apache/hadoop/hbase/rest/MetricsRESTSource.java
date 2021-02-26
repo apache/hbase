@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.rest;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface of the Metrics Source that will export data to Hadoop's Metrics2 system.
  */
+@InterfaceAudience.Private
 public interface MetricsRESTSource extends BaseSource, JvmPauseMonitorSource {
 
   String METRICS_NAME = "REST";
@@ -47,9 +49,9 @@ public interface MetricsRESTSource extends BaseSource, JvmPauseMonitorSource {
   String FAILED_PUT_KEY = "failedPut";
 
   String FAILED_DELETE_KEY = "failedDelete";
-  
+
   String SUCCESSFUL_SCAN_KEY = "successfulScanCount";
-  
+
   String FAILED_SCAN_KEY = "failedScanCount";
 
   String SUCCESSFUL_APPEND_KEY = "successfulAppendCount";
@@ -108,14 +110,14 @@ public interface MetricsRESTSource extends BaseSource, JvmPauseMonitorSource {
    * @param inc The number of failed delete requests.
    */
   void incrementFailedDeleteRequests(int inc);
-  
+
   /**
    * Increment the number of successful scan requests.
    *
    * @param inc Number of successful scan requests.
    */
   void incrementSucessfulScanRequests(final int inc);
-  
+
   /**
    * Increment the number failed scan requests.
    *

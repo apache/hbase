@@ -26,7 +26,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.Closeable;
 import java.io.IOException;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,7 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -71,7 +70,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
   public void setUp() throws Exception {
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
     dir = new Path(TEST_UTIL.createRootDir(), currentTest.getMethodName());
-    wals = new WALFactory(TEST_UTIL.getConfiguration(), null, currentTest.getMethodName());
+    wals = new WALFactory(TEST_UTIL.getConfiguration(), currentTest.getMethodName());
   }
 
   @After
@@ -151,7 +150,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
       // Write log in pb format.
       writer = createWriter(path);
       for (int i = 0; i < recordCount; ++i) {
-        WALKey key = new WALKey(
+        WALKeyImpl key = new WALKeyImpl(
             hri.getEncodedNameAsBytes(), tableName, i, timestamp, HConstants.DEFAULT_CLUSTER_ID);
         WALEdit edit = new WALEdit();
         for (int j = 0; j < columnCount; ++j) {
@@ -178,7 +177,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
         assertNotNull(entry);
         assertEquals(columnCount, entry.getEdit().size());
         assertArrayEquals(hri.getEncodedNameAsBytes(), entry.getKey().getEncodedRegionName());
-        assertEquals(tableName, entry.getKey().getTablename());
+        assertEquals(tableName, entry.getKey().getTableName());
         int idx = 0;
         for (Cell val : entry.getEdit().getCells()) {
           assertTrue(Bytes.equals(row, 0, row.length, val.getRowArray(), val.getRowOffset(),

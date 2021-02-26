@@ -135,7 +135,7 @@ public class BatchScanResultCache implements ScanResultCache {
           // there is a row change
           regroupedResults.add(createCompletedResult());
         }
-      } else if (lastResultPartial && !CellUtil.matchingRow(lastCell, result.getRow())) {
+      } else if (lastResultPartial && !CellUtil.matchingRows(lastCell, result.getRow())) {
         // As for batched scan we may return partial results to user if we reach the batch limit, so
         // here we need to use lastCell to determine if there is row change and increase
         // numberOfCompleteRows.

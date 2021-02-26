@@ -20,20 +20,17 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This Cell is an implementation of {@link ByteBufferCell} where the data resides in
+ * This Cell is an implementation of {@link ByteBufferExtendedCell} where the data resides in
  * off heap/ on heap ByteBuffer
  */
 @InterfaceAudience.Private
-public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
+public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   protected final ByteBuffer buf;
   protected final int offset;
@@ -56,12 +53,10 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
     this.length = length;
   }
 
-  @VisibleForTesting
   public ByteBuffer getBuffer() {
     return this.buf;
   }
 
-  @VisibleForTesting
   public int getOffset() {
     return this.offset;
   }
@@ -78,10 +73,6 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public short getRowLength() {
-    return getRowLen();
-  }
-
-  private short getRowLen() {
     return ByteBufferUtils.toShort(this.buf, this.offset + KeyValue.ROW_OFFSET);
   }
 
@@ -100,12 +91,15 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
     return getFamilyLength(getFamilyLengthPosition());
   }
 
-  private int getFamilyLengthPosition() {
-    return this.offset + KeyValue.ROW_KEY_OFFSET
-        + getRowLen();
+  int getFamilyLengthPosition() {
+    return getFamilyLengthPosition(getRowLength());
   }
 
-  private byte getFamilyLength(int famLenPos) {
+  int getFamilyLengthPosition(int rowLength) {
+    return this.offset + KeyValue.ROW_KEY_OFFSET + rowLength;
+  }
+
+  byte getFamilyLength(int famLenPos) {
     return ByteBufferUtils.toByte(this.buf, famLenPos);
   }
 
@@ -121,21 +115,24 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public int getQualifierLength() {
-    return getQualifierLength(getRowLength(), getFamilyLength());
+    return getQualifierLength(getKeyLength(), getRowLength(), getFamilyLength());
   }
 
-  private int getQualifierLength(int rlength, int flength) {
-    return getKeyLen()
-        - (int) KeyValue.getKeyDataStructureSize(rlength, flength, 0);
+  int getQualifierLength(int keyLength, int rlength, int flength) {
+    return keyLength - (int) KeyValue.getKeyDataStructureSize(rlength, flength, 0);
   }
 
   @Override
   public long getTimestamp() {
-    int offset = getTimestampOffset(getKeyLen());
+    return getTimestamp(getKeyLength());
+  }
+
+  long getTimestamp(int keyLength) {
+    int offset = getTimestampOffset(keyLength);
     return ByteBufferUtils.toLong(this.buf, offset);
   }
 
-  private int getKeyLen() {
+  int getKeyLength() {
     return ByteBufferUtils.toInt(this.buf, this.offset);
   }
 
@@ -145,8 +142,11 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public byte getTypeByte() {
-    return ByteBufferUtils.toByte(this.buf,
-      this.offset + getKeyLen() - 1 + KeyValue.ROW_OFFSET);
+    return getTypeByte(getKeyLength());
+  }
+
+  byte getTypeByte(int keyLen) {
+    return ByteBufferUtils.toByte(this.buf, this.offset + keyLen - 1 + KeyValue.ROW_OFFSET);
   }
 
   @Override
@@ -154,6 +154,7 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
     return this.seqId;
   }
 
+  @Override
   public void setSequenceId(long seqId) {
     this.seqId = seqId;
   }
@@ -185,7 +186,7 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public int getTagsLength() {
-    int tagsLen = this.length - (getKeyLen() + getValueLength()
+    int tagsLen = this.length - (getKeyLength() + getValueLength()
         + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
     if (tagsLen > 0) {
       // There are some Tag bytes in the byte[]. So reduce 2 bytes which is
@@ -213,7 +214,11 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public int getFamilyPosition() {
-    return getFamilyLengthPosition() + Bytes.SIZEOF_BYTE;
+    return getFamilyPosition(getFamilyLengthPosition());
+  }
+
+  public int getFamilyPosition(int familyLengthPosition) {
+    return familyLengthPosition + Bytes.SIZEOF_BYTE;
   }
 
   @Override
@@ -223,7 +228,11 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public int getQualifierPosition() {
-    return getFamilyPosition() + getFamilyLength();
+    return getQualifierPosition(getFamilyPosition(), getFamilyLength());
+  }
+
+  int getQualifierPosition(int familyPosition, int familyLength) {
+    return familyPosition + familyLength;
   }
 
   @Override
@@ -233,7 +242,7 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public int getValuePosition() {
-    return this.offset + KeyValue.ROW_OFFSET + getKeyLen();
+    return this.offset + KeyValue.ROW_OFFSET + getKeyLength();
   }
 
   @Override
@@ -255,7 +264,7 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
     if (this.buf.hasArray()) {
       return ClassSize.align(FIXED_OVERHEAD + length);
     }
-    return ClassSize.align(FIXED_OVERHEAD);
+    return ClassSize.align(FIXED_OVERHEAD) + this.getSerializedSize();
   }
 
   @Override
@@ -270,8 +279,12 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
     if (withTags) {
       return this.length;
     }
-    return getKeyLen() + this.getValueLength()
-        + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+    return getKeyLength() + this.getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+  }
+
+  @Override
+  public int getSerializedSize() {
+    return this.length;
   }
 
   @Override
@@ -292,12 +305,12 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   private int getTimestampOffset() {
     return this.offset + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE
-        + getKeyLen() - KeyValue.TIMESTAMP_TYPE_SIZE;
+        + getKeyLength() - KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 
   @Override
-  public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
-    ByteBufferUtils.copyFromArrayToBuffer(this.buf, this.getTimestampOffset(), ts, tsOffset,
+  public void setTimestamp(byte[] ts) throws IOException {
+    ByteBufferUtils.copyFromArrayToBuffer(this.buf, this.getTimestampOffset(), ts, 0,
         Bytes.SIZEOF_LONG);
   }
 
@@ -329,7 +342,7 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
     return calculateHashForKey(this);
   }
 
-  private int calculateHashForKey(ByteBufferCell cell) {
+  private int calculateHashForKey(ByteBufferExtendedCell cell) {
     int rowHash = ByteBufferUtils.hashCode(cell.getRowByteBuffer(), cell.getRowPosition(),
       cell.getRowLength());
     int familyHash = ByteBufferUtils.hashCode(cell.getFamilyByteBuffer(), cell.getFamilyPosition(),

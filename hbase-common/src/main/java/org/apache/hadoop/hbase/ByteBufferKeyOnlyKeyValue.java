@@ -18,11 +18,15 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import org.apache.yetus.audience.InterfaceAudience;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Optional;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is a key only Cell implementation which is identical to {@link KeyValue.KeyOnlyKeyValue}
@@ -30,8 +34,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  * (onheap and offheap).
  */
 @InterfaceAudience.Private
-public class ByteBufferKeyOnlyKeyValue extends ByteBufferCell {
-
+public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
+  public static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
+      + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT;
   private ByteBuffer buf;
   private int offset = 0; // offset into buffer where key starts at
   private int length = 0; // length of this.
@@ -56,10 +61,22 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferCell {
    * @param length
    */
   public void setKey(ByteBuffer key, int offset, int length) {
+    setKey(key, offset, length, ByteBufferUtils.toShort(key, offset));
+  }
+
+  /**
+   * A setter that helps to avoid object creation every time and whenever
+   * there is a need to create new OffheapKeyOnlyKeyValue.
+   * @param key - the key part of the cell
+   * @param offset - offset of the cell
+   * @param length - length of the cell
+   * @param rowLen - the rowlen part of the cell
+   */
+  public void setKey(ByteBuffer key, int offset, int length, short rowLen) {
     this.buf = key;
     this.offset = offset;
     this.length = length;
-    this.rowLen = ByteBufferUtils.toShort(this.buf, this.offset);
+    this.rowLen = rowLen;
   }
 
   @Override
@@ -144,7 +161,26 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferCell {
 
   @Override
   public byte getTypeByte() {
-    return ByteBufferUtils.toByte(this.buf, this.offset + this.length - 1);
+    return getTypeByte(this.length);
+  }
+
+  byte getTypeByte(int keyLen) {
+    return ByteBufferUtils.toByte(this.buf, this.offset + keyLen - 1);
+  }
+
+  @Override
+  public void setSequenceId(long seqId) throws IOException {
+    throw new IllegalArgumentException("This is a key only Cell");
+  }
+
+  @Override
+  public void setTimestamp(long ts) throws IOException {
+    throw new IllegalArgumentException("This is a key only Cell");
+  }
+
+  @Override
+  public void setTimestamp(byte[] ts) throws IOException {
+    throw new IllegalArgumentException("This is a key only Cell");
   }
 
   @Override
@@ -204,7 +240,11 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferCell {
 
   // The position in BB where the family length is added.
   private int getFamilyLengthPosition() {
-    return this.offset + Bytes.SIZEOF_SHORT + getRowLength();
+    return getFamilyLengthPosition(getRowLength());
+  }
+
+  int getFamilyLengthPosition(int rowLength) {
+    return this.offset + Bytes.SIZEOF_SHORT + rowLength;
   }
 
   @Override
@@ -241,5 +281,23 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferCell {
   @Override
   public String toString() {
     return CellUtil.toString(this, false);
+  }
+
+  @Override
+  public Iterator<Tag> getTags() {
+    return Collections.emptyIterator();
+  }
+
+  @Override
+  public Optional<Tag> getTag(byte type) {
+    return Optional.empty();
+  }
+
+  @Override
+  public long heapSize() {
+    if (this.buf.hasArray()) {
+      return ClassSize.align(FIXED_OVERHEAD + length);
+    }
+    return ClassSize.align(FIXED_OVERHEAD);
   }
 }

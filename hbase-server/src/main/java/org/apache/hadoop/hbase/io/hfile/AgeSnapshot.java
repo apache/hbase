@@ -18,17 +18,17 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Snapshot of block cache age in cache.
  * This object is preferred because we can control how it is serialized out when JSON'ing.
  */
-@JsonIgnoreProperties({"ageHistogram", "snapshot"})
+@InterfaceAudience.Private
 public class AgeSnapshot {
 
-  private final FastLongHistogram ageHistogram;
-  private final long[] quantiles;
+  private transient final FastLongHistogram ageHistogram;
+  private transient final long[] quantiles;
 
   AgeSnapshot(final FastLongHistogram ageHistogram) {
     this.ageHistogram = ageHistogram;

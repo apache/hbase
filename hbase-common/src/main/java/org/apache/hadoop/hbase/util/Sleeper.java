@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Sleeper for current thread.
@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class Sleeper {
-  private static final Log LOG = LogFactory.getLog(Sleeper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Sleeper.class);
   private final int period;
   private final Stoppable stopper;
   private static final long MINIMAL_DELTA_FOR_LOGGING = 10000;
@@ -42,18 +42,11 @@ public class Sleeper {
   /**
    * @param sleep sleep time in milliseconds
    * @param stopper When {@link Stoppable#isStopped()} is true, this thread will
-   * cleanup and exit cleanly.
+   *    cleanup and exit cleanly.
    */
   public Sleeper(final int sleep, final Stoppable stopper) {
     this.period = sleep;
     this.stopper = stopper;
-  }
-
-  /**
-   * Sleep for period.
-   */
-  public void sleep() {
-    sleep(System.currentTimeMillis());
   }
 
   /**
@@ -68,36 +61,34 @@ public class Sleeper {
   }
 
   /**
-   * Sleep for period adjusted by passed <code>startTime</code>
-   * @param startTime Time some task started previous to now.  Time to sleep
-   * will be docked current time minus passed <code>startTime</code>.
+   * Sleep for period.
    */
-  public void sleep(final long startTime) {
+  public void sleep() {
+    sleep(this.period);
+  }
+
+  public void sleep(long sleepTime) {
     if (this.stopper.isStopped()) {
       return;
     }
     long now = System.currentTimeMillis();
-    long waitTime = this.period - (now - startTime);
-    if (waitTime > this.period) {
-      LOG.warn("Calculated wait time > " + this.period +
-        "; setting to this.period: " + System.currentTimeMillis() + ", " +
-        startTime);
-      waitTime = this.period;
-    }
-    while (waitTime > 0) {
+    long currentSleepTime = sleepTime;
+    while (currentSleepTime > 0) {
       long woke = -1;
       try {
         synchronized (sleepLock) {
-          if (triggerWake) break;
-          sleepLock.wait(waitTime);
+          if (triggerWake) {
+            break;
+          }
+
+          sleepLock.wait(currentSleepTime);
         }
         woke = System.currentTimeMillis();
         long slept = woke - now;
         if (slept - this.period > MINIMAL_DELTA_FOR_LOGGING) {
-          LOG.warn("We slept " + slept + "ms instead of " + this.period +
-              "ms, this is likely due to a long " +
+          LOG.warn("We slept {}ms instead of {}ms, this is likely due to a long " +
               "garbage collecting pause and it's usually bad, see " +
-              "http://hbase.apache.org/book.html#trouble.rs.runtime.zkexpired");
+              "http://hbase.apache.org/book.html#trouble.rs.runtime.zkexpired", slept, this.period);
         }
       } catch(InterruptedException iex) {
         // We we interrupted because we're meant to stop?  If not, just
@@ -108,7 +99,7 @@ public class Sleeper {
       }
       // Recalculate waitTime.
       woke = (woke == -1)? System.currentTimeMillis(): woke;
-      waitTime = this.period - (woke - startTime);
+      currentSleepTime = this.period - (woke - now);
     }
     synchronized(sleepLock) {
       triggerWake = false;

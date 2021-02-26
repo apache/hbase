@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
 
 import java.io.IOException;
@@ -26,22 +25,19 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.thrift.TException;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class will coalesce increments from a thift server if
@@ -52,8 +48,8 @@ import org.apache.thrift.TException;
  * thrift server dies or is shut down before everything in the queue is drained.
  *
  */
+@InterfaceAudience.Private
 public class IncrementCoalescer implements IncrementCoalescerMBean {
-
   /**
    * Used to identify a cell that will be incremented.
    *
@@ -82,10 +78,6 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
 
     public byte[] getRowKey() {
       return rowKey;
-    }
-
-    public void setRowKey(byte[] rowKey) {
-      this.rowKey = rowKey;
     }
 
     public byte[] getFamily() {
@@ -121,32 +113,18 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
       if (obj == null) return false;
       if (getClass() != obj.getClass()) return false;
       FullyQualifiedRow other = (FullyQualifiedRow) obj;
-      if (!Arrays.equals(family, other.family)) return false;
-      if (!Arrays.equals(qualifier, other.qualifier)) return false;
-      if (!Arrays.equals(rowKey, other.rowKey)) return false;
-      if (!Arrays.equals(table, other.table)) return false;
-      return true;
-    }
 
-  }
+      if (!Arrays.equals(family, other.family)) {
+        return false;
+      }
+      if (!Arrays.equals(qualifier, other.qualifier)) {
+        return false;
+      }
+      if (!Arrays.equals(rowKey, other.rowKey)) {
+        return false;
+      }
 
-  static class DaemonThreadFactory implements ThreadFactory {
-    static final AtomicInteger poolNumber = new AtomicInteger(1);
-    final ThreadGroup group;
-    final AtomicInteger threadNumber = new AtomicInteger(1);
-    final String namePrefix;
-
-    DaemonThreadFactory() {
-      SecurityManager s = System.getSecurityManager();
-      group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-      namePrefix = "ICV-" + poolNumber.getAndIncrement() + "-thread-";
-    }
-
-    public Thread newThread(Runnable r) {
-      Thread t = new Thread(group, r, namePrefix + threadNumber.getAndIncrement(), 0);
-      if (!t.isDaemon()) t.setDaemon(true);
-      if (t.getPriority() != Thread.NORM_PRIORITY) t.setPriority(Thread.NORM_PRIORITY);
-      return t;
+      return Arrays.equals(table, other.table);
     }
   }
 
@@ -156,25 +134,23 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   private final ConcurrentMap<FullyQualifiedRow, Long> countersMap =
       new ConcurrentHashMap<>(100000, 0.75f, 1500);
   private final ThreadPoolExecutor pool;
-  private final HBaseHandler handler;
+  private final ThriftHBaseServiceHandler handler;
 
   private int maxQueueSize = 500000;
   private static final int CORE_POOL_SIZE = 1;
 
-  private static final Log LOG = LogFactory.getLog(FullyQualifiedRow.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IncrementCoalescer.class);
 
-  @SuppressWarnings("deprecation")
-  public IncrementCoalescer(HBaseHandler hand) {
+  public IncrementCoalescer(ThriftHBaseServiceHandler hand) {
     this.handler = hand;
     LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
-    pool =
-        new ThreadPoolExecutor(CORE_POOL_SIZE, CORE_POOL_SIZE, 50, TimeUnit.MILLISECONDS, queue,
-            Threads.newDaemonThreadFactory("IncrementCoalescer"));
-
+    pool = new ThreadPoolExecutor(CORE_POOL_SIZE, CORE_POOL_SIZE, 50, TimeUnit.MILLISECONDS, queue,
+      new ThreadFactoryBuilder().setNameFormat("IncrementCoalescer-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     MBeans.register("thrift", "Thrift", this);
   }
 
-  public boolean queueIncrement(TIncrement inc) throws TException {
+  public boolean queueIncrement(TIncrement inc) {
     if (!canQueue()) {
       failedIncrements.increment();
       return false;
@@ -182,7 +158,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
     return internalQueueTincrement(inc);
   }
 
-  public boolean queueIncrements(List<TIncrement> incs) throws TException {
+  public boolean queueIncrements(List<TIncrement> incs) {
     if (!canQueue()) {
       failedIncrements.increment();
       return false;
@@ -195,7 +171,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
 
   }
 
-  private boolean internalQueueTincrement(TIncrement inc) throws TException {
+  private boolean internalQueueTincrement(TIncrement inc) {
     byte[][] famAndQf = CellUtil.parseColumn(inc.getColumn());
     if (famAndQf.length != 2) return false;
 
@@ -203,8 +179,9 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
       inc.getAmmount());
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private boolean internalQueueIncrement(byte[] tableName, byte[] rowKey, byte[] fam,
-      byte[] qual, long ammount) throws TException {
+      byte[] qual, long ammount) {
     int countersMapSize = countersMap.size();
 
 
@@ -221,7 +198,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
       Long value = countersMap.remove(key);
       if (value == null) {
         // There was nothing there, create a new value
-        value = Long.valueOf(currentAmount);
+        value = currentAmount;
       } else {
         value += currentAmount;
         successfulCoalescings.increment();
@@ -254,39 +231,36 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   }
 
   private Callable<Integer> createIncCallable() {
-    return new Callable<Integer>() {
-      @Override
-      public Integer call() throws Exception {
-        int failures = 0;
-        Set<FullyQualifiedRow> keys = countersMap.keySet();
-        for (FullyQualifiedRow row : keys) {
-          Long counter = countersMap.remove(row);
-          if (counter == null) {
-            continue;
+    return () -> {
+      int failures = 0;
+      Set<FullyQualifiedRow> keys = countersMap.keySet();
+      for (FullyQualifiedRow row : keys) {
+        Long counter = countersMap.remove(row);
+        if (counter == null) {
+          continue;
+        }
+        Table table = null;
+        try {
+          table = handler.getTable(row.getTable());
+          if (failures > 2) {
+            throw new IOException("Auto-Fail rest of ICVs");
           }
-          Table table = null;
-          try {
-            table = handler.getTable(row.getTable());
-            if (failures > 2) {
-              throw new IOException("Auto-Fail rest of ICVs");
-            }
-            table.incrementColumnValue(row.getRowKey(), row.getFamily(), row.getQualifier(),
-              counter);
-          } catch (IOException e) {
-            // log failure of increment
-            failures++;
-            LOG.error("FAILED_ICV: " + Bytes.toString(row.getTable()) + ", "
-                + Bytes.toStringBinary(row.getRowKey()) + ", "
-                + Bytes.toStringBinary(row.getFamily()) + ", "
-                + Bytes.toStringBinary(row.getQualifier()) + ", " + counter, e);
-          } finally{
-            if(table != null){
-              table.close();
-            }
+          table.incrementColumnValue(row.getRowKey(), row.getFamily(), row.getQualifier(),
+            counter);
+        } catch (IOException e) {
+          // log failure of increment
+          failures++;
+          LOG.error("FAILED_ICV: " + Bytes.toString(row.getTable()) + ", "
+              + Bytes.toStringBinary(row.getRowKey()) + ", "
+              + Bytes.toStringBinary(row.getFamily()) + ", "
+              + Bytes.toStringBinary(row.getQualifier()) + ", " + counter, e);
+        } finally{
+          if(table != null){
+            table.close();
           }
         }
-        return failures;
       }
+      return failures;
     };
   }
 
@@ -322,51 +296,73 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   }
 
   // MBean get/set methods
+  @Override
   public int getQueueSize() {
     return pool.getQueue().size();
   }
+
+  @Override
   public int getMaxQueueSize() {
     return this.maxQueueSize;
   }
+
+  @Override
   public void setMaxQueueSize(int newSize) {
     this.maxQueueSize = newSize;
   }
 
+  @Override
   public long getPoolCompletedTaskCount() {
     return pool.getCompletedTaskCount();
   }
+
+  @Override
   public long getPoolTaskCount() {
     return pool.getTaskCount();
   }
+
+  @Override
   public int getPoolLargestPoolSize() {
     return pool.getLargestPoolSize();
   }
+
+  @Override
   public int getCorePoolSize() {
     return pool.getCorePoolSize();
   }
+
+  @Override
   public void setCorePoolSize(int newCoreSize) {
     pool.setCorePoolSize(newCoreSize);
   }
+
+  @Override
   public int getMaxPoolSize() {
     return pool.getMaximumPoolSize();
   }
+
+  @Override
   public void setMaxPoolSize(int newMaxSize) {
     pool.setMaximumPoolSize(newMaxSize);
   }
+
+  @Override
   public long getFailedIncrements() {
     return failedIncrements.sum();
   }
 
+  @Override
   public long getSuccessfulCoalescings() {
     return successfulCoalescings.sum();
   }
 
+  @Override
   public long getTotalIncrements() {
     return totalIncrements.sum();
   }
 
+  @Override
   public long getCountersMapSize() {
     return countersMap.size();
   }
-
 }

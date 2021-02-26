@@ -19,44 +19,40 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationPeers;
-import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface that defines a replication source
  */
 @InterfaceAudience.Private
 public interface ReplicationSourceInterface {
-
   /**
    * Initializer for the source
    * @param conf the configuration to use
    * @param fs the file system to use
    * @param manager the manager to use
-   * @param replicationQueues
-   * @param replicationPeers
-   * @param stopper the stopper object for this region server
-   * @param peerClusterZnode
-   * @param clusterId
-   * @throws IOException
+   * @param server the server for this region server
    */
   void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationQueues replicationQueues, ReplicationPeers replicationPeers, Stoppable stopper,
-      String peerClusterZnode, UUID clusterId, ReplicationEndpoint replicationEndpoint,
-      WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException;
+      ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
+      String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
+      MetricsSource metrics) throws IOException;
 
   /**
    * Add a log to the list of logs to replicate
@@ -78,7 +74,7 @@ public interface ReplicationSourceInterface {
   /**
    * Start the replication
    */
-  void startup();
+  ReplicationSourceInterface startup();
 
   /**
    * End the replication
@@ -94,17 +90,25 @@ public interface ReplicationSourceInterface {
   void terminate(String reason, Exception cause);
 
   /**
+   * End the replication
+   * @param reason why it's terminating
+   * @param cause the error that's causing it
+   * @param clearMetrics removes all metrics about this Source
+   */
+  void terminate(String reason, Exception cause, boolean clearMetrics);
+
+  /**
    * Get the current log that's replicated
    * @return the current log
    */
   Path getCurrentPath();
 
   /**
-   * Get the id that the source is replicating to
+   * Get the queue id that the source is replicating to
    *
-   * @return peer cluster id
+   * @return queue id
    */
-  String getPeerClusterZnode();
+  String getQueueId();
 
   /**
    * Get the id that the source is replicating to.
@@ -153,7 +157,6 @@ public interface ReplicationSourceInterface {
   /**
    * Try to throttle when the peer config with a bandwidth
    * @param batchSize entries size will be pushed
-   * @throws InterruptedException
    */
   void tryThrottle(int batchSize) throws InterruptedException;
 
@@ -163,4 +166,43 @@ public interface ReplicationSourceInterface {
    * @param batchSize entries size pushed
    */
   void postShipEdits(List<Entry> entries, int batchSize);
+
+  /**
+   * The queue of WALs only belong to one region server. This will return the server name which all
+   * WALs belong to.
+   * @return the server name which all WALs belong to
+   */
+  ServerName getServerWALsBelongTo();
+
+  /**
+   * get the stat of replication for each wal group.
+   * @return stat of replication
+   */
+  default Map<String, ReplicationStatus> getWalGroupStatus() {
+    return new HashMap<>();
+  }
+
+  /**
+   * @return whether this is a replication source for recovery.
+   */
+  default boolean isRecovered() {
+    return false;
+  }
+
+  /**
+   * @return The instance of queueStorage used by this ReplicationSource.
+   */
+  ReplicationQueueStorage getReplicationQueueStorage();
+
+  /**
+   * Log the current position to storage. Also clean old logs from the replication queue.
+   * Use to bypass the default call to
+   * {@link ReplicationSourceManager#logPositionAndCleanOldLogs(ReplicationSourceInterface,
+   * WALEntryBatch)} whem implementation does not need to persist state to backing storage.
+   * @param entryBatch the wal entry batch we just shipped
+   * @return The instance of queueStorage used by this ReplicationSource.
+   */
+  default void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
+    getSourceManager().logPositionAndCleanOldLogs(this, entryBatch);
+  }
 }

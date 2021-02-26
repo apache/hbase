@@ -37,10 +37,10 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.Cell.Type;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Append;
@@ -53,10 +53,13 @@ import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RowResource extends ResourceBase {
-  private static final Log LOG = LogFactory.getLog(RowResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RowResource.class);
 
   private static final String CHECK_PUT = "put";
   private static final String CHECK_DELETE = "delete";
@@ -238,7 +241,14 @@ public class RowResource extends ResourceBase {
               .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
               .build();
           }
-          put.addImmutable(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
+          put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(put.getRow())
+              .setFamily(parts[0])
+              .setQualifier(parts[1])
+              .setTimestamp(cell.getTimestamp())
+              .setType(Type.Put)
+              .setValue(cell.getValue())
+              .build());
         }
         puts.add(put);
         if (LOG.isTraceEnabled()) {
@@ -306,7 +316,14 @@ public class RowResource extends ResourceBase {
           .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
           .build();
       }
-      put.addImmutable(parts[0], parts[1], timestamp, message);
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+        .setRow(put.getRow())
+        .setFamily(parts[0])
+        .setQualifier(parts[1])
+        .setTimestamp(timestamp)
+        .setType(Type.Put)
+        .setValue(message)
+        .build());
       table = servlet.getTable(tableResource.getName());
       table.put(put);
       if (LOG.isTraceEnabled()) {
@@ -496,8 +513,14 @@ public class RowResource extends ResourceBase {
                     .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
                     .build();
           }
-          put.addImmutable(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
-
+          put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(put.getRow())
+              .setFamily(parts[0])
+              .setQualifier(parts[1])
+              .setTimestamp(cell.getTimestamp())
+              .setType(Type.Put)
+              .setValue(cell.getValue())
+              .build());
           if(Bytes.equals(col,
                   valueToCheckCell.getColumn())) {
             valueToPutCell = cell;
@@ -509,8 +532,8 @@ public class RowResource extends ResourceBase {
           return Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
               .entity("Bad request: The column to put and check do not match." + CRLF).build();
         } else {
-          retValue = table.checkAndPut(key, valueToPutParts[0], valueToPutParts[1],
-            valueToCheckCell.getValue(), put);
+          retValue = table.checkAndMutate(key, valueToPutParts[0]).qualifier(valueToPutParts[1])
+            .ifEquals(valueToCheckCell.getValue()).thenPut(put);
         }
       } else {
         servlet.getMetrics().incrementFailedPutRequests(1);
@@ -630,15 +653,15 @@ public class RowResource extends ResourceBase {
           if(cellModelCount == 1) {
             delete.addColumns(parts[0], parts[1]);
           }
-          retValue = table.checkAndDelete(key, parts[0], parts[1],
-            valueToDeleteCell.getValue(), delete);
+          retValue = table.checkAndMutate(key, parts[0]).qualifier(parts[1])
+              .ifEquals(valueToDeleteCell.getValue()).thenDelete(delete);
         } else {
           // The case of empty qualifier.
           if(cellModelCount == 1) {
             delete.addColumns(parts[0], Bytes.toBytes(StringUtils.EMPTY));
           }
-          retValue = table.checkAndDelete(key, parts[0], Bytes.toBytes(StringUtils.EMPTY),
-            valueToDeleteCell.getValue(), delete);
+          retValue = table.checkAndMutate(key, parts[0])
+              .ifEquals(valueToDeleteCell.getValue()).thenDelete(delete);
         }
       } else {
         servlet.getMetrics().incrementFailedDeleteRequests(1);

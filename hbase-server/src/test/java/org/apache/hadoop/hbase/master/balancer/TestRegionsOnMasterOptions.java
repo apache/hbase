@@ -17,41 +17,52 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
-
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test options for regions on master; none, system, or any (i.e. master is like any other
  * regionserver). Checks how regions are deployed when each of the options are enabled.
  * It then does kill combinations to make sure the distribution is more than just for startup.
+ * NOTE: Regions on Master does not work well. See HBASE-19828. Until addressed, disabling this
+ * test.
  */
+@Ignore
 @Category({MediumTests.class})
 public class TestRegionsOnMasterOptions {
-  private static final Log LOG = LogFactory.getLog(TestRegionsOnMasterOptions.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionsOnMasterOptions.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionsOnMasterOptions.class);
   @Rule public TestName name = new TestName();
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-    withLookingForStuckThread(true).build();
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Configuration c;
   private String tablesOnMasterOldValue;
@@ -101,6 +112,8 @@ public class TestRegionsOnMasterOptions {
     checkBalance(0, rsCount);
   }
 
+  @Ignore // Fix this. The Master startup doesn't allow Master reporting as a RegionServer, not
+  // until way late after the Master startup finishes. Needs more work.
   @Test
   public void testSystemTablesOnMaster() throws Exception {
     c.setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
@@ -145,12 +158,14 @@ public class TestRegionsOnMasterOptions {
   }
 
   private void checkBalance(int masterCount, int rsCount) throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster(MASTERS, SLAVES);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(MASTERS).numRegionServers(SLAVES).numDataNodes(SLAVES).build();
+    MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster(option);
     TableName tn = TableName.valueOf(this.name.getMethodName());
     try {
       Table t = TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY, REGIONS);
       LOG.info("Server: " + cluster.getMaster().getServerManager().getOnlineServersList());
-      List<Region> regions = cluster.getMaster().getRegions();
+      List<HRegion> regions = cluster.getMaster().getRegions();
       int mActualCount = regions.size();
       if (masterCount == 0 || masterCount == SYSTEM_REGIONS) {
         // 0 means no regions on master.
@@ -176,6 +191,11 @@ public class TestRegionsOnMasterOptions {
       }
       while (!cluster.getMaster().isInitialized()) {
         Threads.sleep(10);
+      }
+      while (cluster.getMaster().getAssignmentManager().
+          computeRegionInTransitionStat().getTotalRITs() > 0) {
+        Threads.sleep(100);
+        LOG.info("Waiting on RIT to go to zero before calling balancer...");
       }
       LOG.info("Cluster is up; running balancer");
       cluster.getMaster().balance();

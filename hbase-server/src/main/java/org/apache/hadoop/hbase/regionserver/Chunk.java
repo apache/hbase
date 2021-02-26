@@ -19,12 +19,10 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * A chunk of memory out of which allocations are sliced.
@@ -83,6 +81,14 @@ public abstract class Chunk {
 
   boolean isFromPool() {
     return this.fromPool;
+  }
+
+  boolean isJumbo() {
+    return size > ChunkCreator.getInstance().getChunkSize();
+  }
+
+  boolean isIndexChunk() {
+    return size == ChunkCreator.getInstance().getChunkSize(ChunkCreator.ChunkType.INDEX_CHUNK);
   }
 
   /**
@@ -168,7 +174,6 @@ public abstract class Chunk {
         + (data.capacity() - nextFreeOffset.get());
   }
 
-  @VisibleForTesting
   int getNextFreeOffset() {
     return this.nextFreeOffset.get();
   }

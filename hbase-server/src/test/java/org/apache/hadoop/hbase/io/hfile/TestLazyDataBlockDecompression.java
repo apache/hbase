@@ -17,12 +17,20 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,19 +42,15 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
-import static org.junit.Assert.*;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * A kind of integration test at the intersection of {@link HFileBlock}, {@link CacheConfig},
@@ -55,7 +59,12 @@ import static org.junit.Assert.*;
 @Category({IOTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestLazyDataBlockDecompression {
-  private static final Log LOG = LogFactory.getLog(TestLazyDataBlockDecompression.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestLazyDataBlockDecompression.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestLazyDataBlockDecompression.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private FileSystem fs;
@@ -73,13 +82,11 @@ public class TestLazyDataBlockDecompression {
 
   @Before
   public void setUp() throws IOException {
-    CacheConfig.clearGlobalInstances();
     fs = FileSystem.get(TEST_UTIL.getConfiguration());
   }
 
   @After
   public void tearDown() {
-    CacheConfig.clearGlobalInstances();
     fs = null;
   }
 
@@ -117,9 +124,15 @@ public class TestLazyDataBlockDecompression {
     long fileSize = fs.getFileStatus(path).getLen();
     FixedFileTrailer trailer =
       FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
-    HFile.Reader reader = new HFileReaderImpl(path, trailer, fsdis, fileSize, cacheConfig,
-      fsdis.getHfs(), conf);
-    reader.loadFileInfo();
+    ReaderContext context = new ReaderContextBuilder()
+        .withFilePath(path)
+        .withFileSize(fileSize)
+        .withFileSystem(fsdis.getHfs())
+        .withInputStreamWrapper(fsdis)
+        .build();
+    HFileInfo fileInfo = new HFileInfo(context, conf);
+    HFile.Reader reader = new HFilePreadReader(context, fileInfo, cacheConfig, conf);
+    fileInfo.initMetaAndIndex(reader);
     long offset = trailer.getFirstDataBlockOffset(),
       max = trailer.getLastDataBlockOffset();
     List<HFileBlock> blocks = new ArrayList<>(4);
@@ -131,6 +144,7 @@ public class TestLazyDataBlockDecompression {
       blocks.add(block);
     }
     LOG.info("read " + Iterables.toString(blocks));
+    reader.close();
   }
 
   @Test
@@ -150,12 +164,11 @@ public class TestLazyDataBlockDecompression {
     lazyCompressDisabled.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressDisabled.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressDisabled.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, false);
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE =
-      new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressDisabled);
-    CacheConfig cc = new CacheConfig(lazyCompressDisabled);
+    CacheConfig cc = new CacheConfig(lazyCompressDisabled,
+        new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressDisabled));
     assertFalse(cc.shouldCacheDataCompressed());
-    assertTrue(cc.getBlockCache() instanceof LruBlockCache);
-    LruBlockCache disabledBlockCache = (LruBlockCache) cc.getBlockCache();
+    assertFalse(cc.isCombinedBlockCache());
+    LruBlockCache disabledBlockCache = (LruBlockCache) cc.getBlockCache().get();
     LOG.info("disabledBlockCache=" + disabledBlockCache);
     assertEquals("test inconsistency detected.", maxSize, disabledBlockCache.getMaxSize());
     assertTrue("eviction thread spawned unintentionally.",
@@ -185,12 +198,11 @@ public class TestLazyDataBlockDecompression {
     lazyCompressEnabled.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressEnabled.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressEnabled.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE =
-      new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressEnabled);
-    cc = new CacheConfig(lazyCompressEnabled);
+    cc = new CacheConfig(lazyCompressEnabled,
+        new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressEnabled));
     assertTrue("test improperly configured.", cc.shouldCacheDataCompressed());
-    assertTrue(cc.getBlockCache() instanceof LruBlockCache);
-    LruBlockCache enabledBlockCache = (LruBlockCache) cc.getBlockCache();
+    assertTrue(cc.getBlockCache().get() instanceof LruBlockCache);
+    LruBlockCache enabledBlockCache = (LruBlockCache) cc.getBlockCache().get();
     LOG.info("enabledBlockCache=" + enabledBlockCache);
     assertEquals("test inconsistency detected", maxSize, enabledBlockCache.getMaxSize());
     assertTrue("eviction thread spawned unintentionally.",

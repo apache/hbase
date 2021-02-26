@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,39 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.verify;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 @Category({ SmallTests.class })
 public class TestMultiTableSnapshotInputFormatImpl {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultiTableSnapshotInputFormatImpl.class);
 
   private MultiTableSnapshotInputFormatImpl subject;
   private Map<String, Collection<Scan>> snapshotScans;
@@ -68,18 +72,18 @@ public class TestMultiTableSnapshotInputFormatImpl {
     // probably be the more "pure"
     // way of doing things. This is the lesser of two evils, perhaps?
     doNothing().when(this.subject).
-        restoreSnapshot(any(Configuration.class), any(String.class), any(Path.class),
-            any(Path.class), any(FileSystem.class));
+        restoreSnapshot(any(), any(), any(),
+            any(), any());
 
     this.conf = new Configuration();
     this.rootDir = new Path("file:///test-root-dir");
-    FSUtils.setRootDir(conf, rootDir);
+    CommonFSUtils.setRootDir(conf, rootDir);
     this.snapshotScans = ImmutableMap.<String, Collection<Scan>>of("snapshot1",
         ImmutableList.of(new Scan(Bytes.toBytes("1"), Bytes.toBytes("2"))), "snapshot2",
         ImmutableList.of(new Scan(Bytes.toBytes("3"), Bytes.toBytes("4")),
             new Scan(Bytes.toBytes("5"), Bytes.toBytes("6"))));
 
-    this.restoreDir = new Path(FSUtils.getRootDir(conf), "restore-dir");
+    this.restoreDir = new Path(CommonFSUtils.getRootDir(conf), "restore-dir");
 
   }
 
@@ -130,8 +134,13 @@ public class TestMultiTableSnapshotInputFormatImpl {
     }
 
     @Override
+    public int hashCode() {
+      return Objects.hash(startRow, stopRow);
+    }
+
+    @Override
     public String toString() {
-      return org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects.
+      return org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.
         toStringHelper(this).add("startRow", startRow)
           .add("stopRow", stopRow).toString();
     }
@@ -180,7 +189,7 @@ public class TestMultiTableSnapshotInputFormatImpl {
 
     for (Map.Entry<String, Path> entry : snapshotDirs.entrySet()) {
       verify(this.subject).restoreSnapshot(eq(this.conf), eq(entry.getKey()), eq(this.rootDir),
-          eq(entry.getValue()), any(FileSystem.class));
+          eq(entry.getValue()), any());
     }
   }
 }

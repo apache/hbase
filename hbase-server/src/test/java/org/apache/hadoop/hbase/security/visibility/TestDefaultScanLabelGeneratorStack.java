@@ -23,10 +23,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -50,6 +51,10 @@ import org.junit.rules.TestName;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestDefaultScanLabelGeneratorStack {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDefaultScanLabelGeneratorStack.class);
 
   public static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
@@ -85,6 +90,7 @@ public class TestDefaultScanLabelGeneratorStack {
 
     // Set up for the test
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.addLabels(conn, new String[] { SECRET, CONFIDENTIAL });
@@ -102,6 +108,7 @@ public class TestDefaultScanLabelGeneratorStack {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = TEST_UTIL.createTable(tableName, CF)) {
@@ -123,15 +130,13 @@ public class TestDefaultScanLabelGeneratorStack {
 
     // Test that super user can see all the cells.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {
-          Scan s = new Scan();
-          ResultScanner scanner = table.getScanner(s);
-          Result[] next = scanner.next(1);
+          Result[] next = getResult(table, new Scan());
 
           // Test that super user can see all the cells.
-          assertTrue(next.length == 1);
           CellScanner cellScanner = next[0].cellScanner();
           cellScanner.advance();
           Cell current = cellScanner.current();
@@ -164,15 +169,12 @@ public class TestDefaultScanLabelGeneratorStack {
     });
 
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {
           // Test scan with no auth attribute
-          Scan s = new Scan();
-          ResultScanner scanner = table.getScanner(s);
-          Result[] next = scanner.next(1);
-
-          assertTrue(next.length == 1);
+          Result[] next = getResult(table, new Scan());
           CellScanner cellScanner = next[0].cellScanner();
           cellScanner.advance();
           Cell current = cellScanner.current();
@@ -247,6 +249,13 @@ public class TestDefaultScanLabelGeneratorStack {
       }
     });
 
+  }
+
+  private static Result [] getResult(Table table, Scan scan) throws IOException {
+    ResultScanner scanner = table.getScanner(scan);
+    Result[] next = scanner.next(1);
+    assertTrue(next.length == 1);
+    return next;
   }
 
   @AfterClass

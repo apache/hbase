@@ -112,7 +112,7 @@ public final class HelloHBase {
               + "], with one Column Family ["
               + Bytes.toString(MY_COLUMN_FAMILY_NAME) + "].");
       TableDescriptor desc = TableDescriptorBuilder.newBuilder(MY_TABLE_NAME)
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of(MY_COLUMN_FAMILY_NAME))
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(MY_COLUMN_FAMILY_NAME))
               .build();
       admin.createTable(desc);
     }

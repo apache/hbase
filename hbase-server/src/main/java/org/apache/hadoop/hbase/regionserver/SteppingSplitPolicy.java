@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class SteppingSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
   /**
    * @return flushSize * 2 if there's exactly one region of the table in question
@@ -24,6 +27,7 @@ public class SteppingSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy
    * This allows a table to spread quickly across servers, while avoiding creating
    * too many regions.
    */
+  @Override
   protected long getSizeToCheck(final int tableRegionsCount) {
     return tableRegionsCount == 1  ? this.initialSize : getDesiredMaxFileSize();
   }

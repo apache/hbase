@@ -21,6 +21,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 class IndividualBytesFieldCellBuilder extends ExtendedCellBuilderImpl {
+
   @Override
   public ExtendedCell innerBuild() {
     return new IndividualBytesFieldCell(row, rOffset, rLength,

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -30,7 +32,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
  * org.apache.hadoop.hbase.coprocessor.ObserverContext, MiniBatchOperationInProgress)
  * @param T Pair&lt;Mutation, Integer&gt; pair of Mutations and associated rowlock ids .
  */
-@InterfaceAudience.LimitedPrivate("Coprocessors")
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public class MiniBatchOperationInProgress<T> {
   private final T[] operations;
   private Mutation[][] operationsFromCoprocessors;
@@ -39,13 +41,24 @@ public class MiniBatchOperationInProgress<T> {
   private final int firstIndex;
   private final int lastIndexExclusive;
 
+  private int readyToWriteCount = 0;
+  private int cellCount = 0;
+  private int numOfPuts = 0;
+  private int numOfDeletes = 0;
+  private int numOfIncrements = 0;
+  private int numOfAppends = 0;
+
+
   public MiniBatchOperationInProgress(T[] operations, OperationStatus[] retCodeDetails,
-      WALEdit[] walEditsFromCoprocessors, int firstIndex, int lastIndexExclusive) {
+      WALEdit[] walEditsFromCoprocessors, int firstIndex, int lastIndexExclusive,
+      int readyToWriteCount) {
+    Preconditions.checkArgument(readyToWriteCount <= (lastIndexExclusive - firstIndex));
     this.operations = operations;
     this.retCodeDetails = retCodeDetails;
     this.walEditsFromCoprocessors = walEditsFromCoprocessors;
     this.firstIndex = firstIndex;
     this.lastIndexExclusive = lastIndexExclusive;
+    this.readyToWriteCount = readyToWriteCount;
   }
 
   /**
@@ -111,6 +124,7 @@ public class MiniBatchOperationInProgress<T> {
    * in the same batch. These mutations are applied to the WAL and applied to the memstore as well.
    * The timestamp of the cells in the given Mutations MUST be obtained from the original mutation.
    * <b>Note:</b> The durability from CP will be replaced by the durability of corresponding mutation.
+   * <b>Note:</b> Currently only supports Put and Delete operations.
    * @param index the index that corresponds to the original mutation index in the batch
    * @param newOperations the Mutations to add
    */
@@ -125,5 +139,53 @@ public class MiniBatchOperationInProgress<T> {
   public Mutation[] getOperationsFromCoprocessors(int index) {
     return operationsFromCoprocessors == null ? null :
         operationsFromCoprocessors[getAbsoluteIndex(index)];
+  }
+
+  public int getReadyToWriteCount() {
+    return readyToWriteCount;
+  }
+
+  public int getLastIndexExclusive() {
+    return lastIndexExclusive;
+  }
+
+  public int getCellCount() {
+    return cellCount;
+  }
+
+  public void addCellCount(int cellCount) {
+    this.cellCount += cellCount;
+  }
+
+  public int getNumOfPuts() {
+    return numOfPuts;
+  }
+
+  public void incrementNumOfPuts() {
+    this.numOfPuts += 1;
+  }
+
+  public int getNumOfDeletes() {
+    return numOfDeletes;
+  }
+
+  public void incrementNumOfDeletes() {
+    this.numOfDeletes += 1;
+  }
+
+  public int getNumOfIncrements() {
+    return numOfIncrements;
+  }
+
+  public void incrementNumOfIncrements() {
+    this.numOfIncrements += 1;
+  }
+
+  public int getNumOfAppends() {
+    return numOfAppends;
+  }
+
+  public void incrementNumOfAppends() {
+    this.numOfAppends += 1;
   }
 }

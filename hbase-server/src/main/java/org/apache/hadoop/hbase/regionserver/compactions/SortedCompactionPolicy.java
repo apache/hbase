@@ -16,19 +16,16 @@ import java.util.Collection;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Predicate;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Collections2;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * An abstract compaction policy that select files on seq id order.
@@ -36,7 +33,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @InterfaceAudience.Private
 public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
-  private static final Log LOG = LogFactory.getLog(SortedCompactionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SortedCompactionPolicy.class);
 
   public SortedCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo) {
     super(conf, storeConfigInfo);
@@ -87,6 +84,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
     CompactionRequestImpl result = createCompactionRequest(candidateSelection,
       isTryingMajor || isAfterSplit, mayUseOffPeak, mayBeStuck);
+    result.setAfterSplit(isAfterSplit);
 
     ArrayList<HStoreFile> filesToCompact = Lists.newArrayList(result.getFiles());
     removeExcessFiles(filesToCompact, isUserCompaction, isTryingMajor);
@@ -107,6 +105,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
    * @param filesToCompact Files to compact. Can be null.
    * @return True if we should run a major compaction.
    */
+  @Override
   public abstract boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
       throws IOException;
 
@@ -120,16 +119,21 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
    * @return When to run next major compaction
    */
   public long getNextMajorCompactTime(Collection<HStoreFile> filesToCompact) {
-    // default = 24hrs
+    /** Default to {@link org.apache.hadoop.hbase.HConstants#DEFAULT_MAJOR_COMPACTION_PERIOD}. */
     long period = comConf.getMajorCompactionPeriod();
     if (period <= 0) {
       return period;
     }
-    // default = 20% = +/- 4.8 hrs
+
+    /**
+     * Default to {@link org.apache.hadoop.hbase.HConstants#DEFAULT_MAJOR_COMPACTION_JITTER},
+     * that is, +/- 3.5 days (7 days * 0.5).
+     */
     double jitterPct = comConf.getMajorCompactionJitter();
     if (jitterPct <= 0) {
       return period;
     }
+
     // deterministic jitter avoids a major compaction storm on restart
     OptionalInt seed = StoreUtils.getDeterministicRandomSeed(filesToCompact);
     if (seed.isPresent()) {
@@ -150,6 +154,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
    * @param compactionSize Total size of some compaction
    * @return whether this should be a large or small compaction
    */
+  @Override
   public boolean throttleCompaction(long compactionSize) {
     return compactionSize > comConf.getThrottlePoint();
   }
@@ -193,16 +198,9 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
   /**
    * @param candidates pre-filtrate
-   * @return filtered subset exclude all bulk load files if configured
    */
-  protected ArrayList<HStoreFile> filterBulk(ArrayList<HStoreFile> candidates) {
-    candidates.removeAll(Collections2.filter(candidates, new Predicate<HStoreFile>() {
-      @Override
-      public boolean apply(HStoreFile input) {
-        return input.excludeFromMinorCompaction();
-      }
-    }));
-    return candidates;
+  protected void filterBulk(ArrayList<HStoreFile> candidates) {
+    candidates.removeIf(HStoreFile::excludeFromMinorCompaction);
   }
 
   /**

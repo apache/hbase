@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,70 +15,69 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.MultiHConnection;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Store Region State to hbase:meta table.
  */
 @InterfaceAudience.Private
 public class RegionStateStore {
-  private static final Log LOG = LogFactory.getLog(RegionStateStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionStateStore.class);
+  private static final Logger METALOG = LoggerFactory.getLogger("org.apache.hadoop.hbase.META");
 
   /** The delimiter for meta columns for replicaIds &gt; 0 */
   protected static final char META_REPLICA_ID_DELIMITER = '_';
 
   private final MasterServices master;
 
-  private MultiHConnection multiHConnection;
-
   public RegionStateStore(final MasterServices master) {
     this.master = master;
   }
 
-  public void start() throws IOException {
-  }
-
-  public void stop() {
-    if (multiHConnection != null) {
-      multiHConnection.close();
-      multiHConnection = null;
-    }
-  }
-
   public interface RegionStateVisitor {
-    void visitRegionState(RegionInfo regionInfo, State state,
+    void visitRegionState(Result result, RegionInfo regionInfo, State state,
       ServerName regionLocation, ServerName lastHost, long openSeqNum);
   }
 
@@ -90,16 +88,37 @@ public class RegionStateStore {
       @Override
       public boolean visit(final Result r) throws IOException {
         if (r !=  null && !r.isEmpty()) {
-          long st = System.currentTimeMillis();
+          long st = 0;
+          if (LOG.isTraceEnabled()) {
+            st = System.currentTimeMillis();
+          }
           visitMetaEntry(visitor, r);
-          long et = System.currentTimeMillis();
-          LOG.info("[T] LOAD META PERF " + StringUtils.humanTimeDiff(et - st));
+          if (LOG.isTraceEnabled()) {
+            long et = System.currentTimeMillis();
+            LOG.trace("[T] LOAD META PERF " + StringUtils.humanTimeDiff(et - st));
+          }
         } else if (isDebugEnabled) {
           LOG.debug("NULL result from meta - ignoring but this is strange.");
         }
         return true;
       }
     });
+  }
+
+  /**
+   * Queries META table for the passed region encoded name, delegating action upon results to the
+   * <code>RegionStateVisitor</code> passed as second parameter.
+   * @param regionEncodedName encoded name for the Region we want to query META for.
+   * @param visitor The <code>RegionStateVisitor</code> instance to react over the query results.
+   * @throws IOException If some error occurs while querying META or parsing results.
+   */
+  public void visitMetaForRegion(final String regionEncodedName, final RegionStateVisitor visitor)
+    throws IOException {
+    Result result =
+      MetaTableAccessor.scanByRegionEncodedName(master.getConnection(), regionEncodedName);
+    if (result != null) {
+      visitMetaEntry(visitor, result);
+    }
   }
 
   private void visitMetaEntry(final RegionStateVisitor visitor, final Result result)
@@ -114,214 +133,271 @@ public class RegionStateStore {
       final HRegionLocation hrl = locations[i];
       if (hrl == null) continue;
 
-      final RegionInfo regionInfo = hrl.getRegionInfo();
+      final RegionInfo regionInfo = hrl.getRegion();
       if (regionInfo == null) continue;
 
       final int replicaId = regionInfo.getReplicaId();
-      final State state = getRegionState(result, replicaId);
+      final State state = getRegionState(result, regionInfo);
 
       final ServerName lastHost = hrl.getServerName();
-      final ServerName regionLocation = getRegionServer(result, replicaId);
-      final long openSeqNum = -1;
+      ServerName regionLocation = MetaTableAccessor.getTargetServerName(result, replicaId);
+      final long openSeqNum = hrl.getSeqNum();
 
-      // TODO: move under trace, now is visible for debugging
-      LOG.info(String.format("Load hbase:meta entry region=%s regionState=%s lastHost=%s regionLocation=%s",
-        regionInfo, state, lastHost, regionLocation));
-
-      visitor.visitRegionState(regionInfo, state, regionLocation, lastHost, openSeqNum);
+      LOG.debug(
+        "Load hbase:meta entry region={}, regionState={}, lastHost={}, " +
+          "regionLocation={}, openSeqNum={}",
+        regionInfo.getEncodedName(), state, lastHost, regionLocation, openSeqNum);
+      visitor.visitRegionState(result, regionInfo, state, regionLocation, lastHost, openSeqNum);
     }
   }
 
-  public void updateRegionLocation(final RegionInfo regionInfo, final State state,
-      final ServerName regionLocation, final ServerName lastHost, final long openSeqNum,
-      final long pid)
-      throws IOException {
-    if (regionInfo.isMetaRegion()) {
-      updateMetaLocation(regionInfo, regionLocation);
+  void updateRegionLocation(RegionStateNode regionStateNode) throws IOException {
+    if (regionStateNode.getRegionInfo().isMetaRegion()) {
+      updateMetaLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation(),
+        regionStateNode.getState());
     } else {
-      updateUserRegionLocation(regionInfo, state, regionLocation, lastHost, openSeqNum, pid);
+      long openSeqNum = regionStateNode.getState() == State.OPEN ? regionStateNode.getOpenSeqNum() :
+        HConstants.NO_SEQNUM;
+      updateUserRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
+        regionStateNode.getRegionLocation(), openSeqNum,
+        // The regionStateNode may have no procedure in a test scenario; allow for this.
+        regionStateNode.getProcedure() != null ? regionStateNode.getProcedure().getProcId() :
+          Procedure.NO_PROC_ID);
     }
   }
 
-  public void updateRegionState(final long openSeqNum, final long pid,
-      final RegionState newState, final RegionState oldState) throws IOException {
-    updateRegionLocation(newState.getRegion(), newState.getState(), newState.getServerName(),
-        oldState != null ? oldState.getServerName() : null, openSeqNum, pid);
-  }
-
-  protected void updateMetaLocation(final RegionInfo regionInfo, final ServerName serverName)
-      throws IOException {
+  private void updateMetaLocation(RegionInfo regionInfo, ServerName serverName, State state)
+    throws IOException {
     try {
-      MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName,
-        regionInfo.getReplicaId(), State.OPEN);
+      MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
+        state);
     } catch (KeeperException e) {
       throw new IOException(e);
     }
   }
 
-  protected void updateUserRegionLocation(final RegionInfo regionInfo, final State state,
-      final ServerName regionLocation, final ServerName lastHost, final long openSeqNum,
-      final long pid)
-      throws IOException {
+  private void updateUserRegionLocation(RegionInfo regionInfo, State state,
+    ServerName regionLocation, long openSeqNum, long pid) throws IOException {
+    long time = EnvironmentEdgeManager.currentTime();
     final int replicaId = regionInfo.getReplicaId();
-    final Put put = new Put(MetaTableAccessor.getMetaKeyForRegion(regionInfo));
+    final Put put = new Put(MetaTableAccessor.getMetaKeyForRegion(regionInfo), time);
     MetaTableAccessor.addRegionInfo(put, regionInfo);
-    final StringBuilder info = new StringBuilder("pid=" + pid + " updating hbase:meta row=");
-    info.append(regionInfo.getRegionNameAsString()).append(", regionState=").append(state);
+    final StringBuilder info =
+      new StringBuilder("pid=").append(pid).append(" updating hbase:meta row=")
+        .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
-          "Open region should be on a server");
-      MetaTableAccessor.addLocation(put, regionLocation, openSeqNum, -1, replicaId);
+        "Open region should be on a server");
+      MetaTableAccessor.addLocation(put, regionLocation, openSeqNum, replicaId);
+      // only update replication barrier for default replica
+      if (regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID &&
+        hasGlobalReplicationScope(regionInfo.getTable())) {
+        MetaTableAccessor.addReplicationBarrier(put, openSeqNum);
+        info.append(", repBarrier=").append(openSeqNum);
+      }
       info.append(", openSeqNum=").append(openSeqNum);
       info.append(", regionLocation=").append(regionLocation);
-    } else if (regionLocation != null && !regionLocation.equals(lastHost)) {
+    } else if (regionLocation != null) {
       // Ideally, if no regionLocation, write null to the hbase:meta but this will confuse clients
       // currently; they want a server to hit. TODO: Make clients wait if no location.
-      put.addImmutable(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId),
-          Bytes.toBytes(regionLocation.getServerName()));
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+        .setFamily(HConstants.CATALOG_FAMILY)
+        .setQualifier(MetaTableAccessor.getServerNameColumn(replicaId))
+        .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put)
+        .setValue(Bytes.toBytes(regionLocation.getServerName())).build());
       info.append(", regionLocation=").append(regionLocation);
     }
-    put.addImmutable(HConstants.CATALOG_FAMILY, getStateColumn(replicaId),
-      Bytes.toBytes(state.name()));
-    LOG.info(info);
-
-    final boolean serialReplication = hasSerialReplicationScope(regionInfo.getTable());
-    if (serialReplication && state == State.OPEN) {
-      Put barrierPut = MetaTableAccessor.makeBarrierPut(regionInfo.getEncodedNameAsBytes(),
-          openSeqNum, regionInfo.getTable().getName());
-      updateRegionLocation(regionInfo, state, put, barrierPut);
-    } else {
-      updateRegionLocation(regionInfo, state, put);
-    }
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+      .setFamily(HConstants.CATALOG_FAMILY).setQualifier(getStateColumn(replicaId))
+      .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put).setValue(Bytes.toBytes(state.name()))
+      .build());
+    LOG.info(info.toString());
+    updateRegionLocation(regionInfo, state, put);
   }
 
-  protected void updateRegionLocation(final RegionInfo regionInfo, final State state,
-      final Put... put) throws IOException {
-    synchronized (this) {
-      if (multiHConnection == null) {
-        multiHConnection = new MultiHConnection(master.getConfiguration(), 1);
-      }
-    }
-
-    try {
-      multiHConnection.processBatchCallback(Arrays.asList(put), TableName.META_TABLE_NAME, null, null);
+  private void updateRegionLocation(RegionInfo regionInfo, State state, Put put)
+      throws IOException {
+    try (Table table = getMetaTable()) {
+      debugLogMutation(put);
+      table.put(put);
     } catch (IOException e) {
       // TODO: Revist!!!! Means that if a server is loaded, then we will abort our host!
       // In tests we abort the Master!
       String msg = String.format("FAILED persisting region=%s state=%s",
-          regionInfo.getShortNameToLog(), state);
+        regionInfo.getShortNameToLog(), state);
       LOG.error(msg, e);
       master.abort(msg, e);
       throw e;
     }
   }
 
-  // ============================================================================================
-  //  Update Region Splitting State helpers
-  // ============================================================================================
-  public void splitRegion(final RegionInfo parent, final RegionInfo hriA,
-      final RegionInfo hriB, final ServerName serverName)  throws IOException {
-    final TableDescriptor htd = getTableDescriptor(parent.getTable());
-    MetaTableAccessor.splitRegion(master.getConnection(), parent, hriA, hriB, serverName,
-        getRegionReplication(htd), hasSerialReplicationScope(htd));
+  private long getOpenSeqNumForParentRegion(RegionInfo region) throws IOException {
+    MasterFileSystem fs = master.getMasterFileSystem();
+    long maxSeqId = WALSplitUtil.getMaxRegionSequenceId(master.getConfiguration(), region,
+      fs::getFileSystem, fs::getWALFileSystem);
+    return maxSeqId > 0 ? maxSeqId + 1 : HConstants.NO_SEQNUM;
+  }
+
+  private Table getMetaTable() throws IOException {
+    return master.getConnection().getTable(TableName.META_TABLE_NAME);
   }
 
   // ============================================================================================
-  //  Update Region Merging State helpers
+  // Update Region Splitting State helpers
   // ============================================================================================
-  public void mergeRegions(final RegionInfo parent, final RegionInfo hriA,
-      final RegionInfo hriB, final ServerName serverName)  throws IOException {
-    final TableDescriptor htd = getTableDescriptor(parent.getTable());
-    MetaTableAccessor.mergeRegions(master.getConnection(), parent, hriA, hriB, serverName,
-        getRegionReplication(htd), EnvironmentEdgeManager.currentTime(),
-        hasSerialReplicationScope(htd));
+  public void splitRegion(RegionInfo parent, RegionInfo hriA, RegionInfo hriB,
+      ServerName serverName) throws IOException {
+    TableDescriptor htd = getTableDescriptor(parent.getTable());
+    long parentOpenSeqNum = HConstants.NO_SEQNUM;
+    if (htd.hasGlobalReplicationScope()) {
+      parentOpenSeqNum = getOpenSeqNumForParentRegion(parent);
+    }
+    MetaTableAccessor.splitRegion(master.getConnection(), parent, parentOpenSeqNum, hriA, hriB,
+      serverName, getRegionReplication(htd));
   }
 
   // ============================================================================================
-  //  Delete Region State helpers
+  // Update Region Merging State helpers
+  // ============================================================================================
+  public void mergeRegions(RegionInfo child, RegionInfo [] parents, ServerName serverName)
+      throws IOException {
+    TableDescriptor htd = getTableDescriptor(child.getTable());
+    boolean globalScope = htd.hasGlobalReplicationScope();
+    SortedMap<RegionInfo, Long> parentSeqNums = new TreeMap<>();
+    for (RegionInfo ri: parents) {
+      parentSeqNums.put(ri, globalScope? getOpenSeqNumForParentRegion(ri): -1);
+    }
+    MetaTableAccessor.mergeRegions(master.getConnection(), child, parentSeqNums,
+        serverName, getRegionReplication(htd));
+  }
+
+  // ============================================================================================
+  // Delete Region State helpers
   // ============================================================================================
   public void deleteRegion(final RegionInfo regionInfo) throws IOException {
     deleteRegions(Collections.singletonList(regionInfo));
   }
 
   public void deleteRegions(final List<RegionInfo> regions) throws IOException {
-    MetaTableAccessor.deleteRegions(master.getConnection(), regions);
+    MetaTableAccessor.deleteRegionInfos(master.getConnection(), regions);
+  }
+
+  private Scan getScanForUpdateRegionReplicas(TableName tableName) {
+    return MetaTableAccessor.getScanForTableName(master.getConfiguration(), tableName)
+      .addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+  }
+
+  public void removeRegionReplicas(TableName tableName, int oldReplicaCount, int newReplicaCount)
+    throws IOException {
+    if (TableName.isMetaTableName(tableName)) {
+      ZKWatcher zk = master.getZooKeeper();
+      try {
+        for (int i = newReplicaCount; i < oldReplicaCount; i++) {
+          ZKUtil.deleteNode(zk, zk.getZNodePaths().getZNodeForReplica(i));
+        }
+      } catch (KeeperException e) {
+        throw new IOException(e);
+      }
+    } else {
+      Scan scan = getScanForUpdateRegionReplicas(tableName);
+      List<Delete> deletes = new ArrayList<>();
+      long now = EnvironmentEdgeManager.currentTime();
+      try (Table metaTable = getMetaTable(); ResultScanner scanner = metaTable.getScanner(scan)) {
+        for (;;) {
+          Result result = scanner.next();
+          if (result == null) {
+            break;
+          }
+          RegionInfo primaryRegionInfo = MetaTableAccessor.getRegionInfo(result);
+          if (primaryRegionInfo == null || primaryRegionInfo.isSplitParent()) {
+            continue;
+          }
+          Delete delete = new Delete(result.getRow());
+          for (int i = newReplicaCount; i < oldReplicaCount; i++) {
+            delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(i),
+              now);
+            delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getSeqNumColumn(i),
+              now);
+            delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(i),
+              now);
+            delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerNameColumn(i),
+              now);
+            delete.addColumns(HConstants.CATALOG_FAMILY,
+              MetaTableAccessor.getRegionStateColumn(i), now);
+          }
+          deletes.add(delete);
+        }
+        debugLogMutations(deletes);
+        metaTable.delete(deletes);
+      }
+    }
   }
 
   // ==========================================================================
-  //  Table Descriptors helpers
+  // Table Descriptors helpers
   // ==========================================================================
-  private boolean hasSerialReplicationScope(final TableName tableName) throws IOException {
-    return hasSerialReplicationScope(getTableDescriptor(tableName));
+  private boolean hasGlobalReplicationScope(TableName tableName) throws IOException {
+    return hasGlobalReplicationScope(getTableDescriptor(tableName));
   }
 
-  private boolean hasSerialReplicationScope(final TableDescriptor htd) {
-    return (htd != null)? htd.hasSerialReplicationScope(): false;
+  private boolean hasGlobalReplicationScope(TableDescriptor htd) {
+    return htd != null ? htd.hasGlobalReplicationScope() : false;
   }
 
-  private int getRegionReplication(final TableDescriptor htd) {
-    return (htd != null) ? htd.getRegionReplication() : 1;
+  private int getRegionReplication(TableDescriptor htd) {
+    return htd != null ? htd.getRegionReplication() : 1;
   }
 
-  private TableDescriptor getTableDescriptor(final TableName tableName) throws IOException {
+  private TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
     return master.getTableDescriptors().get(tableName);
   }
 
   // ==========================================================================
-  //  Server Name
-  // ==========================================================================
-
-  /**
-   * Returns the {@link ServerName} from catalog table {@link Result}
-   * where the region is transitioning. It should be the same as
-   * {@link MetaTableAccessor#getServerName(Result,int)} if the server is at OPEN state.
-   * @param r Result to pull the transitioning server name from
-   * @return A ServerName instance or {@link MetaTableAccessor#getServerName(Result,int)}
-   * if necessary fields not found or empty.
-   */
-  static ServerName getRegionServer(final Result r, int replicaId) {
-    final Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        getServerNameColumn(replicaId));
-    if (cell == null || cell.getValueLength() == 0) {
-      RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
-      if (locations != null) {
-        HRegionLocation location = locations.getRegionLocation(replicaId);
-        if (location != null) {
-          return location.getServerName();
-        }
-      }
-      return null;
-    }
-    return ServerName.parseServerName(Bytes.toString(cell.getValueArray(),
-      cell.getValueOffset(), cell.getValueLength()));
-  }
-
-  private static byte[] getServerNameColumn(int replicaId) {
-    return replicaId == 0
-        ? HConstants.SERVERNAME_QUALIFIER
-        : Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
-          + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
-  }
-
-  // ==========================================================================
-  //  Region State
+  // Region State
   // ==========================================================================
 
   /**
    * Pull the region state from a catalog table {@link Result}.
-   * @param r Result to pull the region state from
-   * @return the region state, or OPEN if there's no value written.
+   * @return the region state, or null if unknown.
    */
-  protected State getRegionState(final Result r, int replicaId) {
-    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getStateColumn(replicaId));
-    if (cell == null || cell.getValueLength() == 0) return State.OPENING;
-    return State.valueOf(Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+  public static State getRegionState(final Result r, RegionInfo regionInfo) {
+    Cell cell =
+      r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getStateColumn(regionInfo.getReplicaId()));
+    if (cell == null || cell.getValueLength() == 0) {
+      return null;
+    }
+
+    String state =
+      Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+    try {
+      return State.valueOf(state);
+    } catch (IllegalArgumentException e) {
+      LOG.warn(
+        "BAD value {} in hbase:meta info:state column for region {} , " +
+          "Consider using HBCK2 setRegionState ENCODED_REGION_NAME STATE",
+        state, regionInfo.getEncodedName());
+      return null;
+    }
   }
 
   private static byte[] getStateColumn(int replicaId) {
-    return replicaId == 0
-        ? HConstants.STATE_QUALIFIER
-        : Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
-          + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.STATE_QUALIFIER :
+      Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
+        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+  }
+
+  private static void debugLogMutations(List<? extends Mutation> mutations) throws IOException {
+    if (!METALOG.isDebugEnabled()) {
+      return;
+    }
+    // Logging each mutation in separate line makes it easier to see diff between them visually
+    // because of common starting indentation.
+    for (Mutation mutation : mutations) {
+      debugLogMutation(mutation);
+    }
+  }
+
+  private static void debugLogMutation(Mutation p) throws IOException {
+    METALOG.debug("{} {}", p.getClass().getSimpleName(), p.toJSON());
   }
 }

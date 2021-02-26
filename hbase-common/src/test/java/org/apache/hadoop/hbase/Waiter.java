@@ -16,17 +16,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
+
+import static org.junit.Assert.fail;
 
 import java.text.MessageFormat;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import static org.junit.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class that provides a standard waitFor pattern
@@ -34,8 +33,7 @@ import static org.junit.Assert.fail;
  */
 @InterfaceAudience.Private
 public final class Waiter {
-
-  private static final Log LOG = LogFactory.getLog(Waiter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Waiter.class);
 
   /**
    * System property name whose value is a scale factor to increase time out values dynamically used
@@ -83,18 +81,16 @@ public final class Waiter {
   /**
    * A predicate 'closure' used by the {@link Waiter#waitFor(Configuration, long, Predicate)} and
    * {@link Waiter#waitFor(Configuration, long, Predicate)} and
-   * {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate) methods.
+   * {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate)} methods.
    */
   @InterfaceAudience.Private
   public interface Predicate<E extends Exception> {
-
     /**
      * Perform a predicate evaluation.
      * @return the boolean result of the evaluation.
-     * @throws Exception thrown if the predicate evaluation could not evaluate.
+     * @throws E thrown if the predicate evaluation could not evaluate.
      */
     boolean evaluate() throws E;
-
   }
 
   /**
@@ -102,14 +98,12 @@ public final class Waiter {
    */
   @InterfaceAudience.Private
   public interface ExplainingPredicate<E extends Exception> extends Predicate<E> {
-
     /**
      * Perform a predicate evaluation.
      *
      * @return explanation of failed state
      */
     String explainFailure() throws E;
-
   }
 
   /**
@@ -139,7 +133,7 @@ public final class Waiter {
    *         wait is interrupted otherwise <code>-1</code> when times out
    */
   public static <E extends Exception> long waitFor(Configuration conf, long timeout,
-      Predicate<E> predicate) throws E {
+      Predicate<E> predicate) {
     return waitFor(conf, timeout, 100, true, predicate);
   }
 
@@ -157,7 +151,7 @@ public final class Waiter {
    *         wait is interrupted otherwise <code>-1</code> when times out
    */
   public static <E extends Exception> long waitFor(Configuration conf, long timeout, long interval,
-      Predicate<E> predicate) throws E {
+      Predicate<E> predicate) {
     return waitFor(conf, timeout, interval, true, predicate);
   }
 
@@ -176,14 +170,14 @@ public final class Waiter {
    *         wait is interrupted otherwise <code>-1</code> when times out
    */
   public static <E extends Exception> long waitFor(Configuration conf, long timeout, long interval,
-      boolean failIfTimeout, Predicate<E> predicate) throws E {
+      boolean failIfTimeout, Predicate<E> predicate) {
     long started = System.currentTimeMillis();
     long adjustedTimeout = (long) (getWaitForRatio(conf) * timeout);
     long mustEnd = started + adjustedTimeout;
-    long remainderWait = 0;
-    long sleepInterval = 0;
-    Boolean eval = false;
-    Boolean interrupted = false;
+    long remainderWait;
+    long sleepInterval;
+    boolean eval;
+    boolean interrupted = false;
 
     try {
       LOG.info(MessageFormat.format("Waiting up to [{0}] milli-secs(wait.for.ratio=[{1}])",
@@ -192,7 +186,7 @@ public final class Waiter {
               && (remainderWait = mustEnd - System.currentTimeMillis()) > 0) {
         try {
           // handle tail case when remainder wait is less than one interval
-          sleepInterval = (remainderWait > interval) ? interval : remainderWait;
+          sleepInterval = Math.min(remainderWait, interval);
           Thread.sleep(sleepInterval);
         } catch (InterruptedException e) {
           eval = predicate.evaluate();
@@ -220,10 +214,10 @@ public final class Waiter {
     }
   }
 
-  public static String getExplanation(Predicate explain) {
+  public static String getExplanation(Predicate<?> explain) {
     if (explain instanceof ExplainingPredicate) {
       try {
-        return " " + ((ExplainingPredicate) explain).explainFailure();
+        return " " + ((ExplainingPredicate<?>) explain).explainFailure();
       } catch (Exception e) {
         LOG.error("Failed to get explanation, ", e);
         return e.getMessage();
@@ -232,5 +226,4 @@ public final class Waiter {
       return "";
     }
   }
-
 }

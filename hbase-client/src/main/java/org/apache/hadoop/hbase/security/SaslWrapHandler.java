@@ -17,20 +17,20 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBuf;
-import org.apache.hadoop.hbase.shaded.io.netty.buffer.Unpooled;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOutboundHandlerAdapter;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelPromise;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.CoalescingBufferQueue;
-import org.apache.hadoop.hbase.shaded.io.netty.util.ReferenceCountUtil;
-import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.PromiseCombiner;
-
-import java.io.IOException;
-
 import javax.security.sasl.SaslClient;
 
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOutboundHandlerAdapter;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
+import org.apache.hbase.thirdparty.io.netty.channel.CoalescingBufferQueue;
+import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.PromiseCombiner;
+
 
 /**
  * wrap sasl messages.
@@ -92,7 +92,7 @@ public class SaslWrapHandler extends ChannelOutboundHandlerAdapter {
   @Override
   public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
     if (!queue.isEmpty()) {
-      queue.releaseAndFailAll(new IOException("Connection closed"));
+      queue.releaseAndFailAll(new ConnectionClosedException("Connection closed"));
     }
     ctx.close(promise);
   }

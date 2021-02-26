@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * <p>
@@ -72,11 +72,17 @@ public class FamilyFilter extends CompareFilter {
     super(op, familyComparator);
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
-    int familyLength = v.getFamilyLength();
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
+    int familyLength = c.getFamilyLength();
     if (familyLength > 0) {
-      if (compareFamily(getCompareOperator(), this.comparator, v)) {
+      if (compareFamily(getCompareOperator(), this.comparator, c)) {
         return ReturnCode.NEXT_ROW;
       }
     }
@@ -93,6 +99,7 @@ public class FamilyFilter extends CompareFilter {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.FamilyFilter.Builder builder =
       FilterProtos.FamilyFilter.newBuilder();
@@ -131,6 +138,7 @@ public class FamilyFilter extends CompareFilter {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof FamilyFilter)) return false;
@@ -138,4 +146,14 @@ public class FamilyFilter extends CompareFilter {
     FamilyFilter other = (FamilyFilter)o;
     return super.areSerializedFieldsEqual(other);
  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }

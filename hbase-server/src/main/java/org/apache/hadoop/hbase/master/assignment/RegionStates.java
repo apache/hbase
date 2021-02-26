@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,40 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * RegionStates contains a set of Maps that describes the in-memory state of the AM, with
@@ -58,235 +52,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Private
 public class RegionStates {
-  private static final Log LOG = LogFactory.getLog(RegionStates.class);
-
-  protected static final State[] STATES_EXPECTED_ON_OPEN = new State[] {
-    State.OFFLINE, State.CLOSED,      // disable/offline
-    State.SPLITTING, State.SPLIT,     // ServerCrashProcedure
-    State.OPENING, State.FAILED_OPEN, // already in-progress (retrying)
-  };
-
-  protected static final State[] STATES_EXPECTED_ON_CLOSE = new State[] {
-    State.SPLITTING, State.SPLIT, // ServerCrashProcedure
-    State.OPEN,                   // enabled/open
-    State.CLOSING                 // already in-progress (retrying)
-  };
-
-  private static class AssignmentProcedureEvent extends ProcedureEvent<RegionInfo> {
-    public AssignmentProcedureEvent(final RegionInfo regionInfo) {
-      super(regionInfo);
-    }
-  }
-
-  private static class ServerReportEvent extends ProcedureEvent<ServerName> {
-    public ServerReportEvent(final ServerName serverName) {
-      super(serverName);
-    }
-  }
-
-  /**
-   * Current Region State.
-   * In-memory only. Not persisted.
-   */
-  // Mutable/Immutable? Changes have to be synchronized or not?
-  // Data members are volatile which seems to say multi-threaded access is fine.
-  // In the below we do check and set but the check state could change before
-  // we do the set because no synchronization....which seems dodgy. Clear up
-  // understanding here... how many threads accessing? Do locks make it so one
-  // thread at a time working on a single Region's RegionStateNode? Lets presume
-  // so for now. Odd is that elsewhere in this RegionStates, we synchronize on
-  // the RegionStateNode instance. TODO.
-  public static class RegionStateNode implements Comparable<RegionStateNode> {
-    private final RegionInfo regionInfo;
-    private final ProcedureEvent<?> event;
-
-    private volatile RegionTransitionProcedure procedure = null;
-    private volatile ServerName regionLocation = null;
-    private volatile ServerName lastHost = null;
-    /**
-     * A Region-in-Transition (RIT) moves through states.
-     * See {@link State} for complete list. A Region that
-     * is opened moves from OFFLINE => OPENING => OPENED.
-     */
-    private volatile State state = State.OFFLINE;
-
-    /**
-     * Updated whenever a call to {@link #setRegionLocation(ServerName)}
-     * or {@link #setState(State, State...)}.
-     */
-    private volatile long lastUpdate = 0;
-
-    private volatile long openSeqNum = HConstants.NO_SEQNUM;
-
-    public RegionStateNode(final RegionInfo regionInfo) {
-      this.regionInfo = regionInfo;
-      this.event = new AssignmentProcedureEvent(regionInfo);
-    }
-
-    public boolean setState(final State update, final State... expected) {
-      final boolean expectedState = isInState(expected);
-      if (expectedState) {
-        this.state = update;
-        this.lastUpdate = EnvironmentEdgeManager.currentTime();
-      }
-      return expectedState;
-    }
-
-    /**
-     * Put region into OFFLINE mode (set state and clear location).
-     * @return Last recorded server deploy
-     */
-    public ServerName offline() {
-      setState(State.OFFLINE);
-      return setRegionLocation(null);
-    }
-
-    /**
-     * Set new {@link State} but only if currently in <code>expected</code> State
-     * (if not, throw {@link UnexpectedStateException}.
-     */
-    public State transitionState(final State update, final State... expected)
-    throws UnexpectedStateException {
-      if (!setState(update, expected)) {
-        throw new UnexpectedStateException("Expected " + Arrays.toString(expected) +
-          " so could move to " + update + " but current state=" + getState());
-      }
-      return update;
-    }
-
-    public boolean isInState(final State... expected) {
-      if (expected != null && expected.length > 0) {
-        boolean expectedState = false;
-        for (int i = 0; i < expected.length; ++i) {
-          expectedState |= (getState() == expected[i]);
-        }
-        return expectedState;
-      }
-      return true;
-    }
-
-    public boolean isStuck() {
-      return isInState(State.FAILED_OPEN) && getProcedure() != null;
-    }
-
-    public boolean isInTransition() {
-      return getProcedure() != null;
-    }
-
-    public long getLastUpdate() {
-      return procedure != null ? procedure.getLastUpdate() : lastUpdate;
-    }
-
-    public void setLastHost(final ServerName serverName) {
-      this.lastHost = serverName;
-    }
-
-    public void setOpenSeqNum(final long seqId) {
-      this.openSeqNum = seqId;
-    }
-
-    public ServerName setRegionLocation(final ServerName serverName) {
-      ServerName lastRegionLocation = this.regionLocation;
-      if (LOG.isTraceEnabled() && serverName == null) {
-        LOG.trace("Tracking when we are set to null " + this, new Throwable("TRACE"));
-      }
-      this.regionLocation = serverName;
-      this.lastUpdate = EnvironmentEdgeManager.currentTime();
-      return lastRegionLocation;
-    }
-
-    public boolean setProcedure(final RegionTransitionProcedure proc) {
-      if (this.procedure != null && this.procedure != proc) {
-        return false;
-      }
-      this.procedure = proc;
-      return true;
-    }
-
-    public boolean unsetProcedure(final RegionTransitionProcedure proc) {
-      if (this.procedure != null && this.procedure != proc) {
-        return false;
-      }
-      this.procedure = null;
-      return true;
-    }
-
-    public RegionTransitionProcedure getProcedure() {
-      return procedure;
-    }
-
-    public ProcedureEvent<?> getProcedureEvent() {
-      return event;
-    }
-
-    public RegionInfo getRegionInfo() {
-      return regionInfo;
-    }
-
-    public TableName getTable() {
-      return getRegionInfo().getTable();
-    }
-
-    public boolean isSystemTable() {
-      return getTable().isSystemTable();
-    }
-
-    public ServerName getLastHost() {
-      return lastHost;
-    }
-
-    public ServerName getRegionLocation() {
-      return regionLocation;
-    }
-
-    public State getState() {
-      return state;
-    }
-
-    public long getOpenSeqNum() {
-      return openSeqNum;
-    }
-
-    public int getFormatVersion() {
-      // we don't have any format for now
-      // it should probably be in regionInfo.getFormatVersion()
-      return 0;
-    }
-
-    @Override
-    public int compareTo(final RegionStateNode other) {
-      // NOTE: RegionInfo sort by table first, so we are relying on that.
-      // we have a TestRegionState#testOrderedByTable() that check for that.
-      return RegionInfo.COMPARATOR.compare(getRegionInfo(), other.getRegionInfo());
-    }
-
-    @Override
-    public int hashCode() {
-      return getRegionInfo().hashCode();
-    }
-
-    @Override
-    public boolean equals(final Object other) {
-      if (this == other) return true;
-      if (!(other instanceof RegionStateNode)) return false;
-      return compareTo((RegionStateNode)other) == 0;
-    }
-
-    @Override
-    public String toString() {
-      return toDescriptiveString();
-    }
-
-    public String toShortString() {
-      // rit= is the current Region-In-Transition State -- see State enum.
-      return String.format("rit=%s, location=%s", getState(), getRegionLocation());
-    }
-
-    public String toDescriptiveString() {
-      return String.format("%s, table=%s, region=%s",
-        toShortString(), getTable(), getRegionInfo().getEncodedName());
-    }
-  }
+  private static final Logger LOG = LoggerFactory.getLogger(RegionStates.class);
 
   // This comparator sorts the RegionStates by time stamp then Region name.
   // Comparing by timestamp alone can lead us to discard different RegionStates that happen
@@ -296,103 +62,6 @@ public class RegionStates {
     public int compare(final RegionState l, final RegionState r) {
       int stampCmp = Long.compare(l.getStamp(), r.getStamp());
       return stampCmp != 0 ? stampCmp : RegionInfo.COMPARATOR.compare(l.getRegion(), r.getRegion());
-    }
-  }
-
-  public enum ServerState { ONLINE, SPLITTING, OFFLINE }
-  public static class ServerStateNode implements Comparable<ServerStateNode> {
-    private final ServerReportEvent reportEvent;
-
-    private final Set<RegionStateNode> regions;
-    private final ServerName serverName;
-
-    private volatile ServerState state = ServerState.ONLINE;
-    private volatile int versionNumber = 0;
-
-    public ServerStateNode(final ServerName serverName) {
-      this.serverName = serverName;
-      this.regions = new HashSet<RegionStateNode>();
-      this.reportEvent = new ServerReportEvent(serverName);
-    }
-
-    public ServerName getServerName() {
-      return serverName;
-    }
-
-    public ServerState getState() {
-      return state;
-    }
-
-    public int getVersionNumber() {
-      return versionNumber;
-    }
-
-    public ProcedureEvent<?> getReportEvent() {
-      return reportEvent;
-    }
-
-    public boolean isInState(final ServerState... expected) {
-      boolean expectedState = false;
-      if (expected != null) {
-        for (int i = 0; i < expected.length; ++i) {
-          expectedState |= (state == expected[i]);
-        }
-      }
-      return expectedState;
-    }
-
-    public void setState(final ServerState state) {
-      this.state = state;
-    }
-
-    public void setVersionNumber(final int versionNumber) {
-      this.versionNumber = versionNumber;
-    }
-
-    public Set<RegionStateNode> getRegions() {
-      return regions;
-    }
-
-    public int getRegionCount() {
-      return regions.size();
-    }
-
-    public ArrayList<RegionInfo> getRegionInfoList() {
-      ArrayList<RegionInfo> hris = new ArrayList<RegionInfo>(regions.size());
-      for (RegionStateNode region: regions) {
-        hris.add(region.getRegionInfo());
-      }
-      return hris;
-    }
-
-    public void addRegion(final RegionStateNode regionNode) {
-      this.regions.add(regionNode);
-    }
-
-    public void removeRegion(final RegionStateNode regionNode) {
-      this.regions.remove(regionNode);
-    }
-
-    @Override
-    public int compareTo(final ServerStateNode other) {
-      return getServerName().compareTo(other.getServerName());
-    }
-
-    @Override
-    public int hashCode() {
-      return getServerName().hashCode();
-    }
-
-    @Override
-    public boolean equals(final Object other) {
-      if (this == other) return true;
-      if (!(other instanceof ServerStateNode)) return false;
-      return compareTo((ServerStateNode)other) == 0;
-    }
-
-    @Override
-    public String toString() {
-      return String.format("ServerStateNode(%s)", getServerName());
     }
   }
 
@@ -424,6 +93,9 @@ public class RegionStates {
 
   public RegionStates() { }
 
+  /**
+   * Called on stop of AssignmentManager.
+   */
   public void clear() {
     regionsMap.clear();
     regionInTransition.clear();
@@ -431,7 +103,6 @@ public class RegionStates {
     serverMap.clear();
   }
 
-  @VisibleForTesting
   public boolean isRegionInRegionStates(final RegionInfo hri) {
     return (regionsMap.containsKey(hri.getRegionName()) || regionInTransition.containsKey(hri)
         || regionOffline.containsKey(hri));
@@ -440,37 +111,33 @@ public class RegionStates {
   // ==========================================================================
   //  RegionStateNode helpers
   // ==========================================================================
-  protected RegionStateNode createRegionNode(final RegionInfo regionInfo) {
-    RegionStateNode newNode = new RegionStateNode(regionInfo);
+  RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
+    RegionStateNode newNode = new RegionStateNode(regionInfo, regionInTransition);
     RegionStateNode oldNode = regionsMap.putIfAbsent(regionInfo.getRegionName(), newNode);
     return oldNode != null ? oldNode : newNode;
   }
 
-  protected RegionStateNode getOrCreateRegionNode(final RegionInfo regionInfo) {
-    RegionStateNode node = regionsMap.get(regionInfo.getRegionName());
-    return node != null ? node : createRegionNode(regionInfo);
+  public RegionStateNode getOrCreateRegionStateNode(RegionInfo regionInfo) {
+    RegionStateNode node = getRegionStateNodeFromName(regionInfo.getRegionName());
+    return node != null ? node : createRegionStateNode(regionInfo);
   }
 
-  RegionStateNode getRegionNodeFromName(final byte[] regionName) {
+  RegionStateNode getRegionStateNodeFromName(byte[] regionName) {
     return regionsMap.get(regionName);
   }
 
-  protected RegionStateNode getRegionNode(final RegionInfo regionInfo) {
-    return getRegionNodeFromName(regionInfo.getRegionName());
-  }
-
-  RegionStateNode getRegionNodeFromEncodedName(final String encodedRegionName) {
-    // TODO: Need a map <encodedName, ...> but it is just dispatch merge...
-    for (RegionStateNode node: regionsMap.values()) {
-      if (node.getRegionInfo().getEncodedName().equals(encodedRegionName)) {
-        return node;
-      }
-    }
-    return null;
+  public RegionStateNode getRegionStateNode(RegionInfo regionInfo) {
+    return getRegionStateNodeFromName(regionInfo.getRegionName());
   }
 
   public void deleteRegion(final RegionInfo regionInfo) {
     regionsMap.remove(regionInfo.getRegionName());
+    // See HBASE-20860
+    // After master restarts, merged regions' RIT state may not be cleaned,
+    // making sure they are cleaned here
+    if (regionInTransition.containsKey(regionInfo)) {
+      regionInTransition.remove(regionInfo);
+    }
     // Remove from the offline regions map too if there.
     if (this.regionOffline.containsKey(regionInfo)) {
       if (LOG.isTraceEnabled()) LOG.trace("Removing from regionOffline Map: " + regionInfo);
@@ -478,7 +145,11 @@ public class RegionStates {
     }
   }
 
-  ArrayList<RegionStateNode> getTableRegionStateNodes(final TableName tableName) {
+  public void deleteRegions(final List<RegionInfo> regionInfos) {
+    regionInfos.forEach(this::deleteRegion);
+  }
+
+  List<RegionStateNode> getTableRegionStateNodes(final TableName tableName) {
     final ArrayList<RegionStateNode> regions = new ArrayList<RegionStateNode>();
     for (RegionStateNode node: regionsMap.tailMap(tableName.getName()).values()) {
       if (!node.getTable().equals(tableName)) break;
@@ -491,7 +162,7 @@ public class RegionStates {
     final ArrayList<RegionState> regions = new ArrayList<RegionState>();
     for (RegionStateNode node: regionsMap.tailMap(tableName.getName()).values()) {
       if (!node.getTable().equals(tableName)) break;
-      regions.add(createRegionState(node));
+      regions.add(node.toRegionState());
     }
     return regions;
   }
@@ -505,14 +176,16 @@ public class RegionStates {
     return regions;
   }
 
-  Collection<RegionStateNode> getRegionNodes() {
-    return regionsMap.values();
+  /** @return A view of region state nodes for all the regions. */
+  public Collection<RegionStateNode> getRegionStateNodes() {
+    return Collections.unmodifiableCollection(regionsMap.values());
   }
 
+  /** @return A snapshot of region state nodes for all the regions. */
   public ArrayList<RegionState> getRegionStates() {
-    final ArrayList<RegionState> regions = new ArrayList<RegionState>(regionsMap.size());
+    final ArrayList<RegionState> regions = new ArrayList<>(regionsMap.size());
     for (RegionStateNode node: regionsMap.values()) {
-      regions.add(createRegionState(node));
+      regions.add(node.toRegionState());
     }
     return regions;
   }
@@ -521,17 +194,18 @@ public class RegionStates {
   //  RegionState helpers
   // ==========================================================================
   public RegionState getRegionState(final RegionInfo regionInfo) {
-    return createRegionState(getRegionNode(regionInfo));
+    RegionStateNode regionStateNode = getRegionStateNode(regionInfo);
+    return regionStateNode == null ? null : regionStateNode.toRegionState();
   }
 
   public RegionState getRegionState(final String encodedRegionName) {
-    return createRegionState(getRegionNodeFromEncodedName(encodedRegionName));
-  }
-
-  private RegionState createRegionState(final RegionStateNode node) {
-    return node == null ? null :
-      new RegionState(node.getRegionInfo(), node.getState(),
-        node.getLastUpdate(), node.getRegionLocation());
+    // TODO: Need a map <encodedName, ...> but it is just dispatch merge...
+    for (RegionStateNode node: regionsMap.values()) {
+      if (node.getRegionInfo().getEncodedName().equals(encodedRegionName)) {
+        return node.toRegionState();
+      }
+    }
+    return null;
   }
 
   // ============================================================================================
@@ -542,17 +216,148 @@ public class RegionStates {
     return !getTableRegionStates(tableName).isEmpty();
   }
 
-  public List<RegionInfo> getRegionsOfTable(final TableName table) {
-    return getRegionsOfTable(table, false);
+  /**
+   * @return Return online regions of table; does not include OFFLINE or SPLITTING regions.
+   */
+  public List<RegionInfo> getRegionsOfTable(TableName table) {
+    return getRegionsOfTable(table,
+      regionNode -> !regionNode.isInState(State.OFFLINE, State.SPLIT) &&
+        !regionNode.getRegionInfo().isSplitParent());
   }
 
-  List<RegionInfo> getRegionsOfTable(final TableName table, final boolean offline) {
-    final ArrayList<RegionStateNode> nodes = getTableRegionStateNodes(table);
-    final ArrayList<RegionInfo> hris = new ArrayList<RegionInfo>(nodes.size());
-    for (RegionStateNode node: nodes) {
-      if (include(node, offline)) hris.add(node.getRegionInfo());
+  private HRegionLocation createRegionForReopen(RegionStateNode node) {
+    node.lock();
+    try {
+      if (!include(node, false)) {
+        return null;
+      }
+      if (node.isInState(State.OPEN)) {
+        return new HRegionLocation(node.getRegionInfo(), node.getRegionLocation(),
+          node.getOpenSeqNum());
+      } else if (node.isInState(State.OPENING)) {
+        return new HRegionLocation(node.getRegionInfo(), node.getRegionLocation(), -1);
+      } else {
+        return null;
+      }
+    } finally {
+      node.unlock();
     }
-    return hris;
+  }
+
+  /**
+   * Get the regions to be reopened when modifying a table.
+   * <p/>
+   * Notice that the {@code openSeqNum} in the returned HRegionLocation is also used to indicate the
+   * state of this region, positive means the region is in {@link State#OPEN}, -1 means
+   * {@link State#OPENING}. And for regions in other states we do not need reopen them.
+   */
+  public List<HRegionLocation> getRegionsOfTableForReopen(TableName tableName) {
+    return getTableRegionStateNodes(tableName).stream().map(this::createRegionForReopen)
+      .filter(r -> r != null).collect(Collectors.toList());
+  }
+
+  /**
+   * Check whether the region has been reopened. The meaning of the {@link HRegionLocation} is the
+   * same with {@link #getRegionsOfTableForReopen(TableName)}.
+   * <p/>
+   * For a region which is in {@link State#OPEN} before, if the region state is changed or the open
+   * seq num is changed, we can confirm that it has been reopened.
+   * <p/>
+   * For a region which is in {@link State#OPENING} before, usually it will be in {@link State#OPEN}
+   * now and we will schedule a MRP to reopen it. But there are several exceptions:
+   * <ul>
+   * <li>The region is in state other than {@link State#OPEN} or {@link State#OPENING}.</li>
+   * <li>The location of the region has been changed</li>
+   * </ul>
+   * Of course the region could still be in {@link State#OPENING} state and still on the same
+   * server, then here we will still return a {@link HRegionLocation} for it, just like
+   * {@link #getRegionsOfTableForReopen(TableName)}.
+   * @param oldLoc the previous state/location of this region
+   * @return null if the region has been reopened, otherwise a new {@link HRegionLocation} which
+   *         means we still need to reopen the region.
+   * @see #getRegionsOfTableForReopen(TableName)
+   */
+  public HRegionLocation checkReopened(HRegionLocation oldLoc) {
+    RegionStateNode node = getRegionStateNode(oldLoc.getRegion());
+    // HBASE-20921
+    // if the oldLoc's state node does not exist, that means the region is
+    // merged or split, no need to check it
+    if (node == null) {
+      return null;
+    }
+    node.lock();
+    try {
+      if (oldLoc.getSeqNum() >= 0) {
+        // in OPEN state before
+        if (node.isInState(State.OPEN)) {
+          if (node.getOpenSeqNum() > oldLoc.getSeqNum()) {
+            // normal case, the region has been reopened
+            return null;
+          } else {
+            // the open seq num does not change, need to reopen again
+            return new HRegionLocation(node.getRegionInfo(), node.getRegionLocation(),
+              node.getOpenSeqNum());
+          }
+        } else {
+          // the state has been changed so we can make sure that the region has been reopened(not
+          // finished maybe, but not a problem).
+          return null;
+        }
+      } else {
+        // in OPENING state before
+        if (!node.isInState(State.OPEN, State.OPENING)) {
+          // not in OPEN or OPENING state, then we can make sure that the region has been
+          // reopened(not finished maybe, but not a problem)
+          return null;
+        } else {
+          if (!node.getRegionLocation().equals(oldLoc.getServerName())) {
+            // the region has been moved, so we can make sure that the region has been reopened.
+            return null;
+          }
+          // normal case, we are still in OPENING state, or the reopen has been opened and the state
+          // is changed to OPEN.
+          long openSeqNum = node.isInState(State.OPEN) ? node.getOpenSeqNum() : -1;
+          return new HRegionLocation(node.getRegionInfo(), node.getRegionLocation(), openSeqNum);
+        }
+      }
+    } finally {
+      node.unlock();
+    }
+  }
+
+  /**
+   * Get the regions for enabling a table.
+   * <p/>
+   * Here we want the EnableTableProcedure to be more robust and can be used to fix some nasty
+   * states, so the checks in this method will be a bit strange. In general, a region can only be
+   * offline when it is split, for merging we will just delete the parent regions, but with HBCK we
+   * may force update the state of a region to fix some nasty bugs, so in this method we will try to
+   * bring the offline regions back if it is not split. That's why we only check for split state
+   * here.
+   */
+  public List<RegionInfo> getRegionsOfTableForEnabling(TableName table) {
+    return getRegionsOfTable(table,
+      regionNode -> !regionNode.isInState(State.SPLIT) && !regionNode.getRegionInfo().isSplit());
+  }
+
+  /**
+   * Get the regions for deleting a table.
+   * <p/>
+   * Here we need to return all the regions irrespective of the states in order to archive them
+   * all. This is because if we don't archive OFFLINE/SPLIT regions and if a snapshot or a cloned
+   * table references to the regions, we will lose the data of the regions.
+   */
+  public List<RegionInfo> getRegionsOfTableForDeleting(TableName table) {
+    return getTableRegionStateNodes(table).stream().map(RegionStateNode::getRegionInfo)
+      .collect(Collectors.toList());
+  }
+
+  /**
+   * @return Return the regions of the table and filter them.
+   */
+  private List<RegionInfo> getRegionsOfTable(TableName table, Predicate<RegionStateNode> filter) {
+    return getTableRegionStateNodes(table).stream().filter(filter).map(n -> n.getRegionInfo())
+      .collect(Collectors.toList());
   }
 
   /**
@@ -561,60 +366,73 @@ public class RegionStates {
    * @return True if we should include the <code>node</code> (do not include
    * if split or offline unless <code>offline</code> is set to true.
    */
-  boolean include(final RegionStateNode node, final boolean offline) {
+  private boolean include(final RegionStateNode node, final boolean offline) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("WORKING ON " + node + " " + node.getRegionInfo());
     }
-    if (node.isInState(State.SPLIT)) return false;
-    if (node.isInState(State.OFFLINE) && !offline) return false;
     final RegionInfo hri = node.getRegionInfo();
+    if (node.isInState(State.SPLIT) || hri.isSplit()) {
+      return false;
+    }
+    if ((node.isInState(State.OFFLINE) || hri.isOffline()) && !offline) {
+      return false;
+    }
     return (!hri.isOffline() && !hri.isSplit()) ||
         ((hri.isOffline() || hri.isSplit()) && offline);
   }
 
-  /**
-   * Returns the set of regions hosted by the specified server
-   * @param serverName the server we are interested in
-   * @return set of RegionInfo hosted by the specified server
-   */
-  public List<RegionInfo> getServerRegionInfoSet(final ServerName serverName) {
-    final ServerStateNode serverInfo = getServerNode(serverName);
-    if (serverInfo == null) return Collections.emptyList();
-
-    synchronized (serverInfo) {
-      return serverInfo.getRegionInfoList();
-    }
-  }
-
   // ============================================================================================
-  //  TODO: split helpers
+  // Split helpers
+  // These methods will only be called in ServerCrashProcedure, and at the end of SCP we will remove
+  // the ServerStateNode by calling removeServer.
   // ============================================================================================
-  public void logSplit(final ServerName serverName) {
-    final ServerStateNode serverNode = getOrCreateServer(serverName);
+
+  private void setServerState(ServerName serverName, ServerState state) {
+    ServerStateNode serverNode = getOrCreateServer(serverName);
     synchronized (serverNode) {
-      serverNode.setState(ServerState.SPLITTING);
-      /* THIS HAS TO BE WRONG. THIS IS SPLITTING OF REGION, NOT SPLITTING WALs.
-      for (RegionStateNode regionNode: serverNode.getRegions()) {
-        synchronized (regionNode) {
-          // TODO: Abort procedure if present
-          regionNode.setState(State.SPLITTING);
-        }
-      }*/
+      serverNode.setState(state);
     }
   }
 
-  public void logSplit(final RegionInfo regionInfo) {
-    final RegionStateNode regionNode = getRegionNode(regionInfo);
-    synchronized (regionNode) {
-      regionNode.setState(State.SPLIT);
-    }
+  /**
+   * Call this when we start meta log splitting a crashed Server.
+   * @see #metaLogSplit(ServerName)
+   */
+  public void metaLogSplitting(ServerName serverName) {
+    setServerState(serverName, ServerState.SPLITTING_META);
   }
 
-  @VisibleForTesting
-  public void updateRegionState(final RegionInfo regionInfo, final State state) {
-    final RegionStateNode regionNode = getOrCreateRegionNode(regionInfo);
-    synchronized (regionNode) {
+  /**
+   * Called after we've split the meta logs on a crashed Server.
+   * @see #metaLogSplitting(ServerName)
+   */
+  public void metaLogSplit(ServerName serverName) {
+    setServerState(serverName, ServerState.SPLITTING_META_DONE);
+  }
+
+  /**
+   * Call this when we start log splitting for a crashed Server.
+   * @see #logSplit(ServerName)
+   */
+  public void logSplitting(final ServerName serverName) {
+    setServerState(serverName, ServerState.SPLITTING);
+  }
+
+  /**
+   * Called after we've split all logs on a crashed Server.
+   * @see #logSplitting(ServerName)
+   */
+  public void logSplit(final ServerName serverName) {
+    setServerState(serverName, ServerState.OFFLINE);
+  }
+
+  public void updateRegionState(RegionInfo regionInfo, State state) {
+    RegionStateNode regionNode = getOrCreateRegionStateNode(regionInfo);
+    regionNode.lock();
+    try {
       regionNode.setState(state);
+    } finally {
+      regionNode.unlock();
     }
   }
 
@@ -631,11 +449,14 @@ public class RegionStates {
     return result;
   }
 
-  public boolean isRegionInState(final RegionInfo regionInfo, final State... state) {
-    final RegionStateNode region = getRegionNode(regionInfo);
-    if (region != null) {
-      synchronized (region) {
-        return region.isInState(state);
+  public boolean isRegionInState(RegionInfo regionInfo, State... state) {
+    RegionStateNode regionNode = getRegionStateNode(regionInfo);
+    if (regionNode != null) {
+      regionNode.lock();
+      try {
+        return regionNode.isInState(state);
+      } finally {
+        regionNode.unlock();
       }
     }
     return false;
@@ -655,23 +476,37 @@ public class RegionStates {
   public Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(
       final Collection<RegionInfo> regions) {
     final Map<ServerName, List<RegionInfo>> result = new HashMap<ServerName, List<RegionInfo>>();
-    for (RegionInfo hri: regions) {
-      final RegionStateNode node = getRegionNode(hri);
-      if (node == null) continue;
-
-      // TODO: State.OPEN
-      final ServerName serverName = node.getRegionLocation();
-      if (serverName == null) continue;
-
-      List<RegionInfo> serverRegions = result.get(serverName);
-      if (serverRegions == null) {
-        serverRegions = new ArrayList<RegionInfo>();
-        result.put(serverName, serverRegions);
+    if (regions != null) {
+      for (RegionInfo hri : regions) {
+        final RegionStateNode node = getRegionStateNode(hri);
+        if (node == null) {
+          continue;
+        }
+        createSnapshot(node, result);
       }
-
-      serverRegions.add(node.getRegionInfo());
+    } else {
+      for (RegionStateNode node : regionsMap.values()) {
+        if (node == null) {
+          continue;
+        }
+        createSnapshot(node, result);
+      }
     }
     return result;
+  }
+
+  private void createSnapshot(RegionStateNode node, Map<ServerName, List<RegionInfo>> result) {
+    final ServerName serverName = node.getRegionLocation();
+    if (serverName == null) {
+      return;
+    }
+
+    List<RegionInfo> serverRegions = result.get(serverName);
+    if (serverRegions == null) {
+      serverRegions = new ArrayList<RegionInfo>();
+      result.put(serverName, serverRegions);
+    }
+    serverRegions.add(node.getRegionInfo());
   }
 
   public Map<RegionInfo, ServerName> getRegionAssignments() {
@@ -698,12 +533,15 @@ public class RegionStates {
     return tableRegions;
   }
 
-  public ServerName getRegionServerOfRegion(final RegionInfo regionInfo) {
-    final RegionStateNode region = getRegionNode(regionInfo);
-    if (region != null) {
-      synchronized (region) {
-        ServerName server = region.getRegionLocation();
-        return server != null ? server : region.getLastHost();
+  public ServerName getRegionServerOfRegion(RegionInfo regionInfo) {
+    RegionStateNode regionNode = getRegionStateNode(regionInfo);
+    if (regionNode != null) {
+      regionNode.lock();
+      try {
+        ServerName server = regionNode.getRegionLocation();
+        return server != null ? server : regionNode.getLastHost();
+      } finally {
+        regionNode.unlock();
       }
     }
     return null;
@@ -714,68 +552,48 @@ public class RegionStates {
    * Can't let out original since it can change and at least the load balancer
    * wants to iterate this exported list.  We need to synchronize on regions
    * since all access to this.servers is under a lock on this.regions.
-   * @param forceByCluster a flag to force to aggregate the server-load to the cluster level
-   * @return A clone of current assignments by table.
+   *
+   * @return A clone of current assignments.
    */
-  public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsByTable(
-      final boolean forceByCluster) {
-    if (!forceByCluster) return getAssignmentsByTable();
-
-    final HashMap<ServerName, List<RegionInfo>> ensemble =
-      new HashMap<ServerName, List<RegionInfo>>(serverMap.size());
-    for (ServerStateNode serverNode: serverMap.values()) {
-      ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList());
-    }
-
-    // TODO: can we use Collections.singletonMap(HConstants.ENSEMBLE_TABLE_NAME, ensemble)?
-    final Map<TableName, Map<ServerName, List<RegionInfo>>> result =
-      new HashMap<TableName, Map<ServerName, List<RegionInfo>>>(1);
-    result.put(HConstants.ENSEMBLE_TABLE_NAME, ensemble);
-    return result;
-  }
-
-  public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsByTable() {
+  public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsForBalancer(
+      TableStateManager tableStateManager, List<ServerName> onlineServers) {
     final Map<TableName, Map<ServerName, List<RegionInfo>>> result = new HashMap<>();
-    for (RegionStateNode node: regionsMap.values()) {
-      Map<ServerName, List<RegionInfo>> tableResult = result.get(node.getTable());
-      if (tableResult == null) {
-        tableResult = new HashMap<ServerName, List<RegionInfo>>();
-        result.put(node.getTable(), tableResult);
+    for (RegionStateNode node : regionsMap.values()) {
+      if (isTableDisabled(tableStateManager, node.getTable())) {
+        continue;
       }
-
+      if (node.getRegionInfo().isSplitParent()) {
+        continue;
+      }
+      Map<ServerName, List<RegionInfo>> tableResult =
+          result.computeIfAbsent(node.getTable(), t -> new HashMap<>());
       final ServerName serverName = node.getRegionLocation();
       if (serverName == null) {
         LOG.info("Skipping, no server for " + node);
         continue;
       }
-      List<RegionInfo> serverResult = tableResult.get(serverName);
-      if (serverResult == null) {
-        serverResult = new ArrayList<RegionInfo>();
-        tableResult.put(serverName, serverResult);
-      }
-
+      List<RegionInfo> serverResult =
+          tableResult.computeIfAbsent(serverName, s -> new ArrayList<>());
       serverResult.add(node.getRegionInfo());
     }
+    // Add online servers with no assignment for the table.
+    for (Map<ServerName, List<RegionInfo>> table : result.values()) {
+      for (ServerName serverName : onlineServers) {
+        table.computeIfAbsent(serverName, key -> new ArrayList<>());
+      }
+    }
     return result;
+  }
+
+  private boolean isTableDisabled(final TableStateManager tableStateManager,
+      final TableName tableName) {
+    return tableStateManager.isTableState(tableName, TableState.State.DISABLED,
+      TableState.State.DISABLING);
   }
 
   // ==========================================================================
   //  Region in transition helpers
   // ==========================================================================
-  protected boolean addRegionInTransition(final RegionStateNode regionNode,
-      final RegionTransitionProcedure procedure) {
-    if (procedure != null && !regionNode.setProcedure(procedure)) return false;
-
-    regionInTransition.put(regionNode.getRegionInfo(), regionNode);
-    return true;
-  }
-
-  protected void removeRegionInTransition(final RegionStateNode regionNode,
-      final RegionTransitionProcedure procedure) {
-    regionInTransition.remove(regionNode.getRegionInfo());
-    regionNode.unsetProcedure(procedure);
-  }
-
   public boolean hasRegionsInTransition() {
     return !regionInTransition.isEmpty();
   }
@@ -785,21 +603,17 @@ public class RegionStates {
     return node != null ? node.isInTransition() : false;
   }
 
-  /**
-   * @return If a procedure-in-transition for <code>hri</code>, return it else null.
-   */
-  public RegionTransitionProcedure getRegionTransitionProcedure(final RegionInfo hri) {
+  public RegionState getRegionTransitionState(RegionInfo hri) {
     RegionStateNode node = regionInTransition.get(hri);
-    if (node == null) return null;
-    return node.getProcedure();
-  }
+    if (node == null) {
+      return null;
+    }
 
-  public RegionState getRegionTransitionState(final RegionInfo hri) {
-    RegionStateNode node = regionInTransition.get(hri);
-    if (node == null) return null;
-
-    synchronized (node) {
-      return node.isInTransition() ? createRegionState(node) : null;
+    node.lock();
+    try {
+      return node.isInTransition() ? node.toRegionState() : null;
+    } finally {
+      node.unlock();
     }
   }
 
@@ -817,7 +631,7 @@ public class RegionStates {
   public List<RegionState> getRegionsStateInTransition() {
     final List<RegionState> rit = new ArrayList<RegionState>(regionInTransition.size());
     for (RegionStateNode node: regionInTransition.values()) {
-      rit.add(createRegionState(node));
+      rit.add(node.toRegionState());
     }
     return rit;
   }
@@ -825,7 +639,7 @@ public class RegionStates {
   public SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {
     final SortedSet<RegionState> rit = new TreeSet<RegionState>(REGION_STATE_STAMP_COMPARATOR);
     for (RegionStateNode node: regionInTransition.values()) {
-      rit.add(createRegionState(node));
+      rit.add(node.toRegionState());
     }
     return rit;
   }
@@ -851,13 +665,13 @@ public class RegionStates {
     private final RegionStateNode regionNode;
 
     private volatile Exception exception = null;
-    private volatile int retries = 0;
+    private AtomicInteger retries = new AtomicInteger();
 
     public RegionFailedOpen(final RegionStateNode regionNode) {
       this.regionNode = regionNode;
     }
 
-    public RegionStateNode getRegionNode() {
+    public RegionStateNode getRegionStateNode() {
       return regionNode;
     }
 
@@ -866,11 +680,11 @@ public class RegionStates {
     }
 
     public int incrementAndGetRetries() {
-      return ++this.retries;
+      return this.retries.incrementAndGet();
     }
 
     public int getRetries() {
-      return retries;
+      return retries.get();
     }
 
     public void setException(final Exception exception) {
@@ -906,7 +720,7 @@ public class RegionStates {
 
     ArrayList<RegionState> regions = new ArrayList<RegionState>(regionFailedOpen.size());
     for (RegionFailedOpen r: regionFailedOpen.values()) {
-      regions.add(createRegionState(r.getRegionNode()));
+      regions.add(r.getRegionStateNode().toRegionState());
     }
     return regions;
   }
@@ -914,6 +728,12 @@ public class RegionStates {
   // ==========================================================================
   //  Servers
   // ==========================================================================
+
+  /**
+   * Be judicious calling this method. Do it on server register ONLY otherwise
+   * you could mess up online server accounting. TOOD: Review usage and convert
+   * to {@link #getServerNode(ServerName)} where we can.
+   */
   public ServerStateNode getOrCreateServer(final ServerName serverName) {
     ServerStateNode node = serverMap.get(serverName);
     if (node == null) {
@@ -924,11 +744,17 @@ public class RegionStates {
     return node;
   }
 
+  /**
+   * Called by SCP at end of successful processing.
+   */
   public void removeServer(final ServerName serverName) {
     serverMap.remove(serverName);
   }
 
-  protected ServerStateNode getServerNode(final ServerName serverName) {
+  /**
+   * @return Pertinent ServerStateNode or NULL if none found (Do not make modifications).
+   */
+  public ServerStateNode getServerNode(final ServerName serverName) {
     return serverMap.get(serverName);
   }
 
@@ -942,9 +768,8 @@ public class RegionStates {
     return numServers == 0 ? 0.0: (double)totalLoad / (double)numServers;
   }
 
-  public ServerStateNode addRegionToServer(final ServerName serverName,
-      final RegionStateNode regionNode) {
-    ServerStateNode serverNode = getOrCreateServer(serverName);
+  public ServerStateNode addRegionToServer(final RegionStateNode regionNode) {
+    ServerStateNode serverNode = getOrCreateServer(regionNode.getRegionLocation());
     serverNode.addRegion(regionNode);
     return serverNode;
   }

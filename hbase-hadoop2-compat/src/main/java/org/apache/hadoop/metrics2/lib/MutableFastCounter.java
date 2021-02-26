@@ -22,7 +22,9 @@ import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class MutableFastCounter extends MutableCounter {
 
   private final LongAdder counter;

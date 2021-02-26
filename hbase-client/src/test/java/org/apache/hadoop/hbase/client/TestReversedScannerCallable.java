@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -38,6 +39,10 @@ import org.mockito.runners.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 @Category({ ClientTests.class, SmallTests.class })
 public class TestReversedScannerCallable {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReversedScannerCallable.class);
 
   @Mock
   private ClusterConnection connection;
@@ -52,20 +57,14 @@ public class TestReversedScannerCallable {
 
   @Before
   public void setUp() throws Exception {
-    byte[] ROW_BEFORE = ConnectionUtils.createCloseRowBefore(ROW);
-
-    Configuration conf = Mockito.mock(Configuration.class);
     HRegionLocation regionLocation = Mockito.mock(HRegionLocation.class);
     ServerName serverName = Mockito.mock(ServerName.class);
-    HRegionInfo regionInfo = Mockito.mock(HRegionInfo.class);
 
-    Mockito.when(connection.getConfiguration()).thenReturn(conf);
+    Mockito.when(connection.getConfiguration()).thenReturn(new Configuration());
     Mockito.when(regionLocations.size()).thenReturn(1);
     Mockito.when(regionLocations.getRegionLocation(0)).thenReturn(regionLocation);
     Mockito.when(regionLocation.getHostname()).thenReturn("localhost");
-    Mockito.when(regionLocation.getRegionInfo()).thenReturn(regionInfo);
     Mockito.when(regionLocation.getServerName()).thenReturn(serverName);
-    Mockito.when(regionInfo.containsRow(ROW_BEFORE)).thenReturn(true);
     Mockito.when(scan.includeStartRow()).thenReturn(true);
     Mockito.when(scan.getStartRow()).thenReturn(ROW);
   }
@@ -76,7 +75,7 @@ public class TestReversedScannerCallable {
     Mockito.when(connection.relocateRegion(tableName, ROW, 0)).thenReturn(regionLocations);
 
     ReversedScannerCallable callable =
-        new ReversedScannerCallable(connection, tableName, scan, null, rpcFactory);
+      new ReversedScannerCallable(connection, tableName, scan, null, rpcFactory, 0);
     callable.prepare(true);
 
     Mockito.verify(connection).relocateRegion(tableName, ROW, 0);
@@ -86,10 +85,10 @@ public class TestReversedScannerCallable {
   public void testPrepareUsesCache() throws Exception {
     TableName tableName = TableName.valueOf("MyTable");
     Mockito.when(connection.locateRegion(tableName, ROW, true, true, 0))
-        .thenReturn(regionLocations);
+      .thenReturn(regionLocations);
 
     ReversedScannerCallable callable =
-        new ReversedScannerCallable(connection, tableName, scan, null, rpcFactory);
+      new ReversedScannerCallable(connection, tableName, scan, null, rpcFactory, 0);
     callable.prepare(false);
 
     Mockito.verify(connection).locateRegion(tableName, ROW, true, true, 0);

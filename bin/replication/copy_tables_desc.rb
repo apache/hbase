@@ -24,7 +24,6 @@
 #
 
 include Java
-java_import org.apache.commons.logging.LogFactory
 java_import org.apache.hadoop.conf.Configuration
 java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.HConstants
@@ -32,6 +31,7 @@ java_import org.apache.hadoop.hbase.HTableDescriptor
 java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
 java_import org.apache.hadoop.hbase.client.HBaseAdmin
+java_import org.slf4j.LoggerFactory
 
 # Name of this script
 NAME = 'copy_tables_desc'.freeze
@@ -64,7 +64,7 @@ end
 
 usage if ARGV.size < 2 || ARGV.size > 3
 
-LOG = LogFactory.getLog(NAME)
+LOG = LoggerFactory.getLogger(NAME)
 
 parts1 = ARGV[0].split(':')
 

@@ -18,10 +18,11 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServiceNotRunningException;
+import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.NonceKey;
 
@@ -79,40 +80,39 @@ public interface ClusterSchema {
    * Create a new Namespace.
    * @param namespaceDescriptor descriptor for new Namespace
    * @param nonceKey A unique identifier for this operation from the client or process.
+   * @param latch A latch to block on for precondition validation
    * @return procedure id
-   * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
-   *    as well as {@link IOException}
+   * @throws IOException if service is not running see {@link ServiceNotRunningException}
    */
-  long createNamespace(NamespaceDescriptor namespaceDescriptor, NonceKey nonceKey)
+  long createNamespace(NamespaceDescriptor namespaceDescriptor, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
 
   /**
    * Modify an existing Namespace.
    * @param nonceKey A unique identifier for this operation from the client or process.
+   * @param latch A latch to block on for precondition validation
    * @return procedure id
-   * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
-   *    as well as {@link IOException}
+   * @throws IOException if service is not running see {@link ServiceNotRunningException}
    */
-  long modifyNamespace(NamespaceDescriptor descriptor, NonceKey nonceKey)
+  long modifyNamespace(NamespaceDescriptor descriptor, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
 
   /**
    * Delete an existing Namespace.
    * Only empty Namespaces (no tables) can be removed.
    * @param nonceKey A unique identifier for this operation from the client or process.
+   * @param latch A latch to block on for precondition validation
    * @return procedure id
-   * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
-   *    as well as {@link IOException}
+   * @throws IOException if service is not running see {@link ServiceNotRunningException}
    */
-  long deleteNamespace(String name, NonceKey nonceKey)
+  long deleteNamespace(String name, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
 
   /**
    * Get a Namespace
    * @param name Name of the Namespace
    * @return Namespace descriptor for <code>name</code>
-   * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
-   *    as well as {@link IOException}
+   * @throws IOException if namespace does not exist
    */
   // No Future here because presumption is that the request will go against cached metadata so
   // return immediately -- no need of running a Procedure.

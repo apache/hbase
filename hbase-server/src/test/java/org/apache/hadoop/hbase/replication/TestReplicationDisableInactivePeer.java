@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,24 +17,31 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.fail;
+
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationDisableInactivePeer extends TestReplicationBase {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationDisableInactivePeer.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicationDisableInactivePeer.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestReplicationDisableInactivePeer.class);
 
   /**
    * Test disabling an inactive peer. Add a peer which is inactive, trying to
@@ -45,12 +51,9 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
    *
    * @throws Exception
    */
-  @Test(timeout = 600000)
+  @Test
   public void testDisableInactivePeer() throws Exception {
-
-    // enabling and shutdown the peer
-    admin.enablePeer("2");
-    utility2.shutdownMiniHBaseCluster();
+    UTIL2.shutdownMiniHBaseCluster();
 
     byte[] rowkey = Bytes.toBytes("disable inactive peer");
     Put put = new Put(rowkey);
@@ -61,8 +64,8 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
     Thread.sleep(SLEEP_TIME * NB_RETRIES);
 
     // disable and start the peer
-    admin.disablePeer("2");
-    utility2.startMiniHBaseCluster(1, 2);
+    hbaseAdmin.disableReplicationPeer("2");
+    restartTargetHBaseCluster(2);
     Get get = new Get(rowkey);
     for (int i = 0; i < NB_RETRIES; i++) {
       Result res = htable2.get(get);
@@ -84,7 +87,7 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME * NB_RETRIES);
       } else {
-        assertArrayEquals(res.value(), row);
+        assertArrayEquals(row, res.value());
         return;
       }
     }

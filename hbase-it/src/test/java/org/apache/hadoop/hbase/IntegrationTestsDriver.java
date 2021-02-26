@@ -22,15 +22,16 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.internal.TextListener;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * This class drives the Integration test suite execution. Executes all
@@ -40,7 +41,7 @@ import org.junit.runner.Result;
 public class IntegrationTestsDriver extends AbstractHBaseTool {
   private static final String SHORT_REGEX_ARG = "r";
   private static final String LONG_REGEX_ARG = "regex";
-  private static final Log LOG = LogFactory.getLog(IntegrationTestsDriver.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestsDriver.class);
   private IntegrationTestFilter intTestFilter = new IntegrationTestFilter();
 
   public static void main(String[] args) throws Exception {

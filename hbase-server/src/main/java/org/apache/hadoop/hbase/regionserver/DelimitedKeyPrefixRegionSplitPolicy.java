@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
 
-  private static final Log LOG = LogFactory
-      .getLog(DelimitedKeyPrefixRegionSplitPolicy.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(DelimitedKeyPrefixRegionSplitPolicy.class);
   public static final String DELIMITER_KEY = "DelimitedKeyPrefixRegionSplitPolicy.delimiter";
 
   private byte[] delimiter = null;
@@ -67,7 +67,7 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundR
 
       //find the first occurrence of delimiter in split point
       int index =
-        org.apache.hadoop.hbase.shaded.com.google.common.primitives.Bytes.indexOf(splitPoint, delimiter);
+        org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.indexOf(splitPoint, delimiter);
       if (index < 0) {
         LOG.warn("Delimiter " + Bytes.toString(delimiter) + "  not found for split key "
             + Bytes.toString(splitPoint));

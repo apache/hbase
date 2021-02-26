@@ -29,9 +29,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.ClientScanner;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -46,16 +43,19 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.FirstKeyValueMatchingQualifiersFilter;
 import org.apache.hadoop.hbase.filter.RandomRowFilter;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * These tests are focused on testing how partial results appear to a client. Partial results are
@@ -67,9 +67,14 @@ import org.junit.rules.TestName;
  * Unless the flag {@link Scan#setAllowPartialResults(boolean)} has been set to true, the caller of
  * {@link ResultScanner#next()} should never see partial results.
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestPartialResultsFromClientSide {
-  private static final Log LOG = LogFactory.getLog(TestPartialResultsFromClientSide.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestPartialResultsFromClientSide.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestPartialResultsFromClientSide.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static int MINICLUSTER_SIZE = 5;
@@ -386,8 +391,7 @@ public class TestPartialResultsFromClientSide {
       // Estimate the cell heap size. One difference is that on server side, the KV Heap size is
       // estimated differently in case the cell is backed up by MSLAB byte[] (no overhead for
       // backing array). Thus below calculation is a bit brittle.
-      CELL_HEAP_SIZE = CellUtil.estimatedHeapSizeOf(result.rawCells()[0])
-          - (ClassSize.ARRAY+3);
+      CELL_HEAP_SIZE = result.rawCells()[0].heapSize() - (ClassSize.ARRAY + 3);
       if (LOG.isInfoEnabled()) LOG.info("Cell heap size: " + CELL_HEAP_SIZE);
       scanner.close();
     }
@@ -598,12 +602,12 @@ public class TestPartialResultsFromClientSide {
 
   /**
    * Make puts to put the input value into each combination of row, family, and qualifier
-   * @param rows
-   * @param families
-   * @param qualifiers
-   * @param value
-   * @return
-   * @throws IOException
+   * @param rows the rows to use
+   * @param families the families to use
+   * @param qualifiers the qualifiers to use
+   * @param value the values to use
+   * @return the dot product of the given rows, families, qualifiers, and values
+   * @throws IOException if there is a problem creating one of the Put objects
    */
   static ArrayList<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
       byte[] value) throws IOException {
@@ -627,11 +631,11 @@ public class TestPartialResultsFromClientSide {
   /**
    * Make key values to represent each possible combination of family and qualifier in the specified
    * row.
-   * @param row
-   * @param families
-   * @param qualifiers
-   * @param value
-   * @return
+   * @param row the row to use
+   * @param families the families to use
+   * @param qualifiers the qualifiers to use
+   * @param value the values to use
+   * @return the dot product of the given families, qualifiers, and values for a given row
    */
   static ArrayList<Cell> createKeyValuesForRow(byte[] row, byte[][] families, byte[][] qualifiers,
       byte[] value) {
@@ -767,9 +771,9 @@ public class TestPartialResultsFromClientSide {
   /**
    * Exhausts the scanner by calling next repetitively. Once completely exhausted, close scanner and
    * return total cell count
-   * @param scanner
-   * @return
-   * @throws Exception
+   * @param scanner the scanner to exhaust
+   * @return the number of cells counted
+   * @throws Exception if there is a problem retrieving cells from the scanner
    */
   private int countCellsFromScanner(ResultScanner scanner) throws Exception {
     Result result = null;
@@ -824,8 +828,7 @@ public class TestPartialResultsFromClientSide {
     assertEquals(1, regions.size());
     RegionInfo regionInfo = regions.get(0).getFirst();
     ServerName name = TEST_UTIL.getHBaseCluster().getRegionServer(index).getServerName();
-    TEST_UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes(),
-        Bytes.toBytes(name.getServerName()));
+    TEST_UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes(), name);
   }
 
   private void assertCell(Cell cell, byte[] row, byte[] cf, byte[] cq) {

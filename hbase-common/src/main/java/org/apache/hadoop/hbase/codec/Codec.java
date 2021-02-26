@@ -22,9 +22,9 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Encoder/Decoder for Cell.
@@ -48,7 +48,7 @@ public interface Codec {
    * Decoder/CellScanner runs off the end of the cell block. Do this rather than require the user
    * call close explicitly.
    */
-  interface Decoder extends CellScanner {};
+  interface Decoder extends CellScanner {}
 
   Decoder getDecoder(InputStream is);
   Decoder getDecoder(ByteBuff buf);

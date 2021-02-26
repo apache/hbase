@@ -19,17 +19,15 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -49,7 +47,7 @@ public interface Store {
   int NO_PRIORITY = Integer.MIN_VALUE;
 
   // General Accessors
-  Comparator<Cell> getComparator();
+  CellComparator getComparator();
 
   Collection<? extends StoreFile> getStorefiles();
 
@@ -61,12 +59,6 @@ public interface Store {
   long timeOfOldestEdit();
 
   FileSystem getFileSystem();
-
-  /**
-   * getter for CompactionProgress object
-   * @return CompactionProgress object; can be null
-   */
-  CompactionProgress getCompactionProgress();
 
   /**
    * Tests whether we should run a major compaction. For example, if the configured major compaction
@@ -180,9 +172,9 @@ public interface Store {
   long getHFilesSize();
 
   /**
-   * @return The size of the store file indexes, in bytes.
+   * @return The size of the store file root-level indexes, in bytes.
    */
-  long getStorefilesIndexSize();
+  long getStorefilesRootLevelIndexSize();
 
   /**
    * Returns the total size of all index blocks in the data block indexes, including the root level,
@@ -203,8 +195,6 @@ public interface Store {
    * @return the parent region info hosting this store
    */
   RegionInfo getRegionInfo();
-
-  RegionCoprocessorHost getCoprocessorHost();
 
   boolean areWritesEnabled();
 
@@ -290,4 +280,16 @@ public interface Store {
    * @return true if the memstore may need some extra memory space
    */
   boolean isSloppyMemStore();
+
+  int getCurrentParallelPutCount();
+
+  /**
+   * @return the number of read requests purely from the memstore.
+   */
+  long getMemstoreOnlyRowReadsCount();
+
+  /**
+   * @return the number of read requests from the files under this store.
+   */
+  long getMixedRowReadsCount();
 }

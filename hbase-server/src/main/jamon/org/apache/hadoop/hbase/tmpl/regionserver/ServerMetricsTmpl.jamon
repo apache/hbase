@@ -19,10 +19,12 @@ limitations under the License.
 <%args>
 MetricsRegionServerWrapper mWrap;
 MetricsHBaseServerWrapper mServerWrap;
+ByteBuffAllocator bbAllocator;
 </%args>
 <%import>
 java.util.*;
 org.apache.hadoop.hbase.regionserver.HRegionServer;
+org.apache.hadoop.hbase.io.ByteBuffAllocator;
 org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapper;
 org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapper;
 org.apache.hadoop.hbase.util.Bytes;
@@ -45,6 +47,7 @@ org.apache.hadoop.hbase.io.util.MemorySizeUtil;
         <li class=""><a href="#tab_walStats" data-toggle="tab">WALs</a></li>
         <li class=""><a href="#tab_storeStats" data-toggle="tab">Storefiles</a></li>
         <li class=""><a href="#tab_queueStats" data-toggle="tab">Queues</a></li>
+        <li class=""><a href="#tab_byteBuffAllocatorStats" data-toggle="tab">ByteBuffAllocator Stats</a></li>
     </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
         <div class="tab-pane active" id="tab_baseStats">
@@ -65,6 +68,9 @@ org.apache.hadoop.hbase.io.util.MemorySizeUtil;
         <div class="tab-pane" id="tab_queueStats">
             <& queueStats; mWrap = mWrap; mServerWrap = mServerWrap; &>
         </div>
+        <div class="tab-pane" id="tab_byteBuffAllocatorStats">
+            <& byteBuffAllocatorStats; bbAllocator = bbAllocator; &>
+        </div>
     </div>
 </div>
 
@@ -84,8 +90,8 @@ org.apache.hadoop.hbase.io.util.MemorySizeUtil;
     <tr>
         <td><% String.format("%.0f", mWrap.getRequestsPerSecond()) %></td>
         <td><% mWrap.getNumOnlineRegions() %></td>
-        <td><% mWrap.getPercentFileLocal() %></td>
-        <td><% mWrap.getPercentFileLocalSecondaryRegions() %></td>
+        <td><% String.format("%.3f",mWrap.getPercentFileLocal()) %><% "%" %></td>
+        <td><% String.format("%.3f",mWrap.getPercentFileLocalSecondaryRegions()) %><% "%" %></td>
         <td><% mWrap.getNumWALSlowAppend() %></td>
     </tr>
 </table>
@@ -146,7 +152,7 @@ MetricsRegionServerWrapper mWrap;
 <tr>
     <tr>
         <th>Num. WAL Files</th>
-        <th>Size. WAL Files (bytes)</th>
+        <th>Size. WAL Files</th>
     </tr>
 </tr>
 <tr>
@@ -165,9 +171,9 @@ MetricsRegionServerWrapper mWrap;
 
     <th>Num. Stores</th>
     <th>Num. Storefiles</th>
-    <th>Root Index Size (bytes)</th>
-    <th>Index Size (bytes)</th>
-    <th>Bloom Size (bytes)</th>
+    <th>Root Index Size</th>
+    <th>Index Size</th>
+    <th>Bloom Size</th>
 </tr>
 <tr>
     <td><% mWrap.getNumStores() %></td>
@@ -212,7 +218,7 @@ MetricsHBaseServerWrapper mServerWrap;
     <th>Priority Call Queue Length</th>
     <th>General Call Queue Length</th>
     <th>Replication Call Queue Length</th>
-    <th>Total Call Queue Size (bytes)</th>
+    <th>Total Call Queue Size</th>
 
 </tr>
 <tr>
@@ -222,6 +228,30 @@ MetricsHBaseServerWrapper mServerWrap;
     <td><% mServerWrap.getGeneralQueueLength() %></td>
     <td><% mServerWrap.getReplicationQueueLength() %></td>
     <td><% TraditionalBinaryPrefix.long2String(mServerWrap.getTotalQueueSize(), "B", 1) %></td>
+</tr>
+</table>
+</%def>
+
+<%def byteBuffAllocatorStats>
+<%args>
+ByteBuffAllocator bbAllocator;
+</%args>
+<table class="table table-striped">
+<tr>
+    <th>Total Heap Allocation</th>
+    <th>Total Pool Allocation</th>
+    <th>Heap Allocation Ratio</th>
+    <th>Total Buffer Count</th>
+    <th>Used Buffer Count</th>
+    <th>Buffer Size</th>
+</tr>
+<tr>
+    <td><% TraditionalBinaryPrefix.long2String(ByteBuffAllocator.getHeapAllocationBytes(bbAllocator, ByteBuffAllocator.HEAP), "B", 1) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(bbAllocator.getPoolAllocationBytes(), "B", 1) %></td>
+    <td><% String.format("%.3f", ByteBuffAllocator.getHeapAllocationRatio(bbAllocator, ByteBuffAllocator.HEAP) * 100) %><% "%" %></td>
+    <td><% bbAllocator.getTotalBufferCount() %></td>
+    <td><% bbAllocator.getUsedBufferCount() %></td>
+    <td><% TraditionalBinaryPrefix.long2String(bbAllocator.getBufferSize(), "B", 1) %></td>
 </tr>
 </table>
 </%def>

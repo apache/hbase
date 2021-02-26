@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,28 +17,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Arrays;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.ArrayUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class RegionInfoBuilder {
-  private static final Log LOG = LogFactory.getLog(RegionInfoBuilder.class);
 
   /** A non-capture group so that this can be embedded. */
   public static final String ENCODED_REGION_NAME_REGEX = "(?:[a-f0-9]+)";
 
-  private static final int MAX_REPLICA_ID = 0xFFFF;
-
   //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final String NO_HASH = null;
+
+  public static final RegionInfo UNDEFINED =
+    RegionInfoBuilder.newBuilder(TableName.valueOf("__UNDEFINED__")).build();
 
   /**
    * RegionInfo for first meta region
@@ -60,8 +52,6 @@ public class RegionInfoBuilder {
   private int replicaId = RegionInfo.DEFAULT_REPLICA_ID;
   private boolean offLine = false;
   private boolean split = false;
-  private byte[] regionName = null;
-  private String encodedName = null;
 
   public static RegionInfoBuilder newBuilder(TableName tableName) {
     return new RegionInfoBuilder(tableName);
@@ -83,8 +73,6 @@ public class RegionInfoBuilder {
     this.split = regionInfo.isSplit();
     this.regionId = regionInfo.getRegionId();
     this.replicaId = regionInfo.getReplicaId();
-    this.regionName = regionInfo.getRegionName();
-    this.encodedName = regionInfo.getEncodedName();
   }
 
   public RegionInfoBuilder setStartKey(byte[] startKey) {
@@ -112,6 +100,7 @@ public class RegionInfoBuilder {
     return this;
   }
 
+  @Deprecated
   public RegionInfoBuilder setOffline(boolean offLine) {
     this.offLine = offLine;
     return this;
@@ -119,373 +108,7 @@ public class RegionInfoBuilder {
 
   public RegionInfo build() {
     return new MutableRegionInfo(tableName, startKey, endKey, split,
-        regionId, replicaId, offLine, regionName, encodedName);
+        regionId, replicaId, offLine);
   }
 
-  /**
-   * An implementation of RegionInfo that adds mutable methods so can build a RegionInfo instance.
-   */
-  @InterfaceAudience.Private
-  static class MutableRegionInfo implements RegionInfo, Comparable<RegionInfo> {
-    /**
-     * The new format for a region name contains its encodedName at the end.
-     * The encoded name also serves as the directory name for the region
-     * in the filesystem.
-     *
-     * New region name format:
-     *    &lt;tablename>,,&lt;startkey>,&lt;regionIdTimestamp>.&lt;encodedName>.
-     * where,
-     *    &lt;encodedName> is a hex version of the MD5 hash of
-     *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
-     *
-     * The old region name format:
-     *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
-     * For region names in the old format, the encoded name is a 32-bit
-     * JenkinsHash integer value (in its decimal notation, string form).
-     *<p>
-     * **NOTE**
-     *
-     * The first hbase:meta region, and regions created by an older
-     * version of HBase (0.20 or prior) will continue to use the
-     * old region name format.
-     */
-
-    // This flag is in the parent of a split while the parent is still referenced
-    // by daughter regions.  We USED to set this flag when we disabled a table
-    // but now table state is kept up in zookeeper as of 0.90.0 HBase.
-    private boolean offLine = false;
-    private boolean split = false;
-    private final long regionId;
-    private final int replicaId;
-    private final byte[] regionName;
-    private final byte[] startKey;
-    private final byte[] endKey;
-    private final int hashCode;
-    private final String encodedName;
-    private final byte[] encodedNameAsBytes;
-    private final TableName tableName;
-
-    private static int generateHashCode(final TableName tableName, final byte[] startKey,
-        final byte[] endKey, final long regionId,
-        final int replicaId, boolean offLine, byte[] regionName) {
-      int result = Arrays.hashCode(regionName);
-      result ^= regionId;
-      result ^= Arrays.hashCode(checkStartKey(startKey));
-      result ^= Arrays.hashCode(checkEndKey(endKey));
-      result ^= Boolean.valueOf(offLine).hashCode();
-      result ^= Arrays.hashCode(tableName.getName());
-      result ^= replicaId;
-      return result;
-    }
-
-    private static byte[] checkStartKey(byte[] startKey) {
-      return startKey == null? HConstants.EMPTY_START_ROW: startKey;
-    }
-
-    private static byte[] checkEndKey(byte[] endKey) {
-      return endKey == null? HConstants.EMPTY_END_ROW: endKey;
-    }
-
-    private static TableName checkTableName(TableName tableName) {
-      if (tableName == null) {
-        throw new IllegalArgumentException("TableName cannot be null");
-      }
-      return tableName;
-    }
-
-    private static int checkReplicaId(int regionId) {
-      if (regionId > MAX_REPLICA_ID) {
-        throw new IllegalArgumentException("ReplicaId cannot be greater than" + MAX_REPLICA_ID);
-      }
-      return regionId;
-    }
-
-    /**
-     * Private constructor used constructing MutableRegionInfo for the
-     * first meta regions
-     */
-    private MutableRegionInfo(long regionId, TableName tableName, int replicaId) {
-      this(tableName,
-          HConstants.EMPTY_START_ROW,
-          HConstants.EMPTY_END_ROW,
-          false,
-          regionId,
-          replicaId,
-          false,
-          RegionInfo.createRegionName(tableName, null, regionId, replicaId, false));
-    }
-
-    MutableRegionInfo(final TableName tableName, final byte[] startKey,
-        final byte[] endKey, final boolean split, final long regionId,
-        final int replicaId, boolean offLine, byte[] regionName) {
-      this(checkTableName(tableName),
-          checkStartKey(startKey),
-          checkEndKey(endKey),
-          split, regionId,
-          checkReplicaId(replicaId),
-          offLine,
-          regionName,
-          RegionInfo.encodeRegionName(regionName));
-    }
-
-    MutableRegionInfo(final TableName tableName, final byte[] startKey,
-        final byte[] endKey, final boolean split, final long regionId,
-        final int replicaId, boolean offLine, byte[] regionName, String encodedName) {
-      this.tableName = checkTableName(tableName);
-      this.startKey = checkStartKey(startKey);
-      this.endKey = checkEndKey(endKey);
-      this.split = split;
-      this.regionId = regionId;
-      this.replicaId = checkReplicaId(replicaId);
-      this.offLine = offLine;
-      if (ArrayUtils.isEmpty(regionName)) {
-        this.regionName = RegionInfo.createRegionName(this.tableName, this.startKey, this.regionId, this.replicaId,
-            !this.tableName.equals(TableName.META_TABLE_NAME));
-        this.encodedName = RegionInfo.encodeRegionName(this.regionName);
-      } else {
-        this.regionName = regionName;
-        this.encodedName = encodedName;
-      }
-      this.hashCode = generateHashCode(
-          this.tableName,
-          this.startKey,
-          this.endKey,
-          this.regionId,
-          this.replicaId,
-          this.offLine,
-          this.regionName);
-      this.encodedNameAsBytes = Bytes.toBytes(this.encodedName);
-    }
-    /**
-     * @return Return a short, printable name for this region
-     * (usually encoded name) for us logging.
-     */
-    @Override
-    public String getShortNameToLog() {
-      return RegionInfo.prettyPrint(this.getEncodedName());
-    }
-
-    /** @return the regionId */
-    @Override
-    public long getRegionId(){
-      return regionId;
-    }
-
-
-    /**
-     * @return the regionName as an array of bytes.
-     * @see #getRegionNameAsString()
-     */
-    @Override
-    public byte [] getRegionName(){
-      return regionName;
-    }
-
-    /**
-     * @return Region name as a String for use in logging, etc.
-     */
-    @Override
-    public String getRegionNameAsString() {
-      if (RegionInfo.hasEncodedName(this.regionName)) {
-        // new format region names already have their encoded name.
-        return Bytes.toStringBinary(this.regionName);
-      }
-
-      // old format. regionNameStr doesn't have the region name.
-      //
-      //
-      return Bytes.toStringBinary(this.regionName) + "." + this.getEncodedName();
-    }
-
-    /** @return the encoded region name */
-    @Override
-    public String getEncodedName() {
-      return this.encodedName;
-    }
-
-    @Override
-    public byte [] getEncodedNameAsBytes() {
-      return this.encodedNameAsBytes;
-    }
-
-    /** @return the startKey */
-    @Override
-    public byte [] getStartKey(){
-      return startKey;
-    }
-
-
-    /** @return the endKey */
-    @Override
-    public byte [] getEndKey(){
-      return endKey;
-    }
-
-    /**
-     * Get current table name of the region
-     * @return TableName
-     */
-    @Override
-    public TableName getTable() {
-      return this.tableName;
-    }
-
-    /**
-     * Returns true if the given inclusive range of rows is fully contained
-     * by this region. For example, if the region is foo,a,g and this is
-     * passed ["b","c"] or ["a","c"] it will return true, but if this is passed
-     * ["b","z"] it will return false.
-     * @throws IllegalArgumentException if the range passed is invalid (ie. end &lt; start)
-     */
-    @Override
-    public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
-      if (Bytes.compareTo(rangeStartKey, rangeEndKey) > 0) {
-        throw new IllegalArgumentException(
-        "Invalid range: " + Bytes.toStringBinary(rangeStartKey) +
-        " > " + Bytes.toStringBinary(rangeEndKey));
-      }
-
-      boolean firstKeyInRange = Bytes.compareTo(rangeStartKey, startKey) >= 0;
-      boolean lastKeyInRange =
-        Bytes.compareTo(rangeEndKey, endKey) < 0 ||
-        Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
-      return firstKeyInRange && lastKeyInRange;
-    }
-
-    /**
-     * Return true if the given row falls in this region.
-     */
-    @Override
-    public boolean containsRow(byte[] row) {
-      return Bytes.compareTo(row, startKey) >= 0 &&
-        (Bytes.compareTo(row, endKey) < 0 ||
-         Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
-    }
-
-    /**
-     * @return true if this region is from hbase:meta
-     */
-    @Override
-    public boolean isMetaTable() {
-      return isMetaRegion();
-    }
-
-    /** @return true if this region is a meta region */
-    @Override
-    public boolean isMetaRegion() {
-       return tableName.equals(FIRST_META_REGIONINFO.getTable());
-    }
-
-    /**
-     * @return true if this region is from a system table
-     */
-    @Override
-    public boolean isSystemTable() {
-      return tableName.isSystemTable();
-    }
-
-    /**
-     * @return True if has been split and has daughters.
-     */
-    @Override
-    public boolean isSplit() {
-      return this.split;
-    }
-
-    /**
-     * @param split set split status
-     * @return MutableRegionInfo
-     */
-    public MutableRegionInfo setSplit(boolean split) {
-      this.split = split;
-      return this;
-    }
-
-    /**
-     * @return True if this region is offline.
-     */
-    @Override
-    public boolean isOffline() {
-      return this.offLine;
-    }
-
-    /**
-     * The parent of a region split is offline while split daughters hold
-     * references to the parent. Offlined regions are closed.
-     * @param offLine Set online/offline status.
-     * @return MutableRegionInfo
-     */
-    public MutableRegionInfo setOffline(boolean offLine) {
-      this.offLine = offLine;
-      return this;
-    }
-
-    /**
-     * @return True if this is a split parent region.
-     */
-    @Override
-    public boolean isSplitParent() {
-      if (!isSplit()) return false;
-      if (!isOffline()) {
-        LOG.warn("Region is split but NOT offline: " + getRegionNameAsString());
-      }
-      return true;
-    }
-
-    /**
-     * Returns the region replica id
-     * @return returns region replica id
-     */
-    @Override
-    public int getReplicaId() {
-      return replicaId;
-    }
-
-    /**
-     * @see java.lang.Object#toString()
-     */
-    @Override
-    public String toString() {
-      return "{ENCODED => " + getEncodedName() + ", " +
-        HConstants.NAME + " => '" + Bytes.toStringBinary(this.regionName)
-        + "', STARTKEY => '" +
-        Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
-        Bytes.toStringBinary(this.endKey) + "'" +
-        (isOffline()? ", OFFLINE => true": "") +
-        (isSplit()? ", SPLIT => true": "") +
-        ((replicaId > 0)? ", REPLICA_ID => " + replicaId : "") + "}";
-    }
-
-    /**
-     * @param o
-     * @see java.lang.Object#equals(java.lang.Object)
-     */
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o == null) {
-        return false;
-      }
-      if (!(o instanceof RegionInfo)) {
-        return false;
-      }
-      return this.compareTo((RegionInfo)o) == 0;
-    }
-
-    /**
-     * @see java.lang.Object#hashCode()
-     */
-    @Override
-    public int hashCode() {
-      return this.hashCode;
-    }
-
-    @Override
-    public int compareTo(RegionInfo other) {
-      return RegionInfo.COMPARATOR.compare(this, other);
-    }
-
-  }
 }

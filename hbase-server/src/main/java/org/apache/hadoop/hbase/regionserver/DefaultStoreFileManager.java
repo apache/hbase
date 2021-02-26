@@ -26,25 +26,24 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableCollection;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Default implementation of StoreFileManager. Not thread-safe.
  */
 @InterfaceAudience.Private
 class DefaultStoreFileManager implements StoreFileManager {
-  private static final Log LOG = LogFactory.getLog(DefaultStoreFileManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultStoreFileManager.class);
 
   private final CellComparator cellComparator;
   private final CompactionConfiguration comConf;
@@ -181,8 +180,8 @@ class DefaultStoreFileManager implements StoreFileManager {
     return files.stream().limit(Math.max(0, files.size() - 1)).filter(sf -> {
       long fileTs = sf.getReader().getMaxTimestamp();
       if (fileTs < maxTs && !filesCompacting.contains(sf)) {
-        LOG.info("Found an expired store file: " + sf.getPath() + " whose maxTimeStamp is " +
-            fileTs + ", which is below " + maxTs);
+        LOG.info("Found an expired store file {} whose maxTimestamp is {}, which is below {}",
+            sf.getPath(), fileTs,  maxTs);
         return true;
       } else {
         return false;

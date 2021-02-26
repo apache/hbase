@@ -26,12 +26,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -50,7 +50,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class DefaultVisibilityExpressionResolver implements VisibilityExpressionResolver {
-  private static final Log LOG = LogFactory.getLog(DefaultVisibilityExpressionResolver.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultVisibilityExpressionResolver.class);
 
   private Configuration conf;
   private final Map<String, Integer> labels = new HashMap<>();

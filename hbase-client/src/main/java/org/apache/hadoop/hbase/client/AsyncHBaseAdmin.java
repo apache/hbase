@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Collection;
+import com.google.protobuf.RpcChannel;
+
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -27,35 +28,38 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
+import org.apache.hadoop.hbase.CacheEvictionStats;
+import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallable;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.protobuf.RpcChannel;
-
 /**
- * The implementation of AsyncAdmin.
+ * Just a wrapper of {@link RawAsyncHBaseAdmin}. The difference is that users need to provide a
+ * thread pool when constructing this class, and the callback methods registered to the returned
+ * {@link CompletableFuture} will be executed in this thread pool. So usually it is safe for users
+ * to do anything they want in the callbacks without breaking the rpc framework.
  * @since 2.0.0
+ * @see RawAsyncHBaseAdmin
+ * @see AsyncConnection#getAdmin(ExecutorService)
+ * @see AsyncConnection#getAdminBuilder(ExecutorService)
  */
 @InterfaceAudience.Private
-public class AsyncHBaseAdmin implements AsyncAdmin {
-
-  private static final Log LOG = LogFactory.getLog(AsyncHBaseAdmin.class);
+class AsyncHBaseAdmin implements AsyncAdmin {
 
   private final RawAsyncHBaseAdmin rawAdmin;
 
@@ -67,15 +71,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private <T> CompletableFuture<T> wrap(CompletableFuture<T> future) {
-    CompletableFuture<T> asyncFuture = new CompletableFuture<>();
-    future.whenCompleteAsync((r, e) -> {
-      if (e != null) {
-        asyncFuture.completeExceptionally(e);
-      } else {
-        asyncFuture.complete(r);
-      }
-    }, pool);
-    return asyncFuture;
+    return FutureUtils.wrapFuture(future, pool);
   }
 
   @Override
@@ -84,20 +80,50 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<TableDescriptor>> listTables(Optional<Pattern> pattern,
-      boolean includeSysTables) {
-    return wrap(rawAdmin.listTables(pattern, includeSysTables));
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptors(boolean includeSysTables) {
+    return wrap(rawAdmin.listTableDescriptors(includeSysTables));
   }
 
   @Override
-  public CompletableFuture<List<TableName>> listTableNames(Optional<Pattern> pattern,
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptors(Pattern pattern,
+      boolean includeSysTables) {
+    return wrap(rawAdmin.listTableDescriptors(pattern, includeSysTables));
+  }
+
+  @Override
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptors(List<TableName> tableNames) {
+    return wrap(rawAdmin.listTableDescriptors(tableNames));
+  }
+
+  @Override
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptorsByNamespace(String name) {
+    return wrap(rawAdmin.listTableDescriptorsByNamespace(name));
+  }
+
+  @Override
+  public CompletableFuture<List<TableName>> listTableNames(boolean includeSysTables) {
+    return wrap(rawAdmin.listTableNames(includeSysTables));
+  }
+
+  @Override
+  public CompletableFuture<List<TableName>> listTableNames(Pattern pattern,
       boolean includeSysTables) {
     return wrap(rawAdmin.listTableNames(pattern, includeSysTables));
   }
 
   @Override
-  public CompletableFuture<TableDescriptor> getTableDescriptor(TableName tableName) {
-    return wrap(rawAdmin.getTableDescriptor(tableName));
+  public CompletableFuture<List<TableName>> listTableNamesByNamespace(String name) {
+    return wrap(rawAdmin.listTableNamesByNamespace(name));
+  }
+
+  @Override
+  public CompletableFuture<TableDescriptor> getDescriptor(TableName tableName) {
+    return wrap(rawAdmin.getDescriptor(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> createTable(TableDescriptor desc) {
+    return wrap(rawAdmin.createTable(desc));
   }
 
   @Override
@@ -107,18 +133,18 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> createTable(TableDescriptor desc, Optional<byte[][]> splitKeys) {
+  public CompletableFuture<Void> createTable(TableDescriptor desc, byte[][] splitKeys) {
     return wrap(rawAdmin.createTable(desc, splitKeys));
+  }
+
+  @Override
+  public CompletableFuture<Void> modifyTable(TableDescriptor desc) {
+    return wrap(rawAdmin.modifyTable(desc));
   }
 
   @Override
   public CompletableFuture<Void> deleteTable(TableName tableName) {
     return wrap(rawAdmin.deleteTable(tableName));
-  }
-
-  @Override
-  public CompletableFuture<List<TableDescriptor>> deleteTables(Pattern pattern) {
-    return wrap(rawAdmin.deleteTables(pattern));
   }
 
   @Override
@@ -132,18 +158,8 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<TableDescriptor>> enableTables(Pattern pattern) {
-    return wrap(rawAdmin.enableTables(pattern));
-  }
-
-  @Override
   public CompletableFuture<Void> disableTable(TableName tableName) {
     return wrap(rawAdmin.disableTable(tableName));
-  }
-
-  @Override
-  public CompletableFuture<List<TableDescriptor>> disableTables(Pattern pattern) {
-    return wrap(rawAdmin.disableTables(pattern));
   }
 
   @Override
@@ -157,13 +173,13 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> isTableAvailable(TableName tableName, byte[][] splitKeys) {
-    return wrap(rawAdmin.isTableAvailable(tableName, splitKeys));
+  public CompletableFuture<Boolean> isTableAvailable(TableName tableName) {
+    return wrap(rawAdmin.isTableAvailable(tableName));
   }
 
   @Override
-  public CompletableFuture<Pair<Integer, Integer>> getAlterStatus(TableName tableName) {
-    return wrap(rawAdmin.getAlterStatus(tableName));
+  public CompletableFuture<Boolean> isTableAvailable(TableName tableName, byte[][] splitKeys) {
+    return wrap(rawAdmin.isTableAvailable(tableName, splitKeys));
   }
 
   @Override
@@ -204,23 +220,23 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<String>> listNamespaces() {
+    return wrap(rawAdmin.listNamespaces());
+  }
+
+  @Override
   public CompletableFuture<List<NamespaceDescriptor>> listNamespaceDescriptors() {
     return wrap(rawAdmin.listNamespaceDescriptors());
   }
 
   @Override
-  public CompletableFuture<Boolean> closeRegion(byte[] regionName, Optional<ServerName> unused) {
-    return wrap(rawAdmin.closeRegion(regionName, unused));
+  public CompletableFuture<List<RegionInfo>> getRegions(ServerName serverName) {
+    return wrap(rawAdmin.getRegions(serverName));
   }
 
   @Override
-  public CompletableFuture<List<RegionInfo>> getOnlineRegions(ServerName serverName) {
-    return wrap(rawAdmin.getOnlineRegions(serverName));
-  }
-
-  @Override
-  public CompletableFuture<List<RegionInfo>> getTableRegions(TableName tableName) {
-    return wrap(rawAdmin.getTableRegions(tableName));
+  public CompletableFuture<List<RegionInfo>> getRegions(TableName tableName) {
+    return wrap(rawAdmin.getRegions(tableName));
   }
 
   @Override
@@ -229,28 +245,65 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily) {
+    return wrap(rawAdmin.flush(tableName, columnFamily));
+  }
+
+  @Override
   public CompletableFuture<Void> flushRegion(byte[] regionName) {
     return wrap(rawAdmin.flushRegion(regionName));
   }
 
   @Override
-  public CompletableFuture<Void> compact(TableName tableName, Optional<byte[]> columnFamily) {
-    return wrap(rawAdmin.compact(tableName, columnFamily));
+  public CompletableFuture<Void> flushRegion(byte[] regionName, byte[] columnFamily) {
+    return wrap(rawAdmin.flushRegion(regionName, columnFamily));
   }
 
   @Override
-  public CompletableFuture<Void> compactRegion(byte[] regionName, Optional<byte[]> columnFamily) {
+  public CompletableFuture<Void> flushRegionServer(ServerName sn) {
+    return wrap(rawAdmin.flushRegionServer(sn));
+  }
+
+  @Override
+  public CompletableFuture<Void> compact(TableName tableName,
+      CompactType compactType) {
+    return wrap(rawAdmin.compact(tableName, compactType));
+  }
+
+  @Override
+  public CompletableFuture<Void> compact(TableName tableName,
+      byte[] columnFamily, CompactType compactType) {
+    return wrap(rawAdmin.compact(tableName, columnFamily, compactType));
+  }
+
+  @Override
+  public CompletableFuture<Void> compactRegion(byte[] regionName) {
+    return wrap(rawAdmin.compactRegion(regionName));
+  }
+
+  @Override
+  public CompletableFuture<Void> compactRegion(byte[] regionName, byte[] columnFamily) {
     return wrap(rawAdmin.compactRegion(regionName, columnFamily));
   }
 
   @Override
-  public CompletableFuture<Void> majorCompact(TableName tableName, Optional<byte[]> columnFamily) {
-    return wrap(rawAdmin.majorCompact(tableName, columnFamily));
+  public CompletableFuture<Void> majorCompact(TableName tableName, CompactType compactType) {
+    return wrap(rawAdmin.majorCompact(tableName, compactType));
   }
 
   @Override
-  public CompletableFuture<Void>
-      majorCompactRegion(byte[] regionName, Optional<byte[]> columnFamily) {
+  public CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily,
+      CompactType compactType) {
+    return wrap(rawAdmin.majorCompact(tableName, columnFamily, compactType));
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompactRegion(byte[] regionName) {
+    return wrap(rawAdmin.majorCompactRegion(regionName));
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompactRegion(byte[] regionName, byte[] columnFamily) {
     return wrap(rawAdmin.majorCompactRegion(regionName, columnFamily));
   }
 
@@ -265,29 +318,28 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> setMergeOn(boolean on) {
-    return wrap(rawAdmin.setMergeOn(on));
+  public CompletableFuture<Boolean> mergeSwitch(boolean enabled, boolean drainMerges) {
+    return wrap(rawAdmin.mergeSwitch(enabled, drainMerges));
   }
 
   @Override
-  public CompletableFuture<Boolean> isMergeOn() {
-    return wrap(rawAdmin.isMergeOn());
+  public CompletableFuture<Boolean> isMergeEnabled() {
+    return wrap(rawAdmin.isMergeEnabled());
   }
 
   @Override
-  public CompletableFuture<Boolean> setSplitOn(boolean on) {
-    return wrap(rawAdmin.setSplitOn(on));
+  public CompletableFuture<Boolean> splitSwitch(boolean enabled, boolean drainSplits) {
+    return wrap(rawAdmin.splitSwitch(enabled, drainSplits));
   }
 
   @Override
-  public CompletableFuture<Boolean> isSplitOn() {
-    return wrap(rawAdmin.isSplitOn());
+  public CompletableFuture<Boolean> isSplitEnabled() {
+    return wrap(rawAdmin.isSplitEnabled());
   }
 
   @Override
-  public CompletableFuture<Void> mergeRegions(byte[] nameOfRegionA, byte[] nameOfRegionB,
-      boolean forcible) {
-    return wrap(rawAdmin.mergeRegions(nameOfRegionA, nameOfRegionB, forcible));
+  public CompletableFuture<Void> mergeRegions(List<byte[]> nameOfRegionsToMerge, boolean forcible) {
+    return wrap(rawAdmin.mergeRegions(nameOfRegionsToMerge, forcible));
   }
 
   @Override
@@ -301,7 +353,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> splitRegion(byte[] regionName, Optional<byte[]> splitPoint) {
+  public CompletableFuture<Void> splitRegion(byte[] regionName) {
+    return wrap(rawAdmin.splitRegion(regionName));
+  }
+
+  @Override
+  public CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint) {
     return wrap(rawAdmin.splitRegion(regionName, splitPoint));
   }
 
@@ -311,8 +368,8 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
-    return wrap(rawAdmin.unassign(regionName, forcible));
+  public CompletableFuture<Void> unassign(byte[] regionName) {
+    return wrap(rawAdmin.unassign(regionName));
   }
 
   @Override
@@ -321,7 +378,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> move(byte[] regionName, Optional<ServerName> destServerName) {
+  public CompletableFuture<Void> move(byte[] regionName) {
+    return wrap(rawAdmin.move(regionName));
+  }
+
+  @Override
+  public CompletableFuture<Void> move(byte[] regionName, ServerName destServerName) {
     return wrap(rawAdmin.move(regionName, destServerName));
   }
 
@@ -336,9 +398,9 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void>
-      addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig) {
-    return wrap(rawAdmin.addReplicationPeer(peerId, peerConfig));
+  public CompletableFuture<Void> addReplicationPeer(String peerId,
+      ReplicationPeerConfig peerConfig, boolean enabled) {
+    return wrap(rawAdmin.addReplicationPeer(peerId, peerConfig, enabled));
   }
 
   @Override
@@ -369,25 +431,39 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> appendReplicationPeerTableCFs(String peerId,
-      Map<TableName, ? extends Collection<String>> tableCfs) {
+      Map<TableName, List<String>> tableCfs) {
     return wrap(rawAdmin.appendReplicationPeerTableCFs(peerId, tableCfs));
   }
 
   @Override
   public CompletableFuture<Void> removeReplicationPeerTableCFs(String peerId,
-      Map<TableName, ? extends Collection<String>> tableCfs) {
+      Map<TableName, List<String>> tableCfs) {
     return wrap(rawAdmin.removeReplicationPeerTableCFs(peerId, tableCfs));
   }
 
   @Override
-  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(
-      Optional<Pattern> pattern) {
+  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers() {
+    return wrap(rawAdmin.listReplicationPeers());
+  }
+
+  @Override
+  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(Pattern pattern) {
     return wrap(rawAdmin.listReplicationPeers(pattern));
   }
 
   @Override
   public CompletableFuture<List<TableCFs>> listReplicatedTableCFs() {
     return wrap(rawAdmin.listReplicatedTableCFs());
+  }
+
+  @Override
+  public CompletableFuture<Void> enableTableReplication(TableName tableName) {
+    return wrap(rawAdmin.enableTableReplication(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> disableTableReplication(TableName tableName) {
+    return wrap(rawAdmin.disableTableReplication(tableName));
   }
 
   @Override
@@ -406,18 +482,30 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot) {
-    return wrap(rawAdmin.restoreSnapshot(snapshotName, takeFailSafeSnapshot));
+  public CompletableFuture<Void> restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
+      boolean restoreAcl) {
+    return wrap(rawAdmin.restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl));
   }
 
   @Override
-  public CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName) {
-    return wrap(rawAdmin.cloneSnapshot(snapshotName, tableName));
+  public CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
+      boolean restoreAcl) {
+    return wrap(rawAdmin.cloneSnapshot(snapshotName, tableName, restoreAcl));
   }
 
   @Override
-  public CompletableFuture<List<SnapshotDescription>> listSnapshots(Optional<Pattern> pattern) {
+  public CompletableFuture<List<SnapshotDescription>> listSnapshots() {
+    return wrap(rawAdmin.listSnapshots());
+  }
+
+  @Override
+  public CompletableFuture<List<SnapshotDescription>> listSnapshots(Pattern pattern) {
     return wrap(rawAdmin.listSnapshots(pattern));
+  }
+
+  @Override
+  public CompletableFuture<List<SnapshotDescription>> listTableSnapshots(Pattern tableNamePattern) {
+    return wrap(rawAdmin.listTableSnapshots(tableNamePattern));
   }
 
   @Override
@@ -429,6 +517,21 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> deleteSnapshot(String snapshotName) {
     return wrap(rawAdmin.deleteSnapshot(snapshotName));
+  }
+
+  @Override
+  public CompletableFuture<Void> deleteSnapshots() {
+    return wrap(rawAdmin.deleteSnapshots());
+  }
+
+  @Override
+  public CompletableFuture<Void> deleteSnapshots(Pattern pattern) {
+    return wrap(rawAdmin.deleteSnapshots(pattern));
+  }
+
+  @Override
+  public CompletableFuture<Void> deleteTableSnapshots(Pattern tableNamePattern) {
+    return wrap(rawAdmin.deleteTableSnapshots(tableNamePattern));
   }
 
   @Override
@@ -444,9 +547,9 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<byte[]> execProcedureWithRet(String signature, String instance,
+  public CompletableFuture<byte[]> execProcedureWithReturn(String signature, String instance,
       Map<String, String> props) {
-    return wrap(rawAdmin.execProcedureWithRet(signature, instance, props));
+    return wrap(rawAdmin.execProcedureWithReturn(signature, instance, props));
   }
 
   @Override
@@ -471,28 +574,30 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> drainRegionServers(List<ServerName> servers) {
-    return wrap(rawAdmin.drainRegionServers(servers));
+  public CompletableFuture<Void> decommissionRegionServers(List<ServerName> servers,
+      boolean offload) {
+    return wrap(rawAdmin.decommissionRegionServers(servers, offload));
   }
 
   @Override
-  public CompletableFuture<List<ServerName>> listDrainingRegionServers() {
-    return wrap(rawAdmin.listDrainingRegionServers());
+  public CompletableFuture<List<ServerName>> listDecommissionedRegionServers() {
+    return wrap(rawAdmin.listDecommissionedRegionServers());
   }
 
   @Override
-  public CompletableFuture<Void> removeDrainFromRegionServers(List<ServerName> servers) {
-    return wrap(rawAdmin.removeDrainFromRegionServers(servers));
+  public CompletableFuture<Void> recommissionRegionServer(ServerName server,
+      List<byte[]> encodedRegionNames) {
+    return wrap(rawAdmin.recommissionRegionServer(server, encodedRegionNames));
   }
 
   @Override
-  public CompletableFuture<ClusterStatus> getClusterStatus() {
-    return getClusterStatus(EnumSet.allOf(Option.class));
+  public CompletableFuture<ClusterMetrics> getClusterMetrics() {
+    return getClusterMetrics(EnumSet.allOf(Option.class));
   }
 
   @Override
-  public CompletableFuture<ClusterStatus> getClusterStatus(EnumSet<Option> options) {
-    return wrap(rawAdmin.getClusterStatus(options));
+  public CompletableFuture<ClusterMetrics> getClusterMetrics(EnumSet<Option> options) {
+    return wrap(rawAdmin.getClusterMetrics(options));
   }
 
   @Override
@@ -536,9 +641,14 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName,
-      Optional<TableName> tableName) {
-    return wrap(rawAdmin.getRegionLoads(serverName, tableName));
+  public CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName) {
+    return wrap(rawAdmin.getRegionMetrics(serverName));
+  }
+
+  @Override
+  public CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName,
+      TableName tableName) {
+    return wrap(rawAdmin.getRegionMetrics(serverName, tableName));
   }
 
   @Override
@@ -547,8 +657,9 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<CompactionState> getCompactionState(TableName tableName) {
-    return wrap(rawAdmin.getCompactionState(tableName));
+  public CompletableFuture<CompactionState> getCompactionState(
+      TableName tableName, CompactType compactType) {
+    return wrap(rawAdmin.getCompactionState(tableName, compactType));
   }
 
   @Override
@@ -568,8 +679,8 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> setBalancerOn(boolean on) {
-    return wrap(rawAdmin.setBalancerOn(on));
+  public CompletableFuture<Boolean> balancerSwitch(boolean on, boolean drainRITs) {
+    return wrap(rawAdmin.balancerSwitch(on, drainRITs));
   }
 
   @Override
@@ -578,33 +689,33 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> isBalancerOn() {
-    return wrap(rawAdmin.isBalancerOn());
+  public CompletableFuture<Boolean> isBalancerEnabled() {
+    return wrap(rawAdmin.isBalancerEnabled());
   }
 
   @Override
-  public CompletableFuture<Boolean> setNormalizerOn(boolean on) {
-    return wrap(rawAdmin.setNormalizerOn(on));
+  public CompletableFuture<Boolean> normalizerSwitch(boolean on) {
+    return wrap(rawAdmin.normalizerSwitch(on));
   }
 
   @Override
-  public CompletableFuture<Boolean> isNormalizerOn() {
-    return wrap(rawAdmin.isNormalizerOn());
+  public CompletableFuture<Boolean> isNormalizerEnabled() {
+    return wrap(rawAdmin.isNormalizerEnabled());
   }
 
   @Override
-  public CompletableFuture<Boolean> normalize() {
-    return wrap(rawAdmin.normalize());
+  public CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp) {
+    return wrap(rawAdmin.normalize(ntfp));
   }
 
   @Override
-  public CompletableFuture<Boolean> setCleanerChoreOn(boolean enabled) {
-    return wrap(rawAdmin.setCleanerChoreOn(enabled));
+  public CompletableFuture<Boolean> cleanerChoreSwitch(boolean enabled) {
+    return wrap(rawAdmin.cleanerChoreSwitch(enabled));
   }
 
   @Override
-  public CompletableFuture<Boolean> isCleanerChoreOn() {
-    return wrap(rawAdmin.isCleanerChoreOn());
+  public CompletableFuture<Boolean> isCleanerChoreEnabled() {
+    return wrap(rawAdmin.isCleanerChoreEnabled());
   }
 
   @Override
@@ -613,13 +724,13 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> setCatalogJanitorOn(boolean enabled) {
-    return wrap(rawAdmin.setCatalogJanitorOn(enabled));
+  public CompletableFuture<Boolean> catalogJanitorSwitch(boolean enabled) {
+    return wrap(rawAdmin.catalogJanitorSwitch(enabled));
   }
 
   @Override
-  public CompletableFuture<Boolean> isCatalogJanitorOn() {
-    return wrap(rawAdmin.isCatalogJanitorOn());
+  public CompletableFuture<Boolean> isCatalogJanitorEnabled() {
+    return wrap(rawAdmin.isCatalogJanitorEnabled());
   }
 
   @Override
@@ -629,13 +740,13 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      CoprocessorCallable<S, R> callable) {
+      ServiceCaller<S, R> callable) {
     return wrap(rawAdmin.coprocessorService(stubMaker, callable));
   }
 
   @Override
   public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      CoprocessorCallable<S, R> callable, ServerName serverName) {
+      ServiceCaller<S, R> callable, ServerName serverName) {
     return wrap(rawAdmin.coprocessorService(stubMaker, callable, serverName));
   }
 
@@ -647,5 +758,104 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<ServerName>> clearDeadServers(List<ServerName> servers) {
     return wrap(rawAdmin.clearDeadServers(servers));
+  }
+
+  @Override
+  public CompletableFuture<CacheEvictionStats> clearBlockCache(TableName tableName) {
+    return wrap(rawAdmin.clearBlockCache(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> cloneTableSchema(TableName tableName, TableName newTableName,
+      boolean preserveSplits) {
+    return wrap(rawAdmin.cloneTableSchema(tableName, newTableName, preserveSplits));
+  }
+
+  @Override
+  public CompletableFuture<Map<ServerName, Boolean>> compactionSwitch(boolean switchState,
+      List<String> serverNamesList) {
+    return wrap(rawAdmin.compactionSwitch(switchState, serverNamesList));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> switchRpcThrottle(boolean enable) {
+    return wrap(rawAdmin.switchRpcThrottle(enable));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isRpcThrottleEnabled() {
+    return wrap(rawAdmin.isRpcThrottleEnabled());
+  }
+
+  @Override
+  public CompletableFuture<Boolean> exceedThrottleQuotaSwitch(boolean enable) {
+    return wrap(rawAdmin.exceedThrottleQuotaSwitch(enable));
+  }
+
+  @Override
+  public CompletableFuture<Map<TableName, Long>> getSpaceQuotaTableSizes() {
+    return wrap(rawAdmin.getSpaceQuotaTableSizes());
+  }
+
+  @Override
+  public CompletableFuture<Map<TableName, SpaceQuotaSnapshot>> getRegionServerSpaceQuotaSnapshots(
+      ServerName serverName) {
+    return wrap(rawAdmin.getRegionServerSpaceQuotaSnapshots(serverName));
+  }
+
+  @Override
+  public CompletableFuture<SpaceQuotaSnapshot> getCurrentSpaceQuotaSnapshot(String namespace) {
+    return wrap(rawAdmin.getCurrentSpaceQuotaSnapshot(namespace));
+  }
+
+  @Override
+  public CompletableFuture<SpaceQuotaSnapshot> getCurrentSpaceQuotaSnapshot(TableName tableName) {
+    return wrap(rawAdmin.getCurrentSpaceQuotaSnapshot(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> grant(UserPermission userPermission,
+      boolean mergeExistingPermissions) {
+    return wrap(rawAdmin.grant(userPermission, mergeExistingPermissions));
+  }
+
+  @Override
+  public CompletableFuture<Void> revoke(UserPermission userPermission) {
+    return wrap(rawAdmin.revoke(userPermission));
+  }
+
+  @Override
+  public CompletableFuture<List<UserPermission>>
+      getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) {
+    return wrap(rawAdmin.getUserPermissions(getUserPermissionsRequest));
+  }
+
+  @Override
+  public CompletableFuture<List<Boolean>> hasUserPermissions(String userName,
+      List<Permission> permissions) {
+    return wrap(rawAdmin.hasUserPermissions(userName, permissions));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> snapshotCleanupSwitch(final boolean on,
+      final boolean sync) {
+    return wrap(rawAdmin.snapshotCleanupSwitch(on, sync));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isSnapshotCleanupEnabled() {
+    return wrap(rawAdmin.isSnapshotCleanupEnabled());
+  }
+
+  @Override
+  public CompletableFuture<List<Boolean>> clearSlowLogResponses(Set<ServerName> serverNames) {
+    return wrap(rawAdmin.clearSlowLogResponses(serverNames));
+  }
+
+  @Override
+  public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
+      String logType, ServerType serverType, int limit,
+      Map<String, Object> filterParams) {
+    return wrap(rawAdmin.getLogEntries(serverNames, logType, serverType, limit, filterParams));
   }
 }

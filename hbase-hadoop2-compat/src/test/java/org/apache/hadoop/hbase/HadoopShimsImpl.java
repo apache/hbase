@@ -26,12 +26,11 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
  * Compatibility shim layer implementation for Hadoop-2.
  */
 public class HadoopShimsImpl implements HadoopShims {
-
   /**
    * Returns a TaskAttemptContext instance created from the given parameters.
    * @param job an instance of o.a.h.mapreduce.Job
    * @param taskId an identifier for the task attempt id. Should be parsable by
-   * TaskAttemptId.forName()
+   *               {@link TaskAttemptID#forName(String)}
    * @return a concrete TaskAttemptContext instance of o.a.h.mapreduce.TaskAttemptContext
    */
   @Override

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -27,7 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * of elements between collections.
  * @param <T>
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public interface RowAccess<T> extends Iterable<T> {
   /**
    * @return true if there are no elements.

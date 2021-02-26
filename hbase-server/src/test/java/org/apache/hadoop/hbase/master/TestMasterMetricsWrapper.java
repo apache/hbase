@@ -17,12 +17,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
@@ -32,19 +30,27 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterMetricsWrapper {
-  private static final Log LOG = LogFactory.getLog(TestMasterMetricsWrapper.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMasterMetricsWrapper.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterMetricsWrapper.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final int NUM_RS = 4;
 
   @BeforeClass
   public static void setup() throws Exception {
-    TEST_UTIL.startMiniCluster(1, NUM_RS);
+    TEST_UTIL.startMiniCluster(NUM_RS);
   }
 
   @AfterClass
@@ -52,12 +58,14 @@ public class TestMasterMetricsWrapper {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test (timeout = 30000)
+  @Test
   public void testInfo() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(master);
-    assertEquals(master.getSplitPlanCount(), info.getSplitPlanCount(), 0);
-    assertEquals(master.getMergePlanCount(), info.getMergePlanCount(), 0);
+    assertEquals(
+      master.getRegionNormalizerManager().getSplitPlanCount(), info.getSplitPlanCount(), 0);
+    assertEquals(
+      master.getRegionNormalizerManager().getMergePlanCount(), info.getMergePlanCount(), 0);
     assertEquals(master.getAverageLoad(), info.getAverageLoad(), 0);
     assertEquals(master.getClusterId(), info.getClusterId());
     assertEquals(master.getMasterActiveTime(), info.getActiveTime());
@@ -83,7 +91,9 @@ public class TestMasterMetricsWrapper {
     }
     assertEquals(regionServerCount - 1, info.getNumRegionServers());
     assertEquals(1, info.getNumDeadRegionServers());
-    assertEquals(1, info.getNumWALFiles());
+    // now we do not expose this information as WALProcedureStore is not the only ProcedureStore
+    // implementation any more.
+    assertEquals(0, info.getNumWALFiles());
   }
 
   @Test

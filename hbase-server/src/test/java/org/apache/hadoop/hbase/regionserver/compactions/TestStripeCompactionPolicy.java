@@ -23,19 +23,19 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.AdditionalMatchers.aryEq;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,21 +43,21 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.OptionalLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
@@ -70,13 +70,13 @@ import org.apache.hadoop.hbase.regionserver.StripeStoreFlusher;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy.StripeInformationProvider;
 import org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.StoreFileWritersCapture;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
-import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -84,13 +84,17 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentMatcher;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @RunWith(Parameterized.class)
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestStripeCompactionPolicy {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStripeCompactionPolicy.class);
+
   private static final byte[] KEY_A = Bytes.toBytes("aaa");
   private static final byte[] KEY_B = Bytes.toBytes("bbb");
   private static final byte[] KEY_C = Bytes.toBytes("ccc");
@@ -115,6 +119,7 @@ public class TestStripeCompactionPolicy {
 
   @Parameter
   public boolean usePrivateReaders;
+
   @Test
   public void testNoStripesFromFlush() throws Exception {
     Configuration conf = HBaseConfiguration.create();
@@ -134,7 +139,7 @@ public class TestStripeCompactionPolicy {
 
     KeyValue[] input = new KeyValue[] { KV_B, KV_C, KV_C, KV_D, KV_E };
     KeyValue[][] expected = new KeyValue[][] { new KeyValue[] { KV_B },
-        new KeyValue[] { KV_C, KV_C }, new KeyValue[] {  KV_D, KV_E } };
+      new KeyValue[] { KV_C, KV_C }, new KeyValue[] {  KV_D, KV_E } };
     verifyFlush(policy, si, input, expected, new byte[][] { OPEN_KEY, KEY_C, KEY_D, OPEN_KEY });
   }
 
@@ -159,19 +164,24 @@ public class TestStripeCompactionPolicy {
     conf.setInt(StripeStoreConfig.MAX_FILES_KEY, 4);
     conf.setLong(StripeStoreConfig.SIZE_TO_SPLIT_KEY, 1000); // make sure the are no splits
     StoreConfigInformation sci = mock(StoreConfigInformation.class);
+    when(sci.getRegionInfo()).thenReturn(HRegionInfo.FIRST_META_REGIONINFO);
     StripeStoreConfig ssc = new StripeStoreConfig(conf, sci);
     StripeCompactionPolicy policy = new StripeCompactionPolicy(conf, sci, ssc) {
       @Override
       public StripeCompactionRequest selectCompaction(StripeInformationProvider si,
           List<HStoreFile> filesCompacting, boolean isOffpeak) throws IOException {
-        if (!filesCompacting.isEmpty()) return null;
+        if (!filesCompacting.isEmpty()) {
+          return null;
+        }
         return selectSingleStripeCompaction(si, false, false, isOffpeak);
       }
 
       @Override
       public boolean needsCompactions(
           StripeInformationProvider si, List<HStoreFile> filesCompacting) {
-        if (!filesCompacting.isEmpty()) return false;
+        if (!filesCompacting.isEmpty()) {
+          return false;
+        }
         return needsSingleStripeCompaction(si);
       }
     };
@@ -196,7 +206,7 @@ public class TestStripeCompactionPolicy {
     si = createStripesWithSizes(0, 0,
         new Long[] { 5L }, new Long[] { 3L, 2L, 2L, 1L }, new Long[] { 3L, 2L, 2L });
     verifySingleStripeCompaction(policy, si, 1, null);
-    // Or with smallest files, if the count is the same 
+    // Or with smallest files, if the count is the same
     si = createStripesWithSizes(0, 0,
         new Long[] { 3L, 3L, 3L }, new Long[] { 3L, 1L, 2L }, new Long[] { 3L, 2L, 2L });
     verifySingleStripeCompaction(policy, si, 1, null);
@@ -236,7 +246,7 @@ public class TestStripeCompactionPolicy {
     scr.execute(sc, NoLimitThroughputController.INSTANCE, null);
     verify(sc, only()).compact(eq(scr.getRequest()), anyInt(), anyLong(), aryEq(OPEN_KEY),
       aryEq(OPEN_KEY), aryEq(OPEN_KEY), aryEq(OPEN_KEY),
-      any(NoLimitThroughputController.class), any(User.class));
+      any(), any());
   }
 
   @Test
@@ -452,7 +462,7 @@ public class TestStripeCompactionPolicy {
     List<HStoreFile> compactFile = new ArrayList<>();
     Iterator<HStoreFile> iter = si.getStripes().get(0).listIterator(1);
     while (iter.hasNext()) {
-        compactFile.add(iter.next());
+      compactFile.add(iter.next());
     }
     verifyCompaction(policy, si, compactFile, false, 1, null, si.getStartRow(0), si.getEndRow(0),
       true);
@@ -471,6 +481,7 @@ public class TestStripeCompactionPolicy {
     conf.setInt(StripeStoreConfig.INITIAL_STRIPE_COUNT_KEY, initialCount);
     StoreConfigInformation sci = mock(StoreConfigInformation.class);
     when(sci.getStoreFileTtl()).thenReturn(hasTtl ? defaultTtl : Long.MAX_VALUE);
+    when(sci.getRegionInfo()).thenReturn(HRegionInfo.FIRST_META_REGIONINFO);
     StripeStoreConfig ssc = new StripeStoreConfig(conf, sci);
     return new StripeCompactionPolicy(conf, sci, ssc);
   }
@@ -550,18 +561,21 @@ public class TestStripeCompactionPolicy {
     scr.execute(sc, NoLimitThroughputController.INSTANCE, null);
     verify(sc, times(1)).compact(eq(scr.getRequest()), argThat(new ArgumentMatcher<List<byte[]>>() {
       @Override
-      public boolean matches(Object argument) {
-        @SuppressWarnings("unchecked")
-        List<byte[]> other = (List<byte[]>) argument;
-        if (other.size() != boundaries.size()) return false;
+      public boolean matches(List<byte[]> argument) {
+        List<byte[]> other = argument;
+        if (other.size() != boundaries.size()) {
+          return false;
+        }
         for (int i = 0; i < other.size(); ++i) {
-          if (!Bytes.equals(other.get(i), boundaries.get(i))) return false;
+          if (!Bytes.equals(other.get(i), boundaries.get(i))) {
+            return false;
+          }
         }
         return true;
       }
     }), dropDeletesFrom == null ? isNull(byte[].class) : aryEq(dropDeletesFrom),
       dropDeletesTo == null ? isNull(byte[].class) : aryEq(dropDeletesTo),
-      any(NoLimitThroughputController.class), any(User.class));
+      any(), any());
   }
 
   /**
@@ -573,7 +587,7 @@ public class TestStripeCompactionPolicy {
    * @param count Expected # of resulting stripes, null if not checked.
    * @param size Expected target stripe size, null if not checked.
    * @param start Left boundary of the compaction.
-   * @param righr Right boundary of the compaction.
+   * @param end Right boundary of the compaction.
    */
   private void verifyCompaction(StripeCompactionPolicy policy, StripeInformationProvider si,
       Collection<HStoreFile> sfs, Boolean dropDeletes, Integer count, Long size,
@@ -587,15 +601,15 @@ public class TestStripeCompactionPolicy {
       count == null ? anyInt() : eq(count.intValue()),
       size == null ? anyLong() : eq(size.longValue()), aryEq(start), aryEq(end),
       dropDeletesMatcher(dropDeletes, start), dropDeletesMatcher(dropDeletes, end),
-      any(NoLimitThroughputController.class), any(User.class));
+      any(), any());
   }
 
   /** Verify arbitrary flush. */
   protected void verifyFlush(StripeCompactionPolicy policy, StripeInformationProvider si,
       KeyValue[] input, KeyValue[][] expected, byte[][] boundaries) throws IOException {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
-    StripeStoreFlusher.StripeFlushRequest req = policy.selectFlush(CellComparator.COMPARATOR, si,
-      input.length);
+    StripeStoreFlusher.StripeFlushRequest req =
+      policy.selectFlush(CellComparatorImpl.COMPARATOR, si, input.length);
     StripeMultiFileWriter mw = req.createWriter();
     mw.init(null, writers);
     for (KeyValue kv : input) {
@@ -611,7 +625,7 @@ public class TestStripeCompactionPolicy {
 
 
   private byte[] dropDeletesMatcher(Boolean dropDeletes, byte[] value) {
-    return dropDeletes == null ? any(byte[].class)
+    return dropDeletes == null ? any()
             : (dropDeletes.booleanValue() ? aryEq(value) : isNull(byte[].class));
   }
 
@@ -779,23 +793,27 @@ public class TestStripeCompactionPolicy {
     when(store.getColumnFamilyDescriptor()).thenReturn(col);
     when(store.getRegionInfo()).thenReturn(info);
     when(
-      store.createWriterInTmp(anyLong(), any(Compression.Algorithm.class), anyBoolean(),
+      store.createWriterInTmp(anyLong(), any(), anyBoolean(),
         anyBoolean(), anyBoolean(), anyBoolean())).thenAnswer(writers);
+    when(
+      store.createWriterInTmp(anyLong(), any(), anyBoolean(),
+        anyBoolean(), anyBoolean(), anyBoolean(), anyLong(), anyString())).thenAnswer(writers);
 
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean("hbase.regionserver.compaction.private.readers", usePrivateReaders);
     final Scanner scanner = new Scanner();
     return new StripeCompactor(conf, store) {
       @Override
-      protected InternalScanner createScanner(HStore store, List<StoreFileScanner> scanners,
-          long smallestReadPoint, long earliestPutTs, byte[] dropDeletesFromRow,
-          byte[] dropDeletesToRow) throws IOException {
+      protected InternalScanner createScanner(HStore store, ScanInfo scanInfo,
+          List<StoreFileScanner> scanners, long smallestReadPoint, long earliestPutTs,
+          byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
         return scanner;
       }
 
       @Override
-      protected InternalScanner createScanner(HStore store, List<StoreFileScanner> scanners,
-          ScanType scanType, long smallestReadPoint, long earliestPutTs) throws IOException {
+      protected InternalScanner createScanner(HStore store, ScanInfo scanInfo,
+          List<StoreFileScanner> scanners, ScanType scanType, long smallestReadPoint,
+          long earliestPutTs) throws IOException {
         return scanner;
       }
     };
@@ -809,16 +827,13 @@ public class TestStripeCompactionPolicy {
     }
 
     @Override
-    public boolean next(List<Cell> results) throws IOException {
-      if (kvs.isEmpty()) return false;
-      results.add(kvs.remove(0));
-      return !kvs.isEmpty();
-    }
-
-    @Override
     public boolean next(List<Cell> result, ScannerContext scannerContext)
         throws IOException {
-      return next(result);
+      if (kvs.isEmpty()) {
+        return false;
+      }
+      result.add(kvs.remove(0));
+      return !kvs.isEmpty();
     }
 
     @Override

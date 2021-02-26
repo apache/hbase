@@ -17,18 +17,21 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Order;
-import org.apache.hadoop.hbase.util.PositionedByteRange;
-
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
+import org.apache.hadoop.hbase.util.Order;
+import org.apache.hadoop.hbase.util.PositionedByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A base-class for {@link DataType} implementations backed by protobuf. See
- * {@code PBKeyValue} in {@code hbase-examples} module.
+ * A base-class for {@link DataType} implementations backed by protobuf. See {@code PBKeyValue} in
+ * {@code hbase-examples} module.
+ * @deprecated Will be removed in 3.0.0 without replacement. It should not be a public API as it
+ *             exposes the protobuf stuff. Users who depend on this class should just copy the code
+ *             your own code base.
  */
+@Deprecated
 @InterfaceAudience.Public
 public abstract class PBType<T extends Message> implements DataType<T> {
   @Override

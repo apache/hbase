@@ -19,29 +19,22 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTableWrapper;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Encapsulation of the environment of each coprocessor
  */
 @InterfaceAudience.Private
 public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnvironment<C> {
-  private static final Log LOG = LogFactory.getLog(BaseEnvironment.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BaseEnvironment.class);
 
   /** The coprocessor */
   public C impl;
@@ -49,9 +42,6 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
   protected int priority = Coprocessor.PRIORITY_USER;
   /** Current coprocessor state */
   Coprocessor.State state = Coprocessor.State.UNINSTALLED;
-  /** Accounting for tables opened by the coprocessor */
-  protected List<Table> openTables =
-    Collections.synchronizedList(new ArrayList<Table>());
   private int seq;
   private Configuration conf;
   private ClassLoader classLoader;
@@ -61,18 +51,16 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
    * @param impl the coprocessor instance
    * @param priority chaining priority
    */
-  public BaseEnvironment(final C impl, final int priority,
-      final int seq, final Configuration conf) {
+  public BaseEnvironment(final C impl, final int priority, final int seq, final Configuration conf) {
     this.impl = impl;
     this.classLoader = impl.getClass().getClassLoader();
     this.priority = priority;
     this.state = Coprocessor.State.INSTALLED;
     this.seq = seq;
-    this.conf = conf;
+    this.conf = new ReadOnlyConfiguration(conf);
   }
 
   /** Initialize the environment */
-  @Override
   public void startup() throws IOException {
     if (state == Coprocessor.State.INSTALLED ||
         state == Coprocessor.State.STOPPED) {
@@ -93,7 +81,6 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
   }
 
   /** Clean up the environment */
-  @Override
   public void shutdown() {
     if (state == Coprocessor.State.ACTIVE) {
       state = Coprocessor.State.STOPPING;
@@ -111,18 +98,6 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
     } else {
       LOG.warn("Not stopping coprocessor "+impl.getClass().getName()+
           " because not active (state="+state.toString()+")");
-    }
-    synchronized (openTables) {
-      // clean up any table references
-      for (Table table: openTables) {
-        try {
-          ((HTableWrapper)table).internalClose();
-        } catch (IOException e) {
-          // nothing can be done here
-          LOG.warn("Failed to close " +
-              table.getName(), e);
-        }
-      }
     }
   }
 
@@ -161,27 +136,5 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
   @Override
   public Configuration getConfiguration() {
     return conf;
-  }
-
-  /**
-   * Open a table from within the Coprocessor environment
-   * @param tableName the table name
-   * @return an interface for manipulating the table
-   * @exception IOException Exception
-   */
-  @Override
-  public Table getTable(TableName tableName) throws IOException {
-    return this.getTable(tableName, null);
-  }
-
-  /**
-   * Open a table from within the Coprocessor environment
-   * @param tableName the table name
-   * @return an interface for manipulating the table
-   * @exception IOException Exception
-   */
-  @Override
-  public Table getTable(TableName tableName, ExecutorService pool) throws IOException {
-    return HTableWrapper.createWrapper(openTables, tableName, this, pool);
   }
 }

@@ -19,11 +19,13 @@
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Common base implementation for metrics sources which need to track exceptions thrown or
  * received.
  */
+@InterfaceAudience.Private
 public class ExceptionTrackingSourceImpl extends BaseSourceImpl
     implements ExceptionTrackingSource {
   protected MutableFastCounter exceptions;

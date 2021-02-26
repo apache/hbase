@@ -22,18 +22,16 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Store cells following every row's start offset, so we can binary search to a row's cells.
@@ -52,6 +50,13 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
 
   private static class RowIndexEncodingState extends EncodingState {
     RowIndexEncoderV1 encoder = null;
+
+    @Override
+    public void beforeShipped() {
+      if (encoder != null) {
+        encoder.beforeShipped();
+      }
+    }
   }
 
   @Override
@@ -63,7 +68,8 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
           + "encoding context.");
     }
 
-    HFileBlockDefaultEncodingContext encodingCtx = (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+    HFileBlockDefaultEncodingContext encodingCtx =
+      (HFileBlockDefaultEncodingContext) blkEncodingCtx;
     encodingCtx.prepareEncoding(out);
 
     RowIndexEncoderV1 encoder = new RowIndexEncoderV1(out, encodingCtx);
@@ -73,12 +79,12 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
   }
 
   @Override
-  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx,
+  public void encode(Cell cell, HFileBlockEncodingContext encodingCtx,
       DataOutputStream out) throws IOException {
     RowIndexEncodingState state = (RowIndexEncodingState) encodingCtx
         .getEncodingState();
     RowIndexEncoderV1 encoder = state.encoder;
-    return encoder.write(cell);
+    encoder.write(cell);
   }
 
   @Override
@@ -107,8 +113,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
       dup.limit(sourceAsBuffer.position() + onDiskSize);
       return dup.slice();
     } else {
-      RowIndexSeekerV1 seeker = new RowIndexSeekerV1(CellComparator.COMPARATOR,
-          decodingCtx);
+      RowIndexSeekerV1 seeker = new RowIndexSeekerV1(decodingCtx);
       seeker.setCurrentBuffer(new SingleByteBuff(sourceAsBuffer));
       List<Cell> kvs = new ArrayList<>();
       kvs.add(seeker.getCell());
@@ -142,9 +147,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
   }
 
   @Override
-  public EncodedSeeker createSeeker(CellComparator comparator,
-      HFileBlockDecodingContext decodingCtx) {
-    return new RowIndexSeekerV1(comparator, decodingCtx);
+  public EncodedSeeker createSeeker(HFileBlockDecodingContext decodingCtx) {
+    return new RowIndexSeekerV1(decodingCtx);
   }
-
 }

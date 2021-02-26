@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
@@ -28,11 +28,23 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.TimeOffsetEnvironmentEdge;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestDefaultCompactSelection extends TestCompactionPolicy {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDefaultCompactSelection.class);
+
+  @Override
+  protected void config() {
+    super.config();
+    // DON'T change this config since all test cases assume HStore.BLOCKING_STOREFILES_KEY is 10.
+    this.conf.setLong(HStore.BLOCKING_STOREFILES_KEY, 10);
+  }
 
   @Test
   public void testCompactionRatio() throws IOException {
@@ -158,10 +170,8 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
   public void testCompactionEmptyHFile() throws IOException {
     // Set TTL
     ScanInfo oldScanInfo = store.getScanInfo();
-    ScanInfo newScanInfo = new ScanInfo(oldScanInfo.getConfiguration(), oldScanInfo.getFamily(),
-        oldScanInfo.getMinVersions(), oldScanInfo.getMaxVersions(), 600,
-        oldScanInfo.getKeepDeletedCells(), oldScanInfo.getPreadMaxBytes(),
-        oldScanInfo.getTimeToPurgeDeletes(), oldScanInfo.getComparator(), oldScanInfo.isNewVersionBehavior());
+    ScanInfo newScanInfo = oldScanInfo.customize(oldScanInfo.getMaxVersions(), 600,
+        oldScanInfo.getKeepDeletedCells());
     store.setScanInfo(newScanInfo);
     // Do not compact empty store file
     List<HStoreFile> candidates = sfCreate(0);

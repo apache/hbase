@@ -21,20 +21,31 @@ package org.apache.hadoop.hbase.rest.client;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
+import javax.net.ssl.SSLContext;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
@@ -42,10 +53,14 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHeader;
-import org.apache.http.params.CoreConnectionPNames;
+import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A wrapper around HttpClient which provides some useful function and
@@ -55,7 +70,7 @@ import org.apache.http.util.EntityUtils;
 public class Client {
   public static final Header[] EMPTY_HEADER_ARRAY = new Header[0];
 
-  private static final Log LOG = LogFactory.getLog(Client.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Client.class);
 
   private HttpClient httpClient;
   private Cluster cluster;
@@ -65,6 +80,10 @@ public class Client {
 
   private Map<String, String> extraHeaders;
 
+  private static final String AUTH_COOKIE = "hadoop.auth";
+  private static final String AUTH_COOKIE_EQ = AUTH_COOKIE + "=";
+  private static final String COOKIE = "Cookie";
+
   /**
    * Default Constructor
    */
@@ -72,14 +91,35 @@ public class Client {
     this(null);
   }
 
-  private void initialize(Cluster cluster, boolean sslEnabled) {
+  private void initialize(Cluster cluster, boolean sslEnabled, Optional<KeyStore> trustStore) {
     this.cluster = cluster;
     this.sslEnabled = sslEnabled;
     extraHeaders = new ConcurrentHashMap<>();
     String clspath = System.getProperty("java.class.path");
     LOG.debug("classpath " + clspath);
-    this.httpClient = new DefaultHttpClient();
-    this.httpClient.getParams().setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 2000);
+    HttpClientBuilder httpClientBuilder = HttpClients.custom();
+
+    RequestConfig requestConfig = RequestConfig.custom().
+      setConnectTimeout(2000).build();
+    httpClientBuilder.setDefaultRequestConfig(requestConfig);
+
+    // Since HBASE-25267 we don't use the deprecated DefaultHttpClient anymore.
+    // The new http client would decompress the gzip content automatically.
+    // In order to keep the original behaviour of this public class, we disable
+    // automatic content compression.
+    httpClientBuilder.disableContentCompression();
+
+    if(sslEnabled && trustStore.isPresent()) {
+      try {
+        SSLContext sslcontext =
+          SSLContexts.custom().loadTrustMaterial(trustStore.get(), null).build();
+        httpClientBuilder.setSSLContext(sslcontext);
+      } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
+        throw new ClientTrustStoreInitializationException("Error while processing truststore", e);
+      }
+    }
+
+    this.httpClient = httpClientBuilder.build();
   }
 
   /**
@@ -87,7 +127,7 @@ public class Client {
    * @param cluster the cluster definition
    */
   public Client(Cluster cluster) {
-    initialize(cluster, false);
+    this(cluster, false);
   }
 
   /**
@@ -96,7 +136,38 @@ public class Client {
    * @param sslEnabled enable SSL or not
    */
   public Client(Cluster cluster, boolean sslEnabled) {
-    initialize(cluster, sslEnabled);
+    initialize(cluster, sslEnabled, Optional.empty());
+  }
+
+  /**
+   * Constructor, allowing to define custom trust store (only for SSL connections)
+   *
+   * @param cluster the cluster definition
+   * @param trustStorePath custom trust store to use for SSL connections
+   * @param trustStorePassword password to use for custom trust store
+   * @param trustStoreType type of custom trust store
+   *
+   * @throws ClientTrustStoreInitializationException if the trust store file can not be loaded
+   */
+  public Client(Cluster cluster, String trustStorePath,
+    Optional<String> trustStorePassword, Optional<String> trustStoreType) {
+
+    char[] password = trustStorePassword.map(String::toCharArray).orElse(null);
+    String type = trustStoreType.orElse(KeyStore.getDefaultType());
+
+    KeyStore trustStore;
+    try(FileInputStream inputStream = new FileInputStream(new File(trustStorePath))) {
+      trustStore = KeyStore.getInstance(type);
+      trustStore.load(inputStream, password);
+    } catch (KeyStoreException e) {
+      throw new ClientTrustStoreInitializationException(
+        "Invalid trust store type: " + type, e);
+    } catch (CertificateException | NoSuchAlgorithmException | IOException e) {
+      throw new ClientTrustStoreInitializationException(
+        "Trust store load error: " + trustStorePath, e);
+    }
+
+    initialize(cluster, true, Optional.of(trustStore));
   }
 
   /**
@@ -224,6 +295,12 @@ public class Client {
     long startTime = System.currentTimeMillis();
     if (resp != null) EntityUtils.consumeQuietly(resp.getEntity());
     resp = httpClient.execute(method);
+    if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+      // Authentication error
+      LOG.debug("Performing negotiation with the server.");
+      negotiate(method, uri);
+      resp = httpClient.execute(method);
+    }
 
     long endTime = System.currentTimeMillis();
     if (LOG.isTraceEnabled()) {
@@ -250,6 +327,40 @@ public class Client {
       return executePathOnly(cluster, method, headers, path);
     }
     return executeURI(method, headers, path);
+  }
+
+  /**
+   * Initiate client side Kerberos negotiation with the server.
+   * @param method method to inject the authentication token into.
+   * @param uri the String to parse as a URL.
+   * @throws IOException if unknown protocol is found.
+   */
+  private void negotiate(HttpUriRequest method, String uri) throws IOException {
+    try {
+      AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+      KerberosAuthenticator authenticator = new KerberosAuthenticator();
+      authenticator.authenticate(new URL(uri), token);
+      // Inject the obtained negotiated token in the method cookie
+      injectToken(method, token);
+    } catch (AuthenticationException e) {
+      LOG.error("Failed to negotiate with the server.", e);
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Helper method that injects an authentication token to send with the method.
+   * @param method method to inject the authentication token into.
+   * @param token authentication token to inject.
+   */
+  private void injectToken(HttpUriRequest method, AuthenticatedURL.Token token) {
+    String t = token.toString();
+    if (t != null) {
+      if (!t.startsWith("\"")) {
+        t = "\"" + t + "\"";
+      }
+      method.addHeader(COOKIE, AUTH_COOKIE_EQ + t);
+    }
   }
 
   /**
@@ -673,6 +784,14 @@ public class Client {
       return new Response(resp.getStatusLine().getStatusCode(), headers, content);
     } finally {
       method.releaseConnection();
+    }
+  }
+
+
+  public static class ClientTrustStoreInitializationException extends RuntimeException {
+
+    public ClientTrustStoreInitializationException(String message, Throwable cause) {
+      super(message, cause);
     }
   }
 }

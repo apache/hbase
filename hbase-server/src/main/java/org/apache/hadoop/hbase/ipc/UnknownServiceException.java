@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 @SuppressWarnings("serial")
+@InterfaceAudience.Private
 public class UnknownServiceException extends FatalConnectionException {
   UnknownServiceException(final String msg) {
     super(msg);

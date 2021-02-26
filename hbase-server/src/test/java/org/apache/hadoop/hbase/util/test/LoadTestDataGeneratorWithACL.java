@@ -18,9 +18,9 @@ package org.apache.hadoop.hbase.util.test;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.util.MultiThreadedAction.DefaultDataGenerator;
 
 @InterfaceAudience.Private
 public class LoadTestDataGeneratorWithACL extends DefaultDataGenerator {
-  private static final Log LOG = LogFactory.getLog(LoadTestDataGeneratorWithACL.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LoadTestDataGeneratorWithACL.class);
   private String[] userNames = null;
   private static final String COMMA = ",";
   private int specialPermCellInsertionFactor = 100;

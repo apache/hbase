@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.PRIMARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.SECONDARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,11 +33,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -47,10 +47,13 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * An implementation of the {@link org.apache.hadoop.hbase.master.LoadBalancer} that
@@ -64,13 +67,14 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
  * RegionServer as the new Primary RegionServer) after a region is recovered. This
  * should help provide consistent read latencies for the regions even when their
  * primary region servers die. This provides two
- * {@link org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.CandidateGenerator}
+ * {@link CandidateGenerator}
  *
  */
+@InterfaceAudience.Private
 public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     FavoredNodesPromoter {
 
-  private static final Log LOG = LogFactory.getLog(FavoredStochasticBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FavoredStochasticBalancer.class);
   private FavoredNodesManager fnm;
 
   @Override
@@ -87,7 +91,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   }
 
   @Override
-  public void setMasterServices(MasterServices masterServices) {
+  public synchronized void setMasterServices(MasterServices masterServices) {
     super.setMasterServices(masterServices);
     fnm = masterServices.getFavoredNodesManager();
   }
@@ -107,6 +111,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * secondary and tertiary as per favored nodes constraints.
    */
   @Override
+  @NonNull
   public Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
       List<ServerName> servers) throws HBaseIOException {
 
@@ -114,7 +119,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
 
     Set<RegionInfo> regionSet = Sets.newHashSet(regions);
     Map<ServerName, List<RegionInfo>> assignmentMap = assignMasterSystemRegions(regions, servers);
-    if (assignmentMap != null && !assignmentMap.isEmpty()) {
+    if (!assignmentMap.isEmpty()) {
       servers = new ArrayList<>(servers);
       // Guarantee not to put other regions on master
       servers.remove(masterServerName);
@@ -275,10 +280,10 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
 
       // Assign the region to the one with a lower load (both have the desired hdfs blocks)
       ServerName s;
-      ServerLoad tertiaryLoad = super.services.getServerManager().getLoad(tertiaryHost);
-      ServerLoad secondaryLoad = super.services.getServerManager().getLoad(secondaryHost);
+      ServerMetrics tertiaryLoad = super.services.getServerManager().getLoad(tertiaryHost);
+      ServerMetrics secondaryLoad = super.services.getServerManager().getLoad(secondaryHost);
       if (secondaryLoad != null && tertiaryLoad != null) {
-        if (secondaryLoad.getLoad() < tertiaryLoad.getLoad()) {
+        if (secondaryLoad.getRegionMetrics().size() < tertiaryLoad.getRegionMetrics().size()) {
           s = secondaryHost;
         } else {
           s = tertiaryHost;
@@ -365,14 +370,15 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * Reuse BaseLoadBalancer's retainAssignment, but generate favored nodes when its missing.
    */
   @Override
+  @NonNull
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
       List<ServerName> servers) throws HBaseIOException {
 
     Map<ServerName, List<RegionInfo>> assignmentMap = Maps.newHashMap();
     Map<ServerName, List<RegionInfo>> result = super.retainAssignment(regions, servers);
-    if (result == null || result.isEmpty()) {
+    if (result.isEmpty()) {
       LOG.warn("Nothing to assign to, probably no servers or no regions");
-      return null;
+      return result;
     }
 
     // Guarantee not to put other regions on master
@@ -542,9 +548,9 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * keep it simple.
    */
   @Override
-  public void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo regionA,
-      RegionInfo regionB) throws IOException {
-    updateFavoredNodesForRegion(merged, fnm.getFavoredNodes(regionA));
+  public void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo [] mergeParents)
+      throws IOException {
+    updateFavoredNodesForRegion(merged, fnm.getFavoredNodes(mergeParents[0]));
   }
 
   /*
@@ -693,7 +699,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * implementation. For the misplaced regions, we assign a bogus server to it and AM takes care.
    */
   @Override
-  public List<RegionPlan> balanceCluster(Map<ServerName, List<RegionInfo>> clusterState) {
+  public synchronized List<RegionPlan> balanceTable(TableName tableName,
+      Map<ServerName, List<RegionInfo>> loadOfOneTable) {
 
     if (this.services != null) {
 
@@ -701,7 +708,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
       Map<ServerName, List<RegionInfo>> correctAssignments = new HashMap<>();
       int misplacedRegions = 0;
 
-      for (Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
+      for (Entry<ServerName, List<RegionInfo>> entry : loadOfOneTable.entrySet()) {
         ServerName current = entry.getKey();
         List<RegionInfo> regions = Lists.newArrayList();
         correctAssignments.put(current, regions);
@@ -729,13 +736,13 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         }
       }
       LOG.debug("Found misplaced regions: " + misplacedRegions + ", not on favored nodes.");
-      List<RegionPlan> regionPlansFromBalance = super.balanceCluster(correctAssignments);
+      List<RegionPlan> regionPlansFromBalance = super.balanceTable(tableName, correctAssignments);
       if (regionPlansFromBalance != null) {
         regionPlans.addAll(regionPlansFromBalance);
       }
       return regionPlans;
     } else {
-      return super.balanceCluster(clusterState);
+      return super.balanceTable(tableName, loadOfOneTable);
     }
   }
 }

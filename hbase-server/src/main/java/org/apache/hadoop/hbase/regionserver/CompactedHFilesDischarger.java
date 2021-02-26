@@ -19,15 +19,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A chore service that periodically cleans up the compacted files when there are no active readers
@@ -36,10 +34,9 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Private
 public class CompactedHFilesDischarger extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(CompactedHFilesDischarger.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompactedHFilesDischarger.class);
   private RegionServerServices regionServerServices;
   // Default is to use executor
-  @VisibleForTesting
   private boolean useExecutor = true;
 
   /**
@@ -60,7 +57,6 @@ public class CompactedHFilesDischarger extends ScheduledChore {
    * @param regionServerServices the region server that starts this chore
    * @param useExecutor true if to use the region server's executor service, false otherwise
    */
-  @VisibleForTesting
   public CompactedHFilesDischarger(final int period, final Stoppable stopper,
       final RegionServerServices regionServerServices, boolean useExecutor) {
     // Need to add the config classes
@@ -74,7 +70,6 @@ public class CompactedHFilesDischarger extends ScheduledChore {
    * cleanup. Use this method to set no-executor before you call run.
    * @return The old setting for <code>useExecutor</code>
    */
-  @VisibleForTesting
   boolean setUseExecutor(final boolean useExecutor) {
     boolean oldSetting = this.useExecutor;
     this.useExecutor = useExecutor;
@@ -86,13 +81,13 @@ public class CompactedHFilesDischarger extends ScheduledChore {
     // Noop if rss is null. This will never happen in a normal condition except for cases
     // when the test case is not spinning up a cluster
     if (regionServerServices == null) return;
-    List<Region> onlineRegions = regionServerServices.getRegions();
+    List<HRegion> onlineRegions = (List<HRegion>) regionServerServices.getRegions();
     if (onlineRegions == null) return;
-    for (Region region : onlineRegions) {
+    for (HRegion region : onlineRegions) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Started compacted hfiles cleaner on " + region.getRegionInfo());
       }
-      for (HStore store : ((HRegion) region).getStores()) {
+      for (HStore store : region.getStores()) {
         try {
           if (useExecutor && regionServerServices != null) {
             CompactedHFilesDischargeHandler handler = new CompactedHFilesDischargeHandler(
