@@ -53,8 +53,10 @@ public interface MetricsMasterSource extends BaseSource {
   String AVERAGE_LOAD_NAME = "averageLoad";
   String LIVE_REGION_SERVERS_NAME = "liveRegionServers";
   String DEAD_REGION_SERVERS_NAME = "deadRegionServers";
+  String DRAINING_REGION_SERVER_NAME = "draininigRegionServers";
   String NUM_REGION_SERVERS_NAME = "numRegionServers";
   String NUM_DEAD_REGION_SERVERS_NAME = "numDeadRegionServers";
+  String NUM_DRAINING_REGION_SERVERS_NAME = "numDrainingRegionServers";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";
   String CLUSTER_ID_NAME = "clusterId";
@@ -71,6 +73,8 @@ public interface MetricsMasterSource extends BaseSource {
   String NUMBER_OF_REGION_SERVERS_DESC = "Number of RegionServers";
   String DEAD_REGION_SERVERS_DESC = "Names of dead RegionServers";
   String NUMBER_OF_DEAD_REGION_SERVERS_DESC = "Number of dead RegionServers";
+  String DRAINING_REGION_SERVER_DESC = "Names of draining RegionServers";
+  String NUMBER_OF_DRAINING_REGION_SERVERS_DESC = "Number of draining RegionServers";
   String ZOOKEEPER_QUORUM_DESC = "ZooKeeper Quorum";
   String SERVER_NAME_DESC = "Server Name";
   String CLUSTER_ID_DESC = "Cluster Id";

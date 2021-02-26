@@ -105,6 +105,10 @@ public class MetricsMasterSourceImpl
           .addGauge(Interns.info(NUM_DEAD_REGION_SERVERS_NAME,
               NUMBER_OF_DEAD_REGION_SERVERS_DESC),
               masterWrapper.getNumDeadRegionServers())
+          .tag(Interns.info(DRAINING_REGION_SERVER_NAME, DRAINING_REGION_SERVER_DESC),
+              masterWrapper.getDrainingRegionServers())
+          .addGauge(Interns.info(NUM_DRAINING_REGION_SERVERS_NAME, NUMBER_OF_REGION_SERVERS_DESC),
+              masterWrapper.getNumDrainingRegionServers())
           .tag(Interns.info(ZOOKEEPER_QUORUM_NAME, ZOOKEEPER_QUORUM_DESC),
               masterWrapper.getZookeeperQuorum())
           .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), masterWrapper.getServerName())
