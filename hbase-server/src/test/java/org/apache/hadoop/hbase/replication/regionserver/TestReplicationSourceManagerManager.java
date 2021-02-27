@@ -25,7 +25,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Sets;
-
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URLEncoder;
@@ -47,17 +46,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
@@ -72,91 +67,25 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
-import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
 import org.apache.hadoop.hbase.replication.regionserver.helper.DummyServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
-public class TestReplicationSourceManager extends TestReplicationSourceBase {
-
+public class TestReplicationSourceManagerManager extends TestReplicationSourceManagerBase {
   private static final Log LOG =
-    LogFactory.getLog(TestReplicationSourceManager.class);
-  private static final TableName test =
-      TableName.valueOf("test");
-  private static final String slaveId = "1";
-  private static CountDownLatch latch;
+    LogFactory.getLog(TestReplicationSourceManagerManager.class);
   private static List<String> files = new ArrayList<>();
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-
-    conf = HBaseConfiguration.create();
-    conf.set("replication.replicationsource.implementation",
-        ReplicationSourceDummy.class.getCanonicalName());
-    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY,
-        HConstants.REPLICATION_ENABLE_DEFAULT);
-    conf.setLong("replication.sleep.before.failover", 2000);
-    conf.setInt("replication.source.maxretriesmultiplier", 10);
-    utility = new HBaseTestingUtility(conf);
-    utility.startMiniZKCluster();
-
-    zkw = new ZooKeeperWatcher(conf, "test", null);
-    ZKUtil.createWithParents(zkw, "/hbase/replication");
-    ZKUtil.createWithParents(zkw, "/hbase/replication/peers/1");
-    ZKUtil.setData(zkw, "/hbase/replication/peers/1",
-        Bytes.toBytes(conf.get(HConstants.ZOOKEEPER_QUORUM) + ":"
-            + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":/1"));
-    ZKUtil.createWithParents(zkw, "/hbase/replication/peers/1/peer-state");
-    ZKUtil.setData(zkw, "/hbase/replication/peers/1/peer-state",
-      ReplicationStateZKBase.ENABLED_ZNODE_BYTES);
-    ZKUtil.createWithParents(zkw, "/hbase/replication/state");
-    ZKUtil.setData(zkw, "/hbase/replication/state", ReplicationStateZKBase.ENABLED_ZNODE_BYTES);
-
-    ZKClusterId.setClusterId(zkw, new ClusterId());
-    FSUtils.setRootDir(utility.getConfiguration(), utility.getDataTestDir());
-    fs = FileSystem.get(conf);
-    oldLogDir = new Path(utility.getDataTestDir(),
-        HConstants.HREGION_OLDLOGDIR_NAME);
-    logDir = new Path(utility.getDataTestDir(),
-        HConstants.HREGION_LOGDIR_NAME);
-    server = new DummyServer(conf, "example.hostname.com", zkw);
-    replication = new Replication(server, fs, logDir, oldLogDir);
-    manager = replication.getReplicationManager();
-
-    manager.addSource(slaveId);
-
-    htd = new HTableDescriptor(test);
-    HColumnDescriptor col = new HColumnDescriptor(f1);
-    col.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    htd.addFamily(col);
-    col = new HColumnDescriptor(f2);
-    col.setScope(HConstants.REPLICATION_SCOPE_LOCAL);
-    htd.addFamily(col);
-
-    hri = new HRegionInfo(htd.getTableName(), r1, r2);
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    manager.join();
-    utility.shutdownMiniCluster();
-  }
+  private static CountDownLatch latch;
 
   @Test
   public void testLogRoll() throws Exception {

@@ -28,20 +28,22 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
-
 import com.google.common.collect.Lists;
-
+import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -62,6 +64,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -247,7 +250,6 @@ public class TestReplicationSource {
       public boolean evaluate() throws Exception {
         return future.isDone();
       }
-
     });
   }
 
@@ -277,7 +279,7 @@ public class TestReplicationSource {
   }
 
   private static final class Mocks {
-    private final ReplicationSourceManager manager = mock(ReplicationSourceManager.class);
+    private ReplicationSourceManager manager = mock(ReplicationSourceManager.class);
     private final ReplicationQueues queues = mock(ReplicationQueues.class);
     private final ReplicationPeers peers = mock(ReplicationPeers.class);
     private final MetricsSource metrics = mock(MetricsSource.class);
@@ -291,12 +293,32 @@ public class TestReplicationSource {
       when(manager.getTotalBufferUsed()).thenReturn(totalBufferUsed);
     }
 
-    // source manager throws the exception while cleaning logs
-    private void setReplicationSourceWithoutPeerException()
-      throws ReplicationSourceWithoutPeerException {
-      doThrow(new ReplicationSourceWithoutPeerException("No peer")).when(manager)
+    ReplicationSource createReplicationSourceAndManagerWithMocks(ReplicationEndpoint endpoint)
+        throws Exception {
+      ReplicationTracker tracker = mock(ReplicationTracker.class);
+      Server server = mock(Server.class);
+      FileSystem fs = mock(FileSystem.class);
+      UUID clusterId = UUID.randomUUID();
+      String peerId = "testPeerClusterZnode";
+
+      manager = Mockito.spy(new ReplicationSourceManager(
+        queues, peers, tracker, conf, server, fs, logDir, oldLogDir, clusterId));
+
+      doCallRealMethod().when(manager).removePeer(Mockito.anyString());
+      // Mock the failure during cleaning log with node already deleted
+      doThrow(new ReplicationSourceWithoutPeerException("Peer Removed")).when(queues)
+        .removeLog(anyString(), anyString());
+      doCallRealMethod().when(manager)
         .logPositionAndCleanOldLogs(Mockito.<Path>anyObject(), Mockito.anyString(),
           Mockito.anyLong(), Mockito.anyBoolean(), Mockito.anyBoolean());
+      final ReplicationSource source = new ReplicationSource();
+      endpoint.init(context);
+      source.init(conf, FS, manager, queues, peers, mock(Stoppable.class),
+        peerId, clusterId, endpoint, metrics);
+      manager.getSources().add(source);
+      SortedSet<String> walsWithPrefix = Sets.newTreeSet(Collections.singletonList("fake"));
+      doReturn(walsWithPrefix).when(manager).getLogsWithPrefix(anyString(), anyString());
+      return source;
     }
 
     ReplicationSource createReplicationSourceWithMocks(ReplicationEndpoint endpoint,
@@ -522,8 +544,7 @@ public class TestReplicationSource {
    */
   @Test
   public void testReplicationSourceTerminationWhenNoZnodeForPeerAndQueues() throws Exception {
-    Mocks mocks = new Mocks();
-    mocks.setReplicationSourceWithoutPeerException();
+    final Mocks mocks = new Mocks();
     // set table cfs to filter all cells out
     final TableName replicatedTable = TableName.valueOf("replicated_table");
     final Map<TableName, List<String>> cfs =
@@ -543,7 +564,7 @@ public class TestReplicationSource {
       }
     };
 
-    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint, false);
+    final ReplicationSource source = mocks.createReplicationSourceAndManagerWithMocks(endpoint);
     source.run();
     source.enqueueLog(log1);
 
@@ -561,10 +582,9 @@ public class TestReplicationSource {
       }
     });
 
-    // After that the source should be terminated
+    // And the source should be terminated
     Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
       @Override public boolean evaluate() {
-        // wait until reader read all cells
         return !source.isSourceActive();
       }
     });

@@ -189,12 +189,13 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param holdLogInZK if true then the log is retained in ZK
    */
   public synchronized void logPositionAndCleanOldLogs(Path log, String id, long position,
-      boolean queueRecovered, boolean holdLogInZK) throws ReplicationSourceWithoutPeerException {
+      boolean queueRecovered, boolean holdLogInZK) {
     String fileName = log.getName();
     this.replicationQueues.setLogPosition(id, fileName, position);
     if (holdLogInZK) {
       return;
     }
+
     cleanOldLogs(fileName, id, queueRecovered);
   }
 
@@ -205,8 +206,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param id id of the peer cluster
    * @param queueRecovered Whether this is a recovered queue
    */
-  public void cleanOldLogs(String key, String id, boolean queueRecovered)
-      throws ReplicationSourceWithoutPeerException {
+  public void cleanOldLogs(String key, String id, boolean queueRecovered) {
     String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(key);
     if (queueRecovered) {
       Map<String, SortedSet<String>> walsForPeer = walsByIdRecoveredQueues.get(id);
@@ -218,7 +218,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       }
     } else {
       synchronized (this.walsById) {
-        SortedSet<String> wals = walsById.get(id).get(logPrefix);
+        SortedSet<String> wals = getLogsWithPrefix(id, logPrefix);
         if (wals != null && !wals.first().equals(key)) {
           cleanOldLogs(wals, key, id);
         }
@@ -226,14 +226,34 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
   }
 
-  private void cleanOldLogs(SortedSet<String> wals, String key, String id)
-      throws ReplicationSourceWithoutPeerException {
+  private void cleanOldLogs(SortedSet<String> wals, String key, String id) {
     SortedSet<String> walSet = wals.headSet(key);
     LOG.debug("Removing " + walSet.size() + " logs in the list: " + walSet);
-    for (String wal : walSet) {
-      this.replicationQueues.removeLog(id, wal);
+    try {
+      for (String wal : walSet) {
+        this.replicationQueues.removeLog(id, wal);
+      }
+    } catch (ReplicationSourceWithoutPeerException rspe) {
+      // This means the source is running and replication peer have been removed
+      // We should call the removePeer workflow to terminate the source gracefully
+      LOG.warn("Replication peer " + id + " has been removed and source is still running", rspe);
+      String peerId = id;
+      if (peerId.contains("-")) {
+        peerId = peerId.split("-")[0];
+      }
+      peerRemoved(peerId);
     }
     walSet.clear();
+  }
+
+  /**
+   * Get logs with log prefix for the given wal group
+   * @param walGroupId wal group ID
+   * @param logPrefix log prefix
+   * @return logs with the given prefix
+   */
+  public SortedSet<String> getLogsWithPrefix(String walGroupId, String logPrefix) {
+    return walsById.get(walGroupId).get(logPrefix);
   }
 
   /**
@@ -579,7 +599,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   /**
-   * Thie method first deletes all the recovered sources for the specified
+   * This method first deletes all the recovered sources for the specified
    * id, then deletes the normal source (deleting all related data in ZK).
    * @param id The id of the peer cluster
    */
