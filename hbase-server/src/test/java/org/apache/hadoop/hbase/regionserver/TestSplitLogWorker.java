@@ -213,8 +213,8 @@ public class TestSplitLogWorker {
 
     SplitLogCounters.resetCounters();
     executorService = new ExecutorService("TestSplitLogWorker");
-    executorService.startExecutorService(ExecutorType.RS_LOG_REPLAY_OPS,
-        new ExecutorConfig().setCorePoolSize(10));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_LOG_REPLAY_OPS).setCorePoolSize(10));
   }
 
   @After

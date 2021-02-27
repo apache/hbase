@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
+import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
@@ -191,7 +192,8 @@ public class TestHRegionReplayEvents {
     String string = org.apache.hadoop.hbase.executor.EventType.RS_COMPACTED_FILES_DISCHARGER
         .toString();
     ExecutorService es = new ExecutorService(string);
-    es.startExecutorService(new ExecutorConfig().setCorePoolSize(1).setName(string + "-" + string));
+    es.startExecutorService(es.new ExecutorConfig().setCorePoolSize(1).setExecutorType(
+        ExecutorType.RS_COMPACTED_FILES_DISCHARGER));
     when(rss.getExecutorService()).thenReturn(es);
     primaryRegion = HRegion.createHRegion(primaryHri, rootDir, CONF, htd, walPrimary);
     primaryRegion.close();

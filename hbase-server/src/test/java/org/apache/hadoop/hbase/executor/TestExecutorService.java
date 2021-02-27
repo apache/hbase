@@ -71,8 +71,8 @@ public class TestExecutorService {
 
     // Start an executor service pool with max 5 threads
     ExecutorService executorService = new ExecutorService("unit_test");
-    executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
-        new ExecutorConfig().setCorePoolSize(maxThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_SERVER_OPERATIONS).setCorePoolSize(maxThreads));
 
     Executor executor =
       executorService.getExecutor(ExecutorType.MASTER_SERVER_OPERATIONS);
@@ -197,8 +197,8 @@ public class TestExecutorService {
     when(server.getConfiguration()).thenReturn(conf);
 
     ExecutorService executorService = new ExecutorService("unit_test");
-    executorService.startExecutorService(
-      ExecutorType.MASTER_SERVER_OPERATIONS, new ExecutorConfig().setCorePoolSize(1));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_SERVER_OPERATIONS).setCorePoolSize(1));
 
 
     executorService.submit(new EventHandler(server, EventType.M_SERVER_SHUTDOWN) {
@@ -230,8 +230,8 @@ public class TestExecutorService {
     when(server.getConfiguration()).thenReturn(conf);
 
     ExecutorService executorService = new ExecutorService("testSnapshotHandlers");
-    executorService.startExecutorService(
-        ExecutorType.MASTER_SNAPSHOT_OPERATIONS, new ExecutorConfig().setCorePoolSize(1));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_SNAPSHOT_OPERATIONS).setCorePoolSize(1));
 
     CountDownLatch latch = new CountDownLatch(1);
     CountDownLatch waitForEventToStart = new CountDownLatch(1);
