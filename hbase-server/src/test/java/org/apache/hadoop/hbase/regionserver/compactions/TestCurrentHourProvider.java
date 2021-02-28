@@ -28,9 +28,14 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestCurrentHourProvider {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCurrentHourProvider.class);
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCurrentHourProvider.class);
@@ -50,6 +55,7 @@ public class TestCurrentHourProvider {
     // test for all available zoneID
     for (String zoneID : TimeZone.getAvailableIDs()) {
       TimeZone timezone = TimeZone.getTimeZone(zoneID);
+      LOG.info("check time zone: {}", zoneID);
       TimeZone.setDefault(timezone);
 
       // set a time represent hour 11
@@ -63,7 +69,7 @@ public class TestCurrentHourProvider {
           CurrentHourProvider.getCurrentHour() - 2 :
           CurrentHourProvider.getCurrentHour() - 1;
       }
-      assertEquals(11, hour11);
+      assertEquals(zoneID, 11, hour11);
 
       // set a time represent hour 15
       long deltaFor15 = TimeZone.getDefault().getRawOffset() - 28800000;
@@ -76,7 +82,7 @@ public class TestCurrentHourProvider {
           CurrentHourProvider.getCurrentHour() - 2 :
           CurrentHourProvider.getCurrentHour() - 1;
       }
-      assertEquals(15, hour15);
+      assertEquals(zoneID, 15, hour15);
     }
   }
 }
