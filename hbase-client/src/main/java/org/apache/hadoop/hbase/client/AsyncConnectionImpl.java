@@ -424,12 +424,12 @@ class AsyncConnectionImpl implements AsyncConnection {
         }
       });
       return future;
-    }, getClass().getName() + ".getHbck");
+    }, "AsyncConnection.getHbck");
   }
 
   @Override
   public Hbck getHbck(ServerName masterServer) throws IOException {
-    Span span = TraceUtil.createSpan(getClass().getName() + ".getHbck")
+    Span span = TraceUtil.createSpan("AsyncConnection.getHbck")
       .setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName());
     try (Scope scope = span.makeCurrent()) {
       // we will not create a new connection when creating a new protobuf stub, and for hbck there
