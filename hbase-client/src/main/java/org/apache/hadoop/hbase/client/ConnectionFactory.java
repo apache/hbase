@@ -305,6 +305,6 @@ public class ConnectionFactory {
         }
       });
       return future;
-    }, ConnectionFactory.class.getSimpleName() + ".createAsyncConnection");
+    }, "ConnectionFactory.createAsyncConnection");
   }
 }
