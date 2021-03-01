@@ -98,7 +98,7 @@ class AsyncRegionLocator {
 
   private <T> CompletableFuture<T> tracedLocationFuture(Supplier<CompletableFuture<T>> action,
     Function<T, List<String>> getRegionNames, TableName tableName, String methodName) {
-    Span span = createTableSpan(getClass().getSimpleName() + "." + methodName, tableName);
+    Span span = createTableSpan("AsyncRegionLocator." + methodName, tableName);
     try (Scope scope = span.makeCurrent()) {
       CompletableFuture<T> future = action.get();
       FutureUtils.addListener(future, (resp, error) -> {
