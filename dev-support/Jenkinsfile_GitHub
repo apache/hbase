@@ -25,7 +25,7 @@ pipeline {
         // N.B. this is per-branch, which means per PR
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '15'))
-        timeout (time: 7, unit: 'HOURS')
+        timeout (time: 10, unit: 'HOURS')
         timestamps()
         skipDefaultCheckout()
     }
@@ -223,7 +223,7 @@ pipeline {
                               // Has to be relative to WORKSPACE
                               reportDir: "${WORKDIR_REL}/${PATCH_REL}",
                               reportFiles: 'report.html',
-                              reportName: 'PR JDK8 Hadoop2 Check Report'
+                              reportName: 'PR JDK8 Hadoop3 Check Report'
                             ]
                         }
                         // Jenkins pipeline jobs fill slaves on PRs without this :(
