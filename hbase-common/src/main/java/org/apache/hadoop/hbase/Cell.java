@@ -23,6 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 
 /**
+ * trigger UTs
  * The unit of storage in HBase consisting of the following fields:
  * <br>
  * <pre>
