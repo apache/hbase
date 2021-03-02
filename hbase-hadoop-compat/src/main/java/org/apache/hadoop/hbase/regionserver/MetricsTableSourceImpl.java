@@ -336,10 +336,11 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     if (metricMap != null) {
       for (Entry<String, Long> entry : metricMap.entrySet()) {
         // append 'store' and its name to the metric
-        mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + _COLUMNFAMILY
-            + entry.getKey().split(MetricsTableWrapperAggregate.HASH)[1]
-            + this.tableNamePrefixPart2 + metricName,
-          metricDesc), entry.getValue());
+        String storeName =
+          entry.getKey().substring(entry.getKey().indexOf(MetricsTableWrapperAggregate.HASH) + 1);
+        mrb.addGauge(Interns.info(
+          this.tableNamePrefixPart1 + _COLUMNFAMILY + storeName + this.tableNamePrefixPart2
+            + metricName, metricDesc), entry.getValue());
       }
     }
   }

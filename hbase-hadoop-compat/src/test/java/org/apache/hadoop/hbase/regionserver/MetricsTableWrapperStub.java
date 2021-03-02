@@ -117,6 +117,9 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   public Map<String, Long> getMemstoreOnlyRowReadsCount(String table) {
     Map<String, Long> map = new HashMap<String, Long>();
     map.put("table#info", 3L);
+    map.put("table##", 3L);
+    map.put("table###", 3L);
+    map.put("table#fam#1", 3L);
     return map;
   }
 
@@ -124,6 +127,9 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   public Map<String, Long> getMixedRowReadsCount(String table) {
     Map<String, Long> map = new HashMap<String, Long>();
     map.put("table#info", 3L);
+    map.put("table##", 3L);
+    map.put("table###", 3L);
+    map.put("table#fam#1", 3L);
     return map;
   }
 }
