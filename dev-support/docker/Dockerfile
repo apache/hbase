@@ -128,6 +128,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY --from=SPOTBUGS_DOWNLOAD_IMAGE /tmp/spotbugs.tgz /tmp/spotbugs.tgz
 RUN tar xzf /tmp/spotbugs.tgz -C /opt && \
   ln -s "/opt/$(tar -tf /tmp/spotbugs.tgz | head -n1 | cut -d/ -f1)" /opt/spotbugs && \
+  chmod -R a+x /opt/spotbugs/bin/* && \
   rm /tmp/spotbugs.tgz
 
 COPY --from=HADOLINT_DOWNLOAD_IMAGE /tmp/hadolint /tmp/hadolint
