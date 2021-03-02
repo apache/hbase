@@ -145,10 +145,10 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   @Override
   public int getNumDrainingRegionServers() {
     ServerManager serverManager = this.master.getServerManager();
-	if (serverManager == null) {
-	     return 0;
-	}
-	return serverManager.getDrainingServersList().size();
+    if (serverManager == null) {
+        return 0;
+    }
+    return serverManager.getDrainingServersList().size();
   }
 
   @Override
