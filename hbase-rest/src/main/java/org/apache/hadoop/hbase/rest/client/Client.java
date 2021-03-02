@@ -179,7 +179,7 @@ public class Client {
 
   /**
    * Constructor, allowing to define custom trust store (only for SSL connections)
-   * 
+   *
    * @param cluster the cluster definition
    * @param conf Configuration
    * @param trustStorePath custom trust store to use for SSL connections
