@@ -252,7 +252,7 @@ public class TestResult extends TestCase {
 
   /**
    *  Test Result#compareResults when tags are present.
-   * @throws Exception
+   * @throws Exception Exception
    */
   @Test
   public void testCompareResultsWithTags() throws Exception {
