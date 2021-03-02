@@ -39,11 +39,11 @@ import org.apache.hadoop.hbase.util.ClientUtils;
 import org.apache.thrift.TConfiguration;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TTransportException;
-import org.apache.thrift.transport.layered.TFramedTransport;
 import org.apache.thrift.transport.TSaslClientTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TTransportException;
+import org.apache.thrift.transport.layered.TFramedTransport;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
