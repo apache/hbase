@@ -80,7 +80,7 @@ class WALEntryStream implements Closeable {
    * @param walFileLengthProvider provides the length of the WAL file
    * @param serverName the server name which all WALs belong to
    * @param metrics the replication metrics
-   * @throws IOException throw IO exception from stream
+   * @throws IOException
    */
   public WALEntryStream(ReplicationSourceLogQueue logQueue, Configuration conf,
       long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
@@ -368,9 +368,7 @@ class WALEntryStream implements Closeable {
       handleFileNotFound(path, fnfe);
     }  catch (RemoteException re) {
       IOException ioe = re.unwrapRemoteException(FileNotFoundException.class);
-      if (!(ioe instanceof FileNotFoundException)) {
-        throw ioe;
-      }
+      if (!(ioe instanceof FileNotFoundException)) throw ioe;
       handleFileNotFound(path, (FileNotFoundException)ioe);
     } catch (LeaseNotRecoveredException lnre) {
       // HBASE-15019 the WAL was not closed due to some hiccup.
