@@ -139,7 +139,7 @@ public class TestMasterMetrics {
     metricsHelper.assertGauge( "numRegionServers",1 + (tablesOnMaster? 1: 0), masterSource);
     metricsHelper.assertGauge( "averageLoad", 1 + (tablesOnMaster? 0: 1), masterSource);
     metricsHelper.assertGauge( "numDeadRegionServers", 0, masterSource);
-    metricsHelper.assertGauge( "numDrainingRegionServers", 0, masterSource);
+    metricsHelper.assertGauge("numDrainingRegionServers", 0, masterSource);
 
     metricsHelper.assertGauge("masterStartTime", master.getMasterStartTime(), masterSource);
     metricsHelper.assertGauge("masterActiveTime", master.getMasterActiveTime(), masterSource);
