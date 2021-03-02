@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -43,10 +43,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
-import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -54,7 +52,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
@@ -65,8 +63,7 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
  */
 public class TestReplicationBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
-  private static Connection connection1;
-  private static Connection connection2;
+
   protected static Configuration CONF_WITH_LOCALFS;
 
   protected static ReplicationAdmin admin;
@@ -87,8 +84,6 @@ public class TestReplicationBase {
       NB_ROWS_IN_BATCH * 10;
   protected static final long SLEEP_TIME = 500;
   protected static final int NB_RETRIES = 50;
-  protected static AtomicInteger replicateCount = new AtomicInteger();
-  protected static volatile List<WAL.Entry> replicatedEntries = Lists.newArrayList();
 
   protected static final TableName tableName = TableName.valueOf("test");
   protected static final byte[] famName = Bytes.toBytes("f");
@@ -243,26 +238,26 @@ public class TestReplicationBase {
     // as a component in deciding maximum number of parallel batches to send to the peer cluster.
     UTIL2.startMiniCluster(NUM_SLAVES2);
 
-    connection1 = ConnectionFactory.createConnection(CONF1);
-    connection2 = ConnectionFactory.createConnection(CONF2);
-    hbaseAdmin = connection1.getAdmin();
+    admin = new ReplicationAdmin(CONF1);
+    hbaseAdmin = ConnectionFactory.createConnection(CONF1).getAdmin();
 
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
             .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
-    try (
-      Admin admin1 = connection1.getAdmin();
-      Admin admin2 = connection2.getAdmin()) {
+    Connection connection1 = ConnectionFactory.createConnection(CONF1);
+    Connection connection2 = ConnectionFactory.createConnection(CONF2);
+    try (Admin admin1 = connection1.getAdmin()) {
       admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
-      admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
-      UTIL1.waitUntilAllRegionsAssigned(tableName);
-      htable1 = connection1.getTable(tableName);
-      UTIL2.waitUntilAllRegionsAssigned(tableName);
-      htable2 = connection2.getTable(tableName);
     }
-
+    try (Admin admin2 = connection2.getAdmin()) {
+      admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    }
+    UTIL1.waitUntilAllRegionsAssigned(tableName);
+    UTIL2.waitUntilAllRegionsAssigned(tableName);
+    htable1 = connection1.getTable(tableName);
+    htable2 = connection2.getTable(tableName);
   }
 
   @BeforeClass
@@ -278,10 +273,9 @@ public class TestReplicationBase {
   @Before
   public void setUpBase() throws Exception {
     if (!peerExist(PEER_ID2)) {
-      ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer()).setReplicationEndpointImpl(
-          ReplicationEndpointTest.class.getName());
-      hbaseAdmin.addReplicationPeer(PEER_ID2, builder.build());
+      ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+          .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer()).build();
+      hbaseAdmin.addReplicationPeer(PEER_ID2, rpc);
     }
   }
 
@@ -357,33 +351,7 @@ public class TestReplicationBase {
     if (admin != null) {
       admin.close();
     }
-    if (hbaseAdmin != null) {
-      hbaseAdmin.close();
-    }
-
-    if (connection2 != null) {
-      connection2.close();
-    }
-    if (connection1 != null) {
-      connection1.close();
-    }
     UTIL2.shutdownMiniCluster();
     UTIL1.shutdownMiniCluster();
-  }
-
-  /**
-   * Custom replication endpoint to keep track of replication status for tests.
-   */
-  public static class ReplicationEndpointTest extends HBaseInterClusterReplicationEndpoint {
-    public ReplicationEndpointTest() {
-      replicateCount.set(0);
-    }
-
-    @Override public boolean replicate(ReplicateContext replicateContext) {
-      replicateCount.incrementAndGet();
-      replicatedEntries.addAll(replicateContext.getEntries());
-
-      return super.replicate(replicateContext);
-    }
   }
 }

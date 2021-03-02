@@ -94,10 +94,6 @@ class WALEntryBatch {
     return lastWalPath;
   }
 
-  public void setLastWalPath(Path lastWalPath) {
-    this.lastWalPath = lastWalPath;
-  }
-
   /**
    * @return the position in the last WAL that was read.
    */

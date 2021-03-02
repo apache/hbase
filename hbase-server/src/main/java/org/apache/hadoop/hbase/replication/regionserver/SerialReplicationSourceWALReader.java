@@ -50,7 +50,7 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
   }
 
   @Override
-  protected WALEntryBatch readWALEntries(WALEntryStream entryStream, WALEntryBatch batch)
+  protected WALEntryBatch readWALEntries(WALEntryStream entryStream)
       throws IOException, InterruptedException {
     Path currentPath = entryStream.getCurrentPath();
     if (!entryStream.hasNext()) {
@@ -70,7 +70,7 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
       currentPath = entryStream.getCurrentPath();
     }
     long positionBefore = entryStream.getPosition();
-    batch = createBatch(entryStream);
+    WALEntryBatch batch = createBatch(entryStream);
     for (;;) {
       Entry entry = entryStream.peek();
       boolean doFiltering = true;
