@@ -105,7 +105,7 @@ public abstract class AbstractStoreFilePathAccessor implements StoreFilePathAcce
   protected void validate(final String tableName, final String regionName, final String storeName,
     final StoreFilePathUpdate storeFilePathUpdate) {
     validate(tableName, regionName, storeName);
-    Preconditions.checkArgument(storeFilePathUpdate.getStoreFiles() != null,
+    Preconditions.checkArgument(!storeFilePathUpdate.getStoreFiles().isEmpty(),
       "Must have storefiles to be updated");
   }
 }

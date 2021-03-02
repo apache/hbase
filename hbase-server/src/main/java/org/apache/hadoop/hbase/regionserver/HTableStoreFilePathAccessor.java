@@ -116,10 +116,8 @@ public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
   private Put generatePutForStoreFilePaths(final String tableName, final String regionName,
     final String storeName, final StoreFilePathUpdate storeFilePathUpdate) {
     Put put = new Put(Bytes.toBytes(getKey(tableName, regionName, storeName)));
-    if (!storeFilePathUpdate.getStoreFiles().isEmpty()) {
-      put.addColumn(Bytes.toBytes(STOREFILE_INCLUDED_STR), STOREFILE_QUALIFIER,
-        storeFileListToByteArray(storeFilePathUpdate.getStoreFiles()));
-    }
+    put.addColumn(Bytes.toBytes(STOREFILE_INCLUDED_STR), STOREFILE_QUALIFIER,
+      storeFileListToByteArray(storeFilePathUpdate.getStoreFiles()));
     return put;
   }
 

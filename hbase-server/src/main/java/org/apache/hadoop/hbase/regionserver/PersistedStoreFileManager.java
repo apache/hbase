@@ -34,8 +34,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSortedSet;
-import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
@@ -81,21 +79,37 @@ public class PersistedStoreFileManager extends DefaultStoreFileManager {
   }
 
   @Override
-  public void loadFiles(List<HStoreFile> storeFiles) throws IOException {
+  protected void loadFilesHook(ImmutableList<HStoreFile> storeFiles) throws IOException {
     Preconditions.checkArgument(storeFiles != null, "store files cannot be "
       + "null when loading");
     if (storeFiles.isEmpty()) {
       LOG.warn("Other than fresh region with no store files, store files should not be empty");
       return;
     }
-    ImmutableList<HStoreFile> sortedStorefiles =
-      ImmutableList.sortedCopyOf(getStoreFileComparator(), storeFiles);
-    setStoreFiles(sortedStorefiles);
-    updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(sortedStorefiles).build());
+    updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(storeFiles).build());
+  }
+
+  @Override
+  protected void insertNewFilesHook(ImmutableList<HStoreFile> storeFiles) throws IOException {
+    // return in case of empty storeFiles as it is a No-op, empty files expected during region close
+    if (CollectionUtils.isEmpty(storeFiles)) {
+      return;
+    }
+    updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(storeFiles).build());
+  }
+
+  @Override
+  protected void addCompactionResultsHook(ImmutableList<HStoreFile> storeFiles)
+    throws IOException {
+    Preconditions.checkNotNull(storeFiles, "storeFiles cannot be null");
+    updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(storeFiles).build());
   }
 
   @Override
   public Collection<StoreFileInfo> loadInitialFiles() throws IOException {
+    // this logic is totally different from the default implementation in AbstractStoreFileManager
+    // and we need to override the entire function
+
     List<Path> pathList = accessor.getIncludedStoreFilePaths(tableName, regionName, storeName);
     boolean isEmptyInPersistedFilePaths = CollectionUtils.isEmpty(pathList);
     if (isEmptyInPersistedFilePaths) {
@@ -119,8 +133,8 @@ public class PersistedStoreFileManager extends DefaultStoreFileManager {
     ArrayList<StoreFileInfo> storeFiles = new ArrayList<>();
     for (Path storeFilePath : pathList) {
       if (!StoreFileInfo.isValid(getRegionFs().getFileSystem().getFileStatus(storeFilePath))) {
-        // TODO add a comment how this file will be removed when we have cleaner
-        LOG.warn("Invalid StoreFile: {}", storeFilePath);
+        LOG.warn("Invalid StoreFile: {}, and archiving it", storeFilePath);
+        getRegionFs().removeStoreFile(storeName, storeFilePath);
         continue;
       }
       StoreFileInfo info = ServerRegionReplicaUtil
@@ -130,41 +144,6 @@ public class PersistedStoreFileManager extends DefaultStoreFileManager {
       storeFiles.add(info);
     }
     return storeFiles;
-  }
-
-
-  @Override
-  public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
-    // return in case of empty storeFiles as it is a No-op, empty files expected during region close
-    if (CollectionUtils.isEmpty(sfs)) {
-      return;
-    }
-    ImmutableList<HStoreFile> storefiles = ImmutableList
-      .sortedCopyOf(getStoreFileComparator(), Iterables.concat(getStorefiles(), sfs));
-    updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(storefiles).build());
-    setStoreFiles(storefiles);
-  }
-
-  @Override
-  public void addCompactionResults(Collection<HStoreFile> newCompactedFiles,
-    Collection<HStoreFile> results) throws IOException {
-    Preconditions.checkNotNull(newCompactedFiles, "compactedFiles cannot be null");
-    Preconditions.checkNotNull(results, "compaction result cannot be null");
-    // only allow distinct path to be included, especially rerun after a compaction fails
-    ImmutableList<HStoreFile> storefiles = ImmutableList.sortedCopyOf(getStoreFileComparator(),
-      Iterables.concat(Iterables.filter(getStorefiles(), sf -> !newCompactedFiles.contains(sf)),
-        results)).asList();
-    Preconditions.checkArgument(!CollectionUtils.isEmpty(storefiles),
-      "storefiles cannot be empty when adding compaction results");
-
-    ImmutableList<HStoreFile> compactedfiles = ImmutableSortedSet
-      .copyOf(getStoreFileComparator(),
-        Iterables.concat(getCompactedfiles(), newCompactedFiles))
-      .asList();
-    updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(storefiles).build());
-    setStoreFiles(storefiles);
-    setCompactedFiles(compactedfiles);
-    newCompactedFiles.forEach(HStoreFile::markCompactedAway);
   }
 
   void updatePathListToTracker(StoreFilePathUpdate storeFilePathUpdate) throws IOException {

@@ -162,16 +162,27 @@ public class TestPersistedStoreFileManager {
   }
 
   @Test
-  public void testLoadFilesWithEmptyList() throws IOException {
+  public void testLoadFilesWithEmptyListWithExistingData() throws IOException {
+    // first load data into the store and simulate we have persisted data
     storeFileManager.loadFiles(initialStoreFiles);
 
     // writing empty list to loadFiles will not fail but it's not doing anything
     // and mostly this is expected when a fresh region is created.
     storeFileManager.loadFiles(EMPTY_LIST);
-    compareIncludedInManagerVsTable(sortedInitialStoreFiles);
+    // on heap view will be updated to empty, but the pre step loadInitialFiles should have
+    // provide the right view
+    //
+    // this test is telling us that we will never write empty to include list.
+    compareIncludedInManagerVsTable(EMPTY_LIST, sortedInitialStoreFiles);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
+  public void testLoadFilesWithEmptyList() throws IOException {
+    storeFileManager.loadFiles(EMPTY_LIST);
+    compareIncludedInManagerVsTable(EMPTY_LIST);
+  }
+
+  @Test(expected = NullPointerException.class)
   public void testLoadFilesWithNull() throws IOException {
     storeFileManager.loadFiles(initialStoreFiles);
     storeFileManager.loadFiles(null);
