@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -35,9 +36,11 @@ import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClientUtils;
+import org.apache.thrift.TConfiguration;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TFramedTransport;
+import org.apache.thrift.transport.TTransportException;
+import org.apache.thrift.transport.layered.TFramedTransport;
 import org.apache.thrift.transport.TSaslClientTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
@@ -90,8 +93,13 @@ public class DemoClient {
   public void run() throws Exception {
     int timeout = 10000;
     boolean framed = false;
+    TTransport transport = null;
+    try {
+      transport = new TSocket(new TConfiguration(), host, port, timeout);
+    } catch (TTransportException e) {
+      throw new IOException(e);
+    }
 
-    TTransport transport = new TSocket(host, port, timeout);
     if (framed) {
       transport = new TFramedTransport(transport);
     } else if (secure) {
