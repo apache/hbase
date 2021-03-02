@@ -37,7 +37,7 @@ public class PersistedStoreEngine extends DefaultStoreEngine {
   @Override
   public void createComponents(
     Configuration conf, HStore store, CellComparator kvComparator) throws IOException {
-    Preconditions.checkArgument(StorefileTrackingUtils.isStorefileTrackingPersistEnabled(conf));
+    Preconditions.checkArgument(StoreFileTrackingUtils.isStoreFileTrackingPersistEnabled(conf));
 
     createCompactor(conf, store);
     createCompactionPolicy(conf, store);
@@ -66,7 +66,7 @@ public class PersistedStoreEngine extends DefaultStoreEngine {
       new PersistedStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
         compactionPolicy.getConf(), store.getRegionFileSystem(), store.getRegionInfo(),
         store.getColumnFamilyName(),
-        StorefileTrackingUtils.createStoreFilePathAccessor(conf, connection),
+        StoreFileTrackingUtils.createStoreFilePathAccessor(conf, connection),
         readOnly);
   }
 }

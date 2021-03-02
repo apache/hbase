@@ -33,11 +33,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MiscTests.class, SmallTests.class })
-public class TestStorefileTrackingUtils {
+public class TestStoreFileTrackingUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStorefileTrackingUtils.class);
+    HBaseClassTestRule.forClass(TestStoreFileTrackingUtils.class);
 
   private Configuration conf;
   private boolean isFeatureEnabled;
@@ -48,10 +48,10 @@ public class TestStorefileTrackingUtils {
   }
 
   @Test
-  public void testIsStorefileTrackingPersistEnabled() {
+  public void testIsStoreFileTrackingPersistEnabled() {
     conf.setBoolean(HConstants.STOREFILE_TRACKING_PERSIST_ENABLED, true);
     conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, PersistedStoreEngine.class.getName());
-    isFeatureEnabled = StorefileTrackingUtils.isStorefileTrackingPersistEnabled(conf);
+    isFeatureEnabled = StoreFileTrackingUtils.isStoreFileTrackingPersistEnabled(conf);
     assertTrue(isFeatureEnabled);
   }
 
@@ -59,21 +59,21 @@ public class TestStorefileTrackingUtils {
   public void testIsStorefileTrackingPersistDisabledWithStoreEngineSet() {
     conf.setBoolean(HConstants.STOREFILE_TRACKING_PERSIST_ENABLED, false);
     conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, PersistedStoreEngine.class.getName());
-    isFeatureEnabled = StorefileTrackingUtils.isStorefileTrackingPersistEnabled(conf);
+    isFeatureEnabled = StoreFileTrackingUtils.isStoreFileTrackingPersistEnabled(conf);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testIsStorefileTrackingPersistEnabledWithMismatchedStoreEngine() {
+  public void testisStoreFileTrackingPersistEnabledWithMismatchedStoreEngine() {
     conf.setBoolean(HConstants.STOREFILE_TRACKING_PERSIST_ENABLED, true);
     conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, DefaultStoreEngine.class.getName());
-    isFeatureEnabled = StorefileTrackingUtils.isStorefileTrackingPersistEnabled(conf);
+    isFeatureEnabled = StoreFileTrackingUtils.isStoreFileTrackingPersistEnabled(conf);
   }
 
   @Test
   public void testIsStorefileTrackingPersistDisabled() {
     conf.setBoolean(HConstants.STOREFILE_TRACKING_PERSIST_ENABLED, false);
     conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, DefaultStoreEngine.class.getName());
-    isFeatureEnabled = StorefileTrackingUtils.isStorefileTrackingPersistEnabled(conf);
+    isFeatureEnabled = StoreFileTrackingUtils.isStoreFileTrackingPersistEnabled(conf);
     assertFalse(isFeatureEnabled);
   }
 
@@ -83,9 +83,9 @@ public class TestStorefileTrackingUtils {
     String rowkey1 = "region-cf-table";
     String rowkey2 = "region-new-cf-table";
     assertEquals("cf",
-      StorefileTrackingUtils.getFamilyFromKey(rowkey1, "table", "region", separator));
+      StoreFileTrackingUtils.getFamilyFromKey(rowkey1, "table", "region", separator));
     assertEquals("new-cf",
-      StorefileTrackingUtils.getFamilyFromKey(rowkey2, "table", "region", separator));
+      StoreFileTrackingUtils.getFamilyFromKey(rowkey2, "table", "region", separator));
   }
 
 }

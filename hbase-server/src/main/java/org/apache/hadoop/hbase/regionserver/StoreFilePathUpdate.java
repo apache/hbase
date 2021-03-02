@@ -73,7 +73,7 @@ final class StoreFilePathUpdate {
     private List<Path> storeFiles = ImmutableList.of();
 
     Builder withStoreFiles(List<HStoreFile> storeFiles) {
-      this.storeFiles = StorefileTrackingUtils.convertStoreFilesToPaths(storeFiles);
+      this.storeFiles = StoreFileTrackingUtils.convertStoreFilesToPaths(storeFiles);
       return this;
     }
 

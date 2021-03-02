@@ -62,12 +62,12 @@ public class TestHTableStoreFilePathAccessor extends StoreFilePathAccessorTestBa
   @Override
   public void verifyInitialize(MasterServices masterServices) throws Exception {
     assertFalse(admin.tableExists(TableName.STOREFILE_TABLE_NAME));
-    StorefileTrackingUtils.init(TEST_UTIL.getHBaseCluster().getMaster());
+    StoreFileTrackingUtils.init(TEST_UTIL.getHBaseCluster().getMaster());
     assertNotNull(TEST_UTIL.getConnection().getTable(TableName.STOREFILE_TABLE_NAME));
     assertTrue(
       TEST_UTIL.getMiniHBaseCluster().getRegions(TableName.STOREFILE_TABLE_NAME).size() >= 1);
     assertTrue("hbase:storefile table must be assigned and enabled.",
-      StorefileTrackingUtils.isStoreFileTableAssignedAndEnabled(masterServices));
+      StoreFileTrackingUtils.isStoreFileTableAssignedAndEnabled(masterServices));
   }
 
   @Override

@@ -38,16 +38,16 @@ import org.slf4j.LoggerFactory;
  * Utility class to support persistent storefile tracking
  */
 @InterfaceAudience.Private
-public final class StorefileTrackingUtils {
+public final class StoreFileTrackingUtils {
 
-  private static Logger LOG = LoggerFactory.getLogger(StorefileTrackingUtils.class);
+  private static Logger LOG = LoggerFactory.getLogger(StoreFileTrackingUtils.class);
   public static final long SLEEP_DELTA_MS = TimeUnit.MILLISECONDS.toMillis(100);
 
-  private StorefileTrackingUtils() {
+  private StoreFileTrackingUtils() {
     // private for utility class
   }
 
-  public static boolean isStorefileTrackingPersistEnabled(Configuration conf) {
+  public static boolean isStoreFileTrackingPersistEnabled(Configuration conf) {
     boolean isStoreTrackingPersistEnabled =
       conf.getBoolean(HConstants.STOREFILE_TRACKING_PERSIST_ENABLED,
         HConstants.DEFAULT_STOREFILE_TRACKING_PERSIST_ENABLED);

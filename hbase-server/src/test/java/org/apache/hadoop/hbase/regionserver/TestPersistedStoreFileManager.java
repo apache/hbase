@@ -129,7 +129,7 @@ public class TestPersistedStoreFileManager {
       new HTableStoreFilePathAccessor(conf, TEST_UTIL.getAdmin().getConnection());
     // the hbase:storefile should be created in master startup, but we initialize it here for
     // unit tests
-    StorefileTrackingUtils.init(TEST_UTIL.getHBaseCluster().getMaster());
+    StoreFileTrackingUtils.init(TEST_UTIL.getHBaseCluster().getMaster());
 
     storeFileManager =
       new PersistedStoreFileManager(DEFAULT_CELL_COMPARATOR, COMPARATOR, conf,
@@ -201,7 +201,7 @@ public class TestPersistedStoreFileManager {
 
     // make sure the tracking table is not empty and return the list of initialStoreFiles
     List<Path> storeFilePaths =
-      StorefileTrackingUtils.convertStoreFilesToPaths(initialStoreFiles);
+      StoreFileTrackingUtils.convertStoreFilesToPaths(initialStoreFiles);
     when(mockStoreFilePathAccessor
       .getIncludedStoreFilePaths(tableName.getNameAsString(), regionName, DEFAULT_STORE_NAME))
       .thenReturn(storeFilePaths);
@@ -297,13 +297,13 @@ public class TestPersistedStoreFileManager {
 
     List<HStoreFile> firstCompactionResult = createStoreFilesList();
     List<Path> firstCompactionResultPath =
-      StorefileTrackingUtils.convertStoreFilesToPaths(firstCompactionResult);
+      StoreFileTrackingUtils.convertStoreFilesToPaths(firstCompactionResult);
     List<HStoreFile> secondCompactionResult = createStoreFilesList();
     List<Path> secondCompactionResultPath =
-      StorefileTrackingUtils.convertStoreFilesToPaths(secondCompactionResult);
+      StoreFileTrackingUtils.convertStoreFilesToPaths(secondCompactionResult);
     List<HStoreFile> thirdCompactionResult = createStoreFilesList();
     List<Path> thirdCompactionResultPath =
-      StorefileTrackingUtils.convertStoreFilesToPaths(thirdCompactionResult);
+      StoreFileTrackingUtils.convertStoreFilesToPaths(thirdCompactionResult);
     // Composition of all compaction results, loaded into tmpFiles to track that tmpFiles are being
     // removed correctly
     List<Path> initialCompactionTmpPaths = ImmutableList.copyOf(Iterables
@@ -432,7 +432,7 @@ public class TestPersistedStoreFileManager {
 
     Collection<Path> includedPathsFromAccessor = storeFilePathAccessor
       .getIncludedStoreFilePaths(tableName.getNameAsString(), regionName, DEFAULT_STORE_NAME);
-    assertEquals(StorefileTrackingUtils.convertStoreFilesToPaths(expectedStoreFilesInTable),
+    assertEquals(StoreFileTrackingUtils.convertStoreFilesToPaths(expectedStoreFilesInTable),
       includedPathsFromAccessor);
   }
 
