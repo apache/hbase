@@ -214,11 +214,11 @@ class DefaultStoreFileManager implements StoreFileManager {
     return storeFileComparator;
   }
 
-  void setStorefiles(ImmutableList<HStoreFile> storefiles) {
+  void setStoreFiles(ImmutableList<HStoreFile> storefiles) {
     this.storefiles = storefiles;
   }
 
-  void setCompactedfiles(ImmutableList<HStoreFile> compactedfiles) {
+  void setCompactedFiles(ImmutableList<HStoreFile> compactedfiles) {
     this.compactedfiles = compactedfiles;
   }
 

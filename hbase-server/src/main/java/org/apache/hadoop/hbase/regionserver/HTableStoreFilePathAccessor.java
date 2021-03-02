@@ -19,13 +19,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -33,17 +29,11 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.filter.RegexStringComparator;
-import org.apache.hadoop.hbase.filter.RowFilter;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -99,11 +89,6 @@ public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
   }
 
   @Override
-  public void initialize(final MasterServices masterServices) throws IOException {
-    StorefileTrackingUtils.init(masterServices);
-  }
-
-  @Override
   List<Path> getStoreFilePaths(final String tableName, final String regionName,
     final String storeName, final String colFamily) throws IOException {
     validate(tableName, regionName, storeName, colFamily);
@@ -131,7 +116,7 @@ public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
   private Put generatePutForStoreFilePaths(final String tableName, final String regionName,
     final String storeName, final StoreFilePathUpdate storeFilePathUpdate) {
     Put put = new Put(Bytes.toBytes(getKey(tableName, regionName, storeName)));
-    if (storeFilePathUpdate.hasStoreFilesUpdate()) {
+    if (!storeFilePathUpdate.getStoreFiles().isEmpty()) {
       put.addColumn(Bytes.toBytes(STOREFILE_INCLUDED_STR), STOREFILE_QUALIFIER,
         storeFileListToByteArray(storeFilePathUpdate.getStoreFiles()));
     }
@@ -146,34 +131,6 @@ public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
       Bytes.toBytes(getKey(tableName, regionName, storeName)));
     delete.addColumns(STOREFILE_FAMILY_INCLUDED, STOREFILE_QUALIFIER);
     doDelete(Lists.newArrayList(delete));
-  }
-
-  @Override
-  public void deleteRegion(String regionName) throws IOException {
-    Scan scan = getScanWithFilter(regionName);
-    List<Delete> familiesToDelete = new ArrayList<>();
-    for (Result result : getResultScanner(scan)) {
-      String rowKey = Bytes.toString(result.getRow());
-      Delete delete = new Delete(Bytes.toBytes(rowKey));
-      familiesToDelete.add(delete);
-    }
-    doDelete(familiesToDelete);
-  }
-
-  @Override
-  public Set<String> getTrackedFamilies(String tableName, String regionName)
-    throws IOException {
-    // find all rows by regionName
-    Scan scan = getScanWithFilter(regionName);
-
-    Set<String> families = new HashSet<>();
-    for (Result result : getResultScanner(scan)) {
-      String rowKey = Bytes.toString(result.getRow());
-      String family =
-        StorefileTrackingUtils.getFamilyFromKey(rowKey, tableName, regionName, getSeparator());
-      families.add(family);
-    }
-    return families;
   }
 
   @Override
@@ -199,12 +156,6 @@ public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
     }
   }
 
-  private ResultScanner getResultScanner(final Scan scan) throws IOException {
-    try (Table table = getConnection().getTable(TableName.STOREFILE_TABLE_NAME)) {
-      return table.getScanner(scan);
-    }
-  }
-
   private Connection getConnection() throws IOException {
     if (connection == null) {
       throw new IOException("Connection should be provided by region server "
@@ -212,16 +163,4 @@ public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
     }
     return connection;
   }
-
-
-  private Scan getScanWithFilter(String regionName) {
-    Scan scan = new Scan();
-    String regexPattern = "^" + regionName + getSeparator();
-    RowFilter rowFilter = new RowFilter(CompareOperator.EQUAL,
-      new RegexStringComparator(regexPattern));
-    scan.setFilter(rowFilter);
-    scan.addColumn(STOREFILE_FAMILY_INCLUDED, STOREFILE_QUALIFIER);
-    return scan;
-  }
-
 }

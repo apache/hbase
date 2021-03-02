@@ -129,7 +129,7 @@ public class TestPersistedStoreFileManager {
       new HTableStoreFilePathAccessor(conf, TEST_UTIL.getAdmin().getConnection());
     // the hbase:storefile should be created in master startup, but we initialize it here for
     // unit tests
-    storeFilePathAccessor.initialize(TEST_UTIL.getHBaseCluster().getMaster());
+    StorefileTrackingUtils.init(TEST_UTIL.getHBaseCluster().getMaster());
 
     storeFileManager =
       new PersistedStoreFileManager(DEFAULT_CELL_COMPARATOR, COMPARATOR, conf,

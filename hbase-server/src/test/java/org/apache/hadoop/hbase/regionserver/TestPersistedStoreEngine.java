@@ -91,13 +91,6 @@ public class TestPersistedStoreEngine {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    // use killMiniHBaseCluster before shutdownMiniCluster because shutdownMiniCluster puts a RS
-    // that host hbase:meta to a stopped state that prevents meta lookup the table state of
-    // hbase:storefile and hangs the last write to hbase:storefile when any tracking region closes.
-    //
-    // this should be rarely happened on a real cluster and RS with meta table should be the last
-    // to be shutdown normally.
-    TEST_UTIL.killMiniHBaseCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
 

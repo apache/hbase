@@ -78,24 +78,6 @@ public final class StorefileTrackingUtils {
     waitForStoreFileTableOnline(masterServices);
   }
 
-  /**
-   * Cleans up all storefile related state on the cluster. disable and delete hbase:storefile
-   * if found
-   * @param masterServices {@link MasterServices}
-   * @throws IOException if failures
-   */
-  private static void cleanup(MasterServices masterServices) throws IOException {
-    try {
-      masterServices.getConnection().getAdmin().disableTable(TableName.STOREFILE_TABLE_NAME);
-      masterServices.getConnection().getAdmin().deleteTable(TableName.STOREFILE_TABLE_NAME);
-    } catch (IOException ex) {
-      final String message = "Failed disable and deleting table " +
-        TableName.STOREFILE_TABLE_NAME.getNameAsString();
-      LOG.error(message);
-      throw new IOException(message, ex);
-    }
-  }
-
   public static StoreFilePathAccessor createStoreFilePathAccessor(Configuration conf,
     Connection connection) {
     return new HTableStoreFilePathAccessor(conf, connection);

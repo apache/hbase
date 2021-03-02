@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.List;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -24,38 +25,24 @@ import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 @InterfaceAudience.Private
 final class StoreFilePathUpdate {
 
   private final List<Path> storeFiles;
-  private final boolean hasStoreFilesUpdate;
 
-  private StoreFilePathUpdate(final List<Path> storeFiles, boolean hasStoreFilesUpdate) {
-    Preconditions.checkArgument(hasStoreFilesUpdate,
-      "StoreFilePathUpdate must include an update");
+  private StoreFilePathUpdate(final List<Path> storeFiles) {
     Preconditions.checkNotNull(storeFiles, "StoreFiles cannot be null");
-    if (hasStoreFilesUpdate) {
-      Preconditions
-        .checkArgument(CollectionUtils.isNotEmpty(storeFiles), "StoreFilePaths cannot be empty");
-    }
     this.storeFiles = storeFiles;
-    this.hasStoreFilesUpdate = hasStoreFilesUpdate;
   }
 
   List<Path> getStoreFiles() {
     return storeFiles;
   }
 
-  boolean hasStoreFilesUpdate() {
-    return hasStoreFilesUpdate;
-  }
-
   @Override
   public String toString() {
-    return "StoreFilePathUpdate{" + "storeFiles=" + storeFiles + ", hasStoreFilesUpdate="
-      + hasStoreFilesUpdate + '}';
+    return "StoreFilePathUpdate{" + "storeFiles=" + storeFiles + "}";
   }
 
   @Override
@@ -70,14 +57,12 @@ final class StoreFilePathUpdate {
 
     StoreFilePathUpdate that = (StoreFilePathUpdate) o;
 
-    return new EqualsBuilder().append(hasStoreFilesUpdate, that.hasStoreFilesUpdate)
-      .append(storeFiles, that.storeFiles).isEquals();
+    return new EqualsBuilder().append(storeFiles, that.storeFiles).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(17, 37).append(storeFiles)
-      .append(hasStoreFilesUpdate).toHashCode();
+    return new HashCodeBuilder(17, 37).append(storeFiles).toHashCode();
   }
 
   static Builder builder() {
@@ -86,26 +71,21 @@ final class StoreFilePathUpdate {
 
   static class Builder {
     private List<Path> storeFiles = ImmutableList.of();
-    private boolean hasStoreFilesUpdate;
 
     Builder withStoreFiles(List<HStoreFile> storeFiles) {
-      Preconditions.checkArgument(!hasStoreFilesUpdate,
-        "Specify a Path List or File List, but not both");
       this.storeFiles = StorefileTrackingUtils.convertStoreFilesToPaths(storeFiles);
-      this.hasStoreFilesUpdate = true;
       return this;
     }
 
+    @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
     Builder withStorePaths(List<Path> storeFiles) {
-      Preconditions.checkArgument(!hasStoreFilesUpdate,
-        "Specify a Path List or File List, but not both");
       this.storeFiles = storeFiles;
-      this.hasStoreFilesUpdate = true;
       return this;
     }
 
     StoreFilePathUpdate build() {
-      return new StoreFilePathUpdate(storeFiles, hasStoreFilesUpdate);
+      return new StoreFilePathUpdate(storeFiles);
     }
   }
 }

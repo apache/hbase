@@ -38,14 +38,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface StoreFilePathAccessor {
 
   /**
-   * Create the storefile tracking with the help of using the masterService
-   * @param masterServices instance of HMaster
-   * @throws IOException if Master is not running or connection has been lost
-   */
-  void initialize(final MasterServices masterServices) throws IOException;
-
-  /**
-   * GET storefile paths from the 'included' data set
+   * Get storefile paths from the 'included' data set
    * @param tableName name of the current table in String
    * @param regionName name of the current region in String
    * @param storeName name of the column family in String, to be combined with regionName to make
@@ -58,7 +51,11 @@ public interface StoreFilePathAccessor {
     final String storeName) throws IOException;
 
   /**
-   * Writes the specified updates to the tracking
+   * Write an entity that should be persisted into the tracking data for the
+   * specific column family of a given region
+   *
+   * it would be happened during storefile operation e.g. flush and compaction.
+   *
    * @param tableName name of the current table in String
    * @param regionName name of the current region in String
    * @param storeName name of the column family in String, to be combined with regionName to make
@@ -80,22 +77,5 @@ public interface StoreFilePathAccessor {
    */
   void deleteStoreFilePaths(final String tableName, final String regionName, final String storeName)
     throws IOException;
-
-  /**
-   * Returns the families being tracked in the storefile tracking data for the given
-   * table/region
-   * @param tableName Table for which families being tracked needs to be figured out
-   * @param regionName Region for which families being tracked needs to be figured out
-   * @return Set of families being tracked
-   * @throws IOException if failures
-   */
-  Set<String> getTrackedFamilies(String tableName, String regionName) throws IOException;
-
-  /**
-   * Deletes the files tracked for all column families in the given region
-   * @param regionName Region whose tracking data needs to be wiped
-   * @throws IOException if failures
-   */
-  void deleteRegion(final String regionName) throws IOException;
 
 }

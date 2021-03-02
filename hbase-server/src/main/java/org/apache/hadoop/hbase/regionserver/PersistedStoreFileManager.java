@@ -80,12 +80,6 @@ public class PersistedStoreFileManager extends DefaultStoreFileManager {
       familyName, accessor, false);
   }
 
-  /**
-   * Loads the specified storeFiles to the StoreFileManager to be included in reads.
-   *
-   * @param storeFiles list of storefiles to be loaded, could be an empty list. throws exception
-   *                   if it's null.
-   */
   @Override
   public void loadFiles(List<HStoreFile> storeFiles) throws IOException {
     Preconditions.checkArgument(storeFiles != null, "store files cannot be "
@@ -96,7 +90,7 @@ public class PersistedStoreFileManager extends DefaultStoreFileManager {
     }
     ImmutableList<HStoreFile> sortedStorefiles =
       ImmutableList.sortedCopyOf(getStoreFileComparator(), storeFiles);
-    setStorefiles(sortedStorefiles);
+    setStoreFiles(sortedStorefiles);
     updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(sortedStorefiles).build());
   }
 
@@ -148,42 +142,43 @@ public class PersistedStoreFileManager extends DefaultStoreFileManager {
     ImmutableList<HStoreFile> storefiles = ImmutableList
       .sortedCopyOf(getStoreFileComparator(), Iterables.concat(getStorefiles(), sfs));
     updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(storefiles).build());
-    setStorefiles(storefiles);
+    setStoreFiles(storefiles);
   }
 
   @Override
-  public void addCompactionResults(Collection<HStoreFile> newCompactedfiles,
+  public void addCompactionResults(Collection<HStoreFile> newCompactedFiles,
     Collection<HStoreFile> results) throws IOException {
-    Preconditions.checkNotNull(newCompactedfiles, "compactedFiles cannot be null");
+    Preconditions.checkNotNull(newCompactedFiles, "compactedFiles cannot be null");
     Preconditions.checkNotNull(results, "compaction result cannot be null");
     // only allow distinct path to be included, especially rerun after a compaction fails
     ImmutableList<HStoreFile> storefiles = ImmutableList.sortedCopyOf(getStoreFileComparator(),
-      Iterables.concat(Iterables.filter(getStorefiles(), sf -> !newCompactedfiles.contains(sf)),
+      Iterables.concat(Iterables.filter(getStorefiles(), sf -> !newCompactedFiles.contains(sf)),
         results)).asList();
     Preconditions.checkArgument(!CollectionUtils.isEmpty(storefiles),
       "storefiles cannot be empty when adding compaction results");
 
     ImmutableList<HStoreFile> compactedfiles = ImmutableSortedSet
       .copyOf(getStoreFileComparator(),
-        Iterables.concat(getCompactedfiles(), newCompactedfiles))
+        Iterables.concat(getCompactedfiles(), newCompactedFiles))
       .asList();
     updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(storefiles).build());
-    setStorefiles(storefiles);
-    setCompactedfiles(compactedfiles);
-    newCompactedfiles.forEach(HStoreFile::markCompactedAway);
+    setStoreFiles(storefiles);
+    setCompactedFiles(compactedfiles);
+    newCompactedFiles.forEach(HStoreFile::markCompactedAway);
   }
 
   void updatePathListToTracker(StoreFilePathUpdate storeFilePathUpdate) throws IOException {
     try {
+      // if this is not a read only region, update the tracking path
       if (!readOnly) {
         accessor.writeStoreFilePaths(tableName, regionName, storeName, storeFilePathUpdate);
       }
     } catch (IOException e) {
-      String message = "Failed to update Path list of " + tableName + "-" + regionName +
-        "-" + storeName + ", on " + TableName.STOREFILE_STR + ". The new files are not "
-        + "persistent and will be removed from " + regionName + "," + storeName +
-        ".\nFailed update: " + storeFilePathUpdate;
-      LOG.warn(message);
+      String message = String.format(
+        "Failed to persist tracking paths with key %s-%s-%s to table [%s]."
+          + "\nPaths failed to be updated are: %s",
+        regionName, storeName, tableName, TableName.STOREFILE_STR, storeFilePathUpdate);
+      LOG.error(message);
       throw new IOException(message, e);
     }
   }

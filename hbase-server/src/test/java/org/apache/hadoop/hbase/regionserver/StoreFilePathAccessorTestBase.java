@@ -18,12 +18,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -37,7 +35,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public abstract class StoreFilePathAccessorTestBase {
@@ -50,10 +47,10 @@ public abstract class StoreFilePathAccessorTestBase {
 
   protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected StoreFilePathAccessor storeFilePathAccessor;
-  protected static String REGION_NAME = UUID.randomUUID().toString().replaceAll("-", "");
-  protected static String STORE_NAME = UUID.randomUUID().toString();
-  protected static List<Path> EMPTY_PATH = Collections.emptyList();
-  protected static List<Path> INCLUDE_EXAMPLE_PATH =
+  protected static final String REGION_NAME = UUID.randomUUID().toString().replaceAll("-", "");
+  protected static final String STORE_NAME = UUID.randomUUID().toString();
+  protected static final List<Path> EMPTY_PATH = Collections.emptyList();
+  protected static final List<Path> INCLUDE_EXAMPLE_PATH =
     Lists.newArrayList(new Path("hdfs://foo/bar1"), new Path("hdfs://foo/bar2"));
   protected static final String VALID_TABLE_NAME_CHARS = "_.";
 

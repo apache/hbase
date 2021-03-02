@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -30,9 +29,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({ MiscTests.class, MediumTests.class })
 public class TestHTableStoreFilePathAccessor extends StoreFilePathAccessorTestBase {
@@ -42,16 +39,6 @@ public class TestHTableStoreFilePathAccessor extends StoreFilePathAccessorTestBa
     HBaseClassTestRule.forClass(TestHTableStoreFilePathAccessor.class);
 
   private Admin admin;
-
-  @Test
-  public void testGetTrackedFamilies() throws Exception {
-    testInitialize();
-    verifyIncludedFilePaths(EMPTY_PATH);
-    writeAndVerifyIncludedFilePaths(INCLUDE_EXAMPLE_PATH);
-
-    assertEquals(Sets.newHashSet(STORE_NAME), storeFilePathAccessor.getTrackedFamilies(tableName,
-      REGION_NAME));
-  }
 
   @Override
   protected HTableStoreFilePathAccessor getStoreFilePathAccessor() {
@@ -75,7 +62,7 @@ public class TestHTableStoreFilePathAccessor extends StoreFilePathAccessorTestBa
   @Override
   public void verifyInitialize(MasterServices masterServices) throws Exception {
     assertFalse(admin.tableExists(TableName.STOREFILE_TABLE_NAME));
-    storeFilePathAccessor.initialize(TEST_UTIL.getHBaseCluster().getMaster());
+    StorefileTrackingUtils.init(TEST_UTIL.getHBaseCluster().getMaster());
     assertNotNull(TEST_UTIL.getConnection().getTable(TableName.STOREFILE_TABLE_NAME));
     assertTrue(
       TEST_UTIL.getMiniHBaseCluster().getRegions(TableName.STOREFILE_TABLE_NAME).size() >= 1);
