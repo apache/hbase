@@ -93,13 +93,8 @@ public class DemoClient {
   public void run() throws Exception {
     int timeout = 10000;
     boolean framed = false;
-    TTransport transport = null;
-    try {
-      transport = new TSocket(new TConfiguration(), host, port, timeout);
-    } catch (TTransportException e) {
-      throw new IOException(e);
-    }
 
+    TTransport transport = new TSocket(new TConfiguration(), host, port, timeout);
     if (framed) {
       transport = new TFramedTransport(transport);
     } else if (secure) {
