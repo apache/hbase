@@ -154,8 +154,8 @@ public class PersistedStoreFileManager extends DefaultStoreFileManager {
       }
     } catch (IOException e) {
       String message = String.format(
-        "Failed to persist tracking paths with key %s-%s-%s to table [%s]."
-          + "\nPaths failed to be updated are: %s",
+        "Failed to persist tracking paths with key %s-%s-%s to table [%s]. "
+          + "%nPaths failed to be updated are: %s",
         regionName, storeName, tableName, TableName.STOREFILE_STR, storeFilePathUpdate);
       LOG.error(message);
       throw new IOException(message, e);
