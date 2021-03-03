@@ -1263,7 +1263,9 @@ $(document).ready(function()
                 3: {sorter: 'separator'},
                 4: {sorter: 'filesize'},
                 5: {sorter: 'separator'},
-                6: {sorter: 'filesize'}
+                6: {sorter: 'filesize'},
+                7: {empty: 'emptyMin'},
+                8: {empty: 'emptyMax'}
             }
         });
         $("#metaTableBaseStatsTable").tablesorter({
@@ -1272,7 +1274,9 @@ $(document).ready(function()
                 3: {sorter: 'separator'},
                 4: {sorter: 'filesize'},
                 5: {sorter: 'separator'},
-                6: {sorter: 'filesize'}
+                6: {sorter: 'filesize'},
+                7: {empty: 'emptyMin'},
+                8: {empty: 'emptyMax'}
             }
         });
         $("#tableLocalityStatsTable").tablesorter({
