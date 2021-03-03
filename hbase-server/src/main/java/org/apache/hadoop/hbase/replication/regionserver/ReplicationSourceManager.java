@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -147,8 +148,6 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
    */
   AtomicReference<ReplicationSourceInterface> catalogReplicationSource = new AtomicReference<>();
 
-  private final Map<String, MetricsSource> sourceMetrics = new HashMap<>();
-
   /**
    * When enable replication offload, will not create replication source and only write WAL to
    * replication queue storage. The replication source will be started by ReplicationServer.
@@ -203,8 +202,7 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
     this.totalBufferLimit = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
         HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
     this.globalMetrics = globalMetrics;
-    this.replicationOffload = conf.getBoolean(HConstants.REPLICATION_OFFLOAD_ENABLE_KEY,
-      HConstants.REPLICATION_OFFLOAD_ENABLE_DEFAULT);
+    this.replicationOffload = ReplicationUtils.isReplicationOffloadEnabled(conf);
   }
 
   /**
@@ -357,14 +355,15 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
   private ReplicationSourceInterface createSource(String queueId, ReplicationPeer replicationPeer)
       throws IOException {
     ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
+    ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(server.getServerName(), queueId);
     // Init the just created replication source. Pass the default walProvider's wal file length
     // provider. Presumption is we replicate user-space Tables only. For hbase:meta region replica
     // replication, see #createCatalogReplicationSource().
     WALFileLengthProvider walFileLengthProvider =
-      this.walFactory.getWALProvider() != null?
+      this.walFactory.getWALProvider() != null ?
         this.walFactory.getWALProvider().getWALFileLengthProvider() : p -> OptionalLong.empty();
-    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, server.getServerName(),
-      queueId, clusterId, walFileLengthProvider, new MetricsSource(queueId));
+    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, queueInfo,
+      clusterId, walFileLengthProvider, new MetricsSource(queueId));
     return src;
   }
 
@@ -716,8 +715,7 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
         Set<String> walsSet = entry.getValue();
         try {
           // there is not an actual peer defined corresponding to peerId for the failover.
-          ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);
-          String actualPeerId = replicationQueueInfo.getPeerId();
+          String actualPeerId = ReplicationQueueInfo.parsePeerId(queueId);
 
           ReplicationPeerImpl peer = replicationPeers.getPeer(actualPeerId);
           if (peer == null || !isOldPeer(actualPeerId, peer)) {
@@ -784,6 +782,9 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
     for (ReplicationSourceInterface source : this.sources.values()) {
       source.terminate("Region server is closing");
     }
+    for (ReplicationSourceInterface source : this.oldsources) {
+      source.terminate("Region server is closing");
+    }
   }
 
   /**
@@ -795,12 +796,7 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
     Map<String, Map<String, NavigableSet<String>>> walsById = new HashMap<>();
     for (ReplicationSourceInterface source : sources.values()) {
       String queueId = source.getQueueId();
-      Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
-      walsById.put(queueId, walsByGroup);
-      for (String wal : this.queueStorage.getWALsInQueue(this.server.getServerName(), queueId)) {
-        String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
-        walsByGroup.computeIfAbsent(walPrefix, p -> new TreeSet<>()).add(wal);
-      }
+      walsById.put(queueId, getWALsByQueueId(queueId));
     }
     return Collections.unmodifiableMap(walsById);
   }
@@ -814,14 +810,19 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
     Map<String, Map<String, NavigableSet<String>>> walsByIdRecoveredQueues = new HashMap<>();
     for (ReplicationSourceInterface source : oldsources) {
       String queueId = source.getQueueId();
-      Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
-      walsByIdRecoveredQueues.put(queueId, walsByGroup);
-      for (String wal : this.queueStorage.getWALsInQueue(this.server.getServerName(), queueId)) {
-        String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
-        walsByGroup.computeIfAbsent(walPrefix, p -> new TreeSet<>()).add(wal);
-      }
+      walsByIdRecoveredQueues.put(queueId, getWALsByQueueId(queueId));
     }
     return Collections.unmodifiableMap(walsByIdRecoveredQueues);
+  }
+
+  private Map<String, NavigableSet<String>> getWALsByQueueId(String queueId)
+    throws ReplicationException {
+    Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
+    for (String wal : this.queueStorage.getWALsInQueue(this.server.getServerName(), queueId)) {
+      String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
+      walsByGroup.computeIfAbsent(walPrefix, p -> new TreeSet<>()).add(wal);
+    }
+    return walsByGroup;
   }
 
   /**
@@ -939,23 +940,24 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
   public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
       throws IOException {
     for (ReplicationSourceInterface source : this.sources.values()) {
-      throwIOExceptionWhenFail(() -> addHFileRefs(source.getPeerId(), tableName, family, pairs));
+      throwIOExceptionWhenFail(() -> addHFileRefs(source, tableName, family, pairs));
     }
   }
 
   /**
    * Add hfile names to the queue to be replicated.
-   * @param peerId the replication peer id
+   * @param source the replication source
    * @param tableName Name of the table these files belongs to
    * @param family Name of the family these files belong to
    * @param pairs list of pairs of { HFile location in staging dir, HFile path in region dir which
    *          will be added in the queue for replication}
    * @throws ReplicationException If failed to add hfile references
    */
-  private void addHFileRefs(String peerId, TableName tableName, byte[] family,
+  private void addHFileRefs(ReplicationSourceInterface source, TableName tableName, byte[] family,
     List<Pair<Path, Path>> pairs) throws ReplicationException {
+    String peerId = source.getPeerId();
     // Only the normal replication source update here, its peerId is equals to queueId.
-    MetricsSource metrics = sourceMetrics.get(peerId);
+    MetricsSource metrics = source.getSourceMetrics();
     ReplicationPeer replicationPeer = replicationPeers.getPeer(peerId);
     Set<String> namespaces = replicationPeer.getNamespaces();
     Map<TableName, List<String>> tableCFMap = replicationPeer.getTableCFs();
@@ -1050,8 +1052,10 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
     CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
       this.clusterId.toString());
     final ReplicationSourceInterface crs = new CatalogReplicationSource();
+    ReplicationQueueInfo queueInfo =
+      new ReplicationQueueInfo(server.getServerName(), peer.getId());
     crs.init(conf, fs, logDir, this, new NoopReplicationQueueStorage(), peer, server,
-      server.getServerName(), peer.getId(), clusterId, walProvider.getWALFileLengthProvider(),
+      queueInfo, clusterId, walProvider.getWALFileLengthProvider(),
       new MetricsSource(peer.getId()));
     // Add listener on the provider so we can pick up the WAL to replicate on roll.
     WALActionsListener listener = new WALActionsListener() {
@@ -1070,22 +1074,5 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
       crs.enqueueLog(((AbstractFSWAL)wal).getCurrentFileName());
     }
     return crs.startup();
-  }
-
-  private NavigableSet<String> getWalsToRemove(String queueId, String log, boolean inclusive) {
-    NavigableSet<String> walsToRemove = new TreeSet<>();
-    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log);
-    try {
-      this.queueStorage.getWALsInQueue(this.server.getServerName(), queueId).forEach(wal -> {
-        String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
-        if (walPrefix.equals(logPrefix)) {
-          walsToRemove.add(wal);
-        }
-      });
-    } catch (ReplicationException e) {
-      // Just log the exception here, as the recovered replication source will try to cleanup again.
-      LOG.warn("Failed to read wals in queue {}", queueId, e);
-    }
-    return walsToRemove.headSet(log, inclusive);
   }
 }

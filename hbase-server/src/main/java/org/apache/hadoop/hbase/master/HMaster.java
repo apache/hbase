@@ -3795,6 +3795,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public List<ServerName> listReplicationSinkServers() throws IOException {
-    return this.serverManager.getOnlineServersList();
+    return this.replicationServerManager.getOnlineServersList();
   }
 }

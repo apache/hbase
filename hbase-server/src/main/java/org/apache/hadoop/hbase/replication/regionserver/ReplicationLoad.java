@@ -69,9 +69,7 @@ public class ReplicationLoad {
     for (ReplicationSourceInterface source : sources) {
       MetricsSource sm = source.getSourceMetrics();
       // Get the actual peer id
-      String peerId = sm.getPeerID();
-      String[] parts = peerId.split("-", 2);
-      peerId = parts.length != 1 ? parts[0] : peerId;
+      String peerId = source.getPeerId();
 
       long ageOfLastShippedOp = sm.getAgeOfLastShippedOp();
       int sizeOfLogQueue = sm.getSizeOfLogQueue();

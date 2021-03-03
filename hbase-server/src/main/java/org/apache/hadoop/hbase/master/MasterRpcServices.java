@@ -75,7 +75,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.janitor.MetaFixer;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -401,6 +400,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Trans
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatusProtos.ReplicationServerReportRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatusProtos.ReplicationServerReportResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatusProtos.ReplicationServerStatusService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
@@ -3399,6 +3400,7 @@ public class MasterRpcServices extends RSRpcServices implements
       .addAllBalancerDecision(balancerDecisions).build();
   }
 
+  @Override
   public ListReplicationSinkServersResponse listReplicationSinkServers(
     RpcController controller, ListReplicationSinkServersRequest request)
     throws ServiceException {
@@ -3408,7 +3410,7 @@ public class MasterRpcServices extends RSRpcServices implements
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preListReplicationSinkServers();
       }
-      builder.addAllServerName(master.getReplicationServerManager().getOnlineServersList().stream()
+      builder.addAllServerName(master.listReplicationSinkServers().stream()
         .map(ProtobufUtil::toServerName).collect(Collectors.toList()));
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postListReplicationSinkServers();
@@ -3420,8 +3422,8 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
-  public RegionServerReportResponse replicationServerReport(RpcController controller,
-      RegionServerReportRequest request) throws ServiceException {
+  public ReplicationServerReportResponse replicationServerReport(RpcController controller,
+    ReplicationServerReportRequest request) throws ServiceException {
     try {
       master.checkServiceStarted();
       int versionNumber = 0;
@@ -3435,16 +3437,17 @@ public class MasterRpcServices extends RSRpcServices implements
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
       ServerMetrics oldMetrics = master.getReplicationServerManager().getServerMetrics(serverName);
       ServerMetrics newMetrics =
-          ServerMetricsBuilder.toServerMetrics(serverName, versionNumber, version, sl);
-      master.getReplicationServerManager().serverReport(serverName, newMetrics);
+        ServerMetricsBuilder.toServerMetrics(serverName, versionNumber, version, sl);
+      Set<String> queueNodes = request.getQueueNodeList().stream().collect(Collectors.toSet());
+      master.getReplicationServerManager().serverReport(serverName, newMetrics, queueNodes);
       if (sl != null && master.metricsMaster != null) {
         // Up our metrics.
         master.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests()
-            - (oldMetrics != null ? oldMetrics.getRequestCount() : 0));
+          - (oldMetrics != null ? oldMetrics.getRequestCount() : 0));
       }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return RegionServerReportResponse.newBuilder().build();
+    return ReplicationServerReportResponse.newBuilder().build();
   }
 }

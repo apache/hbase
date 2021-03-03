@@ -170,9 +170,12 @@ public class Replication implements ReplicationSourceService {
   @Override
   public void startReplicationService() throws IOException {
     this.replicationManager.init();
-    this.server.getChoreService().scheduleChore(
-      new ReplicationStatisticsChore("ReplicationSourceStatistics", server,
+    // No need to start ReplicationStatisticsChore if replication offload enabled
+    if (!ReplicationUtils.isReplicationOffloadEnabled(conf)) {
+      this.server.getChoreService().scheduleChore(
+        new ReplicationStatisticsChore("ReplicationSourceStatistics", server,
           (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
+    }
     LOG.info("{} started", this.server.toString());
   }
 

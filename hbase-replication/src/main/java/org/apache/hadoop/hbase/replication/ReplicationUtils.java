@@ -86,8 +86,7 @@ public final class ReplicationUtils {
     for (ServerName replicator : queueStorage.getListOfReplicators()) {
       List<String> queueIds = queueStorage.getAllQueues(replicator);
       for (String queueId : queueIds) {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
-        if (queueInfo.getPeerId().equals(peerId)) {
+        if (ReplicationQueueInfo.parsePeerId(queueId).equals(peerId)) {
           queueStorage.removeQueue(replicator, queueId);
         }
       }
@@ -230,5 +229,10 @@ public final class ReplicationUtils {
       return true;
     }
     return false;
+  }
+
+  public static boolean isReplicationOffloadEnabled(Configuration conf) {
+    return conf.getBoolean(HConstants.REPLICATION_OFFLOAD_ENABLE_KEY,
+      HConstants.REPLICATION_OFFLOAD_ENABLE_DEFAULT);
   }
 }

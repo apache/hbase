@@ -367,7 +367,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     return createSinkPeer(serverName);
   }
 
-  private SinkPeer createSinkPeer(ServerName serverName) throws IOException {
+  private SinkPeer createSinkPeer(ServerName serverName) {
     if (fetchServersUseZk) {
       return new RegionServerSinkPeer(serverName, conn.getRegionServerAdmin(serverName));
     } else {

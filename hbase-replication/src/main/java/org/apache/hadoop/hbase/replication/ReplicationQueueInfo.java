@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.replication;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -31,11 +32,16 @@ import org.slf4j.LoggerFactory;
  * This class is responsible for the parsing logic for a queue id representing a queue.
  * It will extract the peerId if it's recovered as well as the dead region servers
  * that were part of the queue's history.
+ * One replication queue has only one owner. And the owner must be one region server. When enable
+ * replication offload feature, region server will not start replication source thread to replicate
+ * data. The replication queue will be used by replication server which is responsible for
+ * replicating data.
  */
 @InterfaceAudience.Private
 public class ReplicationQueueInfo {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationQueueInfo.class);
 
+  private final ServerName owner;
   private final String peerId;
   private final String queueId;
   private boolean queueRecovered;
@@ -46,7 +52,8 @@ public class ReplicationQueueInfo {
    * The passed queueId will be either the id of the peer or the handling story of that queue
    * in the form of id-servername-*
    */
-  public ReplicationQueueInfo(String queueId) {
+  public ReplicationQueueInfo(ServerName owner, String queueId) {
+    this.owner = owner;
     this.queueId = queueId;
     String[] parts = queueId.split("-", 2);
     this.queueRecovered = parts.length != 1;
@@ -55,6 +62,22 @@ public class ReplicationQueueInfo {
       // extract dead servers
       extractDeadServersFromZNodeString(parts[1], this.deadRegionServers);
     }
+  }
+
+  /**
+   * A util method to parse the peerId from queueId.
+   */
+  public static String parsePeerId(String queueId) {
+    String[] parts = queueId.split("-", 2);
+    return parts.length != 1 ? parts[0] : queueId;
+  }
+
+  /**
+   * A util method to check whether a queue is recovered.
+   */
+  public static boolean isQueueRecovered(String queueId) {
+    String[] parts = queueId.split("-", 2);
+    return parts.length != 1;
   }
 
   /**
@@ -114,6 +137,10 @@ public class ReplicationQueueInfo {
     return Collections.unmodifiableList(this.deadRegionServers);
   }
 
+  public ServerName getOwner() {
+    return this.owner;
+  }
+
   public String getPeerId() {
     return this.peerId;
   }
@@ -124,5 +151,19 @@ public class ReplicationQueueInfo {
 
   public boolean isQueueRecovered() {
     return queueRecovered;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o instanceof ReplicationQueueInfo) {
+      ReplicationQueueInfo other = (ReplicationQueueInfo) o;
+      return Objects.equals(this.owner, other.owner) && Objects.equals(this.queueId, other.queueId);
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.owner, this.queueId);
   }
 }

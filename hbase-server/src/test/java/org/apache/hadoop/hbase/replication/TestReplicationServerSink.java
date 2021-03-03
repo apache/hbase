@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_OPERATION_TIMEOUT;
-import static org.apache.hadoop.hbase.master.ReplicationServerManager.ONLINE_SERVER_REFRESH_INTERVAL;
+import static org.apache.hadoop.hbase.master.ReplicationServerManager.REPLICATION_SERVER_REFRESH_PERIOD;
+import static org.apache.hadoop.hbase.replication.ReplicationServerRpcServices.REPLICATION_SERVER_PORT;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -92,8 +93,9 @@ public class TestReplicationServerSink {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    CONF.setInt(REPLICATION_SERVER_PORT, 0);
     CONF.setLong(HBASE_CLIENT_OPERATION_TIMEOUT, 1000);
-    CONF.setLong(ONLINE_SERVER_REFRESH_INTERVAL, 10000);
+    CONF.setLong(REPLICATION_SERVER_REFRESH_PERIOD, 10000);
     CONF.setBoolean(HConstants.REPLICATION_OFFLOAD_ENABLE_KEY, true);
     TEST_UTIL.startMiniCluster(StartMiniClusterOption.builder().numReplicationServers(1).build());
     MASTER = TEST_UTIL.getMiniHBaseCluster().getMaster();
@@ -110,6 +112,9 @@ public class TestReplicationServerSink {
 
   @AfterClass
   public static void afterClass() throws IOException {
+    if (!REPLICATION_SERVER.isStopped()) {
+      REPLICATION_SERVER.stop("afterClass");
+    }
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -171,7 +176,7 @@ public class TestReplicationServerSink {
   public void testReplicationServerReport() throws Exception {
     ReplicationServerManager replicationServerManager = MASTER.getReplicationServerManager();
     assertNotNull(replicationServerManager);
-    TEST_UTIL.waitFor(60000, () -> !replicationServerManager.getOnlineServers().isEmpty()
+    TEST_UTIL.waitFor(60000, () -> !replicationServerManager.getOnlineServersList().isEmpty()
         && null != replicationServerManager.getServerMetrics(REPLICATION_SERVER_NAME));
     // put data via replication server
     testReplicateWAL();
@@ -189,13 +194,13 @@ public class TestReplicationServerSink {
 
     ReplicationServerManager replicationServerManager = MASTER.getReplicationServerManager();
     TEST_UTIL.waitFor(60000, () ->
-        initialNum + 1 == replicationServerManager.getOnlineServers().size()
+        initialNum + 1 == replicationServerManager.getOnlineServersList().size()
         && null != replicationServerManager.getServerMetrics(replicationServerName));
 
     replicationServer.stop("test");
 
     TEST_UTIL.waitFor(180000, 1000, () ->
-        initialNum == replicationServerManager.getOnlineServers().size());
+        initialNum == replicationServerManager.getOnlineServersList().size());
     assertNull(replicationServerManager.getServerMetrics(replicationServerName));
   }
 }

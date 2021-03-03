@@ -23,6 +23,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminServic
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatusProtos;
+
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.Service;
@@ -44,7 +47,11 @@ public class HBasePolicyProvider extends PolicyProvider {
       MasterProtos.ClientMetaService.BlockingInterface.class),
     new Service("security.admin.protocol.acl", MasterService.BlockingInterface.class),
     new Service("security.masterregion.protocol.acl",
-      RegionServerStatusService.BlockingInterface.class)
+      RegionServerStatusService.BlockingInterface.class),
+    new Service("security.masterregion.protocol.acl",
+      ReplicationServerStatusProtos.ReplicationServerStatusService.BlockingInterface.class),
+    new Service("security.masterregion.protocol.acl",
+      ReplicationServerProtos.ReplicationServerService.BlockingInterface.class)
   };
 
   @Override

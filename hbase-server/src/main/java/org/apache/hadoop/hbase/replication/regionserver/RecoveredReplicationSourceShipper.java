@@ -72,7 +72,7 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
     long startPosition = 0;
     String peerClusterZNode = source.getQueueId();
     try {
-      startPosition = this.replicationQueues.getWALPosition(source.getServer().getServerName(),
+      startPosition = this.replicationQueues.getWALPosition(source.getQueueOwner(),
         peerClusterZNode, this.logQueue.getQueue(walGroupId).peek().getName());
       LOG.trace("Recovered queue started with log {} at position {}",
         this.logQueue.getQueue(walGroupId).peek(), startPosition);

@@ -69,13 +69,12 @@ public class ReplicationChecker {
     Set<String> peerIds = new HashSet<>(peerStorage.listPeerIds());
     for (ServerName replicator : queueStorage.getListOfReplicators()) {
       for (String queueId : queueStorage.getAllQueues(replicator)) {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
-        if (!peerIds.contains(queueInfo.getPeerId())) {
+        String peerId = ReplicationQueueInfo.parsePeerId(queueId);
+        if (!peerIds.contains(peerId)) {
           undeletedQueues.computeIfAbsent(replicator, key -> new ArrayList<>()).add(queueId);
           LOG.debug(
             "Undeleted replication queue for removed peer found: " +
-              "[removedPeerId={}, replicator={}, queueId={}]",
-            queueInfo.getPeerId(), replicator, queueId);
+              "[removedPeerId={}, replicator={}, queueId={}]", peerId, replicator, queueId);
         }
       }
     }
@@ -99,10 +98,9 @@ public class ReplicationChecker {
     undeletedQueueIds = getUnDeletedQueues();
     undeletedQueueIds.forEach((replicator, queueIds) -> {
       queueIds.forEach(queueId -> {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
         String msg = "Undeleted replication queue for removed peer found: " +
-          String.format("[removedPeerId=%s, replicator=%s, queueId=%s]", queueInfo.getPeerId(),
-            replicator, queueId);
+          String.format("[removedPeerId=%s, replicator=%s, queueId=%s]",
+            ReplicationQueueInfo.parsePeerId(queueId), replicator, queueId);
         errorReporter.reportError(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE, msg);
       });
     });

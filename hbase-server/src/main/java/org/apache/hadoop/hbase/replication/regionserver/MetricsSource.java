@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -64,6 +65,17 @@ public class MetricsSource implements BaseSource {
             .getSource(id);
     globalSourceSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     singleSourceSourceByTable = new HashMap<>();
+  }
+
+  /**
+   * Constructor used to register the metrics
+   * On ReplicationServer, there may be multiple queues with the same queueId, so use queueOwner
+   * and queueId to distinguish them.
+   *
+   * @param queueInfo The replication queue this class is monitoring
+   */
+  public MetricsSource(ReplicationQueueInfo queueInfo) {
+    this(queueInfo.getOwner() + "." + queueInfo.getQueueId());
   }
 
   /**
@@ -322,14 +334,6 @@ public class MetricsSource implements BaseSource {
     }else{
       return EnvironmentEdgeManager.currentTime() - timeStampNextToReplicate;
     }
-  }
-
-  /**
-   * Get the slave peer ID
-   * @return peerID
-   */
-  public String getPeerID() {
-    return id;
   }
 
   public void incrSizeOfHFileRefsQueue(long size) {
