@@ -65,7 +65,7 @@ public abstract class AbstractStoreFilePathAccessor implements StoreFilePathAcce
     List<Path> paths = new ArrayList<>();
     if (data != null && data.length != 0) {
       String pathString = Bytes.toString(data);
-      String[] pathStrings = pathString.split(LIST_SEPARATOR);
+      String[] pathStrings = StringUtils.split(pathString, LIST_SEPARATOR);
       for (String path : pathStrings) {
         paths.add(new Path(path));
       }
