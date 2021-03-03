@@ -80,7 +80,7 @@ public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
       .setRegionSplitPolicyClassName(BusyRegionSplitPolicy.class.getName())
       .build();
 
-  private Connection connection;
+  private final Connection connection;
 
   public HTableStoreFilePathAccessor(Configuration conf, Connection connection) {
     super(conf);
@@ -97,7 +97,7 @@ public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
       new Get(Bytes.toBytes(getKey(tableName, regionName, storeName)));
     get.addColumn(colFamilyBytes, STOREFILE_QUALIFIER);
     Result result = doGet(get);
-    if (result == null || result.isEmpty()) {
+    if (result.isEmpty()) {
       return new ArrayList<>();
     }
     return byteToStoreFileList(result.getValue(colFamilyBytes, STOREFILE_QUALIFIER));
@@ -137,28 +137,20 @@ public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
   }
 
   private Result doGet(final Get get) throws IOException {
-    try (Table table = getConnection().getTable(TableName.STOREFILE_TABLE_NAME)) {
+    try (Table table = connection.getTable(TableName.STOREFILE_TABLE_NAME)) {
       return table.get(get);
     }
   }
 
   private void doPut(final Put put) throws IOException {
-    try (Table table = getConnection().getTable(TableName.STOREFILE_TABLE_NAME)) {
+    try (Table table = connection.getTable(TableName.STOREFILE_TABLE_NAME)) {
       table.put(put);
     }
   }
 
   private void doDelete(final List<Delete> delete) throws IOException {
-    try (Table table = getConnection().getTable(TableName.STOREFILE_TABLE_NAME)) {
+    try (Table table = connection.getTable(TableName.STOREFILE_TABLE_NAME)) {
       table.delete(delete);
     }
-  }
-
-  private Connection getConnection() throws IOException {
-    if (connection == null) {
-      throw new IOException("Connection should be provided by region server "
-        + "and should not be null after initialized.");
-    }
-    return connection;
   }
 }
