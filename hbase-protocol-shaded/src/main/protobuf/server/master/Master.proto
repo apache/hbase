@@ -1225,9 +1225,9 @@ message ScheduleServerCrashProcedureResponse {
   repeated uint64 pid = 1;
 }
 
-message ScheduleServerCrashProceduresForUnknownServersRequest {}
+message ScheduleSCPsForUnknownServersRequest {}
 
-message ScheduleServerCrashProceduresForUnknownServersResponse {
+message ScheduleSCPsForUnknownServersResponse {
   repeated uint64 pid = 1;
 }
 
@@ -1271,8 +1271,8 @@ service HbckService {
     returns(ScheduleServerCrashProcedureResponse);
 
   /** Schedule a ServerCrashProcedure for unknown servers */
-  rpc ScheduleServerCrashProceduresForUnknownServers(ScheduleServerCrashProceduresForUnknownServersRequest)
-    returns(ScheduleServerCrashProceduresForUnknownServersResponse);
+  rpc ScheduleSCPsForUnknownServers(ScheduleSCPsForUnknownServersRequest)
+    returns(ScheduleSCPsForUnknownServersResponse);
 
   /**
    * Request HBCK chore to run at master side.

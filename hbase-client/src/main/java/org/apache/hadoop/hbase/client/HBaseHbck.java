@@ -46,8 +46,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpec
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProcedureResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProceduresForUnknownServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProceduresForUnknownServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleSCPsForUnknownServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleSCPsForUnknownServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignsResponse;
 
 /**
@@ -203,12 +203,12 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public List<Long> scheduleServerCrashProceduresForUnknownServers() throws IOException {
+  public List<Long> scheduleSCPsForUnknownServers() throws IOException {
     try {
-      ScheduleServerCrashProceduresForUnknownServersResponse response =
-        this.hbck.scheduleServerCrashProceduresForUnknownServers(
+      ScheduleSCPsForUnknownServersResponse response =
+        this.hbck.scheduleSCPsForUnknownServers(
           rpcControllerFactory.newController(),
-          ScheduleServerCrashProceduresForUnknownServersRequest.newBuilder().build());
+          ScheduleSCPsForUnknownServersRequest.newBuilder().build());
       return response.getPidList();
     } catch (ServiceException se) {
       LOG.debug("Failed to run ServerCrashProcedures for unknown servers", se);

@@ -2732,9 +2732,8 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
-  public MasterProtos.ScheduleServerCrashProceduresForUnknownServersResponse
-      scheduleServerCrashProceduresForUnknownServers(RpcController controller,
-      MasterProtos.ScheduleServerCrashProceduresForUnknownServersRequest request)
+  public MasterProtos.ScheduleSCPsForUnknownServersResponse scheduleSCPsForUnknownServers(
+      RpcController controller, MasterProtos.ScheduleSCPsForUnknownServersRequest request)
       throws ServiceException {
 
     List<Long> pids = new ArrayList<>();
@@ -2754,8 +2753,7 @@ public class MasterRpcServices extends RSRpcServices implements
         pids.add(Procedure.NO_PROC_ID);
       }
     }
-    return MasterProtos.ScheduleServerCrashProceduresForUnknownServersResponse
-      .newBuilder().addAllPid(pids).build();
+    return MasterProtos.ScheduleSCPsForUnknownServersResponse.newBuilder().addAllPid(pids).build();
   }
 
   @Override

@@ -45,10 +45,9 @@ public class TestHBCKSCPUnknown extends TestHBCKSCP {
 
   @Override
   protected long scheduleHBCKSCP(ServerName rsServerName, HMaster master) throws ServiceException {
-    MasterProtos.ScheduleServerCrashProceduresForUnknownServersResponse response =
-        master.getMasterRpcServices().scheduleServerCrashProceduresForUnknownServers(null,
-            MasterProtos.ScheduleServerCrashProceduresForUnknownServersRequest.newBuilder()
-              .build());
+    MasterProtos.ScheduleSCPsForUnknownServersResponse response =
+        master.getMasterRpcServices().scheduleSCPsForUnknownServers(null,
+            MasterProtos.ScheduleSCPsForUnknownServersRequest.newBuilder().build());
     assertEquals(1, response.getPidCount());
     long pid = response.getPid(0);
     return pid;
