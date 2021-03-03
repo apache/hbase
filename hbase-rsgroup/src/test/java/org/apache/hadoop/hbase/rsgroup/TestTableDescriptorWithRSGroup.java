@@ -86,10 +86,11 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
 
     // Create table should fail if specified rs group does not exist.
     try {
-      TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf("newTable"))
-        .setRegionServerGroup("nonExistingRSGroup")
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
-        .build();
+      TableDescriptor desc =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName.getNameAsString() + "_2"))
+          .setRegionServerGroup("nonExistingRSGroup")
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
+          .build();
       admin.createTable(desc, getSpitKeys(6));
     } catch (ConstraintException e) {
       assertEquals(e.getMessage(), "Region server group nonExistingRSGroup does not exist.");
@@ -207,8 +208,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     assertEquals(rsGroup2.getTables().first(), tableName);
 
     // Clone Snapshot
-    final TableName clonedTable1 = TableName.valueOf("clonedTable1");
-    admin.cloneSnapshot(snapshotName, clonedTable1);
+    final TableName clonedTable1 = TableName.valueOf(tableName.getNameAsString() + "_1");
+    admin.cloneSnapshot(Bytes.toBytes(snapshotName), clonedTable1);
 
     // Verify that cloned table is created into old rs group
     final RSGroupInfo rsGroupInfoOfTable = rsGroupAdmin.getRSGroupInfoOfTable(clonedTable1);
@@ -219,15 +220,15 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
       regionServerGroup.isPresent());
     assertEquals(rsGroup1.getName(), regionServerGroup.get());
 
-    // Delete table's original rsgroup, clone should fail.
+    // Delete table's original rs group, clone should fail.
     rsGroupAdmin
       .moveServersAndTables(Sets.newHashSet(rsGroup1.getServers()), Sets.newHashSet(clonedTable1),
         rsGroup2.getName());
     rsGroupAdmin.removeRSGroup(rsGroup1.getName());
     // Clone Snapshot
-    final TableName clonedTable2 = TableName.valueOf("clonedTable2");
+    final TableName clonedTable2 = TableName.valueOf(tableName.getNameAsString() + "_2");
     try {
-      admin.cloneSnapshot(snapshotName, clonedTable2);
+      admin.cloneSnapshot(Bytes.toBytes(snapshotName), clonedTable2);
     } catch (ConstraintException e) {
       assertTrue(
         e.getCause().getMessage().contains("Region server group rsGroup1 does not exist."));
@@ -307,7 +308,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
 
     // Create TableDescriptor without a family so creation fails
     TableDescriptor desc =
-      TableDescriptorBuilder.newBuilder(tableName).setRegionServerGroup(rsGroup1.getName()).build();
+      TableDescriptorBuilder.newBuilder(tableName).setRegionServerGroup(rsGroup1.getName())
+        .build();
     try {
       admin.createTable(desc, getSpitKeys(5));
     } catch (DoNotRetryIOException e) {
@@ -338,14 +340,15 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     throws Exception {
     RSGroupInfo rsGroup1 = addGroup("rsGroup1", 1);
     assertEquals(0, rsGroup1.getTables().size());
-    // create table with rsgorup info stored in table descriptor
+    // create table with rs group info stored in table descriptor
     createTable(tableName, rsGroup1.getName());
-    final TableName table2 = TableName.valueOf("table2");
-    // create table with no rsgorup info
+    final TableName table2 = TableName.valueOf(tableName.getNameAsString() + "_2");
+    // create table with no rs group info
     createTable(table2, null);
     rsGroupAdmin.moveTables(Sets.newHashSet(tableName), rsGroup1.getName());
     assertTrue("RSGroup info is not updated into TableDescriptor when table created",
-      admin.getConnection().getTable(tableName).getDescriptor().getRegionServerGroup().isPresent());
+      admin.getConnection().getTable(tableName).getDescriptor().getRegionServerGroup()
+        .isPresent());
     assertFalse("Table descriptor should not have been updated "
         + "as rs group info was not stored in table descriptor.",
       admin.getConnection().getTable(table2).getDescriptor().getRegionServerGroup().isPresent());
@@ -359,15 +362,40 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
       admin.getConnection().getTable(table2).getDescriptor().getRegionServerGroup().isPresent());
   }
 
-  private void createTable(TableName tableName, String rsGroupName) throws IOException {
+  @Test
+  public void testModifyAndMoveTableScenario() throws Exception {
+    RSGroupInfo rsGroup1 = addGroup("rsGroup1", 1);
+    assertEquals(0, rsGroup1.getTables().size());
+    // create table with rs group info stored in table descriptor
+    createTable(tableName, rsGroup1.getName());
+    final TableName table2 = TableName.valueOf(tableName.getNameAsString() + "_2");
+    // create table with no rs group info
+    createTable(table2, null);
+    rsGroupAdmin.moveTables(Sets.newHashSet(table2), rsGroup1.getName());
+
+    RSGroupInfo rsGroup2 = addGroup("rsGroup2", 1);
+    rsGroupAdmin.moveTables(Sets.newHashSet(tableName, table2), rsGroup2.getName());
+    rsGroup2 = rsGroupAdmin.getRSGroupInfo(rsGroup2.getName());
+    assertEquals("Table movement failed.", 2, rsGroup2.getTables().size());
+  }
+
+  private void createTable(TableName tName, String rsGroupName) throws Exception {
     ColumnFamilyDescriptor f1 = ColumnFamilyDescriptorBuilder.newBuilder(familyNameBytes).build();
     final TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(f1);
+      TableDescriptorBuilder.newBuilder(tName).setColumnFamily(f1);
     if (rsGroupName != null) {
       builder.setRegionServerGroup(rsGroupName);
     }
     TableDescriptor desc = builder.build();
-    admin.createTable(desc);
+    admin.createTable(desc, getSpitKeys(10));
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, (Waiter.Predicate<Exception>) () -> {
+      List<String> regions = getTableRegionMap().get(tName);
+      if (regions == null) {
+        return false;
+      }
+
+      return getTableRegionMap().get(tName).size() >= 5;
+    });
   }
 
   private byte[][] getSpitKeys(int numRegions) throws IOException {

@@ -465,7 +465,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       // targetGroup is null when a table is being deleted. In this case no further
       // action is required.
       if (targetGroup != null) {
-        moveOrModifyTables(tables, rsGroupInfoManager.getRSGroup(targetGroup));
+        modifyOrMoveTables(tables, rsGroupInfoManager.getRSGroup(targetGroup));
       }
     }
   }
@@ -588,7 +588,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         rsGroupInfoManager.getRSGroup(srcGroup).getServers(),
         targetGroup, srcGroup);
       //move regions of these tables which are not on group servers
-      moveOrModifyTables(tables, rsGroupInfoManager.getRSGroup(targetGroup));
+      modifyOrMoveTables(tables, rsGroupInfoManager.getRSGroup(targetGroup));
     }
     LOG.info("Move servers and tables done. Severs: {}, Tables: {} => {}", servers, tables,
         targetGroup);
@@ -619,7 +619,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         .filter(t -> oldName.equals(t.getRegionServerGroup().orElse(null)))
         .collect(Collectors.toSet());
       // Update rs group info into table descriptors
-      modifyTables(updateTables, newName);
+      modifyTablesAndWaitForCompletion(updateTables, newName);
     }
   }
 
@@ -730,15 +730,16 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
   }
 
-  private void moveOrModifyTables(Set<TableName> tables, RSGroupInfo targetGroup)
-    throws IOException {
+  // Modify table or move table's regions
+  void modifyOrMoveTables(Set<TableName> tables, RSGroupInfo targetGroup) throws IOException {
     Set<TableName> tablesToBeMoved = new HashSet<>(tables.size());
     Set<TableDescriptor> tablesToBeModified = new HashSet<>(tables.size());
+    // Segregate tables into to be modified or to be moved category
     for (TableName tableName : tables) {
       TableDescriptor descriptor = master.getTableDescriptors().get(tableName);
       if (descriptor == null) {
-        LOG.error("TableDescriptor of table {} not found. "
-          + "Skipping the region movement of this table.");
+        LOG.error(
+          "TableDescriptor of table {} not found. Skipping the region movement of this table.");
         continue;
       }
       if (descriptor.getRegionServerGroup().isPresent()) {
@@ -747,16 +748,27 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         tablesToBeMoved.add(tableName);
       }
     }
+    List<Long> procedureIds = null;
+    if (!tablesToBeModified.isEmpty()) {
+      procedureIds = modifyTables(tablesToBeModified, targetGroup.getName());
+    }
     if (!tablesToBeMoved.isEmpty()) {
       moveTableRegionsToGroup(tablesToBeMoved, targetGroup);
     }
-    if (!tablesToBeModified.isEmpty()) {
-      modifyTables(tablesToBeModified, targetGroup.getName());
+    // By this time moveTableRegionsToGroup is finished, lets wait for modifyTables completion
+    if (procedureIds != null) {
+      waitForProcedureCompletion(procedureIds);
     }
   }
 
+  private void modifyTablesAndWaitForCompletion(Set<TableDescriptor> tableDescriptors,
+    String targetGroup) throws IOException {
+    final List<Long> procIds = modifyTables(tableDescriptors, targetGroup);
+    waitForProcedureCompletion(procIds);
+  }
+
   // Modify table internally moves the regions as well. So separate region movement is not needed
-  private void modifyTables(Set<TableDescriptor> tableDescriptors, String targetGroup)
+  private List<Long> modifyTables(Set<TableDescriptor> tableDescriptors, String targetGroup)
     throws IOException {
     List<Long> procIds = new ArrayList<>(tableDescriptors.size());
     for (TableDescriptor oldTd : tableDescriptors) {
@@ -765,6 +777,10 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       procIds.add(master
         .modifyTable(oldTd.getTableName(), newTd, HConstants.NO_NONCE, HConstants.NO_NONCE));
     }
+    return procIds;
+  }
+
+  private void waitForProcedureCompletion(List<Long> procIds) throws IOException {
     for (long procId : procIds) {
       Procedure<?> proc = master.getMasterProcedureExecutor().getProcedure(procId);
       if (proc == null) {
