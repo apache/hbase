@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
