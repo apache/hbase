@@ -30,10 +30,13 @@ TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396. then
 the encoded region name portion is 527db22f95c8a9e0116f0cc13c680396
 A server name is its host, port plus startcode. For example:
 host187.example.com,60020,1289493121758
+To move meta region, pass 'hbase:meta' as encoded region name"
 Examples:
 
   hbase> move 'ENCODED_REGIONNAME'
   hbase> move 'ENCODED_REGIONNAME', 'SERVER_NAME'
+  hbase> move 'hbase:meta'
+  hbase> move 'hbase:meta', 'SERVER_NAME'
 EOF
       end
 
