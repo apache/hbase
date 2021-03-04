@@ -324,6 +324,7 @@ class MemStoreFlusher implements FlushRequester {
 
     private FlushHandler(String name) {
       super(name);
+      setDaemon(true);
     }
 
     @Override
