@@ -7029,7 +7029,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       isSuccessful = true;
-      if (conf.getBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, true)) {
+      if (conf.getBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, false)) {
         // request compaction
         familyWithFinalPath.keySet().forEach(family -> {
           HStore store = getStore(family);
