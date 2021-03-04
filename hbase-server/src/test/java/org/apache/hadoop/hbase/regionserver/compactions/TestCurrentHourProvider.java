@@ -26,10 +26,12 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
+@Ignore("See HBASE-25385")
 public class TestCurrentHourProvider {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
