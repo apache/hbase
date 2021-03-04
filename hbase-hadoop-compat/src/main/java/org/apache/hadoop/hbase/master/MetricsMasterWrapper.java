@@ -118,6 +118,20 @@ public interface MetricsMasterWrapper {
   int getNumDeadRegionServers();
 
   /**
+   * Get the draining region servers
+   *
+   * @return Draining region server
+   */
+  String getDrainingRegionServers();
+
+  /**
+   * Get the number of draining region servers
+   *
+   * @return number of draining region servers
+   */
+  int getNumDrainingRegionServers();
+
+  /**
    * Get the number of master WAL files.
    */
   long getNumWALFiles();
