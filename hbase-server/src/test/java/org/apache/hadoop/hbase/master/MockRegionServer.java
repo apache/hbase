@@ -690,6 +690,13 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
+  public AdminProtos.GetLogFileSizeIfBeingWrittenResponse getLogFileSizeIfBeingWritten(
+    RpcController controller, AdminProtos.GetLogFileSizeIfBeingWrittenRequest request)
+    throws ServiceException {
+    return null;
+  }
+
+  @Override
   public GetSpaceQuotaSnapshotsResponse getSpaceQuotaSnapshots(
       RpcController controller, GetSpaceQuotaSnapshotsRequest request)
       throws ServiceException {

@@ -328,6 +328,15 @@ message ClearSlowLogResponses {
   required bool is_cleaned = 1;
 }
 
+message GetLogFileSizeIfBeingWrittenRequest {
+  required string wal_path = 1;
+}
+
+message GetLogFileSizeIfBeingWrittenResponse {
+  required bool is_being_written = 1;
+  optional uint64 length = 2;
+}
+
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -398,5 +407,8 @@ service AdminService {
 
   rpc GetLogEntries(LogRequest)
     returns(LogEntry);
+
+  rpc GetLogFileSizeIfBeingWritten(GetLogFileSizeIfBeingWrittenRequest)
+    returns(GetLogFileSizeIfBeingWrittenResponse);
 
 }
