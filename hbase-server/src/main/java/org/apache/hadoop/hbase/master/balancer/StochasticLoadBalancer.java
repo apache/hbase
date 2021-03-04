@@ -817,31 +817,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       double count = stats.length;
       double mean = total/count;
 
-      // Compute max as if all region servers had 0 and one had the sum of all costs.  This must be
-      // a zero sum cost for this to make sense.
-      double max = ((count - 1) * mean) + (total - mean);
-
-      // It's possible that there aren't enough regions to go around
-      double min;
-      if (count > total) {
-        min = ((count - total) * mean) + ((1 - mean) * total);
-      } else {
-        // Some will have 1 more than everything else.
-        int numHigh = (int) (total - (Math.floor(mean) * count));
-        int numLow = (int) (count - numHigh);
-
-        min = (numHigh * (Math.ceil(mean) - mean)) + (numLow * (mean - Math.floor(mean)));
-
-      }
-      min = Math.max(0, min);
       for (int i=0; i<stats.length; i++) {
         double n = stats[i];
-        double diff = Math.abs(mean - n);
+        double diff = (mean - n) * (mean - n);
         totalCost += diff;
       }
 
-      double scaled =  scale(min, max, totalCost);
-      return scaled;
+      return cluster.scale(cluster.getMinStDev(total, count), cluster.getMaxStDev(total, count),
+        Math.sqrt(totalCost / count));
     }
 
     private double getSum(double[] stats) {
@@ -850,23 +833,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         total += s;
       }
       return total;
-    }
-
-    /**
-     * Scale the value between 0 and 1.
-     *
-     * @param min   Min value
-     * @param max   The Max value
-     * @param value The value to be scaled.
-     * @return The scaled value.
-     */
-    protected double scale(double min, double max, double value) {
-      if (max <= min || value <= min) {
-        return 0;
-      }
-      if ((max - min) == 0) return 0;
-
-      return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
     }
   }
 
@@ -916,7 +882,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return 1000000;   // return a number much greater than any of the other cost
       }
 
-      return scale(0, Math.min(cluster.numRegions, maxMoves), moveCost);
+      return cluster.scale(0, Math.min(cluster.numRegions, maxMoves), moveCost);
     }
   }
 
@@ -1024,15 +990,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     @Override
     protected double cost() {
-      double max = cluster.numRegions;
-      double min = ((double) cluster.numRegions) / cluster.numServers;
       double value = 0;
 
-      for (int i = 0; i < cluster.numMaxRegionsPerTable.length; i++) {
-        value += cluster.numMaxRegionsPerTable[i];
+      for (int i = 0; i < cluster.regionStDevPerTable.length; i++) {
+        value += cluster.regionStDevPerTable[i];
       }
 
-      return scale(min, max, value);
+      return value / cluster.regionStDevPerTable.length;
     }
   }
 
@@ -1385,7 +1349,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       for (int i = 0 ; i < costsPerGroup.length; i++) {
         totalCost += costsPerGroup[i];
       }
-      return scale(0, maxCost, totalCost);
+      return cluster.scale(0, maxCost, totalCost);
     }
 
     /**
