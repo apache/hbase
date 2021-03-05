@@ -990,13 +990,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     @Override
     protected double cost() {
-      double value = 0;
-
-      for (int i = 0; i < cluster.regionStDevPerTable.length; i++) {
-        value += cluster.regionStDevPerTable[i];
-      }
-
-      return value / cluster.regionStDevPerTable.length;
+      return cluster.regionStDevByTable;
     }
   }
 

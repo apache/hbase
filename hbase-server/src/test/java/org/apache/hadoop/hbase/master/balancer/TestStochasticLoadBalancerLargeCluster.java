@@ -40,6 +40,6 @@ public class TestStochasticLoadBalancerLargeCluster extends BalancerTestBase {
     int replication = 1;
 
     // we need to capture the outlier and generate a move
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, false, false);
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 }

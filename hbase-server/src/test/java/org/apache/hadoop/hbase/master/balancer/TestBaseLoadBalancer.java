@@ -390,8 +390,8 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
     // now move region1 from servers[0] to servers[2]
     cluster.doAction(new MoveRegionAction(0, 0, 2));
-    // check that the numMaxRegionsPerTable for "table" has increased to 2
-    assertEquals(0.5773502691896257, cluster.regionStDevPerTable[0], 0.01);
+    // check that the regionStDevByTable for "table" has increased
+    assertEquals(0.5773502691896257, cluster.regionStDevByTable, 0.01);
     // now repeat check whether moving region1 from servers[1] to servers[2]
     // would lower availability
     assertTrue(cluster.wouldLowerAvailability(hri1, servers[2]));
