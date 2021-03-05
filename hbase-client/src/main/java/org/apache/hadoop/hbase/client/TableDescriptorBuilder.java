@@ -598,6 +598,12 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  /**
+   * Set the RSGroup for this table, specified RSGroup must exist before create or modify table.
+   *
+   * @param group rsgroup name
+   * @return a TableDescriptorBuilder
+   */
   public TableDescriptorBuilder setRegionServerGroup(String group) {
     desc.setValue(RSGROUP_KEY, group);
     return this;
