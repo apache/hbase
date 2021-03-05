@@ -21,15 +21,21 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.io.FileUtils;
@@ -61,12 +67,14 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -205,7 +213,9 @@ public class TestLogsCleaner {
     // 10 procedure WALs
     assertEquals(10, fs.listStatus(OLD_PROCEDURE_WALS_DIR).length);
 
-    LogCleaner cleaner = new LogCleaner(1000, server, conf, fs, OLD_WALS_DIR, POOL, null);
+    Map<String, Object> params = new HashMap<>();
+    params.put(HMaster.MASTER, mock(HMaster.class));
+    LogCleaner cleaner = new LogCleaner(1000, server, conf, fs, OLD_WALS_DIR, POOL, params);
     cleaner.chore();
 
     // In oldWALs we end up with the current WAL, a newer WAL, the 3 old WALs which
@@ -255,7 +265,7 @@ public class TestLogsCleaner {
         }
       }).when(queueStorage).getAllWALs();
 
-      cleaner.setConf(conf, faultyZK, queueStorage);
+      cleaner.setConf(conf, faultyZK, queueStorage, null);
       // should keep all files due to a ConnectionLossException getting the queues znodes
       cleaner.preClean();
       Iterable<FileStatus> toDelete = cleaner.getDeletableFiles(dummyFiles);
@@ -449,6 +459,57 @@ public class TestLogsCleaner {
     @Override
     public RecoverableZooKeeper getRecoverableZooKeeper() {
       return zk;
+    }
+  }
+
+  /*
+    First throw SessionExpiredException and then ConnectionLossException.
+   */
+  static class SessionExpiredZooKeeperWatcher extends ZKWatcher {
+    private RecoverableZooKeeper zk;
+
+    public SessionExpiredZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable)
+      throws IOException {
+      super(conf, identifier, abortable);
+    }
+
+    public void init() throws Exception {
+      this.zk = spy(super.getRecoverableZooKeeper());
+      doThrow(new KeeperException.SessionExpiredException())
+        .doThrow(new KeeperException.ConnectionLossException())
+        .when(zk).getData(Mockito.anyString(), Mockito.any(), Mockito.any(Stat.class));
+    }
+
+    @Override
+    public RecoverableZooKeeper getRecoverableZooKeeper() {
+      return zk;
+    }
+  }
+
+  /*
+    Tests that HMaster#abort will be called if ReplicationLogCleaner
+     encounters SessionExpiredException which is unrecoverable.
+   */
+  @Test
+  public void testZookeeperSessionExpired() throws Exception {
+    try(SessionExpiredZooKeeperWatcher sessionExpiredZK =
+            new SessionExpiredZooKeeperWatcher(conf, "testSessionExpiredZk-faulty", null)) {
+      sessionExpiredZK.init();
+      ReplicationQueueStorage queueStorage =
+          ReplicationStorageFactory.getReplicationQueueStorage(sessionExpiredZK, conf);
+      ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
+      HMaster master = mock(HMaster.class);
+      doNothing().when(master).abort(Mockito.anyString(), Mockito.any(Throwable.class));
+      cleaner.setConf(conf, sessionExpiredZK, queueStorage, master);
+      // This will throw SessionExpiredException
+      cleaner.preClean();
+      // make sure that HMaster#abort was called.
+      verify(master, times(1))
+          .abort(Mockito.anyString(), Mockito.any(Throwable.class));
+      cleaner.preClean();
+      // tests that HMaster#abort is not called if any non SessionExpiredException is caught.
+      verify(master, times(1))
+        .abort(Mockito.anyString(), Mockito.any(Throwable.class));
     }
   }
 }

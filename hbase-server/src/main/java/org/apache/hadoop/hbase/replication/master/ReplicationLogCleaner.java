@@ -31,8 +31,10 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +54,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   private boolean stopped = false;
   private Set<String> wals;
   private long readZKTimestamp = 0;
+  private HMaster master = null;
 
   @Override
   public void preClean() {
@@ -61,8 +64,20 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       // but they won't be deleted because they're not in the checking set.
       wals = queueStorage.getAllWALs();
     } catch (ReplicationException e) {
-      LOG.warn("Failed to read zookeeper, skipping checking deletable files");
+      LOG.warn("Failed to read zookeeper, skipping checking deletable files", e);
+      handleSessionExpiredException(e);
       wals = null;
+    }
+  }
+
+  /*
+    If preClean call encounters SessionExpiredException then we should abort HMaster.
+   */
+  private void handleSessionExpiredException(ReplicationException e) {
+    if (e.getCause() != null && e.getCause() instanceof KeeperException.SessionExpiredException) {
+      // Abort hmaster
+      String msg = "ReplicationLogCleaner encountered SessionExpiredException";
+      master.abort(msg, e.getCause());
     }
   }
 
@@ -102,10 +117,12 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       if (MapUtils.isNotEmpty(params)) {
         Object master = params.get(HMaster.MASTER);
         if (master != null && master instanceof HMaster) {
+          this.master = (HMaster) master;
           zkw = ((HMaster) master).getZooKeeper();
           shareZK = true;
         }
       }
+      Preconditions.checkNotNull(this.master);
       if (zkw == null) {
         zkw = new ZKWatcher(getConf(), "replicationLogCleaner", null);
       }
@@ -128,10 +145,11 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
 
   @InterfaceAudience.Private
   public void setConf(Configuration conf, ZKWatcher zk,
-      ReplicationQueueStorage replicationQueueStorage) {
+      ReplicationQueueStorage replicationQueueStorage, HMaster master) {
     super.setConf(conf);
     this.zkw = zk;
     this.queueStorage = replicationQueueStorage;
+    this.master = master;
   }
 
   @Override
