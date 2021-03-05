@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -90,6 +91,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
           .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
           .build();
       admin.createTable(desc, getSpitKeys(6));
+      fail("Should have thrown ConstraintException but no exception thrown.");
     } catch (ConstraintException e) {
       assertEquals(e.getMessage(), "Region server group nonExistingRSGroup does not exist.");
     }
@@ -227,6 +229,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     final TableName clonedTable2 = TableName.valueOf(tableName.getNameAsString() + "_2");
     try {
       admin.cloneSnapshot(Bytes.toBytes(snapshotName), clonedTable2);
+      fail("Should have thrown ConstraintException but no exception thrown.");
     } catch (ConstraintException e) {
       assertTrue(
         e.getCause().getMessage().contains("Region server group rsGroup1 does not exist."));
@@ -252,6 +255,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     // ConstraintException as rsGroup2 does not exits
     try {
       admin.modifyTable(newTableDescriptor);
+      fail("Should have thrown ConstraintException but no exception thrown.");
     } catch (ConstraintException e) {
       assertTrue(
         e.getCause().getMessage().contains("Region server group rsGroup2 does not exist."));
@@ -290,6 +294,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     // Removed family to fail pre-check validation
     try {
       admin.modifyTable(newTableDescriptor);
+      fail("Should have thrown DoNotRetryIOException but no exception thrown.");
     } catch (DoNotRetryIOException e) {
       assertTrue(
         e.getCause().getMessage().contains("Table should have at least one column family"));
@@ -310,6 +315,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
         .build();
     try {
       admin.createTable(desc, getSpitKeys(5));
+      fail("Should have thrown DoNotRetryIOException but no exception thrown.");
     } catch (DoNotRetryIOException e) {
       assertTrue(
         e.getCause().getMessage().contains("Table should have at least one column family"));
