@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -256,7 +255,6 @@ public class TestResult extends TestCase {
     }
   }
 
-  @Test
   public void testCompareResultsWithTags() throws Exception {
     Tag t1 = new ArrayBackedTag((byte) 1, Bytes.toBytes("TAG1"));
     Tag t2 = new ArrayBackedTag((byte) 2, Bytes.toBytes("TAG2"));
