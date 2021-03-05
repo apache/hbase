@@ -594,6 +594,13 @@ possible configurations would overwhelm and obscure the important.
     0 means never give up.</description>
   </property>
   <property>
+    <name>hbase.compaction.after.bulkload.enable</name>
+    <value>true</value>
+    <description>Request Compaction after bulkload immediately.
+      If bulkload is continuous, the triggered compactions may increase load,
+      bring about performance side effect.</description>
+  </property>
+  <property>
     <name>hbase.master.balancer.maxRitPercent</name>
     <value>1.0</value>
     <description>The max percent of regions in transition when balancing.
