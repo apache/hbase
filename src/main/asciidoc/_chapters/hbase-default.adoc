@@ -765,7 +765,7 @@ If bulkload is continuous, the triggered compactions may increase load,
 bring about performance side effect.
 +
 .Default
-`true`
+`false`
 
 [[hbase.balancer.period
     ]]
