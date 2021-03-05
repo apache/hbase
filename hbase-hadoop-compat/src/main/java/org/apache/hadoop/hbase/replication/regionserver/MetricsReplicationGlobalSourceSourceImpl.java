@@ -25,7 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsReplicationGlobalSourceSourceImpl
-    implements MetricsReplicationGlobalSourceSource {
+  implements MetricsReplicationGlobalSourceSource {
   private static final String KEY_PREFIX = "source.";
 
   private final MetricsReplicationSourceImpl rms;
@@ -49,6 +49,7 @@ public class MetricsReplicationGlobalSourceSourceImpl
   private final MutableFastCounter completedRecoveryQueue;
   private final MutableFastCounter failedRecoveryQueue;
   private final MutableGaugeLong walReaderBufferUsageBytes;
+  private final MutableGaugeLong sourceInitializing;
 
   public MetricsReplicationGlobalSourceSourceImpl(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
@@ -89,6 +90,7 @@ public class MetricsReplicationGlobalSourceSourceImpl
 
     walReaderBufferUsageBytes = rms.getMetricsRegistry()
         .getGauge(SOURCE_WAL_READER_EDITS_BUFFER, 0L);
+    sourceInitializing = rms.getMetricsRegistry().getGauge(SOURCE_INITIALIZING, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -196,6 +198,21 @@ public class MetricsReplicationGlobalSourceSourceImpl
   public long getOldestWalAge() {
     // Not implemented
     return 0;
+  }
+
+  @Override
+  public void incrSourceInitializing() {
+    sourceInitializing.incr(1L);
+  }
+
+  @Override
+  public void decrSourceInitializing() {
+    sourceInitializing.decr(1L);
+  }
+
+  @Override
+  public int getSourceInitializing() {
+    return (int)sourceInitializing.value();
   }
 
   @Override

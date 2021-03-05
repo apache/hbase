@@ -40,6 +40,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String shippedHFilesKey;
   private final String sizeOfHFileRefsQueueKey;
   private final String oldestWalAgeKey;
+  private final String sourceInitializingKey;
 
   private final MutableHistogram ageOfLastShippedOpHist;
   private final MutableGaugeLong sizeOfLogQueueGauge;
@@ -67,6 +68,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableFastCounter completedWAL;
   private final MutableFastCounter completedRecoveryQueue;
   private final MutableGaugeLong oldestWalAge;
+  private final MutableGaugeLong sourceInitializing;
 
   public MetricsReplicationSourceSourceImpl(MetricsReplicationSourceImpl rms, String id) {
     this.rms = rms;
@@ -126,6 +128,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     oldestWalAgeKey = this.keyPrefix + "oldestWalAge";
     oldestWalAge = rms.getMetricsRegistry().getGauge(oldestWalAgeKey, 0L);
+
+    sourceInitializingKey = this.keyPrefix + "sourceInitializing";
+    sourceInitializing = rms.getMetricsRegistry().getGauge(sourceInitializingKey, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -189,6 +194,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     rms.removeMetric(completedLogsKey);
     rms.removeMetric(completedRecoveryKey);
     rms.removeMetric(oldestWalAgeKey);
+    rms.removeMetric(sourceInitializingKey);
   }
 
   @Override
@@ -260,6 +266,20 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override public long getOldestWalAge() {
     return oldestWalAge.value();
+  }
+
+  @Override
+  public void incrSourceInitializing() {
+    sourceInitializing.incr(1L);
+  }
+
+  @Override
+  public int getSourceInitializing() {
+    return (int)sourceInitializing.value();
+  }
+
+  @Override public void decrSourceInitializing() {
+    sourceInitializing.decr(1L);
   }
 
   @Override
