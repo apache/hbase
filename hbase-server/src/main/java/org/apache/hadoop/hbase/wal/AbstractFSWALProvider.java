@@ -458,7 +458,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
      * @param p path to split
      * @return start time
      */
-    private static long getTS(Path p) {
+    public static long getTS(Path p) {
       return getTimestamp(p.getName());
     }
   }

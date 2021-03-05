@@ -29,20 +29,26 @@
 
 == Background
 
-HBASE-21926 introduced a new servlet that supports integrated profiling via async-profiler.
+https://issues.apache.org/jira/browse/HBASE-21926[HBASE-21926] introduced a new servlet that
+supports integrated, on-demand profiling via the
+https://github.com/jvm-profiling-tools/async-profiler[Async Profiler] project.
 
 == Prerequisites
 
-Go to https://github.com/jvm-profiling-tools/async-profiler, download a release appropriate for your platform, and install on every cluster host.
-If 4.6 or later linux, be sure to set proc variables as per 'Basic Usage' section in the
-<a href="https://github.com/jvm-profiling-tools/async-profiler">Async Profiler Home Page</a>
-(Not doing this will draw you diagrams with no content).
+Go to the https://github.com/jvm-profiling-tools/async-profiler[Async Profiler Home Page], download
+a release appropriate for your platform, and install on every cluster host. If running a Linux
+kernel v4.6 or later, be sure to set proc variables as per the
+https://github.com/jvm-profiling-tools/async-profiler#basic-usage[Basic Usage] section. Not doing
+so will result in flame graphs that contain no content.
 
-Set `ASYNC_PROFILER_HOME` in the environment (put it in hbase-env.sh) to the root directory of the async-profiler install location, or pass it on the HBase daemon's command line as a system property as `-Dasync.profiler.home=/path/to/async-profiler`.
+Set `ASYNC_PROFILER_HOME` in the environment (put it in hbase-env.sh) to the root directory of the
+async-profiler install location, or pass it on the HBase daemon's command line as a system property
+as `-Dasync.profiler.home=/path/to/async-profiler`.
 
 == Usage
 
-Once the prerequisites are satisfied, access to async-profiler is available by way of the HBase UI or direct interaction with the infoserver.
+Once the prerequisites are satisfied, access to async-profiler is available by way of the HBase UI
+or direct interaction with the infoserver.
 
 Examples:
 

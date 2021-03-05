@@ -339,20 +339,27 @@ public class TestTableDescriptorBuilder {
   public void testStringCustomizedValues() throws HBaseException {
     byte[] familyName = Bytes.toBytes("cf");
     ColumnFamilyDescriptor hcd =
-      ColumnFamilyDescriptorBuilder.newBuilder(familyName).setBlocksize(1000).build();
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      ColumnFamilyDescriptorBuilder.newBuilder(familyName).setBlocksize(131072).build();
+    TableDescriptor htd = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName()))
       .setColumnFamily(hcd).setDurability(Durability.ASYNC_WAL).build();
 
     assertEquals(
       "'testStringCustomizedValues', " +
-        "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
+        "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, "
+        + "{NAME => 'cf', BLOCKSIZE => '131072 B (128KB)'}",
       htd.toStringCustomizedValues());
 
-    htd = TableDescriptorBuilder.newBuilder(htd).setMaxFileSize("10737942528").build();
+    htd = TableDescriptorBuilder.newBuilder(htd)
+      .setMaxFileSize("10737942528")
+      .setMemStoreFlushSize("256MB")
+      .build();
     assertEquals(
       "'testStringCustomizedValues', " +
         "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL', "
-        + "MAX_FILESIZE => '10737942528 B (10GB 512KB)'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
+        + "MAX_FILESIZE => '10737942528 B (10GB 512KB)', "
+        + "MEMSTORE_FLUSHSIZE => '268435456 B (256MB)'}}, "
+        + "{NAME => 'cf', BLOCKSIZE => '131072 B (128KB)'}",
       htd.toStringCustomizedValues());
   }
 
@@ -364,5 +371,23 @@ public class TestTableDescriptorBuilder {
     assertEquals(htd.getValue(RSGroupInfo.TABLE_DESC_PROP_GROUP), groupName);
     htd = TableDescriptorBuilder.newBuilder(htd).setRegionServerGroup(null).build();
     assertNull(htd.getValue(RSGroupInfo.TABLE_DESC_PROP_GROUP));
+  }
+
+  @Test
+  public void testSetEmptyValue() {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    String testValue = "TestValue";
+    // test setValue
+    builder.setValue(testValue, "2");
+    assertEquals("2", builder.build().getValue(testValue));
+    builder.setValue(testValue, "");
+    assertNull(builder.build().getValue(Bytes.toBytes(testValue)));
+
+    // test setFlushPolicyClassName
+    builder.setFlushPolicyClassName("class");
+    assertEquals("class", builder.build().getFlushPolicyClassName());
+    builder.setFlushPolicyClassName("");
+    assertNull(builder.build().getFlushPolicyClassName());
   }
 }

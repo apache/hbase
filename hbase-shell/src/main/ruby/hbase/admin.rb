@@ -1108,7 +1108,7 @@ module Hbase
       end
       cfdb.setTimeToLive(arg.delete(ColumnFamilyDescriptorBuilder::TTL)) if arg.include?(ColumnFamilyDescriptorBuilder::TTL)
       cfdb.setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::DATA_BLOCK_ENCODING))) if arg.include?(ColumnFamilyDescriptorBuilder::DATA_BLOCK_ENCODING)
-      cfdb.setBlocksize(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::BLOCKSIZE))) if arg.include?(ColumnFamilyDescriptorBuilder::BLOCKSIZE)
+      cfdb.setBlocksize(arg.delete(ColumnFamilyDescriptorBuilder::BLOCKSIZE)) if arg.include?(ColumnFamilyDescriptorBuilder::BLOCKSIZE)
       cfdb.setMaxVersions(JInteger.valueOf(arg.delete(HConstants::VERSIONS))) if arg.include?(HConstants::VERSIONS)
       cfdb.setMinVersions(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::MIN_VERSIONS))) if arg.include?(ColumnFamilyDescriptorBuilder::MIN_VERSIONS)
       cfdb.setKeepDeletedCells(org.apache.hadoop.hbase.KeepDeletedCells.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::KEEP_DELETED_CELLS).to_s.upcase)) if arg.include?(ColumnFamilyDescriptorBuilder::KEEP_DELETED_CELLS)
@@ -1445,6 +1445,16 @@ module Hbase
         end
       end
       @admin.modifyNamespace(nsb.build)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Get namespace's rsgroup
+    def get_namespace_rsgroup(namespace_name)
+      # Fail if namespace name is not a string
+      raise(ArgumentError, 'Namespace name must be of type String') unless namespace_name.is_a?(String)
+      nsd = @admin.getNamespaceDescriptor(namespace_name)
+      raise(ArgumentError, 'Namespace does not exist') unless nsd
+      nsd.getConfigurationValue("hbase.rsgroup.name")
     end
 
     #----------------------------------------------------------------------------------------------

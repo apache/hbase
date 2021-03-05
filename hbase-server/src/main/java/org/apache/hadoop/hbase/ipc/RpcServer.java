@@ -822,4 +822,7 @@ public abstract class RpcServer implements RpcServerInterface,
     this.namedQueueRecorder = namedQueueRecorder;
   }
 
+  protected boolean needAuthorization() {
+    return authorize;
+  }
 }

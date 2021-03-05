@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import java.io.IOException;
@@ -31,7 +32,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -60,6 +61,8 @@ import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -289,7 +292,7 @@ public class TestReplicationSource {
     source.init(testConf, null, mockManager, null, mockPeer, null,
       "testPeer", null, p -> OptionalLong.empty(), mock(MetricsSource.class));
     ReplicationSourceWALReader reader = new ReplicationSourceWALReader(null,
-      conf, null, 0, null, source);
+      conf, null, 0, null, source, null);
     ReplicationSourceShipper shipper =
       new ReplicationSourceShipper(conf, null, null, source);
     shipper.entryReader = reader;
@@ -482,8 +485,6 @@ public class TestReplicationSource {
     String walGroupId = "fake-wal-group-id";
     ServerName serverName = ServerName.valueOf("www.example.com", 12006, 1524679704418L);
     ServerName deadServer = ServerName.valueOf("www.deadServer.com", 12006, 1524679704419L);
-    PriorityBlockingQueue<Path> queue = new PriorityBlockingQueue<>();
-    queue.put(new Path("/www/html/test"));
     RecoveredReplicationSource source = mock(RecoveredReplicationSource.class);
     Server server = mock(Server.class);
     Mockito.when(server.getServerName()).thenReturn(serverName);
@@ -496,8 +497,12 @@ public class TestReplicationSource {
       .thenReturn(-1L);
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt("replication.source.maxretriesmultiplier", -1);
+    MetricsSource metricsSource = mock(MetricsSource.class);
+    doNothing().when(metricsSource).incrSizeOfLogQueue();
+    ReplicationSourceLogQueue logQueue = new ReplicationSourceLogQueue(conf, metricsSource, source);
+    logQueue.enqueueLog(new Path("/www/html/test"), walGroupId);
     RecoveredReplicationSourceShipper shipper =
-      new RecoveredReplicationSourceShipper(conf, walGroupId, queue, source, storage);
+      new RecoveredReplicationSourceShipper(conf, walGroupId, logQueue, source, storage);
     assertEquals(1001L, shipper.getStartPosition());
   }
 
@@ -590,5 +595,60 @@ public class TestReplicationSource {
       rss.stop("Done");
     }
   }
-}
 
+  /*
+    Test age of oldest wal metric.
+  */
+  @Test
+  public void testAgeOfOldestWal() throws Exception {
+    try {
+      ManualEnvironmentEdge manualEdge = new ManualEnvironmentEdge();
+      EnvironmentEdgeManager.injectEdge(manualEdge);
+
+      String id = "1";
+      MetricsSource metrics = new MetricsSource(id);
+      Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+      conf.setInt("replication.source.maxretriesmultiplier", 1);
+      ReplicationPeer mockPeer = Mockito.mock(ReplicationPeer.class);
+      Mockito.when(mockPeer.getConfiguration()).thenReturn(conf);
+      Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
+      ReplicationPeerConfig peerConfig = Mockito.mock(ReplicationPeerConfig.class);
+      Mockito.when(peerConfig.getReplicationEndpointImpl()).
+        thenReturn(DoNothingReplicationEndpoint.class.getName());
+      Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
+      ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
+      Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
+      Mockito.when(manager.getGlobalMetrics()).
+        thenReturn(mock(MetricsReplicationGlobalSourceSource.class));
+      RegionServerServices rss =
+        TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
+
+      ReplicationSource source = new ReplicationSource();
+      source.init(conf, null, manager, null, mockPeer, rss, id, null,
+        p -> OptionalLong.empty(), metrics);
+
+      final Path log1 = new Path(logDir, "log-walgroup-a.8");
+      manualEdge.setValue(10);
+      // Diff of current time (10) and  log-walgroup-a.8 timestamp will be 2.
+      source.enqueueLog(log1);
+      MetricsReplicationSourceSource metricsSource1 = getSourceMetrics(id);
+      assertEquals(2, metricsSource1.getOldestWalAge());
+
+      final Path log2 = new Path(logDir, "log-walgroup-b.4");
+      // Diff of current time (10) and log-walgroup-b.4 will be 6 so oldestWalAge should be 6
+      source.enqueueLog(log2);
+      assertEquals(6, metricsSource1.getOldestWalAge());
+      // Clear all metrics.
+      metrics.clear();
+    } finally {
+      EnvironmentEdgeManager.reset();
+    }
+  }
+
+  private MetricsReplicationSourceSource getSourceMetrics(String sourceId) {
+    MetricsReplicationSourceFactoryImpl factory =
+      (MetricsReplicationSourceFactoryImpl) CompatibilitySingletonFactory.getInstance(
+        MetricsReplicationSourceFactory.class);
+    return factory.getSource(sourceId);
+  }
+}

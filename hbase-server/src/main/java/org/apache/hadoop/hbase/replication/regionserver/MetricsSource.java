@@ -386,6 +386,17 @@ public class MetricsSource implements BaseSource {
     globalSourceSource.incrFailedRecoveryQueue();
   }
 
+  /*
+   Sets the age of oldest log file just for source.
+  */
+  public void setOldestWalAge(long age) {
+    singleSourceSource.setOldestWalAge(age);
+  }
+
+  public long getOldestWalAge() {
+    return singleSourceSource.getOldestWalAge();
+  }
+
   @Override
   public void init() {
     singleSourceSource.init();

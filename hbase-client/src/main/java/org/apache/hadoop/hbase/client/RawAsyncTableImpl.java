@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.timelineConsistentRead;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.validatePut;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.validatePutsInRowMutations;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
@@ -343,6 +344,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     @Override
     public CompletableFuture<Boolean> thenMutate(RowMutations mutation) {
       preCheck();
+      validatePutsInRowMutations(mutation, conn.connConf.getMaxKeyValueSize());
       return RawAsyncTableImpl.this.<Boolean> newCaller(row, mutation.getMaxPriority(),
         rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller,
@@ -403,6 +405,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
     @Override
     public CompletableFuture<Boolean> thenMutate(RowMutations mutation) {
+      validatePutsInRowMutations(mutation, conn.connConf.getMaxKeyValueSize());
       return RawAsyncTableImpl.this.<Boolean> newCaller(row, mutation.getMaxPriority(),
         rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller,
@@ -420,9 +423,6 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<CheckAndMutateResult> checkAndMutate(CheckAndMutate checkAndMutate) {
-    if (checkAndMutate.getAction() instanceof Put) {
-      validatePut((Put) checkAndMutate.getAction(), conn.connConf.getMaxKeyValueSize());
-    }
     if (checkAndMutate.getAction() instanceof Put || checkAndMutate.getAction() instanceof Delete
       || checkAndMutate.getAction() instanceof Increment
       || checkAndMutate.getAction() instanceof Append) {
@@ -442,6 +442,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         .call();
     } else if (checkAndMutate.getAction() instanceof RowMutations) {
       RowMutations rowMutations = (RowMutations) checkAndMutate.getAction();
+      validatePutsInRowMutations(rowMutations, conn.connConf.getMaxKeyValueSize());
       return RawAsyncTableImpl.this.<CheckAndMutateResult> newCaller(checkAndMutate.getRow(),
         rowMutations.getMaxPriority(), rpcTimeoutNs)
         .action((controller, loc, stub) ->
@@ -514,6 +515,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Result> mutateRow(RowMutations mutations) {
+    validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
     return this.<Result> newCaller(mutations.getRow(), mutations.getMaxPriority(),
       writeRpcTimeoutNs).action((controller, loc, stub) ->
         this.<Result, Result> mutateRow(controller, loc, stub, mutations,
@@ -615,7 +617,12 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         CheckAndMutate checkAndMutate = (CheckAndMutate) action;
         if (checkAndMutate.getAction() instanceof Put) {
           validatePut((Put) checkAndMutate.getAction(), conn.connConf.getMaxKeyValueSize());
+        } else if (checkAndMutate.getAction() instanceof RowMutations) {
+          validatePutsInRowMutations((RowMutations) checkAndMutate.getAction(),
+            conn.connConf.getMaxKeyValueSize());
         }
+      } else if (action instanceof RowMutations) {
+        validatePutsInRowMutations((RowMutations) action, conn.connConf.getMaxKeyValueSize());
       }
     }
     return conn.callerFactory.batch().table(tableName).actions(actions)

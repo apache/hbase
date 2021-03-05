@@ -366,8 +366,6 @@ public class HFileWriterImpl implements HFile.Writer {
    */
   public static Cell getMidpoint(final CellComparator comparator, final Cell left,
       final Cell right) {
-    // TODO: Redo so only a single pass over the arrays rather than one to
-    // compare and then a second composing midpoint.
     if (right == null) {
       throw new IllegalArgumentException("right cell can not be null");
     }
@@ -380,77 +378,47 @@ public class HFileWriterImpl implements HFile.Writer {
     if (comparator instanceof MetaCellComparator) {
       return right;
     }
-    int diff = comparator.compareRows(left, right);
-    if (diff > 0) {
-      throw new IllegalArgumentException("Left row sorts after right row; left="
-          + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
-    }
     byte[] midRow;
     boolean bufferBacked = left instanceof ByteBufferExtendedCell
         && right instanceof ByteBufferExtendedCell;
-    if (diff < 0) {
-      // Left row is < right row.
-      if (bufferBacked) {
-        midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getRowByteBuffer(),
-            ((ByteBufferExtendedCell) left).getRowPosition(), left.getRowLength(),
-            ((ByteBufferExtendedCell) right).getRowByteBuffer(),
-            ((ByteBufferExtendedCell) right).getRowPosition(), right.getRowLength());
-      } else {
-        midRow = getMinimumMidpointArray(left.getRowArray(), left.getRowOffset(),
-            left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());
-      }
-      // If midRow is null, just return 'right'. Can't do optimization.
-      if (midRow == null) {
-        return right;
-      }
+    if (bufferBacked) {
+      midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) left).getRowPosition(), left.getRowLength(),
+        ((ByteBufferExtendedCell) right).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) right).getRowPosition(), right.getRowLength());
+    } else {
+      midRow = getMinimumMidpointArray(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+        right.getRowArray(), right.getRowOffset(), right.getRowLength());
+    }
+    if (midRow != null) {
       return PrivateCellUtil.createFirstOnRow(midRow);
     }
-    // Rows are same. Compare on families.
-    diff = comparator.compareFamilies(left, right);
-    if (diff > 0) {
-      throw new IllegalArgumentException("Left family sorts after right family; left="
-          + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
+    //Rows are same. Compare on families.
+    if (bufferBacked) {
+      midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getFamilyByteBuffer(),
+        ((ByteBufferExtendedCell) left).getFamilyPosition(), left.getFamilyLength(),
+        ((ByteBufferExtendedCell) right).getFamilyByteBuffer(),
+        ((ByteBufferExtendedCell) right).getFamilyPosition(), right.getFamilyLength());
+    } else {
+      midRow = getMinimumMidpointArray(left.getFamilyArray(), left.getFamilyOffset(),
+        left.getFamilyLength(), right.getFamilyArray(), right.getFamilyOffset(),
+        right.getFamilyLength());
     }
-    if (diff < 0) {
-      if (bufferBacked) {
-        midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getFamilyByteBuffer(),
-            ((ByteBufferExtendedCell) left).getFamilyPosition(), left.getFamilyLength(),
-            ((ByteBufferExtendedCell) right).getFamilyByteBuffer(),
-            ((ByteBufferExtendedCell) right).getFamilyPosition(), right.getFamilyLength());
-      } else {
-        midRow = getMinimumMidpointArray(left.getFamilyArray(), left.getFamilyOffset(),
-            left.getFamilyLength(), right.getFamilyArray(), right.getFamilyOffset(),
-            right.getFamilyLength());
-      }
-      // If midRow is null, just return 'right'. Can't do optimization.
-      if (midRow == null) {
-        return right;
-      }
-      // Return new Cell where we use right row and then a mid sort family.
+    if (midRow != null) {
       return PrivateCellUtil.createFirstOnRowFamily(right, midRow, 0, midRow.length);
     }
     // Families are same. Compare on qualifiers.
-    diff = comparator.compareQualifiers(left, right);
-    if (diff > 0) {
-      throw new IllegalArgumentException("Left qualifier sorts after right qualifier; left="
-          + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
+    if (bufferBacked) {
+      midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
+        ((ByteBufferExtendedCell) left).getQualifierPosition(), left.getQualifierLength(),
+        ((ByteBufferExtendedCell) right).getQualifierByteBuffer(),
+        ((ByteBufferExtendedCell) right).getQualifierPosition(), right.getQualifierLength());
+    } else {
+      midRow = getMinimumMidpointArray(left.getQualifierArray(), left.getQualifierOffset(),
+        left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
+        right.getQualifierLength());
     }
-    if (diff < 0) {
-      if (bufferBacked) {
-        midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
-            ((ByteBufferExtendedCell) left).getQualifierPosition(), left.getQualifierLength(),
-            ((ByteBufferExtendedCell) right).getQualifierByteBuffer(),
-            ((ByteBufferExtendedCell) right).getQualifierPosition(), right.getQualifierLength());
-      } else {
-        midRow = getMinimumMidpointArray(left.getQualifierArray(), left.getQualifierOffset(),
-            left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
-            right.getQualifierLength());
-      }
-      // If midRow is null, just return 'right'. Can't do optimization.
-      if (midRow == null) {
-        return right;
-      }
-      // Return new Cell where we use right row and family and then a mid sort qualifier.
+    if (midRow != null) {
       return PrivateCellUtil.createFirstOnRowCol(right, midRow, 0, midRow.length);
     }
     // No opportunity for optimization. Just return right key.
@@ -458,65 +426,98 @@ public class HFileWriterImpl implements HFile.Writer {
   }
 
   /**
+   * Try to get a byte array that falls between left and right as short as possible with
+   * lexicographical order;
+   *
    * @return Return a new array that is between left and right and minimally
-   *         sized else just return null as indicator that we could not create a
-   *         mid point.
+   *         sized else just return null if left == right.
    */
   private static byte[] getMinimumMidpointArray(final byte[] leftArray, final int leftOffset,
       final int leftLength, final byte[] rightArray, final int rightOffset, final int rightLength) {
-    // rows are different
     int minLength = leftLength < rightLength ? leftLength : rightLength;
     int diffIdx = 0;
-    while (diffIdx < minLength
-        && leftArray[leftOffset + diffIdx] == rightArray[rightOffset + diffIdx]) {
-      diffIdx++;
-    }
-    byte[] minimumMidpointArray = null;
-    if (diffIdx >= minLength) {
-      // leftKey's row is prefix of rightKey's.
-      minimumMidpointArray = new byte[diffIdx + 1];
-      System.arraycopy(rightArray, rightOffset, minimumMidpointArray, 0, diffIdx + 1);
-    } else {
-      int diffByte = leftArray[leftOffset + diffIdx];
-      if ((0xff & diffByte) < 0xff && (diffByte + 1) < (rightArray[rightOffset + diffIdx] & 0xff)) {
-        minimumMidpointArray = new byte[diffIdx + 1];
-        System.arraycopy(leftArray, leftOffset, minimumMidpointArray, 0, diffIdx);
-        minimumMidpointArray[diffIdx] = (byte) (diffByte + 1);
-      } else {
-        minimumMidpointArray = new byte[diffIdx + 1];
-        System.arraycopy(rightArray, rightOffset, minimumMidpointArray, 0, diffIdx + 1);
+    for (; diffIdx < minLength; diffIdx++) {
+      byte leftByte = leftArray[leftOffset + diffIdx];
+      byte rightByte = rightArray[rightOffset + diffIdx];
+      if ((leftByte & 0xff) > (rightByte & 0xff)) {
+        throw new IllegalArgumentException("Left byte array sorts after right row; left=" + Bytes
+          .toStringBinary(leftArray, leftOffset, leftLength) + ", right=" + Bytes
+          .toStringBinary(rightArray, rightOffset, rightLength));
+      } else if (leftByte != rightByte) {
+        break;
       }
     }
+    if (diffIdx == minLength) {
+      if (leftLength > rightLength) {
+        //right is prefix of left
+        throw new IllegalArgumentException("Left byte array sorts after right row; left=" + Bytes
+          .toStringBinary(leftArray, leftOffset, leftLength) + ", right=" + Bytes
+          .toStringBinary(rightArray, rightOffset, rightLength));
+      } else if (leftLength < rightLength) {
+        //left is prefix of right.
+        byte[] minimumMidpointArray = new byte[minLength + 1];
+        System.arraycopy(rightArray, rightOffset, minimumMidpointArray, 0, minLength + 1);
+        minimumMidpointArray[minLength] = 0x00;
+        return minimumMidpointArray;
+      } else {
+        //left == right
+        return null;
+      }
+    }
+    //Note that left[diffIdx] can never be equal to 0xff since left < right
+    byte[] minimumMidpointArray = new byte[diffIdx + 1];
+    System.arraycopy(leftArray, leftOffset, minimumMidpointArray, 0, diffIdx + 1);
+    minimumMidpointArray[diffIdx] = (byte) (minimumMidpointArray[diffIdx] + 1);
     return minimumMidpointArray;
   }
 
+  /**
+   * Try to create a new byte array that falls between left and right as short as possible with
+   * lexicographical order.
+   *
+   * @return Return a new array that is between left and right and minimally
+   *         sized else just return null if left == right.
+   */
   private static byte[] getMinimumMidpointArray(ByteBuffer left, int leftOffset, int leftLength,
       ByteBuffer right, int rightOffset, int rightLength) {
-    // rows are different
     int minLength = leftLength < rightLength ? leftLength : rightLength;
     int diffIdx = 0;
-    while (diffIdx < minLength && ByteBufferUtils.toByte(left,
-        leftOffset + diffIdx) == ByteBufferUtils.toByte(right, rightOffset + diffIdx)) {
-      diffIdx++;
-    }
-    byte[] minMidpoint = null;
-    if (diffIdx >= minLength) {
-      // leftKey's row is prefix of rightKey's.
-      minMidpoint = new byte[diffIdx + 1];
-      ByteBufferUtils.copyFromBufferToArray(minMidpoint, right, rightOffset, 0, diffIdx + 1);
-    } else {
-      int diffByte = ByteBufferUtils.toByte(left, leftOffset + diffIdx);
-      if ((0xff & diffByte) < 0xff
-          && (diffByte + 1) < (ByteBufferUtils.toByte(right, rightOffset + diffIdx) & 0xff)) {
-        minMidpoint = new byte[diffIdx + 1];
-        ByteBufferUtils.copyFromBufferToArray(minMidpoint, left, leftOffset, 0, diffIdx);
-        minMidpoint[diffIdx] = (byte) (diffByte + 1);
-      } else {
-        minMidpoint = new byte[diffIdx + 1];
-        ByteBufferUtils.copyFromBufferToArray(minMidpoint, right, rightOffset, 0, diffIdx + 1);
+    for (; diffIdx < minLength; diffIdx++) {
+      int leftByte = ByteBufferUtils.toByte(left, leftOffset + diffIdx);
+      int rightByte = ByteBufferUtils.toByte(right, rightOffset + diffIdx);
+      if ((leftByte & 0xff) > (rightByte & 0xff)) {
+        throw new IllegalArgumentException(
+          "Left byte array sorts after right row; left=" + ByteBufferUtils
+            .toStringBinary(left, leftOffset, leftLength) + ", right=" + ByteBufferUtils
+            .toStringBinary(right, rightOffset, rightLength));
+      } else if (leftByte != rightByte) {
+        break;
       }
     }
-    return minMidpoint;
+    if (diffIdx == minLength) {
+      if (leftLength > rightLength) {
+        //right is prefix of left
+        throw new IllegalArgumentException(
+          "Left byte array sorts after right row; left=" + ByteBufferUtils
+            .toStringBinary(left, leftOffset, leftLength) + ", right=" + ByteBufferUtils
+            .toStringBinary(right, rightOffset, rightLength));
+      } else if (leftLength < rightLength) {
+        //left is prefix of right.
+        byte[] minimumMidpointArray = new byte[minLength + 1];
+        ByteBufferUtils
+          .copyFromBufferToArray(minimumMidpointArray, right, rightOffset, 0, minLength + 1);
+        minimumMidpointArray[minLength] = 0x00;
+        return minimumMidpointArray;
+      } else {
+        //left == right
+        return null;
+      }
+    }
+    //Note that left[diffIdx] can never be equal to 0xff since left < right
+    byte[] minimumMidpointArray = new byte[diffIdx + 1];
+    ByteBufferUtils.copyFromBufferToArray(minimumMidpointArray, left, leftOffset, 0, diffIdx + 1);
+    minimumMidpointArray[diffIdx] = (byte) (minimumMidpointArray[diffIdx] + 1);
+    return minimumMidpointArray;
   }
 
   /** Gives inline block writers an opportunity to contribute blocks. */

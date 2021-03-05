@@ -244,6 +244,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String WAL_HSYNC_CONF_KEY = "hbase.wal.hsync";
   public static final boolean DEFAULT_WAL_HSYNC = false;
 
+  /** Parameter name for compaction after bulkload */
+  public static final String COMPACTION_AFTER_BULKLOAD_ENABLE =
+      "hbase.compaction.after.bulkload.enable";
+
   /**
    * This is for for using HRegion as a local storage, where we may put the recovered edits in a
    * special place. Once this is set, we will only replay the recovered edits under this directory
@@ -4197,18 +4201,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             if (retCodeDetails[i].getOperationStatusCode() == OperationStatusCode.SUCCESS) {
               Mutation m = getMutation(i);
               if (m instanceof Put) {
-                region.coprocessorHost.postPut((Put) m, walEdit, m.getDurability());
+                region.coprocessorHost.postPut((Put) m, walEdit);
               } else if (m instanceof Delete) {
-                region.coprocessorHost.postDelete((Delete) m, walEdit, m.getDurability());
+                region.coprocessorHost.postDelete((Delete) m, walEdit);
               } else if (m instanceof Increment) {
                 Result result = region.getCoprocessorHost().postIncrement((Increment) m,
-                  results[i]);
+                  results[i], walEdit);
                 if (result != results[i]) {
                   retCodeDetails[i] =
                     new OperationStatus(retCodeDetails[i].getOperationStatusCode(), result);
                 }
               } else if (m instanceof Append) {
-                Result result = region.getCoprocessorHost().postAppend((Append) m, results[i]);
+                Result result = region.getCoprocessorHost().postAppend((Append) m, results[i],
+                  walEdit);
                 if (result != results[i]) {
                   retCodeDetails[i] =
                     new OperationStatus(retCodeDetails[i].getOperationStatusCode(), result);
@@ -4270,7 +4275,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         throws IOException {
       Mutation m = getMutation(index);
       if (m instanceof Put) {
-        if (region.coprocessorHost.prePut((Put) m, walEdit, m.getDurability())) {
+        if (region.coprocessorHost.prePut((Put) m, walEdit)) {
           // pre hook says skip this Put
           // mark as success and skip in doMiniBatchMutation
           metrics[0]++;
@@ -4284,7 +4289,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // Can this be avoided?
           region.prepareDelete(curDel);
         }
-        if (region.coprocessorHost.preDelete(curDel, walEdit, m.getDurability())) {
+        if (region.coprocessorHost.preDelete(curDel, walEdit)) {
           // pre hook says skip this Delete
           // mark as success and skip in doMiniBatchMutation
           metrics[1]++;
@@ -4292,7 +4297,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } else if (m instanceof Increment) {
         Increment increment = (Increment) m;
-        Result result = region.coprocessorHost.preIncrement(increment);
+        Result result = region.coprocessorHost.preIncrement(increment, walEdit);
         if (result != null) {
           // pre hook says skip this Increment
           // mark as success and skip in doMiniBatchMutation
@@ -4301,7 +4306,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } else if (m instanceof Append) {
         Append append = (Append) m;
-        Result result = region.coprocessorHost.preAppend(append);
+        Result result = region.coprocessorHost.preAppend(append, walEdit);
         if (result != null) {
           // pre hook says skip this Append
           // mark as success and skip in doMiniBatchMutation
@@ -7024,19 +7029,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       isSuccessful = true;
-      //request compaction
-      familyWithFinalPath.keySet().forEach(family -> {
-        HStore store = getStore(family);
-        try {
-          if (this.rsServices != null && store.needsCompaction()) {
-            this.rsServices.getCompactionRequestor().requestCompaction(this, store,
-              "bulkload hfiles request compaction", Store.PRIORITY_USER + 1,
-              CompactionLifeCycleTracker.DUMMY, null);
+      if (conf.getBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, true)) {
+        // request compaction
+        familyWithFinalPath.keySet().forEach(family -> {
+          HStore store = getStore(family);
+          try {
+            if (this.rsServices != null && store.needsCompaction()) {
+              this.rsServices.getCompactionRequestor().requestCompaction(this, store,
+                "bulkload hfiles request compaction", Store.PRIORITY_USER + 1,
+                CompactionLifeCycleTracker.DUMMY, null);
+              LOG.debug("bulkload hfiles request compaction region : {}, family : {}",
+                this.getRegionInfo(), family);
+            }
+          } catch (IOException e) {
+            LOG.error("bulkload hfiles request compaction error ", e);
           }
-        } catch (IOException e) {
-          LOG.error("bulkload hfiles request compaction error ", e);
-        }
-      });
+        });
+      }
     } finally {
       if (wal != null && !storeFiles.isEmpty()) {
         // Write a bulk load event for hfiles that are loaded

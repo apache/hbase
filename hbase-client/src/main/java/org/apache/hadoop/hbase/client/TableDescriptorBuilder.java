@@ -251,6 +251,7 @@ public class TableDescriptorBuilder {
   public static PrettyPrinter.Unit getUnit(String key) {
     switch (key) {
       case MAX_FILESIZE:
+      case MEMSTORE_FLUSHSIZE:
         return PrettyPrinter.Unit.BYTE;
       default:
         return PrettyPrinter.Unit.NONE;
@@ -700,7 +701,7 @@ public class TableDescriptorBuilder {
               toBytesOrNull(value, Bytes::toBytes));
     }
 
-    /*
+    /**
      * @param key The key.
      * @param value The value. If null, removes the setting.
      */
@@ -709,14 +710,14 @@ public class TableDescriptorBuilder {
       return setValue(key, toBytesOrNull(value, Bytes::toBytes));
     }
 
-    /*
+    /**
      * Setter for storing metadata as a (key, value) pair in {@link #values} map
      *
      * @param key The key.
      * @param value The value. If null, removes the setting.
      */
     public ModifyableTableDescriptor setValue(final Bytes key, final Bytes value) {
-      if (value == null) {
+      if (value == null || value.getLength() == 0) {
         values.remove(key);
       } else {
         values.put(key, value);
@@ -1076,6 +1077,10 @@ public class TableDescriptorBuilder {
     public ModifyableTableDescriptor setColumnFamily(final ColumnFamilyDescriptor family) {
       if (family.getName() == null || family.getName().length <= 0) {
         throw new IllegalArgumentException("Family name cannot be null or empty");
+      }
+      int flength = family.getName() == null ? 0 : family.getName().length;
+      if (flength > Byte.MAX_VALUE) {
+        throw new IllegalArgumentException("The length of family name is bigger than " + Byte.MAX_VALUE);
       }
       if (hasColumnFamily(family.getName())) {
         throw new IllegalArgumentException("Family '"

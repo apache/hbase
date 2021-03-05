@@ -927,7 +927,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     mappers = getOptionAsInt(cmd, Options.MAPPERS.getLongOpt(), mappers);
     filesUser = cmd.getOptionValue(Options.CHUSER.getLongOpt(), filesUser);
     filesGroup = cmd.getOptionValue(Options.CHGROUP.getLongOpt(), filesGroup);
-    filesMode = getOptionAsInt(cmd, Options.CHMOD.getLongOpt(), filesMode);
+    filesMode = getOptionAsInt(cmd, Options.CHMOD.getLongOpt(), filesMode, 8);
     bandwidthMB = getOptionAsInt(cmd, Options.BANDWIDTH.getLongOpt(), bandwidthMB);
     overwrite = cmd.hasOption(Options.OVERWRITE.getLongOpt());
     // And verifyChecksum and verifyTarget with values read from old args in processOldArgs(...).

@@ -192,6 +192,7 @@ fi
 cd "${PROJECT}"
 git checkout "$GIT_REF"
 git_hash="$(git rev-parse --short HEAD)"
+GIT_LONG_HASH="$(git rev-parse HEAD)"
 log "Checked out ${PROJECT} at ${GIT_REF} commit $git_hash"
 
 if [ -z "${RELEASE_VERSION}" ]; then

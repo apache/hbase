@@ -55,7 +55,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -89,6 +88,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -1311,27 +1311,44 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   private void startServiceThreads() throws IOException {
     // Start the executor service pools
-    this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION, conf.getInt(
-      HConstants.MASTER_OPEN_REGION_THREADS, HConstants.MASTER_OPEN_REGION_THREADS_DEFAULT));
-    this.executorService.startExecutorService(ExecutorType.MASTER_CLOSE_REGION, conf.getInt(
-      HConstants.MASTER_CLOSE_REGION_THREADS, HConstants.MASTER_CLOSE_REGION_THREADS_DEFAULT));
+    final int masterOpenRegionPoolSize = conf.getInt(
+        HConstants.MASTER_OPEN_REGION_THREADS, HConstants.MASTER_OPEN_REGION_THREADS_DEFAULT);
+    this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
+        new ExecutorConfig().setCorePoolSize(masterOpenRegionPoolSize));
+    final int masterCloseRegionPoolSize = conf.getInt(
+        HConstants.MASTER_CLOSE_REGION_THREADS, HConstants.MASTER_CLOSE_REGION_THREADS_DEFAULT);
+    this.executorService.startExecutorService(ExecutorType.MASTER_CLOSE_REGION,
+        new ExecutorConfig().setCorePoolSize(masterCloseRegionPoolSize));
+    final int masterServerOpThreads = conf.getInt(HConstants.MASTER_SERVER_OPERATIONS_THREADS,
+        HConstants.MASTER_SERVER_OPERATIONS_THREADS_DEFAULT);
     this.executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
-      conf.getInt(HConstants.MASTER_SERVER_OPERATIONS_THREADS,
-        HConstants.MASTER_SERVER_OPERATIONS_THREADS_DEFAULT));
+        new ExecutorConfig().setCorePoolSize(masterServerOpThreads));
+    final int masterServerMetaOpsThreads = conf.getInt(
+        HConstants.MASTER_META_SERVER_OPERATIONS_THREADS,
+        HConstants.MASTER_META_SERVER_OPERATIONS_THREADS_DEFAULT);
     this.executorService.startExecutorService(ExecutorType.MASTER_META_SERVER_OPERATIONS,
-      conf.getInt(HConstants.MASTER_META_SERVER_OPERATIONS_THREADS,
-        HConstants.MASTER_META_SERVER_OPERATIONS_THREADS_DEFAULT));
-    this.executorService.startExecutorService(ExecutorType.M_LOG_REPLAY_OPS, conf.getInt(
-      HConstants.MASTER_LOG_REPLAY_OPS_THREADS, HConstants.MASTER_LOG_REPLAY_OPS_THREADS_DEFAULT));
-    this.executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS, conf.getInt(
-      SnapshotManager.SNAPSHOT_POOL_THREADS_KEY, SnapshotManager.SNAPSHOT_POOL_THREADS_DEFAULT));
+        new ExecutorConfig().setCorePoolSize(masterServerMetaOpsThreads));
+    final int masterLogReplayThreads = conf.getInt(
+        HConstants.MASTER_LOG_REPLAY_OPS_THREADS, HConstants.MASTER_LOG_REPLAY_OPS_THREADS_DEFAULT);
+    this.executorService.startExecutorService(ExecutorType.M_LOG_REPLAY_OPS,
+        new ExecutorConfig().setCorePoolSize(masterLogReplayThreads));
+    final int masterSnapshotThreads = conf.getInt(
+        SnapshotManager.SNAPSHOT_POOL_THREADS_KEY, SnapshotManager.SNAPSHOT_POOL_THREADS_DEFAULT);
+    this.executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS,
+        new ExecutorConfig().setCorePoolSize(masterSnapshotThreads).setAllowCoreThreadTimeout(true));
+    final int masterMergeDispatchThreads = conf.getInt(HConstants.MASTER_MERGE_DISPATCH_THREADS,
+        HConstants.MASTER_MERGE_DISPATCH_THREADS_DEFAULT);
+    this.executorService.startExecutorService(ExecutorType.MASTER_MERGE_OPERATIONS,
+        new ExecutorConfig().setCorePoolSize(masterMergeDispatchThreads)
+            .setAllowCoreThreadTimeout(true));
 
     // We depend on there being only one instance of this executor running
     // at a time. To do concurrency, would need fencing of enable/disable of
     // tables.
     // Any time changing this maxThreads to > 1, pls see the comment at
     // AccessController#postCompletedCreateTableAction
-    this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
+    this.executorService.startExecutorService(
+        ExecutorType.MASTER_TABLE_OPERATIONS, new ExecutorConfig().setCorePoolSize(1));
     startProcedureExecutor();
 
     // Create cleaner thread pool
@@ -1503,11 +1520,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     try {
       snapshotCleanupTracker.setSnapshotCleanupEnabled(on);
       if (on) {
-        if (!getChoreService().isChoreScheduled(this.snapshotCleanerChore)) {
-          getChoreService().scheduleChore(this.snapshotCleanerChore);
-        }
+        getChoreService().scheduleChore(this.snapshotCleanerChore);
       } else {
-        getChoreService().cancelChore(this.snapshotCleanerChore);
+        this.snapshotCleanerChore.cancel();
       }
     } catch (KeeperException e) {
       LOG.error("Error updating snapshot cleanup mode to {}", on, e);
@@ -1531,24 +1546,23 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private void stopChores() {
-    ChoreService choreService = getChoreService();
-    if (choreService != null) {
-      choreService.cancelChore(this.mobFileCleanerChore);
-      choreService.cancelChore(this.mobFileCompactionChore);
-      choreService.cancelChore(this.balancerChore);
+    if (getChoreService() != null) {
+      shutdownChore(mobFileCleanerChore);
+      shutdownChore(mobFileCompactionChore);
+      shutdownChore(balancerChore);
       if (regionNormalizerManager != null) {
-        choreService.cancelChore(regionNormalizerManager.getRegionNormalizerChore());
+        shutdownChore(regionNormalizerManager.getRegionNormalizerChore());
       }
-      choreService.cancelChore(this.clusterStatusChore);
-      choreService.cancelChore(this.catalogJanitorChore);
-      choreService.cancelChore(this.clusterStatusPublisherChore);
-      choreService.cancelChore(this.snapshotQuotaChore);
-      choreService.cancelChore(this.logCleaner);
-      choreService.cancelChore(this.hfileCleaner);
-      choreService.cancelChore(this.replicationBarrierCleaner);
-      choreService.cancelChore(this.snapshotCleanerChore);
-      choreService.cancelChore(this.hbckChore);
-      choreService.cancelChore(this.regionsRecoveryChore);
+      shutdownChore(clusterStatusChore);
+      shutdownChore(catalogJanitorChore);
+      shutdownChore(clusterStatusPublisherChore);
+      shutdownChore(snapshotQuotaChore);
+      shutdownChore(logCleaner);
+      shutdownChore(hfileCleaner);
+      shutdownChore(replicationBarrierCleaner);
+      shutdownChore(snapshotCleanerChore);
+      shutdownChore(hbckChore);
+      shutdownChore(regionsRecoveryChore);
     }
   }
 

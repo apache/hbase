@@ -112,7 +112,6 @@
       <archive>https://lists.apache.org/list.html?user@hbase.apache.org</archive>
       <otherArchives>
         <otherArchive>https://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
-        <otherArchive>https://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -123,7 +122,6 @@
       <archive>https://lists.apache.org/list.html?dev@hbase.apache.org</archive>
       <otherArchives>
         <otherArchive>https://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
-        <otherArchive>https://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -920,6 +918,7 @@
               <!-- MIT https://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
               <exclude>**/jquery.tablesorter.min.js</exclude>
+              <exclude>**/parser-date-iso8601.min.js</exclude>
               <!-- MIT: bootstrap -->
               <exclude>**/src/main/resources/hbase-webapps/static/*/bootstrap*</exclude>
               <!-- vector graphics -->

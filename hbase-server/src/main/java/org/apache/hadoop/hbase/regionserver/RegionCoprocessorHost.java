@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -902,12 +901,10 @@ public class RegionCoprocessorHost
    * Supports Coprocessor 'bypass'.
    * @param put The Put object
    * @param edit The WALEdit object.
-   * @param durability The durability used
    * @return true if default processing should be bypassed
    * @exception IOException Exception
    */
-  public boolean prePut(final Put put, final WALEdit edit, final Durability durability)
-      throws IOException {
+  public boolean prePut(final Put put, final WALEdit edit) throws IOException {
     if (coprocEnvironments.isEmpty()) {
       return false;
     }
@@ -915,7 +912,7 @@ public class RegionCoprocessorHost
     return execOperation(new RegionObserverOperationWithoutResult(bypassable) {
       @Override
       public void call(RegionObserver observer) throws IOException {
-        observer.prePut(this, put, edit, durability);
+        observer.prePut(this, put, edit);
       }
     });
   }
@@ -949,18 +946,16 @@ public class RegionCoprocessorHost
   /**
    * @param put The Put object
    * @param edit The WALEdit object.
-   * @param durability The durability used
    * @exception IOException Exception
    */
-  public void postPut(final Put put, final WALEdit edit, final Durability durability)
-      throws IOException {
+  public void postPut(final Put put, final WALEdit edit) throws IOException {
     if (coprocEnvironments.isEmpty()) {
       return;
     }
     execOperation(new RegionObserverOperationWithoutResult() {
       @Override
       public void call(RegionObserver observer) throws IOException {
-        observer.postPut(this, put, edit, durability);
+        observer.postPut(this, put, edit);
       }
     });
   }
@@ -969,12 +964,10 @@ public class RegionCoprocessorHost
    * Supports Coprocessor 'bypass'.
    * @param delete The Delete object
    * @param edit The WALEdit object.
-   * @param durability The durability used
    * @return true if default processing should be bypassed
    * @exception IOException Exception
    */
-  public boolean preDelete(final Delete delete, final WALEdit edit, final Durability durability)
-      throws IOException {
+  public boolean preDelete(final Delete delete, final WALEdit edit) throws IOException {
     if (this.coprocEnvironments.isEmpty()) {
       return false;
     }
@@ -982,7 +975,7 @@ public class RegionCoprocessorHost
     return execOperation(new RegionObserverOperationWithoutResult(bypassable) {
       @Override
       public void call(RegionObserver observer) throws IOException {
-         observer.preDelete(this, delete, edit, durability);
+        observer.preDelete(this, delete, edit);
       }
     });
   }
@@ -990,18 +983,16 @@ public class RegionCoprocessorHost
   /**
    * @param delete The Delete object
    * @param edit The WALEdit object.
-   * @param durability The durability used
    * @exception IOException Exception
    */
-  public void postDelete(final Delete delete, final WALEdit edit, final Durability durability)
-      throws IOException {
+  public void postDelete(final Delete delete, final WALEdit edit) throws IOException {
     execOperation(coprocEnvironments.isEmpty()? null:
-        new RegionObserverOperationWithoutResult() {
-      @Override
-      public void call(RegionObserver observer) throws IOException {
-        observer.postDelete(this, delete, edit, durability);
-      }
-    });
+      new RegionObserverOperationWithoutResult() {
+        @Override
+        public void call(RegionObserver observer) throws IOException {
+          observer.postDelete(this, delete, edit);
+        }
+      });
   }
 
   public void preBatchMutate(
@@ -1117,10 +1108,11 @@ public class RegionCoprocessorHost
   /**
    * Supports Coprocessor 'bypass'.
    * @param append append object
+   * @param edit The WALEdit object.
    * @return result to return to client if default operation should be bypassed, null otherwise
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result preAppend(final Append append) throws IOException {
+  public Result preAppend(final Append append, final WALEdit edit) throws IOException {
     boolean bypassable = true;
     Result defaultResult = null;
     if (this.coprocEnvironments.isEmpty()) {
@@ -1131,7 +1123,7 @@ public class RegionCoprocessorHost
             bypassable) {
           @Override
           public Result call(RegionObserver observer) throws IOException {
-            return observer.preAppend(this, append);
+            return observer.preAppend(this, append, edit);
           }
         });
   }
@@ -1161,10 +1153,11 @@ public class RegionCoprocessorHost
   /**
    * Supports Coprocessor 'bypass'.
    * @param increment increment object
+   * @param edit The WALEdit object.
    * @return result to return to client if default operation should be bypassed, null otherwise
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result preIncrement(final Increment increment) throws IOException {
+  public Result preIncrement(final Increment increment, final WALEdit edit) throws IOException {
     boolean bypassable = true;
     Result defaultResult = null;
     if (coprocEnvironments.isEmpty()) {
@@ -1175,7 +1168,7 @@ public class RegionCoprocessorHost
             bypassable) {
           @Override
           public Result call(RegionObserver observer) throws IOException {
-            return observer.preIncrement(this, increment);
+            return observer.preIncrement(this, increment, edit);
           }
         });
   }
@@ -1205,9 +1198,11 @@ public class RegionCoprocessorHost
   /**
    * @param append Append object
    * @param result the result returned by the append
+   * @param edit The WALEdit object.
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result postAppend(final Append append, final Result result) throws IOException {
+  public Result postAppend(final Append append, final Result result, final WALEdit edit)
+    throws IOException {
     if (this.coprocEnvironments.isEmpty()) {
       return result;
     }
@@ -1215,7 +1210,7 @@ public class RegionCoprocessorHost
         new ObserverOperationWithResult<RegionObserver, Result>(regionObserverGetter, result) {
           @Override
           public Result call(RegionObserver observer) throws IOException {
-            return observer.postAppend(this, append, result);
+            return observer.postAppend(this, append, result, edit);
           }
         });
   }
@@ -1223,9 +1218,11 @@ public class RegionCoprocessorHost
   /**
    * @param increment increment object
    * @param result the result returned by postIncrement
+   * @param edit The WALEdit object.
    * @throws IOException if an error occurred on the coprocessor
    */
-  public Result postIncrement(final Increment increment, Result result) throws IOException {
+  public Result postIncrement(final Increment increment, Result result, final WALEdit edit)
+    throws IOException {
     if (this.coprocEnvironments.isEmpty()) {
       return result;
     }
@@ -1233,7 +1230,7 @@ public class RegionCoprocessorHost
         new ObserverOperationWithResult<RegionObserver, Result>(regionObserverGetter, result) {
           @Override
           public Result call(RegionObserver observer) throws IOException {
-            return observer.postIncrement(this, increment, getResult());
+            return observer.postIncrement(this, increment, getResult(), edit);
           }
         });
   }

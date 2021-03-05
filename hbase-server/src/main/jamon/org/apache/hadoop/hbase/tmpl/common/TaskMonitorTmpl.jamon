@@ -117,7 +117,13 @@ String parent = "";
                       <td><% task.getStatus() %>
                           (since <% StringUtils.formatTimeDiff(now, task.getStatusTime()) %>
                           ago)</td>
-                      <td><% task.getCompletionTimestamp() < 0 ? task.getState() : new Date(task.getCompletionTimestamp()) %></td>
+                      <td>
+                        <%if task.getCompletionTimestamp() < 0 %>
+                          <% task.getState() %>
+                        <%else>
+                          <% new Date(task.getCompletionTimestamp()) %> (since <% StringUtils.formatTimeDiff(now, task.getCompletionTimestamp()) %> ago)
+                        </%if>
+                      </td>
                     </tr>
                 </%for>
             </table>
