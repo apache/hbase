@@ -224,11 +224,14 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
 
   private List<String> readLines(BufferedReader reader) throws IOException {
     final List<String> records = new ArrayList<>();
-    String line;
-    while ((line = reader.readLine()) != null) {
-      records.add(line);
+    try {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        records.add(line);
+      }
+    } finally {
+      reader.close();
     }
-    reader.close();
     return records;
   }
 
