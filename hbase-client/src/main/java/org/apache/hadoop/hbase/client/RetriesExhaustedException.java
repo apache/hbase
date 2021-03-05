@@ -48,7 +48,7 @@ public class RetriesExhaustedException extends IOException {
    */
   @InterfaceAudience.Private
   public static class ThrowableWithExtraContext {
-    private final Throwable throwable;
+    public final Throwable throwable;
     private final long whenAsEpochMilli;
     private final String extras;
 

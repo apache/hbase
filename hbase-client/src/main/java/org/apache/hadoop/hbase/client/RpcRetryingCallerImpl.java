@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
+import org.apache.hadoop.hbase.quotas.ThrottlingException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
@@ -102,7 +104,13 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
       long expectedSleep;
       try {
         // bad cache entries are cleared in the call to RetryingCallable#throwable() in catch block
-        callable.prepare(tries != 0);
+        Throwable t = null;
+        if (exceptions != null && !exceptions.isEmpty()) {
+          t = exceptions.get(exceptions.size() - 1).throwable;
+        }
+        if (!(t instanceof RpcThrottlingException)) {
+          callable.prepare(tries != 0);
+        }
         interceptor.intercept(context.prepare(callable, tries));
         return callable.call(getTimeout(callTimeout));
       } catch (PreemptiveFastFailException e) {
