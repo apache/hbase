@@ -18,6 +18,13 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
@@ -37,15 +44,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-import java.util.regex.Pattern;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({ LargeTests.class })
