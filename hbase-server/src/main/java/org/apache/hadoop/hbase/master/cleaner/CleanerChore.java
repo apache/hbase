@@ -120,7 +120,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     } else if (poolSize.matches("0.[0-9]+|1.0")) {
       // if poolSize is a double, return poolSize * availableProcessors;
       // Ensure that we always return at least one.
-      int computedThreads = (int) (AVAIL_PROCESSORS * Double.valueOf(poolSize));
+      int computedThreads = (int) (AVAIL_PROCESSORS * Double.parseDouble(poolSize));
       if (computedThreads < 1) {
         LOG.debug("Computed {} threads for CleanerChore, using 1 instead", computedThreads);
         return 1;
