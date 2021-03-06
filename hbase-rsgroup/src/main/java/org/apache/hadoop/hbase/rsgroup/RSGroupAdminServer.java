@@ -27,11 +27,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -43,7 +47,9 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
+import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -459,7 +465,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       // targetGroup is null when a table is being deleted. In this case no further
       // action is required.
       if (targetGroup != null) {
-        moveTableRegionsToGroup(tables, rsGroupInfoManager.getRSGroup(targetGroup));
+        modifyOrMoveTables(tables, rsGroupInfoManager.getRSGroup(targetGroup));
       }
     }
   }
@@ -582,7 +588,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         rsGroupInfoManager.getRSGroup(srcGroup).getServers(),
         targetGroup, srcGroup);
       //move regions of these tables which are not on group servers
-      moveTableRegionsToGroup(tables, rsGroupInfoManager.getRSGroup(targetGroup));
+      modifyOrMoveTables(tables, rsGroupInfoManager.getRSGroup(targetGroup));
     }
     LOG.info("Move servers and tables done. Severs: {}, Tables: {} => {}", servers, tables,
         targetGroup);
@@ -609,6 +615,11 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   public void renameRSGroup(String oldName, String newName) throws IOException {
     synchronized (rsGroupInfoManager) {
       rsGroupInfoManager.renameRSGroup(oldName, newName);
+      Set<TableDescriptor> updateTables = master.getTableDescriptors().getAll().values().stream()
+        .filter(t -> oldName.equals(t.getRegionServerGroup().orElse(null)))
+        .collect(Collectors.toSet());
+      // Update rs group info into table descriptors
+      modifyTablesAndWaitForCompletion(updateTables, newName);
     }
   }
 
@@ -716,6 +727,67 @@ public class RSGroupAdminServer implements RSGroupAdmin {
             "Server " + address + " is on the dead servers list,"
                 + " Maybe it will come back again, not allowed to remove.");
       }
+    }
+  }
+
+  // Modify table or move table's regions
+  void modifyOrMoveTables(Set<TableName> tables, RSGroupInfo targetGroup) throws IOException {
+    Set<TableName> tablesToBeMoved = new HashSet<>(tables.size());
+    Set<TableDescriptor> tablesToBeModified = new HashSet<>(tables.size());
+    // Segregate tables into to be modified or to be moved category
+    for (TableName tableName : tables) {
+      TableDescriptor descriptor = master.getTableDescriptors().get(tableName);
+      if (descriptor == null) {
+        LOG.error(
+          "TableDescriptor of table {} not found. Skipping the region movement of this table.");
+        continue;
+      }
+      if (descriptor.getRegionServerGroup().isPresent()) {
+        tablesToBeModified.add(descriptor);
+      } else {
+        tablesToBeMoved.add(tableName);
+      }
+    }
+    List<Long> procedureIds = null;
+    if (!tablesToBeModified.isEmpty()) {
+      procedureIds = modifyTables(tablesToBeModified, targetGroup.getName());
+    }
+    if (!tablesToBeMoved.isEmpty()) {
+      moveTableRegionsToGroup(tablesToBeMoved, targetGroup);
+    }
+    // By this time moveTableRegionsToGroup is finished, lets wait for modifyTables completion
+    if (procedureIds != null) {
+      waitForProcedureCompletion(procedureIds);
+    }
+  }
+
+  private void modifyTablesAndWaitForCompletion(Set<TableDescriptor> tableDescriptors,
+    String targetGroup) throws IOException {
+    final List<Long> procIds = modifyTables(tableDescriptors, targetGroup);
+    waitForProcedureCompletion(procIds);
+  }
+
+  // Modify table internally moves the regions as well. So separate region movement is not needed
+  private List<Long> modifyTables(Set<TableDescriptor> tableDescriptors, String targetGroup)
+    throws IOException {
+    List<Long> procIds = new ArrayList<>(tableDescriptors.size());
+    for (TableDescriptor oldTd : tableDescriptors) {
+      TableDescriptor newTd =
+        TableDescriptorBuilder.newBuilder(oldTd).setRegionServerGroup(targetGroup).build();
+      procIds.add(master
+        .modifyTable(oldTd.getTableName(), newTd, HConstants.NO_NONCE, HConstants.NO_NONCE));
+    }
+    return procIds;
+  }
+
+  private void waitForProcedureCompletion(List<Long> procIds) throws IOException {
+    for (long procId : procIds) {
+      Procedure<?> proc = master.getMasterProcedureExecutor().getProcedure(procId);
+      if (proc == null) {
+        continue;
+      }
+      ProcedureSyncWait
+        .waitForProcedureToCompleteIOE(master.getMasterProcedureExecutor(), proc, Long.MAX_VALUE);
     }
   }
 }
