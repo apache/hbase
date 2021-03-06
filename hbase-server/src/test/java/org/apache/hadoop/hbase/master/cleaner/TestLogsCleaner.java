@@ -468,8 +468,8 @@ public class TestLogsCleaner {
   static class SessionExpiredZooKeeperWatcher extends ZKWatcher {
     private RecoverableZooKeeper zk;
 
-    public SessionExpiredZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable)
-      throws IOException {
+    public SessionExpiredZooKeeperWatcher(Configuration conf, String identifier,
+        Abortable abortable) throws IOException {
       super(conf, identifier, abortable);
     }
 
