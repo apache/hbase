@@ -509,7 +509,7 @@ module Hbase
           File.foreach(splits_file) do |line|
             arg[SPLITS].push(line.chomp)
           end
-          htd.setValue(SPLITS_FILE, arg[SPLITS_FILE])
+          htd.setValue(SPLITS_FILE, splits_file)
         end
 
         if arg.key?(SPLITS)
