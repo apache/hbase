@@ -534,7 +534,7 @@ module Hbase
           File.foreach(splits_file) do |line|
             arg[SPLITS].push(line.chomp)
           end
-          tdb.setValue(SPLITS_FILE, arg[SPLITS_FILE])
+          tdb.setValue(SPLITS_FILE, splits_file)
         end
 
         if arg.key?(SPLITS)
