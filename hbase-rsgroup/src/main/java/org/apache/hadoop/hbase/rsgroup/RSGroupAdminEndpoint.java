@@ -485,7 +485,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   }
 
   void assignTableToGroup(TableDescriptor desc) throws IOException {
-    RSGroupInfo rsGroupInfo = groupInfoManager.determineRSGroupInfoForTable(desc.getTableName());
+    RSGroupInfo rsGroupInfo = determineRSGroupInfoForTable(desc);
     if (rsGroupInfo == null) {
       throw new ConstraintException("Default RSGroup for this table " + desc.getTableName()
         + " does not exist.");
@@ -508,21 +508,75 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     if (desc.getTableName().isSystemTable()) {
       return;
     }
-    RSGroupInfo rsGroupInfo = groupInfoManager.determineRSGroupInfoForTable(desc.getTableName());
-    if (rsGroupInfo == null) {
-      throw new ConstraintException("Default RSGroup for this table " + desc.getTableName()
-        + " does not exist.");
-    }
-    if (!RSGroupUtil.rsGroupHasOnlineServer(master, rsGroupInfo)) {
-      throw new HBaseIOException("No online servers in the rsgroup " + rsGroupInfo.getName()
-        + " which table " + desc.getTableName().getNameAsString() + " belongs to");
-    }
-    synchronized (groupInfoManager) {
-      groupInfoManager.moveTables(
-        Collections.singleton(desc.getTableName()), rsGroupInfo.getName());
+    moveTableToValidRSGroup(desc);
+  }
+
+  @Override
+  public void preModifyTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    TableName tableName, TableDescriptor currentDescriptor, TableDescriptor newDescriptor)
+    throws IOException {
+    // If table's rsgroup is changed, it must be valid
+    if (!currentDescriptor.getRegionServerGroup().equals(newDescriptor.getRegionServerGroup())) {
+      RSGroupInfo rsGroupInfo = determineRSGroupInfoForTable(newDescriptor);
+      validateRSGroup(newDescriptor, rsGroupInfo);
     }
   }
 
+  @Override
+  public void postCompletedModifyTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    TableName tableName, TableDescriptor oldDescriptor, TableDescriptor currentDescriptor)
+    throws IOException {
+    // If table's rsgroup is changed, move table into the rsgroup.
+    if (!oldDescriptor.getRegionServerGroup().equals(currentDescriptor.getRegionServerGroup())) {
+      RSGroupInfo rsGroupInfo = determineRSGroupInfoForTable(currentDescriptor);
+      moveTableToRSGroup(currentDescriptor, rsGroupInfo);
+    }
+  }
+
+  // Determine and validate rs group then move table to this valid rs group.
+  private void moveTableToValidRSGroup(TableDescriptor desc) throws IOException {
+    RSGroupInfo rsGroupInfo = determineRSGroupInfoForTable(desc);
+    validateRSGroup(desc, rsGroupInfo);
+    moveTableToRSGroup(desc, rsGroupInfo);
+  }
+
+  private void validateRSGroup(TableDescriptor desc, RSGroupInfo rsGroupInfo) throws IOException {
+    if (rsGroupInfo == null) {
+      throw new ConstraintException(
+        "Default RSGroup for this table " + desc.getTableName() + " does not exist.");
+    }
+    if (!RSGroupUtil.rsGroupHasOnlineServer(master, rsGroupInfo)) {
+      throw new HBaseIOException(
+        "No online servers in the rsgroup " + rsGroupInfo.getName() + " which table " + desc
+          .getTableName().getNameAsString() + " belongs to");
+    }
+  }
+
+  private void moveTableToRSGroup(final TableDescriptor desc, RSGroupInfo rsGroupInfo)
+    throws IOException {
+    // In case of modify table, when rs group is not changed, move is not required.
+    if (!rsGroupInfo.containsTable(desc.getTableName())) {
+      synchronized (groupInfoManager) {
+        groupInfoManager
+          .moveTables(Collections.singleton(desc.getTableName()), rsGroupInfo.getName());
+      }
+    }
+  }
+
+  private RSGroupInfo determineRSGroupInfoForTable(final TableDescriptor desc) throws IOException {
+    Optional<String> optGroupNameOfTable = desc.getRegionServerGroup();
+    if (optGroupNameOfTable.isPresent()) {
+      final RSGroupInfo rsGroup = groupInfoManager.getRSGroup(optGroupNameOfTable.get());
+      if (rsGroup == null) {
+        // When rs group is set in table descriptor then it must exist
+        throw new ConstraintException(
+            "Region server group " + optGroupNameOfTable.get() + " does not exist.");
+      } else {
+        return rsGroup;
+      }
+    }
+    return groupInfoManager.determineRSGroupInfoForTable(desc.getTableName());
+  }
   // Remove table from its RSGroup.
   @Override
   public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
