@@ -18,10 +18,11 @@
 package org.apache.hadoop.hbase.master.snapshot;
 
 import static org.junit.Assert.assertEquals;
-import org.apache.hadoop.conf.Configuration;
+
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -38,8 +39,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Unfortunately, couldn't test TakeSnapshotHandler using mocks, because it relies on TableLock,
@@ -65,7 +64,8 @@ public class TestTakeSnapshotHandler {
     UTIL = new HBaseTestingUtility();
   }
 
-  public TableDescriptor createTableInsertDataAndTakeSnapshot(Map<String, Object> snapshotProps) throws Exception {
+  public TableDescriptor createTableInsertDataAndTakeSnapshot(Map<String, Object> snapshotProps)
+      throws Exception {
     TableDescriptor descriptor =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
         .setColumnFamily(
@@ -108,5 +108,4 @@ public class TestTakeSnapshotHandler {
   public void shutdown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
-  
 }

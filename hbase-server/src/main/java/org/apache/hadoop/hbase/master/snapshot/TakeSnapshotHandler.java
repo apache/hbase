@@ -25,7 +25,6 @@ import java.util.concurrent.CancellationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -146,7 +145,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     if (htd == null) {
       throw new IOException("TableDescriptor missing for " + snapshotTable);
     }
-    if( htd.getMaxFileSize()==-1 &&
+    if (htd.getMaxFileSize()==-1 &&
         this.snapshot.getMaxFileSize()>0) {
       htd = TableDescriptorBuilder.newBuilder(htd).setValue(TableDescriptorBuilder.MAX_FILESIZE,
         Long.toString(this.snapshot.getMaxFileSize())).build();
