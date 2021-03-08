@@ -20,6 +20,81 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.2 - Unreleased (as of 2021-03-08)
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25460](https://issues.apache.org/jira/browse/HBASE-25460) | Expose drainingServers as cluster metric |  Major | metrics |
+| [HBASE-25496](https://issues.apache.org/jira/browse/HBASE-25496) | add get\_namespace\_rsgroup command |  Major | . |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23578](https://issues.apache.org/jira/browse/HBASE-23578) | [UI] Master UI shows long stack traces when table is broken |  Minor | master, UI |
+| [HBASE-25492](https://issues.apache.org/jira/browse/HBASE-25492) | Create table with rsgroup info in branch-2 |  Major | rsgroup |
+| [HBASE-25539](https://issues.apache.org/jira/browse/HBASE-25539) | Add metric for age of oldest wal. |  Major | metrics, regionserver |
+| [HBASE-25574](https://issues.apache.org/jira/browse/HBASE-25574) | Revisit put/delete/increment/append related RegionObserver methods |  Major | Coprocessors |
+| [HBASE-25541](https://issues.apache.org/jira/browse/HBASE-25541) | In WALEntryStream, set the current path to null while dequeing the log |  Major | . |
+| [HBASE-23887](https://issues.apache.org/jira/browse/HBASE-23887) | New L1 cache : AdaptiveLRU |  Major | BlockCache, Performance |
+| [HBASE-25534](https://issues.apache.org/jira/browse/HBASE-25534) | Honor TableDescriptor settings earlier in normalization |  Major | Normalizer |
+| [HBASE-25507](https://issues.apache.org/jira/browse/HBASE-25507) | Leak of ESTABLISHED sockets when compaction encountered "java.io.IOException: Invalid HFile block magic" |  Major | Compaction |
+| [HBASE-25542](https://issues.apache.org/jira/browse/HBASE-25542) | Add client detail to scan name so when lease expires, we have clue on who was scanning |  Major | scan |
+| [HBASE-25528](https://issues.apache.org/jira/browse/HBASE-25528) | Dedicated merge dispatch threadpool on master |  Minor | master |
+| [HBASE-25536](https://issues.apache.org/jira/browse/HBASE-25536) | Remove 0 length wal file from logQueue if it belongs to old sources. |  Major | Replication |
+| [HBASE-25482](https://issues.apache.org/jira/browse/HBASE-25482) | Improve SimpleRegionNormalizer#getAverageRegionSizeMb |  Minor | Normalizer |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25626](https://issues.apache.org/jira/browse/HBASE-25626) | Possible Resource Leak in HeterogeneousRegionCountCostFunction |  Major | . |
+| [HBASE-25644](https://issues.apache.org/jira/browse/HBASE-25644) | Scan#setSmall blindly sets ReadType as PREAD |  Critical | . |
+| [HBASE-25609](https://issues.apache.org/jira/browse/HBASE-25609) | There is a problem with the SPLITS\_FILE in the HBase shell statement |  Minor | . |
+| [HBASE-25385](https://issues.apache.org/jira/browse/HBASE-25385) | TestCurrentHourProvider fails if the latest timezone changes are not present |  Blocker | . |
+| [HBASE-25596](https://issues.apache.org/jira/browse/HBASE-25596) | Fix NPE in ReplicationSourceManager as well as avoid permanently unreplicated data due to EOFException from WAL |  Critical | . |
+| [HBASE-25367](https://issues.apache.org/jira/browse/HBASE-25367) | Sort broken after Change 'State time' in UI |  Major | UI |
+| [HBASE-25421](https://issues.apache.org/jira/browse/HBASE-25421) | There is no limit on the column family length when creating a table |  Major | Client |
+| [HBASE-25371](https://issues.apache.org/jira/browse/HBASE-25371) | When openRegion fails during initial verification(before initializing and setting seq num), exception is observed during region close. |  Major | Region Assignment |
+| [HBASE-25611](https://issues.apache.org/jira/browse/HBASE-25611) | ExportSnapshot chmod flag uses value as decimal |  Major | . |
+| [HBASE-25586](https://issues.apache.org/jira/browse/HBASE-25586) | Fix HBASE-22492 on branch-2 (SASL GapToken) |  Major | rpc |
+| [HBASE-25598](https://issues.apache.org/jira/browse/HBASE-25598) | TestFromClientSide5.testScanMetrics is flaky |  Major | . |
+| [HBASE-25556](https://issues.apache.org/jira/browse/HBASE-25556) | Frequent replication "Encountered a malformed edit" warnings |  Minor | Operability, Replication |
+| [HBASE-25575](https://issues.apache.org/jira/browse/HBASE-25575) | Should validate Puts in RowMutations |  Minor | Client |
+| [HBASE-25559](https://issues.apache.org/jira/browse/HBASE-25559) | Terminate threads of oldsources while RS is closing |  Major | . |
+| [HBASE-25543](https://issues.apache.org/jira/browse/HBASE-25543) | When configuration "hadoop.security.authorization" is set to false,  the system will still try to authorize an RPC and raise AccessDeniedException |  Minor | IPC/RPC |
+| [HBASE-25554](https://issues.apache.org/jira/browse/HBASE-25554) | NPE when init RegionMover |  Major | . |
+| [HBASE-25523](https://issues.apache.org/jira/browse/HBASE-25523) | Region normalizer chore thread is getting killed |  Major | Normalizer |
+| [HBASE-25533](https://issues.apache.org/jira/browse/HBASE-25533) |  The metadata of the table and family should not be an empty string |  Major | . |
+| [HBASE-25478](https://issues.apache.org/jira/browse/HBASE-25478) | Implement retries when enabling tables in TestRegionReplicaReplicationEndpoint |  Minor | . |
+| [HBASE-25513](https://issues.apache.org/jira/browse/HBASE-25513) | When the table is turned on normalize, the first region may not be merged even the size is 0 |  Major | Normalizer |
+| [HBASE-25497](https://issues.apache.org/jira/browse/HBASE-25497) | move\_namespaces\_rsgroup should change hbase.rsgroup.name config in NamespaceDescriptor |  Major | . |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-24900](https://issues.apache.org/jira/browse/HBASE-24900) | Make retain assignment configurable during SCP |  Major | amv2 |
+| [HBASE-25509](https://issues.apache.org/jira/browse/HBASE-25509) | ChoreService.cancelChore will not call ScheduledChore.cleanup which may lead to resource leak |  Major | util |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25553](https://issues.apache.org/jira/browse/HBASE-25553) | It is better for ReplicationTracker.getListOfRegionServers to return ServerName instead of String |  Major | . |
+| [HBASE-25620](https://issues.apache.org/jira/browse/HBASE-25620) | Increase timeout value for pre commit |  Major | build, test |
+| [HBASE-25615](https://issues.apache.org/jira/browse/HBASE-25615) | Upgrade java version in pre commit docker file |  Major | build |
+| [HBASE-25601](https://issues.apache.org/jira/browse/HBASE-25601) | Remove search hadoop references in book |  Major | documentation |
+
+
 ## Release 2.4.1 - 2021-01-18
 
 

@@ -20,6 +20,42 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.2 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-25492](https://issues.apache.org/jira/browse/HBASE-25492) | *Major* | **Create table with rsgroup info in branch-2**
+
+HBASE-25492 added a new interface in TableDescriptor which allows user to define RSGroup name while creating or modifying a table.
+
+
+---
+
+* [HBASE-25460](https://issues.apache.org/jira/browse/HBASE-25460) | *Major* | **Expose drainingServers as cluster metric**
+
+Exposed new jmx metrics: "draininigRegionServers" and "numDrainingRegionServers" to provide "comma separated names for regionservers that are put in draining mode" and "num of such regionservers" respectively.
+
+
+---
+
+* [HBASE-25615](https://issues.apache.org/jira/browse/HBASE-25615) | *Major* | **Upgrade java version in pre commit docker file**
+
+jdk8u232-b09 -\> jdk8u282-b08
+jdk-11.0.6\_10 -\> jdk-11.0.10\_9
+
+
+---
+
+* [HBASE-23887](https://issues.apache.org/jira/browse/HBASE-23887) | *Major* | **New L1 cache : AdaptiveLRU**
+
+Introduced new L1 cache: AdaptiveLRU. This is supposed to provide better performance than default LRU cache.
+Set config key "hfile.block.cache.policy" to "AdaptiveLRU" in hbase-site in order to start using this new cache.
+
+
+
 # HBASE  2.4.1 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
