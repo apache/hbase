@@ -38,6 +38,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RSGroupInfo {
   public static final String DEFAULT_GROUP = "default";
   public static final String NAMESPACE_DESC_PROP_GROUP = "hbase.rsgroup.name";
+  public static final String TABLE_DESC_PROP_GROUP = "hbase.rsgroup.name";
 
   private final String name;
   // Keep servers in a sorted set so has an expected ordering when displayed.
