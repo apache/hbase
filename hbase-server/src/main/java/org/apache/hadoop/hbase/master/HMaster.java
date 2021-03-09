@@ -1678,7 +1678,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       return false;
     }
 
-    if (isNormalizerOn()) {
+    if (!isNormalizerOn()) {
       LOG.debug("Region normalization is disabled, don't run region normalizer.");
       return false;
     }
@@ -1693,11 +1693,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
       for (TableName table : allEnabledTables) {
         final NamespaceAuditor namespaceQuotaManager = quotaManager.getNamespaceQuotaManager();
-        if(namespaceQuotaManager == null) {
-          LOG.debug("Skipping normalizing since namespace quota is null");
-          return false;
-        }
-        if (namespaceQuotaManager.getState(table.getNamespaceAsString()) != null) {
+        if (namespaceQuotaManager != null && namespaceQuotaManager.getState(table.getNamespaceAsString()) != null) {
           LOG.debug("Skipping normalizing " + table + " since its namespace has quota");
           continue;
         }
