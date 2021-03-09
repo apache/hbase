@@ -575,4 +575,9 @@ public class StoreFileScanner implements KeyValueScanner {
   public void shipped() throws IOException {
     this.hfs.shipped();
   }
+
+  @Override
+  public boolean isSeekToSameBlock() {
+    return hfs.isSeekToSameBlock();
+  }
 }

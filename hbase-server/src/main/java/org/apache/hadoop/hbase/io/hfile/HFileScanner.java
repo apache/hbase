@@ -164,6 +164,13 @@ public interface HFileScanner extends Shipper, Closeable {
   Cell getNextIndexedKey();
 
   /**
+   * @return true if we seeked to the current block(based on the seek key)
+   */
+  default boolean isSeekToSameBlock() {
+    return false;
+  }
+
+  /**
    * Close this HFile scanner and do necessary cleanup.
    */
   @Override
