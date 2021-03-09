@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -83,9 +82,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
@@ -587,7 +584,8 @@ public class AssignmentManager {
   private void preTransitCheck(RegionStateNode regionNode, RegionState.State[] expectedStates)
       throws HBaseIOException {
     if (regionNode.getProcedure() != null) {
-      throw new HBaseIOException(regionNode + " is currently in transition");
+      throw new HBaseIOException(regionNode + " is currently in transition; pid=" +
+        regionNode.getProcedure().getProcId());
     }
     if (!regionNode.isInState(expectedStates)) {
       throw new DoNotRetryRegionException("Unexpected state for " + regionNode);
@@ -597,25 +595,53 @@ public class AssignmentManager {
     }
   }
 
-  private TransitRegionStateProcedure createAssignProcedure(RegionInfo regionInfo, ServerName sn)
-    throws IOException {
-     // TODO: should we use getRegionStateNode?
+  /**
+   * Create an assign TransitRegionStateProcedure. Makes sure of RegionState.
+   * Throws exception if not appropriate UNLESS override is set. Used by hbck2 but also by
+   * straightline {@link #assign(RegionInfo, ServerName)} and
+   * {@link #assignAsync(RegionInfo, ServerName)}.
+   * @see #createAssignProcedure(RegionStateNode, ServerName) for a version that does NO checking
+   *   used when only when no checking needed.
+   * @param override If false, check RegionState is appropriate for assign; if not throw exception.
+   */
+  private TransitRegionStateProcedure createAssignProcedure(RegionInfo regionInfo, ServerName sn,
+      boolean override) throws IOException {
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
-    TransitRegionStateProcedure proc;
     regionNode.lock();
     try {
-      preTransitCheck(regionNode, STATES_EXPECTED_ON_ASSIGN);
-      proc = TransitRegionStateProcedure.assign(getProcedureEnvironment(), regionInfo, sn);
-      regionNode.setProcedure(proc);
+      if (override) {
+        if (regionNode.getProcedure() != null) {
+          regionNode.unsetProcedure(regionNode.getProcedure());
+        }
+      } else {
+        preTransitCheck(regionNode, STATES_EXPECTED_ON_ASSIGN);
+      }
+      assert regionNode.getProcedure() == null;
+      return regionNode.setProcedure(TransitRegionStateProcedure.assign(getProcedureEnvironment(),
+        regionInfo, sn));
     } finally {
       regionNode.unlock();
     }
-    return proc;
   }
 
-  // TODO: Need an async version of this for hbck2.
+  /**
+   * Create an assign TransitRegionStateProcedure. Does NO checking of RegionState.
+   * Presumes appriopriate state ripe for assign.
+   * @see #createAssignProcedure(RegionInfo, ServerName, boolean)
+   */
+  private TransitRegionStateProcedure createAssignProcedure(RegionStateNode regionNode,
+      ServerName targetServer) {
+    regionNode.lock();
+    try {
+      return regionNode.setProcedure(TransitRegionStateProcedure.assign(getProcedureEnvironment(),
+        regionNode.getRegionInfo(), targetServer));
+    } finally {
+      regionNode.unlock();
+    }
+  }
+
   public long assign(RegionInfo regionInfo, ServerName sn) throws IOException {
-    TransitRegionStateProcedure proc = createAssignProcedure(regionInfo, sn);
+    TransitRegionStateProcedure proc = createAssignProcedure(regionInfo, sn, false);
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
     return proc.getProcId();
   }
@@ -632,8 +658,8 @@ public class AssignmentManager {
    * @throws IOException if preTransitCheck fails
    */
   public Future<byte[]> assignAsync(RegionInfo regionInfo, ServerName sn) throws IOException {
-    TransitRegionStateProcedure proc = createAssignProcedure(regionInfo, sn);
-    return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
+    return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(),
+      createAssignProcedure(regionInfo, sn, false));
   }
 
   /**
@@ -762,84 +788,86 @@ public class AssignmentManager {
     return RegionInfo.COMPARATOR.compare(left.getRegion(), right.getRegion());
   }
 
-  private TransitRegionStateProcedure createAssignProcedure(RegionStateNode regionNode,
-      ServerName targetServer, boolean override) {
-    TransitRegionStateProcedure proc;
-    regionNode.lock();
-    try {
-      if(override && regionNode.getProcedure() != null) {
-        regionNode.unsetProcedure(regionNode.getProcedure());
-      }
-      assert regionNode.getProcedure() == null;
-      proc = TransitRegionStateProcedure.assign(getProcedureEnvironment(),
-        regionNode.getRegionInfo(), targetServer);
-      regionNode.setProcedure(proc);
-    } finally {
-      regionNode.unlock();
-    }
-    return proc;
-  }
-
-  private TransitRegionStateProcedure createUnassignProcedure(RegionStateNode regionNode,
-      boolean override) {
-    TransitRegionStateProcedure proc;
-    regionNode.lock();
-    try {
-      if(override && regionNode.getProcedure() != null) {
-        regionNode.unsetProcedure(regionNode.getProcedure());
-      }
-      assert regionNode.getProcedure() == null;
-      proc = TransitRegionStateProcedure.unassign(getProcedureEnvironment(),
-          regionNode.getRegionInfo());
-      regionNode.setProcedure(proc);
-    } finally {
-      regionNode.unlock();
-    }
-    return proc;
-  }
-
   /**
    * Create one TransitRegionStateProcedure to assign a region w/o specifying a target server.
-   * This method is specified for HBCK2
+   * This method is called from HBCK2.
+   * @return an assign or null
    */
-  public TransitRegionStateProcedure createOneAssignProcedure(RegionInfo hri, boolean override) {
-    RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(hri);
-    return createAssignProcedure(regionNode, null, override);
+  public TransitRegionStateProcedure createOneAssignProcedure(RegionInfo ri, boolean override) {
+    TransitRegionStateProcedure trsp = null;
+    try {
+      trsp = createAssignProcedure(ri, null, override);
+    } catch (IOException ioe) {
+      LOG.info("Failed {} assign, override={}" +
+        (override? "": "; set override to by-pass state checks."),
+        ri.getEncodedName(), override, ioe);
+    }
+    return trsp;
   }
 
   /**
    * Create one TransitRegionStateProcedure to unassign a region.
-   * This method is specified for HBCK2
+   * This method is called from HBCK2.
+   * @return an unassign or null
    */
-  public TransitRegionStateProcedure createOneUnassignProcedure(RegionInfo hri, boolean override) {
-    RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(hri);
-    return createUnassignProcedure(regionNode, override);
+  public TransitRegionStateProcedure createOneUnassignProcedure(RegionInfo ri, boolean override) {
+    RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(ri);
+    TransitRegionStateProcedure trsp = null;
+    regionNode.lock();
+    try {
+      if (override) {
+        if (regionNode.getProcedure() != null) {
+          regionNode.unsetProcedure(regionNode.getProcedure());
+        }
+      } else {
+        // This is where we could throw an exception; i.e. override is false.
+        preTransitCheck(regionNode, STATES_EXPECTED_ON_UNASSIGN_OR_MOVE);
+      }
+      assert regionNode.getProcedure() == null;
+      trsp = TransitRegionStateProcedure.unassign(getProcedureEnvironment(),
+        regionNode.getRegionInfo());
+      regionNode.setProcedure(trsp);
+    } catch (IOException ioe) {
+      // 'override' must be false here.
+      LOG.info("Failed {} unassign, override=false; set override to by-pass state checks.",
+        ri.getEncodedName(), ioe);
+    } finally{
+      regionNode.unlock();
+    }
+    return trsp;
   }
 
   /**
    * Create an array of TransitRegionStateProcedure w/o specifying a target server.
+   * Used as fallback of caller is unable to do {@link #createAssignProcedures(Map)}.
    * <p/>
    * If no target server, at assign time, we will try to use the former location of the region if
    * one exists. This is how we 'retain' the old location across a server restart.
    * <p/>
    * Should only be called when you can make sure that no one can touch these regions other than
-   * you. For example, when you are creating table.
+   * you. For example, when you are creating or enabling table. Presumes all Regions are in
+   * appropriate state ripe for assign; no checking of Region state is done in here.
+   * @see #createAssignProcedures(Map)
    */
   public TransitRegionStateProcedure[] createAssignProcedures(List<RegionInfo> hris) {
     return hris.stream().map(hri -> regionStates.getOrCreateRegionStateNode(hri))
-        .map(regionNode -> createAssignProcedure(regionNode, null, false))
+        .map(regionNode -> createAssignProcedure(regionNode, null))
         .sorted(AssignmentManager::compare).toArray(TransitRegionStateProcedure[]::new);
   }
 
   /**
+   * Tied to {@link #createAssignProcedures(List)} in that it is called if caller is unable to run
+   * this method. Presumes all Regions are in appropriate state ripe for assign; no checking
+   * of Region state is done in here.
    * @param assignments Map of assignments from which we produce an array of AssignProcedures.
    * @return Assignments made from the passed in <code>assignments</code>
+   * @see #createAssignProcedures(List)
    */
   private TransitRegionStateProcedure[] createAssignProcedures(
       Map<ServerName, List<RegionInfo>> assignments) {
     return assignments.entrySet().stream()
       .flatMap(e -> e.getValue().stream().map(hri -> regionStates.getOrCreateRegionStateNode(hri))
-        .map(regionNode -> createAssignProcedure(regionNode, e.getKey(), false)))
+        .map(regionNode -> createAssignProcedure(regionNode, e.getKey())))
       .sorted(AssignmentManager::compare).toArray(TransitRegionStateProcedure[]::new);
   }
 
@@ -1064,8 +1092,8 @@ public class AssignmentManager {
 
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the split
     if (master.getServerManager().getVersionNumber(serverName) < 0x0200000) {
-      throw new UnsupportedOperationException(String.format(
-        "Split handled by the master: parent=%s hriA=%s hriB=%s", parent.getShortNameToLog(), hriA, hriB));
+      throw new UnsupportedOperationException(String.format("Split handled by the master: " +
+        "parent=%s hriA=%s hriB=%s", parent.getShortNameToLog(), hriA, hriB));
     }
   }
 
@@ -1331,9 +1359,13 @@ public class AssignmentManager {
 
     public boolean isRegionTwiceOverThreshold(final RegionInfo regionInfo) {
       Map<String, RegionState> m = this.ritsOverThreshold;
-      if (m == null) return false;
+      if (m == null) {
+        return false;
+      }
       final RegionState state = m.get(regionInfo.getEncodedName());
-      if (state == null) return false;
+      if (state == null) {
+        return false;
+      }
       return (statTimestamp - state.getStamp()) > (ritThreshold * 2);
     }
 
@@ -1619,7 +1651,9 @@ public class AssignmentManager {
    * @throws IOException
    */
   public Pair<Integer, Integer> getReopenStatus(TableName tableName) {
-    if (isTableDisabled(tableName)) return new Pair<Integer, Integer>(0, 0);
+    if (isTableDisabled(tableName)) {
+      return new Pair<Integer, Integer>(0, 0);
+    }
 
     final List<RegionState> states = regionStates.getTableRegionStates(tableName);
     int ritCount = 0;
@@ -1960,7 +1994,9 @@ public class AssignmentManager {
         assignQueueFullCond.await();
       }
 
-      if (!isRunning()) return null;
+      if (!isRunning()) {
+        return null;
+      }
       assignQueueFullCond.await(assignDispatchWaitMillis, TimeUnit.MILLISECONDS);
       regions = new HashMap<RegionInfo, RegionStateNode>(pendingAssignQueue.size());
       for (RegionStateNode regionNode: pendingAssignQueue) {
@@ -2093,8 +2129,12 @@ public class AssignmentManager {
     final ProcedureEvent<?>[] events = new ProcedureEvent[regions.size()];
     final long st = System.currentTimeMillis();
 
-    if (plan.isEmpty()) {
+    if (plan == null) {
       throw new HBaseIOException("unable to compute plans for regions=" + regions.size());
+    }
+
+    if (plan.isEmpty()) {
+      return;
     }
 
     int evcount = 0;
@@ -2152,7 +2192,7 @@ public class AssignmentManager {
       return Collections.emptyList();
     }
     String highestVersion = Collections.max(serverList,
-        (o1, o2) -> VersionInfo.compareVersion(o1.getSecond(), o2.getSecond())).getSecond();
+      (o1, o2) -> VersionInfo.compareVersion(o1.getSecond(), o2.getSecond())).getSecond();
     return serverList.stream()
         .filter((p)->!p.getSecond().equals(highestVersion))
         .map(Pair::getFirst)
