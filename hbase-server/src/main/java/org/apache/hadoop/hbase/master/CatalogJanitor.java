@@ -782,9 +782,8 @@ public class CatalogJanitor extends ScheduledChore {
 
   private static void checkLog4jProperties() {
     String filename = "log4j.properties";
-    try {
-      final InputStream inStream =
-          CatalogJanitor.class.getClassLoader().getResourceAsStream(filename);
+    try (final InputStream inStream =
+      CatalogJanitor.class.getClassLoader().getResourceAsStream(filename)) {
       if (inStream != null) {
         new Properties().load(inStream);
       } else {
