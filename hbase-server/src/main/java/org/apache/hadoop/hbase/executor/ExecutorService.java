@@ -37,6 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListenableFuture;
@@ -50,11 +51,10 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * and a <code>Runnable</code> that handles the object that is added to the queue.
  *
  * <p>In order to create a new service, create an instance of this class and
- * then do: <code>instance.startExecutorService("myService");</code>.  When done
- * call {@link #shutdown()}.
+ * then do: <code>instance.startExecutorService(executorConfig);</code>. {@link ExecutorConfig}
+ * wraps the configuration needed by this service. When done call {@link #shutdown()}.
  *
- * <p>In order to use the service created above, call
- * {@link #submit(EventHandler)}.
+ * <p>In order to use the service created above, call {@link #submit(EventHandler)}.
  */
 @InterfaceAudience.Private
 public class ExecutorService {
@@ -81,14 +81,15 @@ public class ExecutorService {
   /**
    * Start an executor service with a given name. If there was a service already
    * started with the same name, this throws a RuntimeException.
-   * @param name Name of the service to start.
+   * @param config Configuration to use for the executor.
    */
-  public void startExecutorService(String name, int maxThreads) {
+  public void startExecutorService(final ExecutorConfig config) {
+    final String name = config.getName();
     if (this.executorMap.get(name) != null) {
       throw new RuntimeException("An executor service with the name " + name +
         " is already running!");
     }
-    Executor hbes = new Executor(name, maxThreads);
+    Executor hbes = new Executor(config);
     if (this.executorMap.putIfAbsent(name, hbes) != null) {
       throw new RuntimeException("An executor service with the name " + name +
       " is already running (2)!");
@@ -119,33 +120,21 @@ public class ExecutorService {
   }
 
   Executor getExecutor(String name) {
-    Executor executor = this.executorMap.get(name);
-    return executor;
+    return this.executorMap.get(name);
   }
 
   public ThreadPoolExecutor getExecutorThreadPool(final ExecutorType type) {
     return getExecutor(type).getThreadPoolExecutor();
   }
 
-  public void startExecutorService(final ExecutorType type, final int maxThreads) {
-    String name = type.getExecutorName(this.servername);
-    if (isExecutorServiceRunning(name)) {
-      LOG.debug("Executor service " + toString() + " already running on " + this.servername);
-      return;
-    }
-    startExecutorService(name, maxThreads);
-  }
-
   /**
    * Initialize the executor lazily, Note if an executor need to be initialized lazily, then all
    * paths should use this method to get the executor, should not start executor by using
-   * {@link ExecutorService#startExecutorService(ExecutorType, int)}
+   * {@link ExecutorService#startExecutorService(ExecutorConfig)}
    */
-  public ThreadPoolExecutor getExecutorLazily(ExecutorType type, int maxThreads) {
-    String name = type.getExecutorName(this.servername);
-    return executorMap
-        .computeIfAbsent(name, (executorName) -> new Executor(executorName, maxThreads))
-        .getThreadPoolExecutor();
+  public ThreadPoolExecutor getExecutorLazily(ExecutorConfig config) {
+    return executorMap.computeIfAbsent(config.getName(), (executorName) ->
+        new Executor(config)).getThreadPoolExecutor();
   }
 
   public void submit(final EventHandler eh) {
@@ -182,11 +171,71 @@ public class ExecutorService {
   }
 
   /**
+   * Configuration wrapper for {@link Executor}.
+   */
+  public class ExecutorConfig {
+    // Refer to ThreadPoolExecutor javadoc for details of these configuration.
+    // Argument validation and bound checks delegated to the underlying ThreadPoolExecutor
+    // implementation.
+    public static final long KEEP_ALIVE_TIME_MILLIS_DEFAULT = 1000;
+    private int corePoolSize = -1;
+    private boolean allowCoreThreadTimeout = false;
+    private long keepAliveTimeMillis = KEEP_ALIVE_TIME_MILLIS_DEFAULT;
+    private ExecutorType executorType;
+
+    public ExecutorConfig setExecutorType(ExecutorType type) {
+      this.executorType = type;
+      return this;
+    }
+
+    private ExecutorType getExecutorType() {
+      return Preconditions.checkNotNull(executorType, "ExecutorType not set.");
+    }
+
+    public int getCorePoolSize() {
+      return corePoolSize;
+    }
+
+    public ExecutorConfig setCorePoolSize(int corePoolSize) {
+      this.corePoolSize = corePoolSize;
+      return this;
+    }
+
+    public boolean allowCoreThreadTimeout() {
+      return allowCoreThreadTimeout;
+    }
+
+    /**
+     * Allows timing out of core threads. Good to set this for non-critical thread pools for
+     * release of unused resources. Refer to {@link ThreadPoolExecutor#allowCoreThreadTimeOut}
+     * for additional details.
+     */
+    public ExecutorConfig setAllowCoreThreadTimeout(boolean allowCoreThreadTimeout) {
+      this.allowCoreThreadTimeout = allowCoreThreadTimeout;
+      return this;
+    }
+
+    /**
+     * @return the executor name inferred from the type and the servername on which this is running.
+     */
+    public String getName() {
+      return getExecutorType().getExecutorName(servername);
+    }
+
+    public long getKeepAliveTimeMillis() {
+      return keepAliveTimeMillis;
+    }
+
+    public ExecutorConfig setKeepAliveTimeMillis(long keepAliveTimeMillis) {
+      this.keepAliveTimeMillis = keepAliveTimeMillis;
+      return this;
+    }
+  }
+
+  /**
    * Executor instance.
    */
   static class Executor {
-    // how long to retain excess threads
-    static final long keepAliveTimeInMillis = 1000;
     // the thread pool executor that services the requests
     final TrackingThreadPoolExecutor threadPoolExecutor;
     // work queue to use - unbounded queue
@@ -195,13 +244,15 @@ public class ExecutorService {
     private static final AtomicLong seqids = new AtomicLong(0);
     private final long id;
 
-    protected Executor(String name, int maxThreads) {
+    protected Executor(ExecutorConfig config) {
       this.id = seqids.incrementAndGet();
-      this.name = name;
+      this.name = config.getName();
       // create the thread pool executor
       this.threadPoolExecutor = new TrackingThreadPoolExecutor(
-          maxThreads, maxThreads,
-          keepAliveTimeInMillis, TimeUnit.MILLISECONDS, q);
+          // setting maxPoolSize > corePoolSize has no effect since we use an unbounded task queue.
+          config.getCorePoolSize(), config.getCorePoolSize(),
+          config.getKeepAliveTimeMillis(), TimeUnit.MILLISECONDS, q);
+      this.threadPoolExecutor.allowCoreThreadTimeOut(config.allowCoreThreadTimeout());
       // name the threads for this threadpool
       ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
       tfb.setNameFormat(this.name + "-%d");

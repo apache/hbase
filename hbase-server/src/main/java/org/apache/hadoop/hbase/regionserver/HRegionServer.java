@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
@@ -2026,34 +2027,56 @@ public class HRegionServer extends Thread implements
     choreService.scheduleChore(compactedFileDischarger);
 
     // Start executor services
-    this.executorService.startExecutorService(ExecutorType.RS_OPEN_REGION,
-        conf.getInt("hbase.regionserver.executor.openregion.threads", 3));
-    this.executorService.startExecutorService(ExecutorType.RS_OPEN_META,
-        conf.getInt("hbase.regionserver.executor.openmeta.threads", 1));
-    this.executorService.startExecutorService(ExecutorType.RS_OPEN_PRIORITY_REGION,
-        conf.getInt("hbase.regionserver.executor.openpriorityregion.threads", 3));
-    this.executorService.startExecutorService(ExecutorType.RS_CLOSE_REGION,
-        conf.getInt("hbase.regionserver.executor.closeregion.threads", 3));
-    this.executorService.startExecutorService(ExecutorType.RS_CLOSE_META,
-        conf.getInt("hbase.regionserver.executor.closemeta.threads", 1));
+    final int openRegionThreads = conf.getInt("hbase.regionserver.executor.openregion.threads", 3);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_OPEN_REGION).setCorePoolSize(openRegionThreads));
+    final int openMetaThreads = conf.getInt("hbase.regionserver.executor.openmeta.threads", 1);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_OPEN_META).setCorePoolSize(openMetaThreads));
+    final int openPriorityRegionThreads =
+        conf.getInt("hbase.regionserver.executor.openpriorityregion.threads", 3);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_OPEN_PRIORITY_REGION).setCorePoolSize(openPriorityRegionThreads));
+    final int closeRegionThreads =
+        conf.getInt("hbase.regionserver.executor.closeregion.threads", 3);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_CLOSE_REGION).setCorePoolSize(closeRegionThreads));
+    final int closeMetaThreads = conf.getInt("hbase.regionserver.executor.closemeta.threads", 1);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_CLOSE_META).setCorePoolSize(closeMetaThreads));
     if (conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false)) {
-      this.executorService.startExecutorService(ExecutorType.RS_PARALLEL_SEEK,
-          conf.getInt("hbase.storescanner.parallel.seek.threads", 10));
+      final int storeScannerParallelSeekThreads =
+          conf.getInt("hbase.storescanner.parallel.seek.threads", 10);
+      executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+          ExecutorType.RS_PARALLEL_SEEK).setCorePoolSize(storeScannerParallelSeekThreads)
+          .setAllowCoreThreadTimeout(true));
     }
-    this.executorService.startExecutorService(ExecutorType.RS_LOG_REPLAY_OPS, conf.getInt(
-        HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER));
+    final int logReplayOpsThreads = conf.getInt(
+        HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_LOG_REPLAY_OPS).setCorePoolSize(logReplayOpsThreads)
+        .setAllowCoreThreadTimeout(true));
     // Start the threads for compacted files discharger
-    this.executorService.startExecutorService(ExecutorType.RS_COMPACTED_FILES_DISCHARGER,
-        conf.getInt(CompactionConfiguration.HBASE_HFILE_COMPACTION_DISCHARGER_THREAD_COUNT, 10));
+    final int compactionDischargerThreads =
+        conf.getInt(CompactionConfiguration.HBASE_HFILE_COMPACTION_DISCHARGER_THREAD_COUNT, 10);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_COMPACTED_FILES_DISCHARGER).setCorePoolSize(compactionDischargerThreads));
     if (ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(conf)) {
-      this.executorService.startExecutorService(ExecutorType.RS_REGION_REPLICA_FLUSH_OPS,
-          conf.getInt("hbase.regionserver.region.replica.flusher.threads",
-              conf.getInt("hbase.regionserver.executor.openregion.threads", 3)));
+      final int regionReplicaFlushThreads = conf.getInt(
+          "hbase.regionserver.region.replica.flusher.threads", conf.getInt(
+              "hbase.regionserver.executor.openregion.threads", 3));
+      executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+          ExecutorType.RS_REGION_REPLICA_FLUSH_OPS).setCorePoolSize(regionReplicaFlushThreads));
     }
-    this.executorService.startExecutorService(ExecutorType.RS_REFRESH_PEER,
-      conf.getInt("hbase.regionserver.executor.refresh.peer.threads", 2));
-    this.executorService.startExecutorService(ExecutorType.RS_SWITCH_RPC_THROTTLE,
-      conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1));
+    final int refreshPeerThreads =
+        conf.getInt("hbase.regionserver.executor.refresh.peer.threads", 2);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_REFRESH_PEER).setCorePoolSize(refreshPeerThreads));
+
+    final int switchRpcThrottleThreads =
+        conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_SWITCH_RPC_THROTTLE).setCorePoolSize(switchRpcThrottleThreads));
 
     Threads
       .setDaemonThreadRunning(this.walRoller, getName() + ".logRoller", uncaughtExceptionHandler);
