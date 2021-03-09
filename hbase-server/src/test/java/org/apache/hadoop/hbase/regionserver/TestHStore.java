@@ -1602,7 +1602,7 @@ public class TestHStore {
   public void testSwitchingPreadtoStreamParallelyWithCompactionDischarger() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.hstore.engine.class", DummyStoreEngine.class.getName());
-    conf.setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 0);
+    conf.setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 1);
     // Set the lower threshold to invoke the "MERGE" policy
     MyStore store = initMyStore(name.getMethodName(), conf, new MyStoreHook() {});
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
