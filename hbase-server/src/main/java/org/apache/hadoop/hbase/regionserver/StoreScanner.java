@@ -135,7 +135,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * If the read type is Scan.ReadType.DEFAULT, we will start with pread, and if the kvs we scanned
    * reaches this limit, we will reopen the scanner with stream. The default value is 4 times of
    * block size for this store.
-   * If configured with a value <=0, for all scans with ReadType DEFAULT, we will open scanner with
+   * If configured with a value <0, for all scans with ReadType DEFAULT, we will open scanner with
    * stream mode itself.
    */
   public static final String STORESCANNER_PREAD_MAX_BYTES = "hbase.storescanner.pread.max.bytes";
@@ -195,7 +195,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if (scan.getReadType() == Scan.ReadType.DEFAULT) {
         if (scanInfo.isUsePread()) {
           this.readType = Scan.ReadType.PREAD;
-        } else if (this.preadMaxBytes <= 0) {
+        } else if (this.preadMaxBytes < 0) {
           this.readType = Scan.ReadType.STREAM;
         } else {
           this.readType = Scan.ReadType.DEFAULT;
