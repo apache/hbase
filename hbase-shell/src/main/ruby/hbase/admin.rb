@@ -1150,6 +1150,9 @@ module Hbase
           ttl = ttl ? ttl.to_java(:long) : -1
           snapshot_props = java.util.HashMap.new
           snapshot_props.put("TTL", ttl)
+          max_filesize = arg[MAX_FILESIZE]
+          max_filesize = max_filesize ? max_filesize.to_java(:long) : -1
+          snapshot_props.put("MAX_FILESIZE", max_filesize)
           if arg[SKIP_FLUSH] == true
             @admin.snapshot(snapshot_name, table_name,
                             org.apache.hadoop.hbase.client.SnapshotType::SKIPFLUSH, snapshot_props)
