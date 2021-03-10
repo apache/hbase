@@ -152,6 +152,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   /** number of current operations running on the master */
   public static final int SNAPSHOT_POOL_THREADS_DEFAULT = 1;
 
+  /** Conf key for preserving original max file size configs */
+  public static final String SNAPSHOT_MAX_FILE_SIZE_PRESERVE =
+    "hbase.snapshot.max.filesize.preserve";
+
   private boolean stopped;
   private MasterServices master;  // Needed by TableEventHandlers
   private ProcedureCoordinator coordinator;

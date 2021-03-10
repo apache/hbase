@@ -3010,6 +3010,9 @@ public final class ProtobufUtil {
     if (snapshotDesc.getVersion() != -1) {
       builder.setVersion(snapshotDesc.getVersion());
     }
+    if (snapshotDesc.getMaxFileSize() != -1) {
+      builder.setMaxFileSize(snapshotDesc.getMaxFileSize());
+    }
     builder.setType(ProtobufUtil.createProtosSnapShotDescType(snapshotDesc.getType()));
     return builder.build();
   }
@@ -3025,6 +3028,7 @@ public final class ProtobufUtil {
       createSnapshotDesc(SnapshotProtos.SnapshotDescription snapshotDesc) {
     final Map<String, Object> snapshotProps = new HashMap<>();
     snapshotProps.put("TTL", snapshotDesc.getTtl());
+    snapshotProps.put(TableDescriptorBuilder.MAX_FILESIZE, snapshotDesc.getMaxFileSize());
     return new SnapshotDescription(snapshotDesc.getName(),
             snapshotDesc.hasTable() ? TableName.valueOf(snapshotDesc.getTable()) : null,
             createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),
