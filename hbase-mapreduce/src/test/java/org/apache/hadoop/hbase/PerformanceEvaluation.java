@@ -503,7 +503,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
           TestOptions threadOpts = new TestOptions(opts);
           final Connection con = cons[index % cons.length];
           final AsyncConnection asyncCon = asyncCons[index % asyncCons.length];
-          if (threadOpts.startRow == 0) threadOpts.startRow = index * threadOpts.perClientRunRows;
+          if (threadOpts.startRow == 0) {
+            threadOpts.startRow = index * (threadOpts.initRows / threadOpts.numClientThreads);
+          }
           RunResult run = runOneClient(cmd, conf, con, asyncCon, threadOpts, new Status() {
             @Override
             public void setStatus(final String msg) throws IOException {
@@ -640,12 +642,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // Make input random.
     Map<Integer, String> m = new TreeMap<>();
     Hash h = MurmurHash.getInstance();
-    int perClientRows = (opts.totalRows / opts.numClientThreads);
+    int startRowSteps = (opts.initRows / opts.numClientThreads);
     try {
       for (int j = 0; j < opts.numClientThreads; j++) {
         TestOptions next = new TestOptions(opts);
-        next.startRow = j * perClientRows;
-        next.perClientRunRows = perClientRows;
+        next.startRow = j * startRowSteps;
         String s = GSON.toJson(next);
         LOG.info("Client=" + j + ", input=" + s);
         byte[] b = Bytes.toBytes(s);
@@ -704,6 +705,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int perClientRunRows = DEFAULT_ROWS_PER_GB;
     int numClientThreads = 1;
     int totalRows = DEFAULT_ROWS_PER_GB;
+    int initRows = -1; // will decide the actual num later
     int measureAfter = 0;
     float sampleRate = 1.0f;
     double traceRate = 0.0;
@@ -712,7 +714,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     boolean writeToWAL = true;
     boolean autoFlush = false;
     boolean oneCon = false;
-    int connCount = -1; //wil decide the actual num later
+    int connCount = -1; // will decide the actual num later
     boolean useTags = false;
     int noOfTags = 1;
     boolean reportLatency = false;
@@ -760,6 +762,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.perClientRunRows = that.perClientRunRows;
       this.numClientThreads = that.numClientThreads;
       this.totalRows = that.totalRows;
+      this.initRows = that.initRows;
       this.sampleRate = that.sampleRate;
       this.traceRate = that.traceRate;
       this.tableName = that.tableName;
@@ -1134,6 +1137,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public long getBufferSize() {
       return this.bufferSize;
+    }
+
+    public int getInitRows() {
+      return initRows;
+    }
+
+    public void setInitRows(int initRows) {
+      this.initRows = initRows;
     }
   }
 
@@ -1550,7 +1561,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (opts.randomSleep > 0) {
         Thread.sleep(rd.nextInt(opts.randomSleep));
       }
-      Get get = new Get(getRandomRow(this.rand, opts.totalRows));
+      Get get = new Get(getRandomRow(this.rand, opts.initRows));
       for (int family = 0; family < opts.families; family++) {
         byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
         if (opts.addColumns) {
@@ -1626,7 +1637,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     protected byte[] generateRow(final int i) {
-      return getRandomRow(this.rand, opts.totalRows);
+      return getRandomRow(this.rand, opts.initRows);
     }
   }
 
@@ -1807,7 +1818,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     boolean testRow(final int i, final long startTime) throws IOException {
-      Scan scan = new Scan().withStartRow(getRandomRow(this.rand, opts.totalRows))
+      Scan scan = new Scan().withStartRow(getRandomRow(this.rand, opts.initRows))
           .setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
           .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType)
           .setScanMetricsEnabled(true);
@@ -1897,7 +1908,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected abstract Pair<byte[],byte[]> getStartAndStopRow();
 
     protected Pair<byte[], byte[]> generateStartAndStopRows(int maxRange) {
-      int start = this.rand.nextInt(Integer.MAX_VALUE) % opts.totalRows;
+      int start = this.rand.nextInt(Integer.MAX_VALUE) % opts.initRows;
       int stop = start + maxRange;
       return new Pair<>(format(start), format(stop));
     }
@@ -1973,7 +1984,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (opts.randomSleep > 0) {
         Thread.sleep(rd.nextInt(opts.randomSleep));
       }
-      Get get = new Get(getRandomRow(this.rand, opts.totalRows));
+      Get get = new Get(getRandomRow(this.rand, opts.initRows));
       for (int family = 0; family < opts.families; family++) {
         byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
         if (opts.addColumns) {
@@ -2079,7 +2090,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     protected byte[] generateRow(final int i) {
-      return getRandomRow(this.rand, opts.totalRows);
+      return getRandomRow(this.rand, opts.initRows);
     }
 
 
@@ -2614,7 +2625,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" nomapred        Run multiple clients using threads " +
       "(rather than use mapreduce)");
     System.err.println(" oneCon          all the threads share the same connection. Default: False");
-    System.err.println(" connCount          connections all threads share. "
+    System.err.println(" connCount       connections all threads share. "
         + "For example, if set to 2, then all thread share 2 connection. "
         + "Default: depend on oneCon parameter. if oneCon set to true, then connCount=1, "
         + "if not, connCount=thread number");
@@ -2637,19 +2648,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
         "'valueSize'; set on read for stats on size: Default: Not set.");
     System.err.println(" blockEncoding   Block encoding to use. Value should be one of "
         + Arrays.toString(DataBlockEncoding.values()) + ". Default: NONE");
+    System.err.println(" initRows        The total rows currently in the table. When initRows "
+        + "is less than totalRows(perClientRunRows * nclients), initRows will be set equal to "
+        + "totalRows. Default: -1");
     System.err.println();
     System.err.println("Table Creation / Write Tests:");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
     System.err.println(" rows            Rows each client runs. Default: "
-        + DEFAULT_OPTS.getPerClientRunRows()
-        + ".  In case of randomReads and randomSeekScans this could"
-        + " be specified along with --size to specify the number of rows to be scanned within"
-        + " the total range specified by the size.");
-    System.err.println(
-      " size            Total size in GiB. Mutually exclusive with --rows for writes and scans"
-          + ". But for randomReads and randomSeekScans when you use size with --rows you could"
-          + " use size to specify the end range and --rows"
-          + " specifies the number of rows within that range. " + "Default: 1.0.");
+        + DEFAULT_OPTS.getPerClientRunRows());
+    System.err.println(" size            Total size in GiB. Mutually exclusive with --rows. "
+        + "When both --size and --rows are set, the value of perClientRunRows is only calculated "
+        + "based on --size, --rows is ignored. Default: 1.0.");
     System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
     System.err.println(" flushCommits    Used to determine if the test should flush the table. " +
       "Default: false");
@@ -2991,6 +3000,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
+      final String initRows = "--initRows=";
+      if (cmd.startsWith(initRows)) {
+        opts.initRows = Integer.parseInt(cmd.substring(initRows.length()));
+        continue;
+      }
+
       validateParsedOpts(opts);
 
       if (isCommandClass(cmd)) {
@@ -3000,7 +3015,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         } catch (NoSuchElementException | NumberFormatException e) {
           throw new IllegalArgumentException("Command " + cmd + " does not have threads number", e);
         }
-        opts = calculateRowsAndSize(opts);
+        calculateRowsAndSize(opts);
         break;
       } else {
         printUsageAndExit("ERROR: Unrecognized option/command: " + cmd, -1);
@@ -3035,18 +3050,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   static TestOptions calculateRowsAndSize(final TestOptions opts) {
     int rowsPerGB = getRowsPerGB(opts);
-    if ((opts.getCmdName() != null
-        && (opts.getCmdName().equals(RANDOM_READ) || opts.getCmdName().equals(RANDOM_SEEK_SCAN)))
-        && opts.size != DEFAULT_OPTS.size
-        && opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {
-      opts.totalRows = (int) opts.size * rowsPerGB;
-    } else if (opts.size != DEFAULT_OPTS.size) {
+    if (opts.size != DEFAULT_OPTS.size) {
       // total size in GB specified
       opts.totalRows = (int) opts.size * rowsPerGB;
       opts.perClientRunRows = opts.totalRows / opts.numClientThreads;
     } else {
       opts.totalRows = opts.perClientRunRows * opts.numClientThreads;
-      opts.size = opts.totalRows / rowsPerGB;
+    }
+
+    // initRows must greater or equal to totalRows
+    if (opts.initRows < opts.totalRows) {
+      opts.initRows = opts.totalRows;
     }
     return opts;
   }
