@@ -1151,6 +1151,12 @@ message ScheduleServerCrashProcedureResponse {
   repeated uint64 pid = 1;
 }
 
+message ScheduleSCPsForUnknownServersRequest {}
+
+message ScheduleSCPsForUnknownServersResponse {
+  repeated uint64 pid = 1;
+}
+
 message FixMetaRequest {}
 
 message FixMetaResponse {}
@@ -1189,6 +1195,10 @@ service HbckService {
   /** Schedule a ServerCrashProcedure to help recover a crash server */
   rpc ScheduleServerCrashProcedure(ScheduleServerCrashProcedureRequest)
     returns(ScheduleServerCrashProcedureResponse);
+
+  /** Schedule a ServerCrashProcedure for unknown servers */
+  rpc ScheduleSCPsForUnknownServers(ScheduleSCPsForUnknownServersRequest)
+    returns(ScheduleSCPsForUnknownServersResponse);
 
   /**
    * Request HBCK chore to run at master side.
