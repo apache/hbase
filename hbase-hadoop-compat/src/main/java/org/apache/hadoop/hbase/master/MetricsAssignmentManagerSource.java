@@ -60,6 +60,27 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_DURATION_DESC =
       "Total durations in milliseconds for all Regions in Transition (Histogram).";
 
+  // HBCK report metrics
+  String ORPHAN_REGIONS_ON_RS = "orphanRegionsOnRS";
+  String ORPHAN_REGIONS_ON_FS = "orphanRegionsOnFS";
+  String INCONSISTENT_REGIONS = "inconsistentRegions";
+
+  String ORPHAN_REGIONS_ON_RS_DESC = "Current number of Orphan Regions on RS (Gauge).";
+  String ORPHAN_REGIONS_ON_FS_DESC = "Current number of Orphan Regions on FS (Gauge).";
+  String INCONSISTENT_REGIONS_DESC = "Current number of Inconsistent Regions (Gauge).";
+
+  // CatalogJanitor Consistency report metrics
+  String HOLES = "holes";
+  String OVERLAPS = "overlaps";
+  String UNKNOWN_SERVER_REGIONS = "unknownServerRegions";
+  String EMPTY_REGION_INFO_REGIONS = "emptyRegionInfoRegions";
+
+  String HOLES_DESC = "Current number of Holes (Gauge).";
+  String OVERLAPS_DESC = "Current number of Overlaps (Gauge).";
+  String UNKNOWN_SERVER_REGIONS_DESC = "Current number of Unknown Server Regions (Gauge).";
+  String EMPTY_REGION_INFO_REGIONS_DESC =
+      "Current number of Regions with Empty Region Info (Gauge).";
+
   String ASSIGN_METRIC_PREFIX = "assign";
   String UNASSIGN_METRIC_PREFIX = "unassign";
   String MOVE_METRIC_PREFIX = "move";
@@ -97,6 +118,55 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   void updateDeadServerOpenRegions(int deadRegions);
 
   void updateUnknownServerOpenRegions(int unknownRegions);
+
+  /**
+   * Set the number of orphan regions on RS.
+   *
+   * @param orphanRegionsOnRs count of the orphan regions on RS in HBCK chore report.
+   */
+  void setOrphanRegionsOnRs(int orphanRegionsOnRs);
+
+  /**
+   * Set the number of orphan regions on FS.
+   *
+   * @param orphanRegionsOnFs count of the orphan regions on FS in HBCK chore report.
+   */
+  void setOrphanRegionsOnFs(int orphanRegionsOnFs);
+
+  /**
+   * Set the number of inconsistent regions.
+   *
+   * @param inconsistentRegions count of the inconsistent regions in HBCK chore report.
+   */
+  void setInconsistentRegions(int inconsistentRegions);
+
+  /**
+   * Set the number of holes.
+   *
+   * @param holes count of the holes in CatalogJanitor Consistency report.
+   */
+  void setHoles(int holes);
+
+  /**
+   * Set the number of overlaps.
+   *
+   * @param overlaps count of the overlaps in CatalogJanitor Consistency report.
+   */
+  void setOverlaps(int overlaps);
+
+  /**
+   * Set the number of unknown server regions.
+   * @param unknownServerRegions count of the unknown server regions in CatalogJanitor Consistency
+   *          report.
+   */
+  void setUnknownServerRegions(int unknownServerRegions);
+
+  /**
+   * Set the number of regions with empty region info.
+   * @param emptyRegionInfoRegions count of the regions with empty region info in CatalogJanitor
+   *          Consistency report.
+   */
+  void setEmptyRegionInfoRegions(int emptyRegionInfoRegions);
 
   /**
    * TODO: Remove. This may not be needed now as assign and unassign counts are tracked separately
