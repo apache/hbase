@@ -917,6 +917,17 @@ public class ServerManager {
     return serverName == null || deadservers.isDeadServer(serverName);
   }
 
+  /**
+   * Check if a server is unknown.  A server can be online,
+   * or known to be dead, or unknown to this manager (i.e, not online,
+   * not known to be dead either; it is simply not tracked by the
+   * master any more, for example, a very old previous instance).
+   */
+  public boolean isServerUnknown(ServerName serverName) {
+    return serverName == null
+      || (!onlineServers.containsKey(serverName) && !deadservers.isDeadServer(serverName));
+  }
+
   public void shutdownCluster() {
     String statusStr = "Cluster shutdown requested of master=" + this.master.getServerName();
     LOG.info(statusStr);

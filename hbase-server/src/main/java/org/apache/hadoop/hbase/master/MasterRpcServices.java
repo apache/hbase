@@ -2701,6 +2701,31 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
+  public MasterProtos.ScheduleSCPsForUnknownServersResponse scheduleSCPsForUnknownServers(
+      RpcController controller, MasterProtos.ScheduleSCPsForUnknownServersRequest request)
+      throws ServiceException {
+
+    List<Long> pids = new ArrayList<>();
+    final Set<ServerName> serverNames =
+      master.getAssignmentManager().getRegionStates().getRegionStates().stream()
+        .map(RegionState::getServerName).collect(Collectors.toSet());
+
+    final Set<ServerName> unknownServerNames = serverNames.stream()
+      .filter(sn -> master.getServerManager().isServerUnknown(sn)).collect(Collectors.toSet());
+
+    for (ServerName sn: unknownServerNames) {
+      LOG.info("{} schedule ServerCrashProcedure for unknown {}",
+        this.master.getClientIdAuditPrefix(), sn);
+      if (shouldSubmitSCP(sn)) {
+        pids.add(this.master.getServerManager().expireServer(sn, true));
+      } else {
+        pids.add(Procedure.NO_PROC_ID);
+      }
+    }
+    return MasterProtos.ScheduleSCPsForUnknownServersResponse.newBuilder().addAllPid(pids).build();
+  }
+
+  @Override
   public FixMetaResponse fixMeta(RpcController controller, FixMetaRequest request)
       throws ServiceException {
     rpcPreCheck("fixMeta");
