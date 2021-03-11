@@ -97,7 +97,7 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
       LOG.info("Mock Cluster :  " + printStats(list));
       Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
           (Map) mockClusterServersWithTables(servers);
-      List<RegionPlan> plans = loadBalancer.balanceClusterPlans(LoadOfAllTable);
+      List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
       ArrayListMultimap<String, ServerAndLoad> balancedCluster = reconcile(list, plans);
       LOG.info("Mock Balance : " + printStats(balancedCluster));
       assertClusterAsBalanced(balancedCluster);

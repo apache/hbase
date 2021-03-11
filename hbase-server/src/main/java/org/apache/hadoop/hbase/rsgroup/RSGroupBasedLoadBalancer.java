@@ -137,10 +137,10 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   /**
    * Override to balance by RSGroup
-   * not invoke {@link #balanceTablePlans(TableName, Map)}
+   * not invoke {@link #balanceTable(TableName, Map)}
    */
   @Override
-  public List<RegionPlan> balanceClusterPlans(
+  public List<RegionPlan> balanceCluster(
       Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException {
     if (!isOnline()) {
       throw new ConstraintException(
@@ -173,7 +173,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         List<RegionPlan> groupPlans = null;
         if (!loadOfTablesInGroup.isEmpty()) {
           LOG.info("Start Generate Balance plan for group: " + rsgroup.getName());
-          groupPlans = this.internalBalancer.balanceClusterPlans(loadOfTablesInGroup);
+          groupPlans = this.internalBalancer.balanceCluster(loadOfTablesInGroup);
         }
         if (groupPlans != null) {
           regionPlans.addAll(groupPlans);
@@ -465,7 +465,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
    * can achieve table balanced rather than overall balanced
    */
   @Override
-  public List<RegionPlan> balanceTablePlans(TableName tableName,
+  public List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     if (!isOnline()) {
       LOG.error(RSGroupInfoManager.class.getSimpleName()
@@ -487,7 +487,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         correctedStateAndRegionPlans.getFirst();
     List<RegionPlan> regionPlans = correctedStateAndRegionPlans.getSecond();
     List<RegionPlan> tablePlans =
-        this.internalBalancer.balanceTablePlans(tableName, correctedLoadOfThisTable.get(tableName));
+        this.internalBalancer.balanceTable(tableName, correctedLoadOfThisTable.get(tableName));
 
     if (tablePlans != null) {
       regionPlans.addAll(tablePlans);
@@ -554,7 +554,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         // We balance per group instead of per table
         Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
           getRSGroupAssignmentsByTable(groupName);
-        List<RegionPlan> plans = balanceClusterPlans(assignmentsByTable);
+        List<RegionPlan> plans = balanceCluster(assignmentsByTable);
         if (!plans.isEmpty()) {
           LOG.info("Balance RSGroup {}, starting {} balance plans", groupName, plans.size());
           balancedPlans = masterServices.executeRegionPlansWithThrottling(plans);

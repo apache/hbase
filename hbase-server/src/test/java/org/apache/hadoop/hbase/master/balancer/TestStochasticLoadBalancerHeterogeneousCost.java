@@ -150,7 +150,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     final Map<ServerName, List<RegionInfo>> serverMap =
         this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
     final List<RegionPlan> plans =
-        BalancerTestBase.loadBalancer.balanceTablePlans(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+        BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     // As we disabled all the other cost functions, balancing only according to
     // the heterogeneous cost function should return nothing.
     assertNull(plans);
@@ -175,7 +175,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
 
     // Run the balancer.
     final List<RegionPlan> plans =
-        BalancerTestBase.loadBalancer.balanceTablePlans(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+        BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     assertNotNull(plans);
 
     // Check to see that this actually got to a stable place.
@@ -187,7 +187,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
       LOG.info("Mock Balanced cluster : " + this.printMock(balancedCluster));
 
       if (assertFullyBalanced) {
-        final List<RegionPlan> secondPlans = BalancerTestBase.loadBalancer.balanceTablePlans(
+        final List<RegionPlan> secondPlans = BalancerTestBase.loadBalancer.balanceTable(
           HConstants.ENSEMBLE_TABLE_NAME, serverMap);
         assertNull(secondPlans);
 

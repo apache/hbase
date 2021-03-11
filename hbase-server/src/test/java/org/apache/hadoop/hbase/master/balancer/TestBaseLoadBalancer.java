@@ -117,13 +117,13 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
   public static class MockBalancer extends BaseLoadBalancer {
     @Override
-    public List<RegionPlan> balanceClusterPlans(Map<TableName, Map<ServerName,
+    public List<RegionPlan> balanceCluster(Map<TableName, Map<ServerName,
       List<RegionInfo>>> loadOfAllTable) {
       return null;
     }
 
     @Override
-    public List<RegionPlan> balanceTablePlans(TableName tableName,
+    public List<RegionPlan> balanceTable(TableName tableName,
         Map<ServerName, List<RegionInfo>> loadOfOneTable) {
       return null;
     }

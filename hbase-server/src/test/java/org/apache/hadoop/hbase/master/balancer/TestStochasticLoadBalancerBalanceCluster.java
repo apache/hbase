@@ -62,12 +62,12 @@ public class TestStochasticLoadBalancerBalanceCluster extends BalancerTestBase {
 
       Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
           (Map) mockClusterServersWithTables(servers);
-      List<RegionPlan> plans = loadBalancer.balanceClusterPlans(LoadOfAllTable);
+      List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
       List<ServerAndLoad> balancedCluster = reconcile(list, plans, servers);
       LOG.info("Mock Balance : " + printMock(balancedCluster));
       assertClusterAsBalanced(balancedCluster);
       LoadOfAllTable = (Map) mockClusterServersWithTables(servers);
-      List<RegionPlan> secondPlans = loadBalancer.balanceClusterPlans(LoadOfAllTable);
+      List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
       assertNull(secondPlans);
       for (Map.Entry<ServerName, List<RegionInfo>> entry : servers.entrySet()) {
         returnRegions(entry.getValue());

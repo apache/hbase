@@ -147,7 +147,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
         TreeMap<ServerName, List<RegionInfo>> servers = mapEntry.getValue();
         List<ServerAndLoad> list = convertToList(servers);
         LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
-        List<RegionPlan> partialplans = loadBalancer.balanceTablePlans(tableName, servers);
+        List<RegionPlan> partialplans = loadBalancer.balanceTable(tableName, servers);
         if(partialplans != null) clusterplans.addAll(partialplans);
         List<ServerAndLoad> balancedClusterPerTable = reconcile(list, partialplans, servers);
         LOG.info("Mock Balance : " + printMock(balancedClusterPerTable));
@@ -203,7 +203,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
       TreeMap<ServerName, List<RegionInfo>> servers = mapEntry.getValue();
       List<ServerAndLoad> list = convertToList(servers);
       LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
-      List<RegionPlan> partialplans = loadBalancer.balanceTablePlans(tableName, servers);
+      List<RegionPlan> partialplans = loadBalancer.balanceTable(tableName, servers);
       if (partialplans != null) clusterplans1.addAll(partialplans);
       List<ServerAndLoad> balancedClusterPerTable = reconcile(list, partialplans, servers);
       LOG.info("Mock Balance : " + printMock(balancedClusterPerTable));
@@ -238,7 +238,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
     HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> LoadOfAllTable =
         mockClusterServersWithTables(serverRegionInfo);
     loadBalancer.setClusterLoad((Map) LoadOfAllTable);
-    List<RegionPlan> partialplans = loadBalancer.balanceTablePlans(TableName.valueOf("table1"),
+    List<RegionPlan> partialplans = loadBalancer.balanceTable(TableName.valueOf("table1"),
       LoadOfAllTable.get(TableName.valueOf("table1")));
     List<ServerAndLoad> balancedServerLoads =
         reconcile(serverAndLoads, partialplans, serverRegionInfo);

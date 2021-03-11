@@ -45,7 +45,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue
  * RegionServers.
  *
  * <p>Cluster-wide load balancing will occur only when there are no regions in
- * transition and according to a fixed period of a time using {@link #balanceClusterPlans(Map)}.
+ * transition and according to a fixed period of a time using {@link #balanceCluster(Map)}.
  *
  * <p>On cluster startup, bulk assignment can be used to determine
  * locations for all Regions in a cluster.
@@ -253,7 +253,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    *         or null if cluster is already balanced
    */
   @Override
-  public List<RegionPlan> balanceTablePlans(TableName tableName,
+  public List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     List<RegionPlan> regionsToReturn = balanceMasterRegions(loadOfOneTable);
     if (regionsToReturn != null || loadOfOneTable == null || loadOfOneTable.size() <= 1) {
@@ -604,9 +604,9 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    * on every server to achieve overall balanced
    */
   @Override
-  public synchronized List<RegionPlan> balanceClusterPlans(Map<TableName, Map<ServerName,
+  public synchronized List<RegionPlan> balanceCluster(Map<TableName, Map<ServerName,
     List<RegionInfo>>> loadOfAllTable) {
     setClusterLoad(loadOfAllTable);
-    return super.balanceClusterPlans(loadOfAllTable);
+    return super.balanceCluster(loadOfAllTable);
   }
 }

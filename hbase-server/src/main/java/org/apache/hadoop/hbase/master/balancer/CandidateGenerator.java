@@ -37,7 +37,7 @@ abstract class CandidateGenerator {
 
   /**
    * From a list of regions pick a random one. Null can be returned which
-   * {@link StochasticLoadBalancer#balanceClusterPlans(Map)} recognize as signal to try a region
+   * {@link StochasticLoadBalancer#balanceCluster(Map)} recognize as signal to try a region
    * move rather than swap.
    *
    * @param cluster The state of the cluster
