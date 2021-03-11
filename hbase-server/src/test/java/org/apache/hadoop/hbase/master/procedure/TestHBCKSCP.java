@@ -40,12 +40,8 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
-
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -56,6 +52,10 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 
 
 /**
@@ -109,15 +109,16 @@ public class TestHBCKSCP extends TestSCPBase {
     // not be processing this server 'normally'. Remove it from processing by
     // calling 'finish' and then remove it from dead servers so rsServerName
     // becomes an 'Unknown Server' even though it is still around.
+    LOG.info("Killing {}", rsServerName);
+    cluster.killRegionServer(rsServerName);
+
     master.getServerManager().moveFromOnlineToDeadServers(rsServerName);
     master.getServerManager().getDeadServers().finish(rsServerName);
     master.getServerManager().getDeadServers().removeDeadServer(rsServerName);
     master.getAssignmentManager().getRegionStates().removeServer(rsServerName);
     // Kill the server. Nothing should happen since an 'Unknown Server' as far
     // as the Master is concerned; i.e. no SCP.
-    LOG.info("Killing {}", rsServerName);
     HRegionServer hrs = cluster.getRegionServer(rsServerName);
-    hrs.abort("KILLED");
     while (!hrs.isStopped()) {
       Threads.sleep(10);
     }
@@ -135,12 +136,7 @@ public class TestHBCKSCP extends TestSCPBase {
 
     // I now have 'Unknown Server' references in hbase:meta; i.e. Server references
     // with no corresponding SCP. Queue one.
-    MasterProtos.ScheduleServerCrashProcedureResponse response =
-        master.getMasterRpcServices().scheduleServerCrashProcedure(null,
-            MasterProtos.ScheduleServerCrashProcedureRequest.newBuilder().
-                addServerName(ProtobufUtil.toServerName(rsServerName)).build());
-    assertEquals(1, response.getPidCount());
-    long pid = response.getPid(0);
+    long pid = scheduleHBCKSCP(rsServerName, master);
     assertNotEquals(Procedure.NO_PROC_ID, pid);
     while (master.getMasterProcedureExecutor().getActiveProcIds().contains(pid)) {
       Threads.sleep(10);
@@ -154,6 +150,16 @@ public class TestHBCKSCP extends TestSCPBase {
     assertNotEquals(rsServerName, serverName);
     // Make sure no mention of old server post SCP.
     assertFalse(searchMeta(master, rsServerName));
+  }
+
+  protected long scheduleHBCKSCP(ServerName rsServerName, HMaster master) throws ServiceException {
+    MasterProtos.ScheduleServerCrashProcedureResponse response =
+        master.getMasterRpcServices().scheduleServerCrashProcedure(null,
+            MasterProtos.ScheduleServerCrashProcedureRequest.newBuilder().
+                addServerName(ProtobufUtil.toServerName(rsServerName)).build());
+    assertEquals(1, response.getPidCount());
+    long pid = response.getPid(0);
+    return pid;
   }
 
   /**
