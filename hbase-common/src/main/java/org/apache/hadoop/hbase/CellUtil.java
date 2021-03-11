@@ -570,35 +570,6 @@ public final class CellUtil {
         buf.length);
   }
 
-  public static boolean matchingTags(final Cell left, final Cell right) {
-    return matchingTags(left, right, left.getTagsLength(), right.getTagsLength());
-  }
-
-  public static boolean matchingTags(final Cell left, final Cell right, int llength,
-                                      int rlength) {
-    if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
-      ByteBufferExtendedCell leftBBCell = (ByteBufferExtendedCell) left;
-      ByteBufferExtendedCell rightBBCell = (ByteBufferExtendedCell) right;
-      return ByteBufferUtils.equals(
-        leftBBCell.getTagsByteBuffer(), leftBBCell.getTagsPosition(), llength,
-        rightBBCell.getTagsByteBuffer(),rightBBCell.getTagsPosition(), rlength);
-    }
-    if (left instanceof ByteBufferExtendedCell) {
-      ByteBufferExtendedCell leftBBCell = (ByteBufferExtendedCell) left;
-      return ByteBufferUtils.equals(
-        leftBBCell.getTagsByteBuffer(), leftBBCell.getTagsPosition(), llength,
-        right.getTagsArray(), right.getTagsOffset(), rlength);
-    }
-    if (right instanceof ByteBufferExtendedCell) {
-      ByteBufferExtendedCell rightBBCell = (ByteBufferExtendedCell) right;
-      return ByteBufferUtils.equals(
-        rightBBCell.getTagsByteBuffer(), rightBBCell.getTagsPosition(), rlength,
-        left.getTagsArray(), left.getTagsOffset(), llength);
-    }
-    return Bytes.equals(left.getTagsArray(), left.getTagsOffset(), llength,
-      right.getTagsArray(), right.getTagsOffset(), rlength);
-  }
-
   /**
    * @return True if a delete type, a {@link KeyValue.Type#Delete} or a
    *         {KeyValue.Type#DeleteFamily} or a

@@ -792,7 +792,7 @@ public class Result implements CellScannable, CellScanner {
     for (int i = 0; i < res1.size(); i++) {
       if (!ourKVs[i].equals(replicatedKVs[i]) ||
           !CellUtil.matchingValue(ourKVs[i], replicatedKVs[i]) ||
-          !CellUtil.matchingTags(ourKVs[i], replicatedKVs[i])) {
+          !PrivateCellUtil.matchingTags(ourKVs[i], replicatedKVs[i])) {
         throw new Exception("This result was different: "
             + res1.toString() + " compared to " + res2.toString());
       }
