@@ -812,10 +812,6 @@ public final class PrivateCellUtil {
     return a.getTypeByte() == b.getTypeByte();
   }
 
-  public static boolean matchingTags(final Cell left, final Cell right) {
-    return matchingTags(left, right, left.getTagsLength(), right.getTagsLength());
-  }
-
   public static boolean matchingTags(final Cell left, final Cell right, int llength,
                                      int rlength) {
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
