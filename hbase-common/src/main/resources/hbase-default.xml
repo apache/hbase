@@ -595,7 +595,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.compaction.after.bulkload.enable</name>
-    <value>true</value>
+    <value>false</value>
     <description>Request Compaction after bulkload immediately.
       If bulkload is continuous, the triggered compactions may increase load,
       bring about performance side effect.</description>
