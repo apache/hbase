@@ -582,11 +582,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
   }
 
   private synchronized void setSourceStartupStatus(boolean initializing) {
+    startupOngoing.set(initializing);
     if (initializing) {
-      startupOngoing.set(true);
       metrics.incrSourceInitializing();
     } else {
-      startupOngoing.set(false);
       metrics.decrSourceInitializing();
     }
   }

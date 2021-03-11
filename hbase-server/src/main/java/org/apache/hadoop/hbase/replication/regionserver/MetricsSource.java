@@ -342,7 +342,7 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Get the source initializing counts
-   * @return sizeOfLogQueue
+   * @return number of replication sources getting initialized
    */
   public int getSourceInitializing() {
     return singleSourceSource.getSourceInitializing();

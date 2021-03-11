@@ -20,7 +20,6 @@ package org.apache.hadoop.metrics2.lib;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -30,7 +29,6 @@ import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
@@ -450,6 +448,41 @@ public class DynamicMetricsRegistry {
     }
 
     return (MutableGaugeLong) metric;
+  }
+
+  /**
+   * Get a MetricMutableGaugeInt from the storage.  If it is not there atomically put it.
+   *
+   * @param gaugeName              name of the gauge to create or get.
+   * @param potentialStartingValue value of the new gauge if we have to create it.
+   */
+  public MutableGaugeInt getGaugeInt(String gaugeName, int potentialStartingValue) {
+    //Try and get the guage.
+    MutableMetric metric = metricsMap.get(gaugeName);
+
+    //If it's not there then try and put a new one in the storage.
+    if (metric == null) {
+
+      //Create the potential new gauge.
+      MutableGaugeInt newGauge = new MutableGaugeInt(new MetricsInfoImpl(gaugeName, ""),
+        potentialStartingValue);
+
+      // Try and put the gauge in.  This is atomic.
+      metric = metricsMap.putIfAbsent(gaugeName, newGauge);
+
+      //If the value we get back is null then the put was successful and we will return that.
+      //otherwise gaugeLong should contain the thing that was in before the put could be completed.
+      if (metric == null) {
+        return newGauge;
+      }
+    }
+
+    if (!(metric instanceof MutableGaugeInt)) {
+      throw new MetricsException("Metric already exists in registry for metric name: " + gaugeName +
+        " and not of type MetricMutableGaugeInr");
+    }
+
+    return (MutableGaugeInt) metric;
   }
 
   /**

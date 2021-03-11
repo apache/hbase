@@ -455,7 +455,7 @@ public class TestReplicationSource {
 
     @Override
     public synchronized UUID getPeerUUID() {
-      if(count==0) {
+      if (count==0) {
         count++;
         throw new RuntimeException();
       } else {
@@ -473,7 +473,7 @@ public class TestReplicationSource {
 
     @Override
     public synchronized UUID getPeerUUID() {
-      if(failing) {
+      if (failing) {
         return null;
       } else {
         return super.getPeerUUID();

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -68,7 +69,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableFastCounter completedWAL;
   private final MutableFastCounter completedRecoveryQueue;
   private final MutableGaugeLong oldestWalAge;
-  private final MutableGaugeLong sourceInitializing;
+  private final MutableGaugeInt sourceInitializing;
 
   public MetricsReplicationSourceSourceImpl(MetricsReplicationSourceImpl rms, String id) {
     this.rms = rms;
@@ -129,8 +130,8 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     oldestWalAgeKey = this.keyPrefix + "oldestWalAge";
     oldestWalAge = rms.getMetricsRegistry().getGauge(oldestWalAgeKey, 0L);
 
-    sourceInitializingKey = this.keyPrefix + "sourceInitializing";
-    sourceInitializing = rms.getMetricsRegistry().getGauge(sourceInitializingKey, 0L);
+    sourceInitializingKey = this.keyPrefix + "numInitializing";
+    sourceInitializing = rms.getMetricsRegistry().getGaugeInt(sourceInitializingKey, 0);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -270,16 +271,16 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override
   public void incrSourceInitializing() {
-    sourceInitializing.incr(1L);
+    sourceInitializing.incr(1);
   }
 
   @Override
   public int getSourceInitializing() {
-    return (int)sourceInitializing.value();
+    return sourceInitializing.value();
   }
 
   @Override public void decrSourceInitializing() {
-    sourceInitializing.decr(1L);
+    sourceInitializing.decr(1);
   }
 
   @Override
