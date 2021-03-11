@@ -144,6 +144,7 @@ public class HbckChore extends ScheduledChore {
       LOG.warn("Unexpected", t);
     }
     running = false;
+    updateAssignmentManagerMetrics();
   }
 
   // This function does the sanity checks of making sure the chore is not run when it is
@@ -308,6 +309,15 @@ public class HbckChore extends ScheduledChore {
     }
     LOG.info("Loaded {} tables {} regions from filesyetem and found {} orphan regions",
         tableDirs.size(), numRegions, orphanRegionsOnFS.size());
+  }
+
+  private void updateAssignmentManagerMetrics() {
+    master.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateOrphanRegionsOnRs(getOrphanRegionsOnRS().size());
+    master.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateOrphanRegionsOnFs(getOrphanRegionsOnFS().size());
+    master.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateInconsistentRegions(getInconsistentRegions().size());
   }
 
   /**
