@@ -81,6 +81,8 @@ public class RoundRobinTableInputFormat extends TableInputFormat {
    * gets one split before a server gets a second, and so on; i.e. round-robin the splits amongst
    * the servers in the cluster.
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="WMI_WRONG_MAP_ITERATOR",
+    justification = "Implementation cannot use the spotbugs suggestion; not performance critical")
   List<InputSplit> roundRobin(List<InputSplit> inputs) throws IOException {
     if ((inputs == null) || inputs.isEmpty()) {
       return inputs;
