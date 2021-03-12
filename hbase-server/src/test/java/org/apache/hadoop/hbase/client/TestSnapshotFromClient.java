@@ -227,7 +227,7 @@ public class TestSnapshotFromClient {
     final String SNAPSHOT_NAME = "offlineTableSnapshot";
     byte[] snapshot = Bytes.toBytes(SNAPSHOT_NAME);
 
-    admin.snapshot(new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME,
+    admin.snapshot(new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME.getNameAsString(),
         SnapshotType.DISABLED, null, -1, SnapshotManifestV1.DESCRIPTOR_VERSION));
     LOG.debug("Snapshot completed.");
 

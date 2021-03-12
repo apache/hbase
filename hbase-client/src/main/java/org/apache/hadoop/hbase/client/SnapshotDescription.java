@@ -18,7 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import java.util.Map;
 
 /**
  * The POJO equivalent of HBaseProtos.SnapshotDescription
@@ -31,6 +34,8 @@ public class SnapshotDescription {
   private final String owner;
   private final long creationTime;
   private final int version;
+
+  private final long maxFileSize;
 
   public SnapshotDescription(String name) {
     this(name, (TableName)null);
@@ -48,7 +53,7 @@ public class SnapshotDescription {
   }
 
   public SnapshotDescription(String name, TableName table) {
-    this(name, table, SnapshotType.DISABLED, null);
+    this(name, table, SnapshotType.DISABLED, null, -1, -1, null);
   }
 
   /**
@@ -63,7 +68,7 @@ public class SnapshotDescription {
   }
 
   public SnapshotDescription(String name, TableName table, SnapshotType type) {
-    this(name, table, type, null);
+    this(name, table, type, null, -1, -1, null);
   }
 
   /**
@@ -78,7 +83,7 @@ public class SnapshotDescription {
   }
 
   public SnapshotDescription(String name, TableName table, SnapshotType type, String owner) {
-    this(name, table, type, owner, -1, -1);
+    this(name, table, type, owner, -1, -1, null);
   }
 
   /**
@@ -90,17 +95,37 @@ public class SnapshotDescription {
   @Deprecated
   public SnapshotDescription(String name, String table, SnapshotType type, String owner,
       long creationTime, int version) {
-    this(name, TableName.valueOf(table), type, owner, creationTime, version);
+    this(name, TableName.valueOf(table), type, owner, creationTime, version, null);
   }
 
   public SnapshotDescription(String name, TableName table, SnapshotType type, String owner,
-      long creationTime, int version) {
+      long creationTime, int version, Map<String, Object> snapshotProps) {
     this.name = name;
     this.table = table;
     this.snapShotType = type;
     this.owner = owner;
     this.creationTime = creationTime;
     this.version = version;
+    this.maxFileSize = getLongFromSnapshotProps(snapshotProps, TableDescriptorBuilder.MAX_FILESIZE);
+  }
+
+  private long getLongFromSnapshotProps(Map<String, Object> snapshotProps, String property) {
+    return MapUtils.getLongValue(snapshotProps, property, -1);
+  }
+
+
+
+  /**
+   * SnapshotDescription Parameterized Constructor
+   *
+   * @param snapshotName  Name of the snapshot
+   * @param tableName     TableName associated with the snapshot
+   * @param type          Type of the snapshot - enum SnapshotType
+   * @param snapshotProps Additional properties for snapshot e.g. TTL
+   */
+  public SnapshotDescription(String snapshotName, TableName tableName, SnapshotType type,
+                             Map<String, Object> snapshotProps) {
+    this(snapshotName, tableName, type, null, -1, -1, snapshotProps);
   }
 
   public String getName() {
@@ -143,11 +168,14 @@ public class SnapshotDescription {
     return this.version;
   }
 
+  public long getMaxFileSize() { return maxFileSize; }
+
   @Override
   public String toString() {
     return "SnapshotDescription: name = " + ((name != null) ? name : null) + "/table = "
         + ((table != null) ? table : null) + " /owner = " + ((owner != null) ? owner : null)
         + (creationTime != -1 ? ("/creationtime = " + creationTime) : "")
-        + (version != -1 ? ("/version = " + version) : "");
+        + (version != -1 ? ("/version = " + version) : "")
+        + (maxFileSize != -1 ? ("/maxFileSize = " + maxFileSize) : "");
   }
 }
