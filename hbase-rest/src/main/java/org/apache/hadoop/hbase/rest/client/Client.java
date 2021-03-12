@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.rest.client;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -28,6 +29,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -156,15 +158,17 @@ public class Client {
     String type = trustStoreType.orElse(KeyStore.getDefaultType());
 
     KeyStore trustStore;
-    try(FileInputStream inputStream = new FileInputStream(new File(trustStorePath))) {
+    try {
       trustStore = KeyStore.getInstance(type);
-      trustStore.load(inputStream, password);
     } catch (KeyStoreException e) {
-      throw new ClientTrustStoreInitializationException(
-        "Invalid trust store type: " + type, e);
+      throw new ClientTrustStoreInitializationException("Invalid trust store type: " + type, e);
+    }
+    try (InputStream inputStream =
+      new BufferedInputStream(Files.newInputStream(new File(trustStorePath).toPath()))) {
+      trustStore.load(inputStream, password);
     } catch (CertificateException | NoSuchAlgorithmException | IOException e) {
-      throw new ClientTrustStoreInitializationException(
-        "Trust store load error: " + trustStorePath, e);
+      throw new ClientTrustStoreInitializationException("Trust store load error: " + trustStorePath,
+        e);
     }
 
     initialize(cluster, true, Optional.of(trustStore));
