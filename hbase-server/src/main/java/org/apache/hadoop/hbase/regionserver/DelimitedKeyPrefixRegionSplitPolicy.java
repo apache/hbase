@@ -48,6 +48,12 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundR
   private byte[] delimiter = null;
 
   @Override
+  public String toString() {
+    return "DelimitedKeyPrefixRegionSplitPolicy{" + "delimiter=" + Bytes.toStringBinary(delimiter) +
+      ", " + super.toString() + '}';
+  }
+
+  @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     // read the prefix length from the table descriptor
