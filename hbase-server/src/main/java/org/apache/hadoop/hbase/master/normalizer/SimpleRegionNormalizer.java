@@ -284,7 +284,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     double avgRegionSize;
     int targetRegionCount = tableDescriptor.getNormalizerTargetRegionCount();
     long targetRegionSize = tableDescriptor.getNormalizerTargetRegionSize();
-    LOG.debug("Table {} configured with target region count {}, target region size {}", table,
+    LOG.debug("Table {} configured with target region count {}, target region size {} MB", table,
       targetRegionCount, targetRegionSize);
 
     if (targetRegionSize > 0) {
@@ -299,7 +299,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       } else {
         avgRegionSize = totalSizeMb / (double) regionCount;
       }
-      LOG.debug("Table {}, total aggregated regions size: {} and average region size {}", table,
+      avgRegionSize = Math.round(avgRegionSize * 100.0) / 100.0;
+      LOG.debug("Table {}, total aggregated regions size: {} MB and average region size {} MB", table,
         totalSizeMb, avgRegionSize);
     }
 
@@ -351,7 +352,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     if (avgRegionSizeMb < configuration.getMergeMinRegionSizeMb(ctx)) {
       return Collections.emptyList();
     }
-    LOG.debug("Computing normalization plan for table {}. average region size: {}, number of"
+    LOG.debug("Computing normalization plan for table {}. average region size: {} MB, number of"
       + " regions: {}.", ctx.getTableName(), avgRegionSizeMb, ctx.getTableRegions().size());
 
     // this nested loop walks the table's region chain once, looking for contiguous sequences of
@@ -426,7 +427,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
    */
   private List<NormalizationPlan> computeSplitNormalizationPlans(final NormalizeContext ctx) {
     final double avgRegionSize = ctx.getAverageRegionSizeMb();
-    LOG.debug("Table {}, average region size: {}", ctx.getTableName(), avgRegionSize);
+    LOG.debug("Table {}, average region size: {} MB", ctx.getTableName(), avgRegionSize);
 
     final List<NormalizationPlan> plans = new ArrayList<>();
     for (final RegionInfo hri : ctx.getTableRegions()) {
@@ -435,7 +436,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       }
       final long regionSizeMb = getRegionSizeMB(hri);
       if (regionSizeMb > 2 * avgRegionSize) {
-        LOG.info("Table {}, large region {} has size {}, more than twice avg size {}, splitting",
+        LOG.info("Table {}, large region {} has size {} MB, more than twice avg size {} MB, splitting",
           ctx.getTableName(), hri.getRegionNameAsString(), regionSizeMb, avgRegionSize);
         plans.add(new SplitNormalizationPlan(hri, regionSizeMb));
       }
