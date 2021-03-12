@@ -35,12 +35,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Utility class to support persistent storefile tracking
+ * Utility class to support persistent store file tracking
  */
 @InterfaceAudience.Private
 public final class StoreFileTrackingUtils {
 
-  private static Logger LOG = LoggerFactory.getLogger(StoreFileTrackingUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StoreFileTrackingUtils.class);
   public static final long SLEEP_DELTA_MS = TimeUnit.MILLISECONDS.toMillis(100);
 
   private StoreFileTrackingUtils() {
@@ -57,10 +57,10 @@ public final class StoreFileTrackingUtils {
     boolean isFeatureEnabled = isStoreTrackingPersistEnabled && isPersistedStoreEngineSet;
     if (isStoreTrackingPersistEnabled ^ isPersistedStoreEngineSet) {
       // check if both configuration are correct.
-      String errorMessage = String.format("please set %s to true and set store engine key %s to %s "
-          + "to enable persist storefile tracking",
-        HConstants.STOREFILE_TRACKING_PERSIST_ENABLED,
-        StoreEngine.STORE_ENGINE_CLASS_KEY, PersistedStoreEngine.class.getName());
+      String errorMessage = String.format("please set %s to true and set store engine key %s to "
+          + "%s to enable persist storefile tracking",
+        HConstants.STOREFILE_TRACKING_PERSIST_ENABLED, StoreEngine.STORE_ENGINE_CLASS_KEY,
+        PersistedStoreEngine.class.getName());
       throw new IllegalArgumentException(errorMessage);
     }
     return isFeatureEnabled;

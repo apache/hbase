@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import com.google.errorprone.annotations.RestrictedApi;
+import java.util.Collection;
 import java.util.List;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -72,7 +73,7 @@ final class StoreFilePathUpdate {
   static class Builder {
     private List<Path> storeFiles = ImmutableList.of();
 
-    Builder withStoreFiles(List<HStoreFile> storeFiles) {
+    Builder withStoreFiles(Collection<HStoreFile> storeFiles) {
       this.storeFiles = StoreFileTrackingUtils.convertStoreFilesToPaths(storeFiles);
       return this;
     }

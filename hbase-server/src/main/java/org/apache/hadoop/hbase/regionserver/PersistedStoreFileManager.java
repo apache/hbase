@@ -51,10 +51,10 @@ public class PersistedStoreFileManager extends DefaultStoreFileManager {
   private final String tableName;
   private final String regionName;
   private final String storeName;
-  private StoreFilePathAccessor accessor;
-  private Configuration conf;
+  private final StoreFilePathAccessor accessor;
+  private final Configuration conf;
   // only uses for warmupHRegion
-  private boolean readOnly;
+  private final boolean readOnly;
 
   public PersistedStoreFileManager(CellComparator cellComparator,
     Comparator<HStoreFile> storeFileComparator, Configuration conf,
@@ -79,23 +79,28 @@ public class PersistedStoreFileManager extends DefaultStoreFileManager {
   }
 
   @Override
-  protected void loadFilesHook(ImmutableList<HStoreFile> storeFiles) throws IOException {
+  public void loadFiles(List<HStoreFile> storeFiles) throws IOException {
+    // update with a sorted store files
+    super.loadFiles(storeFiles);
     Preconditions.checkArgument(storeFiles != null, "store files cannot be "
       + "null when loading");
     if (storeFiles.isEmpty()) {
       LOG.warn("Other than fresh region with no store files, store files should not be empty");
       return;
     }
-    updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(storeFiles).build());
+    updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(getStorefiles()).build());
   }
 
   @Override
-  protected void insertNewFilesHook(ImmutableList<HStoreFile> storeFiles) throws IOException {
-    // return in case of empty storeFiles as it is a No-op, empty files expected during region close
-    if (CollectionUtils.isEmpty(storeFiles)) {
+  public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
+    // concatenate the new store files
+    super.insertNewFiles(sfs);
+    // return in case of empty store files as it is a No-op, here empty files are expected
+    // during region close
+    if (CollectionUtils.isEmpty(getStorefiles())) {
       return;
     }
-    updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(storeFiles).build());
+    updatePathListToTracker(StoreFilePathUpdate.builder().withStoreFiles(getStorefiles()).build());
   }
 
   @Override
@@ -107,8 +112,7 @@ public class PersistedStoreFileManager extends DefaultStoreFileManager {
 
   @Override
   public Collection<StoreFileInfo> loadInitialFiles() throws IOException {
-    // this logic is totally different from the default implementation in AbstractStoreFileManager
-    // and we need to override the entire function
+    // this logic is totally different from the default implementation in DefaultStoreFileManager
 
     List<Path> pathList = accessor.getIncludedStoreFilePaths(tableName, regionName, storeName);
     boolean isEmptyInPersistedFilePaths = CollectionUtils.isEmpty(pathList);
