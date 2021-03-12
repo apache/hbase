@@ -468,9 +468,14 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       LOG.debug("Couldn't delete '{}' yet because it isn't empty w/exception.", dir, exception);
       deleted = false;
     } catch (IOException ioe) {
-      LOG.info("Could not delete {} under {}. might be transient; we'll retry. if it keeps "
-          + "happening, use following exception when asking on mailing list.",
-        type, dir, ioe);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Could not delete {} under {}; will retry. If it keeps happening, " +
+            "quote the exception when asking on mailing list.", type, dir, ioe);
+      } else {
+        LOG.info("Could not delete {} under {} because {}; will retry. If it  keeps happening, enable" +
+            "TRACE-level logging and quote the exception when asking on mailing list.",
+            type, dir, ioe.getMessage());
+      }
       deleted = false;
     } catch (Exception e) {
       LOG.info("unexpected exception: ", e);
