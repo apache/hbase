@@ -352,8 +352,8 @@ public class TableSplit extends InputSplit
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("HBase table split(");
-    sb.append("table name: ").append(tableName);
+    sb.append("Split(");
+    sb.append("tablename=").append(tableName);
     // null scan input is represented by ""
     String printScan = "";
     if (!scan.equals("")) {
@@ -364,12 +364,12 @@ public class TableSplit extends InputSplit
       catch (IOException e) {
         printScan = "";
       }
+      sb.append(", scan=").append(printScan);
     }
-    sb.append(", scan: ").append(printScan);
-    sb.append(", start row: ").append(Bytes.toStringBinary(startRow));
-    sb.append(", end row: ").append(Bytes.toStringBinary(endRow));
-    sb.append(", region location: ").append(regionLocation);
-    sb.append(", encoded region name: ").append(encodedRegionName);
+    sb.append(", startrow=").append(Bytes.toStringBinary(startRow));
+    sb.append(", endrow=").append(Bytes.toStringBinary(endRow));
+    sb.append(", regionLocation=").append(regionLocation);
+    sb.append(", regionname=").append(encodedRegionName);
     sb.append(")");
     return sb.toString();
   }
