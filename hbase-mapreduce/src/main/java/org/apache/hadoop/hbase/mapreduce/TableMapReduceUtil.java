@@ -71,6 +71,7 @@ import com.codahale.metrics.MetricRegistry;
 @InterfaceAudience.Public
 public class TableMapReduceUtil {
   private static final Logger LOG = LoggerFactory.getLogger(TableMapReduceUtil.class);
+  public static final String TABLE_INPUT_CLASS_KEY = "hbase.table.input.class";
 
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
@@ -264,8 +265,17 @@ public class TableMapReduceUtil {
       Class<?> outputValueClass, Job job,
       boolean addDependencyJars)
   throws IOException {
-      initTableMapperJob(Bytes.toString(table), scan, mapper, outputKeyClass,
-              outputValueClass, job, addDependencyJars, TableInputFormat.class);
+      initTableMapperJob(Bytes.toString(table), scan, mapper, outputKeyClass, outputValueClass, job,
+        addDependencyJars, getConfiguredInputFormat(job));
+  }
+
+  /**
+   * @return {@link TableInputFormat} .class unless Configuration has something else at
+   *   {@link #TABLE_INPUT_CLASS_KEY}.
+   */
+  private static Class<? extends InputFormat> getConfiguredInputFormat(Job job) {
+    return (Class<? extends InputFormat>)job.getConfiguration().
+      getClass(TABLE_INPUT_CLASS_KEY, TableInputFormat.class);
   }
 
   /**
@@ -290,7 +300,7 @@ public class TableMapReduceUtil {
       boolean addDependencyJars)
   throws IOException {
       initTableMapperJob(table, scan, mapper, outputKeyClass,
-              outputValueClass, job, addDependencyJars, TableInputFormat.class);
+              outputValueClass, job, addDependencyJars, getConfiguredInputFormat(job));
   }
 
   /**
