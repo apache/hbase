@@ -127,20 +127,22 @@ class MemStoreFlusher implements FlushRequester {
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
     int handlerCount = conf.getInt("hbase.hstore.flusher.count", 2);
-    if (handlerCount < 1) {
-      LOG.warn("hbase.hstore.flusher.count was configed to {} which is less than 1, corrected to 1",
-          handlerCount);
-      handlerCount = 1;
+    if(server != null){
+      if (handlerCount < 1) {
+        LOG.warn("hbase.hstore.flusher.count was configed to {} which is less than 1, corrected to 1",
+            handlerCount);
+        handlerCount = 1;
+      }
+      LOG.info("globalMemStoreLimit="
+          + TraditionalBinaryPrefix
+              .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimit(), "", 1)
+          + ", globalMemStoreLimitLowMark="
+          + TraditionalBinaryPrefix.long2String(
+            this.server.getRegionServerAccounting().getGlobalMemStoreLimitLowMark(), "", 1)
+          + ", Offheap="
+          + (this.server.getRegionServerAccounting().isOffheap()));
     }
     this.flushHandlers = new FlushHandler[handlerCount];
-    LOG.info("globalMemStoreLimit="
-        + TraditionalBinaryPrefix
-            .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimit(), "", 1)
-        + ", globalMemStoreLimitLowMark="
-        + TraditionalBinaryPrefix.long2String(
-          this.server.getRegionServerAccounting().getGlobalMemStoreLimitLowMark(), "", 1)
-        + ", Offheap="
-        + (this.server.getRegionServerAccounting().isOffheap()));
   }
 
   public LongAdder getUpdatesBlockedMsHighWater() {
