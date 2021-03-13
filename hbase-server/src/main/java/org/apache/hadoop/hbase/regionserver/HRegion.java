@@ -8416,6 +8416,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     flushesQueued.increment();
   }
 
+  public void decrementFlushesQueuedCount() {
+    flushesQueued.decrement();
+  }
+
   /**
    * If a handler thread is eligible for interrupt, make it ineligible. Should be paired
    * with {{@link #enableInterrupts()}.

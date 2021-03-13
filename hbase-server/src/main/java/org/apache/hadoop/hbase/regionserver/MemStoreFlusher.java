@@ -467,18 +467,28 @@ class MemStoreFlusher implements FlushRequester {
   public boolean requestFlush(HRegion r, List<byte[]> families,
       FlushLifeCycleTracker tracker) {
     synchronized (regionsInQueue) {
-      if (!regionsInQueue.containsKey(r)) {
-        // This entry has no delay so it will be added at the top of the flush
-        // queue. It'll come out near immediately.
-        FlushRegionEntry fqe = new FlushRegionEntry(r, families, tracker);
-        this.regionsInQueue.put(r, fqe);
-        this.flushQueue.add(fqe);
-        r.incrementFlushesQueuedCount();
-        return true;
-      } else {
-        tracker.notExecuted("Flush already requested on " + r);
-        return false;
+      if (regionsInQueue.containsKey(r)) {
+        FlushRegionEntry existFqe = regionsInQueue.get(r);
+        // if a delayed one exists, just remove it
+        if (existFqe.whenToExpire > existFqe.createTime) {
+          LOG.info("Remove the existing delayed flush entry for {}, "
+            + "because we need to flush it immediately", r);
+          this.regionsInQueue.remove(r);
+          this.flushQueue.remove(existFqe);
+          r.decrementFlushesQueuedCount();
+        } else {
+          tracker.notExecuted("Flush already requested on " + r);
+          return false;
+        }
       }
+
+      // This entry has no delay so it will be added at the top of the flush
+      // queue. It'll come out near immediately.
+      FlushRegionEntry fqe = new FlushRegionEntry(r, families, tracker);
+      this.regionsInQueue.put(r, fqe);
+      this.flushQueue.add(fqe);
+      r.incrementFlushesQueuedCount();
+      return true;
     }
   }
 
