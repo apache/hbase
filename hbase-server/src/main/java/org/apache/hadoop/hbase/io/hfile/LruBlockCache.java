@@ -577,7 +577,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * Multi-threaded call to run the eviction process.
    */
   private void runEviction() {
-    if (evictionThread == null) {
+    if (evictionThread == null || !evictionThread.isGo()) {
       evict();
     } else {
       evictionThread.evict();
@@ -888,7 +888,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
           }
         }
         LruBlockCache cache = this.cache.get();
-        if (cache == null) break;
+        if (cache == null) {
+          this.go = false;
+          break;
+        }
         cache.evict();
       }
     }
@@ -904,6 +907,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     synchronized void shutdown() {
       this.go = false;
       this.notifyAll();
+    }
+
+    public boolean isGo() {
+      return go;
     }
 
     /**
