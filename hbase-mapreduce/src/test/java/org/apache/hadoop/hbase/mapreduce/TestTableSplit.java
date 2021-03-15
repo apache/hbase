@@ -102,32 +102,32 @@ public class TestTableSplit {
         new TableSplit(TableName.valueOf(name.getMethodName()), "row-start".getBytes(), "row-end".getBytes(),
             "location");
     String str =
-        "HBase table split(table name: " + name.getMethodName() + ", scan: , start row: row-start, "
-            + "end row: row-end, region location: location, "
-            + "encoded region name: )";
+        "Split(tablename=" + name.getMethodName() + ", startrow=row-start, "
+            + "endrow=row-end, regionLocation=location, "
+            + "regionname=)";
     Assert.assertEquals(str, split.toString());
 
     split =
         new TableSplit(TableName.valueOf(name.getMethodName()), null, "row-start".getBytes(),
             "row-end".getBytes(), "location", "encoded-region-name", 1000L);
     str =
-        "HBase table split(table name: " + name.getMethodName() + ", scan: , start row: row-start, "
-            + "end row: row-end, region location: location, "
-            + "encoded region name: encoded-region-name)";
+        "Split(tablename=" + name.getMethodName() + ", startrow=row-start, "
+            + "endrow=row-end, regionLocation=location, "
+            + "regionname=encoded-region-name)";
     Assert.assertEquals(str, split.toString());
 
     split = new TableSplit(null, null, null, null);
     str =
-        "HBase table split(table name: null, scan: , start row: null, "
-            + "end row: null, region location: null, "
-            + "encoded region name: )";
+        "Split(tablename=null, startrow=null, "
+            + "endrow=null, regionLocation=null, "
+            + "regionname=)";
     Assert.assertEquals(str, split.toString());
 
     split = new TableSplit(null, null, null, null, null, null, 1000L);
     str =
-        "HBase table split(table name: null, scan: , start row: null, "
-            + "end row: null, region location: null, "
-            + "encoded region name: null)";
+        "Split(tablename=null, startrow=null, "
+            + "endrow=null, regionLocation=null, "
+            + "regionname=null)";
     Assert.assertEquals(str, split.toString());
   }
 }
