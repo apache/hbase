@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -61,25 +60,25 @@ class MasterMetaBootstrap {
       throw new IllegalStateException("hbase:meta must be initialized first before we can " +
           "assign out its replicas");
     }
-    ServerName metaServername = MetaTableLocator.getMetaRegionLocation(this.master.getZooKeeper());
+
     for (int i = 1; i < numReplicas; i++) {
       // Get current meta state for replica from zk.
-      RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper(), i);
       RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
-          RegionInfoBuilder.FIRST_META_REGIONINFO, i);
-      LOG.debug(hri.getRegionNameAsString() + " replica region state from zookeeper=" + metaState);
-      if (metaServername.equals(metaState.getServerName())) {
-        metaState = null;
-        LOG.info(hri.getRegionNameAsString() +
-          " old location is same as current hbase:meta location; setting location as null...");
-      }
+        RegionInfoBuilder.FIRST_META_REGIONINFO, i);
+
+      RegionState rs = assignmentManager.getRegionStates().getRegionState(hri);
+      LOG.debug(hri.getRegionNameAsString() + " replica region state from zookeeper=" + rs);
+
       // These assigns run inline. All is blocked till they complete. Only interrupt is shutting
       // down hosting server which calls AM#stop.
-      if (metaState != null && metaState.getServerName() != null) {
-        // Try to retain old assignment.
-        assignmentManager.assignAsync(hri, metaState.getServerName());
-      } else {
+      if (rs == null) {
         assignmentManager.assignAsync(hri);
+      } else if (rs != null && rs.isOffline()) {
+        if (rs.getServerName() != null) {
+          assignmentManager.assignAsync(hri, rs.getServerName());
+        } else {
+          assignmentManager.assignAsync(hri);
+        }
       }
     }
     unassignExcessMetaReplica(numReplicas);
