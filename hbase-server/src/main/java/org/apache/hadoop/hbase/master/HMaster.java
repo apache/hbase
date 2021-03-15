@@ -1767,7 +1767,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         LOG.info("balance " + plan);
         //TODO: bulk assign
         try {
-          this.assignmentManager.moveAsync(plan);
+          this.assignmentManager.balance(plan);
         } catch (HBaseIOException hioe) {
           //should ignore failed plans here, avoiding the whole balance plans be aborted
           //later calls of balance() can fetch up the failed and skipped plans
