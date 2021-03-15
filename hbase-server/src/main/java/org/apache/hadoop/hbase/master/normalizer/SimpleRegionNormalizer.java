@@ -352,7 +352,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       return Collections.emptyList();
     }
     LOG.debug("Computing normalization plan for table {}. average region size: {} MB, number of"
-      + " regions: {}.", ctx.getTableName(), String.format("%.3f", avgRegionSizeMb),
+      + " regions: {}.", ctx.getTableName(), avgRegionSizeMb,
       ctx.getTableRegions().size());
 
     // this nested loop walks the table's region chain once, looking for contiguous sequences of
@@ -438,7 +438,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       final long regionSizeMb = getRegionSizeMB(hri);
       if (regionSizeMb > 2 * avgRegionSize) {
         LOG.info("Table {}, large region {} has size {} MB, more than twice avg size {} MB, splitting",
-          ctx.getTableName(), hri.getRegionNameAsString(), String.format("%.3f", regionSizeMb),
+          ctx.getTableName(), hri.getRegionNameAsString(), regionSizeMb,
           String.format("%.3f", avgRegionSize));
         plans.add(new SplitNormalizationPlan(hri, regionSizeMb));
       }
