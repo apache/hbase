@@ -214,6 +214,11 @@ fi
 
 git clean -d -f -x
 cd ..
+if [[ "$PROJECT" =~ ^hbase- ]]; then
+  DEST_DIR_NAME="${PROJECT}-${package_version_name}"
+else
+  DEST_DIR_NAME="$package_version_name"
+fi
 
 if [[ "$1" == "publish-dist" ]]; then
   # Source and binary tarballs
@@ -225,11 +230,6 @@ if [[ "$1" == "publish-dist" ]]; then
     make_binary_release "${PROJECT}" "${RELEASE_VERSION}"
   fi
 
-  if [[ "$PROJECT" =~ ^hbase- ]]; then
-    DEST_DIR_NAME="${PROJECT}-${package_version_name}"
-  else
-    DEST_DIR_NAME="$package_version_name"
-  fi
   svn_target="svn-${PROJECT}"
   svn co --depth=empty "$RELEASE_STAGING_LOCATION" "$svn_target"
   rm -rf "${svn_target:?}/${DEST_DIR_NAME}"
