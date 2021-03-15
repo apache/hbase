@@ -725,6 +725,17 @@ public class AssignmentManager {
     return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
   }
 
+  public Future<byte[]> balance(RegionPlan regionPlan) throws HBaseIOException {
+    ServerName current =
+      this.getRegionStates().getRegionAssignments().get(regionPlan.getRegionInfo());
+    if (!current.equals(regionPlan.getSource())) {
+      LOG.debug("Skip region plan {}, source server not match, current region location is {}",
+        regionPlan, current);
+      return null;
+    }
+    return moveAsync(regionPlan);
+  }
+
   // ============================================================================================
   //  RegionTransition procedures helpers
   // ============================================================================================
