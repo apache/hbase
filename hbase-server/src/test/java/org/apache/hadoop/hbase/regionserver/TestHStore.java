@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
@@ -1661,6 +1662,22 @@ public class TestHStore {
     thread.join();
     KeyValueHeap heap2 = thread.getHeap();
     assertFalse(heap.equals(heap2));
+  }
+
+  @Test
+  public void testMaxPreadBytesConfiguredToBeLessThanZero() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set("hbase.hstore.engine.class", DummyStoreEngine.class.getName());
+    // Set 'hbase.storescanner.pread.max.bytes' < 0, so that StoreScanner will be a STREAM type.
+    conf.setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, -1);
+    MyStore store = initMyStore(name.getMethodName(), conf, new MyStoreHook() {});
+    Scan scan = new Scan();
+    scan.addFamily(family);
+    // ReadType on Scan is still DEFAULT only.
+    assertEquals(ReadType.DEFAULT, scan.getReadType());
+    StoreScanner storeScanner = (StoreScanner) store.getScanner(scan,
+        scan.getFamilyMap().get(family), Long.MAX_VALUE);
+    assertFalse(storeScanner.isScanUsePread());
   }
 
   @Test
