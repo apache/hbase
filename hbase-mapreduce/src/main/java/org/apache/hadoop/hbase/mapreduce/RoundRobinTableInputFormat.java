@@ -19,11 +19,12 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -88,11 +89,11 @@ public class RoundRobinTableInputFormat extends TableInputFormat {
     List<InputSplit> result = new ArrayList<>(inputs.size());
     // Prepare a hashmap with each region server as key and list of Input Splits as value
     Map<String, List<InputSplit>> regionServerSplits = new HashMap<>();
-    for (InputSplit is: inputs) {
+    for (InputSplit is : inputs) {
       if (is instanceof TableSplit) {
-        String regionServer = ((TableSplit)is).getRegionLocation();
-        if (regionServer != null && !regionServer.isEmpty()) {
-          regionServerSplits.computeIfAbsent(regionServer, k -> new LinkedList<>()).add(is);
+        String regionServer = ((TableSplit) is).getRegionLocation();
+        if (regionServer != null && !StringUtils.isBlank(regionServer)) {
+          regionServerSplits.computeIfAbsent(regionServer, k -> new ArrayList<>()).add(is);
           continue;
         }
       }
@@ -101,15 +102,14 @@ public class RoundRobinTableInputFormat extends TableInputFormat {
     }
     // Write out splits in a manner that spreads splits for a RegionServer to avoid 'clumping'.
     while (!regionServerSplits.isEmpty()) {
-      Iterator<String> iterator = regionServerSplits.keySet().iterator();
-      while (iterator.hasNext()) {
-        String regionServer = iterator.next();
-        List<InputSplit> inputSplitListForRegion = regionServerSplits.get(regionServer);
+      Iterator<List<InputSplit>> iter = regionServerSplits.values().iterator();
+      while (iter.hasNext()) {
+        List<InputSplit> inputSplitListForRegion = iter.next();
         if (!inputSplitListForRegion.isEmpty()) {
           result.add(inputSplitListForRegion.remove(0));
         }
         if (inputSplitListForRegion.isEmpty()) {
-          iterator.remove();
+          iter.remove();
         }
       }
     }
