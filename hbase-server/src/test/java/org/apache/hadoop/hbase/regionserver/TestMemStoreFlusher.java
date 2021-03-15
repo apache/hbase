@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +29,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -61,10 +64,35 @@ public class TestMemStoreFlusher {
     HRegion r = mock(HRegion.class);
     doReturn(hri).when(r).getRegionInfo();
 
+    // put a delayed task with 30s delay
+    msf.requestDelayedFlush(r, 30000);
+    assertEquals(1, msf.getFlushQueueSize());
+    assertTrue(msf.regionsInQueue.get(r).isDelay());
+
+    // put a non-delayed task, then the delayed one should be replaced
+    assertTrue(msf.requestFlush(r, FlushLifeCycleTracker.DUMMY));
+    assertEquals(1, msf.getFlushQueueSize());
+    assertFalse(msf.regionsInQueue.get(r).isDelay());
+  }
+
+  @Test
+  public void testNotReplaceDelayedFlushEntryWhichExpired() {
+    RegionInfo hri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).setRegionId(1)
+        .setReplicaId(0).build();
+    HRegion r = mock(HRegion.class);
+    doReturn(hri).when(r).getRegionInfo();
+
+    // put a delayed task with 100ms delay
     msf.requestDelayedFlush(r, 100);
     assertEquals(1, msf.getFlushQueueSize());
-    boolean success = msf.requestFlush(r, FlushLifeCycleTracker.DUMMY);
-    assertEquals(true, success);
+    assertTrue(msf.regionsInQueue.get(r).isDelay());
+
+    Threads.sleep(200);
+
+    // put a non-delayed task, and the delayed one is expired, so it should not be replaced
+    assertFalse(msf.requestFlush(r, FlushLifeCycleTracker.DUMMY));
     assertEquals(1, msf.getFlushQueueSize());
+    assertTrue(msf.regionsInQueue.get(r).isDelay());
   }
 }

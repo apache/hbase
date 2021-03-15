@@ -73,7 +73,7 @@ class MemStoreFlusher implements FlushRequester {
   // These two data members go together.  Any entry in the one must have
   // a corresponding entry in the other.
   private final BlockingQueue<FlushQueueEntry> flushQueue = new DelayQueue<>();
-  private final Map<Region, FlushRegionEntry> regionsInQueue = new HashMap<>();
+  protected final Map<Region, FlushRegionEntry> regionsInQueue = new HashMap<>();
   private AtomicBoolean wakeupPending = new AtomicBoolean();
 
   private final long threadWakeFrequency;
@@ -127,7 +127,7 @@ class MemStoreFlusher implements FlushRequester {
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
     int handlerCount = conf.getInt("hbase.hstore.flusher.count", 2);
-    if(server != null){
+    if (server != null) {
       if (handlerCount < 1) {
         LOG.warn("hbase.hstore.flusher.count was configed to {} which is less than 1, "
             + "corrected to 1", handlerCount);
@@ -469,10 +469,10 @@ class MemStoreFlusher implements FlushRequester {
   public boolean requestFlush(HRegion r, List<byte[]> families,
       FlushLifeCycleTracker tracker) {
     synchronized (regionsInQueue) {
-      if (regionsInQueue.containsKey(r)) {
-        FlushRegionEntry existFqe = regionsInQueue.get(r);
-        // if a delayed one exists, just remove it
-        if (existFqe.whenToExpire > existFqe.createTime) {
+      FlushRegionEntry existFqe = regionsInQueue.get(r);
+      if (existFqe != null) {
+        // if a delayed one exists and not reach the time to execute, just remove it
+        if (existFqe.isDelay() && existFqe.whenToExpire > EnvironmentEdgeManager.currentTime()) {
           LOG.info("Remove the existing delayed flush entry for {}, "
             + "because we need to flush it immediately", r);
           this.regionsInQueue.remove(r);
@@ -883,6 +883,13 @@ class MemStoreFlusher implements FlushRequester {
      */
     public boolean isMaximumWait(final long maximumWait) {
       return (EnvironmentEdgeManager.currentTime() - this.createTime) > maximumWait;
+    }
+
+    /**
+     * @return True if the entry is a delay flush task
+     */
+    public boolean isDelay() {
+      return this.whenToExpire > this.createTime;
     }
 
     /**
