@@ -270,6 +270,7 @@ public class ThriftServer extends Configured implements Tool{
       LOG.info(String.format("Using deprecated %s config for SPNEGO principal. Use %s instead.",
           THRIFT_KERBEROS_PRINCIPAL_KEY, THRIFT_SPNEGO_PRINCIPAL_KEY));
       principal = conf.get(THRIFT_KERBEROS_PRINCIPAL_KEY);
+      
     }
     // Handle _HOST in principal value
     return org.apache.hadoop.security.SecurityUtil.getServerPrincipal(principal, host);
