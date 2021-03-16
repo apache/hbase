@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.junit.Assert.assertEquals;
-
 import java.util.Date;
 import java.util.TimeZone;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -63,7 +62,7 @@ public class TestCurrentHourProvider {
           CurrentHourProvider.getCurrentHour() - 2 :
           CurrentHourProvider.getCurrentHour() - 1;
       }
-      assertEquals(11, hour11);
+      assertEquals("Timezone=" + timezone, 11, hour11);
 
       // set a time represent hour 15
       long deltaFor15 = TimeZone.getDefault().getRawOffset() - 28800000;
@@ -76,7 +75,7 @@ public class TestCurrentHourProvider {
           CurrentHourProvider.getCurrentHour() - 2 :
           CurrentHourProvider.getCurrentHour() - 1;
       }
-      assertEquals(15, hour15);
+      assertEquals("Timezone=" + timezone, 15, hour15);
     }
   }
 }
