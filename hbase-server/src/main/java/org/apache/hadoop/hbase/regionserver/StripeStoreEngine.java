@@ -61,7 +61,8 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
       Configuration conf, HStore store, CellComparator comparator) throws IOException {
     this.config = new StripeStoreConfig(conf, store);
     this.compactionPolicy = new StripeCompactionPolicy(conf, store, config);
-    this.storeFileManager = new StripeStoreFileManager(comparator, conf, this.config);
+    this.storeFileManager = new StripeStoreFileManager(comparator, conf, this.config,
+        store.getRegionFileSystem(), store.getColumnFamilyName());
     this.storeFlusher = new StripeStoreFlusher(
       conf, store, this.compactionPolicy, this.storeFileManager);
     this.compactor = new StripeCompactor(conf, store);
