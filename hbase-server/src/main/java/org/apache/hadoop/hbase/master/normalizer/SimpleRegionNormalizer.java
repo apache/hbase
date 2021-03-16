@@ -299,8 +299,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       } else {
         avgRegionSize = totalSizeMb / (double) regionCount;
       }
-      LOG.debug("Table {}, total aggregated regions size: {} MB and average region size {} MB", table,
-        totalSizeMb, String.format("%.3f", avgRegionSize));
+      LOG.debug("Table {}, total aggregated regions size: {} MB and average region size {} MB",
+        table, totalSizeMb, String.format("%.3f", avgRegionSize));
     }
 
     return avgRegionSize;
@@ -437,8 +437,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       }
       final long regionSizeMb = getRegionSizeMB(hri);
       if (regionSizeMb > 2 * avgRegionSize) {
-        LOG.info("Table {}, large region {} has size {} MB, more than twice avg size {} MB, splitting",
-          ctx.getTableName(), hri.getRegionNameAsString(), regionSizeMb,
+        LOG.info("Table {}, large region {} has size {} MB, more than twice avg size {} MB, "
+            + "splitting", ctx.getTableName(), hri.getRegionNameAsString(), regionSizeMb,
           String.format("%.3f", avgRegionSize));
         plans.add(new SplitNormalizationPlan(hri, regionSizeMb));
       }
