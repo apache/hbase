@@ -18,7 +18,8 @@
 # * limitations under the License.
 # */
 
-# Move regions off a server then stop it. Optionally restart and reload.
+# Move regions off a server then stop it.  Optionally restart and reload.
+# Turn off the balancer before running this script.
 function usage {
   echo "Usage: graceful_stop.sh [--config <conf-dir>] [-e] [--restart [--reload]] [--thrift] \
 [--rest] [-n |--noack] [--maxthreads <number of threads>] [--movetimeout <timeout in seconds>] \
@@ -32,7 +33,7 @@ moving regions"
   echo " maxthreads xx  Limit the number of threads used by the region mover. Default value is 1."
   echo " movetimeout xx Timeout for moving regions. If regions are not moved by the timeout value,\
 exit with error. Default value is INT_MAX."
-  echo " hostname       Hostname to stop; match what HBase uses; pass 'localhost' if local to avoid ssh"
+  echo " hostname       Hostname of server we are to stop"
   echo " e|failfast     Set -e so exit immediately if any command exits with non-zero status"
   echo " nob|nobalancer Do not manage balancer states. This is only used as optimization in \
 rolling_restart.sh to avoid multiple calls to hbase shell"
@@ -101,6 +102,13 @@ fi
 hostname=$1
 filename="/tmp/$hostname"
 
+local=
+localhostname=`/bin/hostname`
+
+if [ "$localhostname" == "$hostname" ]; then
+  local=true
+fi
+
 if [ "$nob" == "true"  ]; then
   log "[ $0 ] skipping disabling balancer -nob argument is used"
   HBASE_BALANCER_STATE=false
@@ -111,7 +119,7 @@ else
 fi
 
 unload_args="--filename $filename --maxthreads $maxthreads $noack --operation unload \
-  --timeout $movetimeout --regionserverhost $hostname"
+--timeout $movetimeout --regionserverhost $hostname"
 
 if [ "$designatedfile" != "" ]; then
   unload_args="$unload_args --designatedfile $designatedfile"
@@ -131,25 +139,49 @@ hosts="/tmp/$(basename $0).$$.tmp"
 echo $hostname >> $hosts
 if [ "$thrift" != "" ]; then
   log "Stopping thrift server on $hostname"
-  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop thrift
+  if [ "$local" == true ]; then
+    "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop thrift
+  else
+    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop thrift
+  fi
 fi
 if [ "$rest" != "" ]; then
   log "Stopping rest server on $hostname"
-  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop rest
+  if [ "$local" == true ]; then
+    "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop rest
+  else
+    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop rest
+  fi
 fi
 log "Stopping regionserver on $hostname"
-"$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop regionserver
+if [ "$local" == true ]; then
+  "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop regionserver
+else
+  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop regionserver
+fi
 if [ "$restart" != "" ]; then
   log "Restarting regionserver on $hostname"
-  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start regionserver
+  if [ "$local" == true ]; then
+    "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start regionserver
+  else
+    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start regionserver
+  fi
   if [ "$thrift" != "" ]; then
     log "Restarting thrift server on $hostname"
     # -b 0.0.0.0 says listen on all interfaces rather than just default.
-    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start thrift -b 0.0.0.0
+    if [ "$local" == true ]; then
+      "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start thrift -b 0.0.0.0
+    else
+      "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start thrift -b 0.0.0.0
+    fi
   fi
   if [ "$rest" != "" ]; then
     log "Restarting rest server on $hostname"
-    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start rest
+    if [ "$local" == true ]; then
+      "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start rest
+    else
+      "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start rest
+    fi
   fi
   if [ "$reload" != "" ]; then
     log "Reloading $hostname region(s)"
@@ -169,4 +201,4 @@ else
 fi
 
 # Cleanup tmp files.
-trap "rm -f  /tmp/$(basename $0).*.tmp &> /dev/null" EXIT
+trap "rm -f  "/tmp/$(basename $0).*.tmp" &> /dev/null" EXIT
