@@ -111,7 +111,7 @@ else
 fi
 
 unload_hostname="$hostname"
-if [[ "$hostname" -eq "localhost" ]]; then
+if [[ "$hostname" == "localhost" ]]; then
   # Need fqdn to remove the host Region server from target Region Servers list
   unload_hostname=`/bin/hostname -f`
 fi
