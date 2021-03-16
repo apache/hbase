@@ -163,12 +163,12 @@ public class HFileOutputFormat2
   static final String MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY =
           "hbase.mapreduce.use.multi.table.hfileoutputformat";
 
-  public static final String LOCALITY_SENSITIVE_ZOOKEEPER_QUORUM_CONF_KEY =
-    "hbase.hfileoutputformat.locality.sensitive.zookeeper.quorum";
-  public static final String LOCALITY_SENSITIVE_ZOOKEEPER_CLIENT_PORT_CONF_KEY =
-    "hbase.hfileoutputformat.locality.sensitive.zookeeper." + HConstants.CLIENT_PORT_STR;
-  public static final String LOCALITY_SENSITIVE_ZOOKEEPER_ZNODE_PARENT_CONF_KEY =
-    "hbase.hfileoutputformat.locality.sensitive." + HConstants.ZOOKEEPER_ZNODE_PARENT;
+  public static final String REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY =
+    "hbase.hfileoutputformat.remote.cluster.zookeeper.quorum";
+  public static final String REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY =
+    "hbase.hfileoutputformat.remote.cluster.zookeeper." + HConstants.CLIENT_PORT_STR;
+  public static final String REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY =
+    "hbase.hfileoutputformat.remote.cluster." + HConstants.ZOOKEEPER_ZNODE_PARENT;
 
   public static final String STORAGE_POLICY_PROPERTY = HStore.BLOCK_STORAGE_POLICY_KEY;
   public static final String STORAGE_POLICY_PROPERTY_CF_PREFIX = STORAGE_POLICY_PROPERTY + ".";
@@ -282,7 +282,7 @@ public class HFileOutputFormat2
             String tableName = Bytes.toString(tableNameBytes);
             if (tableName != null) {
               try (Connection connection = ConnectionFactory.createConnection(
-                createLocalitySensitiveClusterConf(conf));
+                createRemoteClusterConf(conf));
                   RegionLocator locator =
                       connection.getRegionLocator(TableName.valueOf(tableName))) {
                 loc = locator.getRegionLocation(rowKey);
@@ -348,12 +348,12 @@ public class HFileOutputFormat2
         wl.written = 0;
       }
 
-      private Configuration createLocalitySensitiveClusterConf(Configuration conf) {
+      private Configuration createRemoteClusterConf(Configuration conf) {
         final Configuration newConf = new Configuration(conf);
 
-        final String quorum = conf.get(LOCALITY_SENSITIVE_ZOOKEEPER_QUORUM_CONF_KEY);
-        final String clientPort = conf.get(LOCALITY_SENSITIVE_ZOOKEEPER_CLIENT_PORT_CONF_KEY);
-        final String parent = conf.get(LOCALITY_SENSITIVE_ZOOKEEPER_ZNODE_PARENT_CONF_KEY);
+        final String quorum = conf.get(REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY);
+        final String clientPort = conf.get(REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY);
+        final String parent = conf.get(REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY);
 
         if (quorum != null && clientPort != null && parent != null) {
           newConf.set(HConstants.ZOOKEEPER_QUORUM, quorum);
@@ -550,7 +550,7 @@ public class HFileOutputFormat2
   public static void configureIncrementalLoad(Job job, Table table, RegionLocator regionLocator)
       throws IOException {
     configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
-    configureLocalitySensitiveCluster(job, table.getConfiguration());
+    configureRemoteCluster(job, table.getConfiguration());
   }
 
   /**
@@ -684,7 +684,8 @@ public class HFileOutputFormat2
   }
 
   /**
-   * Configure HBase cluster key to load region location for locality-sensitive it's enabled.
+   * Configure HBase cluster key for remote cluster to load region location for locality-sensitive
+   * if it's enabled.
    * It's not necessary to call this method explicitly when the cluster key for HBase cluster to be
    * used to load region location is configured in the job configuration.
    * Call this method when another HBase cluster key is configured in the job configuration.
@@ -701,14 +702,14 @@ public class HFileOutputFormat2
    *
    * @see #configureIncrementalLoad(Job, Table, RegionLocator)
    * @see #LOCALITY_SENSITIVE_CONF_KEY
-   * @see #LOCALITY_SENSITIVE_ZOOKEEPER_QUORUM_CONF_KEY
-   * @see #LOCALITY_SENSITIVE_ZOOKEEPER_CLIENT_PORT_CONF_KEY
-   * @see #LOCALITY_SENSITIVE_ZOOKEEPER_ZNODE_PARENT_CONF_KEY
+   * @see #REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY
+   * @see #REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY
+   * @see #REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY
    */
-  public static void configureLocalitySensitiveCluster(Job job, Configuration clusterConf) {
-    Configuration jobConf = job.getConfiguration();
+  public static void configureRemoteCluster(Job job, Configuration clusterConf) {
+    Configuration conf = job.getConfiguration();
 
-    if (!jobConf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
+    if (!conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
       return;
     }
 
@@ -718,11 +719,11 @@ public class HFileOutputFormat2
     final String parent = clusterConf.get(
       HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
 
-    jobConf.set(LOCALITY_SENSITIVE_ZOOKEEPER_QUORUM_CONF_KEY, quorum);
-    jobConf.setInt(LOCALITY_SENSITIVE_ZOOKEEPER_CLIENT_PORT_CONF_KEY, clientPort);
-    jobConf.set(LOCALITY_SENSITIVE_ZOOKEEPER_ZNODE_PARENT_CONF_KEY, parent);
+    conf.set(REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY, quorum);
+    conf.setInt(REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY, clientPort);
+    conf.set(REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY, parent);
 
-    LOG.info("Cluster for bulkload locality sensitive is configured: " +
+    LOG.info("ZK configs for remote cluster of bulkload is configured: " +
       quorum + ":" + clientPort + "/" + parent);
   }
 

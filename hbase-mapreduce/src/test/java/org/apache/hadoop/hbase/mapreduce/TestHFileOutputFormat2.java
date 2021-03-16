@@ -1687,11 +1687,11 @@ public class TestHFileOutputFormat2  {
       HFileOutputFormat2.configureIncrementalLoad(job, table, r);
 
       assertEquals(confB.get(HConstants.ZOOKEEPER_QUORUM),
-        jobConf.get(HFileOutputFormat2.LOCALITY_SENSITIVE_ZOOKEEPER_QUORUM_CONF_KEY));
+        jobConf.get(HFileOutputFormat2.REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY));
       assertEquals(confB.get(HConstants.ZOOKEEPER_CLIENT_PORT),
-        jobConf.get(HFileOutputFormat2.LOCALITY_SENSITIVE_ZOOKEEPER_CLIENT_PORT_CONF_KEY));
+        jobConf.get(HFileOutputFormat2.REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY));
       assertEquals(confB.get(HConstants.ZOOKEEPER_ZNODE_PARENT),
-        jobConf.get(HFileOutputFormat2.LOCALITY_SENSITIVE_ZOOKEEPER_ZNODE_PARENT_CONF_KEY));
+        jobConf.get(HFileOutputFormat2.REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY));
 
       FileOutputFormat.setOutputPath(job, testDir);
 
