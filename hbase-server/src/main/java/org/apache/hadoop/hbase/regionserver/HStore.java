@@ -547,7 +547,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    * from the given directory.
    */
   private List<HStoreFile> loadStoreFiles(boolean warmup) throws IOException {
-    Collection<StoreFileInfo> files = getRegionFileSystem().getStoreFiles(getColumnFamilyName());
+    Collection<StoreFileInfo> files =
+        this.storeEngine.getStoreFileManager().loadInitialFiles();
     return openStoreFiles(files, warmup);
   }
 

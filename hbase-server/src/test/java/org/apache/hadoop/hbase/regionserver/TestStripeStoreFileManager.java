@@ -611,10 +611,11 @@ public class TestStripeStoreFileManager {
 
   private static StripeStoreFileManager createManager(
       ArrayList<HStoreFile> sfs, Configuration conf) throws Exception {
+    HStore store = Mockito.mock(HStore.class);
     StripeStoreConfig config = new StripeStoreConfig(
-        conf, Mockito.mock(StoreConfigInformation.class));
+        conf, store);
     StripeStoreFileManager result = new StripeStoreFileManager(CellComparatorImpl.COMPARATOR, conf,
-        config);
+        config, store.getRegionFileSystem(), store.getColumnFamilyName());
     result.loadFiles(sfs);
     return result;
   }

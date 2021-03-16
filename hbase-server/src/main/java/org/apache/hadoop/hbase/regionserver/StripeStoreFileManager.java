@@ -82,6 +82,8 @@ public class StripeStoreFileManager
    */
   public final static byte[] OPEN_KEY = HConstants.EMPTY_BYTE_ARRAY;
   final static byte[] INVALID_KEY = null;
+  private final HRegionFileSystem regionFs;
+  private final String familyName;
 
   /**
    * The state class. Used solely to replace results atomically during
@@ -124,16 +126,24 @@ public class StripeStoreFileManager
   private final int blockingFileCount;
 
   public StripeStoreFileManager(
-      CellComparator kvComparator, Configuration conf, StripeStoreConfig config) {
+      CellComparator kvComparator, Configuration conf, StripeStoreConfig config,
+      HRegionFileSystem regionFs, String familyName) {
     this.cellComparator = kvComparator;
     this.config = config;
     this.blockingFileCount = conf.getInt(
         HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
+    this.regionFs = regionFs;
+    this.familyName = familyName;
   }
 
   @Override
   public void loadFiles(List<HStoreFile> storeFiles) {
     loadUnclassifiedStoreFiles(storeFiles);
+  }
+
+  @Override
+  public Collection<StoreFileInfo> loadInitialFiles() throws IOException {
+    return regionFs.getStoreFiles(familyName);
   }
 
   @Override

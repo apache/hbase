@@ -24,11 +24,9 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
 
 /**
@@ -46,7 +44,16 @@ public interface StoreFileManager {
    * Loads the initial store files into empty StoreFileManager.
    * @param storeFiles The files to load.
    */
-  void loadFiles(List<HStoreFile> storeFiles);
+  void loadFiles(List<HStoreFile> storeFiles) throws IOException;
+
+  /**
+   * Load store files that are available for opening to perform filter-based
+   * validation
+   *
+   * @return a list of {@link StoreFileInfo} for the requested store.
+   * @throws IOException if store files cannot be listed
+   */
+  Collection<StoreFileInfo> loadInitialFiles() throws IOException;
 
   /**
    * Adds new files, either for from MemStore flush or bulk insert, into the structure.
@@ -65,7 +72,7 @@ public interface StoreFileManager {
   /**
    * Remove the compacted files
    * @param compactedFiles the list of compacted files
-   * @throws IOException
+   * @throws IOException if compacted files cannot be cleaned
    */
   void removeCompactedFiles(Collection<HStoreFile> compactedFiles) throws IOException;
 
@@ -80,7 +87,7 @@ public interface StoreFileManager {
    * accessed single threaded.
    * @return The files compacted previously.
    */
-  Collection<HStoreFile> clearCompactedFiles();
+  Collection<HStoreFile> clearCompactedFiles() throws IOException;
 
   /**
    * Gets the snapshot of the store files currently in use. Can be used for things like metrics
@@ -145,7 +152,7 @@ public interface StoreFileManager {
   /**
    * Gets the split point for the split of this set of store files (approx. middle).
    * @return The mid-point if possible.
-   * @throws IOException
+   * @throws IOException on failures
    */
   Optional<byte[]> getSplitPoint() throws IOException;
 

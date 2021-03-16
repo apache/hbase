@@ -49,6 +49,8 @@ class DefaultStoreFileManager implements StoreFileManager {
   private final CompactionConfiguration comConf;
   private final int blockingFileCount;
   private final Comparator<HStoreFile> storeFileComparator;
+  private final HRegionFileSystem regionFs;
+  private final String familyName;
   /**
    * List of store files inside this store. This is an immutable list that
    * is atomically replaced when its contents change.
@@ -64,17 +66,25 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   public DefaultStoreFileManager(CellComparator cellComparator,
       Comparator<HStoreFile> storeFileComparator, Configuration conf,
-      CompactionConfiguration comConf) {
+      CompactionConfiguration comConf, HRegionFileSystem regionFs,
+      String familyName) {
     this.cellComparator = cellComparator;
     this.storeFileComparator = storeFileComparator;
     this.comConf = comConf;
     this.blockingFileCount =
         conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
+    this.regionFs = regionFs;
+    this.familyName = familyName;
   }
 
   @Override
-  public void loadFiles(List<HStoreFile> storeFiles) {
+  public void loadFiles(List<HStoreFile> storeFiles) throws IOException {
     this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, storeFiles);
+  }
+
+  @Override
+  public Collection<StoreFileInfo> loadInitialFiles() throws IOException {
+    return regionFs.getStoreFiles(familyName);
   }
 
   @Override
@@ -101,7 +111,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public Collection<HStoreFile> clearCompactedFiles() {
+  public Collection<HStoreFile> clearCompactedFiles() throws IOException {
     List<HStoreFile> result = compactedfiles;
     compactedfiles = ImmutableList.of();
     return result;
@@ -119,16 +129,27 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public void addCompactionResults(Collection<HStoreFile> newCompactedfiles,
-      Collection<HStoreFile> results) {
+    Collection<HStoreFile> results) throws IOException {
     this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, Iterables
-        .concat(Iterables.filter(storefiles, sf -> !newCompactedfiles.contains(sf)), results));
+      .concat(Iterables.filter(storefiles, sf -> !newCompactedfiles.contains(sf)), results));
+    this.compactedfiles = ImmutableList.sortedCopyOf(storeFileComparator,
+      Iterables.concat(this.compactedfiles, newCompactedfiles));
+
+    addCompactionResultsHook(storefiles);
     // Mark the files as compactedAway once the storefiles and compactedfiles list is finalized
     // Let a background thread close the actual reader on these compacted files and also
     // ensure to evict the blocks from block cache so that they are no longer in
     // cache
     newCompactedfiles.forEach(HStoreFile::markCompactedAway);
-    this.compactedfiles = ImmutableList.sortedCopyOf(storeFileComparator,
-      Iterables.concat(this.compactedfiles, newCompactedfiles));
+  }
+
+  /**
+   * additional logic after addCompactionResults() before marking compactedAway to
+   * newCompactedfiles the if any.
+   * @param storeFiles a list of store files to be processed
+   */
+  protected void addCompactionResultsHook(ImmutableList<HStoreFile> storeFiles) throws IOException {
+    // no-ops
   }
 
   @Override
@@ -202,6 +223,14 @@ class DefaultStoreFileManager implements StoreFileManager {
   @Override
   public Comparator<HStoreFile> getStoreFileComparator() {
     return storeFileComparator;
+  }
+
+  HRegionFileSystem getRegionFs() {
+    return regionFs;
+  }
+
+  String getFamilyName() {
+    return familyName;
   }
 }
 
