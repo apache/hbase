@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
 public class CurrentHourProvider {
@@ -38,10 +36,8 @@ public class CurrentHourProvider {
     }
   }
 
-  @VisibleForTesting
-  static Tick nextTick() {
+  private static Tick nextTick() {
     Calendar calendar = new GregorianCalendar();
-    calendar.setTimeInMillis(EnvironmentEdgeManager.currentTime());
     int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
     moveToNextHour(calendar);
     return new Tick(currentHour, calendar.getTimeInMillis());
@@ -54,12 +50,11 @@ public class CurrentHourProvider {
     calendar.set(Calendar.MILLISECOND, 0);
   }
 
-  @VisibleForTesting
-  static volatile Tick tick = nextTick();
+  private static volatile Tick tick = nextTick();
 
   public static int getCurrentHour() {
     Tick tick = CurrentHourProvider.tick;
-    if (EnvironmentEdgeManager.currentTime() < tick.expirationTimeInMillis) {
+    if(System.currentTimeMillis() < tick.expirationTimeInMillis) {
       return tick.currentHour;
     }
 
