@@ -8416,7 +8416,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     flushesQueued.increment();
   }
 
-  public void decrementFlushesQueuedCount() {
+  protected void decrementFlushesQueuedCount() {
     flushesQueued.decrement();
   }
 

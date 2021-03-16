@@ -888,7 +888,7 @@ class MemStoreFlusher implements FlushRequester {
     /**
      * @return True if the entry is a delay flush task
      */
-    public boolean isDelay() {
+    protected boolean isDelay() {
       return this.whenToExpire > this.createTime;
     }
 
