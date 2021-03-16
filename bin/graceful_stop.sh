@@ -110,8 +110,13 @@ else
   log "Previous balancer state was $HBASE_BALANCER_STATE"
 fi
 
+unload_hostname="$hostname"
+if [[ "$hostname" -eq "localhost" ]]; then
+  # Need fqdn to remove the host Region server from target Region Servers list
+  unload_hostname=`/bin/hostname -f`
+fi
 unload_args="--filename $filename --maxthreads $maxthreads $noack --operation unload \
-  --timeout $movetimeout --regionserverhost $hostname"
+  --timeout $movetimeout --regionserverhost $unload_hostname"
 
 if [ "$designatedfile" != "" ]; then
   unload_args="$unload_args --designatedfile $designatedfile"
