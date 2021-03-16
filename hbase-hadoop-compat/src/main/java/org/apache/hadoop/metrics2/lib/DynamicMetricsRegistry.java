@@ -471,7 +471,7 @@ public class DynamicMetricsRegistry {
       metric = metricsMap.putIfAbsent(gaugeName, newGauge);
 
       //If the value we get back is null then the put was successful and we will return that.
-      //otherwise gaugeLong should contain the thing that was in before the put could be completed.
+      //otherwise gaugeInt should contain the thing that was in before the put could be completed.
       if (metric == null) {
         return newGauge;
       }

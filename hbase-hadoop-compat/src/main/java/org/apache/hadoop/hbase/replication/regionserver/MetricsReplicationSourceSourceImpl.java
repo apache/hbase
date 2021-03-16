@@ -130,7 +130,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     oldestWalAgeKey = this.keyPrefix + "oldestWalAge";
     oldestWalAge = rms.getMetricsRegistry().getGauge(oldestWalAgeKey, 0L);
 
-    sourceInitializingKey = this.keyPrefix + "numInitializing";
+    sourceInitializingKey = this.keyPrefix + "isInitializing";
     sourceInitializing = rms.getMetricsRegistry().getGaugeInt(sourceInitializingKey, 0);
   }
 
