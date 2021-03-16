@@ -473,11 +473,7 @@ public class TestReplicationSource {
 
     @Override
     public synchronized UUID getPeerUUID() {
-      if (failing) {
-        return null;
-      } else {
-        return super.getPeerUUID();
-      }
+      return failing ? null : super.getPeerUUID();
     }
   }
 

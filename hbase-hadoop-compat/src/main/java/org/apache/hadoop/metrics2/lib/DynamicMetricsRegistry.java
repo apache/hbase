@@ -462,7 +462,6 @@ public class DynamicMetricsRegistry {
 
     //If it's not there then try and put a new one in the storage.
     if (metric == null) {
-
       //Create the potential new gauge.
       MutableGaugeInt newGauge = new MutableGaugeInt(new MetricsInfoImpl(gaugeName, ""),
         potentialStartingValue);
