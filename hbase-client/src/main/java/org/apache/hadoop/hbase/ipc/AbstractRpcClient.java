@@ -573,7 +573,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
         if (this.rpcClient.metrics != null) {
           this.rpcClient.metrics.incrNsLookups();
         }
-        isa = Address.toSocketAddress(addr);
+        isa = addr.toSocketAddress();
         if (isa.isUnresolved()) {
           if (this.rpcClient.metrics != null) {
             this.rpcClient.metrics.incrNsLookupsFailed();
@@ -609,7 +609,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
         if (this.rpcClient.metrics != null) {
           this.rpcClient.metrics.incrNsLookups();
         }
-        isa = Address.toSocketAddress(addr);
+        isa = addr.toSocketAddress();
         if (isa.isUnresolved()) {
           if (this.rpcClient.metrics != null) {
             this.rpcClient.metrics.incrNsLookupsFailed();

@@ -255,7 +255,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (this.rpcClient.metrics != null) {
           this.rpcClient.metrics.incrNsLookups();
         }
-        InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
+        InetSocketAddress remoteAddr = remoteId.getAddress().toSocketAddress();
         if (remoteAddr.isUnresolved()) {
           if (this.rpcClient.metrics != null) {
             this.rpcClient.metrics.incrNsLookupsFailed();
