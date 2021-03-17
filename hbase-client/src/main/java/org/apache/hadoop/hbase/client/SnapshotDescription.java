@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Map;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import java.util.Map;
 
 /**
  * The POJO equivalent of HBaseProtos.SnapshotDescription
@@ -89,7 +89,7 @@ public class SnapshotDescription {
   /**
    * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
    *   instance instead.
-   * @see #SnapshotDescription(String, TableName, SnapshotType, String, long, int)
+   * @see #SnapshotDescription(String, String, SnapshotType, String, long, int)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
    */
   @Deprecated
@@ -168,7 +168,9 @@ public class SnapshotDescription {
     return this.version;
   }
 
-  public long getMaxFileSize() { return maxFileSize; }
+  public long getMaxFileSize() {
+    return maxFileSize;
+  }
 
   @Override
   public String toString() {

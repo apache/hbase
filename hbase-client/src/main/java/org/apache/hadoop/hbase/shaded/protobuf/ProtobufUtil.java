@@ -2946,9 +2946,9 @@ public final class ProtobufUtil {
     final Map<String, Object> snapshotProps = new HashMap<>();
     snapshotProps.put(TableDescriptorBuilder.MAX_FILESIZE, snapshotDesc.getMaxFileSize());
     return new SnapshotDescription(snapshotDesc.getName(),
-        snapshotDesc.hasTable() ? snapshotDesc.getTable() : null,
+        snapshotDesc.hasTable() ? TableName.valueOf(snapshotDesc.getTable()) : null,
         createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),
-        snapshotDesc.getCreationTime(), snapshotDesc.getVersion());
+        snapshotDesc.getCreationTime(), snapshotDesc.getVersion(), snapshotProps);
   }
 
   public static RegionLoadStats createRegionLoadStats(ClientProtos.RegionLoadStats stats) {
