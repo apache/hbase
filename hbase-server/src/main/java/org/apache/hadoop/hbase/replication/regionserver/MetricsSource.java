@@ -21,13 +21,12 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +61,8 @@ public class MetricsSource implements BaseSource {
     singleSourceSource =
         CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
             .getSource(id);
-    globalSourceSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+    globalSourceSource = CompatibilitySingletonFactory
+      .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     singleSourceSourceByTable = new HashMap<>();
   }
 
@@ -166,6 +166,22 @@ public class MetricsSource implements BaseSource {
   public void decrSizeOfLogQueue() {
     singleSourceSource.decrSizeOfLogQueue(1);
     globalSourceSource.decrSizeOfLogQueue(1);
+  }
+
+  /**
+   * Increment the count for initializing sources
+   */
+  public void incrSourceInitializing() {
+    singleSourceSource.incrSourceInitializing();
+    globalSourceSource.incrSourceInitializing();
+  }
+
+  /**
+   * Decrement the count for initializing sources
+   */
+  public void decrSourceInitializing() {
+    singleSourceSource.decrSourceInitializing();
+    globalSourceSource.decrSourceInitializing();
   }
 
   /**
@@ -333,6 +349,14 @@ public class MetricsSource implements BaseSource {
     }else{
       return EnvironmentEdgeManager.currentTime() - timeStampNextToReplicate;
     }
+  }
+
+  /**
+   * Get the source initializing counts
+   * @return number of replication sources getting initialized
+   */
+  public int getSourceInitializing() {
+    return singleSourceSource.getSourceInitializing();
   }
 
   /**

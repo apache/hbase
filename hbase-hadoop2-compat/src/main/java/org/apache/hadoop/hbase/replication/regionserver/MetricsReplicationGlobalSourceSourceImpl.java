@@ -19,13 +19,14 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsReplicationGlobalSourceSourceImpl
-    implements MetricsReplicationGlobalSourceSource {
+  implements MetricsReplicationGlobalSourceSource {
   private static final String KEY_PREFIX = "source.";
 
   private final MetricsReplicationSourceImpl rms;
@@ -55,6 +56,7 @@ public class MetricsReplicationGlobalSourceSourceImpl
   private final MutableFastCounter completedRecoveryQueue;
   private final MutableFastCounter failedRecoveryQueue;
   private final MutableGaugeLong walReaderBufferUsageBytes;
+  private final MutableGaugeInt sourceInitializing;
 
   public MetricsReplicationGlobalSourceSourceImpl(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
@@ -97,6 +99,7 @@ public class MetricsReplicationGlobalSourceSourceImpl
 
     walReaderBufferUsageBytes = rms.getMetricsRegistry()
         .getGauge(SOURCE_WAL_READER_EDITS_BUFFER, 0L);
+    sourceInitializing = rms.getMetricsRegistry().getGaugeInt(SOURCE_INITIALIZING, 0);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -220,6 +223,21 @@ public class MetricsReplicationGlobalSourceSourceImpl
   public long getOldestWalAge() {
     // Not implemented
     return 0;
+  }
+
+  @Override
+  public void incrSourceInitializing() {
+    sourceInitializing.incr(1);
+  }
+
+  @Override
+  public void decrSourceInitializing() {
+    sourceInitializing.decr(1);
+  }
+
+  @Override
+  public int getSourceInitializing() {
+    return sourceInitializing.value();
   }
 
   @Override
