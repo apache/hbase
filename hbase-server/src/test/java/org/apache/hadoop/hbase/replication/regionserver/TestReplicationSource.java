@@ -457,7 +457,7 @@ public class TestReplicationSource {
 
     @Override
     public synchronized UUID getPeerUUID() {
-      if(count==0) {
+      if (count==0) {
         count++;
         throw new RuntimeException();
       } else {
@@ -465,6 +465,18 @@ public class TestReplicationSource {
       }
     }
 
+  }
+
+  /**
+   * Bad Endpoint with failing connection to peer on demand.
+   */
+  public static class BadReplicationEndpoint extends DoNothingReplicationEndpoint {
+    static boolean failing = true;
+
+    @Override
+    public synchronized UUID getPeerUUID() {
+      return failing ? null : super.getPeerUUID();
+    }
   }
 
   public static class FaultyReplicationEndpoint extends DoNothingReplicationEndpoint {
@@ -550,6 +562,25 @@ public class TestReplicationSource {
       assertEquals(0, rs.getSourceMetrics().getSizeOfLogQueue());
       rs.enqueueLog(new Path("a.1"));
       assertEquals(1, rs.getSourceMetrics().getSizeOfLogQueue());
+    } finally {
+      rs.terminate("Done");
+      rss.stop("Done");
+    }
+  }
+
+  @Test
+  public void testReplicationSourceInitializingMetric() throws IOException {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setBoolean("replication.source.regionserver.abort", false);
+    ReplicationSource rs = new ReplicationSource();
+    RegionServerServices rss = setupForAbortTests(rs, conf,
+      BadReplicationEndpoint.class.getName());
+    try {
+      rs.startup();
+      assertTrue(rs.isSourceActive());
+      Waiter.waitFor(conf, 1000, () -> rs.getSourceMetrics().getSourceInitializing() == 1);
+      BadReplicationEndpoint.failing = false;
+      Waiter.waitFor(conf, 1000, () -> rs.getSourceMetrics().getSourceInitializing() == 0);
     } finally {
       rs.terminate("Done");
       rss.stop("Done");
