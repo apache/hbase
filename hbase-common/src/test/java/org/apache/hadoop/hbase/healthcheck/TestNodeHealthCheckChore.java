@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.healthcheck;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -28,7 +27,11 @@ import java.io.PrintWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HealthChecker.HealthCheckerExitStatus;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.healthcheck.HealthChecker.HealthCheckerExitStatus;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.util.Shell;
@@ -47,7 +50,7 @@ public class TestNodeHealthCheckChore {
       HBaseClassTestRule.forClass(TestNodeHealthCheckChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNodeHealthCheckChore.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
   private static final int SCRIPT_TIMEOUT = 5000;
   private File healthScriptFile;
   private String eol = System.getProperty("line.separator");
@@ -56,9 +59,11 @@ public class TestNodeHealthCheckChore {
   public void cleanUp() throws IOException {
     // delete and recreate the test directory, ensuring a clean test dir between tests
     Path testDir = UTIL.getDataTestDir();
-    FileSystem fs = UTIL.getTestFileSystem();
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     fs.delete(testDir, true);
-    if (!fs.mkdirs(testDir)) throw new IOException("Failed mkdir " + testDir);
+    if (!fs.mkdirs(testDir)) {
+      throw new IOException("Failed mkdir " + testDir);
+    }
   }
 
   @Test
@@ -86,11 +91,12 @@ public class TestNodeHealthCheckChore {
     String location = healthScriptFile.getAbsolutePath();
     long timeout = config.getLong(HConstants.HEALTH_SCRIPT_TIMEOUT, SCRIPT_TIMEOUT);
 
-    HealthChecker checker = new HealthChecker();
+    org.apache.hadoop.hbase.healthcheck.HealthChecker
+      checker = new org.apache.hadoop.hbase.healthcheck.HealthChecker();
     checker.init(location, timeout);
 
     createScript(script, true);
-    HealthReport report = checker.checkHealth();
+    org.apache.hadoop.hbase.healthcheck.HealthReport report = checker.checkHealth();
     assertEquals(expectedStatus, report.getStatus());
 
     LOG.info("Health Status:" + report.getHealthReport());
@@ -104,7 +110,8 @@ public class TestNodeHealthCheckChore {
     Configuration conf = getConfForNodeHealthScript();
     String errorScript = "echo ERROR" + eol + " echo \"Server not healthy\"";
     createScript(errorScript, true);
-    HealthCheckChore rsChore = new HealthCheckChore(100, stop, conf);
+    org.apache.hadoop.hbase.healthcheck.HealthCheckChore
+      rsChore = new org.apache.hadoop.hbase.healthcheck.HealthCheckChore(100, stop, conf);
     try {
       //Default threshold is three.
       rsChore.chore();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -27,7 +26,7 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.UUID;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -35,7 +34,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ComparisonChain;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
@@ -47,7 +45,6 @@ public class TestRegionSplitCalculator {
       HBaseClassTestRule.forClass(TestRegionSplitCalculator.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionSplitCalculator.class);
-  public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   /**
    * This is range uses a user specified start and end keys. It also has an
    * extra tiebreaker so that different ranges with the same start/end key pair
@@ -60,7 +57,7 @@ public class TestRegionSplitCalculator {
     SimpleRange(byte[] start, byte[] end) {
       this.start = start;
       this.end = end;
-      this.tiebreaker = TEST_UTIL.getRandomUUID();
+      this.tiebreaker = HBaseCommonTestingUtility.getRandomUUID();
     }
 
     @Override
@@ -79,17 +76,14 @@ public class TestRegionSplitCalculator {
     }
   }
 
-  Comparator<SimpleRange> cmp = new Comparator<SimpleRange>() {
-    @Override
-    public int compare(SimpleRange sr1, SimpleRange sr2) {
-      ComparisonChain cc = ComparisonChain.start();
-      cc = cc.compare(sr1.getStartKey(), sr2.getStartKey(),
-          Bytes.BYTES_COMPARATOR);
-      cc = cc.compare(sr1.getEndKey(), sr2.getEndKey(),
-          RegionSplitCalculator.BYTES_COMPARATOR);
-      cc = cc.compare(sr1.tiebreaker, sr2.tiebreaker);
-      return cc.result();
-    }
+  Comparator<SimpleRange> cmp = (sr1, sr2) -> {
+    ComparisonChain cc = ComparisonChain.start();
+    cc = cc.compare(sr1.getStartKey(), sr2.getStartKey(),
+        Bytes.BYTES_COMPARATOR);
+    cc = cc.compare(sr1.getEndKey(), sr2.getEndKey(),
+        RegionSplitCalculator.BYTES_COMPARATOR);
+    cc = cc.compare(sr1.tiebreaker, sr2.tiebreaker);
+    return cc.result();
   };
 
   /**

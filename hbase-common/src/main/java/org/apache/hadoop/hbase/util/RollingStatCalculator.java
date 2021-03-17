@@ -45,7 +45,6 @@ public class RollingStatCalculator {
 
   /**
    * Creates a RollingStatCalculator with given number of rolling periods.
-   * @param rollingPeriod
    */
   public RollingStatCalculator(int rollingPeriod) {
     this.rollingPeriod = rollingPeriod;

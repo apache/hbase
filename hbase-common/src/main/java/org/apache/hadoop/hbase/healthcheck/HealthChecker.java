@@ -15,11 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.healthcheck;
 
 import java.io.IOException;
 import java.util.ArrayList;
-
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.slf4j.Logger;
@@ -107,21 +106,23 @@ class HealthChecker {
   private String getHealthReport(HealthCheckerExitStatus status){
     String healthReport = null;
     switch (status) {
-    case SUCCESS:
-      healthReport = "Server is healthy.";
-      break;
-    case TIMED_OUT:
-      healthReport = "Health script timed out";
-      break;
-    case FAILED_WITH_EXCEPTION:
-      healthReport = exceptionStackTrace;
-      break;
-    case FAILED_WITH_EXIT_CODE:
-      healthReport = "Health script failed with exit code.";
-      break;
-    case FAILED:
-      healthReport = shexec.getOutput();
-      break;
+      case SUCCESS:
+        healthReport = "Server is healthy.";
+        break;
+      case TIMED_OUT:
+        healthReport = "Health script timed out";
+        break;
+      case FAILED_WITH_EXCEPTION:
+        healthReport = exceptionStackTrace;
+        break;
+      case FAILED_WITH_EXIT_CODE:
+        healthReport = "Health script failed with exit code.";
+        break;
+      case FAILED:
+        healthReport = shexec.getOutput();
+        break;
+      default:
+        throw new IllegalStateException("Unexpected value: " + status);
     }
     return healthReport;
   }
