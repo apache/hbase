@@ -37,14 +37,7 @@ class TableSkewCostFunction extends CostFunction {
 
   @Override
   protected double cost() {
-    double max = cluster.numRegions;
-    double min = ((double) cluster.numRegions) / cluster.numServers;
-    double value = 0;
-
-    for (int i = 0; i < cluster.numMaxRegionsPerTable.length; i++) {
-      value += cluster.numMaxRegionsPerTable[i];
-    }
-
-    return scale(min, max, value);
+    return scale(cluster.minRegionSkewByTable,
+      cluster.maxRegionSkewByTable, cluster.regionSkewByTable);
   }
 }

@@ -63,31 +63,13 @@ final class DoubleArrayCost {
     double count = stats.length;
     double mean = total / count;
 
-    // Compute max as if all region servers had 0 and one had the sum of all costs. This must be
-    // a zero sum cost for this to make sense.
-    double max = ((count - 1) * mean) + (total - mean);
-
-    // It's possible that there aren't enough regions to go around
-    double min;
-    if (count > total) {
-      min = ((count - total) * mean) + ((1 - mean) * total);
-    } else {
-      // Some will have 1 more than everything else.
-      int numHigh = (int) (total - (Math.floor(mean) * count));
-      int numLow = (int) (count - numHigh);
-
-      min = (numHigh * (Math.ceil(mean) - mean)) + (numLow * (mean - Math.floor(mean)));
-
-    }
-    min = Math.max(0, min);
     for (int i = 0; i < stats.length; i++) {
       double n = stats[i];
       double diff = Math.abs(mean - n);
       totalCost += diff;
     }
-
-    double scaled = CostFunction.scale(min, max, totalCost);
-    return scaled;
+    return CostFunction.scale(getMinSkew(total, count),
+      getMaxSkew(total, count), totalCost);
   }
 
   private static double getSum(double[] stats) {
@@ -96,5 +78,33 @@ final class DoubleArrayCost {
       total += s;
     }
     return total;
+  }
+
+  /**
+   * Return the min skew of distribution
+   */
+  public static double getMinSkew(double total, double numServers) {
+    double mean = total / numServers;
+    // It's possible that there aren't enough regions to go around
+    double min;
+    if (numServers > total) {
+      min = ((numServers - total) * mean + (1 - mean) * total) ;
+    } else {
+      // Some will have 1 more than everything else.
+      int numHigh = (int) (total - (Math.floor(mean) * numServers));
+      int numLow = (int) (numServers - numHigh);
+      min = numHigh * (Math.ceil(mean) - mean) + numLow * (mean - Math.floor(mean));
+    }
+    return min;
+  }
+
+  /**
+   * Return the max deviation of distribution
+   * Compute max as if all region servers had 0 and one had the sum of all costs.  This must be
+   * a zero sum cost for this to make sense.
+   */
+  public static double getMaxSkew(double total, double numServers) {
+    double mean = total / numServers;
+    return (total - mean) + (numServers - 1) * mean;
   }
 }

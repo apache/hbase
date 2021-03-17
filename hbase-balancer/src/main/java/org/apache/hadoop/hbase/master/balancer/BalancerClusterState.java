@@ -81,7 +81,11 @@ class BalancerClusterState {
   int[] initialRegionIndexToServerIndex; // regionIndex -> serverIndex (initial cluster state)
   int[] regionIndexToTableIndex; // regionIndex -> tableIndex
   int[][] numRegionsPerServerPerTable; // serverIndex -> tableIndex -> # regions
-  int[] numMaxRegionsPerTable; // tableIndex -> max number of regions in a single RS
+  int[] numRegionsPerTable; // tableIndex -> region count
+  double[] meanRegionsPerTable; // mean region count per table
+  double regionSkewByTable;       // skew on RS per by table
+  double minRegionSkewByTable;       // min skew on RS per by table
+  double maxRegionSkewByTable;       // max skew on RS per by table
   int[] regionIndexToPrimaryIndex; // regionIndex -> regionIndex of the primary
   boolean hasRegionReplicas = false; // whether there is regions with replicas
 
@@ -291,6 +295,7 @@ class BalancerClusterState {
 
     numTables = tables.size();
     numRegionsPerServerPerTable = new int[numServers][numTables];
+    numRegionsPerTable = new int[numTables];
 
     for (int i = 0; i < numServers; i++) {
       for (int j = 0; j < numTables; j++) {
@@ -298,20 +303,28 @@ class BalancerClusterState {
       }
     }
 
+    for (int i = 0; i < numTables; i++) {
+      numRegionsPerTable[i] = 0;
+    }
+
     for (int i = 0; i < regionIndexToServerIndex.length; i++) {
       if (regionIndexToServerIndex[i] >= 0) {
         numRegionsPerServerPerTable[regionIndexToServerIndex[i]][regionIndexToTableIndex[i]]++;
+        numRegionsPerTable[regionIndexToTableIndex[i]]++;
       }
     }
 
-    numMaxRegionsPerTable = new int[numTables];
-    for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
-      for (tableIndex = 0; tableIndex < aNumRegionsPerServerPerTable.length; tableIndex++) {
-        if (aNumRegionsPerServerPerTable[tableIndex] > numMaxRegionsPerTable[tableIndex]) {
-          numMaxRegionsPerTable[tableIndex] = aNumRegionsPerServerPerTable[tableIndex];
-        }
-      }
+    // Avoid repeated computation for planning
+    meanRegionsPerTable = new double[numTables];
+    maxRegionSkewByTable = 0;
+    minRegionSkewByTable = 0;
+    for (int i = 0; i < numTables; i++) {
+      meanRegionsPerTable[i] = Double.valueOf(numRegionsPerTable[i]) / numServers;
+      minRegionSkewByTable += DoubleArrayCost.getMinSkew(numRegionsPerTable[i], numServers);
+      maxRegionSkewByTable += DoubleArrayCost.getMaxSkew(numRegionsPerTable[i], numServers);
     }
+
+    computeRegionSkewPerTable();
 
     for (int i = 0; i < regions.length; i++) {
       RegionInfo info = regions[i];
@@ -671,22 +684,21 @@ class BalancerClusterState {
     int tableIndex = regionIndexToTableIndex[region];
     if (oldServer >= 0) {
       numRegionsPerServerPerTable[oldServer][tableIndex]--;
+      // update regionSkewPerTable for the move from old server
+      regionSkewByTable +=
+        Math.abs(numRegionsPerServerPerTable[oldServer][tableIndex]
+          - meanRegionsPerTable[tableIndex])
+          - Math.abs(numRegionsPerServerPerTable[oldServer][tableIndex] + 1
+          - meanRegionsPerTable[tableIndex]);
     }
     numRegionsPerServerPerTable[newServer][tableIndex]++;
 
-    // check whether this caused maxRegionsPerTable in the new Server to be updated
-    if (numRegionsPerServerPerTable[newServer][tableIndex] > numMaxRegionsPerTable[tableIndex]) {
-      numMaxRegionsPerTable[tableIndex] = numRegionsPerServerPerTable[newServer][tableIndex];
-    } else if (oldServer >= 0 && (numRegionsPerServerPerTable[oldServer][tableIndex]
-        + 1) == numMaxRegionsPerTable[tableIndex]) {
-      // recompute maxRegionsPerTable since the previous value was coming from the old server
-      numMaxRegionsPerTable[tableIndex] = 0;
-      for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
-        if (aNumRegionsPerServerPerTable[tableIndex] > numMaxRegionsPerTable[tableIndex]) {
-          numMaxRegionsPerTable[tableIndex] = aNumRegionsPerServerPerTable[tableIndex];
-        }
-      }
-    }
+    // update regionSkewPerTable for the move to new server
+    regionSkewByTable +=
+      Math.abs(numRegionsPerServerPerTable[newServer][tableIndex]
+        - meanRegionsPerTable[tableIndex])
+        - Math.abs(numRegionsPerServerPerTable[newServer][tableIndex] - 1
+        - meanRegionsPerTable[tableIndex]);
 
     // update for servers
     int primary = regionIndexToPrimaryIndex[region];
@@ -856,10 +868,25 @@ class BalancerClusterState {
       .append(Arrays.toString(serverIndicesSortedByRegionCount)).append(", regionsPerServer=")
       .append(Arrays.deepToString(regionsPerServer));
 
-    desc.append(", numMaxRegionsPerTable=").append(Arrays.toString(numMaxRegionsPerTable))
+    desc.append(", regionSkewByTable=").append(regionSkewByTable)
       .append(", numRegions=").append(numRegions).append(", numServers=").append(numServers)
       .append(", numTables=").append(numTables).append(", numMovedRegions=").append(numMovedRegions)
       .append('}');
     return desc.toString();
+  }
+
+  /**
+   * Recompute the region skew during init or plan of moves.
+   */
+  private void computeRegionSkewPerTable() {
+    // reinitialize for recomputation
+    regionSkewByTable = 0;
+
+    for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
+      for (int tableIndex = 0; tableIndex < aNumRegionsPerServerPerTable.length; tableIndex++) {
+        regionSkewByTable += Math.abs(aNumRegionsPerServerPerTable[tableIndex]
+          - meanRegionsPerTable[tableIndex]);
+      }
+    }
   }
 }
