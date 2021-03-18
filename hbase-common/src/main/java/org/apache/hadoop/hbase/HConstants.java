@@ -157,6 +157,21 @@ public final class HConstants {
   /** Default value for the balancer period */
   public static final int DEFAULT_HBASE_BALANCER_PERIOD = 300000;
 
+  /**
+   * Config key for enable/disable automatically separate child regions to different region servers
+   * in the procedure of split regions. One child will be kept to the server where parent
+   * region is on, and the other child will be assigned to a random server.
+   * See HBASE-25518.
+   */
+  public static final String HBASE_ENABLE_SEPARATE_CHILD_REGIONS =
+    "hbase.master.auto.separate.child.regions.after.split.enabled";
+
+  /**
+   * Default value for automatically separate child regions to different region servers
+   * (set to "false" to keep all child regions to the server where parent region is on)
+   */
+  public static final boolean DEFAULT_HBASE_ENABLE_SEPARATE_CHILD_REGIONS = false;
+
   /** The name of the ensemble table */
   public static final TableName ENSEMBLE_TABLE_NAME = TableName.valueOf("hbase:ensemble");
 
