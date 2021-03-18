@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -50,15 +48,20 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
-@Category({MasterTests.class, MediumTests.class})
-public class TestRegionSplit {
+@Category({ MasterTests.class, MediumTests.class})
+public class TestRegionSplitAndSeparateChildren {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionSplit.class);
+    HBaseClassTestRule.forClass(TestRegionSplitAndSeparateChildren.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionSplit.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+    TestRegionSplitAndSeparateChildren.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -71,13 +74,15 @@ public class TestRegionSplit {
   public TestName name = new TestName();
 
   private static void setupConf(Configuration conf) {
+    // enable automatically separate child regions
+    conf.setBoolean(HConstants.HBASE_ENABLE_SEPARATE_CHILD_REGIONS, true);
   }
 
   @BeforeClass
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     StartMiniClusterOption option =
-        StartMiniClusterOption.builder().numMasters(1).numRegionServers(3).numDataNodes(3).build();
+      StartMiniClusterOption.builder().numMasters(1).numRegionServers(3).numDataNodes(3).build();
     UTIL.startMiniCluster(option);
   }
 
@@ -109,7 +114,7 @@ public class TestRegionSplit {
   }
 
   @Test
-  public void testSplitTableRegion() throws Exception {
+  public void testSplitTableRegionAndSeparateChildRegions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -129,7 +134,8 @@ public class TestRegionSplit {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertTrue("not able to split table", UTIL.getHBaseCluster().getRegions(tableName).size() == 2);
+    assertTrue("not able to split table",
+      UTIL.getHBaseCluster().getRegions(tableName).size() == 2);
 
     //disable table
     UTIL.getAdmin().disableTable(tableName);
@@ -153,7 +159,7 @@ public class TestRegionSplit {
     assertEquals("Table region not correct.", 2, tableRegions.size());
     Map<RegionInfo, ServerName> regionInfoMap = UTIL.getHBaseCluster().getMaster()
       .getAssignmentManager().getRegionStates().getRegionAssignments();
-    assertEquals(regionInfoMap.get(tableRegions.get(0).getRegionInfo()),
+    assertNotEquals(regionInfoMap.get(tableRegions.get(0).getRegionInfo()),
       regionInfoMap.get(tableRegions.get(1).getRegionInfo()));
   }
 
