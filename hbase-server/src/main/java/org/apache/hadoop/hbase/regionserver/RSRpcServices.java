@@ -3282,10 +3282,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // arbitrary 32. TODO: keep record of general size of results being returned.
     List<Cell> values = new ArrayList<>(32);
     region.startRegionOperation(Operation.SCAN);
+    long before = EnvironmentEdgeManager.currentTime();
+    // Used to check if we've matched the row limit set on the Scan
+    int numOfCompleteRows = 0;
+    // Count of times we call nextRaw; can be > numOfCompleteRows.
+    int numOfNextRawCalls = 0;
     try {
       int numOfResults = 0;
-      int numOfCompleteRows = 0;
-      long before = EnvironmentEdgeManager.currentTime();
       synchronized (scanner) {
         boolean stale = (region.getRegionInfo().getReplicaId() != 0);
         boolean clientHandlesPartials =
@@ -3341,6 +3344,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
           // Collect values to be returned here
           moreRows = scanner.nextRaw(values, scannerContext);
+          numOfNextRawCalls++;
 
           if (!values.isEmpty()) {
             if (limitOfRows > 0) {
@@ -3432,18 +3436,21 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           builder.setScanMetrics(metricBuilder.build());
         }
       }
+    } finally {
+      region.closeRegionOperation();
+      // Update serverside metrics, even on error.
       long end = EnvironmentEdgeManager.currentTime();
       long responseCellSize = context != null ? context.getResponseCellSize() : 0;
       region.getMetrics().updateScanTime(end - before);
       final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
       if (metricsRegionServer != null) {
         metricsRegionServer.updateScanSize(
-            region.getTableDescriptor().getTableName(), responseCellSize);
+          region.getTableDescriptor().getTableName(), responseCellSize);
         metricsRegionServer.updateScanTime(
-            region.getTableDescriptor().getTableName(), end - before);
+          region.getTableDescriptor().getTableName(), end - before);
+        metricsRegionServer.updateReadQueryMeter(region.getRegionInfo().getTable(),
+          numOfNextRawCalls);
       }
-    } finally {
-      region.closeRegionOperation();
     }
     // coprocessor postNext hook
     if (region.getCoprocessorHost() != null) {
