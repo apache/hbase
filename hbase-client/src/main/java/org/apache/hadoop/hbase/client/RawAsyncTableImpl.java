@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiReque
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 
 /**
  * The implementation of RawAsyncTable.
@@ -324,7 +323,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc,
           stub, put,
           (rn, p) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier, op, value,
-            null, timeRange, p),
+            null, timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE),
           (c, r) -> r.getProcessed()))
         .call();
     }
@@ -336,7 +335,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller,
           loc, stub, delete,
           (rn, d) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier, op, value,
-            null, timeRange, d),
+            null, timeRange, d, HConstants.NO_NONCE, HConstants.NO_NONCE),
           (c, r) -> r.getProcessed()))
         .call();
     }
@@ -349,8 +348,9 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller,
           loc, stub, mutation,
-          (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier, op, value,
-            null, timeRange, rm), CheckAndMutateResult::isSuccess))
+          (rn, rm) -> RequestConverter.buildMultiRequest(rn, row, family, qualifier, op, value,
+            null, timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE),
+          CheckAndMutateResult::isSuccess))
         .call();
     }
   }
@@ -387,7 +387,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc,
           stub, put,
           (rn, p) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null,
-            filter, timeRange, p),
+            filter, timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE),
           (c, r) -> r.getProcessed()))
         .call();
     }
@@ -398,7 +398,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller,
           loc, stub, delete,
           (rn, d) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null,
-            filter, timeRange, d),
+            filter, timeRange, d, HConstants.NO_NONCE, HConstants.NO_NONCE),
           (c, r) -> r.getProcessed()))
         .call();
     }
@@ -410,8 +410,9 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller,
           loc, stub, mutation,
-          (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null,
-            filter, timeRange, rm), CheckAndMutateResult::isSuccess))
+          (rn, rm) -> RequestConverter.buildMultiRequest(rn, row, null, null, null, null,
+            filter, timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE),
+          CheckAndMutateResult::isSuccess))
         .call();
     }
   }
@@ -430,6 +431,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       if (mutation instanceof Put) {
         validatePut((Put) mutation, conn.connConf.getMaxKeyValueSize());
       }
+      long nonceGroup = conn.getNonceGenerator().getNonceGroup();
+      long nonce = conn.getNonceGenerator().newNonce();
       return RawAsyncTableImpl.this.<CheckAndMutateResult> newCaller(checkAndMutate.getRow(),
         mutation.getPriority(), rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller,
@@ -437,21 +440,23 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
           (rn, m) -> RequestConverter.buildMutateRequest(rn, checkAndMutate.getRow(),
             checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
             checkAndMutate.getCompareOp(), checkAndMutate.getValue(), checkAndMutate.getFilter(),
-            checkAndMutate.getTimeRange(), m),
+            checkAndMutate.getTimeRange(), m, nonceGroup, nonce),
           (c, r) -> ResponseConverter.getCheckAndMutateResult(r, c.cellScanner())))
         .call();
     } else if (checkAndMutate.getAction() instanceof RowMutations) {
       RowMutations rowMutations = (RowMutations) checkAndMutate.getAction();
       validatePutsInRowMutations(rowMutations, conn.connConf.getMaxKeyValueSize());
+      long nonceGroup = conn.getNonceGenerator().getNonceGroup();
+      long nonce = conn.getNonceGenerator().newNonce();
       return RawAsyncTableImpl.this.<CheckAndMutateResult> newCaller(checkAndMutate.getRow(),
         rowMutations.getMaxPriority(), rpcTimeoutNs)
         .action((controller, loc, stub) ->
           RawAsyncTableImpl.this.<CheckAndMutateResult, CheckAndMutateResult> mutateRow(
             controller, loc, stub, rowMutations,
-            (rn, rm) -> RequestConverter.buildMutateRequest(rn, checkAndMutate.getRow(),
+            (rn, rm) -> RequestConverter.buildMultiRequest(rn, checkAndMutate.getRow(),
             checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
             checkAndMutate.getCompareOp(), checkAndMutate.getValue(), checkAndMutate.getFilter(),
-            checkAndMutate.getTimeRange(), rm),
+            checkAndMutate.getTimeRange(), rm, nonceGroup, nonce),
             resp -> resp))
         .call();
     } else {
@@ -516,16 +521,13 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public CompletableFuture<Result> mutateRow(RowMutations mutations) {
     validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
+    long nonceGroup = conn.getNonceGenerator().getNonceGroup();
+    long nonce = conn.getNonceGenerator().newNonce();
     return this.<Result> newCaller(mutations.getRow(), mutations.getMaxPriority(),
       writeRpcTimeoutNs).action((controller, loc, stub) ->
         this.<Result, Result> mutateRow(controller, loc, stub, mutations,
-          (rn, rm) -> {
-            RegionAction.Builder regionMutationBuilder = RequestConverter
-              .buildRegionAction(rn, rm);
-            regionMutationBuilder.setAtomic(true);
-            return MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build())
-              .build();
-          }, resp -> resp))
+          (rn, rm) -> RequestConverter.buildMultiRequest(rn, rm, nonceGroup, nonce),
+          resp -> resp))
       .call();
   }
 

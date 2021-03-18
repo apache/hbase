@@ -172,7 +172,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       } else {
         action = new Action(rawAction, i);
       }
-      if (rawAction instanceof Append || rawAction instanceof Increment) {
+      if (hasIncrementOrAppend(rawAction)) {
         action.setNonce(conn.getNonceGenerator().newNonce());
       }
       this.actions.add(action);
@@ -182,6 +182,26 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
     this.action2Errors = new IdentityHashMap<>();
     this.startNs = System.nanoTime();
+  }
+
+  private static boolean hasIncrementOrAppend(Row action) {
+    if (action instanceof Append || action instanceof Increment) {
+      return true;
+    } else if (action instanceof RowMutations) {
+      return hasIncrementOrAppend((RowMutations) action);
+    } else if (action instanceof CheckAndMutate) {
+      return hasIncrementOrAppend(((CheckAndMutate) action).getAction());
+    }
+    return false;
+  }
+
+  private static boolean hasIncrementOrAppend(RowMutations mutations) {
+    for (Mutation mutation : mutations.getMutations()) {
+      if (mutation instanceof Append || mutation instanceof Increment) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private long remainingTimeNs() {
