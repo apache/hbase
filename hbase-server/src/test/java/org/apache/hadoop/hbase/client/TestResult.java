@@ -34,10 +34,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
@@ -244,6 +247,50 @@ public class TestResult extends TestCase {
       fail();
     } catch (Exception x) {
       assertTrue(x.getMessage().startsWith("This result was different:"));
+    }
+  }
+
+  /**
+   *  Test Result#compareResults when tags are present.
+   * @throws Exception Exception
+   */
+  @Test
+  public void testCompareResultsWithTags() throws Exception {
+    byte[] qualifier = Bytes.toBytes("q");
+    String tagValue1 = "tagV1";
+    String tagValue2 = "tagV2";
+    // Create cell with 2 tags
+    KeyValue kv1 = new KeyValue(row, family, qualifier, HConstants.LATEST_TIMESTAMP,
+      value, new Tag[] {new Tag((byte) 1, tagValue1), new Tag((byte) 2, tagValue2)});
+
+    // Create cell with no tags.
+    KeyValue kv2 = new KeyValue(row, family, qualifier, HConstants.LATEST_TIMESTAMP,
+      value);
+
+    Result r1 = Result.create(new KeyValue[] {kv1});
+    Result r2 = Result.create(new KeyValue[] {kv2});
+    // Compare result with self.
+    Result.compareResults(r1, r1);
+
+    try {
+      // Compare result with 2 tags v/s no tags.
+      Result.compareResults(r1, r2);
+      fail();
+    } catch (Exception e) {
+      assertTrue(e.getMessage().startsWith("This result was different:"));
+    }
+
+    // Create cell with just 1 tag.
+    String tagValue3 = "tagV3";
+    KeyValue kv3 = new KeyValue(row, family, qualifier, HConstants.LATEST_TIMESTAMP,
+      value, new Tag[] {new Tag((byte) 1, tagValue3)});
+    Result r3 = Result.create(new KeyValue[] {kv3});
+    try {
+      // Compare result with 2 tags v/s 1 tag.
+      Result.compareResults(r1, r3);
+      fail();
+    } catch (Exception e) {
+      assertTrue(e.getMessage().startsWith("This result was different:"));
     }
   }
 

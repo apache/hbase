@@ -470,6 +470,14 @@ public final class CellUtil {
         buf.length);
   }
 
+  /*
+    Compares tags in both cells.
+   */
+  public static boolean matchingTags(final Cell left, final Cell right) {
+    return Bytes.equals(left.getTagsArray(), left.getTagsOffset(), left.getTagsLength(),
+        right.getTagsArray(), right.getTagsOffset(), right.getTagsLength());
+  }
+
   public static boolean matchingTimestamp(Cell a, Cell b) {
     return CellComparator.compareTimestamps(a, b) == 0;
   }
