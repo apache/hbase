@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
@@ -225,21 +226,28 @@ public class AssignmentManager {
     ZKWatcher zkw = master.getZooKeeper();
     // it could be null in some tests
     if (zkw != null) {
-      // here we are still in the early steps of active master startup. There is only one thread(us)
-      // can access AssignmentManager and create region node, so here we do not need to lock the
-      // region node.
-      RegionState regionState = MetaTableLocator.getMetaRegionState(zkw);
-      RegionStateNode regionNode =
-        regionStates.getOrCreateRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
-      regionNode.setRegionLocation(regionState.getServerName());
-      regionNode.setState(regionState.getState());
-      if (regionNode.getProcedure() != null) {
-        regionNode.getProcedure().stateLoaded(this, regionNode);
+      List<String> metaZNodes = zkw.getMetaReplicaNodes();
+      LOG.debug("hbase:meta replica znodes: {}", metaZNodes);
+      for (String metaZNode : metaZNodes) {
+        int replicaId = zkw.getZNodePaths().getMetaReplicaIdFromZnode(metaZNode);
+        // here we are still in the early steps of active master startup. There is only one thread(us)
+        // can access AssignmentManager and create region node, so here we do not need to lock the
+        // region node.
+        RegionState regionState = MetaTableLocator.getMetaRegionState(zkw, replicaId);
+        RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionState.getRegion());
+        regionNode.setRegionLocation(regionState.getServerName());
+        regionNode.setState(regionState.getState());
+        if (regionNode.getProcedure() != null) {
+          regionNode.getProcedure().stateLoaded(this, regionNode);
+        }
+        if (regionState.getServerName() != null) {
+          regionStates.addRegionToServer(regionNode);
+        }
+        if (RegionReplicaUtil.isDefaultReplica(replicaId)) {
+          setMetaAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
+        }
+        LOG.debug("Loaded hbase:meta {}", regionNode);
       }
-      if (regionState.getServerName() != null) {
-        regionStates.addRegionToServer(regionNode);
-      }
-      setMetaAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
     }
   }
 
