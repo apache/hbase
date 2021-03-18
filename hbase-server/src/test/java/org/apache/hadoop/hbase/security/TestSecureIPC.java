@@ -239,10 +239,12 @@ public class TestSecureIPC {
           }
         };
 
-        createConnectionMethod.invoke(doAnswer(answer).when(spiedRpcClient), any(ConnectionId.class));
+        createConnectionMethod.invoke(
+          doAnswer(answer).when(spiedRpcClient), any(ConnectionId.class));
         return spiedRpcClient;
       } else {
-        throw new UnsupportedOperationException(rpcClient.getClass() + " isn't supported for testing");
+        throw new UnsupportedOperationException(
+          rpcClient.getClass() + " isn't supported for testing");
       }
     }
   }
@@ -316,7 +318,8 @@ public class TestSecureIPC {
    * Sets up a RPC Server and a Client. Does a RPC checks the result. If an exception is thrown from
    * the stub, this function will throw root cause of that exception.
    */
-  private void callRpcService(User clientUser, Callable<RpcClient> rpcClientFactory) throws Exception {
+  private void callRpcService(User clientUser, Callable<RpcClient> rpcClientFactory)
+    throws Exception {
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
     Mockito.when(securityInfoMock.getServerPrincipal())
         .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
