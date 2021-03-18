@@ -275,9 +275,6 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         region.getMetrics().updateReadRequestCount();
       }
     }
-    if (rsServices != null && rsServices.getMetrics() != null) {
-      rsServices.getMetrics().updateReadQueryMeter(getRegionInfo().getTable());
-    }
 
     // If the size limit was reached it means a partial Result is being returned. Returning a
     // partial Result means that we should not reset the filters; filters should only be reset in
