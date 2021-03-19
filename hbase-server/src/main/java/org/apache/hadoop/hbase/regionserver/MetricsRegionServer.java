@@ -40,6 +40,12 @@ public class MetricsRegionServer {
   public static final String RS_ENABLE_TABLE_METRICS_KEY =
       "hbase.regionserver.enable.table.latencies";
   public static final boolean RS_ENABLE_TABLE_METRICS_DEFAULT = true;
+  public static final String RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY =
+      "hbase.regionserver.enable.server.query.meter";
+  public static final boolean RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY_DEFAULT = false;
+  public static final String RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY =
+      "hbase.regionserver.enable.table.query.meter";
+  public static final boolean RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT = false;
 
   public static final String SLOW_METRIC_TIME = "hbase.ipc.slow.metric.time";
   private final MetricsRegionServerSource serverSource;
@@ -74,8 +80,11 @@ public class MetricsRegionServer {
 
     slowMetricTime = conf.getLong(SLOW_METRIC_TIME, DEFAULT_SLOW_METRIC_TIME);
     quotaSource = CompatibilitySingletonFactory.getInstance(MetricsRegionServerQuotaSource.class);
-    serverReadQueryMeter = metricRegistry.meter("ServerReadQueryPerSecond");
-    serverWriteQueryMeter = metricRegistry.meter("ServerWriteQueryPerSecond");
+    if (conf.getBoolean(RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY,
+        RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY_DEFAULT)) {
+      serverReadQueryMeter = metricRegistry.meter("ServerReadQueryPerSecond");
+      serverWriteQueryMeter = metricRegistry.meter("ServerWriteQueryPerSecond");
+    }
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
@@ -93,7 +102,9 @@ public class MetricsRegionServer {
    */
   static RegionServerTableMetrics createTableMetrics(Configuration conf) {
     if (conf.getBoolean(RS_ENABLE_TABLE_METRICS_KEY, RS_ENABLE_TABLE_METRICS_DEFAULT)) {
-      return new RegionServerTableMetrics();
+      return new RegionServerTableMetrics(
+        conf.getBoolean(RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY,
+          RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT));
     }
     return null;
   }
@@ -284,20 +295,26 @@ public class MetricsRegionServer {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updateTableReadQueryMeter(tn, count);
     }
-    this.serverReadQueryMeter.mark(count);
+    if (serverReadQueryMeter != null) {
+      serverReadQueryMeter.mark(count);
+    }
   }
 
   public void updateWriteQueryMeter(TableName tn, long count) {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updateTableWriteQueryMeter(tn, count);
     }
-    this.serverWriteQueryMeter.mark(count);
+    if (serverWriteQueryMeter != null) {
+      serverWriteQueryMeter.mark(count);
+    }
   }
 
   public void updateWriteQueryMeter(TableName tn) {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updateTableWriteQueryMeter(tn);
     }
-    this.serverWriteQueryMeter.mark();
+    if (serverWriteQueryMeter != null) {
+      serverWriteQueryMeter.mark();
+    }
   }
 }
