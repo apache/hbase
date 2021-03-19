@@ -186,4 +186,8 @@ public class ReplicationSourceLogQueue {
     }
     return oldestWalTimestamp;
   }
+
+  public MetricsSource getMetrics() {
+    return metrics;
+  }
 }

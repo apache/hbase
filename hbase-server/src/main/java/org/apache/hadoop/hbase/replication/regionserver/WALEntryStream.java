@@ -256,7 +256,6 @@ class WALEntryStream implements Closeable {
     logQueue.remove(walGroupId);
     setCurrentPath(null);
     setPosition(0);
-    metrics.decrSizeOfLogQueue();
   }
 
   /**
