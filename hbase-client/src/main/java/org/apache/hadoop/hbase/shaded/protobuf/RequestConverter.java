@@ -235,7 +235,6 @@ public final class RequestConverter {
    * Create a protocol buffer MultiRequest for row mutations
    *
    * @return a multi request
-   * @throws IOException
    */
   public static ClientProtos.MultiRequest buildMultiRequest(final byte[] regionName,
     final RowMutations rowMutations, long nonceGroup, long nonce) throws IOException {

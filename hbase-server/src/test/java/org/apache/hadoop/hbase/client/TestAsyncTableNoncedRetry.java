@@ -82,7 +82,7 @@ public class TestAsyncTableNoncedRetry {
   private static final AtomicInteger CALLED = new AtomicInteger();
 
   private static final long SLEEP_TIME = 2000;
-  
+
   private static final long RPC_TIMEOUT = SLEEP_TIME / 4 * 3; // three fourths of the sleep time
 
   // The number of miniBatchOperations that are executed in a RegionServer
