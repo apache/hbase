@@ -247,39 +247,78 @@ public final class RequestConverter {
    */
   public static MutateRequest buildMutateRequest(final byte[] regionName, final byte[] row,
     final byte[] family, final byte[] qualifier, final CompareOperator op, final byte[] value,
-    final Filter filter, final TimeRange timeRange, final Mutation mutation) throws IOException {
-    return MutateRequest.newBuilder()
-      .setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName))
-      .setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation))
+    final Filter filter, final TimeRange timeRange, final Mutation mutation, long nonceGroup,
+    long nonce) throws IOException {
+    MutateRequest.Builder builder = MutateRequest.newBuilder();
+    if (mutation instanceof Increment || mutation instanceof Append) {
+      builder.setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation, nonce))
+        .setNonceGroup(nonceGroup);
+    } else {
+      builder.setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation));
+    }
+    return builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName))
       .setCondition(buildCondition(row, family, qualifier, op, value, filter, timeRange))
       .build();
   }
 
   /**
-   * Create a protocol buffer MutateRequest for conditioned row mutations
+   * Create a protocol buffer MultiRequest for conditioned row mutations
    *
-   * @return a mutate request
+   * @return a multi request
    * @throws IOException
    */
-  public static ClientProtos.MultiRequest buildMutateRequest(final byte[] regionName,
+  public static ClientProtos.MultiRequest buildMultiRequest(final byte[] regionName,
     final byte[] row, final byte[] family, final byte[] qualifier,
     final CompareOperator op, final byte[] value, final Filter filter, final TimeRange timeRange,
-    final RowMutations rowMutations) throws IOException {
+    final RowMutations rowMutations, long nonceGroup, long nonce) throws IOException {
+    return buildMultiRequest(regionName, rowMutations, buildCondition(row, family, qualifier, op,
+      value, filter, timeRange), nonceGroup, nonce);
+  }
+
+  /**
+   * Create a protocol buffer MultiRequest for row mutations
+   *
+   * @return a multi request
+   */
+  public static ClientProtos.MultiRequest buildMultiRequest(final byte[] regionName,
+    final RowMutations rowMutations, long nonceGroup, long nonce) throws IOException {
+    return buildMultiRequest(regionName, rowMutations, null, nonceGroup, nonce);
+  }
+
+  private static ClientProtos.MultiRequest buildMultiRequest(final byte[] regionName,
+    final RowMutations rowMutations, final Condition condition, long nonceGroup, long nonce)
+    throws IOException {
     RegionAction.Builder builder =
-        getRegionActionBuilderWithRegion(RegionAction.newBuilder(), regionName);
+      getRegionActionBuilderWithRegion(RegionAction.newBuilder(), regionName);
     builder.setAtomic(true);
+
+    boolean hasNonce = false;
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
     for (Mutation mutation: rowMutations.getMutations()) {
       mutationBuilder.clear();
-      MutationProto mp = ProtobufUtil.toMutation(getMutationType(mutation), mutation,
-        mutationBuilder);
+      MutationProto mp;
+      if (mutation instanceof Increment || mutation instanceof Append) {
+        mp = ProtobufUtil.toMutation(getMutationType(mutation), mutation, mutationBuilder, nonce);
+        hasNonce = true;
+      } else {
+        mp = ProtobufUtil.toMutation(getMutationType(mutation), mutation, mutationBuilder);
+      }
       actionBuilder.clear();
       actionBuilder.setMutation(mp);
       builder.addAction(actionBuilder.build());
     }
-    return ClientProtos.MultiRequest.newBuilder().addRegionAction(builder.setCondition(
-      buildCondition(row, family, qualifier, op, value, filter, timeRange)).build()).build();
+
+    if (condition != null) {
+      builder.setCondition(condition);
+    }
+
+    MultiRequest.Builder multiRequestBuilder = MultiRequest.newBuilder();
+    if (hasNonce) {
+      multiRequestBuilder.setNonceGroup(nonceGroup);
+    }
+
+    return multiRequestBuilder.addRegionAction(builder.build()).build();
   }
 
   /**
@@ -360,33 +399,6 @@ public final class RequestConverter {
     builder.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, delete,
       MutationProto.newBuilder()));
     return builder.build();
-  }
-
-  /**
-   * Create a protocol buffer MultiRequest for row mutations.
-   * Does not propagate Action absolute position.  Does not set atomic action on the created
-   * RegionAtomic.  Caller should do that if wanted.
-   * @param regionName
-   * @param rowMutations
-   * @return a data-laden RegionMutation.Builder
-   * @throws IOException
-   */
-  public static RegionAction.Builder buildRegionAction(final byte [] regionName,
-      final RowMutations rowMutations)
-  throws IOException {
-    RegionAction.Builder builder =
-      getRegionActionBuilderWithRegion(RegionAction.newBuilder(), regionName);
-    ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
-    MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
-    for (Mutation mutation: rowMutations.getMutations()) {
-      mutationBuilder.clear();
-      MutationProto mp = ProtobufUtil.toMutation(getMutationType(mutation), mutation,
-        mutationBuilder);
-      actionBuilder.clear();
-      actionBuilder.setMutation(mp);
-      builder.addAction(actionBuilder.build());
-    }
-    return builder;
   }
 
   public static RegionAction.Builder getRegionActionBuilderWithRegion(
@@ -785,9 +797,6 @@ public final class RequestConverter {
         throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
     }
-    if (!multiRequestBuilder.hasNonceGroup() && hasNonce) {
-      multiRequestBuilder.setNonceGroup(nonceGroup);
-    }
     if (builder.getActionCount() > 0) {
       multiRequestBuilder.addRegionAction(builder.build());
     }
@@ -801,8 +810,11 @@ public final class RequestConverter {
       builder.clear();
       getRegionActionBuilderWithRegion(builder, regionName);
 
-      buildNoDataRegionAction((RowMutations) action.getAction(), cells, builder, actionBuilder,
-        mutationBuilder);
+      boolean hasIncrementOrAppend = buildNoDataRegionAction((RowMutations) action.getAction(),
+        cells, action.getNonce(), builder, actionBuilder, mutationBuilder);
+      if (hasIncrementOrAppend) {
+        hasNonce = true;
+      }
       builder.setAtomic(true);
 
       multiRequestBuilder.addRegionAction(builder.build());
@@ -836,16 +848,21 @@ public final class RequestConverter {
       } else if (cam.getAction() instanceof Increment) {
         actionBuilder.clear();
         mutationBuilder.clear();
-        buildNoDataRegionAction((Increment) cam.getAction(), cells, HConstants.NO_NONCE, builder,
+        buildNoDataRegionAction((Increment) cam.getAction(), cells, action.getNonce(), builder,
           actionBuilder, mutationBuilder);
+        hasNonce = true;
       } else if (cam.getAction() instanceof Append) {
         actionBuilder.clear();
         mutationBuilder.clear();
-        buildNoDataRegionAction((Append) cam.getAction(), cells, HConstants.NO_NONCE, builder,
+        buildNoDataRegionAction((Append) cam.getAction(), cells, action.getNonce(), builder,
           actionBuilder, mutationBuilder);
+        hasNonce = true;
       } else if (cam.getAction() instanceof RowMutations) {
-        buildNoDataRegionAction((RowMutations) cam.getAction(), cells, builder, actionBuilder,
-          mutationBuilder);
+        boolean hasIncrementOrAppend = buildNoDataRegionAction((RowMutations) cam.getAction(),
+          cells, action.getNonce(), builder, actionBuilder, mutationBuilder);
+        if (hasIncrementOrAppend) {
+          hasNonce = true;
+        }
         builder.setAtomic(true);
       } else {
         throw new DoNotRetryIOException("CheckAndMutate doesn't support " +
@@ -857,6 +874,10 @@ public final class RequestConverter {
       // This CheckAndMutate region action is at (multiRequestBuilder.getRegionActionCount() - 1)
       // in the overall multiRequest.
       indexMap.put(multiRequestBuilder.getRegionActionCount() - 1, action.getOriginalIndex());
+    }
+
+    if (!multiRequestBuilder.hasNonceGroup() && hasNonce) {
+      multiRequestBuilder.setNonceGroup(nonceGroup);
     }
   }
 
@@ -907,18 +928,29 @@ public final class RequestConverter {
       MutationType.APPEND, append, mutationBuilder, nonce)));
   }
 
-  private static void buildNoDataRegionAction(final RowMutations rowMutations,
-    final List<CellScannable> cells, final RegionAction.Builder regionActionBuilder,
+  /**
+   * @return whether or not the rowMutations has a Increment or Append
+   */
+  private static boolean buildNoDataRegionAction(final RowMutations rowMutations,
+    final List<CellScannable> cells, long nonce, final RegionAction.Builder regionActionBuilder,
     final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
     throws IOException {
+    boolean ret = false;
     for (Mutation mutation: rowMutations.getMutations()) {
       mutationBuilder.clear();
-      MutationProto mp = ProtobufUtil.toMutationNoData(getMutationType(mutation), mutation,
-        mutationBuilder);
+      MutationProto mp;
+      if (mutation instanceof Increment || mutation instanceof Append) {
+        mp = ProtobufUtil.toMutationNoData(getMutationType(mutation), mutation, mutationBuilder,
+          nonce);
+        ret = true;
+      } else {
+        mp = ProtobufUtil.toMutationNoData(getMutationType(mutation), mutation, mutationBuilder);
+      }
       cells.add(mutation);
       actionBuilder.clear();
       regionActionBuilder.addAction(actionBuilder.setMutation(mp).build());
     }
+    return ret;
   }
 
   private static MutationType getMutationType(Mutation mutation) {

@@ -555,17 +555,16 @@ public class HTable implements Table {
 
   @Override
   public Result mutateRow(final RowMutations rm) throws IOException {
+    long nonceGroup = getNonceGroup();
+    long nonce = getNonce();
     CancellableRegionServerCallable<MultiResponse> callable =
       new CancellableRegionServerCallable<MultiResponse>(this.connection, getName(), rm.getRow(),
           rpcControllerFactory.newController(), writeRpcTimeoutMs,
           new RetryingTimeTracker().start(), rm.getMaxPriority()) {
       @Override
       protected MultiResponse rpcCall() throws Exception {
-        RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
-            getLocation().getRegionInfo().getRegionName(), rm);
-        regionMutationBuilder.setAtomic(true);
-        MultiRequest request =
-            MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
+        MultiRequest request = RequestConverter.buildMultiRequest(
+          getLocation().getRegionInfo().getRegionName(), rm, nonceGroup, nonce);
         ClientProtos.MultiResponse response = doMulti(request);
         ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
         if (res.hasException()) {
@@ -595,6 +594,14 @@ public class HTable implements Table {
       throw ars.getErrors();
     }
     return (Result) results[0];
+  }
+
+  private long getNonceGroup() {
+    return ((ClusterConnection) getConnection()).getNonceGenerator().getNonceGroup();
+  }
+
+  private long getNonce() {
+    return ((ClusterConnection) getConnection()).getNonceGenerator().newNonce();
   }
 
   @Override
@@ -737,6 +744,8 @@ public class HTable implements Table {
   private CheckAndMutateResult doCheckAndMutate(final byte[] row, final byte[] family,
     final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
     final TimeRange timeRange, final RowMutations rm) throws IOException {
+    long nonceGroup = getNonceGroup();
+    long nonce = getNonce();
     CancellableRegionServerCallable<MultiResponse> callable =
     new CancellableRegionServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
     rpcControllerFactory.newController(), writeRpcTimeoutMs, new RetryingTimeTracker().start(),
@@ -744,8 +753,8 @@ public class HTable implements Table {
       @Override
       protected MultiResponse rpcCall() throws Exception {
         MultiRequest request = RequestConverter
-          .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), row, family,
-            qualifier, op, value, filter, timeRange, rm);
+          .buildMultiRequest(getLocation().getRegionInfo().getRegionName(), row, family,
+            qualifier, op, value, filter, timeRange, rm, nonceGroup, nonce);
         ClientProtos.MultiResponse response = doMulti(request);
         ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
         if (res.hasException()) {
@@ -822,6 +831,8 @@ public class HTable implements Table {
   private CheckAndMutateResult doCheckAndMutate(final byte[] row, final byte[] family,
     final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
     final TimeRange timeRange, final Mutation mutation) throws IOException {
+    long nonceGroup = getNonceGroup();
+    long nonce = getNonce();
     ClientServiceCallable<CheckAndMutateResult> callable =
       new ClientServiceCallable<CheckAndMutateResult>(this.connection, getName(), row,
         this.rpcControllerFactory.newController(), mutation.getPriority()) {
@@ -829,7 +840,7 @@ public class HTable implements Table {
         protected CheckAndMutateResult rpcCall() throws Exception {
           MutateRequest request = RequestConverter.buildMutateRequest(
             getLocation().getRegionInfo().getRegionName(), row, family, qualifier, op, value,
-            filter, timeRange, mutation);
+            filter, timeRange, mutation, nonceGroup, nonce);
           MutateResponse response = doMutate(request);
           if (response.hasResult()) {
             return new CheckAndMutateResult(response.getProcessed(),
