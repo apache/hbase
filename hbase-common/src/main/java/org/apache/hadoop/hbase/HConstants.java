@@ -1553,6 +1553,16 @@ public final class HConstants {
   public static final String HBASE_CANARY_READ_RAW_SCAN_KEY = "hbase.canary.read.raw.enabled";
 
   public static final String HBASE_CANARY_READ_ALL_CF = "hbase.canary.read.all.column.famliy";
+
+  public static final String HBASE_CANARY_REGION_TASK_COUNT_MAX =
+      "hbase.canary.region.task.count.max";
+
+  public static final String HBASE_CANARY_REGION_TASK_COUNT_MIN =
+      "hbase.canary.region.task.count.min";
+
+  public static final String HBASE_CANARY_REGION_TASK_COUNT_NORMALIZE_ENABLE =
+      "hbase.canary.region.task.count.normalize.enable";
+
   /**
    * Configuration keys for programmatic JAAS configuration for secured ZK interaction
    */
