@@ -2648,9 +2648,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
         "'valueSize'; set on read for stats on size: Default: Not set.");
     System.err.println(" blockEncoding   Block encoding to use. Value should be one of "
         + Arrays.toString(DataBlockEncoding.values()) + ". Default: NONE");
-    System.err.println(" initRows        The total rows currently in the table. When initRows "
-        + "is less than totalRows(perClientRunRows * nclients), initRows will be set equal to "
-        + "totalRows. Default: -1");
+    System.err.println(" initRows        The total rows currently in the table. This could "
+        + "specify the range of reading and writing, making reading and writing more random. "
+        + "If initRows is less than totalRows(perClientRunRows * nclients), initRows will be "
+        + "set equal to totalRows. Default: -1");
     System.err.println();
     System.err.println("Table Creation / Write Tests:");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
