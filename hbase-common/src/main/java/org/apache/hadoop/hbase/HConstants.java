@@ -1447,7 +1447,8 @@ public final class HConstants {
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   public static final String UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS =
     "hbase.unsafe.client.kerberos.hostname.disable.reversedns";
-  public static final boolean DEFAULT_UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS = false;
+  public static final boolean DEFAULT_UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS =
+    false;
 
   private HConstants() {
     // Can't be instantiated with this ctor.
