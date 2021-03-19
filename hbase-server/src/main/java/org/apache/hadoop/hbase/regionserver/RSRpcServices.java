@@ -2901,16 +2901,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // arbitrary 32. TODO: keep record of general size of results being returned.
     List<Cell> values = new ArrayList<Cell>(32);
     region.startRegionOperation(Operation.SCAN);
+    long before = EnvironmentEdgeManager.currentTime();
+    // Used to check if we've matched the row limit set on the Scan
+    int numOfCompleteRows = 0;
+    // Count of times we call nextRaw; can be > numOfCompleteRows.
+    int numOfNextRawCalls = 0;
     try {
       int numOfResults = 0;
-      int numOfCompleteRows = 0;
-      long before = EnvironmentEdgeManager.currentTime();
       synchronized (scanner) {
         boolean stale = (region.getRegionInfo().getReplicaId() != 0);
-        boolean clientHandlesPartials =
-            request.hasClientHandlesPartials() && request.getClientHandlesPartials();
-        boolean clientHandlesHeartbeats =
-            request.hasClientHandlesHeartbeats() && request.getClientHandlesHeartbeats();
+        boolean clientHandlesPartials = request.hasClientHandlesPartials() && request.getClientHandlesPartials();
+        boolean clientHandlesHeartbeats = request.hasClientHandlesHeartbeats() && request.getClientHandlesHeartbeats();
 
         // On the server side we must ensure that the correct ordering of partial results is
         // returned to the client to allow them to properly reconstruct the partial results.
@@ -2933,9 +2934,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         long timeLimit = getTimeLimit(controller, allowHeartbeatMessages);
 
         final LimitScope sizeScope =
-            allowPartialResults ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
+          allowPartialResults ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
         final LimitScope timeScope =
-            allowHeartbeatMessages ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
+          allowHeartbeatMessages ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
 
         boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
 
@@ -2958,22 +2959,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
           // Collect values to be returned here
           moreRows = scanner.nextRaw(values, scannerContext);
+          numOfNextRawCalls++;
 
           if (!values.isEmpty()) {
             if (limitOfRows > 0) {
               // First we need to check if the last result is partial and we have a row change. If
               // so then we need to increase the numOfCompleteRows.
               if (results.isEmpty()) {
-                if (rsh.rowOfLastPartialResult != null &&
-                    !CellUtil.matchingRow(values.get(0), rsh.rowOfLastPartialResult)) {
+                if (rsh.rowOfLastPartialResult != null && !CellUtil.matchingRow(values.get(0), rsh.rowOfLastPartialResult)) {
                   numOfCompleteRows++;
                   checkLimitOfRows(numOfCompleteRows, limitOfRows, moreRows, scannerContext,
                     builder);
                 }
               } else {
                 Result lastResult = results.get(results.size() - 1);
-                if (lastResult.mayHaveMoreCellsInRow() &&
-                    !CellUtil.matchingRow(values.get(0), lastResult.getRow())) {
+                if (lastResult.mayHaveMoreCellsInRow() && !CellUtil
+                  .matchingRow(values.get(0), lastResult.getRow())) {
                   numOfCompleteRows++;
                   checkLimitOfRows(numOfCompleteRows, limitOfRows, moreRows, scannerContext,
                     builder);
@@ -3015,8 +3016,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
           if (limitReached || !moreRows) {
             if (LOG.isTraceEnabled()) {
-              LOG.trace("Done scanning. limitReached: " + limitReached + " moreRows: " + moreRows
-                  + " scannerContext: " + scannerContext);
+              LOG.trace("Done scanning. limitReached: " + limitReached + " moreRows: " + moreRows + " scannerContext: " + scannerContext);
             }
             // We only want to mark a ScanResponse as a heartbeat message in the event that
             // there are more values to be read server side. If there aren't more values,
@@ -3053,21 +3053,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           builder.setScanMetrics(metricBuilder.build());
         }
       }
+    } finally {
+      region.closeRegionOperation();
+      // Update serverside metrics, even on error.
       long end = EnvironmentEdgeManager.currentTime();
       long responseCellSize = context != null ? context.getResponseCellSize() : 0;
       region.getMetrics().updateScanTime(end - before);
       if (regionServer.metricsRegionServer != null) {
-        regionServer.metricsRegionServer.updateScanSize(
-            region.getTableDesc().getTableName(), responseCellSize);
-        regionServer.metricsRegionServer.updateScanTime(
-            region.getTableDesc().getTableName(), end - before);
+        regionServer.metricsRegionServer.updateScanSize(region.getTableDesc().getTableName(), responseCellSize);
+        regionServer.metricsRegionServer.updateScanTime(region.getTableDesc().getTableName(), end - before);
+        regionServer.metricsRegionServer
+          .updateReadQueryMeter(region.getRegionInfo().getTable(), numOfNextRawCalls);
       }
-    } finally {
-      region.closeRegionOperation();
-    }
-    // coprocessor postNext hook
-    if (region.getCoprocessorHost() != null) {
-      region.getCoprocessorHost().postScannerNext(scanner, results, maxResults, true);
+      // coprocessor postNext hook
+      if (region.getCoprocessorHost() != null) {
+        region.getCoprocessorHost().postScannerNext(scanner, results, maxResults, true);
+      }
     }
   }
 
