@@ -1,3 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -15,32 +17,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
-
-import org.apache.yetus.audience.InterfaceAudience;
-
-/**
- * Logger class that buffers before trying to log to the specified console.
- */
-@InterfaceAudience.Private
-public class AsyncConsoleAppender extends org.apache.log4j.AsyncAppender {
-  private final org.apache.log4j.ConsoleAppender consoleAppender;
-
-  public AsyncConsoleAppender() {
-    super();
-    consoleAppender = new org.apache.log4j.ConsoleAppender(
-      new org.apache.log4j.PatternLayout("%d{ISO8601} %-5p [%t] %c{2}: %m%n"));
-    this.addAppender(consoleAppender);
-  }
-
-  public void setTarget(String value) {
-    consoleAppender.setTarget(value);
-  }
-
-  @Override
-  public void activateOptions() {
-    consoleAppender.activateOptions();
-    super.activateOptions();
-  }
-
-}
+-->
+<Configuration>
+  <Appenders>
+    <!-- Console appender -->
+    <Console name="console" target="SYSTEM_ERR">
+      <PatternLayout pattern="%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n" />
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Root level="warn">
+      <AppenderRef ref="console" />
+    </Root>
+    <!-- ZooKeeper will still put stuff at WARN -->
+    <Logger name="org.apache.zookeeper" level="error" />
+  </Loggers>
+</Configuration>

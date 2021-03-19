@@ -639,7 +639,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * This is used before starting HDFS and map-reduce mini-clusters Run something like the below to
    * check for the likes of '/tmp' references -- i.e. references outside of the test data dir -- in
    * the conf.
-   *
    * <pre>
    * Configuration conf = TEST_UTIL.getConfiguration();
    * for (Iterator&lt;Map.Entry&lt;String, String&gt;&gt; i = conf.iterator(); i.hasNext();) {

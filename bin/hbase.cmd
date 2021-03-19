@@ -329,7 +329,13 @@ set HBASE_OPTS=%HBASE_OPTS% -XX:OnOutOfMemoryError="taskkill /F /PID %p"
 if not defined HBASE_ROOT_LOGGER (
   set HBASE_ROOT_LOGGER=INFO,console
 )
-set HBASE_OPTS=%HBASE_OPTS% -Dhbase.root.logger="%HBASE_ROOT_LOGGER%"
+
+for /F "tokens=1,2 delims=," %%a in ("%HBASE_ROOT_LOGGER%") do (
+  set HBASE_ROOT_LOGGER_LEVEL=%%a
+  set HBASE_ROOT_LOGGER_APPENDER=%%b
+)
+
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.root.logger.level="%HBASE_ROOT_LOGGER_LEVEL% -Dhbase.root.logger.appender="%HBASE_ROOT_LOGGER_APPENDER% "
 
 if defined JAVA_LIBRARY_PATH (
   set HBASE_OPTS=%HBASE_OPTS% -Djava.library.path="%JAVA_LIBRARY_PATH%"
@@ -345,7 +351,13 @@ if not defined HBASE_SECURITY_LOGGER (
     set HBASE_SECURITY_LOGGER=INFO,DRFAS
   )
 )
-set HBASE_OPTS=%HBASE_OPTS% -Dhbase.security.logger="%HBASE_SECURITY_LOGGER%"
+
+for /F "tokens=1,2 delims=," %%a in ("%HBASE_SECURITY_LOGGER%") do (
+  set HBASE_SECURITY_LOGGER_LEVEL=%%a
+  set HBASE_SECURITY_LOGGER_APPENDER=%%b
+)
+
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.security.logger.level="%HBASE_SECURITY_LOGGER_LEVEL% -Dhbase.security.logger.appender="%HBASE_SECURITY_LOGGER_APPENDER%"
 
 set HEAP_SETTINGS=%JAVA_HEAP_MAX% %JAVA_OFFHEAP_MAX%
 set java_arguments=%HEAP_SETTINGS% %HBASE_OPTS% -classpath "%CLASSPATH%" %CLASS% %hbase-command-arguments%
