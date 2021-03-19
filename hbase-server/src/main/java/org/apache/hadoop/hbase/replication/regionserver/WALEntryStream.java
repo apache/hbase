@@ -271,7 +271,6 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
     logQueue.remove(walGroupId);
     setCurrentPath(null);
     setPosition(0);
-    metrics.decrSizeOfLogQueue();
   }
 
   private void readNextEntryAndSetPosition() throws IOException {

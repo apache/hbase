@@ -143,7 +143,10 @@ public class TestWALEntryStream {
 
   @Before
   public void setUp() throws Exception {
-    logQueue = new ReplicationSourceLogQueue(conf, new MetricsSource("2"));
+    MetricsSource source = new MetricsSource("2");
+    // Source with the same id is shared and carries values from the last run
+    source.clear();
+    logQueue = new ReplicationSourceLogQueue(conf, source);
     List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     pathWatcher = new PathWatcher();
     listeners.add(pathWatcher);
@@ -810,5 +813,29 @@ public class TestWALEntryStream {
       writer.sync(false);
     }
     writer.close();
+  }
+
+  /**
+   * Tests size of log queue is incremented and decremented properly.
+   */
+  @Test
+  public void testSizeOfLogQueue() throws Exception {
+    // There should be always 1 log which is current wal.
+    assertEquals(1, logQueue.getMetrics().getSizeOfLogQueue());
+    appendToLog();
+    log.rollWriter();
+    // After rolling there will be 2 wals in the queue
+    assertEquals(2, logQueue.getMetrics().getSizeOfLogQueue());
+
+    try (WALEntryStream entryStream =
+           new WALEntryStream(logQueue, fs, conf, logQueue.getMetrics(), fakeWalGroupId)) {
+      // There's one edit in the log, read it.
+      assertTrue(entryStream.hasNext());
+      WAL.Entry entry = entryStream.next();
+      assertNotNull(entry);
+      assertFalse(entryStream.hasNext());
+    }
+    // After removing one wal, size of log queue will be 1 again.
+    assertEquals(1, logQueue.getMetrics().getSizeOfLogQueue());
   }
 }
