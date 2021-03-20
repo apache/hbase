@@ -62,14 +62,14 @@ public class TestHDFSBlocksDistribution {
       , distribution.getHostAndWeights().get("test").getWeightForSsd());
   }
 
-  public class MockHDFSBlocksDistribution extends HDFSBlocksDistribution {
+  private static final class MockHDFSBlocksDistribution extends HDFSBlocksDistribution {
+
     @Override
-    public Map<String,HostAndWeight> getHostAndWeights() {
+    public Map<String, HostAndWeight> getHostAndWeights() {
       HashMap<String, HostAndWeight> map = new HashMap<>();
       map.put("test", new HostAndWeight(null, 100, 0));
       return map;
     }
-
   }
 
   @Test

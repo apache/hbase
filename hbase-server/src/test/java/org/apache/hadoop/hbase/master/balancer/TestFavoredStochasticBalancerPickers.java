@@ -180,10 +180,11 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
         serverAssignments.put(sn, getTableRegionsFromServer(tableName, sn));
       }
     }
-    RegionLocationFinder regionFinder = new RegionLocationFinder();
+    RegionHDFSBlockLocationFinder regionFinder = new RegionHDFSBlockLocationFinder();
     regionFinder.setClusterMetrics(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
     regionFinder.setConf(conf);
-    regionFinder.setServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
+    regionFinder.setClusterInfoProvider(
+      new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
     Cluster cluster = new Cluster(serverAssignments, null, regionFinder, new RackManager(conf));
     LoadOnlyFavoredStochasticBalancer balancer = (LoadOnlyFavoredStochasticBalancer) TEST_UTIL
         .getMiniHBaseCluster().getMaster().getLoadBalancer().getInternalBalancer();
@@ -196,8 +197,9 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
       LOG.error("Most loaded server: " + mostLoadedServer + " does not match: "
           + cluster.servers[servers[servers.length -1]]);
     }
-    assertEquals(mostLoadedServer, cluster.servers[servers[servers.length -1]]);
-    FavoredStochasticBalancer.FavoredNodeLoadPicker loadPicker = balancer.new FavoredNodeLoadPicker();
+    assertEquals(mostLoadedServer, cluster.servers[servers[servers.length - 1]]);
+    FavoredStochasticBalancer.FavoredNodeLoadPicker loadPicker =
+      balancer.new FavoredNodeLoadPicker();
     boolean userRegionPicked = false;
     for (int i = 0; i < 100; i++) {
       if (userRegionPicked) {
