@@ -35,17 +35,19 @@ import org.mockito.Mockito;
 public class TestRpcServerTraceLogging {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
-      .forClass(TestRpcServerTraceLogging.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestRpcServerTraceLogging.class);
 
-  static org.apache.log4j.Logger rpcServerLog = org.apache.log4j.Logger.getLogger(RpcServer.class);
+  private static final org.apache.logging.log4j.core.Logger rpcServerLog =
+    (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+      .getLogger(RpcServer.class);
 
   static final String TRACE_LOG_MSG =
-      "This is dummy message for testing:: region { type: REGION_NAME value: \"hbase:meta,,1\" }"
-          + " scan { column { family: \"info\" } time_range { from: 0 to: 9223372036854775807 } "
-      + "max_versions: 1 cache_blocks: true max_result_size: 2097152 caching: 2147483647 } "
-      + "number_of_rows: 2147483647 close_scanner: false client_handles_partials: "
-      + "true client_handles_heartbeats: true track_scan_metrics: false";
+    "This is dummy message for testing:: region { type: REGION_NAME value: \"hbase:meta,,1\" }" +
+      " scan { column { family: \"info\" } time_range { from: 0 to: 9223372036854775807 } " +
+      "max_versions: 1 cache_blocks: true max_result_size: 2097152 caching: 2147483647 } " +
+      "number_of_rows: 2147483647 close_scanner: false client_handles_partials: " +
+      "true client_handles_heartbeats: true track_scan_metrics: false";
 
   static final int TRACE_LOG_LENGTH = TRACE_LOG_MSG.length();
 
@@ -62,7 +64,7 @@ public class TestRpcServerTraceLogging {
   @Test
   public void testLoggingWithTraceOff() {
     conf.setInt("hbase.ipc.trace.log.max.length", 250);
-    rpcServerLog.setLevel(org.apache.log4j.Level.DEBUG);
+    rpcServerLog.setLevel(org.apache.logging.log4j.Level.DEBUG);
     String truncatedString = mockRpcServer.truncateTraceLog(TRACE_LOG_MSG);
 
     assertEquals(150 + RpcServer.KEY_WORD_TRUNCATED.length(), truncatedString.length());
@@ -72,7 +74,7 @@ public class TestRpcServerTraceLogging {
   @Test
   public void testLoggingWithTraceOn() {
     conf.setInt("hbase.ipc.trace.log.max.length", 250);
-    rpcServerLog.setLevel(org.apache.log4j.Level.TRACE);
+    rpcServerLog.setLevel(org.apache.logging.log4j.Level.TRACE);
     String truncatedString = mockRpcServer.truncateTraceLog(TRACE_LOG_MSG);
 
     assertEquals(250 + RpcServer.KEY_WORD_TRUNCATED.length(), truncatedString.length());
@@ -82,7 +84,7 @@ public class TestRpcServerTraceLogging {
   @Test
   public void testLoggingWithTraceOnLargeMax() {
     conf.setInt("hbase.ipc.trace.log.max.length", 2000);
-    rpcServerLog.setLevel(org.apache.log4j.Level.TRACE);
+    rpcServerLog.setLevel(org.apache.logging.log4j.Level.TRACE);
     String truncatedString = mockRpcServer.truncateTraceLog(TRACE_LOG_MSG);
 
     assertEquals(TRACE_LOG_LENGTH, truncatedString.length());
