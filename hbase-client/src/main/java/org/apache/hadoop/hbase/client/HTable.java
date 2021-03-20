@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -613,7 +612,8 @@ public class HTable implements Table {
       @Override
       protected Result rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), append, getNonceGroup(), getNonce());
+          getLocation().getRegionInfo().getRegionName(), append, super.getNonceGroup(),
+          super.getNonce());
         MutateResponse response = doMutate(request);
         if (!response.hasResult()) return null;
         return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
@@ -632,7 +632,8 @@ public class HTable implements Table {
       @Override
       protected Result rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), increment, getNonceGroup(), getNonce());
+          getLocation().getRegionInfo().getRegionName(), increment, super.getNonceGroup(),
+          super.getNonce());
         MutateResponse response = doMutate(request);
         // Should this check for null like append does?
         return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
@@ -671,7 +672,7 @@ public class HTable implements Table {
       protected Long rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildIncrementRequest(
           getLocation().getRegionInfo().getRegionName(), row, family,
-          qualifier, amount, durability, getNonceGroup(), getNonce());
+          qualifier, amount, durability, super.getNonceGroup(), super.getNonce());
         MutateResponse response = doMutate(request);
         Result result = ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
         return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));

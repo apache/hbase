@@ -398,8 +398,29 @@ class AsyncProcess {
   }
 
   private void setNonce(NonceGenerator ng, Row r, Action action) {
-    if (!(r instanceof Append) && !(r instanceof Increment)) return;
-    action.setNonce(ng.newNonce()); // Action handles NO_NONCE, so it's ok if ng is disabled.
+    if (hasIncrementOrAppend(r)) {
+      action.setNonce(ng.newNonce()); // Action handles NO_NONCE, so it's ok if ng is disabled.
+    }
+  }
+
+  private static boolean hasIncrementOrAppend(Row action) {
+    if (action instanceof Append || action instanceof Increment) {
+      return true;
+    } else if (action instanceof RowMutations) {
+      return hasIncrementOrAppend((RowMutations) action);
+    } else if (action instanceof CheckAndMutate) {
+      return hasIncrementOrAppend(((CheckAndMutate) action).getAction());
+    }
+    return false;
+  }
+
+  private static boolean hasIncrementOrAppend(RowMutations mutations) {
+    for (Mutation mutation : mutations.getMutations()) {
+      if (mutation instanceof Append || mutation instanceof Increment) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private int checkTimeout(String name, int timeout) {
