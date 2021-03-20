@@ -33,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang.StringUtils;
@@ -119,6 +120,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   private int maxRetriesMultiplier;
   // Indicates if this particular source is running
   private volatile boolean sourceRunning = false;
+  // Indicates if the source initialization is in progress
+  private volatile boolean startupOngoing = false;
   // Metrics for this source
   private MetricsSource metrics;
   // ReplicationEndpoint which will handle the actual replication
@@ -266,16 +269,19 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   public void run() {
     // mark we are running now
     this.sourceRunning = true;
+    this.setSourceStartupStatus(true);
     try {
       // start the endpoint, connect to the cluster
       Service.State state = replicationEndpoint.start().get();
       if (state != Service.State.RUNNING) {
         LOG.warn("ReplicationEndpoint was not started. Exiting");
         uninitialize();
+        this.setSourceStartupStatus(false);
         return;
       }
     } catch (Exception ex) {
       LOG.warn("Error starting ReplicationEndpoint, exiting", ex);
+      this.setSourceStartupStatus(false);
       throw new RuntimeException(ex);
     }
 
@@ -300,6 +306,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     if (!this.isSourceActive()) {
+      this.setSourceStartupStatus(false);
       return;
     }
 
@@ -310,6 +317,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           + peerClusterId + " which is not allowed by ReplicationEndpoint:"
           + replicationEndpoint.getClass().getName(), null, false);
       this.manager.closeQueue(this);
+      this.setSourceStartupStatus(false);
       return;
     }
     LOG.info("Replicating " + clusterId + " -> " + peerClusterId);
@@ -326,6 +334,16 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         LOG.debug("Starting up worker for wal group " + walGroupId);
         worker.startup();
       }
+    }
+    this.setSourceStartupStatus(false);
+  }
+
+  private synchronized void setSourceStartupStatus(boolean initializing) {
+    startupOngoing = initializing;
+    if (initializing) {
+      metrics.incrSourceInitializing();
+    } else {
+      metrics.decrSourceInitializing();
     }
   }
 

@@ -450,6 +450,40 @@ public class DynamicMetricsRegistry {
   }
 
   /**
+   * Get a MetricMutableGaugeInt from the storage.  If it is not there atomically put it.
+   *
+   * @param gaugeName              name of the gauge to create or get.
+   * @param potentialStartingValue value of the new gauge if we have to create it.
+   */
+  public MutableGaugeInt getGaugeInt(String gaugeName, int potentialStartingValue) {
+    //Try and get the guage.
+    MutableMetric metric = metricsMap.get(gaugeName);
+
+    //If it's not there then try and put a new one in the storage.
+    if (metric == null) {
+      //Create the potential new gauge.
+      MutableGaugeInt newGauge = new MutableGaugeInt(new MetricsInfoImpl(gaugeName, ""),
+        potentialStartingValue);
+
+      // Try and put the gauge in.  This is atomic.
+      metric = metricsMap.putIfAbsent(gaugeName, newGauge);
+
+      //If the value we get back is null then the put was successful and we will return that.
+      //otherwise gaugeInt should contain the thing that was in before the put could be completed.
+      if (metric == null) {
+        return newGauge;
+      }
+    }
+
+    if (!(metric instanceof MutableGaugeInt)) {
+      throw new MetricsException("Metric already exists in registry for metric name: " + gaugeName +
+        " and not of type MetricMutableGaugeInr");
+    }
+
+    return (MutableGaugeInt) metric;
+  }
+
+  /**
    * Get a MetricMutableCounterLong from the storage.  If it is not there atomically put it.
    *
    * @param counterName            Name of the counter to get
