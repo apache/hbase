@@ -105,9 +105,6 @@ filename="/tmp/$hostname"
 local=
 localhostname=`/bin/hostname -f`
 
-if [ "$localhostname" == "$hostname" ]; then
-  local=true
-fi
 if [ "$localhostname" == "$hostname" ] || [ "$hostname" == "localhost" ]; then
   local=true
   hostname=$localhostname
