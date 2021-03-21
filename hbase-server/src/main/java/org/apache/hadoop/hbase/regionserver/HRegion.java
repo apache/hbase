@@ -3289,8 +3289,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected final Map<byte[], List<Cell>>[] familyCellMaps;
     // For Increment/Append operations
     protected final Result[] results;
-    // For nonce operations
-    protected final boolean[] canProceed;
 
     protected final HRegion region;
     protected int nextIndexToProcess = 0;
@@ -3306,7 +3304,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.walEditsFromCoprocessors = new WALEdit[operations.length];
       familyCellMaps = new Map[operations.length];
       this.results = new Result[operations.length];
-      this.canProceed = new boolean[operations.length];
 
       this.region = region;
       observedExceptions = new ObservedExceptionsInBatch();
@@ -3727,8 +3724,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * of the logic is same.
    */
   static class MutationBatchOperation extends BatchOperation<Mutation> {
+    // For nonce operations
     private long nonceGroup;
     private long nonce;
+    protected boolean canProceed;
+
     public MutationBatchOperation(final HRegion region, Mutation[] operations, boolean atomic,
         long nonceGroup, long nonce) {
       super(region, operations);
@@ -3840,6 +3840,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     @Override
     public void prepareMiniBatchOperations(MiniBatchOperationInProgress<Mutation> miniBatchOp,
         long timestamp, final List<RowLock> acquiredRowLocks) throws IOException {
+      // For nonce operations
+      canProceed = startNonceOperation();
+
       visitBatchOperations(true, miniBatchOp.getLastIndexExclusive(), (int index) -> {
         Mutation mutation = getMutation(index);
         if (mutation instanceof Put) {
@@ -3858,8 +3861,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
 
           // For nonce operations
-          canProceed[index] = startNonceOperation(nonceGroup, nonce);
-          if (!canProceed[index]) {
+          if (!canProceed) {
             Result result;
             if (returnResults) {
               // convert duplicate increment/append to get
@@ -3921,11 +3923,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     /**
      * Starts the nonce operation for a mutation, if needed.
-     * @param nonceGroup Nonce group from the request.
-     * @param nonce Nonce.
      * @return whether to proceed this mutation.
      */
-    private boolean startNonceOperation(long nonceGroup, long nonce) throws IOException {
+    private boolean startNonceOperation() throws IOException {
       if (region.rsServices == null || region.rsServices.getNonceManager() == null
         || nonce == HConstants.NO_NONCE) {
         return true;
@@ -3942,11 +3942,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     /**
      * Ends nonce operation for a mutation, if needed.
-     * @param nonceGroup Nonce group from the request. Always 0 in initial implementation.
-     * @param nonce Nonce.
      * @param success Whether the operation for this nonce has succeeded.
      */
-    private void endNonceOperation(long nonceGroup, long nonce, boolean success) {
+    private void endNonceOperation(boolean success) {
       if (region.rsServices != null && region.rsServices.getNonceManager() != null
         && nonce != HConstants.NO_NONCE) {
         region.rsServices.getNonceManager().endOperation(nonceGroup, nonce, success);
@@ -4215,13 +4213,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
 
         // For nonce operations
-        visitBatchOperations(false, miniBatchOp.getLastIndexExclusive(), (int i) -> {
-          if (canProceed[i]) {
-            endNonceOperation(nonceGroup, nonce,
-              retCodeDetails[i].getOperationStatusCode() == OperationStatusCode.SUCCESS);
-          }
-          return true;
-        });
+        if (canProceed && nonce != HConstants.NO_NONCE) {
+          boolean[] areAllIncrementsAndAppendsSuccessful = new boolean[]{true};
+          visitBatchOperations(false, miniBatchOp.getLastIndexExclusive(), (int i) -> {
+            Mutation mutation = getMutation(i);
+            if (mutation instanceof Increment || mutation instanceof Append) {
+              if (retCodeDetails[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
+                areAllIncrementsAndAppendsSuccessful[0] = false;
+                return false;
+              }
+            }
+            return true;
+          });
+          endNonceOperation(areAllIncrementsAndAppendsSuccessful[0]);
+        }
 
         // See if the column families were consistent through the whole thing.
         // if they were then keep them. If they were not then pass a null.
@@ -4478,7 +4483,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   public OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic, long nonceGroup,
-      long nonce) throws IOException {
+    long nonce) throws IOException {
     // As it stands, this is used for 3 things
     //  * batchMutate with single mutation - put/delete/increment/append, separate or from
     //    checkAndMutate.
@@ -4770,6 +4775,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    return checkAndMutate(checkAndMutate, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
+  public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate, long nonceGroup,
+    long nonce) throws IOException {
     byte[] row = checkAndMutate.getRow();
     Filter filter = null;
     byte[] family = null;
@@ -4881,9 +4891,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // All edits for the given row (across all column families) must happen atomically.
           Result r;
           if (mutation != null) {
-            r = doBatchMutate(mutation, true).getResult();
+            r = doBatchMutate(mutation, true, nonceGroup, nonce).getResult();
           } else {
-            r = mutateRow(rowMutations);
+            r = mutateRow(rowMutations, nonceGroup, nonce);
           }
           this.checkAndMutateChecksPassed.increment();
           return new CheckAndMutateResult(true, r);
@@ -8244,9 +8254,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public Result mutateRow(RowMutations rm) throws IOException {
+    return mutateRow(rm, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
+  public Result mutateRow(RowMutations rm, long nonceGroup, long nonce) throws IOException {
     final List<Mutation> m = rm.getMutations();
-    OperationStatus[] statuses = batchMutate(m.toArray(new Mutation[0]), true,
-      HConstants.NO_NONCE, HConstants.NO_NONCE);
+    OperationStatus[] statuses = batchMutate(m.toArray(new Mutation[0]), true, nonceGroup, nonce);
 
     List<Result> results = new ArrayList<>();
     for (OperationStatus status : statuses) {
