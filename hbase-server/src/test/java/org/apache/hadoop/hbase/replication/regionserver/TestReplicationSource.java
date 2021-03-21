@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-
+import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.OptionalLong;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -44,16 +45,11 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.regionserver.RecoveredReplicationSource;
-import org.apache.hadoop.hbase.replication.regionserver.RecoveredReplicationSourceShipper;
-import org.apache.hadoop.hbase.replication.regionserver.Replication;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -96,9 +92,13 @@ public class TestReplicationSource {
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
     Path rootDir = TEST_UTIL.createRootDir();
     oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    if (FS.exists(oldLogDir)) FS.delete(oldLogDir, true);
+    if (FS.exists(oldLogDir))  {
+      FS.delete(oldLogDir, true);
+    }
     logDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
-    if (FS.exists(logDir)) FS.delete(logDir, true);
+    if (FS.exists(logDir)) {
+      FS.delete(logDir, true);
+    }
   }
 
   @AfterClass
@@ -116,8 +116,12 @@ public class TestReplicationSource {
   @Test
   public void testLogMoving() throws Exception{
     Path logPath = new Path(logDir, "log");
-    if (!FS.exists(logDir)) FS.mkdirs(logDir);
-    if (!FS.exists(oldLogDir)) FS.mkdirs(oldLogDir);
+    if (!FS.exists(logDir)) {
+      FS.mkdirs(logDir);
+    }
+    if (!FS.exists(oldLogDir)) {
+      FS.mkdirs(oldLogDir);
+    }
     WALProvider.Writer writer = WALFactory.createWALWriter(FS, logPath,
         TEST_UTIL.getConfiguration());
     for(int i = 0; i < 3; i++) {
@@ -318,6 +322,68 @@ public class TestReplicationSource {
         new RecoveredReplicationSourceShipper(conf, walGroupId, queue, source, storage);
     Assert.assertEquals(1001L, shipper.getStartPosition());
     conf.unset("replication.source.maxretriesmultiplier");
+  }
+
+  /**
+   * Replication Endpoint with failing connection to peer
+   */
+  public static class BadConnectionReplicationEndpoint
+      extends HBaseInterClusterReplicationEndpoint {
+    static boolean failing = true;
+
+    @Override public void init(Context context) throws IOException {
+      this.ctx = context;
+    }
+
+    @Override
+    public synchronized UUID getPeerUUID() {
+      return failing ? null : UUID.randomUUID();
+    }
+
+    @Override
+    protected void doStart() {
+      notifyStarted();
+    }
+
+    @Override
+    protected void doStop() {
+      notifyStopped();
+    }
+
+    @Override
+    public boolean canReplicateToSameCluster() {
+      return true;
+    }
+  }
+
+  @Test
+  public void testReplicationSourceInitializingMetric() throws IOException {
+    String id = "1";
+    MetricsSource metrics = new MetricsSource(id);
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    ReplicationPeer mockPeer = Mockito.mock(ReplicationPeer.class);
+    ReplicationPeerConfig peerConfig = Mockito.mock(ReplicationPeerConfig.class);
+    Mockito.when(peerConfig.getReplicationEndpointImpl()).
+      thenReturn(BadConnectionReplicationEndpoint.class.getName());
+    Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
+    ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
+    RegionServerServices rss =
+      TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
+
+    ReplicationSource source = new ReplicationSource();
+    source.init(conf, null, manager, null, mockPeer, rss, id, UUID.randomUUID(),
+      p -> OptionalLong.empty(), metrics);
+
+    try {
+      source.startup();
+      assertTrue(source.isSourceActive());
+      Waiter.waitFor(conf, 1000, () -> source.getSourceMetrics().getSourceInitializing() == 1);
+      BadConnectionReplicationEndpoint.failing = false;
+      Waiter.waitFor(conf, 1000, () -> source.getSourceMetrics().getSourceInitializing() == 0);
+    } finally {
+      source.terminate("Done");
+      rss.stop("Done");
+    }
   }
 }
 

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getArchivedLogPath;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -65,7 +64,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -113,6 +111,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private int maxRetriesMultiplier;
   // Indicates if this particular source is running
   volatile boolean sourceRunning = false;
+  // Indicates if the source initialization is in progress
+  private volatile boolean startupOngoing = false;
   // Metrics for this source
   private MetricsSource metrics;
   // WARN threshold for the number of queued logs, defaults to 2
@@ -480,6 +480,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if (!this.isSourceActive()) {
+      this.setSourceStartupStatus(false);
       return;
     }
 
@@ -502,6 +503,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if (!this.isSourceActive()) {
+      setSourceStartupStatus(false);
       return;
     }
 
@@ -512,6 +514,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
           + peerClusterId + " which is not allowed by ReplicationEndpoint:"
           + replicationEndpoint.getClass().getName(), null, false);
       this.manager.removeSource(this);
+      setSourceStartupStatus(false);
       return;
     }
     LOG.info("{} Source: {}, is now replicating from cluster: {}; to peer cluster: {};",
@@ -524,12 +527,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
       PriorityBlockingQueue<Path> queue = entry.getValue();
       tryStartNewShipper(walGroupId, queue);
     }
+    setSourceStartupStatus(false);
   }
 
   @Override
   public void startup() {
     // mark we are running now
     this.sourceRunning = true;
+    setSourceStartupStatus(true);
     initThread = new Thread(this::initialize);
     Threads.setDaemonThreadRunning(initThread,
       Thread.currentThread().getName() + ".replicationSource," + this.queueId,
@@ -641,6 +646,15 @@ public class ReplicationSource implements ReplicationSourceInterface {
   @Override
   public boolean isSourceActive() {
     return !this.server.isStopped() && this.sourceRunning;
+  }
+
+  private synchronized void setSourceStartupStatus(boolean initializing) {
+    startupOngoing = initializing;
+    if (initializing) {
+      metrics.incrSourceInitializing();
+    } else {
+      metrics.decrSourceInitializing();
+    }
   }
 
   public UUID getPeerClusterUUID(){

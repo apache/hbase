@@ -52,6 +52,8 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   public static final String SOURCE_COMPLETED_LOGS = "source.completedLogs";
   public static final String SOURCE_COMPLETED_RECOVERY_QUEUES = "source.completedRecoverQueues";
   public static final String SOURCE_FAILED_RECOVERY_QUEUES = "source.failedRecoverQueues";
+  // This is to track the num of replication sources getting initialized
+  public static final String SOURCE_INITIALIZING = "source.numInitializing";
 
   void setLastShippedAge(long age);
   void incrSizeOfLogQueue(int size);
@@ -80,4 +82,7 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   long getWALEditsRead();
   long getShippedOps();
   long getEditsFiltered();
+  void incrSourceInitializing();
+  void decrSourceInitializing();
+  int getSourceInitializing();
 }
