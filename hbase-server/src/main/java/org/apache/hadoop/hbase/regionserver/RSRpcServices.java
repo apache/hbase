@@ -3065,9 +3065,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       region.getMetrics().updateScanTime(end - before);
       if (regionServer.metricsRegionServer != null) {
         regionServer.metricsRegionServer.updateScanSize(
-          region.getTableDesc().getTableName(), responseCellSize);
+            region.getTableDesc().getTableName(), responseCellSize);
         regionServer.metricsRegionServer.updateScanTime(
-          region.getTableDesc().getTableName(), end - before);
+            region.getTableDesc().getTableName(), end - before);
         regionServer.metricsRegionServer
           .updateReadQueryMeter(region.getRegionInfo().getTable(), numOfNextRawCalls);
       }
