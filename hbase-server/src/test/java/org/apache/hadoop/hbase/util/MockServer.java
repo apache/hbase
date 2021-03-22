@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
@@ -38,47 +37,27 @@ import org.slf4j.LoggerFactory;
  */
 public class MockServer implements Server {
   private static final Logger LOG = LoggerFactory.getLogger(MockServer.class);
-  final static ServerName NAME = ServerName.valueOf("MockServer", 123, -1);
 
-  boolean stopped;
-  boolean aborted;
-  final ZKWatcher zk;
-  final HBaseTestingUtility htu;
+  final static ServerName NAME = ServerName.valueOf("MockServer", 123, 123456789);
 
-  public MockServer() throws ZooKeeperConnectionException, IOException {
-    // Shutdown default constructor by making it private.
-    this(null);
-  }
+  protected volatile boolean stopped;
+  protected volatile boolean aborted;
 
-  public MockServer(final HBaseTestingUtility htu)
-  throws ZooKeeperConnectionException, IOException {
-    this(htu, true);
-  }
-
-  /**
-   * @param htu Testing utility to use
-   * @param zkw If true, create a zkw.
-   * @throws ZooKeeperConnectionException
-   * @throws IOException
-   */
-  public MockServer(final HBaseTestingUtility htu, final boolean zkw)
-  throws ZooKeeperConnectionException, IOException {
-    this.htu = htu;
-    this.zk = zkw?
-      new ZKWatcher(htu.getConfiguration(), NAME.toString(), this, true):
-      null;
+  public MockServer() {
+    stopped = false;
+    aborted = false;
   }
 
   @Override
   public void abort(String why, Throwable e) {
-    LOG.error(HBaseMarkers.FATAL, "Abort why=" + why, e);
+    LOG.error(HBaseMarkers.FATAL, "Abort {} why={}", getServerName(), why, e);
     stop(why);
     this.aborted = true;
   }
 
   @Override
   public void stop(String why) {
-    LOG.debug("Stop why=" + why);
+    LOG.debug("Stop {} why={}", getServerName(), why);
     this.stopped = true;
   }
 
@@ -89,22 +68,22 @@ public class MockServer implements Server {
 
   @Override
   public Configuration getConfiguration() {
-    return this.htu.getConfiguration();
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public ZKWatcher getZooKeeper() {
-    return this.zk;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public CoordinatedStateManager getCoordinatedStateManager() {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public Connection getConnection() {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -119,12 +98,12 @@ public class MockServer implements Server {
 
   @Override
   public ChoreService getChoreService() {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public FileSystem getFileSystem() {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -134,11 +113,11 @@ public class MockServer implements Server {
 
   @Override
   public Connection createConnection(Configuration conf) throws IOException {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public AsyncClusterConnection getAsyncClusterConnection() {
-    return null;
+    throw new UnsupportedOperationException();
   }
 }
