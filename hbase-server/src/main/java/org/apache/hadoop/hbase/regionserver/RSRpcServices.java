@@ -2936,9 +2936,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         long timeLimit = getTimeLimit(controller, allowHeartbeatMessages);
 
         final LimitScope sizeScope =
-          allowPartialResults ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
+            allowPartialResults ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
         final LimitScope timeScope =
-          allowHeartbeatMessages ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
+            allowHeartbeatMessages ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
 
         boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
 
