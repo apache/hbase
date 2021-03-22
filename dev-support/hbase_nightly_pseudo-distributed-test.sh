@@ -198,23 +198,23 @@ echo "Writing out configuration for HBase."
 rm -rf "${working_dir}/hbase-conf"
 mkdir "${working_dir}/hbase-conf"
 
-if [ -f "${component_install}/conf/log4j.properties" ]; then
-  cp "${component_install}/conf/log4j.properties" "${working_dir}/hbase-conf/log4j.properties"
+if [ -f "${component_install}/conf/log4j2.xml" ]; then
+  cp "${component_install}/conf/log4j2.xml" "${working_dir}/hbase-conf/log4j2.xml"
 else
-  cat >"${working_dir}/hbase-conf/log4j.properties" <<EOF
-# Define some default values that can be overridden by system properties
-hbase.root.logger=INFO,console
-
-# Define the root logger to the system property "hbase.root.logger".
-log4j.rootLogger=${hbase.root.logger}
-
-# Logging Threshold
-log4j.threshold=ALL
-# console
-log4j.appender.console=org.apache.log4j.ConsoleAppender
-log4j.appender.console.target=System.err
-log4j.appender.console.layout=org.apache.log4j.PatternLayout
-log4j.appender.console.layout.ConversionPattern=%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n
+  cat >"${working_dir}/hbase-conf/log4j2.xml" <<EOF
+<Configuration>
+  <Appenders>
+    <!-- Console appender -->
+    <Console name="console" target="SYSTEM_ERR">
+      <PatternLayout pattern="%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n" />
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Root level="${sys:hbase.root.logger.level:-info}">
+      <AppenderRef ref="${sys:hbase.root.logger.appender:-console}" />
+    </Root>
+  </Loggers>
+</Configuration>
 EOF
 fi
 
@@ -307,7 +307,11 @@ fi
 
 if [ "${hadoop_version%.*.*}" -gt 2 ]; then
   echo "Verifying configs"
-  "${hadoop_exec}" --config "${working_dir}/hbase-conf/" conftest
+  hadoop_conf_files=""
+  for f in "${working_dir}"/hbase-conf/*-site.xml; do
+    hadoop_conf_files="$hadoop_conf_files -conffile $f"
+  done
+  "${hadoop_exec}" --config "${working_dir}/hbase-conf/" conftest $hadoop_conf_files
 fi
 
 if [ -n "${clean}" ]; then

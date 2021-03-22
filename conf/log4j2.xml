@@ -54,7 +54,8 @@
       </Policies>
       <DefaultRolloverStrategy max="20" />
     </RollingFile>
-    <!-- Http Access Log RFA -->
+    <!--
+      Http Access Log RFA, uncomment this if you want an http access.log
     <RollingFile name="AccessRFA"
       fileName="/var/log/hbase/access.log"
       filePattern="/var/log/hbase/access.log.%i">
@@ -64,6 +65,7 @@
       </Policies>
       <DefaultRolloverStrategy max="10" />
     </RollingFile>
+    -->
     <Null name="NullAppender" />
   </Appenders>
   <Loggers>
