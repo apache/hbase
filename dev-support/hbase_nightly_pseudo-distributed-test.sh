@@ -308,7 +308,7 @@ fi
 if [ "${hadoop_version%.*.*}" -gt 2 ]; then
   echo "Verifying configs"
   hadoop_conf_files=""
-  for f in "${working_dir}/hbase-conf/*-site.xml"; do
+  for f in "${working_dir}"/hbase-conf/*-site.xml; do
     hadoop_conf_files="$hadoop_conf_files -conffile $f"
   done
   "${hadoop_exec}" --config "${working_dir}/hbase-conf/" conftest $hadoop_conf_files
