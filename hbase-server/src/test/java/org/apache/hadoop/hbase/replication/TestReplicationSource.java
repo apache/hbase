@@ -863,7 +863,7 @@ public class TestReplicationSource {
     }
   }
 
-  /*
+  /**
   Test age of oldest wal metric.
   */
   @Test
@@ -896,6 +896,29 @@ public class TestReplicationSource {
     } finally {
       EnvironmentEdgeManager.reset();
     }
+  }
+
+  @Test
+  public void testReplicationSourceInitializingMetric() throws Exception {
+    String id = "1";
+    MetricsSource metrics = Mockito.spy(new MetricsSource(id));
+    Mocks mocks = new Mocks();
+    ReplicationSource source = mocks.createReplicationSourceWithMocks(metrics,
+      new TestReplicationEndpoint.BadReplicationEndpoint());
+    source.startup();
+    final MetricsReplicationSourceSource metricsSource1 = getSourceMetrics(id);
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return metricsSource1.getSourceInitializing() == 1;
+      }
+    });
+    TestReplicationEndpoint.BadReplicationEndpoint.failing = false;
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return metricsSource1.getSourceInitializing() == 0;
+      }
+    });
+    metrics.clear();
   }
 
   private MetricsReplicationSourceSource getSourceMetrics(String sourceId) {

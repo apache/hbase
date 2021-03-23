@@ -22,10 +22,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -134,7 +133,8 @@ public class MetricsSource implements BaseSource {
    * @param tableName String as group and tableName
    */
   public void setAgeOfLastShippedOpByTable(long timestamp, String tableName) {
-    getSourceForTable(tableName).setLastShippedAge(EnvironmentEdgeManager.currentTime() - timestamp);
+    getSourceForTable(tableName)
+      .setLastShippedAge(EnvironmentEdgeManager.currentTime() - timestamp);
   }
 
   /**
@@ -182,6 +182,22 @@ public class MetricsSource implements BaseSource {
   public void decrSizeOfLogQueue() {
     singleSourceSource.decrSizeOfLogQueue(1);
     globalSourceSource.decrSizeOfLogQueue(1);
+  }
+
+  /**
+   * Increment the count for initializing sources
+   */
+  public void incrSourceInitializing() {
+    singleSourceSource.incrSourceInitializing();
+    globalSourceSource.incrSourceInitializing();
+  }
+
+  /**
+   * Decrement the count for initializing sources
+   */
+  public void decrSourceInitializing() {
+    singleSourceSource.decrSourceInitializing();
+    globalSourceSource.decrSourceInitializing();
   }
 
   /**
@@ -288,6 +304,14 @@ public class MetricsSource implements BaseSource {
       }
     }
     return lastTimestamp;
+  }
+
+  /**
+   * Get the source initializing counts
+   * @return number of replication sources getting initialized
+   */
+  public int getSourceInitializing() {
+    return singleSourceSource.getSourceInitializing();
   }
 
   /**

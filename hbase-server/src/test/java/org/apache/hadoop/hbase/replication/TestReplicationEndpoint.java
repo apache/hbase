@@ -419,6 +419,22 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       cells.get(0).getRowLength(), row, 0, row.length));
   }
 
+  /**
+   * Bad Endpoint with failing connection to peer on demand.
+   */
+  public static class BadReplicationEndpoint extends ReplicationEndpointForTest {
+    static boolean failing = true;
+
+    public BadReplicationEndpoint() {
+      super();
+    }
+
+    @Override
+    public synchronized UUID getPeerUUID() {
+      return failing ? null : super.getPeerUUID();
+    }
+  }
+
   public static class ReplicationEndpointForTest extends BaseReplicationEndpoint {
     static UUID uuid = UUID.randomUUID();
     static AtomicInteger contructedCount = new AtomicInteger();
