@@ -1380,6 +1380,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Updates the configuration of all the regionservers in the rsgroup.
+    def update_rsgroup_config(groupName)
+      @admin.updateConfiguration(groupName)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Returns namespace's structure description
     def describe_namespace(namespace_name)
       namespace = @admin.getNamespaceDescriptor(namespace_name)
