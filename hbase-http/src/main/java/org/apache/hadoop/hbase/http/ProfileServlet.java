@@ -48,7 +48,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
  * //  -b bufsize        frame buffer size (long)
  * //  -t                profile different threads separately
  * //  -s                simple class names instead of FQN
- * //  -o fmt[,fmt...]   output format: summary|traces|flat|collapsed|svg|tree|jfr
+ * //  -o fmt[,fmt...]   output format: summary|traces|flat|collapsed|svg|tree|jfr|html
  * //  --width px        SVG width pixels (integer)
  * //  --height px       SVG frame height pixels (integer)
  * //  --minwidth px     skip frames smaller than px (double)
@@ -145,9 +145,12 @@ public class ProfileServlet extends HttpServlet {
     TRACES,
     FLAT,
     COLLAPSED,
+    // No SVG in 2.x asyncprofiler.
     SVG,
     TREE,
-    JFR
+    JFR,
+    // In 2.x asyncprofiler, this is how you get flamegraphs.
+    HTML
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED",
@@ -355,10 +358,10 @@ public class ProfileServlet extends HttpServlet {
       try {
         return Output.valueOf(outputArg.trim().toUpperCase());
       } catch (IllegalArgumentException e) {
-        return Output.SVG;
+        return Output.HTML;
       }
     }
-    return Output.SVG;
+    return Output.HTML;
   }
 
   static void setResponseHeader(final HttpServletResponse response) {
@@ -387,7 +390,7 @@ public class ProfileServlet extends HttpServlet {
       resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       setResponseHeader(resp);
       resp.getWriter().write("The profiler servlet was disabled at startup.\n\n" +
-        "Please ensure the prerequsites for the Profiler Servlet have been installed and the\n" +
+        "Please ensure the prerequisites for the Profiler Servlet have been installed and the\n" +
         "environment is properly configured. For more information please see\n" +
         "http://hbase.apache.org/book.html#profiler\n");
       return;
