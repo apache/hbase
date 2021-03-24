@@ -915,7 +915,7 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setNormalizerTargetRegionSize(final long regionSize) {
-        return setValue(NORMALIZER_TARGET_REGION_SIZE_KEY, Long.toString(regionSize));
+      return setValue(NORMALIZER_TARGET_REGION_SIZE_KEY, Long.toString(regionSize));
     }
 
     /**
