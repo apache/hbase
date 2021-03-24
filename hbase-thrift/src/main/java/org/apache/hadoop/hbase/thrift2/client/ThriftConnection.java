@@ -58,11 +58,11 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
+import org.apache.thrift.transport.layered.TFramedTransport;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -160,14 +160,16 @@ public class ThriftConnection implements Connection {
 
     @Override
     public Pair<THBaseService.Client, TTransport> getClient() throws IOException {
-      TSocket sock = new TSocket(connection.getHost(), connection.getPort());
-      sock.setSocketTimeout(connection.getOperationTimeout());
-      sock.setConnectTimeout(connection.getConnectTimeout());
-      TTransport tTransport = sock;
-      if (connection.isFramed()) {
-        tTransport = new TFramedTransport(tTransport);
-      }
+      TTransport tTransport = null;
       try {
+        TSocket sock = new TSocket(connection.getHost(), connection.getPort());
+        sock.setSocketTimeout(connection.getOperationTimeout());
+        sock.setConnectTimeout(connection.getConnectTimeout());
+        tTransport = sock;
+        if (connection.isFramed()) {
+          tTransport = new TFramedTransport(tTransport);
+        }
+
         sock.open();
       } catch (TTransportException e) {
         throw new IOException(e);
