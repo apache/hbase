@@ -35,12 +35,13 @@ import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClientUtils;
+import org.apache.thrift.TConfiguration;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSaslClientTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.layered.TFramedTransport;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -91,7 +92,7 @@ public class DemoClient {
     int timeout = 10000;
     boolean framed = false;
 
-    TTransport transport = new TSocket(host, port, timeout);
+    TTransport transport = new TSocket(new TConfiguration(), host, port, timeout);
     if (framed) {
       transport = new TFramedTransport(transport);
     } else if (secure) {
