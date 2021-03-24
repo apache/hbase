@@ -1118,14 +1118,27 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private FileInputStream deleteFileOnClose(final File file) throws IOException {
     return new FileInputStream(file) {
+      private File myFile;
+      private FileInputStream init(File file) {
+        myFile = file;
+        return this;
+      }
       @Override
       public void close() throws IOException {
-        super.close();
-        if (!file.delete()) {
-          throw new IOException("Failed deleting persistence file " + file.getAbsolutePath());
+        // close() will be called during try-with-resources and it will be
+        // called by finalizer thread during GC. To avoid double-free resource,
+        // set myFile to null after the first call.
+        if (myFile == null) {
+          return;
         }
+
+        super.close();
+        if (!myFile.delete()) {
+          throw new IOException("Failed deleting persistence file " + myFile.getAbsolutePath());
+        }
+        myFile = null;
       }
-    };
+    }.init(file);
   }
 
   private void verifyCapacityAndClasses(long capacitySize, String ioclass, String mapclass)
