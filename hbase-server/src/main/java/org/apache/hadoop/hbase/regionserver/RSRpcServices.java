@@ -3071,10 +3071,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         regionServer.metricsRegionServer
           .updateReadQueryMeter(region.getRegionInfo().getTable(), numOfNextRawCalls);
       }
-      // coprocessor postNext hook
-      if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().postScannerNext(scanner, results, maxResults, true);
-      }
+    }
+    // coprocessor postNext hook
+    if (region.getCoprocessorHost() != null) {
+      region.getCoprocessorHost().postScannerNext(scanner, results, maxResults, true);
     }
   }
 
