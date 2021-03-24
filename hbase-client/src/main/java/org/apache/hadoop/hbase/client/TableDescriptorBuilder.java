@@ -173,9 +173,13 @@ public class TableDescriptorBuilder {
 
   @InterfaceAudience.Private
   public static final String NORMALIZER_TARGET_REGION_SIZE_MB = "NORMALIZER_TARGET_REGION_SIZE_MB";
+  private static final Bytes NORMALIZER_TARGET_REGION_SIZE_KEY_MB =
+	      new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE_MB));
+  // Keeping backward compatability with HBASE-25651 change. Can be removed in later version
+  @InterfaceAudience.Private
+  public static final String NORMALIZER_TARGET_REGION_SIZE = "NORMALIZER_TARGET_REGION_SIZE";
   private static final Bytes NORMALIZER_TARGET_REGION_SIZE_KEY =
-      new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE_MB));
-
+	      new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE));
   /**
    * Default durability for HTD is USE_DEFAULT, which defaults to HBase-global
    * default value
@@ -884,7 +888,12 @@ public class TableDescriptorBuilder {
      */
     @Override
     public long getNormalizerTargetRegionSize() {
-      return getOrDefault(NORMALIZER_TARGET_REGION_SIZE_KEY, Long::valueOf, Long.valueOf(-1));
+      if (values.containsKey(NORMALIZER_TARGET_REGION_SIZE_KEY)) {
+        return getOrDefault(NORMALIZER_TARGET_REGION_SIZE_KEY, Long::valueOf, Long.valueOf(-1));
+      }
+      else {
+        return getOrDefault(NORMALIZER_TARGET_REGION_SIZE_KEY_MB, Long::valueOf, Long.valueOf(-1));
+      }
     }
 
     /**
@@ -912,7 +921,12 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setNormalizerTargetRegionSize(final long regionSize) {
-      return setValue(NORMALIZER_TARGET_REGION_SIZE_KEY, Long.toString(regionSize));
+      if (values.containsKey(NORMALIZER_TARGET_REGION_SIZE_KEY)) {
+        return setValue(NORMALIZER_TARGET_REGION_SIZE_KEY, Long.toString(regionSize));
+      }
+      else {
+        return setValue(NORMALIZER_TARGET_REGION_SIZE_KEY_MB, Long.toString(regionSize));
+      }
     }
 
     /**
