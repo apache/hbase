@@ -175,7 +175,7 @@ public class TableDescriptorBuilder {
   public static final String NORMALIZER_TARGET_REGION_SIZE_MB = "NORMALIZER_TARGET_REGION_SIZE_MB";
   private static final Bytes NORMALIZER_TARGET_REGION_SIZE_KEY =
       new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE_MB));
-  // Keeping backward compatability with HBASE-25651 change. Can be removed in later version
+  // TODO: Keeping backward compatability with HBASE-25651 change. Can be removed in later version
   @InterfaceAudience.Private
   public static final String NORMALIZER_TARGET_REGION_SIZE = "NORMALIZER_TARGET_REGION_SIZE";
 
