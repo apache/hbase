@@ -28,12 +28,11 @@ import org.apache.hadoop.hbase.metrics.Timer;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * <p>
- * This class is for maintaining the various regionserver statistics
- * and publishing them through the metrics interfaces.
- * </p>
+ * Maintains regionserver statistics and publishes them through the metrics interfaces.
  * This class has a number of metrics variables that are publicly accessible;
- * these variables (objects) have methods to update their values.
+ * these variables (objects) have methods to update their values. Batch your updates rather than
+ * call on each instance else all threads will do nothing but contend trying to maintain metric
+ * counters!
  */
 @InterfaceStability.Evolving
 @InterfaceAudience.Private
@@ -49,7 +48,9 @@ public class MetricsRegionServer {
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
+  // Incremented once for each call to Scan#nextRaw
   private Meter serverReadQueryMeter;
+  // Incremented per write.
   private Meter serverWriteQueryMeter;
 
   public MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper, Configuration conf) {
@@ -239,13 +240,6 @@ public class MetricsRegionServer {
       tableMetrics.updateTableReadQueryMeter(tn, count);
     }
     this.serverReadQueryMeter.mark(count);
-  }
-
-  public void updateReadQueryMeter(TableName tn) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateTableReadQueryMeter(tn);
-    }
-    this.serverReadQueryMeter.mark();
   }
 
   public void updateWriteQueryMeter(TableName tn, long count) {
