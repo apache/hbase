@@ -25,6 +25,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public interface MetricsTableQueryMeter {
 
+  String TABLE_READ_QUERY_PER_SECOND = "tableReadQueryPerSecond";
+  String TABLE_WRITE_QUERY_PER_SECOND = "tableWriteQueryPerSecond";
+
   /**
    * Update table read QPS
    * @param tableName The table the metric is for
