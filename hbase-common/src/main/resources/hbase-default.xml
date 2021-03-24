@@ -611,8 +611,36 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.regions.slop</name>
     <value>0.001</value>
     <description>Rebalance if any regionserver has average + (average * slop) regions. 
-      The default value of this parameter is 0.001 in StochasticLoadBalancer (the default load balancer),
-      while the default is 0.2 in other load balancers (i.e., SimpleLoadBalancer).</description>
+      The default value of this parameter is 0.001 in StochasticLoadBalancer (the default
+      load balancer), while the default is 0.2 in other load balancers (i.e., SimpleLoadBalancer).
+    </description>
+  </property>
+  <property>
+    <name>hbase.normalizer.split.enabled</name>
+    <value>true</value>
+    <description>Whether to split a region as part of normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.enabled</name>
+    <value>true</value>
+    <description>Whether to merge a region as part of normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.min.region.count</name>
+    <value>3</value>
+    <description>The minimum number of regions in a table to consider it for merge normalization.
+    </description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_age.days</name>
+    <value>3</value>
+    <description>The minimum age for a region to be considered for a merge, in days.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_size.mb</name>
+    <value>1</value>
+    <description>The minimum size for a region to be considered for a merge, in whole MBs.
+    </description>
   </property>
   <property>
     <name>hbase.server.thread.wakefrequency</name>
