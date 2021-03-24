@@ -180,6 +180,7 @@ public class TableDescriptorBuilder {
   public static final String NORMALIZER_TARGET_REGION_SIZE = "NORMALIZER_TARGET_REGION_SIZE";
   private static final Bytes NORMALIZER_TARGET_REGION_SIZE_KEY =
       new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE));
+
   /**
    * Default durability for HTD is USE_DEFAULT, which defaults to HBase-global
    * default value
