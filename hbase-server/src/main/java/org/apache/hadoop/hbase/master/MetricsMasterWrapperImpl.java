@@ -55,11 +55,17 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public long getSplitPlanCount() {
+    if (master.getRegionNormalizerManager() == null) {
+      return 0;
+    }
     return master.getRegionNormalizerManager().getSplitPlanCount();
   }
 
   @Override
   public long getMergePlanCount() {
+    if (master.getRegionNormalizerManager() == null) {
+      return 0;
+    }
     return master.getRegionNormalizerManager().getMergePlanCount();
   }
 
