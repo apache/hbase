@@ -20,6 +20,70 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.3.5 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-25685](https://issues.apache.org/jira/browse/HBASE-25685) | *Major* | **asyncprofiler2.0 no longer supports svg; wants html**
+
+If asyncprofiler 1.x, all is good. If asyncprofiler 2.x and it is hbase-2.3.x or hbase-2.4.x, add '?output=html' to get flamegraphs from the profiler.
+
+Otherwise, if hbase-2.5+ and asyncprofiler2, all works. If asyncprofiler1 and hbase-2.5+, you may have to add '?output=svg' to the query.
+
+
+---
+
+* [HBASE-25374](https://issues.apache.org/jira/browse/HBASE-25374) | *Minor* | **Make REST Client connection and socket time out configurable**
+
+Configuration parameter to set rest client connection timeout
+
+"hbase.rest.client.conn.timeout" Default is 2 \* 1000
+
+"hbase.rest.client.socket.timeout" Default of 30 \* 1000
+
+
+---
+
+* [HBASE-25566](https://issues.apache.org/jira/browse/HBASE-25566) | *Major* | **RoundRobinTableInputFormat**
+
+Adds RoundRobinTableInputFormat, a subclass of TableInputFormat, that takes the TIF#getSplits list and resorts it so as to spread the InputFormats as broadly about the cluster as possible. RRTIF works to frustrate bunching of InputSplits on RegionServers to avoid the scenario where a few RegionServers are working hard fielding many InputSplits while others idle hosting a few or none.
+
+
+---
+
+* [HBASE-25587](https://issues.apache.org/jira/browse/HBASE-25587) | *Major* | **[hbck2] Schedule SCP for all unknown servers**
+
+Adds scheduleSCPsForUnknownServers to Hbck Service.
+
+
+---
+
+* [HBASE-25582](https://issues.apache.org/jira/browse/HBASE-25582) | *Major* | **Support setting scan ReadType to be STREAM at cluster level**
+
+Adding a new meaning for the config 'hbase.storescanner.pread.max.bytes' when configured with a value \<0.   
+In HBase 2.x we allow the Scan op to specify a ReadType (PREAD / STREAM/ DEFAULT).  When Scan comes with DEFAULT read type, we will start scan with preads and later switch to stream read once we see we are scanning a total data size \> value of hbase.storescanner.pread.max.bytes.  (This is calculated for data per region:cf).  This config defaults to 4 x of HFile block size = 256 KB by default.
+This jira added a new meaning for this config when configured with a -ve value.  In such case, for all scans with DEFAULT read type, we will start with STREAM read itself. (Switch at begin of the scan itself)
+
+
+---
+
+* [HBASE-25460](https://issues.apache.org/jira/browse/HBASE-25460) | *Major* | **Expose drainingServers as cluster metric**
+
+Exposed new jmx metrics: "draininigRegionServers" and "numDrainingRegionServers" to provide "comma separated names for regionservers that are put in draining mode" and "num of such regionservers" respectively.
+
+
+---
+
+* [HBASE-25615](https://issues.apache.org/jira/browse/HBASE-25615) | *Major* | **Upgrade java version in pre commit docker file**
+
+jdk8u232-b09 -\> jdk8u282-b08
+jdk-11.0.6\_10 -\> jdk-11.0.10\_9
+
+
+
 # HBASE  2.3.4 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

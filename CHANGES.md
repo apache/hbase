@@ -20,6 +20,97 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.3.5 - Unreleased (as of 2021-03-25)
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25587](https://issues.apache.org/jira/browse/HBASE-25587) | [hbck2] Schedule SCP for all unknown servers |  Major | hbase-operator-tools, hbck2 |
+| [HBASE-25460](https://issues.apache.org/jira/browse/HBASE-25460) | Expose drainingServers as cluster metric |  Major | metrics |
+| [HBASE-25496](https://issues.apache.org/jira/browse/HBASE-25496) | add get\_namespace\_rsgroup command |  Major | . |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25621](https://issues.apache.org/jira/browse/HBASE-25621) | Balancer should check region plan source to avoid misplace region groups |  Major | Balancer |
+| [HBASE-25374](https://issues.apache.org/jira/browse/HBASE-25374) | Make REST Client connection and socket time out configurable |  Minor | REST |
+| [HBASE-25597](https://issues.apache.org/jira/browse/HBASE-25597) | Add row info in Exception when cell size exceeds maxCellSize |  Minor | . |
+| [HBASE-25635](https://issues.apache.org/jira/browse/HBASE-25635) | CandidateGenerator may miss some region balance actions |  Major | Balancer |
+| [HBASE-25566](https://issues.apache.org/jira/browse/HBASE-25566) | RoundRobinTableInputFormat |  Major | mapreduce |
+| [HBASE-25548](https://issues.apache.org/jira/browse/HBASE-25548) | Optionally allow snapshots to preserve cluster's max filesize config by setting it into table descriptor |  Major | . |
+| [HBASE-25582](https://issues.apache.org/jira/browse/HBASE-25582) | Support setting scan ReadType to be STREAM at cluster level |  Major | . |
+| [HBASE-23578](https://issues.apache.org/jira/browse/HBASE-23578) | [UI] Master UI shows long stack traces when table is broken |  Minor | master, UI |
+| [HBASE-25541](https://issues.apache.org/jira/browse/HBASE-25541) | In WALEntryStream, set the current path to null while dequeing the log |  Major | . |
+| [HBASE-25507](https://issues.apache.org/jira/browse/HBASE-25507) | Leak of ESTABLISHED sockets when compaction encountered "java.io.IOException: Invalid HFile block magic" |  Major | Compaction |
+| [HBASE-25528](https://issues.apache.org/jira/browse/HBASE-25528) | Dedicated merge dispatch threadpool on master |  Minor | master |
+| [HBASE-25536](https://issues.apache.org/jira/browse/HBASE-25536) | Remove 0 length wal file from logQueue if it belongs to old sources. |  Major | Replication |
+| [HBASE-25329](https://issues.apache.org/jira/browse/HBASE-25329) | Dump region hashes in logs for the regions that are stuck in transition for more than a configured amount of time |  Minor | . |
+| [HBASE-25475](https://issues.apache.org/jira/browse/HBASE-25475) | Improve unit test for HBASE-25445 : SplitWALRemoteProcedure failed to archive split WAL |  Minor | wal |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25590](https://issues.apache.org/jira/browse/HBASE-25590) | Bulkload replication HFileRefs cannot be cleared in some cases where set exclude-namespace/exclude-table-cfs |  Major | Replication |
+| [HBASE-25562](https://issues.apache.org/jira/browse/HBASE-25562) | ReplicationSourceWALReader log and handle exception immediately without retrying |  Major | Replication |
+| [HBASE-25685](https://issues.apache.org/jira/browse/HBASE-25685) | asyncprofiler2.0 no longer supports svg; wants html |  Major | . |
+| [HBASE-25674](https://issues.apache.org/jira/browse/HBASE-25674) | RegionInfo.parseFrom(DataInputStream) sometimes fails to read the protobuf magic marker |  Minor | Client |
+| [HBASE-25639](https://issues.apache.org/jira/browse/HBASE-25639) | meta replica state is not respected during active master switch |  Critical | meta replicas |
+| [HBASE-25595](https://issues.apache.org/jira/browse/HBASE-25595) | TestLruBlockCache.testBackgroundEvictionThread is flaky |  Major | . |
+| [HBASE-25662](https://issues.apache.org/jira/browse/HBASE-25662) | Fix spotbugs warning in RoundRobinTableInputFormat |  Major | findbugs |
+| [HBASE-25657](https://issues.apache.org/jira/browse/HBASE-25657) | Fix spotbugs warnings after upgrading spotbugs to 4.x |  Major | findbugs |
+| [HBASE-25646](https://issues.apache.org/jira/browse/HBASE-25646) | Possible Resource Leak in CatalogJanitor |  Major | master |
+| [HBASE-25626](https://issues.apache.org/jira/browse/HBASE-25626) | Possible Resource Leak in HeterogeneousRegionCountCostFunction |  Major | . |
+| [HBASE-25644](https://issues.apache.org/jira/browse/HBASE-25644) | Scan#setSmall blindly sets ReadType as PREAD |  Critical | . |
+| [HBASE-25609](https://issues.apache.org/jira/browse/HBASE-25609) | There is a problem with the SPLITS\_FILE in the HBase shell statement |  Minor | . |
+| [HBASE-25421](https://issues.apache.org/jira/browse/HBASE-25421) | There is no limit on the column family length when creating a table |  Major | Client |
+| [HBASE-25371](https://issues.apache.org/jira/browse/HBASE-25371) | When openRegion fails during initial verification(before initializing and setting seq num), exception is observed during region close. |  Major | Region Assignment |
+| [HBASE-25611](https://issues.apache.org/jira/browse/HBASE-25611) | ExportSnapshot chmod flag uses value as decimal |  Major | . |
+| [HBASE-25586](https://issues.apache.org/jira/browse/HBASE-25586) | Fix HBASE-22492 on branch-2 (SASL GapToken) |  Major | rpc |
+| [HBASE-25598](https://issues.apache.org/jira/browse/HBASE-25598) | TestFromClientSide5.testScanMetrics is flaky |  Major | . |
+| [HBASE-25556](https://issues.apache.org/jira/browse/HBASE-25556) | Frequent replication "Encountered a malformed edit" warnings |  Minor | Operability, Replication |
+| [HBASE-25559](https://issues.apache.org/jira/browse/HBASE-25559) | Terminate threads of oldsources while RS is closing |  Major | . |
+| [HBASE-25543](https://issues.apache.org/jira/browse/HBASE-25543) | When configuration "hadoop.security.authorization" is set to false,  the system will still try to authorize an RPC and raise AccessDeniedException |  Minor | IPC/RPC |
+| [HBASE-25523](https://issues.apache.org/jira/browse/HBASE-25523) | Region normalizer chore thread is getting killed |  Major | Normalizer |
+| [HBASE-25533](https://issues.apache.org/jira/browse/HBASE-25533) |  The metadata of the table and family should not be an empty string |  Major | . |
+| [HBASE-25497](https://issues.apache.org/jira/browse/HBASE-25497) | move\_namespaces\_rsgroup should change hbase.rsgroup.name config in NamespaceDescriptor |  Major | . |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25691](https://issues.apache.org/jira/browse/HBASE-25691) | Test failure: TestVerifyBucketCacheFile.testRetrieveFromFile |  Major | test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25629](https://issues.apache.org/jira/browse/HBASE-25629) | Reimplement TestCurrentHourProvider to not depend on unstable TZs |  Major | test |
+| [HBASE-25677](https://issues.apache.org/jira/browse/HBASE-25677) | Server+table counters on each scan #nextRaw invocation becomes a bottleneck when heavy load |  Major | metrics |
+| [HBASE-25668](https://issues.apache.org/jira/browse/HBASE-25668) | TestCurrentHourProvider fails 100% in branch-2.3 |  Minor | flakies |
+| [HBASE-25667](https://issues.apache.org/jira/browse/HBASE-25667) | Remove RSGroup test addition made in parent; depends on functionality not in old branches |  Major | . |
+| [HBASE-24900](https://issues.apache.org/jira/browse/HBASE-24900) | Make retain assignment configurable during SCP |  Major | amv2 |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25553](https://issues.apache.org/jira/browse/HBASE-25553) | It is better for ReplicationTracker.getListOfRegionServers to return ServerName instead of String |  Major | . |
+| [HBASE-25604](https://issues.apache.org/jira/browse/HBASE-25604) | Upgrade spotbugs to 4.x |  Major | build, findbugs |
+| [HBASE-25620](https://issues.apache.org/jira/browse/HBASE-25620) | Increase timeout value for pre commit |  Major | build, test |
+| [HBASE-25615](https://issues.apache.org/jira/browse/HBASE-25615) | Upgrade java version in pre commit docker file |  Major | build |
+| [HBASE-25601](https://issues.apache.org/jira/browse/HBASE-25601) | Remove search hadoop references in book |  Major | documentation |
+
+
 ## Release 2.3.4 - Unreleased (as of 2021-01-14)
 
 
