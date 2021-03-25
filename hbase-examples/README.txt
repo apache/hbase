@@ -45,7 +45,7 @@ Example code.
     * PHP: hbase-examples/src/main/php/DemoClient.php
       1. Modify the THRIFT_HOME path in the file to point to actual {$THRIFT_HOME}.
       2. Execute {php DemoClient.php}.
-      3. Starting from Thrift 0.9.0, if Thrift.php complains about some files it cannot include, go to thrift root,
+      3. Starting from Thrift 0.14.1, if Thrift.php complains about some files it cannot include, go to thrift root,
         and copy the contents of php/lib/Thrift under lib/php/src. Thrift.php appears to include, from under the same root,
         both TStringUtils.php, only present in src/, and other files only present under lib/; this will bring them under
         the same root (src/).
@@ -58,7 +58,7 @@ Example code.
 
     * CPP: hbase-examples/src/main/cpp/DemoClient.cpp
       1. Make sure you have boost and Thrift C++ libraries; modify Makefile if necessary.
-        The recent (0.9.0 as of this writing) version of Thrift can be downloaded from http://thrift.apache.org/download/.
+        The recent (0.14.1 as of this writing) version of Thrift can be downloaded from http://thrift.apache.org/download/.
         Boost can be found at http://www.boost.org/users/download/.
       2. Execute {make}.
       3. Execute {./DemoClient}.
