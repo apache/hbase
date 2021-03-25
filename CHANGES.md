@@ -57,6 +57,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25568](https://issues.apache.org/jira/browse/HBASE-25568) | Upgrade Thrift jar to fix CVE-2020-13949 |  Critical | Thrift |
 | [HBASE-25590](https://issues.apache.org/jira/browse/HBASE-25590) | Bulkload replication HFileRefs cannot be cleared in some cases where set exclude-namespace/exclude-table-cfs |  Major | Replication |
 | [HBASE-25562](https://issues.apache.org/jira/browse/HBASE-25562) | ReplicationSourceWALReader log and handle exception immediately without retrying |  Major | Replication |
 | [HBASE-25685](https://issues.apache.org/jira/browse/HBASE-25685) | asyncprofiler2.0 no longer supports svg; wants html |  Major | . |
