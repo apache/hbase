@@ -1466,7 +1466,7 @@
     <external.protobuf.version>2.5.0</external.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
-    <thrift.version>0.13.0</thrift.version>
+    <thrift.version>0.14.1</thrift.version>
     <zookeeper.version>3.5.7</zookeeper.version>
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.30</slf4j.version>
