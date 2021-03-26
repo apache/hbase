@@ -1027,9 +1027,9 @@ public class HRegionServer extends HasThread implements
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
       }
 
-      // Try and register with the Master; tell it we are here.  Break if server is stopped or the
-      // clusterup flag is down or hdfs went wacky. Once registered successfully, go ahead and start
-      // up all Services. Use RetryCounter to get backoff in case Master is struggling to come up.
+      // Get configurations from the Master. Break if server is stopped or
+      // the clusterup flag is down or hdfs went wacky. Then start up all Services.
+      // Use RetryCounter to get backoff in case Master is struggling to come up.
       RetryCounterFactory rcf = new RetryCounterFactory(Integer.MAX_VALUE,
           this.sleeper.getPeriod(), 1000 * 60 * 5);
       RetryCounter rc = rcf.create();
@@ -1056,7 +1056,7 @@ public class HRegionServer extends HasThread implements
         rsQuotaManager.start(getRpcServer().getScheduler());
       }
 
-      // We registered with the Master.  Go into run mode.
+      // Run mode.
       long lastMsg = System.currentTimeMillis();
       long oldRequestCount = -1;
       // The main run loop.
@@ -1090,7 +1090,14 @@ public class HRegionServer extends HasThread implements
         }
         long now = System.currentTimeMillis();
         if ((now - lastMsg) >= msgInterval) {
-          tryRegionServerReport(lastMsg, now);
+          // Register with the Master now that our setup is complete.
+          if (tryRegionServerReport(lastMsg, now) && !online.get()) {
+            // Wake up anyone waiting for this server to online
+            synchronized (online) {
+              online.set(true);
+              online.notifyAll();
+            }
+          }
           lastMsg = System.currentTimeMillis();
         }
         if (!isStopped() && !isAborted()) {
@@ -1282,12 +1289,12 @@ public class HRegionServer extends HasThread implements
   }
 
   @InterfaceAudience.Private
-  protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
+  protected boolean tryRegionServerReport(long reportStartTime, long reportEndTime)
   throws IOException {
     RegionServerStatusService.BlockingInterface rss = rssStub;
     if (rss == null) {
       // the current server could be stopping.
-      return;
+      return false;
     }
     ClusterStatusProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
     try {
@@ -1307,7 +1314,9 @@ public class HRegionServer extends HasThread implements
       // Couldn't connect to the master, get location from zk and reconnect
       // Method blocks until new master is found or we are stopped
       createRegionServerStatusStub(true);
+      return false;
     }
+    return true;
   }
 
   ClusterStatusProtos.ServerLoad buildServerLoad(long reportStartTime, long reportEndTime)
@@ -1571,11 +1580,6 @@ public class HRegionServer extends HasThread implements
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
 
-      // Wake up anyone waiting for this server to online
-      synchronized (online) {
-        online.set(true);
-        online.notifyAll();
-      }
     } catch (Throwable e) {
       stop("Failed initialization");
       throw convertThrowableToIOE(cleanup(e, "Failed init"),
@@ -2554,10 +2558,9 @@ public class HRegionServer extends HasThread implements
   }
 
   /*
-   * Let the master know we're here Run initialization using parameters passed
-   * us by the master.
+   * Run initialization using parameters passed us by the master.
    * @return A Map of key/value configurations we got from the Master else
-   * null if we failed to register.
+   * null if we failed during report.
    * @throws IOException
    */
   private RegionServerStartupResponse reportForDuty() throws IOException {
