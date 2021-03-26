@@ -63,7 +63,7 @@ public class DumpClusterStatusAction extends Action {
    */
   private static Set<Address> collectKnownRegionServers(final ClusterStatus clusterStatus) {
     final Set<Address> regionServers = new HashSet<>();
-    final Set<ServerName> serverNames = clusterStatus.getLiveServersLoad().keySet();
+    final Set<ServerName> serverNames = new HashSet<>(clusterStatus.getLiveServersLoad().keySet());
     serverNames.addAll(clusterStatus.getDeadServerNames());
 
     for (final ServerName serverName : serverNames) {
