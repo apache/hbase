@@ -5108,7 +5108,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param delta If we are doing delta changes -- e.g. increment/append -- then this flag will be
    *          set; when set we will run operations that make sense in the increment/append scenario
    *          but that do not make sense otherwise.
-   * @see #applyToMemStore(HStore, Cell, MemStoreSizing)
    */
   private void applyToMemStore(HStore store, List<Cell> cells, boolean delta,
       MemStoreSizing memstoreAccounting) throws IOException {
@@ -5119,19 +5118,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } else {
       store.add(cells, memstoreAccounting);
     }
-  }
-
-  /**
-   * @see #applyToMemStore(HStore, List, boolean, MemStoreSizing)
-   */
-  private void applyToMemStore(HStore store, Cell cell, MemStoreSizing memstoreAccounting)
-      throws IOException {
-    // Any change in how we update Store/MemStore needs to also be done in other applyToMemStore!!!!
-    if (store == null) {
-      checkFamily(CellUtil.cloneFamily(cell));
-      // Unreachable because checkFamily will throw exception
-    }
-    store.add(cell, memstoreAccounting);
   }
 
   private void checkFamilies(Collection<byte[]> families, Durability durability)
@@ -7689,12 +7675,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } finally {
       closeRegionOperation(Operation.INCREMENT);
     }
-  }
-
-  private WriteEntry doWALAppend(WALEdit walEdit, Durability durability, List<UUID> clusterIds,
-      long now, long nonceGroup, long nonce) throws IOException {
-    return doWALAppend(walEdit, durability, clusterIds, now, nonceGroup, nonce,
-        SequenceId.NO_SEQUENCE_ID);
   }
 
   /**
