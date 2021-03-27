@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.hbtop.terminal.Color;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 
 /**
- * The implementation of the {@link TerminalPrinter} interface.
+ * An implementation of the {@link TerminalPrinter} interface for normal display mode.
  */
 @InterfaceAudience.Private
 public class TerminalPrinterImpl extends AbstractTerminalPrinter {

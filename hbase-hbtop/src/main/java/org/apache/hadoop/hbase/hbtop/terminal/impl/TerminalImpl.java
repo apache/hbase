@@ -43,7 +43,10 @@ import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalSize;
 
 /**
- * The implementation of the {@link Terminal} interface.
+ * An implementation of the {@link Terminal} interface for normal display mode.
+ *
+ * This implementation produces output intended for human viewing. In particular, it only displays
+ * one screenful of data. The output contains some escape sequences for formatting.
  */
 @InterfaceAudience.Private
 public class TerminalImpl implements Terminal {
