@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
 
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,14 +32,19 @@ import org.slf4j.LoggerFactory;
  * I.e. rows can be co-located in a region by their prefix.
  */
 @InterfaceAudience.Private
-public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
+public class KeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
   private static final Logger LOG = LoggerFactory
       .getLogger(KeyPrefixRegionSplitPolicy.class);
   @Deprecated
   public static final String PREFIX_LENGTH_KEY_DEPRECATED = "prefix_split_key_policy.prefix_length";
   public static final String PREFIX_LENGTH_KEY = "KeyPrefixRegionSplitPolicy.prefix_length";
+  public static final String BASE_REGION_SPLIT_POLICY_CLASS_KEY =
+    "KeyPrefixRegionSplitPolicy.base_region_split_policy_class";
+  public static final String DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS =
+    "org.apache.hadoop.hbase.regionserver.SteppingSplitPolicy";
 
   private int prefixLength = 0;
+  private RegionSplitPolicy baseRegionSplitPolicy;
 
   @Override
   public String toString() {
@@ -77,12 +83,50 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
       LOG.error("Invalid value for " + PREFIX_LENGTH_KEY + " for table "
           + region.getTableDescriptor().getTableName() + ":"
           + prefixLengthString + ". Using default RegionSplitPolicy");
+      return;
     }
+
+    // read the base region split policy class name from the table descriptor
+    String baseRegionSplitPolicyClassName = region.getTableDescriptor().getValue(
+      BASE_REGION_SPLIT_POLICY_CLASS_KEY);
+    if (baseRegionSplitPolicyClassName == null) {
+      baseRegionSplitPolicyClassName = DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS;
+    }
+
+    try {
+      baseRegionSplitPolicy = newBaseRegionSplitPolicy(baseRegionSplitPolicyClassName);
+    } catch (Exception e) {
+      LOG.error("Invalid class for " + BASE_REGION_SPLIT_POLICY_CLASS_KEY + " for table "
+        + region.getTableDescriptor().getTableName() + ":"
+        + baseRegionSplitPolicyClassName + ". Using default RegionSplitPolicy", e);
+      try {
+        baseRegionSplitPolicy = newBaseRegionSplitPolicy(DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS);
+      } catch (Exception ignored) {
+      }
+    }
+    baseRegionSplitPolicy.configureForRegion(region);
+  }
+
+  private RegionSplitPolicy newBaseRegionSplitPolicy(String baseRegionSplitPolicyClassName)
+    throws ClassNotFoundException {
+    Class<? extends RegionSplitPolicy> baseRegionSplitPolicyClass =
+      Class.forName(baseRegionSplitPolicyClassName).asSubclass(RegionSplitPolicy.class);
+    return ReflectionUtils.newInstance(baseRegionSplitPolicyClass, getConf());
+  }
+
+  @Override
+  protected boolean shouldSplit() {
+    return baseRegionSplitPolicy.shouldSplit();
+  }
+
+  @Override
+  protected boolean canSplit() {
+    return baseRegionSplitPolicy.canSplit();
   }
 
   @Override
   protected byte[] getSplitPoint() {
-    byte[] splitPoint = super.getSplitPoint();
+    byte[] splitPoint = baseRegionSplitPolicy.getSplitPoint();
     if (prefixLength > 0 && splitPoint != null && splitPoint.length > 0) {
       // group split keys by a prefix
       return Arrays.copyOf(splitPoint,
@@ -90,5 +134,10 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
     } else {
       return splitPoint;
     }
+  }
+
+  @Override
+  protected boolean skipStoreFileRangeCheck(String familyName) {
+    return baseRegionSplitPolicy.skipStoreFileRangeCheck(familyName);
   }
 }

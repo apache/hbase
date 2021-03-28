@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
 
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,13 +40,18 @@ import org.apache.hadoop.hbase.util.Bytes;
  * @see KeyPrefixRegionSplitPolicy
  */
 @InterfaceAudience.Private
-public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
+public class DelimitedKeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(DelimitedKeyPrefixRegionSplitPolicy.class);
   public static final String DELIMITER_KEY = "DelimitedKeyPrefixRegionSplitPolicy.delimiter";
+  public static final String BASE_REGION_SPLIT_POLICY_CLASS_KEY =
+    "DelimitedKeyPrefixRegionSplitPolicy.base_region_split_policy_class";
+  public static final String DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS =
+    "org.apache.hadoop.hbase.regionserver.SteppingSplitPolicy";
 
   private byte[] delimiter = null;
+  private RegionSplitPolicy baseRegionSplitPolicy;
 
   @Override
   public String toString() {
@@ -64,11 +70,48 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundR
       return;
     }
     delimiter = Bytes.toBytes(delimiterString);
+
+    // read the base region split policy class name from the table descriptor
+    String baseRegionSplitPolicyClassName = region.getTableDescriptor().getValue(
+      BASE_REGION_SPLIT_POLICY_CLASS_KEY);
+    if (baseRegionSplitPolicyClassName == null) {
+      baseRegionSplitPolicyClassName = DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS;
+    }
+
+    try {
+      baseRegionSplitPolicy = newBaseRegionSplitPolicy(baseRegionSplitPolicyClassName);
+    } catch (Exception e) {
+      LOG.error("Invalid class for " + BASE_REGION_SPLIT_POLICY_CLASS_KEY + " for table "
+        + region.getTableDescriptor().getTableName() + ":"
+        + baseRegionSplitPolicyClassName + ". Using default RegionSplitPolicy", e);
+      try {
+        baseRegionSplitPolicy = newBaseRegionSplitPolicy(DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS);
+      } catch (Exception ignored) {
+      }
+    }
+    baseRegionSplitPolicy.configureForRegion(region);
+  }
+
+  private RegionSplitPolicy newBaseRegionSplitPolicy(String baseRegionSplitPolicyClassName)
+    throws ClassNotFoundException {
+    Class<? extends RegionSplitPolicy> baseRegionSplitPolicyClass =
+      Class.forName(baseRegionSplitPolicyClassName).asSubclass(RegionSplitPolicy.class);
+    return ReflectionUtils.newInstance(baseRegionSplitPolicyClass, getConf());
+  }
+
+  @Override
+  protected boolean shouldSplit() {
+    return baseRegionSplitPolicy.shouldSplit();
+  }
+
+  @Override
+  protected boolean canSplit() {
+    return baseRegionSplitPolicy.canSplit();
   }
 
   @Override
   protected byte[] getSplitPoint() {
-    byte[] splitPoint = super.getSplitPoint();
+    byte[] splitPoint = baseRegionSplitPolicy.getSplitPoint();
     if (splitPoint != null && delimiter != null) {
 
       //find the first occurrence of delimiter in split point
@@ -85,5 +128,10 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundR
     } else {
       return splitPoint;
     }
+  }
+
+  @Override
+  protected boolean skipStoreFileRangeCheck(String familyName) {
+    return baseRegionSplitPolicy.skipStoreFileRangeCheck(familyName);
   }
 }
