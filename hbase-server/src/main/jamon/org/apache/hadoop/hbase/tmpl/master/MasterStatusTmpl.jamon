@@ -30,6 +30,7 @@ AssignmentManager assignmentManager = null;
 </%args>
 <%import>
 java.util.*;
+java.net.URLEncoder;
 java.io.IOException;
 org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 org.apache.hadoop.hbase.client.RegionInfo;
@@ -602,7 +603,6 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <th>CLOSED</th>
         <th>CLOSING</th>
         <th>OFFLINE</th>
-        <th>FAILED</th>
         <th>SPLIT</th>
         <th>Other</th>
     </tr>
@@ -621,37 +621,39 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
       int closingRegionsCount = tableRegions.get(RegionState.State.CLOSING).size();
       int offlineRegionsCount = tableRegions.get(RegionState.State.OFFLINE).size();
       int splitRegionsCount = tableRegions.get(RegionState.State.SPLIT).size();
-      int failedRegionsCount = tableRegions.get(RegionState.State.FAILED_OPEN).size()
-             + tableRegions.get(RegionState.State.FAILED_CLOSE).size();
       int otherRegionsCount = 0;
       for (List<RegionInfo> list: tableRegions.values()) {
          otherRegionsCount += list.size();
       }
       // now subtract known states
       otherRegionsCount = otherRegionsCount - openRegionsCount
-                     - failedRegionsCount - offlineRegionsCount
-                     - splitRegionsCount - openingRegionsCount
-                     - closedRegionsCount - closingRegionsCount;
+                     - offlineRegionsCount - splitRegionsCount
+                     - openingRegionsCount - closedRegionsCount
+                     - closingRegionsCount;
+    String encodedTableName = URLEncoder.encode(tableName.getNameAsString());
     </%java>
     <tr>
         <td><% tableName.getNamespaceAsString() %></td>
-        <td><a href=table.jsp?name=<% tableName.getNameAsString() %>><% tableName.getQualifierAsString() %></a> </td>
+        <td><a href=table.jsp?name=<% encodedTableName %>><% URLEncoder.encode(tableName.getQualifierAsString()) %></a> </td>
         <%if (frags != null) %>
             <td align="center"><% frags.get(tableName.getNameAsString()) != null ? frags.get(tableName.getNameAsString()).intValue() + "%" : "n/a" %></td>
         </%if>
         <td><% tableState.getState() %></td>
         <td><% openRegionsCount %></td>
-        <%if (openingRegionsCount > 0) %> <td><a href="/rits.jsp?table=<% tableName.getNameAsString() %>&state=OPENING"><% openingRegionsCount %></td> <%else><td><% openingRegionsCount %></td> </%if>
-        <td><% closedRegionsCount %></td>
-        <%if (closingRegionsCount > 0) %> <td><a href="/rits.jsp?table=<% tableName.getNameAsString() %>&state=CLOSING"><% closingRegionsCount %></td> <%else><td><% closingRegionsCount %></td> </%if>
-        <td><% offlineRegionsCount %></td>
-        <td><% failedRegionsCount %></td>
-        <td><% splitRegionsCount %></td>
+        <%if (openingRegionsCount > 0) %> <td><a href="/table.jsp?name=hbase%3Ameta&scan_table=<% encodedTableName %>&scan_region_state=OPENING"><% openingRegionsCount %></td> <%else><td><% openingRegionsCount %></td> </%if>
+        <%if (closedRegionsCount > 0) %> <td><a href="/table.jsp?name=hbase%3Ameta&scan_table=<% encodedTableName %>&scan_region_state=CLOSED"><% closedRegionsCount %></td> <%else><td><% closedRegionsCount %></td> </%if>
+        <%if (closingRegionsCount > 0) %> <td><a href="/table.jsp?name=hbase%3Ameta&scan_table=<% encodedTableName %>&scan_region_state=CLOSING"><% closingRegionsCount %></td> <%else><td><% closingRegionsCount %></td> </%if>
+        <%if (offlineRegionsCount > 0) %> <td><a href="/table.jsp?name=hbase%3Ameta&scan_table=<% encodedTableName %>&scan_region_state=OFFLINE"><% offlineRegionsCount %></td> <%else><td><% offlineRegionsCount %></td> </%if>
+        <%if (splitRegionsCount > 0) %> <td><a href="/table.jsp?name=hbase%3Ameta&scan_table=<% encodedTableName %>&scan_region_state=SPLIT"><% splitRegionsCount %></td> <%else><td><% splitRegionsCount %></td> </%if>
         <td><% otherRegionsCount %></td>
         <td><% desc.toStringCustomizedValues() %></td>
     </tr>
     </%for>
-    <p><% tables.size() %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
+    <p><% tables.size() %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]. Click count below to
+    see list of regions currently in 'state' designated by the column title. For 'Other' Region state,
+    browse to <a href="/table.jsp?name=hbase%3Ameta">hbase:meta</a> and adjust filter on 'Meta Entries' to
+    query on states other than those listed here. Queries may take a while if the <i>hbase:meta</i> table
+    is large.</p>
 </tbody>
 </table>
 </%if>
