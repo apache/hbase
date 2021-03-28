@@ -99,6 +99,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -964,6 +965,9 @@ public final class ProtobufUtil {
    */
   public static Mutation toMutation(final MutationProto proto) throws IOException {
     MutationType type = proto.getMutateType();
+    if (type == MutationType.INCREMENT) {
+      return toIncrement(proto, null);
+    }
     if (type == MutationType.APPEND) {
       return toAppend(proto, null);
     }
@@ -3715,6 +3719,37 @@ public final class ProtobufUtil {
     } catch (IllegalArgumentException e) {
       throw new DoNotRetryIOException(e.getMessage());
     }
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
+    final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
+    final TimeRange timeRange) throws IOException {
+
+    ClientProtos.Condition.Builder builder = ClientProtos.Condition.newBuilder()
+      .setRow(UnsafeByteOperations.unsafeWrap(row));
+
+    if (filter != null) {
+      builder.setFilter(ProtobufUtil.toFilter(filter));
+    } else {
+      builder.setFamily(UnsafeByteOperations.unsafeWrap(family))
+        .setQualifier(UnsafeByteOperations.unsafeWrap(
+          qualifier == null ? HConstants.EMPTY_BYTE_ARRAY : qualifier))
+        .setComparator(ProtobufUtil.toComparator(new BinaryComparator(value)))
+        .setCompareType(HBaseProtos.CompareType.valueOf(op.name()));
+    }
+
+    return builder.setTimeRange(ProtobufUtil.toTimeRange(timeRange)).build();
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final Filter filter,
+    final TimeRange timeRange) throws IOException {
+    return toCondition(row, null, null, null, null, filter, timeRange);
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
+    final byte[] qualifier, final CompareOperator op, final byte[] value,
+    final TimeRange timeRange) throws IOException {
+    return toCondition(row, family, qualifier, op, value, null, timeRange);
   }
 
   public static List<LogEntry> toBalancerDecisionResponse(
