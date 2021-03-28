@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
@@ -43,6 +44,10 @@ import org.mockito.stubbing.Answer;
  */
 @Category({ MiscTests.class, SmallTests.class })
 public class TestJul2Slf4j {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestJul2Slf4j.class);
 
   static {
     System.setProperty("java.util.logging.config.class", JulToSlf4jInitializer.class.getName());
