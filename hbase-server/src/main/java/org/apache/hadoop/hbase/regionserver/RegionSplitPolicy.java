@@ -41,7 +41,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class RegionSplitPolicy extends Configured {
-  private static final Class<? extends RegionSplitPolicy>
+  static final Class<? extends RegionSplitPolicy>
     DEFAULT_SPLIT_POLICY_CLASS = SteppingSplitPolicy.class;
 
   /**

@@ -40,8 +40,6 @@ public class KeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
   public static final String PREFIX_LENGTH_KEY = "KeyPrefixRegionSplitPolicy.prefix_length";
   public static final String BASE_REGION_SPLIT_POLICY_CLASS_KEY =
     "KeyPrefixRegionSplitPolicy.base_region_split_policy_class";
-  public static final String DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS =
-    "org.apache.hadoop.hbase.regionserver.SteppingSplitPolicy";
 
   private int prefixLength = 0;
   private RegionSplitPolicy baseRegionSplitPolicy;
@@ -90,7 +88,7 @@ public class KeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
     String baseRegionSplitPolicyClassName = region.getTableDescriptor().getValue(
       BASE_REGION_SPLIT_POLICY_CLASS_KEY);
     if (baseRegionSplitPolicyClassName == null) {
-      baseRegionSplitPolicyClassName = DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS;
+      baseRegionSplitPolicyClassName = RegionSplitPolicy.DEFAULT_SPLIT_POLICY_CLASS.getName();
     }
 
     try {
@@ -100,7 +98,8 @@ public class KeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
         + region.getTableDescriptor().getTableName() + ":"
         + baseRegionSplitPolicyClassName + ". Using default RegionSplitPolicy", e);
       try {
-        baseRegionSplitPolicy = newBaseRegionSplitPolicy(DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS);
+        baseRegionSplitPolicy =
+          newBaseRegionSplitPolicy(RegionSplitPolicy.DEFAULT_SPLIT_POLICY_CLASS.getName());
       } catch (Exception ignored) {
       }
     }

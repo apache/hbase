@@ -47,8 +47,6 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
   public static final String DELIMITER_KEY = "DelimitedKeyPrefixRegionSplitPolicy.delimiter";
   public static final String BASE_REGION_SPLIT_POLICY_CLASS_KEY =
     "DelimitedKeyPrefixRegionSplitPolicy.base_region_split_policy_class";
-  public static final String DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS =
-    "org.apache.hadoop.hbase.regionserver.SteppingSplitPolicy";
 
   private byte[] delimiter = null;
   private RegionSplitPolicy baseRegionSplitPolicy;
@@ -75,7 +73,7 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
     String baseRegionSplitPolicyClassName = region.getTableDescriptor().getValue(
       BASE_REGION_SPLIT_POLICY_CLASS_KEY);
     if (baseRegionSplitPolicyClassName == null) {
-      baseRegionSplitPolicyClassName = DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS;
+      baseRegionSplitPolicyClassName = RegionSplitPolicy.DEFAULT_SPLIT_POLICY_CLASS.getName();
     }
 
     try {
@@ -85,7 +83,8 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
         + region.getTableDescriptor().getTableName() + ":"
         + baseRegionSplitPolicyClassName + ". Using default RegionSplitPolicy", e);
       try {
-        baseRegionSplitPolicy = newBaseRegionSplitPolicy(DEFAULT_BASE_REGION_SPLIT_POLICY_CLASS);
+        baseRegionSplitPolicy =
+          newBaseRegionSplitPolicy(RegionSplitPolicy.DEFAULT_SPLIT_POLICY_CLASS.getName());
       } catch (Exception ignored) {
       }
     }
