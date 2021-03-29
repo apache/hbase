@@ -965,6 +965,7 @@ public class MasterRpcServices extends RSRpcServices implements
       }
 
       String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+      User caller = RpcServer.getRequestUser().orElse(null);
       AUDITLOG.info("User {} (remote address: {}) master service request for {}.{}", caller,
         remoteAddress, serviceName, methodName);
 
