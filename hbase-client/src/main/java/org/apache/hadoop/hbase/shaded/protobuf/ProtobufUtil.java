@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -3611,12 +3612,16 @@ public final class ProtobufUtil {
 
   public static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
     RSGroupInfo rsGroupInfo = new RSGroupInfo(proto.getName());
-    for (HBaseProtos.ServerName el : proto.getServersList()) {
-      rsGroupInfo.addServer(Address.fromParts(el.getHostName(), el.getPort()));
-    }
-    for (HBaseProtos.TableName pTableName : proto.getTablesList()) {
-      rsGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
-    }
+
+    Collection<Address> addresses = proto.getServersList().parallelStream()
+      .map(serverName -> Address.fromParts(serverName.getHostName(), serverName.getPort()))
+      .collect(Collectors.toList());
+    rsGroupInfo.addAllServers(addresses);
+
+    Collection<TableName> tables = proto.getTablesList().parallelStream()
+      .map(ProtobufUtil::toTableName).collect(Collectors.toList());
+    rsGroupInfo.addAllTables(tables);
+
     proto.getConfigurationList().forEach(pair ->
         rsGroupInfo.setConfiguration(pair.getName(), pair.getValue()));
     return rsGroupInfo;
