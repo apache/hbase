@@ -29,12 +29,14 @@ import org.apache.hadoop.hbase.metrics.MetricRegistries;
 public class RegionServerTableMetrics {
 
   private final MetricsTableLatencies latencies;
-  private final MetricsTableQueryMeter queryMeter;
+  private MetricsTableQueryMeter queryMeter;
 
-  public RegionServerTableMetrics() {
+  public RegionServerTableMetrics(boolean enableTableQueryMeter) {
     latencies = CompatibilitySingletonFactory.getInstance(MetricsTableLatencies.class);
-    queryMeter = new MetricsTableQueryMeterImpl(MetricRegistries.global().
-      get(((MetricsTableLatenciesImpl) latencies).getMetricRegistryInfo()).get());
+    if (enableTableQueryMeter) {
+      queryMeter = new MetricsTableQueryMeterImpl(MetricRegistries.global().
+        get(((MetricsTableLatenciesImpl) latencies).getMetricRegistryInfo()).get());
+    }
   }
 
   public void updatePut(TableName table, long time) {
@@ -82,18 +84,20 @@ public class RegionServerTableMetrics {
   }
 
   public void updateTableReadQueryMeter(TableName table, long count) {
-    queryMeter.updateTableReadQueryMeter(table, count);
-  }
-
-  public void updateTableReadQueryMeter(TableName table) {
-    queryMeter.updateTableReadQueryMeter(table);
+    if (queryMeter != null) {
+      queryMeter.updateTableReadQueryMeter(table, count);
+    }
   }
 
   public void updateTableWriteQueryMeter(TableName table, long count) {
-    queryMeter.updateTableWriteQueryMeter(table, count);
+    if (queryMeter != null) {
+      queryMeter.updateTableWriteQueryMeter(table, count);
+    }
   }
 
   public void updateTableWriteQueryMeter(TableName table) {
-    queryMeter.updateTableWriteQueryMeter(table);
+    if (queryMeter != null) {
+      queryMeter.updateTableWriteQueryMeter(table);
+    }
   }
 }
