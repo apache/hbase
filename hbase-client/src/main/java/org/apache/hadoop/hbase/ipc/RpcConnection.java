@@ -24,6 +24,7 @@ import io.netty.util.TimerTask;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -121,7 +121,7 @@ abstract class RpcConnection {
       if (metrics != null) {
         metrics.incrNsLookups();
       }
-      InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
+      InetSocketAddress remoteAddr = remoteId.getAddress().toSocketAddress();
       if (remoteAddr.isUnresolved()) {
         if (metrics != null) {
           metrics.incrNsLookupsFailed();
@@ -129,7 +129,7 @@ abstract class RpcConnection {
         throw new UnknownHostException(remoteId.getAddress() + " could not be resolved");
       }
       serverPrincipal = SecurityUtil.getServerPrincipal(conf.get(serverKey),
-        remoteAddr.getAddress().getCanonicalHostName().toLowerCase());
+        getHostnameForServerPrincipal(conf, remoteAddr.getAddress()));
       if (LOG.isDebugEnabled()) {
         LOG.debug("RPC Server Kerberos principal name for service=" + remoteId.getServiceName()
             + " is " + serverPrincipal);
@@ -157,6 +157,30 @@ abstract class RpcConnection {
     // Default minimum time between force relogin attempts is 10 minutes
     this.minTimeBeforeForceRelogin =
         conf.getInt(HConstants.HBASE_MINTIME_BEFORE_FORCE_RELOGIN, 10 * 60 * 1000);
+  }
+
+  private static boolean useCanonicalHostname(Configuration conf) {
+    return !conf.getBoolean(
+      HConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS,
+      HConstants.DEFAULT_UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS);
+  }
+
+  public static String getHostnameForServerPrincipal(Configuration conf, InetAddress addr) {
+    final String hostname;
+
+    if (useCanonicalHostname(conf)) {
+      hostname = addr.getCanonicalHostName();
+      if (hostname.equals(addr.getHostAddress())) {
+        LOG.warn("Canonical hostname for SASL principal is the same with IP address: "
+          + hostname + ", " + addr.getHostName() + ". Check DNS configuration or consider "
+          + HConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS
+          + "=true");
+      }
+    } else {
+      hostname = addr.getHostName();
+    }
+
+    return hostname.toLowerCase();
   }
 
   private UserInformation getUserInfo(UserGroupInformation ugi) {

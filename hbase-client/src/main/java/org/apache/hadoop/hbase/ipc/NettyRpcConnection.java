@@ -54,7 +54,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
-import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
@@ -227,7 +226,7 @@ class NettyRpcConnection extends RpcConnection {
     if (this.rpcClient.metrics != null) {
       this.rpcClient.metrics.incrNsLookups();
     }
-    InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
+    InetSocketAddress remoteAddr = remoteId.getAddress().toSocketAddress();
     if (remoteAddr.isUnresolved()) {
       if (this.rpcClient.metrics != null) {
         this.rpcClient.metrics.incrNsLookupsFailed();

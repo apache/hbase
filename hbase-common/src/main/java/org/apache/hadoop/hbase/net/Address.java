@@ -53,8 +53,8 @@ public class Address implements Comparable<Address> {
     return Address.fromParts(addr.getHostString(), addr.getPort());
   }
 
-  public static InetSocketAddress toSocketAddress(Address addr) {
-    return new InetSocketAddress(addr.getHostName(), addr.getPort());
+  public InetSocketAddress toSocketAddress() {
+    return new InetSocketAddress(getHostName(), getPort());
   }
 
   public static InetSocketAddress[] toSocketAddress(Address[] addrs) {
@@ -63,7 +63,7 @@ public class Address implements Comparable<Address> {
     }
     InetSocketAddress[] result = new InetSocketAddress[addrs.length];
     for (int i = 0; i < addrs.length; i++) {
-      result[i] = toSocketAddress(addrs[i]);
+      result[i] = addrs[i].toSocketAddress();
     }
     return result;
   }

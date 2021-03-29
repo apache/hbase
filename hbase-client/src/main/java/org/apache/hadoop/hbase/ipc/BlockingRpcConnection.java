@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
-import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -255,7 +254,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (this.rpcClient.metrics != null) {
           this.rpcClient.metrics.incrNsLookups();
         }
-        InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
+        InetSocketAddress remoteAddr = remoteId.getAddress().toSocketAddress();
         if (remoteAddr.isUnresolved()) {
           if (this.rpcClient.metrics != null) {
             this.rpcClient.metrics.incrNsLookupsFailed();

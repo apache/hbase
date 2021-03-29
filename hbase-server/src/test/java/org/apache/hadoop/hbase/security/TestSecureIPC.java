@@ -26,6 +26,10 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConf
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.BlockingService;
@@ -33,11 +37,16 @@ import com.google.protobuf.ServiceException;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.Callable;
 
 import javax.security.sasl.SaslException;
 
@@ -46,7 +55,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
+import org.apache.hadoop.hbase.ipc.ConnectionId;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.NettyRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -55,6 +66,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -73,6 +85,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 @RunWith(Parameterized.class)
 @Category({ SecurityTests.class, SmallTests.class })
@@ -104,6 +118,12 @@ public class TestSecureIPC {
 
   @Parameter
   public String rpcClientImpl;
+
+  private Callable<RpcClient> rpcClientFactory = new Callable<RpcClient>() {
+    @Override public RpcClient call() {
+      return RpcClientFactory.createClient(clientConf, HConstants.DEFAULT_CLUSTER_ID.toString());
+    }
+  };
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -141,6 +161,92 @@ public class TestSecureIPC {
     assertEquals(krbPrincipal, ugi.getUserName());
 
     callRpcService(User.create(ugi2));
+  }
+
+  @Test
+  public void testRpcCallWithEnabledKerberosSaslAuth_CanonicalHostname() throws Exception {
+    UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
+
+    // check that the login user is okay:
+    assertSame(ugi2, ugi);
+    assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
+    assertEquals(krbPrincipal, ugi.getUserName());
+
+    clientConf.setBoolean(
+      HConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS, false);
+    clientConf.set(HBaseKerberosUtils.KRB_PRINCIPAL, "hbase/_HOST@" + KDC.getRealm());
+
+    callRpcService(User.create(ugi2), new CanonicalHostnameTestingRpcClientFactory("localhost"));
+  }
+
+  @Test
+  public void testRpcCallWithEnabledKerberosSaslAuth_NoCanonicalHostname() throws Exception {
+    UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
+
+    // check that the login user is okay:
+    assertSame(ugi2, ugi);
+    assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
+    assertEquals(krbPrincipal, ugi.getUserName());
+
+    clientConf.setBoolean(
+      HConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS, true);
+    clientConf.set(HBaseKerberosUtils.KRB_PRINCIPAL, "hbase/_HOST@" + KDC.getRealm());
+
+    callRpcService(User.create(ugi2), new CanonicalHostnameTestingRpcClientFactory("127.0.0.1"));
+  }
+
+  public class CanonicalHostnameTestingRpcClientFactory implements Callable<RpcClient> {
+    private final String canonicalHostName;
+
+    public CanonicalHostnameTestingRpcClientFactory(String canonicalHostName) {
+      this.canonicalHostName = canonicalHostName;
+    }
+
+    @Override
+    public RpcClient call() throws Exception {
+      final RpcClient rpcClient = rpcClientFactory.call();
+
+      if (rpcClient instanceof AbstractRpcClient<?>) {
+        final AbstractRpcClient<?> abstractRpcClient = (AbstractRpcClient<?>) rpcClient;
+        final AbstractRpcClient<?> spiedRpcClient = spy(abstractRpcClient);
+
+        final Method createConnectionMethod =
+          AbstractRpcClient.class.getDeclaredMethod("createConnection", ConnectionId.class);
+        createConnectionMethod.setAccessible(true);
+
+        final Answer<Object> answer = new Answer<Object>() {
+          @Override public Object answer(InvocationOnMock invocationOnMock)
+            throws InvocationTargetException, IllegalAccessException {
+            final ConnectionId remoteId = invocationOnMock.getArgumentAt(0, ConnectionId.class);
+
+            final InetSocketAddress serverAddr = remoteId.getAddress().toSocketAddress();
+            try {
+              final Field canonicalHostNameField =
+                InetAddress.class.getDeclaredField("canonicalHostName");
+              canonicalHostNameField.setAccessible(true);
+              canonicalHostNameField.set(serverAddr.getAddress(), canonicalHostName);
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+              throw new RuntimeException(e);
+            }
+
+            final Address address = spy(remoteId.getAddress());
+            doReturn(serverAddr).when(address).toSocketAddress();
+
+            ConnectionId mockedRemoteId =
+              new ConnectionId(remoteId.getTicket(), remoteId.getServiceName(), address);
+
+            return createConnectionMethod.invoke(abstractRpcClient, mockedRemoteId);
+          }
+        };
+
+        createConnectionMethod.invoke(
+          doAnswer(answer).when(spiedRpcClient), any(ConnectionId.class));
+        return spiedRpcClient;
+      } else {
+        throw new UnsupportedOperationException(
+          rpcClient.getClass() + " isn't supported for testing");
+      }
+    }
   }
 
   @Test
@@ -204,11 +310,16 @@ public class TestSecureIPC {
     return UserGroupInformation.getLoginUser();
   }
 
+  private void callRpcService(User clientUser) throws Exception {
+    callRpcService(clientUser, rpcClientFactory);
+  }
+
   /**
    * Sets up a RPC Server and a Client. Does a RPC checks the result. If an exception is thrown from
    * the stub, this function will throw root cause of that exception.
    */
-  private void callRpcService(User clientUser) throws Exception {
+  private void callRpcService(User clientUser, Callable<RpcClient> rpcClientFactory)
+    throws Exception {
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
     Mockito.when(securityInfoMock.getServerPrincipal())
         .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
@@ -221,8 +332,7 @@ public class TestSecureIPC {
           new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)),
         isa, serverConf, new FifoRpcScheduler(serverConf, 1));
     rpcServer.start();
-    try (RpcClient rpcClient =
-        RpcClientFactory.createClient(clientConf, HConstants.DEFAULT_CLUSTER_ID.toString())) {
+    try (RpcClient rpcClient = rpcClientFactory.call()) {
       BlockingInterface stub =
           newBlockingStub(rpcClient, rpcServer.getListenerAddress(), clientUser);
       TestThread th1 = new TestThread(stub);
