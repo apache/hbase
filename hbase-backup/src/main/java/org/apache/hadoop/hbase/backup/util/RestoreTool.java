@@ -488,8 +488,8 @@ public class RestoreTool {
       }
       if (createNew) {
         LOG.info("Creating target table '" + targetTableName + "'");
-        byte[][] keys;
-        try{
+        byte[][] keys = null;
+        try {
           if (regionDirList == null || regionDirList.size() == 0) {
             admin.createTable(htd);
           } else {
@@ -498,12 +498,15 @@ public class RestoreTool {
             admin.createTable(htd, keys);
           }
         } catch (NamespaceNotFoundException e){
-          LOG.warn(e.getMessage());
+          LOG.warn("There was no namespace and the same will be created");
           String namespaceAsString = targetTableName.getNamespaceAsString();
-          LOG.info("Creating target  namespace '" + namespaceAsString + "'");
+          LOG.info("Creating target namespace '" + namespaceAsString + "'");
           admin.createNamespace(NamespaceDescriptor.create(namespaceAsString).build());
-          checkAndCreateTable(conn, tableBackupPath, tableName, targetTableName, regionDirList, htd,
-            truncateIfExists);
+          if (null == keys) {
+            admin.createTable(htd);
+          } else {
+            admin.createTable(htd, keys);
+          }
         }
 
       }
