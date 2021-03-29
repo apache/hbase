@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
@@ -487,12 +489,21 @@ public class RestoreTool {
       if (createNew) {
         LOG.info("Creating target table '" + targetTableName + "'");
         byte[][] keys;
-        if (regionDirList == null || regionDirList.size() == 0) {
-          admin.createTable(htd);
-        } else {
-          keys = generateBoundaryKeys(regionDirList);
-          // create table using table descriptor and region boundaries
-          admin.createTable(htd, keys);
+        try{
+          if (regionDirList == null || regionDirList.size() == 0) {
+            admin.createTable(htd);
+          } else {
+            keys = generateBoundaryKeys(regionDirList);
+            // create table using table descriptor and region boundaries
+            admin.createTable(htd, keys);
+          }
+        } catch (NamespaceNotFoundException e){
+          LOG.warn(e.getMessage());
+          String namespaceAsString = targetTableName.getNamespaceAsString();
+          LOG.info("Creating target  namespace '" + namespaceAsString + "'");
+          admin.createNamespace(NamespaceDescriptor.create(namespaceAsString).build());
+          checkAndCreateTable(conn, tableBackupPath, tableName, targetTableName, regionDirList, htd,
+            truncateIfExists);
         }
 
       }
