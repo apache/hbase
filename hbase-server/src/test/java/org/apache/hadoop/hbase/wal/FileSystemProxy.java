@@ -58,13 +58,14 @@ public class FileSystemProxy extends FileSystem {
   }
 
   @Override
-  public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite, int bufferSize,
-      short replication, long blockSize, Progressable progress) throws IOException {
+  public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite,
+      int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
     return real.create(f, permission, overwrite, bufferSize, replication, blockSize, progress);
   }
 
   @Override
-  public FSDataOutputStream append(Path f, int bufferSize, Progressable progress) throws IOException {
+  public FSDataOutputStream append(Path f, int bufferSize, Progressable progress)
+      throws IOException {
     return real.append(f, bufferSize, progress);
   }
 

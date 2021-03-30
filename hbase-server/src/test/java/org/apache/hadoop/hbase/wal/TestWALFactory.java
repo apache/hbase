@@ -726,7 +726,8 @@ public class TestWALFactory {
   public void testReaderClosedOnBadCodec() throws IOException {
     // Create our own Configuration and WALFactory to avoid breaking other test methods
     Configuration confWithCodec = new Configuration(conf);
-    confWithCodec.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, BrokenWALCellCodec.class, Codec.class);
+    confWithCodec.setClass(
+        WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, BrokenWALCellCodec.class, Codec.class);
     WALFactory customFactory = new WALFactory(confWithCodec, null, currentTest.getMethodName());
 
     // Hack a Proxy over the FileSystem so that we can track the InputStreams opened by
@@ -767,7 +768,8 @@ public class TestWALFactory {
       WALEdit cols = new WALEdit();
       cols.add(new KeyValue(row, Bytes.toBytes("column"),
         Bytes.toBytes("0"), System.currentTimeMillis(), new byte[] { 0 }));
-      final WAL log = customFactory.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
+      final WAL log = customFactory.getWAL(
+          hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
       final long txid = log.append(htd, hri,
         new WALKey(hri.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis(),
             mvcc),

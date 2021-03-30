@@ -341,7 +341,8 @@ public class WALFactory {
               }
               if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTime()) {
                 LOG.error("Can't open after " + nbAttempt + " attempts and "
-                    + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms " + " for " + path);
+                    + (EnvironmentEdgeManager.currentTime() - startWaiting)
+                    + "ms " + " for " + path);
               } else {
                 try {
                   Thread.sleep(nbAttempt < 3 ? 500 : 1000);
