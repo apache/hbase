@@ -1220,7 +1220,7 @@ public final class RequestConverter {
       final long nonceGroup,
       final long nonce) {
     DeleteColumnRequest.Builder builder = DeleteColumnRequest.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setColumnName(UnsafeByteOperations.unsafeWrap(columnName));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
