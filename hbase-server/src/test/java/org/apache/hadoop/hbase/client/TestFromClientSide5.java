@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -267,28 +269,321 @@ public class TestFromClientSide5 extends FromClientSideBase {
     final byte [] ROW1 = Bytes.toBytes("testRow1");
 
     try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
-      Put p = new Put(ROW);
-      p.addColumn(FAMILY, QUALIFIER, VALUE);
-      MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, p);
+      // Add initial data
+      t.put(new Put(ROW1).addColumn(FAMILY, QUALIFIER, VALUE));
 
-      p = new Put(ROW1);
-      p.addColumn(FAMILY, QUALIFIER, VALUE);
-      MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, p);
+      // Execute MultiRowMutation
+      Put put = new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE);
+      MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, put);
+
+      Delete delete = new Delete(ROW1);
+      MutationProto m2 = ProtobufUtil.toMutation(MutationType.DELETE, delete);
 
       MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
       mrmBuilder.addMutationRequest(m1);
       mrmBuilder.addMutationRequest(m2);
-      MutateRowsRequest mrm = mrmBuilder.build();
+
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
               MultiRowMutationService.newBlockingStub(channel);
-      service.mutateRows(null, mrm);
-      Get g = new Get(ROW);
-      Result r = t.get(g);
-      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)));
-      g = new Get(ROW1);
-      r = t.get(g);
-      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)));
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
+
+      // Assert
+      assertTrue(response.getProcessed());
+
+      Result r = t.get(new Get(ROW));
+      assertEquals(Bytes.toString(VALUE), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
+
+      r = t.get(new Get(ROW1));
+      assertTrue(r.isEmpty());
+    }
+  }
+
+  @Test
+  public void testMultiRowMutationWithSingleConditionWhenConditionMatches() throws Exception {
+    final TableName tableName = name.getTableName();
+    final byte [] ROW1 = Bytes.toBytes("testRow1");
+    final byte [] ROW2 = Bytes.toBytes("testRow2");
+    final byte [] VALUE1 = Bytes.toBytes("testValue1");
+    final byte [] VALUE2 = Bytes.toBytes("testValue2");
+
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      // Add initial data
+      t.put(new Put(ROW2).addColumn(FAMILY, QUALIFIER, VALUE2));
+
+      // Execute MultiRowMutation with conditions
+      Put put1 = new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE);
+      MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, put1);
+      Put put2 = new Put(ROW1).addColumn(FAMILY, QUALIFIER, VALUE1);
+      MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, put2);
+      Delete delete = new Delete(ROW2);
+      MutationProto m3 = ProtobufUtil.toMutation(MutationType.DELETE, delete);
+
+      MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
+      mrmBuilder.addMutationRequest(m1);
+      mrmBuilder.addMutationRequest(m2);
+      mrmBuilder.addMutationRequest(m3);
+      mrmBuilder.addCondition(ProtobufUtil.toCondition(ROW2, FAMILY, QUALIFIER,
+        CompareOperator.EQUAL, VALUE2, null));
+
+      CoprocessorRpcChannel channel = t.coprocessorService(ROW);
+      MultiRowMutationService.BlockingInterface service =
+        MultiRowMutationService.newBlockingStub(channel);
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
+
+      // Assert
+      assertTrue(response.getProcessed());
+
+      Result r = t.get(new Get(ROW));
+      assertEquals(Bytes.toString(VALUE), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
+
+      r = t.get(new Get(ROW1));
+      assertEquals(Bytes.toString(VALUE1), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
+
+      r = t.get(new Get(ROW2));
+      assertTrue(r.isEmpty());
+    }
+  }
+
+  @Test
+  public void testMultiRowMutationWithSingleConditionWhenConditionNotMatch() throws Exception {
+    final TableName tableName = name.getTableName();
+    final byte [] ROW1 = Bytes.toBytes("testRow1");
+    final byte [] ROW2 = Bytes.toBytes("testRow2");
+    final byte [] VALUE1 = Bytes.toBytes("testValue1");
+    final byte [] VALUE2 = Bytes.toBytes("testValue2");
+
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      // Add initial data
+      t.put(new Put(ROW2).addColumn(FAMILY, QUALIFIER, VALUE2));
+
+      // Execute MultiRowMutation with conditions
+      Put put1 = new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE);
+      MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, put1);
+      Put put2 = new Put(ROW1).addColumn(FAMILY, QUALIFIER, VALUE1);
+      MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, put2);
+      Delete delete = new Delete(ROW2);
+      MutationProto m3 = ProtobufUtil.toMutation(MutationType.DELETE, delete);
+
+      MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
+      mrmBuilder.addMutationRequest(m1);
+      mrmBuilder.addMutationRequest(m2);
+      mrmBuilder.addMutationRequest(m3);
+      mrmBuilder.addCondition(ProtobufUtil.toCondition(ROW2, FAMILY, QUALIFIER,
+        CompareOperator.EQUAL, VALUE1, null));
+
+      CoprocessorRpcChannel channel = t.coprocessorService(ROW);
+      MultiRowMutationService.BlockingInterface service =
+        MultiRowMutationService.newBlockingStub(channel);
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
+
+      // Assert
+      assertFalse(response.getProcessed());
+
+      Result r = t.get(new Get(ROW));
+      assertTrue(r.isEmpty());
+
+      r = t.get(new Get(ROW1));
+      assertTrue(r.isEmpty());
+
+      r = t.get(new Get(ROW2));
+      assertEquals(Bytes.toString(VALUE2), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
+    }
+  }
+
+  @Test
+  public void testMultiRowMutationWithMultipleConditionsWhenConditionsMatch() throws Exception {
+    final TableName tableName = name.getTableName();
+    final byte [] ROW1 = Bytes.toBytes("testRow1");
+    final byte [] ROW2 = Bytes.toBytes("testRow2");
+    final byte [] VALUE1 = Bytes.toBytes("testValue1");
+    final byte [] VALUE2 = Bytes.toBytes("testValue2");
+
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      // Add initial data
+      t.put(new Put(ROW2).addColumn(FAMILY, QUALIFIER, VALUE2));
+
+      // Execute MultiRowMutation with conditions
+      Put put1 = new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE);
+      MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, put1);
+      Put put2 = new Put(ROW1).addColumn(FAMILY, QUALIFIER, VALUE1);
+      MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, put2);
+      Delete delete = new Delete(ROW2);
+      MutationProto m3 = ProtobufUtil.toMutation(MutationType.DELETE, delete);
+
+      MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
+      mrmBuilder.addMutationRequest(m1);
+      mrmBuilder.addMutationRequest(m2);
+      mrmBuilder.addMutationRequest(m3);
+      mrmBuilder.addCondition(ProtobufUtil.toCondition(ROW, FAMILY, QUALIFIER,
+        CompareOperator.EQUAL, null, null));
+      mrmBuilder.addCondition(ProtobufUtil.toCondition(ROW2, FAMILY, QUALIFIER,
+        CompareOperator.EQUAL, VALUE2, null));
+
+      CoprocessorRpcChannel channel = t.coprocessorService(ROW);
+      MultiRowMutationService.BlockingInterface service =
+        MultiRowMutationService.newBlockingStub(channel);
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
+
+      // Assert
+      assertTrue(response.getProcessed());
+
+      Result r = t.get(new Get(ROW));
+      assertEquals(Bytes.toString(VALUE), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
+
+      r = t.get(new Get(ROW1));
+      assertEquals(Bytes.toString(VALUE1), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
+
+      r = t.get(new Get(ROW2));
+      assertTrue(r.isEmpty());
+    }
+  }
+
+  @Test
+  public void testMultiRowMutationWithMultipleConditionsWhenConditionsNotMatch() throws Exception {
+    final TableName tableName = name.getTableName();
+    final byte [] ROW1 = Bytes.toBytes("testRow1");
+    final byte [] ROW2 = Bytes.toBytes("testRow2");
+    final byte [] VALUE1 = Bytes.toBytes("testValue1");
+    final byte [] VALUE2 = Bytes.toBytes("testValue2");
+
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      // Add initial data
+      t.put(new Put(ROW2).addColumn(FAMILY, QUALIFIER, VALUE2));
+
+      // Execute MultiRowMutation with conditions
+      Put put1 = new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE);
+      MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, put1);
+      Put put2 = new Put(ROW1).addColumn(FAMILY, QUALIFIER, VALUE1);
+      MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, put2);
+      Delete delete = new Delete(ROW2);
+      MutationProto m3 = ProtobufUtil.toMutation(MutationType.DELETE, delete);
+
+      MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
+      mrmBuilder.addMutationRequest(m1);
+      mrmBuilder.addMutationRequest(m2);
+      mrmBuilder.addMutationRequest(m3);
+      mrmBuilder.addCondition(ProtobufUtil.toCondition(ROW1, FAMILY, QUALIFIER,
+        CompareOperator.EQUAL, null, null));
+      mrmBuilder.addCondition(ProtobufUtil.toCondition(ROW2, FAMILY, QUALIFIER,
+        CompareOperator.EQUAL, VALUE1, null));
+
+      CoprocessorRpcChannel channel = t.coprocessorService(ROW);
+      MultiRowMutationService.BlockingInterface service =
+        MultiRowMutationService.newBlockingStub(channel);
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
+
+      // Assert
+      assertFalse(response.getProcessed());
+
+      Result r = t.get(new Get(ROW));
+      assertTrue(r.isEmpty());
+
+      r = t.get(new Get(ROW1));
+      assertTrue(r.isEmpty());
+
+      r = t.get(new Get(ROW2));
+      assertEquals(Bytes.toString(VALUE2), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
+    }
+  }
+
+  @Test
+  public void testMultiRowMutationWithFilterConditionWhenConditionMatches() throws Exception {
+    final TableName tableName = name.getTableName();
+    final byte [] ROW1 = Bytes.toBytes("testRow1");
+    final byte [] ROW2 = Bytes.toBytes("testRow2");
+    final byte [] QUALIFIER2 = Bytes.toBytes("testQualifier2");
+    final byte [] VALUE1 = Bytes.toBytes("testValue1");
+    final byte [] VALUE2 = Bytes.toBytes("testValue2");
+    final byte [] VALUE3 = Bytes.toBytes("testValue3");
+
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      // Add initial data
+      t.put(new Put(ROW2).addColumn(FAMILY, QUALIFIER, VALUE2)
+        .addColumn(FAMILY, QUALIFIER2, VALUE3));
+
+      // Execute MultiRowMutation with conditions
+      Put put1 = new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE);
+      MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, put1);
+      Put put2 = new Put(ROW1).addColumn(FAMILY, QUALIFIER, VALUE1);
+      MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, put2);
+      Delete delete = new Delete(ROW2);
+      MutationProto m3 = ProtobufUtil.toMutation(MutationType.DELETE, delete);
+
+      MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
+      mrmBuilder.addMutationRequest(m1);
+      mrmBuilder.addMutationRequest(m2);
+      mrmBuilder.addMutationRequest(m3);
+      mrmBuilder.addCondition(ProtobufUtil.toCondition(ROW2, new FilterList(
+        new SingleColumnValueFilter(FAMILY, QUALIFIER, CompareOperator.EQUAL, VALUE2),
+        new SingleColumnValueFilter(FAMILY, QUALIFIER2, CompareOperator.EQUAL, VALUE3)), null));
+
+      CoprocessorRpcChannel channel = t.coprocessorService(ROW);
+      MultiRowMutationService.BlockingInterface service =
+        MultiRowMutationService.newBlockingStub(channel);
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
+
+      // Assert
+      assertTrue(response.getProcessed());
+
+      Result r = t.get(new Get(ROW));
+      assertEquals(Bytes.toString(VALUE), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
+
+      r = t.get(new Get(ROW1));
+      assertEquals(Bytes.toString(VALUE1), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
+
+      r = t.get(new Get(ROW2));
+      assertTrue(r.isEmpty());
+    }
+  }
+
+  @Test
+  public void testMultiRowMutationWithFilterConditionWhenConditionNotMatch() throws Exception {
+    final TableName tableName = name.getTableName();
+    final byte [] ROW1 = Bytes.toBytes("testRow1");
+    final byte [] ROW2 = Bytes.toBytes("testRow2");
+    final byte [] QUALIFIER2 = Bytes.toBytes("testQualifier2");
+    final byte [] VALUE1 = Bytes.toBytes("testValue1");
+    final byte [] VALUE2 = Bytes.toBytes("testValue2");
+    final byte [] VALUE3 = Bytes.toBytes("testValue3");
+
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      // Add initial data
+      t.put(new Put(ROW2).addColumn(FAMILY, QUALIFIER, VALUE2)
+        .addColumn(FAMILY, QUALIFIER2, VALUE3));
+
+      // Execute MultiRowMutation with conditions
+      Put put1 = new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE);
+      MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, put1);
+      Put put2 = new Put(ROW1).addColumn(FAMILY, QUALIFIER, VALUE1);
+      MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, put2);
+      Delete delete = new Delete(ROW2);
+      MutationProto m3 = ProtobufUtil.toMutation(MutationType.DELETE, delete);
+
+      MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
+      mrmBuilder.addMutationRequest(m1);
+      mrmBuilder.addMutationRequest(m2);
+      mrmBuilder.addMutationRequest(m3);
+      mrmBuilder.addCondition(ProtobufUtil.toCondition(ROW2, new FilterList(
+        new SingleColumnValueFilter(FAMILY, QUALIFIER, CompareOperator.EQUAL, VALUE2),
+        new SingleColumnValueFilter(FAMILY, QUALIFIER2, CompareOperator.EQUAL, VALUE2)), null));
+
+      CoprocessorRpcChannel channel = t.coprocessorService(ROW);
+      MultiRowMutationService.BlockingInterface service =
+        MultiRowMutationService.newBlockingStub(channel);
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
+
+      // Assert
+      assertFalse(response.getProcessed());
+
+      Result r = t.get(new Get(ROW));
+      assertTrue(r.isEmpty());
+
+      r = t.get(new Get(ROW1));
+      assertTrue(r.isEmpty());
+
+      r = t.get(new Get(ROW2));
+      assertEquals(Bytes.toString(VALUE2), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
     }
   }
 

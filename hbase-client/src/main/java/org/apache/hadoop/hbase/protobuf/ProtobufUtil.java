@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -751,6 +753,9 @@ public final class ProtobufUtil {
    */
   public static Mutation toMutation(final MutationProto proto) throws IOException {
     MutationType type = proto.getMutateType();
+    if (type == MutationType.INCREMENT) {
+      return toIncrement(proto, null);
+    }
     if (type == MutationType.APPEND) {
       return toAppend(proto, null);
     }
@@ -1789,5 +1794,52 @@ public final class ProtobufUtil {
     return HBaseProtos.TimeRange.newBuilder().setFrom(timeRange.getMin())
       .setTo(timeRange.getMax())
       .build();
+  }
+
+  public static TimeRange toTimeRange(HBaseProtos.TimeRange timeRange) {
+    if (timeRange == null) {
+      return TimeRange.allTime();
+    }
+    if (timeRange.hasFrom()) {
+      if (timeRange.hasTo()) {
+        return TimeRange.between(timeRange.getFrom(), timeRange.getTo());
+      } else {
+        return TimeRange.from(timeRange.getFrom());
+      }
+    } else {
+      return TimeRange.until(timeRange.getTo());
+    }
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
+    final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
+    final TimeRange timeRange) throws IOException {
+
+    ClientProtos.Condition.Builder builder = ClientProtos.Condition.newBuilder()
+      .setRow(ByteStringer.wrap(row));
+
+    if (filter != null) {
+      builder.setFilter(ProtobufUtil.toFilter(filter));
+    } else {
+      builder.setFamily(ByteStringer.wrap(family))
+        .setQualifier(ByteStringer.wrap(
+          qualifier == null ? HConstants.EMPTY_BYTE_ARRAY : qualifier))
+        .setComparator(
+          ProtobufUtil.toComparator(new BinaryComparator(value)))
+        .setCompareType(HBaseProtos.CompareType.valueOf(op.name()));
+    }
+
+    return builder.setTimeRange(ProtobufUtil.toTimeRange(timeRange)).build();
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final Filter filter,
+    final TimeRange timeRange) throws IOException {
+    return toCondition(row, null, null, null, null, filter, timeRange);
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
+    final byte[] qualifier, final CompareOperator op, final byte[] value,
+    final TimeRange timeRange) throws IOException {
+    return toCondition(row, family, qualifier, op, value, null, timeRange);
   }
 }

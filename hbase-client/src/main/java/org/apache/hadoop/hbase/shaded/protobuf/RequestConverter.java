@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -88,7 +87,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Condition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
@@ -99,7 +97,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -271,7 +268,7 @@ public final class RequestConverter {
     return MutateRequest.newBuilder()
       .setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName))
       .setMutation(ProtobufUtil.toMutation(type, mutation))
-      .setCondition(buildCondition(row, family, qualifier, op, value, filter, timeRange))
+      .setCondition(ProtobufUtil.toCondition(row, family, qualifier, op, value, filter, timeRange))
       .build();
   }
 
@@ -307,7 +304,8 @@ public final class RequestConverter {
       builder.addAction(actionBuilder.build());
     }
     return ClientProtos.MultiRequest.newBuilder().addRegionAction(builder.build())
-        .setCondition(buildCondition(row, family, qualifier, op, value, filter, timeRange))
+        .setCondition(ProtobufUtil.toCondition(row, family, qualifier, op, value, filter,
+          timeRange))
         .build();
   }
 
@@ -1062,31 +1060,6 @@ public final class RequestConverter {
     regionBuilder.setValue(UnsafeByteOperations.unsafeWrap(value));
     regionBuilder.setType(type);
     return regionBuilder.build();
-  }
-
-  /**
-   * Create a protocol buffer Condition
-   *
-   * @return a Condition
-   * @throws IOException
-   */
-  public static Condition buildCondition(final byte[] row, final byte[] family,
-    final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
-    final TimeRange timeRange) throws IOException {
-
-    Condition.Builder builder = Condition.newBuilder().setRow(UnsafeByteOperations.unsafeWrap(row));
-
-    if (filter != null) {
-      builder.setFilter(ProtobufUtil.toFilter(filter));
-    } else {
-      builder.setFamily(UnsafeByteOperations.unsafeWrap(family))
-        .setQualifier(UnsafeByteOperations.unsafeWrap(
-          qualifier == null ? HConstants.EMPTY_BYTE_ARRAY : qualifier))
-        .setComparator(ProtobufUtil.toComparator(new BinaryComparator(value)))
-        .setCompareType(CompareType.valueOf(op.name()));
-    }
-
-    return builder.setTimeRange(ProtobufUtil.toTimeRange(timeRange)).build();
   }
 
   /**
