@@ -15,23 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
-import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
-import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
@@ -45,40 +37,35 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class})
-public class TestUpdateConfigurationInRSGroup extends TestAsyncAdminBase {
-  protected static final Logger LOG = LoggerFactory.getLogger(TestUpdateConfigurationInRSGroup.class);
+public class TestUpdateRSGroupConfiguration extends TestRSGroupsBase {
+  protected static final Logger LOG = LoggerFactory.getLogger(TestUpdateRSGroupConfiguration.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestUpdateConfigurationInRSGroup.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static Admin ADMIN;
+    HBaseClassTestRule.forClass(TestUpdateRSGroupConfiguration.class);
   private static final String TEST_GROUP = "test";
   private static final String TEST2_GROUP = "test2";
 
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  public static void setUp() throws Exception {
     setUpConfigurationFiles(TEST_UTIL);
-    RSGroupUtil.enableRSGroup(TEST_UTIL.getConfiguration());
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(3)
-      .numMasters(2).build();
-    TEST_UTIL.startMiniCluster(option);
+    setUpTestBeforeClass();
     addResourceToRegionServerConfiguration(TEST_UTIL);
-    ADMIN = TEST_UTIL.getAdmin();
   }
 
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
+  public static void tearDown() throws Exception {
+    tearDownAfterClass();
   }
 
   @Before
-  public void setUp() throws Exception {
+  public void beforeMethod() throws Exception {
+    setUpBeforeMethod();
   }
 
   @After
-  public void tearDown() throws Exception {
-    deleteGroups();
+  public void afterMethod() throws Exception {
+    tearDownAfterMethod();
   }
 
   @Test
@@ -113,10 +100,10 @@ public class TestUpdateConfigurationInRSGroup extends TestAsyncAdminBase {
     // Check the configuration of the RegionServer in test rsgroup, should be update
     Configuration regionServerConfiguration =
       TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
-      .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-      .filter(regionServer ->
-        (regionServer.getServerName().getAddress().equals(testRSGroup.getServers().first())))
-      .collect(Collectors.toList()).get(0).getConfiguration();
+        .map(JVMClusterUtil.RegionServerThread::getRegionServer)
+        .filter(regionServer ->
+          (regionServer.getServerName().getAddress().equals(testRSGroup.getServers().first())))
+        .collect(Collectors.toList()).get(0).getConfiguration();
     int custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
     assertEquals(1000, custom);
 
@@ -131,33 +118,5 @@ public class TestUpdateConfigurationInRSGroup extends TestAsyncAdminBase {
     assertEquals(0, custom);
 
     restoreHBaseSiteXML();
-  }
-
-  private RSGroupInfo addGroup(String groupName, int serverCount) throws IOException {
-    RSGroupInfo defaultInfo = ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
-    ADMIN.addRSGroup(groupName);
-    Set<Address> set = new HashSet<>();
-    for (Address server : defaultInfo.getServers()) {
-      if (set.size() == serverCount) {
-        break;
-      }
-      set.add(server);
-    }
-    ADMIN.moveServersToRSGroup(set, groupName);
-    return ADMIN.getRSGroup(groupName);
-  }
-
-  private void deleteGroups() throws IOException {
-    for (RSGroupInfo groupInfo : ADMIN.listRSGroups()) {
-      if (!groupInfo.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
-        removeGroup(groupInfo.getName());
-      }
-    }
-  }
-
-  private void removeGroup(String groupName) throws IOException {
-    RSGroupInfo groupInfo = ADMIN.getRSGroup(groupName);
-    ADMIN.moveServersToRSGroup(groupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
-    ADMIN.removeRSGroup(groupName);
   }
 }

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.AbstractTestUpdateConfiguration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -63,7 +64,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-public abstract class TestRSGroupsBase {
+public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsBase.class);
 
   // shared
