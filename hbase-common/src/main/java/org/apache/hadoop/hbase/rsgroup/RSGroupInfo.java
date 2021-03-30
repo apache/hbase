@@ -96,7 +96,7 @@ public class RSGroupInfo {
   /**
    * Get list of servers.
    */
-  public Set<Address> getServers() {
+  public SortedSet<Address> getServers() {
     return servers;
   }
 

@@ -114,4 +114,12 @@ public interface RSGroupAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   void updateRSGroupConfig(String groupName, Map<String, String> configuration) throws IOException;
+
+  /**
+   * Update the configuration and trigger an online config change
+   * on all the regionservers in the RSGroup.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   */
+  void updateConfiguration(String groupName) throws IOException;
 }

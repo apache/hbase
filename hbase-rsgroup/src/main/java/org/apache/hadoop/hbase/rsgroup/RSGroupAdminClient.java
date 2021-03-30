@@ -21,10 +21,14 @@ import com.google.protobuf.ServiceException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -267,6 +271,21 @@ public class RSGroupAdminClient implements RSGroupAdmin {
       stub.updateRSGroupConfig(null, builder.build());
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public void updateConfiguration(String groupName) throws IOException {
+    RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
+    if (rsGroupInfo == null) {
+      throw new IllegalArgumentException("RSGroup does not exist: " + groupName);
+    }
+    ClusterMetrics status =
+      admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.SERVERS_NAME));
+    List<ServerName> groupServers = status.getServersName().stream().filter(
+      s -> rsGroupInfo.containsServer(s.getAddress())).collect(Collectors.toList());
+    for (ServerName server : groupServers) {
+      admin.updateConfiguration(server);
     }
   }
 }

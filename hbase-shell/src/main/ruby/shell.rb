@@ -552,6 +552,7 @@ Shell.load_command_group(
   commands: %w[
     update_config
     update_all_config
+    update_rsgroup_config
   ]
 )
 

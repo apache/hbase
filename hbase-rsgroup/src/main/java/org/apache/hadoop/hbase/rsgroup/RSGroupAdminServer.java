@@ -631,6 +631,10 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
   }
 
+  @Override
+  public void updateConfiguration(String groupName) throws IOException {
+  }
+
   private Map<String, RegionState> rsGroupGetRegionsInTransition(String groupName)
       throws IOException {
     Map<String, RegionState> rit = Maps.newTreeMap();

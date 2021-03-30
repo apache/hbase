@@ -132,6 +132,11 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
     verify();
   }
 
+  @Override
+  public void updateConfiguration(String groupName) throws IOException {
+    wrapped.updateConfiguration(groupName);
+  }
+
   public void verify() throws IOException {
     Map<String, RSGroupInfo> groupMap = Maps.newHashMap();
     Set<RSGroupInfo> zList = Sets.newHashSet();
