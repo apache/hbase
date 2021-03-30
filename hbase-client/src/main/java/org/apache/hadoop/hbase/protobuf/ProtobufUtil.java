@@ -1774,17 +1774,17 @@ public final class ProtobufUtil {
   }
 
   public static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
-    RSGroupInfo RSGroupInfo = new RSGroupInfo(proto.getName());
+    RSGroupInfo rsGroupInfo = new RSGroupInfo(proto.getName());
 
     Collection<Address> addresses = proto.getServersList().parallelStream()
       .map(serverName -> Address.fromParts(serverName.getHostName(), serverName.getPort()))
       .collect(Collectors.toList());
-    RSGroupInfo.addAllServers(addresses);
+    rsGroupInfo.addAllServers(addresses);
 
     Collection<TableName> tables = proto.getTablesList().parallelStream()
       .map(ProtobufUtil::toTableName).collect(Collectors.toList());
-    RSGroupInfo.addAllTables(tables);
-    return RSGroupInfo;
+    rsGroupInfo.addAllTables(tables);
+    return rsGroupInfo;
   }
 
   public static HBaseProtos.TimeRange toTimeRange(TimeRange timeRange) {
