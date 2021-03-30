@@ -19,27 +19,31 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 
 @InterfaceAudience.Private
 class RSGroupProtobufUtil {
   static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
-    RSGroupInfo RSGroupInfo = new RSGroupInfo(proto.getName());
-    for(HBaseProtos.ServerName el: proto.getServersList()) {
-      RSGroupInfo.addServer(Address.fromParts(el.getHostName(), el.getPort()));
-    }
-    for(TableProtos.TableName pTableName: proto.getTablesList()) {
-      RSGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
-    }
-    return RSGroupInfo;
+    RSGroupInfo rsGroupInfo = new RSGroupInfo(proto.getName());
+
+    Collection<Address> addresses = proto.getServersList().parallelStream()
+      .map(serverName -> Address.fromParts(serverName.getHostName(), serverName.getPort()))
+      .collect(Collectors.toList());
+    rsGroupInfo.addAllServers(addresses);
+
+    Collection<TableName> tables = proto.getTablesList().parallelStream()
+      .map(ProtobufUtil::toTableName).collect(Collectors.toList());
+    rsGroupInfo.addAllTables(tables);
+    return rsGroupInfo;
   }
 
   static RSGroupProtos.RSGroupInfo toProtoGroupInfo(RSGroupInfo pojo) {
