@@ -311,7 +311,7 @@ public class WALFactory {
             reader.init(fs, path, conf, stream);
             return reader;
           }
-        } catch (IOException e) {
+        } catch (Exception e) {
           if (stream != null) {
             try {
               stream.close();
@@ -328,33 +328,38 @@ public class WALFactory {
               LOG.debug("exception details", exception);
             }
           }
-          String msg = e.getMessage();
-          if (msg != null && (msg.contains("Cannot obtain block length")
-              || msg.contains("Could not obtain the last block")
-              || msg.matches("Blocklist for [^ ]* has changed.*"))) {
-            if (++nbAttempt == 1) {
-              LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
-            }
-            if (reporter != null && !reporter.progress()) {
-              throw new InterruptedIOException("Operation is cancelled");
-            }
-            if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTime()) {
-              LOG.error("Can't open after " + nbAttempt + " attempts and "
-                  + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms " + " for " + path);
-            } else {
-              try {
-                Thread.sleep(nbAttempt < 3 ? 500 : 1000);
-                continue; // retry
-              } catch (InterruptedException ie) {
-                InterruptedIOException iioe = new InterruptedIOException();
-                iioe.initCause(ie);
-                throw iioe;
+          if (e instanceof IOException) {
+            String msg = e.getMessage();
+            if (msg != null && (msg.contains("Cannot obtain block length")
+                || msg.contains("Could not obtain the last block")
+                || msg.matches("Blocklist for [^ ]* has changed.*"))) {
+              if (++nbAttempt == 1) {
+                LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
               }
+              if (reporter != null && !reporter.progress()) {
+                throw new InterruptedIOException("Operation is cancelled");
+              }
+              if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTime()) {
+                LOG.error("Can't open after " + nbAttempt + " attempts and "
+                    + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms " + " for " + path);
+              } else {
+                try {
+                  Thread.sleep(nbAttempt < 3 ? 500 : 1000);
+                  continue; // retry
+                } catch (InterruptedException ie) {
+                  InterruptedIOException iioe = new InterruptedIOException();
+                  iioe.initCause(ie);
+                  throw iioe;
+                }
+              }
+              throw new LeaseNotRecoveredException(e);
+            } else {
+              throw e;
             }
-            throw new LeaseNotRecoveredException(e);
-          } else {
-            throw e;
           }
+
+          // Rethrow the original exception if we are not retrying due to HDFS-isms.
+          throw e;
         }
       }
     } catch (IOException ie) {
