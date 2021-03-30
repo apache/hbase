@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
 
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +37,10 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <code>userid_eventtype_eventid</code>, and use prefix delimiter _, this split policy
  * ensures that all rows starting with the same userid, belongs to the same region.
  * @see KeyPrefixRegionSplitPolicy
+ *
+ * @deprecated since 3.0.0 and will be removed in 4.0.0. See HBASE-25706.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class DelimitedKeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
 
@@ -69,33 +71,8 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
     }
     delimiter = Bytes.toBytes(delimiterString);
 
-    // read the base region split policy class name from the table descriptor
-    String baseRegionSplitPolicyClassName = region.getTableDescriptor().getValue(
-      BASE_REGION_SPLIT_POLICY_CLASS_KEY);
-    if (baseRegionSplitPolicyClassName == null) {
-      baseRegionSplitPolicyClassName = RegionSplitPolicy.DEFAULT_SPLIT_POLICY_CLASS.getName();
-    }
-
-    try {
-      baseRegionSplitPolicy = newBaseRegionSplitPolicy(baseRegionSplitPolicyClassName);
-    } catch (Exception e) {
-      LOG.error("Invalid class for " + BASE_REGION_SPLIT_POLICY_CLASS_KEY + " for table "
-        + region.getTableDescriptor().getTableName() + ":"
-        + baseRegionSplitPolicyClassName + ". Using default RegionSplitPolicy", e);
-      try {
-        baseRegionSplitPolicy =
-          newBaseRegionSplitPolicy(RegionSplitPolicy.DEFAULT_SPLIT_POLICY_CLASS.getName());
-      } catch (Exception ignored) {
-      }
-    }
-    baseRegionSplitPolicy.configureForRegion(region);
-  }
-
-  private RegionSplitPolicy newBaseRegionSplitPolicy(String baseRegionSplitPolicyClassName)
-    throws ClassNotFoundException {
-    Class<? extends RegionSplitPolicy> baseRegionSplitPolicyClass =
-      Class.forName(baseRegionSplitPolicyClassName).asSubclass(RegionSplitPolicy.class);
-    return ReflectionUtils.newInstance(baseRegionSplitPolicyClass, getConf());
+    baseRegionSplitPolicy = KeyPrefixRegionSplitPolicy.createBaseRegionSplitPolicy(
+      BASE_REGION_SPLIT_POLICY_CLASS_KEY, region, getConf());
   }
 
   @Override

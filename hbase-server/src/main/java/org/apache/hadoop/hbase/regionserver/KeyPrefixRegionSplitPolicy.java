@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -30,7 +31,10 @@ import org.slf4j.LoggerFactory;
  *
  * This ensures that a region is not split "inside" a prefix of a row key.
  * I.e. rows can be co-located in a region by their prefix.
+ *
+ * @deprecated since 3.0.0 and will be removed in 4.0.0. See HBASE-25706.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class KeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
   private static final Logger LOG = LoggerFactory
@@ -84,33 +88,48 @@ public class KeyPrefixRegionSplitPolicy extends RegionSplitPolicy {
       return;
     }
 
+    baseRegionSplitPolicy = createBaseRegionSplitPolicy(BASE_REGION_SPLIT_POLICY_CLASS_KEY,
+      region, getConf());
+  }
+
+  static RegionSplitPolicy createBaseRegionSplitPolicy(String baseRegionSplitPolicyClassKey,
+    HRegion region, Configuration conf) {
     // read the base region split policy class name from the table descriptor
     String baseRegionSplitPolicyClassName = region.getTableDescriptor().getValue(
-      BASE_REGION_SPLIT_POLICY_CLASS_KEY);
+      baseRegionSplitPolicyClassKey);
     if (baseRegionSplitPolicyClassName == null) {
       baseRegionSplitPolicyClassName = RegionSplitPolicy.DEFAULT_SPLIT_POLICY_CLASS.getName();
     }
 
+    RegionSplitPolicy ret = null;
     try {
-      baseRegionSplitPolicy = newBaseRegionSplitPolicy(baseRegionSplitPolicyClassName);
+      ret = newBaseRegionSplitPolicyInstance(baseRegionSplitPolicyClassName, conf);
     } catch (Exception e) {
-      LOG.error("Invalid class for " + BASE_REGION_SPLIT_POLICY_CLASS_KEY + " for table "
+      LOG.error("Invalid class for " + baseRegionSplitPolicyClassKey + " for table "
         + region.getTableDescriptor().getTableName() + ":"
         + baseRegionSplitPolicyClassName + ". Using default RegionSplitPolicy", e);
       try {
-        baseRegionSplitPolicy =
-          newBaseRegionSplitPolicy(RegionSplitPolicy.DEFAULT_SPLIT_POLICY_CLASS.getName());
+        ret =
+          newBaseRegionSplitPolicyInstance(RegionSplitPolicy.DEFAULT_SPLIT_POLICY_CLASS.getName(),
+            conf);
       } catch (Exception ignored) {
+        // Ignore it because creating a instance of the default RegionSplitPolicy should at least
+        // succeed
       }
     }
-    baseRegionSplitPolicy.configureForRegion(region);
+    // ret should not be null because creating a instance of the default RegionSplitPolicy should
+    // at least succeed
+    assert ret != null;
+
+    ret.configureForRegion(region);
+    return ret;
   }
 
-  private RegionSplitPolicy newBaseRegionSplitPolicy(String baseRegionSplitPolicyClassName)
-    throws ClassNotFoundException {
+  private static RegionSplitPolicy newBaseRegionSplitPolicyInstance(
+    String baseRegionSplitPolicyClassName, Configuration conf) throws ClassNotFoundException {
     Class<? extends RegionSplitPolicy> baseRegionSplitPolicyClass =
       Class.forName(baseRegionSplitPolicyClassName).asSubclass(RegionSplitPolicy.class);
-    return ReflectionUtils.newInstance(baseRegionSplitPolicyClass, getConf());
+    return ReflectionUtils.newInstance(baseRegionSplitPolicyClass, conf);
   }
 
   @Override
