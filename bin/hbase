@@ -306,6 +306,8 @@ for f in "${HBASE_HOME}"/lib/client-facing-thirdparty/*.jar; do
     CLASSPATH="${CLASSPATH}:${f}"
   fi
 done
+# redirect java.util.logging to slf4j
+HBASE_OPTS="$HBASE_OPTS -Djava.util.logging.config.class=org.apache.hadoop.hbase.logging.JulToSlf4jInitializer"
 
 # default log directory & file
 if [ "$HBASE_LOG_DIR" = "" ]; then
