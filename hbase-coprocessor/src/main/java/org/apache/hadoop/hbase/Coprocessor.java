@@ -18,11 +18,9 @@
  */
 
 package org.apache.hadoop.hbase;
-
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.Collections;
-
-import com.google.protobuf.Service;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -97,8 +95,8 @@ public interface Coprocessor {
 
   /**
    * Coprocessor endpoints providing protobuf services should override this method.
-   * @return Iterable of {@link Service}s or empty collection. Implementations should never
-   * return null.
+   * @return Iterable of {@link Service}s or empty collection; implementations should not return
+   *    null.
    */
   default Iterable<Service> getServices() {
     return Collections.EMPTY_SET;

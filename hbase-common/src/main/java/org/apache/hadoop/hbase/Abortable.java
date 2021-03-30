@@ -1,6 +1,5 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -16,38 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.coprocessor;
+package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown if a coprocessor encounters any exception.
+ * Interface to support the aborting of a given server or client.
+ * <p>
+ * This is used primarily when we could get an unexpected and fatal exception; abort is called to
+ * exit the hosting process.
  */
-@InterfaceAudience.Public
-public class CoprocessorException extends DoNotRetryIOException {
-  private static final long serialVersionUID = 4357922136679804887L;
-
-  /** Default Constructor */
-  public CoprocessorException() {
-    super();
-  }
+@InterfaceAudience.Private
+public interface Abortable {
+  /**
+   * Abort the server or client.
+   * @param why Why we're aborting.
+   * @param e Throwable that caused abort. Can be null.
+   */
+  void abort(String why, Throwable e);
 
   /**
-   * Constructor with a Class object and exception message.
-   * @param clazz
-   * @param s
+   * Check if the server or client was aborted.
+   * @return true if the server or client was aborted, false otherwise
    */
-  public CoprocessorException(Class<?> clazz, String s) {
-    super( "Coprocessor [" + clazz.getName() + "]: " + s);
-  }
-
-  /**
-   * Constructs the exception and supplies a string as the message
-   * @param s - message
-   */
-  public CoprocessorException(String s) {
-    super(s);
-  }
-
+  boolean isAborted();
 }

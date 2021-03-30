@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -44,7 +43,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -111,7 +109,7 @@ public class TestAccessController3 extends SecureTestUtil {
   // https://hbase.apache.org/book/appendix_acl_matrix.html
   // creating all Scope x Permission combinations
 
-  private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
+  private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
   private static MasterCoprocessorEnvironment CP_ENV;
   private static AccessController ACCESS_CONTROLLER;
@@ -281,7 +279,8 @@ public class TestAccessController3 extends SecureTestUtil {
       public Object run() throws Exception {
         HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV), htd, null);
+        ACCESS_CONTROLLER.preCreateTable(TestAccessController.
+          createAndPrepare(CP_ENV), htd, null);
         return null;
       }
     };

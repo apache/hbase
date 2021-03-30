@@ -90,6 +90,10 @@ public class WALCoprocessorHost
       super.shutdown();
       MetricsCoprocessor.removeRegistry(this.metricRegistry);
     }
+
+    @Override public String toString() {
+      return "WALEnvironment{wal=" + wal + '}';
+    }
   }
 
   private final WAL wal;

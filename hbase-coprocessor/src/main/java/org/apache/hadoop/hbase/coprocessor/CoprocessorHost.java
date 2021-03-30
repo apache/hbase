@@ -31,10 +31,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -42,17 +38,18 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedList;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides the common setup framework and runtime services for coprocessor
  * invocation from HBase services.
  * @param <C> type of specific coprocessor this host will handle
  * @param <E> type of specific coprocessor environment this host requires.
- * provides
  */
 @InterfaceAudience.Private
 public abstract class CoprocessorHost<C extends Coprocessor, E extends CoprocessorEnvironment<C>> {
@@ -100,8 +97,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
    * the intention is to preserve a history of all loaded coprocessors for
    * diagnosis in case of server crash (HBASE-4014).
    */
-  private static Set<String> coprocessorNames =
-      Collections.synchronizedSet(new HashSet<String>());
+  private static final Set<String> coprocessorNames = Collections.synchronizedSet(new HashSet<>());
 
   public static Set<String> getLoadedCoprocessors() {
     synchronized (coprocessorNames) {
@@ -139,8 +135,9 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
     // load default coprocessors from configure file
     String[] defaultCPClasses = conf.getStrings(confKey);
-    if (defaultCPClasses == null || defaultCPClasses.length == 0)
+    if (defaultCPClasses == null || defaultCPClasses.length == 0) {
       return;
+    }
 
     int currentSystemPriority = Coprocessor.PRIORITY_SYSTEM;
     for (String className : defaultCPClasses) {
@@ -454,15 +451,8 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       // server is configured to abort.
       abortServer(env, e);
     } else {
-      // If available, pull a table name out of the environment
-      if(env instanceof RegionCoprocessorEnvironment) {
-        String tableName = ((RegionCoprocessorEnvironment)env).getRegionInfo().getTable().getNameAsString();
-        LOG.error("Removing coprocessor '" + env.toString() + "' from table '"+ tableName + "'", e);
-      } else {
-        LOG.error("Removing coprocessor '" + env.toString() + "' from " +
-                "environment",e);
-      }
-
+      // env will print the Region toString if a RegionCoprocessorEnvironment which includes table.
+      LOG.error("Removing coprocessor '" + env.toString() + "' from " + "environment", e);
       coprocEnvironments.remove(env);
       try {
         shutdown(env);
@@ -480,16 +470,13 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
    * Used to limit legacy handling to once per Coprocessor class per classloader.
    */
   private static final Set<Class<? extends Coprocessor>> legacyWarning =
-      new ConcurrentSkipListSet<>(
-          new Comparator<Class<? extends Coprocessor>>() {
-            @Override
-            public int compare(Class<? extends Coprocessor> c1, Class<? extends Coprocessor> c2) {
-              if (c1.equals(c2)) {
-                return 0;
-              }
-              return c1.getName().compareTo(c2.getName());
-            }
-          });
+      new ConcurrentSkipListSet<>(new Comparator<Class<? extends Coprocessor>>() {
+        @Override
+        public int compare(Class<? extends Coprocessor> c1, Class<? extends Coprocessor> c2) {
+          return c1.equals(c2) ? 0 : c1.getName().compareTo(c2.getName());
+        }
+      }
+     );
 
   /**
    * Implementations defined function to get an observer of type {@code O} from a coprocessor of
@@ -518,7 +505,8 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
 
     ObserverOperation(ObserverGetter<C, O> observerGetter, User user, boolean bypassable) {
-      super(user != null? user: RpcServer.getRequestUser().orElse(null), bypassable);
+      // Used to get user from RpcServer if null -- removed.
+      super(user, bypassable);
       this.observerGetter = observerGetter;
     }
 
@@ -546,7 +534,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
 
     /**
-     * In case of coprocessors which have many kinds of observers (for eg, {@link RegionCoprocessor}
+     * In case of coprocessors which have many kinds of observers (e.g. RegionCoprocessor
      * has BulkLoadObserver, RegionObserver, etc), some implementations may not need all
      * observers, in which case they will return null for that observer's getter.
      * We simply ignore such cases.
@@ -614,7 +602,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
   /**
    * @return True if we are to bypass (Can only be <code>true</code> if
-   * ObserverOperation#isBypassable().
+   *    ObserverOperation#isBypassable()).
    */
   protected <O> boolean execOperation(final ObserverOperation<O> observerOperation)
       throws IOException {
@@ -657,11 +645,12 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
    * master/regionserver stop or cluster shutdown. (Refer:
    * <a href="https://issues.apache.org/jira/browse/HBASE-16663">HBASE-16663</a>
    * @return true if bypaas coprocessor execution, false if not.
-   * @throws IOException
    */
   protected <O> boolean execShutdown(final ObserverOperation<O> observerOperation)
       throws IOException {
-    if (observerOperation == null) return false;
+    if (observerOperation == null) {
+      return false;
+    }
     boolean bypass = false;
     List<E> envs = coprocEnvironments.get();
     // Iterate the coprocessors and execute ObserverOperation's call()

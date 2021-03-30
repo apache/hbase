@@ -1689,4 +1689,9 @@ public class RegionCoprocessorHost
           }
         });
   }
+
+  @Override
+  public String toString() {
+    return "RegionCoprocessorHost{region=" + region + "} " + super.toString();
+  }
 }

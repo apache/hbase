@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
