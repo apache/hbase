@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,42 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.coprocessor;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Subclass if exception is not meant to be retried: e.g.
- * {@link org.apache.hadoop.hbase.UnknownScannerException}
+ * Thrown if a coprocessor encounters any exception.
  */
 @InterfaceAudience.Public
-public class DoNotRetryIOException extends HBaseIOException {
-  // TODO: This would be more useful as a marker interface than as a class.
-  private static final long serialVersionUID = 1197446454511704139L;
-
-  public DoNotRetryIOException() {
+public class CoprocessorException extends DoNotRetryIOException {
+  /** Default Constructor */
+  public CoprocessorException() {
     super();
   }
 
   /**
-   * @param message the message for this exception
+   * Constructor with a Class object and exception message.
    */
-  public DoNotRetryIOException(String message) {
-    super(message);
+  public CoprocessorException(Class<?> clazz, String s) {
+    super("Coprocessor [" + clazz.getName() + "]: " + s);
   }
 
   /**
-   * @param message the message for this exception
-   * @param throwable the {@link Throwable} to use for this exception
+   * Constructs the exception and supplies a string as the message
    */
-  public DoNotRetryIOException(String message, Throwable throwable) {
-    super(message, throwable);
-  }
-
-  /**
-   * @param throwable the {@link Throwable} to use for this exception
-   */
-  public DoNotRetryIOException(Throwable throwable) {
-    super(throwable);
+  public CoprocessorException(String s) {
+    super(s);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,25 +22,20 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestReadOnlyConfiguration {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReadOnlyConfiguration.class);
+    HBaseClassTestRule.forClass(TestReadOnlyConfiguration.class);
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Test
+  @Test (expected = UnsupportedOperationException.class)
   public void testAddDefaultResource() {
     Configuration configuration = new Configuration();
     Configuration readOnlyConf = new ReadOnlyConfiguration(configuration);
-    configuration.addDefaultResource("abc.xml");
+    readOnlyConf.addDefaultResource("abc.xml");
+    readOnlyConf.setInt("any.old.config", 1);
   }
 }
