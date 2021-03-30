@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -102,7 +101,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -257,7 +255,7 @@ public final class RequestConverter {
       builder.setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation));
     }
     return builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName))
-      .setCondition(buildCondition(row, family, qualifier, op, value, filter, timeRange))
+      .setCondition(ProtobufUtil.toCondition(row, family, qualifier, op, value, filter, timeRange))
       .build();
   }
 
@@ -271,8 +269,8 @@ public final class RequestConverter {
     final byte[] row, final byte[] family, final byte[] qualifier,
     final CompareOperator op, final byte[] value, final Filter filter, final TimeRange timeRange,
     final RowMutations rowMutations, long nonceGroup, long nonce) throws IOException {
-    return buildMultiRequest(regionName, rowMutations, buildCondition(row, family, qualifier, op,
-      value, filter, timeRange), nonceGroup, nonce);
+    return buildMultiRequest(regionName, rowMutations, ProtobufUtil.toCondition(row, family,
+      qualifier, op, value, filter, timeRange), nonceGroup, nonce);
   }
 
   /**
@@ -666,8 +664,9 @@ public final class RequestConverter {
       getRegionActionBuilderWithRegion(builder, regionName);
 
       CheckAndMutate cam = (CheckAndMutate) action.getAction();
-      builder.setCondition(buildCondition(cam.getRow(), cam.getFamily(), cam.getQualifier(),
-        cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange()));
+      builder.setCondition(ProtobufUtil.toCondition(cam.getRow(), cam.getFamily(),
+        cam.getQualifier(), cam.getCompareOp(), cam.getValue(), cam.getFilter(),
+        cam.getTimeRange()));
 
       if (cam.getAction() instanceof Put) {
         actionBuilder.clear();
@@ -832,8 +831,9 @@ public final class RequestConverter {
       getRegionActionBuilderWithRegion(builder, regionName);
 
       CheckAndMutate cam = (CheckAndMutate) action.getAction();
-      builder.setCondition(buildCondition(cam.getRow(), cam.getFamily(), cam.getQualifier(),
-        cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange()));
+      builder.setCondition(ProtobufUtil.toCondition(cam.getRow(), cam.getFamily(),
+        cam.getQualifier(), cam.getCompareOp(), cam.getValue(), cam.getFilter(),
+        cam.getTimeRange()));
 
       if (cam.getAction() instanceof Put) {
         actionBuilder.clear();
@@ -1185,31 +1185,6 @@ public final class RequestConverter {
     regionBuilder.setValue(UnsafeByteOperations.unsafeWrap(value));
     regionBuilder.setType(type);
     return regionBuilder.build();
-  }
-
-  /**
-   * Create a protocol buffer Condition
-   *
-   * @return a Condition
-   * @throws IOException
-   */
-  public static Condition buildCondition(final byte[] row, final byte[] family,
-    final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
-    final TimeRange timeRange) throws IOException {
-
-    Condition.Builder builder = Condition.newBuilder().setRow(UnsafeByteOperations.unsafeWrap(row));
-
-    if (filter != null) {
-      builder.setFilter(ProtobufUtil.toFilter(filter));
-    } else {
-      builder.setFamily(UnsafeByteOperations.unsafeWrap(family))
-        .setQualifier(UnsafeByteOperations.unsafeWrap(
-          qualifier == null ? HConstants.EMPTY_BYTE_ARRAY : qualifier))
-        .setComparator(ProtobufUtil.toComparator(new BinaryComparator(value)))
-        .setCompareType(CompareType.valueOf(op.name()));
-    }
-
-    return builder.setTimeRange(ProtobufUtil.toTimeRange(timeRange)).build();
   }
 
   /**
