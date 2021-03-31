@@ -18,10 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -34,6 +30,7 @@ import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestMetricsWAL {
@@ -44,7 +41,7 @@ public class TestMetricsWAL {
 
   @Test
   public void testLogRollRequested() throws Exception {
-    MetricsWALSource source = mock(MetricsWALSourceImpl.class);
+    MetricsWALSource source = Mockito.mock(MetricsWALSourceImpl.class);
     MetricsWAL metricsWAL = new MetricsWAL(source);
     metricsWAL.logRollRequested(WALActionsListener.RollRequestReason.ERROR);
     metricsWAL.logRollRequested(WALActionsListener.RollRequestReason.LOW_REPLICATION);
@@ -52,24 +49,24 @@ public class TestMetricsWAL {
     metricsWAL.logRollRequested(WALActionsListener.RollRequestReason.SIZE);
 
     // Log roll was requested four times
-    verify(source, times(4)).incrementLogRollRequested();
+    Mockito.verify(source, Mockito.times(4)).incrementLogRollRequested();
     // One was because of an IO error.
-    verify(source, times(1)).incrementErrorLogRoll();
+    Mockito.verify(source, Mockito.times(1)).incrementErrorLogRoll();
     // One was because of low replication on the hlog.
-    verify(source, times(1)).incrementLowReplicationLogRoll();
+    Mockito.verify(source, Mockito.times(1)).incrementLowReplicationLogRoll();
     // One was because of slow sync on the hlog.
-    verify(source, times(1)).incrementSlowSyncLogRoll();
+    Mockito.verify(source, Mockito.times(1)).incrementSlowSyncLogRoll();
     // One was because of hlog file length limit.
-    verify(source, times(1)).incrementSizeLogRoll();
+    Mockito.verify(source, Mockito.times(1)).incrementSizeLogRoll();
   }
 
   @Test
   public void testPostSync() throws Exception {
     long nanos = TimeUnit.MILLISECONDS.toNanos(145);
-    MetricsWALSource source = mock(MetricsWALSourceImpl.class);
+    MetricsWALSource source = Mockito.mock(MetricsWALSourceImpl.class);
     MetricsWAL metricsWAL = new MetricsWAL(source);
     metricsWAL.postSync(nanos, 1);
-    verify(source, times(1)).incrementSyncTime(145);
+    Mockito.verify(source, Mockito.times(1)).incrementSyncTime(145);
   }
 
   @Test
@@ -88,14 +85,14 @@ public class TestMetricsWAL {
 
   @Test
   public void testWalWrittenInBytes() throws Exception {
-    MetricsWALSource source = mock(MetricsWALSourceImpl.class);
+    MetricsWALSource source = Mockito.mock(MetricsWALSourceImpl.class);
     MetricsWAL metricsWAL = new MetricsWAL(source);
     TableName tableName = TableName.valueOf("foo");
     WALKey walKey = new WALKeyImpl(null, tableName, -1);
     metricsWAL.postAppend(100, 900, walKey, null);
     metricsWAL.postAppend(200, 2000, walKey, null);
-    verify(source, times(1)).incrementWrittenBytes(100);
-    verify(source, times(1)).incrementWrittenBytes(200);
+    Mockito.verify(source, Mockito.times(1)).incrementWrittenBytes(100);
+    Mockito.verify(source, Mockito.times(1)).incrementWrittenBytes(200);
   }
 
   @Test
