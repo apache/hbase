@@ -248,7 +248,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction modifyNamespace = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preModifyNamespace(TestAccessController.createAndPrepare(CP_ENV),
+        ACCESS_CONTROLLER.preModifyNamespace(ObserverContextImpl.createAndPrepare(CP_ENV),
           NamespaceDescriptor.create(TEST_NAMESPACE).addConfiguration("abc", "156").build());
         return null;
       }
@@ -266,7 +266,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction createNamespace = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCreateNamespace(TestAccessController.createAndPrepare(CP_ENV),
+        ACCESS_CONTROLLER.preCreateNamespace(ObserverContextImpl.createAndPrepare(CP_ENV),
           NamespaceDescriptor.create(TEST_NAMESPACE2).build());
         return null;
       }
@@ -275,7 +275,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction deleteNamespace = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteNamespace(TestAccessController.createAndPrepare(CP_ENV),
+        ACCESS_CONTROLLER.preDeleteNamespace(ObserverContextImpl.createAndPrepare(CP_ENV),
           TEST_NAMESPACE2);
         return null;
       }
@@ -300,7 +300,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction getNamespaceAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preGetNamespaceDescriptor(TestAccessController.createAndPrepare(CP_ENV),
+        ACCESS_CONTROLLER.preGetNamespaceDescriptor(ObserverContextImpl.createAndPrepare(CP_ENV),
           TEST_NAMESPACE);
         return null;
       }
@@ -422,7 +422,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction preGrantAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preGrant(TestAccessController.createAndPrepare(CP_ENV),
+        ACCESS_CONTROLLER.preGrant(ObserverContextImpl.createAndPrepare(CP_ENV),
           new UserPermission(testUser,
               Permission.newBuilder(TEST_NAMESPACE).withActions(Action.WRITE).build()),
           false);
@@ -432,7 +432,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction preRevokeAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRevoke(TestAccessController.createAndPrepare(CP_ENV),
+        ACCESS_CONTROLLER.preRevoke(ObserverContextImpl.createAndPrepare(CP_ENV),
           new UserPermission(testUser,
               Permission.newBuilder(TEST_NAMESPACE).withActions(Action.WRITE).build()));
         return null;
@@ -518,7 +518,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
       public Object run() throws Exception {
         HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_TABLE));
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(TestAccessController.createAndPrepare(CP_ENV), htd, null);
+        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV), htd, null);
         return null;
       }
     };

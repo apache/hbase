@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.util.Optional;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -41,9 +42,6 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
   }
 
   public ObserverContextImpl(User caller, boolean bypassable) {
-    // Used to do RpcServer.getRequestUser().orElse(null) if null but removed so no dependence on
-    // RPCServer.
-    assert caller != null;
     this.caller = caller;
     this.bypassable = bypassable;
   }
@@ -89,5 +87,19 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
     return Optional.ofNullable(caller);
   }
 
-
+  /**
+   * Instantiates a new ObserverContext instance if the passed reference is <code>null</code> and
+   * sets the environment in the new or existing instance. This allows deferring the instantiation
+   * of a ObserverContext until it is actually needed.
+   * @param <E> The environment type for the context
+   * @param env The coprocessor environment to set
+   * @return An instance of <code>ObserverContext</code> with the environment set
+   */
+  @Deprecated
+  // TODO: Remove this method, ObserverContext should not depend on RpcServer
+  public static <E extends CoprocessorEnvironment> ObserverContext<E> createAndPrepare(E env) {
+    ObserverContextImpl<E> ctx = new ObserverContextImpl<>(RpcServer.getRequestUser().orElse(null));
+    ctx.prepare(env);
+    return ctx;
+  }
 }

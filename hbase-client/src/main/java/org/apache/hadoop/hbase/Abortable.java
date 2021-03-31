@@ -1,4 +1,5 @@
-/*
+/**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,36 +21,25 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Subclass if exception is not meant to be retried.
+ * Interface to support the aborting of a given server or client.
+ * <p>
+ * This is used primarily for ZooKeeper usage when we could get an unexpected
+ * and fatal exception, requiring an abort.
+ * <p>
+ * Implemented by the Master, RegionServer, and TableServers (client).
  */
-@InterfaceAudience.Public
-public class DoNotRetryIOException extends HBaseIOException {
-  // TODO: This would be more useful as a marker interface than as a class.
-  private static final long serialVersionUID = 1197446454511704139L;
-
-  public DoNotRetryIOException() {
-    super();
-  }
+@InterfaceAudience.Private
+public interface Abortable {
+  /**
+   * Abort the server or client.
+   * @param why Why we're aborting.
+   * @param e Throwable that caused abort. Can be null.
+   */
+  void abort(String why, Throwable e);
 
   /**
-   * @param message the message for this exception
+   * Check if the server or client was aborted.
+   * @return true if the server or client was aborted, false otherwise
    */
-  public DoNotRetryIOException(String message) {
-    super(message);
-  }
-
-  /**
-   * @param message the message for this exception
-   * @param throwable the {@link Throwable} to use for this exception
-   */
-  public DoNotRetryIOException(String message, Throwable throwable) {
-    super(message, throwable);
-  }
-
-  /**
-   * @param throwable the {@link Throwable} to use for this exception
-   */
-  public DoNotRetryIOException(Throwable throwable) {
-    super(throwable);
-  }
+  boolean isAborted();
 }

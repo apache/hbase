@@ -258,10 +258,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-coprocessor</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-http</artifactId>
       <exclusions>
         <exclusion>

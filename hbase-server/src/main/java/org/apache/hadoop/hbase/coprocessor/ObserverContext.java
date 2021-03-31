@@ -17,18 +17,20 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import java.util.Optional;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+import java.util.Optional;
+
 /**
- * Carries the execution state for a given invocation of an Observer coprocessor method. The same
- * ObserverContext instance is passed sequentially to all loaded coprocessors for a given Observer
- * method trigger, with the <code>CoprocessorEnvironment</code> reference set appropriately for each
- * Coprocessor type:
+ * Carries the execution state for a given invocation of an Observer coprocessor
+ * ({@link RegionObserver}, {@link MasterObserver}, or {@link WALObserver})
+ * method. The same ObserverContext instance is passed sequentially to all loaded
+ * coprocessors for a given Observer method trigger, with the
+ * <code>CoprocessorEnvironment</code> reference set appropriately for each Coprocessor type:
  * e.g. the RegionCoprocessorEnvironment is passed to RegionCoprocessors, and so on.
  * @param <E> The {@link CoprocessorEnvironment} subclass applicable to the
  *     revelant Observer interface.
@@ -66,6 +68,7 @@ public interface ObserverContext<E extends CoprocessorEnvironment> {
    * 'bypass' in hbase2.</p>
    */
   void bypass();
+
 
   /**
    * Returns the active user for the coprocessor call. If an explicit {@code User} instance was

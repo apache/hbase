@@ -1,4 +1,5 @@
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +19,6 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 /**
  * Encapsulation of the environment of each coprocessor
@@ -35,21 +37,21 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
   private static final Logger LOG = LoggerFactory.getLogger(BaseEnvironment.class);
 
   /** The coprocessor */
-  protected final C impl;
+  public C impl;
   /** Chaining priority */
   protected int priority = Coprocessor.PRIORITY_USER;
   /** Current coprocessor state */
   Coprocessor.State state = Coprocessor.State.UNINSTALLED;
-  private final int seq;
-  private final Configuration conf;
-  private final ClassLoader classLoader;
+  private int seq;
+  private Configuration conf;
+  private ClassLoader classLoader;
 
   /**
    * Constructor
    * @param impl the coprocessor instance
    * @param priority chaining priority
    */
-  public BaseEnvironment(C impl, final int priority, int seq, Configuration conf) {
+  public BaseEnvironment(final C impl, final int priority, final int seq, final Configuration conf) {
     this.impl = impl;
     this.classLoader = impl.getClass().getClassLoader();
     this.priority = priority;
