@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -134,10 +133,10 @@ public class TestWALRecordReader {
     long ts = System.currentTimeMillis();
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), ts, value));
-    log.appendData(info, getWalKeyImpl(ts, scopes), edit);
+    log.appendData(getWalKeyImpl(ts, scopes), edit);
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), ts+1, value));
-    log.appendData(info, getWalKeyImpl(ts+1, scopes), edit);
+    log.appendData(getWalKeyImpl(ts+1, scopes), edit);
     log.sync();
     Threads.sleep(10);
     LOG.info("Before 1st WAL roll " + log.toString());
@@ -149,10 +148,10 @@ public class TestWALRecordReader {
 
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("3"), ts1+1, value));
-    log.appendData(info, getWalKeyImpl(ts1+1, scopes), edit);
+    log.appendData(getWalKeyImpl(ts1+1, scopes), edit);
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("4"), ts1+2, value));
-    log.appendData(info, getWalKeyImpl(ts1+2, scopes), edit);
+    log.appendData(getWalKeyImpl(ts1+2, scopes), edit);
     log.sync();
     log.shutdown();
     walfactory.shutdown();
@@ -196,7 +195,7 @@ public class TestWALRecordReader {
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
         System.currentTimeMillis(), value));
-    long txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
+    long txid = log.appendData(getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
     log.sync(txid);
 
     Thread.sleep(1); // make sure 2nd log gets a later timestamp
@@ -205,7 +204,7 @@ public class TestWALRecordReader {
 
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), System.currentTimeMillis(), value));
-    txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
+    txid = log.appendData(getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
     log.sync(txid);
     log.shutdown();
     walfactory.shutdown();

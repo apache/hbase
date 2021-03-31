@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -187,7 +186,7 @@ public abstract class AbstractTestFSWAL {
       WALKeyImpl key = new WALKeyImpl(hri.getEncodedNameAsBytes(), htd.getTableName(),
           SequenceId.NO_SEQUENCE_ID, timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE,
           HConstants.NO_NONCE, mvcc, scopes);
-      log.appendData(hri, key, cols);
+      log.appendData(key, cols);
     }
     log.sync();
   }
@@ -203,7 +202,6 @@ public abstract class AbstractTestFSWAL {
   /**
    * tests the log comparator. Ensure that we are not mixing meta logs with non-meta logs (throws
    * exception if we do). Comparison is based on the timestamp present in the wal name.
-   * @throws Exception
    */
   @Test
   public void testWALComparator() throws Exception {
@@ -261,7 +259,6 @@ public abstract class AbstractTestFSWAL {
    * This method tests this behavior by inserting edits and rolling the wal enough times to reach
    * the max number of logs threshold. It checks whether we get the "right regions and stores" for
    * flush on rolling the wal.
-   * @throws Exception
    */
   @Test
   public void testFindMemStoresEligibleForFlush() throws Exception {
@@ -406,7 +403,6 @@ public abstract class AbstractTestFSWAL {
    * slowing appends in the background ring buffer thread while in foreground we call flush. The
    * addition of the sync over HRegion in flush should fix an issue where flush was returning before
    * all of its appends had made it out to the WAL (HBASE-11109).
-   * @throws IOException
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-11109">HBASE-11109</a>
    */
   @Test
@@ -470,7 +466,7 @@ public abstract class AbstractTestFSWAL {
         final RegionInfo info = region.getRegionInfo();
         final WALKeyImpl logkey = new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
             System.currentTimeMillis(), clusterIds, -1, -1, region.getMVCC(), scopes);
-        wal.append(info, logkey, edits, true);
+        wal.append(logkey, edits, true);
         region.getMVCC().completeAndWait(logkey.getWriteEntry());
       }
       region.flush(true);
@@ -520,7 +516,7 @@ public abstract class AbstractTestFSWAL {
         new WALKeyImpl(ri.getEncodedNameAsBytes(), td.getTableName(), SequenceId.NO_SEQUENCE_ID,
           timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE, HConstants.NO_NONCE, mvcc, scopes);
     try {
-      wal.append(ri, key, cols, true);
+      wal.append(key, cols, true);
       fail("Should fail since the wal has already been closed");
     } catch (IOException e) {
       // expected

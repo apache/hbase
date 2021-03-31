@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -92,17 +91,17 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
     return Optional.of(this);
   }
 
-  @Override
-  public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
-      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+  // What to do here? TODO?
+  public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env, WALKey logKey,
+      WALEdit logEdit) throws IOException {
     postWALWriteCalled = true;
   }
 
-  @Override
+  // What to do here? TODO?
   public void preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
-      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+      WALKey logKey, WALEdit logEdit) throws IOException {
     // check table name matches or not.
-    if (!Bytes.equals(info.getTable().toBytes(), this.tableName)) {
+    if (!Bytes.equals(logKey.getTableName().toBytes(), this.tableName)) {
       return;
     }
     preWALWriteCalled = true;

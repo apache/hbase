@@ -28,7 +28,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -182,10 +181,6 @@ public abstract class AbstractTestWALReplay {
     }
   }
 
-  /**
-   *
-   * @throws Exception
-   */
   @Test
   public void testReplayEditsAfterRegionMovedWithMultiCF() throws Exception {
     final TableName tableName =
@@ -263,7 +258,6 @@ public abstract class AbstractTestWALReplay {
 
   /**
    * Tests for hbase-2727.
-   * @throws Exception
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2727">HBASE-2727</a>
    */
   @Test
@@ -328,16 +322,11 @@ public abstract class AbstractTestWALReplay {
   /**
    * Test case of HRegion that is only made out of bulk loaded files.  Assert
    * that we don't 'crash'.
-   * @throws IOException
-   * @throws IllegalAccessException
-   * @throws NoSuchFieldException
-   * @throws IllegalArgumentException
-   * @throws SecurityException
    */
   @Test
-  public void testRegionMadeOfBulkLoadedFilesOnly()
-  throws IOException, SecurityException, IllegalArgumentException,
-      NoSuchFieldException, IllegalAccessException, InterruptedException {
+  public void testRegionMadeOfBulkLoadedFilesOnly() throws
+        IOException, SecurityException, IllegalArgumentException,
+          NoSuchFieldException, IllegalAccessException, InterruptedException {
     final TableName tableName =
         TableName.valueOf("testRegionMadeOfBulkLoadedFilesOnly");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
@@ -394,11 +383,6 @@ public abstract class AbstractTestWALReplay {
    * files) and an edit in the memstore.
    * This is for HBASE-10958 "[dataloss] Bulk loading with seqids can prevent some log entries
    * from being replayed"
-   * @throws IOException
-   * @throws IllegalAccessException
-   * @throws NoSuchFieldException
-   * @throws IllegalArgumentException
-   * @throws SecurityException
    */
   @Test
   public void testCompactedBulkLoadedFiles()
@@ -464,11 +448,6 @@ public abstract class AbstractTestWALReplay {
   /**
    * Test writing edits into an HRegion, closing it, splitting logs, opening
    * Region again.  Verify seqids.
-   * @throws IOException
-   * @throws IllegalAccessException
-   * @throws NoSuchFieldException
-   * @throws IllegalArgumentException
-   * @throws SecurityException
    */
   @Test
   public void testReplayEditsWrittenViaHRegion()
@@ -571,17 +550,11 @@ public abstract class AbstractTestWALReplay {
    * died.
    *
    * We restart Region again, and verify that the edits were replayed.
-   *
-   * @throws IOException
-   * @throws IllegalAccessException
-   * @throws NoSuchFieldException
-   * @throws IllegalArgumentException
-   * @throws SecurityException
    */
   @Test
-  public void testReplayEditsAfterPartialFlush()
-  throws IOException, SecurityException, IllegalArgumentException,
-      NoSuchFieldException, IllegalAccessException, InterruptedException {
+  public void testReplayEditsAfterPartialFlush() throws
+      IOException, SecurityException, IllegalArgumentException,
+        NoSuchFieldException, IllegalAccessException, InterruptedException {
     final TableName tableName =
         TableName.valueOf("testReplayEditsWrittenViaHRegion");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
@@ -663,7 +636,6 @@ public abstract class AbstractTestWALReplay {
    * Test that we could recover the data correctly after aborting flush. In the
    * test, first we abort flush after writing some data, then writing more data
    * and flush again, at last verify the data.
-   * @throws IOException
    */
   @Test
   public void testReplayEditsAfterAbortingFlush() throws IOException {
@@ -749,10 +721,12 @@ public abstract class AbstractTestWALReplay {
     List<Cell> results = new ArrayList<>();
     while (true) {
       boolean existMore = scanner.next(results);
-      if (!results.isEmpty())
+      if (!results.isEmpty()) {
         scannedCount++;
-      if (!existMore)
+      }
+      if (!existMore) {
         break;
+      }
       results.clear();
     }
     return scannedCount;
@@ -761,7 +735,6 @@ public abstract class AbstractTestWALReplay {
   /**
    * Create an HRegion with the result of a WAL split and test we only see the
    * good edits
-   * @throws Exception
    */
   @Test
   public void testReplayEditsWrittenIntoWAL() throws Exception {
@@ -801,15 +774,13 @@ public abstract class AbstractTestWALReplay {
     long now = ee.currentTime();
     edit.add(new KeyValue(rowName, Bytes.toBytes("another family"), rowName,
       now, rowName));
-    wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes),
-      edit);
+    wal.appendData(new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes), edit);
 
     // Delete the c family to verify deletes make it over.
     edit = new WALEdit();
     now = ee.currentTime();
     edit.add(new KeyValue(rowName, Bytes.toBytes("c"), null, now, KeyValue.Type.DeleteFamily));
-    wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes),
-      edit);
+    wal.appendData(new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes), edit);
 
     // Sync.
     wal.sync();
@@ -1163,7 +1134,7 @@ public abstract class AbstractTestWALReplay {
     byte[] rowName, byte[] family, EnvironmentEdge ee, MultiVersionConcurrencyControl mvcc,
     int index, NavigableMap<byte[], Integer> scopes) throws IOException {
     FSWALEntry entry = new FSWALEntry(sequence, createWALKey(htd.getTableName(), hri, mvcc, scopes),
-      createWALEdit(rowName, family, ee, index), hri, true, null);
+      createWALEdit(rowName, family, ee, index),true, null);
     entry.stampRegionSequenceId(mvcc.begin());
     return entry;
   }
@@ -1173,7 +1144,7 @@ public abstract class AbstractTestWALReplay {
       final HTableDescriptor htd, final MultiVersionConcurrencyControl mvcc,
       NavigableMap<byte[], Integer> scopes) throws IOException {
     for (int j = 0; j < count; j++) {
-      wal.appendData(hri, createWALKey(tableName, hri, mvcc, scopes),
+      wal.appendData(createWALKey(tableName, hri, mvcc, scopes),
         createWALEdit(rowName, family, ee, j));
     }
     wal.sync();

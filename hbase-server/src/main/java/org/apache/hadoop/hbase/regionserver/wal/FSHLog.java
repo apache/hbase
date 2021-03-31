@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRe
 import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.LOW_REPLICATION;
 import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SIZE;
 import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SLOW_SYNC;
-
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.ExceptionHandler;
@@ -65,8 +64,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 /**
  * The default implementation of FSWAL.
  */
@@ -109,8 +106,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   // We use ring buffer sequence as txid of FSWALEntry and SyncFuture.
   private static final Logger LOG = LoggerFactory.getLogger(FSHLog.class);
 
-  private static final String TOLERABLE_LOW_REPLICATION = "hbase.regionserver.hlog.tolerable.lowreplication";
-  private static final String LOW_REPLICATION_ROLL_LIMIT = "hbase.regionserver.hlog.lowreplication.rolllimit";
+  private static final String TOLERABLE_LOW_REPLICATION =
+    "hbase.regionserver.hlog.tolerable.lowreplication";
+  private static final String LOW_REPLICATION_ROLL_LIMIT =
+    "hbase.regionserver.hlog.lowreplication.rolllimit";
   private static final int DEFAULT_LOW_REPLICATION_ROLL_LIMIT = 5;
   private static final String ROLL_ERRORS_TOLERATED = "hbase.regionserver.logroll.errors.tolerated";
   private static final int DEFAULT_ROLL_ERRORS_TOLERATED = 2;
@@ -119,7 +118,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   private static final String MAX_BATCH_COUNT = "hbase.regionserver.wal.sync.batch.count";
   private static final int DEFAULT_MAX_BATCH_COUNT = 200;
 
-  private static final String FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS = "hbase.wal.fshlog.wait.on.shutdown.seconds";
+  private static final String FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS =
+    "hbase.wal.fshlog.wait.on.shutdown.seconds";
   private static final int DEFAULT_FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS = 5;
 
   /**
@@ -491,9 +491,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   @Override
-  protected long append(final RegionInfo hri, final WALKeyImpl key, final WALEdit edits,
+  protected long append(final WALKeyImpl key, final WALEdit edits,
     final boolean inMemstore) throws IOException {
-    return stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore,
+    return stampSequenceIdAndPublishToRingBuffer(key, edits, inMemstore,
       disruptor.getRingBuffer());
   }
 
@@ -865,8 +865,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * To start up the drama, Thread A creates an instance of this class each time it would do this
    * zigzag dance and passes it to Thread B (these classes use Latches so it is one shot only).
    * Thread B notices the new instance (via reading a volatile reference or how ever) and it starts
-   * to work toward the 'safe point'. Thread A calls {@link #waitSafePoint(SyncFuture)} when it cannot proceed
-   * until the Thread B 'safe point' is attained. Thread A will be held inside in
+   * to work toward the 'safe point'. Thread A calls {@link #waitSafePoint(SyncFuture)} when it
+   * cannot proceed until the Thread B 'safe point' is attained. Thread A will be held inside in
    * {@link #waitSafePoint(SyncFuture)} until Thread B reaches the 'safe point'. Once there, Thread B frees
    * Thread A by calling {@link #safePointAttained()}. Thread A now knows Thread B is at the 'safe
    * point' and that it is holding there (When Thread B calls {@link #safePointAttained()} it blocks
@@ -1052,8 +1052,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             // Failed append. Record the exception.
             this.exception = e;
             // invoking cleanupOutstandingSyncsOnException when append failed with exception,
-            // it will cleanup existing sync requests recorded in syncFutures but not offered to SyncRunner yet,
-            // so there won't be any sync future left over if no further truck published to disruptor.
+            // it will cleanup existing sync requests recorded in syncFutures but not offered to
+            // SyncRunner yet, so there won't be any sync future left over if no further truck
+            // published to disruptor.
             cleanupOutstandingSyncsOnException(sequence,
                 this.exception instanceof DamagedWALException ? this.exception
                     : new DamagedWALException("On sync", this.exception));

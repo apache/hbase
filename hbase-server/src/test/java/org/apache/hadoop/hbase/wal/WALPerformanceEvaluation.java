@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.wal;
 
 import static com.codahale.metrics.MetricRegistry.name;
-
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
@@ -183,7 +182,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             RegionInfo hri = region.getRegionInfo();
             final WALKeyImpl logkey =
                 new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes);
-            wal.appendData(hri, logkey, walEdit);
+            wal.appendData(logkey, walEdit);
             if (!this.noSync) {
               if (++lastSync >= this.syncInterval) {
                 wal.sync();
@@ -408,9 +407,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
    * Verify the content of the WAL file.
    * Verify that the file has expected number of edits.
    * @param wals may not be null
-   * @param wal
    * @return Count of edits.
-   * @throws IOException
    */
   private long verify(final WALFactory wals, final Path wal, final boolean verbose)
       throws IOException {
@@ -574,9 +571,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   /**
    * The guts of the {@link #main} method.
    * Call this method to avoid the {@link #main(String[])} System.exit.
-   * @param args
    * @return errCode
-   * @throws Exception
    */
   static int innerMain(final Configuration c, final String [] args) throws Exception {
     return ToolRunner.run(c, new WALPerformanceEvaluation(), args);

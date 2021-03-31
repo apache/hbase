@@ -98,5 +98,9 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-metrics-api</artifactId>
+      </dependency>
   </dependencies>
 </project>

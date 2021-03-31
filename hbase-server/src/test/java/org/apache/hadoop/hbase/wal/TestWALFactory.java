@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
@@ -35,7 +34,6 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -180,7 +178,6 @@ public class TestWALFactory {
   /**
    * Just write multiple logs then split.  Before fix for HADOOP-2283, this
    * would fail.
-   * @throws IOException
    */
   @Test
   public void testSplit() throws IOException {
@@ -219,7 +216,7 @@ public class TestWALFactory {
           LOG.info("Region " + i + ": " + edit);
           WALKeyImpl walKey =  new WALKeyImpl(infos[i].getEncodedNameAsBytes(), tableName,
               System.currentTimeMillis(), mvcc, scopes);
-          log.appendData(infos[i], walKey, edit);
+          log.appendData(walKey, edit);
           walKey.getWriteEntry();
         }
         log.sync();
@@ -227,11 +224,11 @@ public class TestWALFactory {
       }
     }
     wals.shutdown();
-    // The below calculation of logDir relies on insider information... WALSplitter should be connected better
-    // with the WAL system.... not requiring explicit path. The oldLogDir is just made up not used.
-    Path logDir =
-        new Path(new Path(hbaseWALDir, HConstants.HREGION_LOGDIR_NAME),
-            this.currentServername.toString());
+    // The below calculation of logDir relies on insider information... WALSplitter should be
+    // connected better with the WAL system.... not requiring explicit path. The oldLogDir is just
+    // made up not used.
+    Path logDir = new Path(new Path(hbaseWALDir, HConstants.HREGION_LOGDIR_NAME),
+      this.currentServername.toString());
     Path oldLogDir = new Path(hbaseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     List<Path> splits = WALSplitter.split(hbaseWALDir, logDir, oldLogDir, fs, conf, wals);
     verifySplits(splits, howmany);
@@ -239,7 +236,6 @@ public class TestWALFactory {
 
   /**
    * Test new HDFS-265 sync.
-   * @throws Exception
    */
   @Test
   public void Broken_testSync() throws Exception {
@@ -281,7 +277,7 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+        wal.appendData(new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
           System.currentTimeMillis(), mvcc, scopes), kvs);
       }
       // Now call sync and try reading.  Opening a Reader before you sync just
@@ -292,7 +288,9 @@ public class TestWALFactory {
       reader = wals.createReader(fs, walPath);
       int count = 0;
       WAL.Entry entry = new WAL.Entry();
-      while ((entry = reader.next(entry)) != null) count++;
+      while ((entry = reader.next(entry)) != null) {
+        count++;
+      }
       assertEquals(total, count);
       reader.close();
       // Add test that checks to see that an open of a Reader works on a file
@@ -300,20 +298,24 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+        wal.appendData(new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
           System.currentTimeMillis(), mvcc, scopes), kvs);
       }
       wal.sync();
       reader = wals.createReader(fs, walPath);
       count = 0;
-      while((entry = reader.next(entry)) != null) count++;
+      while((entry = reader.next(entry)) != null) {
+        count++;
+      }
       assertTrue(count >= total);
       reader.close();
       // If I sync, should see double the edits.
       wal.sync();
       reader = wals.createReader(fs, walPath);
       count = 0;
-      while((entry = reader.next(entry)) != null) count++;
+      while((entry = reader.next(entry)) != null) {
+        count++;
+      }
       assertEquals(total * 2, count);
       reader.close();
       // Now do a test that ensures stuff works when we go over block boundary,
@@ -322,14 +324,16 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), value));
-        wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+        wal.appendData(new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
           System.currentTimeMillis(), mvcc, scopes), kvs);
       }
       // Now I should have written out lots of blocks.  Sync then read.
       wal.sync();
       reader = wals.createReader(fs, walPath);
       count = 0;
-      while((entry = reader.next(entry)) != null) count++;
+      while((entry = reader.next(entry)) != null) {
+        count++;
+      }
       assertEquals(total * 3, count);
       reader.close();
       // shutdown and ensure that Reader gets right length also.
@@ -340,12 +344,13 @@ public class TestWALFactory {
       assertEquals(total * 3, count);
       reader.close();
     } finally {
-      if (reader != null) reader.close();
+      if (reader != null) {
+        reader.close();
+      }
     }
   }
 
-  private void verifySplits(final List<Path> splits, final int howmany)
-  throws IOException {
+  private void verifySplits(final List<Path> splits, final int howmany) throws IOException {
     assertEquals(howmany * howmany, splits.size());
     for (int i = 0; i < splits.size(); i++) {
       LOG.info("Verifying=" + splits.get(i));
@@ -399,12 +404,12 @@ public class TestWALFactory {
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-      wal.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
+      wal.appendData(new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
         System.currentTimeMillis(), mvcc, scopes), kvs);
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync();
-     int namenodePort = cluster.getNameNodePort();
+    int namenodePort = cluster.getNameNodePort();
     final Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
 
 
@@ -482,8 +487,9 @@ public class TestWALFactory {
       throw new Exception("Timed out waiting for WAL.recoverLog()");
     }
 
-    if (t.exception != null)
+    if (t.exception != null) {
       throw t.exception;
+    }
 
     // Make sure you can read all the content
     WAL.Reader reader = wals.createReader(fs, walPath);
@@ -532,7 +538,7 @@ public class TestWALFactory {
           .setEndKey(Bytes.toBytes(Bytes.toString(row) + "1")).build();
       final WAL log = wals.getWAL(info);
 
-      final long txid = log.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(),
+      final long txid = log.appendData(new WALKeyImpl(info.getEncodedNameAsBytes(),
         htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
       log.sync(txid);
       log.startCacheFlush(info.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
@@ -545,7 +551,9 @@ public class TestWALFactory {
       // entry in the below... thats why we have '1'.
       for (int i = 0; i < 1; i++) {
         WAL.Entry entry = reader.next(null);
-        if (entry == null) break;
+        if (entry == null) {
+          break;
+        }
         WALKey key = entry.getKey();
         WALEdit val = entry.getEdit();
         assertTrue(Bytes.equals(info.getEncodedNameAsBytes(), key.getEncodedRegionName()));
@@ -588,7 +596,7 @@ public class TestWALFactory {
       }
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       final WAL log = wals.getWAL(hri);
-      final long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
+      final long txid = log.appendData(new WALKeyImpl(hri.getEncodedNameAsBytes(),
         htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
       log.sync(txid);
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
@@ -619,7 +627,6 @@ public class TestWALFactory {
 
   /**
    * Test that we can visit entries before they are appended
-   * @throws Exception
    */
   @Test
   public void testVisitors() throws Exception {
@@ -640,7 +647,7 @@ public class TestWALFactory {
       cols.add(new KeyValue(row, Bytes.toBytes("column"),
           Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[]{(byte) (i + '0')}));
-      log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
+      log.appendData(new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
         System.currentTimeMillis(), mvcc, scopes), cols);
     }
     log.sync();
@@ -650,7 +657,7 @@ public class TestWALFactory {
     cols.add(new KeyValue(row, Bytes.toBytes("column"),
         Bytes.toBytes(Integer.toString(11)),
         timestamp, new byte[]{(byte) (11 + '0')}));
-    log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
+    log.appendData(new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
       System.currentTimeMillis(), mvcc, scopes), cols);
     log.sync();
     assertEquals(COL_COUNT, visitor.increments);
@@ -669,12 +676,6 @@ public class TestWALFactory {
 
   static class DumbWALActionsListener implements WALActionsListener {
     int increments = 0;
-
-    @Override
-    public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
-      increments++;
-    }
-
     @Override
     public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) {
       // To change body of implemented methods use File | Settings | File
@@ -762,7 +763,8 @@ public class TestWALFactory {
   public void testReaderClosedOnBadCodec() throws IOException {
     // Create our own Configuration and WALFactory to avoid breaking other test methods
     Configuration confWithCodec = new Configuration(conf);
-    confWithCodec.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, BrokenWALCellCodec.class, Codec.class);
+    confWithCodec.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, BrokenWALCellCodec.class,
+      Codec.class);
     WALFactory customFactory = new WALFactory(confWithCodec, this.currentServername.toString());
 
     // Hack a Proxy over the FileSystem so that we can track the InputStreams opened by
@@ -802,7 +804,7 @@ public class TestWALFactory {
       cols.add(new KeyValue(row, Bytes.toBytes("column"),
         Bytes.toBytes("0"), System.currentTimeMillis(), new byte[] { 0 }));
       final WAL log = customFactory.getWAL(hri);
-      final long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
+      final long txid = log.appendData(new WALKeyImpl(hri.getEncodedNameAsBytes(),
         htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
       // Sync the edit to the WAL
       log.sync(txid);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -362,7 +362,7 @@ import org.junit.experimental.categories.Category;
       KeyValue kv = new KeyValue(b, famName, b);
       WALEdit edit = new WALEdit();
       edit.add(kv);
-      txId = wal.appendData(info, getWalKeyImpl(), edit);
+      txId = wal.appendData(getWalKeyImpl(), edit);
     }
     wal.sync(txId);
   }

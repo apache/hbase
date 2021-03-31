@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,11 +19,9 @@
 package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -63,12 +60,12 @@ public class FaultyFSLog extends FSHLog {
   }
 
   @Override
-  protected long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
+  protected long append(WALKeyImpl key, WALEdit edits, boolean inMemstore)
       throws IOException {
     if (this.ft == FailureType.APPEND) {
       throw new IOException("append");
     }
-    return super.append(info, key, edits, inMemstore);
+    return super.append(key, edits, inMemstore);
   }
 }
 

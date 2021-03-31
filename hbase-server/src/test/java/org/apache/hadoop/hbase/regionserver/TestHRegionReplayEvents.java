@@ -368,8 +368,7 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-      = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       CompactionDescriptor compactionDesc
       = WALEdit.getCompaction(entry.getEdit().getCells().get(0));
       if (flushDesc != null) {
@@ -470,8 +469,7 @@ public class TestHRegionReplayEvents {
       if (entry == null) {
         break;
       }
-      FlushDescriptor flushDesc
-      = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flushDesc != null) {
         // first verify that everything is replayed and visible before flush event replay
         HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
@@ -1164,7 +1162,7 @@ public class TestHRegionReplayEvents {
 
     // test for region open and close
     secondaryRegion = HRegion.openHRegion(secondaryHri, htd, walSecondary, CONF, rss, null);
-    verify(walSecondary, times(0)).appendData(any(RegionInfo.class), any(WALKeyImpl.class),
+    verify(walSecondary, times(0)).appendData(any(WALKeyImpl.class),
       any(WALEdit.class));
 
     // test for replay prepare flush
@@ -1180,11 +1178,11 @@ public class TestHRegionReplayEvents {
           primaryRegion.getRegionInfo().getRegionName()))
       .build());
 
-    verify(walSecondary, times(0)).appendData(any(RegionInfo.class), any(WALKeyImpl.class),
+    verify(walSecondary, times(0)).appendData(any(WALKeyImpl.class),
       any(WALEdit.class));
 
     secondaryRegion.close();
-    verify(walSecondary, times(0)).appendData(any(RegionInfo.class), any(WALKeyImpl.class),
+    verify(walSecondary, times(0)).appendData(any(WALKeyImpl.class),
       any(WALEdit.class));
   }
 

@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +16,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.replication.regionserver;
+package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.util.OptionalLong;
-
-import org.apache.hadoop.fs.Path;
+import java.io.IOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used by replication to prevent replicating unacked log entries. See
- * https://issues.apache.org/jira/browse/HBASE-14004 for more details.
- * WALFileLengthProvider exists because we do not want to reference WALFactory and WALProvider
- * directly in the replication code so in the future it will be easier to decouple them.
- * Each walProvider will have its own implementation.
+ * Thrown when we fail close of the write-ahead-log file.
+ * Package private.
  */
-@InterfaceAudience.Private
-@FunctionalInterface
-public interface WALFileLengthProvider {
+@InterfaceAudience.Public
+public class FailedLogCloseException extends IOException {
+  private static final long serialVersionUID = 1759152841462990925L;
 
-  OptionalLong getLogFileSizeIfBeingWritten(Path path);
+  public FailedLogCloseException() {
+    super();
+  }
+  public FailedLogCloseException(String msg) {
+    super(msg);
+  }
+  public FailedLogCloseException(final String msg, final Throwable t) {
+    super(msg, t);
+  }
+  public FailedLogCloseException(final Throwable t) {
+    super(t);
+  }
 }

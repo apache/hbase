@@ -372,7 +372,7 @@ public abstract class AbstractTestDLS {
         // HBaseTestingUtility.createMultiRegions use 5 bytes key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
         e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, System.currentTimeMillis(), value));
-        log.appendData(curRegionInfo, new WALKeyImpl(curRegionInfo.getEncodedNameAsBytes(),
+        log.appendData(new WALKeyImpl(curRegionInfo.getEncodedNameAsBytes(),
           tableName, System.currentTimeMillis(), mvcc), e);
         if (0 == i % syncEvery) {
           log.sync();

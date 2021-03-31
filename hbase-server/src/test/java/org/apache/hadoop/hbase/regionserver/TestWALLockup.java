@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -54,6 +53,7 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -66,7 +66,6 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
  * Testing for lock up of FSHLog.
@@ -155,8 +154,9 @@ public class TestWALLockup {
         // Don't countdown latch until someone waiting on it otherwise, the above
         // afterCreatingZigZagLatch will get to the latch and no one will ever free it and we'll
         // be stuck; test won't go down
-        while (this.latch.getCount() <= 0)
+        while (this.latch.getCount() <= 0) {
           Threads.sleep(1);
+        }
         this.latch.countDown();
       }
     }
@@ -253,7 +253,7 @@ public class TestWALLockup {
       LOG.info("SET throwing of exception on append");
       dodgyWAL.throwException = true;
       // This append provokes a WAL roll request
-      dodgyWAL.appendData(region.getRegionInfo(), key, edit);
+      dodgyWAL.appendData(key, edit);
       boolean exception = false;
       try {
         dodgyWAL.sync(false);

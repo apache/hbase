@@ -7907,7 +7907,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     WriteEntry writeEntry = null;
     try {
-      long txid = this.wal.appendData(this.getRegionInfo(), walKey, walEdit);
+      long txid = this.wal.appendData(walKey, walEdit);
       // Call sync on our edit.
       if (txid != 0) {
         sync(txid, durability);

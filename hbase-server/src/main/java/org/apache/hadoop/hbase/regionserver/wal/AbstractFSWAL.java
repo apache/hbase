@@ -23,7 +23,6 @@ import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRe
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
-
 import com.lmax.disruptor.RingBuffer;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -59,7 +58,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -82,12 +80,11 @@ import org.apache.hadoop.hbase.wal.WALProvider.WriterBase;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS. Only one
@@ -265,6 +262,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected volatile boolean closed = false;
 
   protected final AtomicBoolean shutdown = new AtomicBoolean(false);
+
   /**
    * WAL Comparator; it compares the timestamp (log filenum), present in the log file name. Throws
    * an IllegalArgumentException if used to compare paths from different wals.
@@ -273,12 +271,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     (o1, o2) -> Long.compare(getFileNumFromFileName(o1), getFileNumFromFileName(o2));
 
   private static final class WalProps {
-
     /**
      * Map the encoded region name to the highest sequence id.
      * <p/>Contains all the regions it has an entry for.
      */
-    public final Map<byte[], Long> encodedName2HighestSequenceId;
+    private final Map<byte[], Long> encodedName2HighestSequenceId;
 
     /**
      * The log file size. Notice that the size may not be accurate if we do asynchronous close in
@@ -1007,7 +1004,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
 
     // Coprocessor hook.
-    coprocessorHost.preWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit());
+    coprocessorHost.preWALWrite(entry.getKey(), entry.getEdit());
     if (!listeners.isEmpty()) {
       for (WALActionsListener i : listeners) {
         i.visitLogEntryBeforeWrite(entry.getKey(), entry.getEdit());
@@ -1023,7 +1020,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       sequenceIdAccounting.update(encodedRegionName, entry.getFamilyNames(), regionSequenceId,
         entry.isInMemStore());
     }
-    coprocessorHost.postWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit());
+    coprocessorHost.postWALWrite(entry.getKey(), entry.getEdit());
     // Update metrics.
     postAppend(entry, EnvironmentEdgeManager.currentTime() - start);
     numEntries.incrementAndGet();
@@ -1071,12 +1068,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
   }
 
-  protected final long stampSequenceIdAndPublishToRingBuffer(RegionInfo hri, WALKeyImpl key,
+  protected final long stampSequenceIdAndPublishToRingBuffer(WALKeyImpl key,
     WALEdit edits, boolean inMemstore, RingBuffer<RingBufferTruck> ringBuffer)
     throws IOException {
     if (this.closed) {
-      throw new IOException(
-        "Cannot append; log is closed, regionName = " + hri.getRegionNameAsString());
+      throw new IOException("WAL closed; cannot append; encodedRegionName=" +
+        Bytes.toString(key.getEncodedRegionName()));
     }
     MutableLong txidHolder = new MutableLong();
     MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin(() -> {
@@ -1086,7 +1083,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     ServerCall<?> rpcCall = RpcServer.getCurrentCall().filter(c -> c instanceof ServerCall)
       .filter(c -> c.getCellScanner() != null).map(c -> (ServerCall) c).orElse(null);
     try (TraceScope scope = TraceUtil.createTrace(implClassName + ".append")) {
-      FSWALEntry entry = new FSWALEntry(txid, key, edits, hri, inMemstore, rpcCall);
+      FSWALEntry entry = new FSWALEntry(txid, key, edits, inMemstore, rpcCall);
       entry.stampRegionSequenceId(we);
       ringBuffer.get(txid).load(entry);
     } finally {
@@ -1123,14 +1120,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public long appendData(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException {
-    return append(info, key, edits, true);
+  public long appendData(WALKeyImpl key, WALEdit edits) throws IOException {
+    return append(key, edits, true);
   }
 
   @Override
-  public long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits)
-    throws IOException {
-    return append(info, key, edits, false);
+  public long appendMarker(WALKeyImpl key, WALEdit edits) throws IOException {
+    return append(key, edits, false);
   }
 
   /**
@@ -1150,7 +1146,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * passed in WALKey <code>walKey</code> parameter. Be warned that the WriteEntry is not
    * immediately available on return from this method. It WILL be available subsequent to a sync of
    * this append; otherwise, you will just have to wait on the WriteEntry to get filled in.
-   * @param info the regioninfo associated with append
    * @param key Modified by this call; we add to it this edits region edit/sequence id.
    * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
    *          sequence id that is after all currently appended edits.
@@ -1163,7 +1158,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
    *         in it.
    */
-  protected abstract long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
+  protected abstract long append(WALKeyImpl key, WALEdit edits, boolean inMemstore)
       throws IOException;
 
   protected abstract void doAppend(W writer, FSWALEntry entry) throws IOException;

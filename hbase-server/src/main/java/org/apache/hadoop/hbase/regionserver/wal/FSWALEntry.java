@@ -25,16 +25,14 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A WAL Entry for {@link AbstractFSWAL} implementation.  Immutable.
@@ -61,8 +59,6 @@ class FSWALEntry extends Entry {
    * Set if this is a meta edit and it is of close region type.
    */
   private final transient boolean closeRegion;
-
-  private final transient RegionInfo regionInfo;
   private final transient Set<byte[]> familyNames;
   private final transient ServerCall<?> rpcCall;
 
@@ -70,12 +66,11 @@ class FSWALEntry extends Entry {
    * @param inMemstore If true, then this is a data edit, one that came from client. If false, it
    *   is a meta edit made by the hbase system itself and is for the WAL only.
    */
-  FSWALEntry(final long txid, final WALKeyImpl key, final WALEdit edit, final RegionInfo regionInfo,
-    final boolean inMemstore, ServerCall<?> rpcCall) {
+  FSWALEntry(final long txid, final WALKeyImpl key, final WALEdit edit, final boolean inMemstore,
+      ServerCall<?> rpcCall) {
     super(key, edit);
     this.inMemstore = inMemstore;
     this.closeRegion = !inMemstore && edit.isRegionCloseMarker();
-    this.regionInfo = regionInfo;
     this.txid = txid;
     if (inMemstore) {
       // construct familyNames here to reduce the work of log sinker.
@@ -115,10 +110,6 @@ class FSWALEntry extends Entry {
 
   boolean isCloseRegion() {
     return closeRegion;
-  }
-
-  RegionInfo getRegionInfo() {
-    return this.regionInfo;
   }
 
   /**

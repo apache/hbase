@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -582,7 +582,7 @@ public class TestWALEntryStream {
   }
 
   private void appendToLog(String key) throws IOException {
-    final long txid = log.appendData(info,
+    final long txid = log.appendData(
       new WALKeyImpl(info.getEncodedNameAsBytes(), tableName, System.currentTimeMillis(),
           mvcc, scopes), getWALEdit(key));
     log.sync(txid);
@@ -606,7 +606,7 @@ public class TestWALEntryStream {
   }
 
   private long appendToLog(int count) throws IOException {
-    return log.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+    return log.appendData(new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
       System.currentTimeMillis(), mvcc, scopes), getWALEdits(count));
   }
 

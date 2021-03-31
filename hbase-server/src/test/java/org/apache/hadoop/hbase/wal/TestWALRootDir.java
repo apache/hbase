@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -98,8 +97,7 @@ public class TestWALRootDir {
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
         System.currentTimeMillis(), value));
-    long txid =
-      log.appendData(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 0), edit);
+    long txid = log.appendData(getWalKey(System.currentTimeMillis(), regionInfo, 0), edit);
     log.sync(txid);
     assertEquals("Expect 1 log have been created", 1,
         getWALFiles(walFs, walRootDir).size());
@@ -109,7 +107,7 @@ public class TestWALRootDir {
         HConstants.HREGION_LOGDIR_NAME)).size());
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
         System.currentTimeMillis(), value));
-    txid = log.appendData(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 1), edit);
+    txid = log.appendData(getWalKey(System.currentTimeMillis(), regionInfo, 1), edit);
     log.sync(txid);
     log.rollWriter();
     log.shutdown();
@@ -129,7 +127,9 @@ public class TestWALRootDir {
     LOG.debug("Scanning " + dir.toString() + " for WAL files");
 
     FileStatus[] files = fs.listStatus(dir);
-    if (files == null) return Collections.emptyList();
+    if (files == null) {
+      return Collections.emptyList();
+    }
     for (FileStatus file : files) {
       if (file.isDirectory()) {
         // recurse into sub directories

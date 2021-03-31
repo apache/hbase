@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
@@ -202,7 +201,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
                 SequenceId.NO_SEQUENCE_ID, timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE,
                 HConstants.NO_NONCE, mvcc, scopes);
             try {
-              wal.append(ri, key, cols, true);
+              wal.append(key, cols, true);
             } catch (IOException e) {
               // should not happen
               throw new UncheckedIOException(e);

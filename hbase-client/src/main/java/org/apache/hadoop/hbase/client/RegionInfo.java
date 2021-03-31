@@ -851,4 +851,15 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   default int compareTo(RegionInfo other) {
     return RegionInfo.COMPARATOR.compare(this, other);
   }
+
+  /**
+   * Empty row key is not allowed in mutations because it is both the start key and the end key
+   * so we return the smallest byte[] that is bigger (in lex comparison) than byte[0] if startkey
+   * is empty.
+   * @return {@link #getStartKey()} or if length == 0, new byte [] {0}
+   */
+  default byte[] getNonEmptyStartKey() {
+    byte[] startKey = getStartKey();
+    return startKey.length == 0? new byte [] {0}: startKey;
+  }
 }

@@ -204,6 +204,10 @@
         </exclusion>
       </exclusions>
     </dependency>
+      <dependency>
+          <artifactId>hbase-wal</artifactId>
+          <groupId>org.apache.hbase</groupId>
+      </dependency>
   </dependencies>
 
   <profiles>

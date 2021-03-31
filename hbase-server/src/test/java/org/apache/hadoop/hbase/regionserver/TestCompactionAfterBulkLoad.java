@@ -89,7 +89,7 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
       conf.setBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, true);
       when(regionServerServices.getConfiguration()).thenReturn(conf);
       when(regionServerServices.getCompactionRequestor()).thenReturn(compactionRequester);
-      when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
+      when(log.appendMarker(any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
           .thenAnswer(new Answer() {
             @Override
             public Object answer(InvocationOnMock invocation) {

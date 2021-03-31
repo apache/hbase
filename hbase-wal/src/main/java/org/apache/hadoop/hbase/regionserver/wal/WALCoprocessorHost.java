@@ -1,6 +1,4 @@
-
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,10 +20,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
@@ -45,18 +41,16 @@ import org.slf4j.LoggerFactory;
  * loaded within a {@link WAL}.
  */
 @InterfaceAudience.Private
-public class WALCoprocessorHost
-    extends CoprocessorHost<WALCoprocessor, WALCoprocessorEnvironment> {
+public class WALCoprocessorHost extends
+    CoprocessorHost<WALCoprocessor, WALCoprocessorEnvironment> {
   private static final Logger LOG = LoggerFactory.getLogger(WALCoprocessorHost.class);
 
   /**
    * Encapsulation of the environment of each coprocessor
    */
-  static class WALEnvironment extends BaseEnvironment<WALCoprocessor>
-    implements WALCoprocessorEnvironment {
-
+  static class WALEnvironment extends BaseEnvironment<WALCoprocessor> implements
+      WALCoprocessorEnvironment {
     private final WAL wal;
-
     private final MetricRegistry metricRegistry;
 
     @Override
@@ -113,7 +107,7 @@ public class WALCoprocessorHost
     super(null);
     this.wal = log;
     // load system default cp's from configuration.
-    loadSystemCoprocessors(conf, WAL_COPROCESSOR_CONF_KEY);
+    loadSystemCoprocessors(conf, CoprocessorHost.WAL_COPROCESSOR_CONF_KEY);
   }
 
   @Override
@@ -139,37 +133,24 @@ public class WALCoprocessorHost
   }
 
   private ObserverGetter<WALCoprocessor, WALObserver> walObserverGetter =
-      WALCoprocessor::getWALObserver;
+    WALCoprocessor::getWALObserver;
 
-  abstract class WALObserverOperation extends
-      ObserverOperationWithoutResult<WALObserver> {
+  abstract class WALObserverOperation extends ObserverOperationWithoutResult<WALObserver> {
     public WALObserverOperation() {
       super(walObserverGetter);
     }
   }
 
-  public void preWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
-      throws IOException {
+  public void preWALWrite(final WALKey logKey, final WALEdit logEdit) throws IOException {
     // Not bypassable.
     if (this.coprocEnvironments.isEmpty()) {
       return;
     }
-    execOperation(new WALObserverOperation() {
-      @Override
-      public void call(WALObserver oserver) throws IOException {
-        oserver.preWALWrite(this, info, logKey, logEdit);
-      }
-    });
+    // TODO: We used to call WALObserver methods but they have been removed. Call CP instead?
   }
 
-  public void postWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
-      throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {
-      @Override
-      protected void call(WALObserver observer) throws IOException {
-        observer.postWALWrite(this, info, logKey, logEdit);
-      }
-    });
+  public void postWALWrite(final WALKey logKey, final WALEdit logEdit) throws IOException {
+    // TODO: We used to call WALObserver methods but they have been removed. Call CP instead?
   }
 
   /**
@@ -178,7 +159,7 @@ public class WALCoprocessorHost
    * @param newPath the path of the wal we are going to create
    */
   public void preWALRoll(Path oldPath, Path newPath) throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {
+    execOperation(coprocEnvironments.isEmpty()? null : new WALObserverOperation() {
       @Override
       protected void call(WALObserver observer) throws IOException {
         observer.preWALRoll(this, oldPath, newPath);

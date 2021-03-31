@@ -63,7 +63,7 @@ public class TestBulkLoad extends TestBulkloadBase {
     storeFileName = (new Path(storeFileName)).getName();
     List<String> storeFileNames = new ArrayList<>();
     storeFileNames.add(storeFileName);
-    when(log.appendMarker(any(), any(),
+    when(log.appendMarker(any(),
       argThat(bulkLogWalEdit(WALEdit.BULK_LOAD, tableName.toBytes(), familyName, storeFileNames))))
           .thenAnswer(new Answer() {
             @Override
@@ -89,7 +89,7 @@ public class TestBulkLoad extends TestBulkloadBase {
 
   @Test
   public void shouldBulkLoadSingleFamilyHLog() throws IOException {
-    when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
+    when(log.appendMarker(any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
         .thenAnswer(new Answer() {
           @Override
           public Object answer(InvocationOnMock invocation) {
@@ -109,7 +109,7 @@ public class TestBulkLoad extends TestBulkloadBase {
   @Test
   public void shouldBulkLoadManyFamilyHLog() throws IOException {
     when(log.appendMarker(any(),
-            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)))).thenAnswer(new Answer() {
+      argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)))).thenAnswer(new Answer() {
               @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);
@@ -128,7 +128,7 @@ public class TestBulkLoad extends TestBulkloadBase {
 
   @Test
   public void shouldBulkLoadManyFamilyHLogEvenWhenTableNameNamespaceSpecified() throws IOException {
-    when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
+    when(log.appendMarker(any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
         .thenAnswer(new Answer() {
           @Override
           public Object answer(InvocationOnMock invocation) {

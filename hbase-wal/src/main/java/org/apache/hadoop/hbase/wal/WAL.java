@@ -17,22 +17,18 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.apache.commons.lang3.StringUtils.isNumeric;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
-import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-
-import static org.apache.commons.lang3.StringUtils.isNumeric;
 
 /**
  * A Write Ahead Log (WAL) provides service for reading, writing waledits. This interface provides
@@ -42,7 +38,6 @@ import static org.apache.commons.lang3.StringUtils.isNumeric;
  * WAL.equals to determine if they have already seen a given WAL.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public interface WAL extends Closeable, WALFileLengthProvider {
 
   /**
@@ -64,9 +59,9 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    *
    * @return If lots of logs, flush the stores of returned regions so next time through we
    *         can clean logs. Returns null if nothing to flush. Names are actual
-   *         region names as returned by {@link RegionInfo#getEncodedName()}
+   *         region names as returned by RegionInfo#getEncodedName()
    */
-  Map<byte[], List<byte[]>> rollWriter() throws FailedLogCloseException, IOException;
+  Map<byte[], List<byte[]>> rollWriter() throws IOException;
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
@@ -80,7 +75,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    *          been written to the current writer
    * @return If lots of logs, flush the stores of returned regions so next time through we
    *         can clean logs. Returns null if nothing to flush. Names are actual
-   *         region names as returned by {@link RegionInfo#getEncodedName()}
+   *         region names as returned by RegionInfo#getEncodedName()
    */
   Map<byte[], List<byte[]>> rollWriter(boolean force) throws IOException;
 
@@ -105,35 +100,32 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * The WAL is not flushed/sync'd after this transaction completes BUT on return this edit must
    * have its region edit/sequence id assigned else it messes up our unification of mvcc and
    * sequenceid. On return <code>key</code> will have the region edit/sequence id filled in.
-   * @param info the regioninfo associated with append
    * @param key Modified by this call; we add to it this edits region edit/sequence id.
    * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
    *          sequence id that is after all currently appended edits.
    * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
    *         in it.
-   * @see #appendMarker(RegionInfo, WALKeyImpl, WALEdit)
+   * @see #appendMarker(WALKeyImpl, WALEdit)
    */
-  long appendData(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException;
+  long appendData(WALKeyImpl key, WALEdit edits) throws IOException;
 
   /**
    * Append an operational 'meta' event marker edit to the WAL. A marker meta edit could
    * be a FlushDescriptor, a compaction marker, or a region event marker; e.g. region open
    * or region close. The difference between a 'marker' append and a 'data' append as in
-   * {@link #appendData(RegionInfo, WALKeyImpl, WALEdit)}is that a marker will not have
+   * {@link #appendData(WALKeyImpl, WALEdit)}is that a marker will not have
    * transitioned through the memstore.
    * <p/>
    * The WAL is not flushed/sync'd after this transaction completes BUT on return this edit must
    * have its region edit/sequence id assigned else it messes up our unification of mvcc and
    * sequenceid. On return <code>key</code> will have the region edit/sequence id filled in.
-   * @param info the regioninfo associated with append
    * @param key Modified by this call; we add to it this edits region edit/sequence id.
    * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
    *          sequence id that is after all currently appended edits.
    * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
    *         in it.
-   * @see #appendData(RegionInfo, WALKeyImpl, WALEdit)
    */
-  long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException;
+  long appendMarker(WALKeyImpl key, WALEdit edits) throws IOException;
 
   /**
    * updates the seuence number of a specific store.
@@ -181,10 +173,10 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * concurrent appends while we set up cache flush.
    * @param families Families to flush. May be a subset of all families in the region.
    * @return Returns {@link HConstants#NO_SEQNUM} if we are flushing the whole region OR if
-   * we are flushing a subset of all families but there are no edits in those families not
-   * being flushed; in other words, this is effectively same as a flush of all of the region
-   * though we were passed a subset of regions. Otherwise, it returns the sequence id of the
-   * oldest/lowest outstanding edit.
+   *    we are flushing a subset of all families but there are no edits in those families not
+   *    being flushed; in other words, this is effectively same as a flush of all of the region
+   *    though we were passed a subset of regions. Otherwise, it returns the sequence id of the
+   *    oldest/lowest outstanding edit.
    * @see #completeCacheFlush(byte[], long)
    * @see #abortCacheFlush(byte[])
    */
@@ -220,7 +212,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @param encodedRegionName The region to get the number for.
    * @return The earliest/lowest/oldest sequence id if present, HConstants.NO_SEQNUM if absent.
    * @deprecated Since version 1.2.0. Removing because not used and exposes subtle internal
-   * workings. Use {@link #getEarliestMemStoreSeqNum(byte[], byte[])}
+   *    workings. Use {@link #getEarliestMemStoreSeqNum(byte[], byte[])}
    */
   @Deprecated
   long getEarliestMemStoreSeqNum(byte[] encodedRegionName);
@@ -324,7 +316,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @param name Name of the WAL file.
    * @return Timestamp or -1.
    */
-  public static long getTimestamp(String name) {
+  static long getTimestamp(String name) {
     String [] splits = name.split("\\.");
     if (splits.length <= 1) {
       return -1;

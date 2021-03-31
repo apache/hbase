@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -45,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -55,8 +54,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(MediumTests.class)
 public class TestRegionObserverForAddingMutationsFromCoprocessors {
@@ -107,7 +104,6 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
 
   /**
    * Test various multiput operations.
-   * @throws Exception
    */
   @Test
   public void testMulti() throws Exception {
@@ -225,9 +221,9 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
       Mutation mut = miniBatchOp.getOperation(0);
       List<Cell> cells = mut.getFamilyCellMap().get(test);
       Put[] puts = new Put[] {
-          new Put(Bytes.toBytes("cpPut")).addColumn(test, dummy, cells.get(0).getTimestamp(),
-            Bytes.toBytes("cpdummy")).setTTL(mut.getTTL())
-          };
+        new Put(Bytes.toBytes("cpPut")).addColumn(test, dummy, cells.get(0).getTimestamp(),
+          Bytes.toBytes("cpdummy")).setTTL(mut.getTTL())
+      };
       LOG.info("Putting:" + Arrays.toString(puts));
       miniBatchOp.addOperationsFromCP(0, puts);
     }
@@ -317,9 +313,9 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
       if (mut instanceof Delete) {
         List<Cell> cells = mut.getFamilyCellMap().get(test);
         Delete[] deletes = new Delete[] {
-            // delete only 2 rows
-            new Delete(row1, cells.get(0).getTimestamp()),
-            new Delete(row2, cells.get(0).getTimestamp()),
+          // delete only 2 rows
+          new Delete(row1, cells.get(0).getTimestamp()),
+          new Delete(row2, cells.get(0).getTimestamp()),
         };
         LOG.info("Deleting:" + Arrays.toString(deletes));
         miniBatchOp.addOperationsFromCP(0, deletes);
@@ -335,10 +331,10 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
       return Optional.of(this);
     }
 
-    @Override
+    // WHAT TO DO HERE?
     public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-                             RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
-      if (info.getTable().equals(TableName.valueOf("testCPMutationsAreWrittenToWALEdit"))) {
+        WALKey logKey, WALEdit logEdit) throws IOException {
+      if (logKey.getTableName().equals(TableName.valueOf("testCPMutationsAreWrittenToWALEdit"))) {
         savedEdit = logEdit;
       }
     }

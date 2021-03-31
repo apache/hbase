@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -33,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface WALActionsListener {
 
   /** The reason for the log roll request. */
-  static enum RollRequestReason {
+  enum RollRequestReason {
     /** The length of the log exceeds the roll size threshold. */
     SIZE,
     /** Too few replicas in the writer pipeline. */
@@ -42,7 +41,7 @@ public interface WALActionsListener {
     SLOW_SYNC,
     /** I/O or other error. */
     ERROR
-  };
+  }
 
   /**
    * The WAL is going to be rolled. The oldPath can be null if this is
@@ -84,15 +83,14 @@ public interface WALActionsListener {
    */
   default void logCloseRequested() {}
 
-  /**
-  * Called before each write.
-  */
-  default void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {}
+  // /**
+  // * Called before each write.
+  // */
+  // default void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {}
 
   /**
-   * @param logKey
    * @param logEdit TODO: Retire this in favor of
-   *          {@link #visitLogEntryBeforeWrite(RegionInfo, WALKey, WALEdit)} It only exists to get
+   *          #visitLogEntryBeforeWrite(RegionInfo, WALKey, WALEdit) It only exists to get
    *          scope when replicating. Scope should be in the WALKey and not need us passing in a
    *          <code>htd</code>.
    * @throws IOException If failed to parse the WALEdit
@@ -114,8 +112,7 @@ public interface WALActionsListener {
   /**
    * For notification post writer sync.  Used by metrics system at least.
    * @param timeInNanos How long the filesystem sync took in nanoseconds.
-   * @param handlerSyncs How many sync handler calls were released by this call to filesystem
-   * sync.
+   * @param handlerSyncs How many sync handler calls were released by this call to filesystem sync.
    */
   default void postSync(final long timeInNanos, final int handlerSyncs) {}
 }

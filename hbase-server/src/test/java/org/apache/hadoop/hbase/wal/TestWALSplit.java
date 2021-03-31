@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.FaultyProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.InstrumentedLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -224,7 +225,9 @@ public class TestWALSplit {
       long startCount = counter.get();
       zombie.start();
       // Wait till writer starts going.
-      while (startCount == counter.get()) Threads.sleep(1);
+      while (startCount == counter.get()) {
+        Threads.sleep(1);
+      }
       // Give it a second to write a few appends.
       Threads.sleep(1000);
       final Configuration conf2 = HBaseConfiguration.create(conf);
@@ -679,7 +682,9 @@ public class TestWALSplit {
     Reader in = wals.createReader(fs, splitLog[0]);
     @SuppressWarnings("unused")
     Entry entry;
-    while ((entry = in.next()) != null) ++actualCount;
+    while ((entry = in.next()) != null) {
+      ++actualCount;
+    }
     assertEquals(expectedCount, actualCount);
     in.close();
 
@@ -815,7 +820,9 @@ public class TestWALSplit {
     final Thread someOldThread = new Thread("Some-old-thread") {
       @Override
       public void run() {
-        while(!stop.get()) Threads.sleep(10);
+       while(!stop.get()) {
+         Threads.sleep(10);
+       }
       }
     };
     someOldThread.setDaemon(true);
@@ -909,8 +916,7 @@ public class TestWALSplit {
 
     final AtomicInteger count = new AtomicInteger();
 
-    CancelableProgressable localReporter
-        = new CancelableProgressable() {
+    CancelableProgressable localReporter = new CancelableProgressable() {
       @Override
       public boolean progress() {
         count.getAndIncrement();
@@ -1031,11 +1037,13 @@ public class TestWALSplit {
 
           @Override
           public Entry answer(InvocationOnMock invocation) throws Throwable {
-            if (index >= numFakeEdits) return null;
+            if (index >= numFakeEdits) {
+              return null;
+            }
 
             // Generate r0 through r4 in round robin fashion
             int regionIdx = index % regions.size();
-            byte region[] = new byte[] {(byte)'r', (byte) (0x30 + regionIdx)};
+            byte [] region = new byte[] {(byte)'r', (byte) (0x30 + regionIdx)};
 
             Entry ret = createTestEntry(TABLE_NAME, region,
                 Bytes.toBytes(index / regions.size()),
@@ -1193,7 +1201,8 @@ public class TestWALSplit {
    * @param leaveOpen index to leave un-closed. -1 to close all.
    * @return the writer that's still open, or null if all were closed.
    */
-  private Writer generateWALs(int writers, int entries, int leaveOpen, int regionEvents) throws IOException {
+  private Writer generateWALs(int writers, int entries, int leaveOpen, int regionEvents)
+      throws IOException {
     makeRegionDirs(REGIONS);
     fs.mkdirs(WALDIR);
     Writer [] ws = new Writer[writers];
@@ -1348,7 +1357,7 @@ public class TestWALSplit {
         .addAllCompactionInput(Arrays.asList(inputs))
         .addCompactionOutput(output);
 
-    WALEdit edit = WALEdit.createCompaction(hri, desc.build());
+    WALEdit edit = WALEdit.createCompaction(WALUtil.getRowForRegion(hri), desc.build());
     WALKeyImpl key = new WALKeyImpl(hri.getEncodedNameAsBytes(), TABLE_NAME, 1,
         EnvironmentEdgeManager.currentTime(), HConstants.DEFAULT_CLUSTER_ID);
     w.append(new Entry(key, edit));

@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.NavigableMap;
@@ -157,15 +156,14 @@ public class TestFSHLogProvider {
       long timestamp = System.currentTimeMillis();
       WALEdit cols = new WALEdit();
       cols.add(new KeyValue(row, row, row, timestamp, row));
-      log.appendData(hri,
-        getWalKey(hri.getEncodedNameAsBytes(), htd.getTableName(), timestamp, scopes), cols);
+      log.appendData(getWalKey(hri.getEncodedNameAsBytes(), htd.getTableName(), timestamp, scopes),
+        cols);
     }
     log.sync();
   }
 
   /**
    * used by TestDefaultWALProviderWithHLogKey
-   * @param scopes
    */
   WALKeyImpl getWalKey(final byte[] info, final TableName tableName, final long timestamp,
       NavigableMap<byte[], Integer> scopes) {
@@ -174,8 +172,6 @@ public class TestFSHLogProvider {
 
   /**
    * helper method to simulate region flush for a WAL.
-   * @param wal
-   * @param regionEncodedName
    */
   protected void flushRegion(WAL wal, byte[] regionEncodedName, Set<byte[]> flushedFamilyNames) {
     wal.startCacheFlush(regionEncodedName, flushedFamilyNames);
@@ -261,7 +257,6 @@ public class TestFSHLogProvider {
    * archiving if for all the regions which have entries in that wal file, have flushed - past
    * their maximum sequence id in that wal file.
    * <p>
-   * @throws IOException
    */
   @Test
   public void testWALArchiving() throws IOException {
@@ -337,7 +332,6 @@ public class TestFSHLogProvider {
 
   /**
    * Write to a log file with three concurrent threads and verifying all data is written.
-   * @throws Exception
    */
   @Test
   public void testConcurrentWrites() throws Exception {

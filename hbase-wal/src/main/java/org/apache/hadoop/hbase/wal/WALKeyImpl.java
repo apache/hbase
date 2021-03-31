@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,14 +34,12 @@ import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FamilyScope;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.ScopeType;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Default implementation of Key for an Entry in the WAL.
@@ -278,8 +276,6 @@ public class WALKeyImpl implements WALKey {
    * @param tablename         the tablename
    * @param now               Time at which this edit was written.
    * @param clusterIds        the clusters that have consumed the change(used in Replication)
-   * @param nonceGroup
-   * @param nonce
    * @param mvcc mvcc control used to generate sequence numbers and control read/write points
    */
   public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename,
@@ -296,7 +292,6 @@ public class WALKeyImpl implements WALKey {
    *
    * @param encodedRegionName Encoded name of the region as returned by
    *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
-   * @param tablename
    * @param now               Time at which this edit was written.
    * @param clusterIds        the clusters that have consumed the change(used in Replication)
    * @param nonceGroup        the nonceGroup
@@ -319,10 +314,6 @@ public class WALKeyImpl implements WALKey {
    *
    * @param encodedRegionName Encoded name of the region as returned by
    *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
-   * @param tablename
-   * @param logSeqNum
-   * @param nonceGroup
-   * @param nonce
    */
   // TODO: Fix being able to pass in sequenceid.
   public WALKeyImpl(final byte[] encodedRegionName,

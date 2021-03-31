@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URLEncoder;
@@ -96,10 +95,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
@@ -291,7 +288,7 @@ public abstract class TestReplicationSourceManager {
         wal.rollWriter();
       }
       LOG.info(Long.toString(i));
-      final long txid = wal.appendData(hri,
+      final long txid = wal.appendData(
         new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
         edit);
       wal.sync(txid);
@@ -305,7 +302,7 @@ public abstract class TestReplicationSourceManager {
     LOG.info(baseline + " and " + time);
 
     for (int i = 0; i < 3; i++) {
-      wal.appendData(hri,
+      wal.appendData(
         new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
         edit);
     }
@@ -323,7 +320,7 @@ public abstract class TestReplicationSourceManager {
     manager.logPositionAndCleanOldLogs(manager.getSources().get(0),
       new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
 
-    wal.appendData(hri,
+    wal.appendData(
       new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
       edit);
     wal.sync();
@@ -431,7 +428,7 @@ public abstract class TestReplicationSourceManager {
       WALProtos.CompactionDescriptor.getDefaultInstance();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(HConstants.EMPTY_START_ROW)
         .setEndKey(HConstants.EMPTY_END_ROW).build();
-    WALEdit edit = WALEdit.createCompaction(hri, compactionDescriptor);
+    WALEdit edit = WALEdit.createCompaction(hri.getNonEmptyStartKey(), compactionDescriptor);
     ReplicationSourceWALActionListener.scopeWALEdits(new WALKeyImpl(), edit, conf);
   }
 
@@ -479,7 +476,6 @@ public abstract class TestReplicationSourceManager {
    * corresponding ReplicationSourceInterface correctly cleans up the corresponding
    * replication queue and ReplicationPeer.
    * See HBASE-16096.
-   * @throws Exception
    */
   @Test
   public void testPeerRemovalCleanup() throws Exception{
@@ -575,10 +571,7 @@ public abstract class TestReplicationSourceManager {
 
   /**
    * Add a peer and wait for it to initialize
-   * @param peerId
-   * @param peerConfig
    * @param waitForSource Whether to wait for replication source to initialize
-   * @throws Exception
    */
   private void addPeerAndWait(final String peerId, final ReplicationPeerConfig peerConfig,
       final boolean waitForSource) throws Exception {
@@ -617,8 +610,6 @@ public abstract class TestReplicationSourceManager {
 
   /**
    * Remove a peer and wait for it to get cleaned up
-   * @param peerId
-   * @throws Exception
    */
   private void removePeerAndWait(final String peerId) throws Exception {
     final ReplicationPeers rp = manager.getReplicationPeers();
@@ -671,7 +662,7 @@ public abstract class TestReplicationSourceManager {
       UnsafeByteOperations.unsafeWrap(hri.getEncodedNameAsBytes()), storeFiles, storeFilesSize, 1);
 
     // 3. create bulk load wal edit event
-    WALEdit logEdit = WALEdit.createBulkLoadEvent(hri, desc);
+    WALEdit logEdit = WALEdit.createBulkLoadEvent(hri.getNonEmptyStartKey(), desc);
     return logEdit;
   }
 

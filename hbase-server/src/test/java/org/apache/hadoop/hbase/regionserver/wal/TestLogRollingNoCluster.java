@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertFalse;
-
 import java.io.IOException;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -78,8 +77,6 @@ public class TestLogRollingNoCluster {
   /**
    * Spin up a bunch of threads and have them all append to a WAL.  Roll the
    * WAL frequently to try and trigger NPE.
-   * @throws IOException
-   * @throws InterruptedException
    */
   @Test
   public void testContendedLogRolling() throws Exception {
@@ -171,7 +168,7 @@ public class TestLogRollingNoCluster {
           for(byte[] fam: this.metaTableDescriptor.getColumnFamilyNames()) {
             scopes.put(fam, 0);
           }
-          final long txid = wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
+          final long txid = wal.appendData(new WALKeyImpl(hri.getEncodedNameAsBytes(),
             TableName.META_TABLE_NAME, now, mvcc, scopes), edit);
           Threads.sleep(ThreadLocalRandom.current().nextInt(5));
           wal.sync(txid);

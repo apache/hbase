@@ -900,8 +900,8 @@ public class TestHRegion {
         long time = System.nanoTime();
         WALEdit edit = null;
         if (i == maxSeqId) {
-          edit = WALEdit.createCompaction(region.getRegionInfo(),
-          CompactionDescriptor.newBuilder()
+          edit = WALEdit.createCompaction(region.getRegionInfo().getNonEmptyStartKey(),
+            CompactionDescriptor.newBuilder()
           .setTableName(ByteString.copyFrom(tableName.getName()))
           .setFamilyName(ByteString.copyFrom(regionName))
           .setEncodedRegionName(ByteString.copyFrom(regionName))
@@ -1012,8 +1012,8 @@ public class TestHRegion {
       long time = System.nanoTime();
 
       writer.append(new WAL.Entry(new WALKeyImpl(regionName, tableName, 10, time,
-          HConstants.DEFAULT_CLUSTER_ID), WALEdit.createCompaction(region.getRegionInfo(),
-          compactionDescriptor)));
+          HConstants.DEFAULT_CLUSTER_ID), WALEdit.createCompaction(
+            region.getRegionInfo().getNonEmptyStartKey(), compactionDescriptor)));
       writer.close();
 
       // close the region now, and reopen again
@@ -5416,7 +5416,6 @@ public class TestHRegion {
 
   /**
    * Test case to check put function with memstore flushing for same row, same ts
-   * @throws Exception
    */
   @Test
   public void testPutWithMemStoreFlush() throws Exception {
@@ -5547,7 +5546,7 @@ public class TestHRegion {
     region.put(put);
 
     // verify append called or not
-    verify(wal, expectAppend ? times(1) : never()).appendData((HRegionInfo) any(),
+    verify(wal, expectAppend ? times(1) : never()).appendData(
       (WALKeyImpl) any(), (WALEdit) any());
 
     // verify sync called or not
@@ -6682,7 +6681,7 @@ public class TestHRegion {
     region = HRegion.openHRegion(hri, htd, rss.getWAL(hri),
       TEST_UTIL.getConfiguration(), rss, null);
 
-    verify(wal, times(1)).appendMarker(any(RegionInfo.class), any(WALKeyImpl.class),
+    verify(wal, times(1)).appendMarker(any(WALKeyImpl.class),
       editCaptor.capture());
 
     WALEdit edit = editCaptor.getValue();
@@ -6755,7 +6754,7 @@ public class TestHRegion {
    */
   private WAL mockWAL() throws IOException {
     WAL wal = mock(WAL.class);
-    when(wal.appendData(any(RegionInfo.class), any(WALKeyImpl.class), any(WALEdit.class)))
+    when(wal.appendData(any(WALKeyImpl.class), any(WALEdit.class)))
       .thenAnswer(new Answer<Long>() {
         @Override
         public Long answer(InvocationOnMock invocation) throws Throwable {
@@ -6765,7 +6764,7 @@ public class TestHRegion {
           return 1L;
         }
       });
-    when(wal.appendMarker(any(RegionInfo.class), any(WALKeyImpl.class), any(WALEdit.class))).
+    when(wal.appendMarker(any(WALKeyImpl.class), any(WALEdit.class))).
         thenAnswer(new Answer<Long>() {
           @Override
           public Long answer(InvocationOnMock invocation) throws Throwable {
@@ -6807,8 +6806,8 @@ public class TestHRegion {
     region.close(false);
 
     // 2 times, one for region open, the other close region
-    verify(wal, times(2)).appendMarker(any(RegionInfo.class),
-        (WALKeyImpl) any(WALKeyImpl.class), editCaptor.capture());
+    verify(wal, times(2)).appendMarker((WALKeyImpl)any(WALKeyImpl.class),
+      editCaptor.capture());
 
     WALEdit edit = editCaptor.getAllValues().get(1);
     assertNotNull(edit);

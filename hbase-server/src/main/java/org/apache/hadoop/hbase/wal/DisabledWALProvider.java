@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -162,18 +162,17 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public long appendData(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException {
-      return append(info, key, edits, true);
+    public long appendData(WALKeyImpl key, WALEdit edits) throws IOException {
+      return append(key, edits, true);
     }
 
     @Override
-    public long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits)
+    public long appendMarker(WALKeyImpl key, WALEdit edits)
       throws IOException {
-      return append(info, key, edits, false);
+      return append(key, edits, false);
     }
 
-    private long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
-        throws IOException {
+    private long append(WALKeyImpl key, WALEdit edits, boolean inMemstore) throws IOException {
       WriteEntry writeEntry = key.getMvcc().begin();
       if (!edits.isReplay()) {
         for (Cell cell : edits.getCells()) {
@@ -196,8 +195,10 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public void updateStore(byte[] encodedRegionName, byte[] familyName,
-        Long sequenceid, boolean onlyIfGreater) { return; }
+    public void updateStore(byte[] encodedRegionName, byte[] familyName, Long sequenceid,
+        boolean onlyIfGreater) {
+      return;
+    }
 
     @Override
     public void sync() {
@@ -221,7 +222,9 @@ class DisabledWALProvider implements WALProvider {
 
     @Override
     public Long startCacheFlush(final byte[] encodedRegionName, Set<byte[]> flushedFamilyNames) {
-      if (closed.get()) return null;
+      if (closed.get()) {
+        return null;
+      }
       return HConstants.NO_SEQNUM;
     }
 

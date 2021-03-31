@@ -23,20 +23,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
@@ -61,9 +58,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  * normal processing so would make sense to do this. Current system is an awkward marking of Cell
  * columnfamily as {@link #METAFAMILY} and then setting qualifier based off meta edit type. For
  * replay-time where we read Cell-at-a-time, there are utility methods below for figuring
- * meta type. See also
- * {@link #createBulkLoadEvent(RegionInfo, WALProtos.BulkLoadDescriptor)}, etc., for where we
- * create meta WALEdit instances.</p>
+ * meta type. See also #createBulkLoadEvent(RegionInfo, WALProtos.BulkLoadDescriptor), etc., for
+ * where we create meta WALEdit instances.</p>
  *
  * <p>WALEdit will accumulate a Set of all column family names referenced by the Cells
  * {@link #add(Cell)}'d. This is an optimization. Usually when loading a WALEdit, we have the
@@ -308,8 +304,10 @@ public class WALEdit implements HeapSize {
     return sb.toString();
   }
 
-  public static WALEdit createFlushWALEdit(RegionInfo hri, FlushDescriptor f) {
-    KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, FLUSH,
+  // Changed first param from RegionInfo to byte [] hbase3. Should be fine in a LimitedPrivate class
+  // going to a major version where this method is only called from a private util method.
+  public static WALEdit createFlushWALEdit(byte [] regionRow, FlushDescriptor f) {
+    KeyValue kv = new KeyValue(regionRow, METAFAMILY, FLUSH,
       EnvironmentEdgeManager.currentTime(), f.toByteArray());
     return new WALEdit().add(kv, METAFAMILY);
   }
@@ -326,11 +324,6 @@ public class WALEdit implements HeapSize {
    *   {@link #REGION_EVENT_PREFIX} + {@link RegionEventDescriptor#getEventType()};
    *   for example HBASE::REGION_EVENT::REGION_CLOSE.
    */
-  public static WALEdit createRegionEventWALEdit(RegionInfo hri,
-      RegionEventDescriptor regionEventDesc) {
-    return createRegionEventWALEdit(getRowForRegion(hri), regionEventDesc);
-  }
-
   @InterfaceAudience.Private
   public static WALEdit createRegionEventWALEdit(byte [] rowForRegion,
       RegionEventDescriptor regionEventDesc) {
@@ -371,21 +364,11 @@ public class WALEdit implements HeapSize {
   /**
    * @return A Marker WALEdit that has <code>c</code> serialized as its value
    */
-  public static WALEdit createCompaction(final RegionInfo hri, final CompactionDescriptor c) {
+  public static WALEdit createCompaction(byte [] regionRow, final CompactionDescriptor c) {
     byte [] pbbytes = c.toByteArray();
-    KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, COMPACTION,
+    KeyValue kv = new KeyValue(regionRow, METAFAMILY, COMPACTION,
       EnvironmentEdgeManager.currentTime(), pbbytes);
     return new WALEdit().add(kv, METAFAMILY); //replication scope null so this won't be replicated
-  }
-
-  public static byte[] getRowForRegion(RegionInfo hri) {
-    byte[] startKey = hri.getStartKey();
-    if (startKey.length == 0) {
-      // empty row key is not allowed in mutations because it is both the start key and the end key
-      // we return the smallest byte[] that is bigger (in lex comparison) than byte[0].
-      return new byte[] {0};
-    }
-    return startKey;
   }
 
   /**
@@ -409,13 +392,14 @@ public class WALEdit implements HeapSize {
   /**
    * Create a bulk loader WALEdit
    *
-   * @param hri                The RegionInfo for the region in which we are bulk loading
    * @param bulkLoadDescriptor The descriptor for the Bulk Loader
    * @return The WALEdit for the BulkLoad
    */
-  public static WALEdit createBulkLoadEvent(RegionInfo hri,
+  // Changed first param from RegionInfo to byte [] hbase3. Should be fine in a LimitedPrivate class
+  // going to a major version where this method is only called from a private util method.
+  public static WALEdit createBulkLoadEvent(byte [] regionRow,
       WALProtos.BulkLoadDescriptor bulkLoadDescriptor) {
-    KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, BULK_LOAD,
+    KeyValue kv = new KeyValue(regionRow, METAFAMILY, BULK_LOAD,
         EnvironmentEdgeManager.currentTime(), bulkLoadDescriptor.toByteArray());
     return new WALEdit().add(kv, METAFAMILY);
   }

@@ -21,7 +21,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
@@ -51,6 +50,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -62,7 +62,6 @@ import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 @RunWith(Parameterized.class)
 @Category({ ReplicationTests.class, LargeTests.class })
@@ -424,7 +423,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     long now = EnvironmentEdgeManager.currentTime();
     edit.add(new KeyValue(rowName, famName, qualifier, now, value));
     WALKeyImpl walKey = new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes);
-    wal.appendData(hri, walKey, edit);
+    wal.appendData(walKey, edit);
     wal.sync();
 
     Get get = new Get(rowName);
