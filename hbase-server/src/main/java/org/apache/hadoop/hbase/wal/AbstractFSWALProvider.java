@@ -36,19 +36,18 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.FailedCloseWALAfterInitializedErrorException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Base class of a WAL Provider that returns a single thread safe WAL that writes to Hadoop FS. By
@@ -98,14 +97,12 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   private final ReadWriteLock walCreateLock = new ReentrantReadWriteLock();
 
   /**
-   * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
    * @param providerId differentiate between providers from one factory, used for FS layout. may be
    *          null
    */
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
-      throws IOException {
+  public void init(Configuration conf, String providerId, Abortable abortable) throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -144,7 +141,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   @Override
-  public T getWAL(RegionInfo region) throws IOException {
+  public T getWAL(String encodedRegionName) throws IOException {
     T walCopy = wal;
     if (walCopy != null) {
       return walCopy;

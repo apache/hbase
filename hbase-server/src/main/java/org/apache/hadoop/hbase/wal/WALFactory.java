@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -160,7 +159,7 @@ public class WALFactory {
     LOG.info("Instantiating WALProvider of type " + clazz);
     try {
       final WALProvider result = clazz.getDeclaredConstructor().newInstance();
-      result.init(this, conf, providerId, this.abortable);
+      result.init(conf, providerId, this.abortable);
       return result;
     } catch (Exception e) {
       LOG.error("couldn't set up WALProvider, the configured class is " + clazz);
@@ -206,7 +205,7 @@ public class WALFactory {
       // special handling of existing configuration behavior.
       LOG.warn("Running with WAL disabled.");
       provider = new DisabledWALProvider();
-      provider.init(this, conf, factoryId, null);
+      provider.init(conf, factoryId, null);
     }
   }
 
@@ -291,9 +290,9 @@ public class WALFactory {
     // Use different WAL for hbase:meta. Instantiates the meta WALProvider if not already up.
     if (region != null && region.isMetaRegion() &&
       region.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
-      return getMetaProvider().getWAL(region);
+      return getMetaProvider().getWAL(region.getEncodedName());
     } else {
-      return provider.getWAL(region);
+      return provider.getWAL(region.getEncodedName());
     }
   }
 

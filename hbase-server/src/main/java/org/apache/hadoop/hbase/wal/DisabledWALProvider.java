@@ -56,7 +56,7 @@ class DisabledWALProvider implements WALProvider {
   WAL disabled;
 
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+  public void init(Configuration conf, String providerId, Abortable abortable)
       throws IOException {
     if (null != disabled) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
@@ -75,7 +75,7 @@ class DisabledWALProvider implements WALProvider {
   }
 
   @Override
-  public WAL getWAL(RegionInfo region) throws IOException {
+  public WAL getWAL(String encodedRegionName) throws IOException {
     return disabled;
   }
 

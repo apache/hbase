@@ -40,17 +40,15 @@ public interface WALProvider {
 
   /**
    * Set up the provider to create wals. will only be called once per instance.
-   * @param factory factory that made us may not be null
    * @param conf may not be null
    * @param providerId differentiate between providers from one factory. may be null
    */
-  void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
-      throws IOException;
+  void init(Configuration conf, String providerId, Abortable abortable) throws IOException;
 
   /**
    * @return a WAL for writing entries for the given region.
    */
-  WAL getWAL(byte [] encodedRegionName) throws IOException;
+  WAL getWAL(String encodedRegionName) throws IOException;
 
   /**
    * @return the List of WALs that are used by this server
@@ -118,7 +116,7 @@ public interface WALProvider {
   /**
    * Add a {@link WALActionsListener}.
    * <p>
-   * Notice that you must call this method before calling {@link #getWAL(byte[])} as this method
+   * Notice that you must call this method before calling {@link #getWAL(String)} as this method
    * will not effect the {@link WAL} which has already been created. And as long as we can only it
    * when initialization, it is not thread safe.
    */

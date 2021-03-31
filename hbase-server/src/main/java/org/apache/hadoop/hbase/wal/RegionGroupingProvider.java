@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.META_WAL_PROVIDER_ID;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,11 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.RegionInfo;
 // imports for classes still in regionserver.wal
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -139,8 +136,7 @@ public class RegionGroupingProvider implements WALProvider {
   private Class<? extends WALProvider> providerClass;
 
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
-      throws IOException {
+  public void init(Configuration conf, String providerId, Abortable abortable) throws IOException {
     if (null != strategy) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -181,7 +177,7 @@ public class RegionGroupingProvider implements WALProvider {
     return cached.values().stream().flatMap(p -> p.getWALs().stream()).collect(Collectors.toList());
   }
 
-  private WAL getWAL(String group) throws IOException {
+  private WAL getWALFor(String group) throws IOException {
     WALProvider provider = cached.get(group);
     if (provider == null) {
       Lock lock = createLock.acquireLock(group);
@@ -200,23 +196,24 @@ public class RegionGroupingProvider implements WALProvider {
   }
 
   @Override
-  public WAL getWAL(RegionInfo region) throws IOException {
+  public WAL getWAL(String encodedRegionName) throws IOException {
     String group;
     if (META_WAL_PROVIDER_ID.equals(this.providerId)) {
       group = META_WAL_GROUP_NAME;
     } else {
       byte[] id;
       byte[] namespace;
-      if (region != null) {
-        id = region.getEncodedNameAsBytes();
-        namespace = region.getTable().getNamespace();
+      if (encodedRegionName != null) {
+        id = Bytes.toBytes(encodedRegionName);
+        // TODO: Used pass RegionInfo, now encoded Region name...region.getTable().getNamespace();
+        namespace = null;
       } else {
         id = HConstants.EMPTY_BYTE_ARRAY;
         namespace = null;
       }
       group = strategy.group(id, namespace);
     }
-    return getWAL(group);
+    return getWALFor(group);
   }
 
   @Override

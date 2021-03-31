@@ -1357,7 +1357,7 @@ public class TestWALSplit {
         .addAllCompactionInput(Arrays.asList(inputs))
         .addCompactionOutput(output);
 
-    WALEdit edit = WALEdit.createCompaction(WALUtil.getRowForRegion(hri), desc.build());
+    WALEdit edit = WALEdit.createCompaction(hri.getNonEmptyStartKey(), desc.build());
     WALKeyImpl key = new WALKeyImpl(hri.getEncodedNameAsBytes(), TABLE_NAME, 1,
         EnvironmentEdgeManager.currentTime(), HConstants.DEFAULT_CLUSTER_ID);
     w.append(new Entry(key, edit));

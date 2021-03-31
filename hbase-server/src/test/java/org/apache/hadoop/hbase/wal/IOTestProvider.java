@@ -21,20 +21,18 @@ package org.apache.hadoop.hbase.wal;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.DEFAULT_PROVIDER_ID;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.META_WAL_PROVIDER_ID;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
-
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.RegionInfo;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
@@ -83,33 +81,28 @@ public class IOTestProvider implements WALProvider {
     none;
   }
 
-  private WALFactory factory;
-
   private Configuration conf;
 
   private volatile FSHLog log;
+  private Instant instant = Instant.now();
 
   private String providerId;
   protected AtomicBoolean initialized = new AtomicBoolean(false);
 
   private List<WALActionsListener> listeners = new ArrayList<>();
   /**
-   * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
    * @param providerId differentiate between providers from one facotry, used for FS layout. may be
    *                   null
    */
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+  public void init(Configuration conf, String providerId, Abortable abortable)
       throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
-    this.factory = factory;
     this.conf = conf;
     this.providerId = providerId != null ? providerId : DEFAULT_PROVIDER_ID;
-
-
   }
 
   @Override
@@ -118,15 +111,16 @@ public class IOTestProvider implements WALProvider {
   }
 
   private FSHLog createWAL() throws IOException {
-    String logPrefix = factory.factoryId + WAL_FILE_NAME_DELIMITER + providerId;
+    String now = this.instant.toString();
+    String logPrefix = now + WAL_FILE_NAME_DELIMITER + providerId;
     return new IOTestWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
-        AbstractFSWALProvider.getWALDirectoryName(factory.factoryId),
+        AbstractFSWALProvider.getWALDirectoryName(now),
         HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners, true, logPrefix,
         META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
   }
 
   @Override
-  public WAL getWAL(RegionInfo region) throws IOException {
+  public WAL getWAL(String encodedRegionName) throws IOException {
     FSHLog log = this.log;
     if (log != null) {
       return log;
@@ -186,7 +180,6 @@ public class IOTestProvider implements WALProvider {
      *        If prefix is null, "wal" will be used
      * @param suffix will be url encoded. null is treated as empty. non-empty must start with
      *        {@link AbstractFSWALProvider#WAL_FILE_NAME_DELIMITER}
-     * @throws IOException
      */
     public IOTestWAL(final FileSystem fs, final Path rootDir, final String logDir,
         final String archiveDir, final Configuration conf,

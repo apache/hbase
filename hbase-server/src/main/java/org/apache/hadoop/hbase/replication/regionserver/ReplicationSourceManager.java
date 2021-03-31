@@ -41,7 +41,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -398,7 +397,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * replication state changes or new replication config changes. Here we don't need to change
    * replication queue storage and only to enqueue all logs to the new replication source
    * @param peerId the id of the replication peer
-   * @throws IOException
    */
   public void refreshSources(String peerId) throws IOException {
     String terminateMessage = "Peer " + peerId +
@@ -1008,7 +1006,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * This ReplicationSource is NOT created via {@link ReplicationSourceFactory}.
    * @see #addSource(String) This is a specialization of the addSource call.
    * @see #catalogReplicationSource for a note on this ReplicationSource's lifecycle (and more on
-   * why the special handling).
+   *    why the special handling).
    */
   private ReplicationSourceInterface createCatalogReplicationSource(RegionInfo regionInfo)
       throws IOException {
@@ -1041,7 +1039,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       // instance too (listeners are passed by provider to WAL instance on creation but if provider
       // created already, our listener add above is missed). And add the current WAL file to the
       // Replication Source so it can start replicating it.
-      WAL wal = walProvider.getWAL(regionInfo);
+      WAL wal = walProvider.getWAL(regionInfo.getEncodedName());
       wal.registerWALActionsListener(listener);
       crs.enqueueLog(((AbstractFSWAL)wal).getCurrentFileName());
     }
