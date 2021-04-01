@@ -763,9 +763,10 @@ Maximum retries. This is a maximum number of iterations
 Request Compaction after bulkload immediately.
 If bulkload is continuous, the triggered compactions may increase load,
 bring about performance side effect.
+(For HBase-2.x, the default value for "hbase.compaction.after.bulkload.enable" is true)
 +
 .Default
-`true`
+`false`
 
 [[hbase.balancer.period
     ]]

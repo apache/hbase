@@ -602,43 +602,47 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   private CheckAndMutateResult checkAndMutate(HRegion region, List<ClientProtos.Action> actions,
-    CellScanner cellScanner, Condition condition, ActivePolicyEnforcement spaceQuotaEnforcement)
-    throws IOException {
+    CellScanner cellScanner, Condition condition, long nonceGroup,
+    ActivePolicyEnforcement spaceQuotaEnforcement) throws IOException {
     int countOfCompleteMutation = 0;
     try {
       if (!region.getRegionInfo().isMetaRegion()) {
         regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
       List<Mutation> mutations = new ArrayList<>();
+      long nonce = HConstants.NO_NONCE;
       for (ClientProtos.Action action: actions) {
         if (action.hasGet()) {
           throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
             action.getGet());
         }
-        MutationType type = action.getMutation().getMutateType();
+        MutationProto mutation = action.getMutation();
+        MutationType type = mutation.getMutateType();
         switch (type) {
           case PUT:
-            Put put = ProtobufUtil.toPut(action.getMutation(), cellScanner);
+            Put put = ProtobufUtil.toPut(mutation, cellScanner);
             ++countOfCompleteMutation;
             checkCellSizeLimit(region, put);
             spaceQuotaEnforcement.getPolicyEnforcement(region).check(put);
             mutations.add(put);
             break;
           case DELETE:
-            Delete del = ProtobufUtil.toDelete(action.getMutation(), cellScanner);
+            Delete del = ProtobufUtil.toDelete(mutation, cellScanner);
             ++countOfCompleteMutation;
             spaceQuotaEnforcement.getPolicyEnforcement(region).check(del);
             mutations.add(del);
             break;
           case INCREMENT:
-            Increment increment = ProtobufUtil.toIncrement(action.getMutation(), cellScanner);
+            Increment increment = ProtobufUtil.toIncrement(mutation, cellScanner);
+            nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
             ++countOfCompleteMutation;
             checkCellSizeLimit(region, increment);
             spaceQuotaEnforcement.getPolicyEnforcement(region).check(increment);
             mutations.add(increment);
             break;
           case APPEND:
-            Append append = ProtobufUtil.toAppend(action.getMutation(), cellScanner);
+            Append append = ProtobufUtil.toAppend(mutation, cellScanner);
+            nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
             ++countOfCompleteMutation;
             checkCellSizeLimit(region, append);
             spaceQuotaEnforcement.getPolicyEnforcement(region).check(append);
@@ -658,7 +662,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
         }
         if (result == null) {
-          result = region.checkAndMutate(checkAndMutate);
+          result = region.checkAndMutate(checkAndMutate, nonceGroup, nonce);
           if (region.getCoprocessorHost() != null) {
             result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
           }
@@ -902,7 +906,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       while (cells.advance()) {
         int size = PrivateCellUtil.estimatedSerializedSizeOf(cells.current());
         if (size > r.maxCellSize) {
-          String msg = "Cell with size " + size + " exceeds limit of " + r.maxCellSize + " bytes";
+          String msg = "Cell[" + cells.current() + "] with size " + size
+            + " exceeds limit of " + r.maxCellSize + " bytes";
           LOG.debug(msg);
           throw new DoNotRetryIOException(msg);
         }
@@ -912,21 +917,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   private void doAtomicBatchOp(final RegionActionResult.Builder builder, final HRegion region,
     final OperationQuota quota, final List<ClientProtos.Action> mutations,
-    final CellScanner cells, ActivePolicyEnforcement spaceQuotaEnforcement)
+    final CellScanner cells, long nonceGroup, ActivePolicyEnforcement spaceQuotaEnforcement)
     throws IOException {
     // Just throw the exception. The exception will be caught and then added to region-level
     // exception for RegionAction. Leaving the null to action result is ok since the null
     // result is viewed as failure by hbase client. And the region-lever exception will be used
     // to replaced the null result. see AsyncRequestFutureImpl#receiveMultiAction and
     // AsyncBatchRpcRetryingCaller#onComplete for more details.
-    doBatchOp(builder, region, quota, mutations, cells, spaceQuotaEnforcement, true);
+    doBatchOp(builder, region, quota, mutations, cells, nonceGroup, spaceQuotaEnforcement, true);
   }
 
   private void doNonAtomicBatchOp(final RegionActionResult.Builder builder, final HRegion region,
     final OperationQuota quota, final List<ClientProtos.Action> mutations,
     final CellScanner cells, ActivePolicyEnforcement spaceQuotaEnforcement) {
     try {
-      doBatchOp(builder, region, quota, mutations, cells, spaceQuotaEnforcement, false);
+      doBatchOp(builder, region, quota, mutations, cells, HConstants.NO_NONCE,
+        spaceQuotaEnforcement, false);
     } catch (IOException e) {
       // Set the exception for each action. The mutations in same RegionAction are group to
       // different batch and then be processed individually. Hence, we don't set the region-level
@@ -945,9 +951,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @param mutations
    */
   private void doBatchOp(final RegionActionResult.Builder builder, final HRegion region,
-      final OperationQuota quota, final List<ClientProtos.Action> mutations,
-      final CellScanner cells, ActivePolicyEnforcement spaceQuotaEnforcement, boolean atomic)
-      throws IOException {
+    final OperationQuota quota, final List<ClientProtos.Action> mutations,
+    final CellScanner cells, long nonceGroup, ActivePolicyEnforcement spaceQuotaEnforcement,
+    boolean atomic) throws IOException {
     Mutation[] mArray = new Mutation[mutations.size()];
     long before = EnvironmentEdgeManager.currentTime();
     boolean batchContainsPuts = false, batchContainsDelete = false;
@@ -961,6 +967,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
        */
       Map<Mutation, ClientProtos.Action> mutationActionMap = new HashMap<>();
       int i = 0;
+      long nonce = HConstants.NO_NONCE;
       for (ClientProtos.Action action: mutations) {
         if (action.hasGet()) {
           throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
@@ -981,10 +988,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
           case INCREMENT:
             mutation = ProtobufUtil.toIncrement(m, cells);
+            nonce = m.hasNonce() ? m.getNonce() : HConstants.NO_NONCE;
             break;
 
           case APPEND:
             mutation = ProtobufUtil.toAppend(m, cells);
+            nonce = m.hasNonce() ? m.getNonce() : HConstants.NO_NONCE;
             break;
 
           default:
@@ -1009,7 +1018,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         Arrays.sort(mArray, (v1, v2) -> Row.COMPARATOR.compare(v1, v2));
       }
 
-      OperationStatus[] codes = region.batchMutate(mArray, atomic);
+      OperationStatus[] codes = region.batchMutate(mArray, atomic, nonceGroup, nonce);
 
       // When atomic is true, it indicates that the mutateRow API or the batch API with
       // RowMutations is called. In this case, we need to merge the results of the
@@ -2809,7 +2818,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
         try {
           CheckAndMutateResult result = checkAndMutate(region, regionAction.getActionList(),
-            cellScanner, request.getCondition(), spaceQuotaEnforcement);
+            cellScanner, request.getCondition(), nonceGroup, spaceQuotaEnforcement);
           responseBuilder.setProcessed(result.isSuccess());
           ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
             ClientProtos.ResultOrException.newBuilder();
@@ -2877,7 +2886,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             if (regionAction.getActionCount() == 1) {
               CheckAndMutateResult result = checkAndMutate(region, quota,
                 regionAction.getAction(0).getMutation(), cellScanner,
-                regionAction.getCondition(), spaceQuotaEnforcement);
+                regionAction.getCondition(), nonceGroup, spaceQuotaEnforcement);
               regionActionResultBuilder.setProcessed(result.isSuccess());
               resultOrExceptionOrBuilder.setIndex(0);
               if (result.getResult() != null) {
@@ -2886,7 +2895,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder.build());
             } else {
               CheckAndMutateResult result = checkAndMutate(region, regionAction.getActionList(),
-                cellScanner, regionAction.getCondition(), spaceQuotaEnforcement);
+                cellScanner, regionAction.getCondition(), nonceGroup, spaceQuotaEnforcement);
               regionActionResultBuilder.setProcessed(result.isSuccess());
               for (int i = 0; i < regionAction.getActionCount(); i++) {
                 if (i == 0 && result.getResult() != null) {
@@ -2919,7 +2928,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
           try {
             doAtomicBatchOp(regionActionResultBuilder, region, quota, regionAction.getActionList(),
-              cellScanner, spaceQuotaEnforcement);
+              cellScanner, nonceGroup, spaceQuotaEnforcement);
             regionActionResultBuilder.setProcessed(true);
             // We no longer use MultiResponse#processed. Instead, we use
             // RegionActionResult#processed. This is for backward compatibility for old clients.
@@ -3041,7 +3050,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
       if (request.hasCondition()) {
         CheckAndMutateResult result = checkAndMutate(region, quota, mutation, cellScanner,
-          request.getCondition(), spaceQuotaEnforcement);
+          request.getCondition(), nonceGroup, spaceQuotaEnforcement);
         builder.setProcessed(result.isSuccess());
         boolean clientCellBlockSupported = isClientCellBlockSupport(context);
         addResult(builder, result.getResult(), controller, clientCellBlockSupported);
@@ -3125,11 +3134,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   private CheckAndMutateResult checkAndMutate(HRegion region, OperationQuota quota,
-    MutationProto mutation, CellScanner cellScanner, Condition condition,
+    MutationProto mutation, CellScanner cellScanner, Condition condition, long nonceGroup,
     ActivePolicyEnforcement spaceQuota) throws IOException {
     long before = EnvironmentEdgeManager.currentTime();
     CheckAndMutate checkAndMutate = ProtobufUtil.toCheckAndMutate(condition, mutation,
       cellScanner);
+    long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
     checkCellSizeLimit(region, (Mutation) checkAndMutate.getAction());
     spaceQuota.getPolicyEnforcement(region).check((Mutation) checkAndMutate.getAction());
     quota.addMutation((Mutation) checkAndMutate.getAction());
@@ -3139,7 +3149,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
     }
     if (result == null) {
-      result = region.checkAndMutate(checkAndMutate);
+      result = region.checkAndMutate(checkAndMutate, nonceGroup, nonce);
       if (region.getCoprocessorHost() != null) {
         result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
       }
@@ -3360,10 +3370,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // arbitrary 32. TODO: keep record of general size of results being returned.
     List<Cell> values = new ArrayList<>(32);
     region.startRegionOperation(Operation.SCAN);
+    long before = EnvironmentEdgeManager.currentTime();
+    // Used to check if we've matched the row limit set on the Scan
+    int numOfCompleteRows = 0;
+    // Count of times we call nextRaw; can be > numOfCompleteRows.
+    int numOfNextRawCalls = 0;
     try {
       int numOfResults = 0;
-      int numOfCompleteRows = 0;
-      long before = EnvironmentEdgeManager.currentTime();
       synchronized (scanner) {
         boolean stale = (region.getRegionInfo().getReplicaId() != 0);
         boolean clientHandlesPartials =
@@ -3419,6 +3432,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
           // Collect values to be returned here
           moreRows = scanner.nextRaw(values, scannerContext);
+          numOfNextRawCalls++;
 
           if (!values.isEmpty()) {
             if (limitOfRows > 0) {
@@ -3510,18 +3524,21 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           builder.setScanMetrics(metricBuilder.build());
         }
       }
+    } finally {
+      region.closeRegionOperation();
+      // Update serverside metrics, even on error.
       long end = EnvironmentEdgeManager.currentTime();
       long responseCellSize = context != null ? context.getResponseCellSize() : 0;
       region.getMetrics().updateScanTime(end - before);
       final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
       if (metricsRegionServer != null) {
         metricsRegionServer.updateScanSize(
-            region.getTableDescriptor().getTableName(), responseCellSize);
+          region.getTableDescriptor().getTableName(), responseCellSize);
         metricsRegionServer.updateScanTime(
-            region.getTableDescriptor().getTableName(), end - before);
+          region.getTableDescriptor().getTableName(), end - before);
+        metricsRegionServer.updateReadQueryMeter(region.getRegionInfo().getTable(),
+          numOfNextRawCalls);
       }
-    } finally {
-      region.closeRegionOperation();
     }
     // coprocessor postNext hook
     if (region.getCoprocessorHost() != null) {

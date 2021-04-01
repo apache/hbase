@@ -895,7 +895,9 @@ public class Scan extends Query {
   @Deprecated
   public Scan setSmall(boolean small) {
     this.small = small;
-    this.readType = ReadType.PREAD;
+    if (small) {
+      this.readType = ReadType.PREAD;
+    }
     return this;
   }
 

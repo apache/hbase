@@ -595,7 +595,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.compaction.after.bulkload.enable</name>
-    <value>true</value>
+    <value>false</value>
     <description>Request Compaction after bulkload immediately.
       If bulkload is continuous, the triggered compactions may increase load,
       bring about performance side effect.</description>
@@ -1220,6 +1220,14 @@ possible configurations would overwhelm and obscure the important.
       to SIMPLE authentication, and will reject the connection.  WARNING: This setting should ONLY
       be used as a temporary measure while converting clients over to secure authentication.  It
       MUST BE DISABLED for secure operation.</description>
+  </property>
+  <property>
+    <name>hbase.unsafe.client.kerberos.hostname.disable.reversedns</name>
+    <value>false</value>
+    <description>This config is for experts: don't set its value unless you really know what you are doing.
+      When set to true, HBase client using SASL Kerberos will skip reverse DNS lookup and use provided
+      hostname of the destination for the principal instead. See https://issues.apache.org/jira/browse/HBASE-25665
+      for more details.</description>
   </property>
   <property>
     <name>hbase.display.keys</name>

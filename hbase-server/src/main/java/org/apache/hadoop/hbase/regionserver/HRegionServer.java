@@ -1014,10 +1014,9 @@ public class HRegionServer extends Thread implements
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
 
-        // Try and register with the Master; tell it we are here.  Break if server is stopped or
-        // the clusterup flag is down or hdfs went wacky. Once registered successfully, go ahead and
-        // start up all Services. Use RetryCounter to get backoff in case Master is struggling to
-        // come up.
+        // Get configurations from the Master. Break if server is stopped or
+        // the clusterup flag is down or hdfs went wacky. Then start up all Services.
+        // Use RetryCounter to get backoff in case Master is struggling to come up.
         LOG.debug("About to register with Master.");
         RetryCounterFactory rcf =
           new RetryCounterFactory(Integer.MAX_VALUE, this.sleeper.getPeriod(), 1000 * 60 * 5);
@@ -1050,7 +1049,7 @@ public class HRegionServer extends Thread implements
         }
       }
 
-      // We registered with the Master.  Go into run mode.
+      // Run mode.
       long lastMsg = System.currentTimeMillis();
       long oldRequestCount = -1;
       // The main run loop.
@@ -1084,7 +1083,14 @@ public class HRegionServer extends Thread implements
         }
         long now = System.currentTimeMillis();
         if ((now - lastMsg) >= msgInterval) {
-          tryRegionServerReport(lastMsg, now);
+          // Register with the Master now that our setup is complete.
+          if (tryRegionServerReport(lastMsg, now) && !online.get()) {
+            // Wake up anyone waiting for this server to online
+            synchronized (online) {
+              online.set(true);
+              online.notifyAll();
+            }
+          }
           lastMsg = System.currentTimeMillis();
         }
         if (!isStopped() && !isAborted()) {
@@ -1253,12 +1259,12 @@ public class HRegionServer extends Thread implements
   }
 
   @InterfaceAudience.Private
-  protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
+  protected boolean tryRegionServerReport(long reportStartTime, long reportEndTime)
       throws IOException {
     RegionServerStatusService.BlockingInterface rss = rssStub;
     if (rss == null) {
       // the current server could be stopping.
-      return;
+      return false;
     }
     ClusterStatusProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
     try {
@@ -1278,7 +1284,9 @@ public class HRegionServer extends Thread implements
       // Couldn't connect to the master, get location from zk and reconnect
       // Method blocks until new master is found or we are stopped
       createRegionServerStatusStub(true);
+      return false;
     }
+    return true;
   }
 
   /**
@@ -1653,11 +1661,6 @@ public class HRegionServer extends Thread implements
           ", sessionid=0x" +
           Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
 
-      // Wake up anyone waiting for this server to online
-      synchronized (online) {
-        online.set(true);
-        online.notifyAll();
-      }
     } catch (Throwable e) {
       stop("Failed initialization");
       throw convertThrowableToIOE(cleanup(e, "Failed init"),
@@ -2042,57 +2045,59 @@ public class HRegionServer extends Thread implements
 
     // Start executor services
     final int openRegionThreads = conf.getInt("hbase.regionserver.executor.openregion.threads", 3);
-    this.executorService.startExecutorService(ExecutorType.RS_OPEN_REGION,
-        new ExecutorConfig().setCorePoolSize(openRegionThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_OPEN_REGION).setCorePoolSize(openRegionThreads));
     final int openMetaThreads = conf.getInt("hbase.regionserver.executor.openmeta.threads", 1);
-    this.executorService.startExecutorService(ExecutorType.RS_OPEN_META,
-        new ExecutorConfig().setCorePoolSize(openMetaThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_OPEN_META).setCorePoolSize(openMetaThreads));
     final int openPriorityRegionThreads =
         conf.getInt("hbase.regionserver.executor.openpriorityregion.threads", 3);
-    this.executorService.startExecutorService(ExecutorType.RS_OPEN_PRIORITY_REGION,
-       new ExecutorConfig().setCorePoolSize(openPriorityRegionThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_OPEN_PRIORITY_REGION).setCorePoolSize(openPriorityRegionThreads));
     final int closeRegionThreads =
         conf.getInt("hbase.regionserver.executor.closeregion.threads", 3);
-    this.executorService.startExecutorService(ExecutorType.RS_CLOSE_REGION,
-        new ExecutorConfig().setCorePoolSize(closeRegionThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_CLOSE_REGION).setCorePoolSize(closeRegionThreads));
     final int closeMetaThreads = conf.getInt("hbase.regionserver.executor.closemeta.threads", 1);
-    this.executorService.startExecutorService(ExecutorType.RS_CLOSE_META,
-        new ExecutorConfig().setCorePoolSize(closeMetaThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_CLOSE_META).setCorePoolSize(closeMetaThreads));
     if (conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false)) {
       final int storeScannerParallelSeekThreads =
           conf.getInt("hbase.storescanner.parallel.seek.threads", 10);
-      this.executorService.startExecutorService(ExecutorType.RS_PARALLEL_SEEK,
-          new ExecutorConfig().setCorePoolSize(storeScannerParallelSeekThreads)
-              .setAllowCoreThreadTimeout(true));
+      executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+          ExecutorType.RS_PARALLEL_SEEK).setCorePoolSize(storeScannerParallelSeekThreads)
+          .setAllowCoreThreadTimeout(true));
     }
     final int logReplayOpsThreads = conf.getInt(
         HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER);
-    this.executorService.startExecutorService(ExecutorType.RS_LOG_REPLAY_OPS,
-        new ExecutorConfig().setCorePoolSize(logReplayOpsThreads).setAllowCoreThreadTimeout(true));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_LOG_REPLAY_OPS).setCorePoolSize(logReplayOpsThreads)
+        .setAllowCoreThreadTimeout(true));
     // Start the threads for compacted files discharger
     final int compactionDischargerThreads =
         conf.getInt(CompactionConfiguration.HBASE_HFILE_COMPACTION_DISCHARGER_THREAD_COUNT, 10);
-    this.executorService.startExecutorService(ExecutorType.RS_COMPACTED_FILES_DISCHARGER,
-        new ExecutorConfig().setCorePoolSize(compactionDischargerThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_COMPACTED_FILES_DISCHARGER).setCorePoolSize(compactionDischargerThreads));
     if (ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(conf)) {
       final int regionReplicaFlushThreads = conf.getInt(
           "hbase.regionserver.region.replica.flusher.threads", conf.getInt(
               "hbase.regionserver.executor.openregion.threads", 3));
-      this.executorService.startExecutorService(ExecutorType.RS_REGION_REPLICA_FLUSH_OPS,
-          new ExecutorConfig().setCorePoolSize(regionReplicaFlushThreads));
+      executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+          ExecutorType.RS_REGION_REPLICA_FLUSH_OPS).setCorePoolSize(regionReplicaFlushThreads));
     }
     final int refreshPeerThreads =
         conf.getInt("hbase.regionserver.executor.refresh.peer.threads", 2);
-    this.executorService.startExecutorService(ExecutorType.RS_REFRESH_PEER,
-        new ExecutorConfig().setCorePoolSize(refreshPeerThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_REFRESH_PEER).setCorePoolSize(refreshPeerThreads));
     final int replaySyncReplicationWALThreads =
         conf.getInt("hbase.regionserver.executor.replay.sync.replication.wal.threads", 1);
-    this.executorService.startExecutorService(ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL,
-        new ExecutorConfig().setCorePoolSize(replaySyncReplicationWALThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL).setCorePoolSize(
+            replaySyncReplicationWALThreads));
     final int switchRpcThrottleThreads =
         conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1);
-    this.executorService.startExecutorService(ExecutorType.RS_SWITCH_RPC_THROTTLE,
-        new ExecutorConfig().setCorePoolSize(switchRpcThrottleThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_SWITCH_RPC_THROTTLE).setCorePoolSize(switchRpcThrottleThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
         uncaughtExceptionHandler);
@@ -2834,10 +2839,9 @@ public class HRegionServer extends Thread implements
   }
 
   /*
-   * Let the master know we're here Run initialization using parameters passed
-   * us by the master.
+   * Run initialization using parameters passed us by the master.
    * @return A Map of key/value configurations we got from the Master else
-   * null if we failed to register.
+   * null if we failed during report.
    * @throws IOException
    */
   private RegionServerStartupResponse reportForDuty() throws IOException {

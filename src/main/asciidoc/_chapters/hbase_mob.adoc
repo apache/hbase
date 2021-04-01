@@ -469,7 +469,7 @@ reloaded.
 
 .Procedure: Stop MOB maintenance, change MOB threshold, rewrite data via compaction
 . Ensure the MOB compaction chore in the Master is off by setting
-`hbase.mob.file.compaction.chore.period` to `0`. Applying this configuration change will require a
+`hbase.mob.compaction.chore.period` to `0`. Applying this configuration change will require a
 rolling restart of HBase Masters. That will require at least one fail-over of the active master,
 which may cause retries for clients doing HBase administrative operations.
 . Ensure no MOB compactions are issued for the table via the HBase shell for the duration of this
@@ -598,7 +598,7 @@ Done.
 ----
 . After the column family no longer shows the MOB feature enabled, it is safe to start MOB
 maintenance chores again. You can allow the default to be used for
-`hbase.mob.file.compaction.chore.period` by removing it from your configuration files or restore
+`hbase.mob.compaction.chore.period` by removing it from your configuration files or restore
 it to whatever custom value you had prior to starting this process.
 . Once the MOB feature is disabled for the column family there will be no internal HBase process
 looking for data in the MOB storage area specific to this column family. There will still be data

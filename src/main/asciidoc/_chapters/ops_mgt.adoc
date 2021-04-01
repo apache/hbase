@@ -1364,10 +1364,9 @@ Copy the script if you need to make use of it in a version of hbase previous to 
 
 A downside to the above stop of a RegionServer is that regions could be offline for a good period of time.
 Regions are closed in order.
-If many regions on the server, the first region to close may not be back online until all regions close and after the master notices the RegionServer's znode gone.
-In Apache HBase 0.90.2, we added facility for having a node gradually shed its load and then shutdown itself down.
-Apache HBase 0.90.2 added the _graceful_stop.sh_ script.
-Here is its usage:
+If many regions on the server, the first region to close may not be back online until all regions close and
+after the master notices the RegionServer's znode gone.  A node can be asked to gradually shed its load and
+then shutdown itself using the  _graceful_stop.sh_ script. Here is its usage:
 
 ----
 $ ./bin/graceful_stop.sh
@@ -1393,16 +1392,17 @@ To decommission a loaded RegionServer, run the following: +$
 [NOTE]
 ====
 The `HOSTNAME` passed to _graceful_stop.sh_ must match the hostname that hbase is using to identify RegionServers.
-Check the list of RegionServers in the master UI for how HBase is referring to servers.
-It's usually hostname but can also be FQDN.
-Whatever HBase is using, this is what you should pass the _graceful_stop.sh_ decommission script.
-If you pass IPs, the script is not yet smart enough to make a hostname (or FQDN) of it and so it will fail when it checks if server is currently running; the graceful unloading of regions will not run.
+HBase uses fully-qualified domain names usually. Check the list of RegionServers in the master UI for how HBase
+is referring to servers. Whatever HBase is using, this is what you should pass the _graceful_stop.sh_ decommission script.
+If you pass IPs, the script is not yet smart enough to make a hostname (or FQDN) of it and so it will fail when it checks
+if server is currently running; the graceful unloading of regions will not run.
 ====
 
 The _graceful_stop.sh_ script will move the regions off the decommissioned RegionServer one at a time to minimize region churn.
-It will verify the region deployed in the new location before it will moves the next region and so on until the decommissioned server is carrying zero regions.
-At this point, the _graceful_stop.sh_ tells the RegionServer `stop`.
-The master will at this point notice the RegionServer gone but all regions will have already been redeployed and because the RegionServer went down cleanly, there will be no WAL logs to split.
+It will verify the region deployed in the new location before it will moves the next region and so on until the decommissioned
+server is carrying zero regions. At this point, the _graceful_stop.sh_ tells the RegionServer `stop`.
+The master will at this point notice the RegionServer gone but all regions will have already been redeployed and because the
+RegionServer went down cleanly, there will be no WAL logs to split.
 
 [[lb]]
 .Load Balancer
@@ -3167,6 +3167,21 @@ providing default TTL in sec for key: `hbase.master.snapshot.ttl`.
 Value 0 for this config indicates TTL: FOREVER
 
 
+.Take a snapshot with custom MAX_FILESIZE
+
+Optionally, snapshots can be created with a custom max file size configuration that will be
+used by cloned tables, instead of the global `hbase.hregion.max.filesize` configuration property.
+This is mostly useful when exporting snapshots between different clusters. If the HBase cluster where
+the snapshot is originally taken has a much larger value set for `hbase.hregion.max.filesize` than
+one or more clusters where the snapshot is being exported to, a storm of region splits may occur when
+restoring the snapshot on destination clusters. Specifying `MAX_FILESIZE` on properties passed to
+`snapshot` command will save informed value into the table's `MAX_FILESIZE`
+decriptor at snapshot creation time. If the table already defines `MAX_FILESIZE` descriptor,
+this property would be ignored and have no effect.
+
+----
+snapshot 'table01', 'snap01', {MAX_FILESIZE => 21474836480}
+----
 
 .Enable/Disable Snapshot Auto Cleanup on running cluster:
 

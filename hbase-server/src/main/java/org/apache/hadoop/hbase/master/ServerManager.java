@@ -204,7 +204,8 @@ public class ServerManager {
   }
 
   /**
-   * Let the server manager know a new regionserver has come online
+   * Let the server manager know a regionserver is requesting configurations.
+   * Regionserver will not be added here, but in its first report.
    * @param request the startup request
    * @param versionNumber the version number of the new regionserver
    * @param version the version of the new regionserver, could contain strings like "SNAPSHOT"
@@ -227,10 +228,6 @@ public class ServerManager {
     ServerName sn = ServerName.valueOf(hostname, request.getPort(), request.getServerStartCode());
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");
-    if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn, versionNumber, version))) {
-      LOG.warn(
-        "THIS SHOULD NOT HAPPEN, RegionServerStartup" + " could not record the server: " + sn);
-    }
     return sn;
   }
 
@@ -281,7 +278,6 @@ public class ServerManager {
     if (null == this.onlineServers.replace(sn, sl)) {
       // Already have this host+port combo and its just different start code?
       // Just let the server in. Presume master joining a running cluster.
-      // recordNewServer is what happens at the end of reportServerStartup.
       // The only thing we are skipping is passing back to the regionserver
       // the ServerName to use. Here we presume a master has already done
       // that so we'll press on with whatever it gave us for ServerName.
@@ -899,6 +895,17 @@ public class ServerManager {
    */
   public synchronized boolean isServerDead(ServerName serverName) {
     return serverName == null || deadservers.isDeadServer(serverName);
+  }
+
+  /**
+   * Check if a server is unknown.  A server can be online,
+   * or known to be dead, or unknown to this manager (i.e, not online,
+   * not known to be dead either; it is simply not tracked by the
+   * master any more, for example, a very old previous instance).
+   */
+  public boolean isServerUnknown(ServerName serverName) {
+    return serverName == null
+      || (!onlineServers.containsKey(serverName) && !deadservers.isDeadServer(serverName));
   }
 
   public void shutdownCluster() {

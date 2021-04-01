@@ -19,15 +19,11 @@ package org.apache.hadoop.hbase.procedure2.store.region;
 
 import java.io.IOException;
 import java.lang.management.MemoryType;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
@@ -35,42 +31,21 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStorePerformanceEvaluat
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 public class RegionProcedureStorePerformanceEvaluation
   extends ProcedureStorePerformanceEvaluation<RegionProcedureStore> {
 
-  private static final class MockServer implements Server {
+  private static final class DummyServer extends MockServer {
 
     private final Configuration conf;
 
     private final ServerName serverName =
       ServerName.valueOf("localhost", 12345, System.currentTimeMillis());
 
-    private volatile boolean abort = false;
-
-    public MockServer(Configuration conf) {
+    public DummyServer(Configuration conf) {
       this.conf = conf;
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-      abort = true;
-    }
-
-    @Override
-    public boolean isAborted() {
-      return abort;
-    }
-
-    @Override
-    public void stop(String why) {
-    }
-
-    @Override
-    public boolean isStopped() {
-      return false;
     }
 
     @Override
@@ -79,38 +54,8 @@ public class RegionProcedureStorePerformanceEvaluation
     }
 
     @Override
-    public ZKWatcher getZooKeeper() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Connection getConnection() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Connection createConnection(Configuration conf) throws IOException {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public AsyncClusterConnection getAsyncClusterConnection() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public ServerName getServerName() {
       return serverName;
-    }
-
-    @Override
-    public CoordinatedStateManager getCoordinatedStateManager() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ChoreService getChoreService() {
-      throw new UnsupportedOperationException();
     }
   }
 
@@ -132,7 +77,7 @@ public class RegionProcedureStorePerformanceEvaluation
       initialCountPercentage, null, indexChunkSizePercent);
     conf.setBoolean(MasterRegionFactory.USE_HSYNC_KEY, "hsync".equals(syncType));
     CommonFSUtils.setRootDir(conf, storeDir);
-    MockServer server = new MockServer(conf);
+    DummyServer server = new DummyServer(conf);
     region = MasterRegionFactory.create(server);
     return new RegionProcedureStore(server, region, (fs, apth) -> {
     });

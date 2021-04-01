@@ -150,6 +150,16 @@ public interface MetricsAssertHelper {
   boolean checkCounterExists(String name, BaseSource source);
 
   /**
+   * Check if a gauge exists.
+   *
+   * @param name   name of the gauge.
+   * @param source The BaseSource{@link BaseSource} that will provide the tags,
+   *               gauges, and counters.
+   * @return
+   */
+  boolean checkGaugeExists(String name, BaseSource source);
+
+  /**
    * Get the value of a gauge as a double.
    *
    * @param name   name of the gauge.

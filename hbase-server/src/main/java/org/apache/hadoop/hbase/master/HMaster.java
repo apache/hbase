@@ -1313,42 +1313,43 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Start the executor service pools
     final int masterOpenRegionPoolSize = conf.getInt(
         HConstants.MASTER_OPEN_REGION_THREADS, HConstants.MASTER_OPEN_REGION_THREADS_DEFAULT);
-    this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
-        new ExecutorConfig().setCorePoolSize(masterOpenRegionPoolSize));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_OPEN_REGION).setCorePoolSize(masterOpenRegionPoolSize));
     final int masterCloseRegionPoolSize = conf.getInt(
         HConstants.MASTER_CLOSE_REGION_THREADS, HConstants.MASTER_CLOSE_REGION_THREADS_DEFAULT);
-    this.executorService.startExecutorService(ExecutorType.MASTER_CLOSE_REGION,
-        new ExecutorConfig().setCorePoolSize(masterCloseRegionPoolSize));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_CLOSE_REGION).setCorePoolSize(masterCloseRegionPoolSize));
     final int masterServerOpThreads = conf.getInt(HConstants.MASTER_SERVER_OPERATIONS_THREADS,
         HConstants.MASTER_SERVER_OPERATIONS_THREADS_DEFAULT);
-    this.executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
-        new ExecutorConfig().setCorePoolSize(masterServerOpThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_SERVER_OPERATIONS).setCorePoolSize(masterServerOpThreads));
     final int masterServerMetaOpsThreads = conf.getInt(
         HConstants.MASTER_META_SERVER_OPERATIONS_THREADS,
         HConstants.MASTER_META_SERVER_OPERATIONS_THREADS_DEFAULT);
-    this.executorService.startExecutorService(ExecutorType.MASTER_META_SERVER_OPERATIONS,
-        new ExecutorConfig().setCorePoolSize(masterServerMetaOpsThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_META_SERVER_OPERATIONS).setCorePoolSize(masterServerMetaOpsThreads));
     final int masterLogReplayThreads = conf.getInt(
         HConstants.MASTER_LOG_REPLAY_OPS_THREADS, HConstants.MASTER_LOG_REPLAY_OPS_THREADS_DEFAULT);
-    this.executorService.startExecutorService(ExecutorType.M_LOG_REPLAY_OPS,
-        new ExecutorConfig().setCorePoolSize(masterLogReplayThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.M_LOG_REPLAY_OPS).setCorePoolSize(masterLogReplayThreads));
     final int masterSnapshotThreads = conf.getInt(
         SnapshotManager.SNAPSHOT_POOL_THREADS_KEY, SnapshotManager.SNAPSHOT_POOL_THREADS_DEFAULT);
-    this.executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS,
-        new ExecutorConfig().setCorePoolSize(masterSnapshotThreads).setAllowCoreThreadTimeout(true));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_SNAPSHOT_OPERATIONS).setCorePoolSize(masterSnapshotThreads)
+        .setAllowCoreThreadTimeout(true));
     final int masterMergeDispatchThreads = conf.getInt(HConstants.MASTER_MERGE_DISPATCH_THREADS,
         HConstants.MASTER_MERGE_DISPATCH_THREADS_DEFAULT);
-    this.executorService.startExecutorService(ExecutorType.MASTER_MERGE_OPERATIONS,
-        new ExecutorConfig().setCorePoolSize(masterMergeDispatchThreads)
-            .setAllowCoreThreadTimeout(true));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_MERGE_OPERATIONS).setCorePoolSize(masterMergeDispatchThreads)
+        .setAllowCoreThreadTimeout(true));
 
     // We depend on there being only one instance of this executor running
     // at a time. To do concurrency, would need fencing of enable/disable of
     // tables.
     // Any time changing this maxThreads to > 1, pls see the comment at
     // AccessController#postCompletedCreateTableAction
-    this.executorService.startExecutorService(
-        ExecutorType.MASTER_TABLE_OPERATIONS, new ExecutorConfig().setCorePoolSize(1));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.MASTER_TABLE_OPERATIONS).setCorePoolSize(1));
     startProcedureExecutor();
 
     // Create cleaner thread pool
@@ -1734,7 +1735,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         LOG.info("balance " + plan);
         //TODO: bulk assign
         try {
-          this.assignmentManager.moveAsync(plan);
+          this.assignmentManager.balance(plan);
         } catch (HBaseIOException hioe) {
           //should ignore failed plans here, avoiding the whole balance plans be aborted
           //later calls of balance() can fetch up the failed and skipped plans

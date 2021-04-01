@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.hbtop.terminal.impl.batch;
 
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 
+/**
+ * An implementation of the {@link TerminalPrinter} interface for batch mode.
+ */
 public class BatchTerminalPrinter implements TerminalPrinter {
 
   @Override
