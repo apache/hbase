@@ -63,6 +63,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.AbstractRpcServices;
+import org.apache.hadoop.hbase.AbstractServer;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.ChoreService;
@@ -85,8 +87,6 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
-import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
@@ -112,7 +112,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
-import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -246,7 +245,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings({ "deprecation"})
-public class HRegionServer extends Thread implements
+public class HRegionServer extends AbstractServer implements
     RegionServerServices, LastSequenceId, ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(HRegionServer.class);
 
@@ -287,11 +286,6 @@ public class HRegionServer extends Thread implements
   private MemStoreFlusher cacheFlusher;
 
   private HeapMemoryManager hMemManager;
-
-  /**
-   * The asynchronous cluster connection to be shared by services.
-   */
-  protected AsyncClusterConnection asyncClusterConnection;
 
   /**
    * Go here to get table descriptors.
@@ -339,11 +333,6 @@ public class HRegionServer extends Thread implements
   private HFileSystem dataFs;
   private HFileSystem walFs;
 
-  // Set when a report to the master comes back with a message asking us to
-  // shutdown. Also set by call to stop when debugging or running unit tests
-  // of HRegionServer in isolation.
-  private volatile boolean stopped = false;
-
   // Go down hard. Used if file system becomes unavailable and also in
   // debugging and unit tests.
   private AtomicBoolean abortRequested;
@@ -359,13 +348,11 @@ public class HRegionServer extends Thread implements
   private volatile boolean killed = false;
   private volatile boolean shutDown = false;
 
-  protected final Configuration conf;
 
   private Path dataRootDir;
   private Path walRootDir;
 
   private final int threadWakeFrequency;
-  final int msgInterval;
 
   private static final String PERIOD_COMPACTION = "hbase.regionserver.compaction.check.period";
   private final int compactionCheckFrequency;
@@ -375,8 +362,6 @@ public class HRegionServer extends Thread implements
   // Stub to do region server status calls against the master.
   private volatile RegionServerStatusService.BlockingInterface rssStub;
   private volatile LockService.BlockingInterface lockStub;
-  // RPC client. Used to make the stub above that does region server status checking.
-  private RpcClient rpcClient;
 
   private UncaughtExceptionHandler uncaughtExceptionHandler;
 
@@ -419,22 +404,11 @@ public class HRegionServer extends Thread implements
   // flag set after we're done setting up server threads
   final AtomicBoolean online = new AtomicBoolean(false);
 
-  // zookeeper connection and watcher
-  protected final ZKWatcher zooKeeper;
-
-  // master address tracker
-  private final MasterAddressTracker masterAddressTracker;
-
   // Cluster Status Tracker
   protected final ClusterStatusTracker clusterStatusTracker;
 
   // Log Splitting Worker
   private SplitLogWorker splitLogWorker;
-
-  // A sleeper that sleeps for msgInterval.
-  protected final Sleeper sleeper;
-
-  private final int shortOperationTimeout;
 
   // Time to pause if master says 'please hold'
   private final long retryPauseTime;
@@ -458,13 +432,6 @@ public class HRegionServer extends Thread implements
   private ScheduledChore nonceManagerChore;
 
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
-
-  /**
-   * The server name the Master sees us as.  Its made from the hostname the
-   * master passes us, port, and server startcode. Gets set after registration
-   * against Master.
-   */
-  protected ServerName serverName;
 
   /**
    * hostname specified by hostname config
@@ -498,16 +465,6 @@ public class HRegionServer extends Thread implements
     Configuration.addDeprecation(RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY);
   }
 
-  /**
-   * This servers startcode.
-   */
-  protected final long startcode;
-
-  /**
-   * Unique identifier for the cluster we are a part of.
-   */
-  protected String clusterId;
-
   // chore for refreshing store files for secondary regions
   private StorefileRefresherChore storefileRefresher;
 
@@ -538,8 +495,6 @@ public class HRegionServer extends Thread implements
    */
   final ServerNonceManager nonceManager;
 
-  private UserProvider userProvider;
-
   protected final RSRpcServices rpcServices;
 
   private CoordinatedStateManager csm;
@@ -566,15 +521,7 @@ public class HRegionServer extends Thread implements
    */
   private NamedQueueRecorder namedQueueRecorder = null;
 
-  /**
-   * True if this RegionServer is coming up in a cluster where there is no Master;
-   * means it needs to just come up and make do without a Master to talk to: e.g. in test or
-   * HRegionServer is doing other than its usual duties: e.g. as an hollowed-out host whose only
-   * purpose is as a Replication-stream sink; see HBASE-18846 for more.
-   * TODO: can this replace {@link #TEST_SKIP_REPORTING_TRANSITION} ?
-   */
-  private final boolean masterless;
-  private static final String MASTERLESS_CONFIG_NAME = "hbase.masterless";
+
 
   /**regionserver codec list **/
   private static final String REGIONSERVER_CODEC = "hbase.regionserver.codecs";
@@ -589,18 +536,14 @@ public class HRegionServer extends Thread implements
    * Defer till after we register with the Master as much as possible. See {@link #startServices}.
    */
   public HRegionServer(final Configuration conf) throws IOException {
-    super("RegionServer");  // thread name
+    super(conf, "RegionServer"); // thread name
     TraceUtil.initTracer(conf);
     try {
-      this.startcode = System.currentTimeMillis();
-      this.conf = conf;
       this.dataFsOk = true;
-      this.masterless = conf.getBoolean(MASTERLESS_CONFIG_NAME, false);
       this.eventLoopGroupConfig = setupNetty(this.conf);
       MemorySizeUtil.checkForClusterFreeHeapMemoryLimit(this.conf);
       HFile.checkHFileVersion(this.conf);
       checkCodecs(this.conf);
-      this.userProvider = UserProvider.instantiate(conf);
       FSUtils.setupShortCircuitRead(this.conf);
 
       // Disable usage of meta replicas in the regionserver
@@ -629,9 +572,10 @@ public class HRegionServer extends Thread implements
       rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
       String hostName =
-          StringUtils.isBlank(useThisHostnameInstead) ? this.rpcServices.isa.getHostName()
+          StringUtils.isBlank(useThisHostnameInstead) ? this.rpcServices.getIsa().getHostName()
               : this.useThisHostnameInstead;
-      serverName = ServerName.valueOf(hostName, this.rpcServices.isa.getPort(), this.startcode);
+      setServerName(
+        ServerName.valueOf(hostName, this.rpcServices.getIsa().getPort(), this.startcode));
 
       // login the zookeeper client principal (if using security)
       ZKUtil.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
@@ -663,7 +607,7 @@ public class HRegionServer extends Thread implements
 
       // Some unit tests don't need a cluster, so no zookeeper at all
       // Open connection to zookeeper and set primary watcher
-      zooKeeper = new ZKWatcher(conf, getProcessName() + ":" + rpcServices.isa.getPort(), this,
+      zooKeeper = new ZKWatcher(conf, getProcessName() + ":" + rpcServices.getIsa().getPort(), this,
         canCreateBaseZNode());
       // If no master in cluster, skip trying to track one or look for a cluster status.
       if (!this.masterless) {
@@ -697,6 +641,10 @@ public class HRegionServer extends Thread implements
       throw t;
     }
   }
+  @Override
+  protected AbstractRpcServices getRpcService(){
+    return rpcServices;
+  }
 
   private void initNamedQueueRecorder(Configuration conf) {
     if (!(this instanceof HMaster)) {
@@ -726,7 +674,7 @@ public class HRegionServer extends Thread implements
           " to true while " + UNSAFE_RS_HOSTNAME_KEY + " is used";
         throw new IOException(msg);
       } else {
-        return rpcServices.isa.getHostName();
+        return rpcServices.getIsa().getHostName();
       }
     } else {
       return hostname;
@@ -797,10 +745,6 @@ public class HRegionServer extends Thread implements
     return REGIONSERVER;
   }
 
-  protected boolean canCreateBaseZNode() {
-    return this.masterless;
-  }
-
   protected boolean canUpdateTableDescriptor() {
     return false;
   }
@@ -841,25 +785,6 @@ public class HRegionServer extends Thread implements
     return true;
   }
 
-  private Configuration cleanupConfiguration() {
-    Configuration conf = this.conf;
-    // We use ZKConnectionRegistry for all the internal communication, primarily for these reasons:
-    // - Decouples RS and master life cycles. RegionServers can continue be up independent of
-    //   masters' availability.
-    // - Configuration management for region servers (cluster internal) is much simpler when adding
-    //   new masters or removing existing masters, since only clients' config needs to be updated.
-    // - We need to retain ZKConnectionRegistry for replication use anyway, so we just extend it for
-    //   other internal connections too.
-    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
-    if (conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
-      // Use server ZK cluster for server-issued connections, so we clone
-      // the conf and unset the client ZK related properties
-      conf = new Configuration(this.conf);
-      conf.unset(HConstants.CLIENT_ZOOKEEPER_QUORUM);
-    }
-    return conf;
-  }
 
   /**
    * Run test on configured codecs to make sure supporting libs are in place.
@@ -876,42 +801,6 @@ public class HRegionServer extends Thread implements
     }
   }
 
-  public String getClusterId() {
-    return this.clusterId;
-  }
-
-  /**
-   * Setup our cluster connection if not already initialized.
-   */
-  protected final synchronized void setupClusterConnection() throws IOException {
-    if (asyncClusterConnection == null) {
-      Configuration conf = cleanupConfiguration();
-      InetSocketAddress localAddress = new InetSocketAddress(this.rpcServices.isa.getAddress(), 0);
-      User user = userProvider.getCurrent();
-      asyncClusterConnection =
-        ClusterConnectionFactory.createAsyncClusterConnection(conf, localAddress, user);
-    }
-  }
-
-  /**
-   * All initialization needed before we go register with Master.<br>
-   * Do bare minimum. Do bulk of initializations AFTER we've connected to the Master.<br>
-   * In here we just put up the RpcServer, setup Connection, and ZooKeeper.
-   */
-  private void preRegistrationInitialization() {
-    try {
-      initializeZooKeeper();
-      setupClusterConnection();
-      // Setup RPC client for master communication
-      this.rpcClient = asyncClusterConnection.getRpcClient();
-    } catch (Throwable t) {
-      // Call stop if error or process will stick around for ever since server
-      // puts up non-daemon threads.
-      this.rpcServices.stop();
-      abort("Initialization of RS failed.  Hence aborting RS.", t);
-    }
-  }
-
   /**
    * Bring up connection to zk ensemble and then wait until a master for this cluster and then after
    * that, wait until cluster 'up' flag has been set. This is the order in which master does things.
@@ -920,7 +809,8 @@ public class HRegionServer extends Thread implements
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
     justification="cluster Id znode read would give us correct response")
-  private void initializeZooKeeper() throws IOException, InterruptedException {
+  @Override
+  protected void initializeZooKeeper() throws IOException, InterruptedException {
     // Nothing to do in here if no Master in the mix.
     if (this.masterless) {
       return;
@@ -1143,10 +1033,10 @@ public class HRegionServer extends Thread implements
       if (this.dataFsOk) {
         closeUserRegions(abortRequested.get()); // Don't leave any open file handles
       }
-      LOG.info("aborting server " + this.serverName);
+      LOG.info("aborting server " + getServerName());
     } else {
       closeUserRegions(abortRequested.get());
-      LOG.info("stopping server " + this.serverName);
+      LOG.info("stopping server " + getServerName());
     }
 
     if (this.asyncClusterConnection != null) {
@@ -1171,7 +1061,7 @@ public class HRegionServer extends Thread implements
 
     if (!this.killed && this.dataFsOk) {
       waitOnAllRegionsToClose(abortRequested.get());
-      LOG.info("stopping server " + this.serverName + "; all regions closed.");
+      LOG.info("stopping server " + getServerName() + "; all regions closed.");
     }
 
     // Stop the quota manager
@@ -1228,7 +1118,7 @@ public class HRegionServer extends Thread implements
       this.zooKeeper.close();
     }
     this.shutDown = true;
-    LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
+    LOG.info("Exiting; stopping=" + getServerName() + "; zookeeper connection closed.");
   }
 
   private boolean containsMetaTableRegions() {
@@ -1269,7 +1159,7 @@ public class HRegionServer extends Thread implements
     ClusterStatusProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
     try {
       RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();
-      request.setServer(ProtobufUtil.toServerName(this.serverName));
+      request.setServer(ProtobufUtil.toServerName(getServerName()));
       request.setLoad(sl);
       rss.regionServerReport(null, request.build());
     } catch (ServiceException se) {
@@ -1538,16 +1428,6 @@ public class HRegionServer extends Thread implements
     }
   }
 
-  private static boolean sleepInterrupted(long millis) {
-    boolean interrupted = false;
-    try {
-      Thread.sleep(millis);
-    } catch (InterruptedException e) {
-      LOG.warn("Interrupted while sleeping");
-      interrupted = true;
-    }
-    return interrupted;
-  }
 
   private void shutdownWAL(final boolean close) {
     if (this.walFactory != null) {
@@ -1588,8 +1468,8 @@ public class HRegionServer extends Thread implements
         // The hostname the master sees us as.
         if (key.equals(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER)) {
           String hostnameFromMasterPOV = e.getValue();
-          this.serverName = ServerName.valueOf(hostnameFromMasterPOV, rpcServices.isa.getPort(),
-              this.startcode);
+          setServerName(ServerName.valueOf(hostnameFromMasterPOV, rpcServices.getIsa().getPort(),
+              this.startcode));
           if (!StringUtils.isBlank(useThisHostnameInstead) &&
               !hostnameFromMasterPOV.equals(useThisHostnameInstead)) {
             String msg = "Master passed us a different hostname to use; was=" +
@@ -1598,9 +1478,9 @@ public class HRegionServer extends Thread implements
             throw new IOException(msg);
           }
           if (StringUtils.isBlank(useThisHostnameInstead) &&
-              !hostnameFromMasterPOV.equals(rpcServices.isa.getHostName())) {
+              !hostnameFromMasterPOV.equals(rpcServices.getIsa().getHostName())) {
             String msg = "Master passed us a different hostname to use; was=" +
-                rpcServices.isa.getHostName() + ", but now=" + hostnameFromMasterPOV;
+                rpcServices.getIsa().getHostName() + ", but now=" + hostnameFromMasterPOV;
             LOG.error(msg);
           }
           continue;
@@ -1629,7 +1509,7 @@ public class HRegionServer extends Thread implements
       // hack! Maps DFSClient => RegionServer for logs.  HDFS made this
       // config param for task trackers, but we can piggyback off of it.
       if (this.conf.get("mapreduce.task.attempt.id") == null) {
-        this.conf.set("mapreduce.task.attempt.id", "hb_rs_" + this.serverName.toString());
+        this.conf.set("mapreduce.task.attempt.id", "hb_rs_" + getServerName().toString());
       }
 
       // Save it in a file, this will allow to see if we crash
@@ -1657,7 +1537,7 @@ public class HRegionServer extends Thread implements
 
 
       // Set up ZK
-      LOG.info("Serving as " + this.serverName + ", RpcServer on " + rpcServices.isa +
+      LOG.info("Serving as " + getServerName() + ", RpcServer on " + rpcServices.getIsa() +
           ", sessionid=0x" +
           Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
 
@@ -1763,11 +1643,12 @@ public class HRegionServer extends Thread implements
     }
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
-    float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
-    float dataLocalityForSsd = hdfsBd.getBlockLocalityIndexForSsd(serverName.getHostname());
+    float dataLocality = hdfsBd.getBlockLocalityIndex(getServerName().getHostname());
+    float dataLocalityForSsd = hdfsBd.getBlockLocalityIndexForSsd(getServerName().getHostname());
     long blocksTotalWeight = hdfsBd.getUniqueBlocksTotalWeight();
-    long blocksLocalWeight = hdfsBd.getBlocksLocalWeight(serverName.getHostname());
-    long blocksLocalWithSsdWeight = hdfsBd.getBlocksLocalWithSsdWeight(serverName.getHostname());
+    long blocksLocalWeight = hdfsBd.getBlocksLocalWeight(getServerName().getHostname());
+    long blocksLocalWithSsdWeight =
+        hdfsBd.getBlocksLocalWithSsdWeight(getServerName().getHostname());
     if (regionLoadBldr == null) {
       regionLoadBldr = RegionLoad.newBuilder();
     }
@@ -1947,17 +1828,17 @@ public class HRegionServer extends Thread implements
     boolean isMasterNoTableOrSystemTableOnly = this instanceof HMaster &&
         !LoadBalancer.isMasterCanHostUserRegions(conf);
     WALFactory factory =
-        new WALFactory(conf, serverName.toString(), this, !isMasterNoTableOrSystemTableOnly);
+        new WALFactory(conf, getServerName().toString(), this, !isMasterNoTableOrSystemTableOnly);
     if (!isMasterNoTableOrSystemTableOnly) {
       // TODO Replication make assumptions here based on the default filesystem impl
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-      String logName = AbstractFSWALProvider.getWALDirectoryName(this.serverName.toString());
+      String logName = AbstractFSWALProvider.getWALDirectoryName(this.getServerName().toString());
 
       Path logDir = new Path(walRootDir, logName);
       LOG.debug("logDir={}", logDir);
       if (this.walFs.exists(logDir)) {
         throw new RegionServerRunningException(
-            "Region server has already created directory at " + this.serverName.toString());
+            "Region server has already created directory at " + this.getServerName().toString());
       }
       // Always create wal directory as now we need this when master restarts to find out the live
       // region servers.
@@ -2418,7 +2299,7 @@ public class HRegionServer extends Thread implements
       Preconditions.checkArgument(hris != null && hris.length == 1);
       if (hris[0].isMetaRegion()) {
         try {
-          MetaTableLocator.setMetaLocation(getZooKeeper(), serverName,
+          MetaTableLocator.setMetaLocation(getZooKeeper(), getServerName(),
               hris[0].getReplicaId(), RegionState.State.OPEN);
         } catch (KeeperException e) {
           LOG.info("Failed to update meta location", e);
@@ -2427,7 +2308,7 @@ public class HRegionServer extends Thread implements
       } else {
         try {
           MetaTableAccessor.updateRegionLocation(asyncClusterConnection.toConnection(), hris[0],
-              serverName, openSeqNum, masterSystemTime);
+              getServerName(), openSeqNum, masterSystemTime);
         } catch (IOException e) {
           LOG.info("Failed to update meta", e);
           return false;
@@ -2446,7 +2327,7 @@ public class HRegionServer extends Thread implements
 
     ReportRegionStateTransitionRequest.Builder builder =
         ReportRegionStateTransitionRequest.newBuilder();
-    builder.setServer(ProtobufUtil.toServerName(serverName));
+    builder.setServer(ProtobufUtil.toServerName(getServerName()));
     RegionStateTransition.Builder transition = builder.addTransitionBuilder();
     transition.setTransitionCode(code);
     if (code == TransitionCode.OPENED && openSeqNum >= 0) {
@@ -2551,7 +2432,7 @@ public class HRegionServer extends Thread implements
 
   @Override
   public RpcServerInterface getRpcServer() {
-    return rpcServices.rpcServer;
+    return rpcServices.getRpcServer();
   }
 
   @InterfaceAudience.Private
@@ -2602,10 +2483,10 @@ public class HRegionServer extends Thread implements
       }
       // Report to the master but only if we have already registered with the master.
       RegionServerStatusService.BlockingInterface rss = rssStub;
-      if (rss != null && this.serverName != null) {
+      if (rss != null && getServerName() != null) {
         ReportRSFatalErrorRequest.Builder builder =
           ReportRSFatalErrorRequest.newBuilder();
-        builder.setServer(ProtobufUtil.toServerName(this.serverName));
+        builder.setServer(ProtobufUtil.toServerName(getServerName()));
         builder.setErrorMessage(msg);
         rss.reportRSFatalError(null, builder.build());
       }
@@ -2627,12 +2508,6 @@ public class HRegionServer extends Thread implements
     return abortRequested.compareAndSet(false, true);
   }
 
-  /**
-   * @see HRegionServer#abort(String, Throwable)
-   */
-  public void abort(String reason) {
-    abort(reason, null);
-  }
 
   @Override
   public boolean isAborted() {
@@ -2858,9 +2733,9 @@ public class HRegionServer extends Thread implements
       rpcServices.rpcMultiRequestCount.reset();
       rpcServices.rpcMutateRequestCount.reset();
       LOG.info("reportForDuty to master=" + masterServerName + " with port="
-        + rpcServices.isa.getPort() + ", startcode=" + this.startcode);
+        + rpcServices.getIsa().getPort() + ", startcode=" + this.startcode);
       long now = EnvironmentEdgeManager.currentTime();
-      int port = rpcServices.isa.getPort();
+      int port = rpcServices.getIsa().getPort();
       RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
       if (!StringUtils.isBlank(useThisHostnameInstead)) {
         request.setUseThisHostnameInstead(useThisHostnameInstead);
@@ -2958,14 +2833,6 @@ public class HRegionServer extends Thread implements
   /** @return the info server */
   public InfoServer getInfoServer() {
     return infoServer;
-  }
-
-  /**
-   * @return true if a stop has been requested.
-   */
-  @Override
-  public boolean isStopped() {
-    return this.stopped;
   }
 
   @Override
@@ -3106,11 +2973,6 @@ public class HRegionServer extends Thread implements
   @Override
   public CoordinatedStateManager getCoordinatedStateManager() {
     return csm;
-  }
-
-  @Override
-  public ServerName getServerName() {
-    return serverName;
   }
 
   public RegionServerCoprocessorHost getRegionServerCoprocessorHost(){
@@ -3469,10 +3331,10 @@ public class HRegionServer extends Thread implements
         encodedRegionName: Bytes.toStringBinary(regionName);
       if (isOpening != null && isOpening) {
         throw new RegionOpeningException("Region " + regionNameStr +
-          " is opening on " + this.serverName);
+          " is opening on " + getServerName());
       }
       throw new NotServingRegionException("" + regionNameStr +
-        " is not online on " + this.serverName);
+        " is not online on " + getServerName());
     }
     return region;
   }
@@ -3964,11 +3826,6 @@ public class HRegionServer extends Thread implements
       Threads.printThreadInfo(System.out, "Zombie HRegionServer");
       Runtime.getRuntime().halt(1);
     }
-  }
-
-  @Override
-  public AsyncClusterConnection getAsyncClusterConnection() {
-    return asyncClusterConnection;
   }
 
   @InterfaceAudience.Private

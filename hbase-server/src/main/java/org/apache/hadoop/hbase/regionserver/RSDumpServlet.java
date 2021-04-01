@@ -142,7 +142,7 @@ public class RSDumpServlet extends StateDumpServlet {
 
 
   public static void dumpCallQueues(HRegionServer hrs, PrintWriter out) {
-    CallQueueInfo callQueueInfo = hrs.rpcServices.rpcServer.getScheduler().getCallQueueInfo();
+    CallQueueInfo callQueueInfo = hrs.rpcServices.getRpcServer().getScheduler().getCallQueueInfo();
 
     for(String queueName: callQueueInfo.getCallQueueNames()) {
 

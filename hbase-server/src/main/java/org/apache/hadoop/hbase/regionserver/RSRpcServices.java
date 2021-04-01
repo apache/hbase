@@ -48,6 +48,7 @@ import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.AbstractRpcServices;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
@@ -91,7 +92,6 @@ import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
@@ -268,8 +268,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
-public class RSRpcServices implements HBaseRPCErrorHandler,
-    AdminService.BlockingInterface, ClientService.BlockingInterface, PriorityFunction,
+public class RSRpcServices extends AbstractRpcServices implements
+    AdminService.BlockingInterface, ClientService.BlockingInterface,
     ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(RSRpcServices.class);
 
@@ -324,10 +324,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // Request counter for rpc mutate
   final LongAdder rpcMutateRequestCount = new LongAdder();
 
-  // Server to handle client requests.
-  final RpcServerInterface rpcServer;
-  final InetSocketAddress isa;
-
   protected final HRegionServer regionServer;
   private final long maxScannerResultSize;
 
@@ -369,7 +365,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   private AccessChecker accessChecker;
   private ZKPermissionWatcher zkPermissionWatcher;
-
   /**
    * Services launched in RSRpcServices. By default they are on but you can use the below
    * booleans to selectively enable/disable either Admin or Client Service (Rare is the case
@@ -1522,16 +1517,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (KeeperException e) {
       LOG.error("ZooKeeper permission watcher initialization failed", e);
     }
-    this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.serverName);
+    this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.getServerName());
     rpcServer.start();
   }
 
-  void stop() {
+  @Override
+  protected void stop() {
     if (zkPermissionWatcher != null) {
       zkPermissionWatcher.close();
     }
     closeAllScanners();
-    rpcServer.stop();
+    super.stop();
   }
 
   /**
@@ -1540,17 +1536,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // TODO : Rename this and HMaster#checkInitialized to isRunning() (or a better name).
   protected void checkOpen() throws IOException {
     if (regionServer.isAborted()) {
-      throw new RegionServerAbortedException("Server " + regionServer.serverName + " aborting");
+      throw new RegionServerAbortedException(
+          "Server " + regionServer.getServerName() + " aborting");
     }
     if (regionServer.isStopped()) {
-      throw new RegionServerStoppedException("Server " + regionServer.serverName + " stopping");
+      throw new RegionServerStoppedException(
+          "Server " + regionServer.getServerName() + " stopping");
     }
     if (!regionServer.isDataFileSystemOk()) {
       throw new RegionServerStoppedException("File system not available");
     }
     if (!regionServer.isOnline()) {
-      throw new ServerNotRunningYetException("Server " + regionServer.serverName
-          + " is not running yet");
+      throw new ServerNotRunningYetException(
+          "Server " + regionServer.getServerName() + " is not running yet");
     }
   }
 
@@ -1927,7 +1925,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     requestCount.increment();
     int infoPort = regionServer.infoServer != null ? regionServer.infoServer.getPort() : -1;
-    return ResponseConverter.buildGetServerInfoResponse(regionServer.serverName, infoPort);
+    return ResponseConverter.buildGetServerInfoResponse(regionServer.getServerName(), infoPort);
   }
 
   @Override
@@ -1976,10 +1974,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   private void throwOnWrongStartCode(long serverStartCode) throws ServiceException {
     // check that we are the same server that this RPC is intended for.
-    if (regionServer.serverName.getStartcode() != serverStartCode) {
+    if (regionServer.getServerName().getStartcode() != serverStartCode) {
       throw new ServiceException(new DoNotRetryIOException(
         "This RPC was intended for a " + "different server with startCode: " + serverStartCode +
-          ", this server is: " + regionServer.serverName));
+          ", this server is: " + regionServer.getServerName()));
     }
   }
 
@@ -2051,7 +2049,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         try {
           while (System.currentTimeMillis() <= endTime
               && !regionServer.isStopped() && !regionServer.isOnline()) {
-            regionServer.online.wait(regionServer.msgInterval);
+            regionServer.online.wait(regionServer.getMsgInterval());
           }
           checkOpen();
         } catch (InterruptedException t) {
@@ -2406,10 +2404,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final BulkLoadHFileRequest request) throws ServiceException {
     long start = EnvironmentEdgeManager.currentTime();
     List<String> clusterIds = new ArrayList<>(request.getClusterIdsList());
-    if(clusterIds.contains(this.regionServer.clusterId)){
+    if(clusterIds.contains(this.regionServer.getClusterId())){
       return BulkLoadHFileResponse.newBuilder().setLoaded(true).build();
     } else {
-      clusterIds.add(this.regionServer.clusterId);
+      clusterIds.add(this.regionServer.getClusterId());
     }
     try {
       checkOpen();
