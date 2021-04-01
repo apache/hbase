@@ -24,7 +24,6 @@ import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -88,7 +87,6 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
-import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -109,6 +107,7 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
 import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
+import org.apache.hadoop.hbase.master.compaction.CompactionServerManager;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
@@ -300,6 +299,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   // server manager to deal with region server info
   private volatile ServerManager serverManager;
 
+  private volatile CompactionServerManager compactionServerManager;
+
   // manager of assignment nodes in zookeeper
   private AssignmentManager assignmentManager;
 
@@ -444,7 +445,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       // Hack! Maps DFSClient => Master for logs.  HDFS made this
       // config param for task trackers, but we can piggyback off of it.
       if (this.conf.get("mapreduce.task.attempt.id") == null) {
-        this.conf.set("mapreduce.task.attempt.id", "hb_m_" + this.serverName.toString());
+        this.conf.set("mapreduce.task.attempt.id", "hb_m_" + getServerName().toString());
       }
 
       this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(this));
@@ -478,7 +479,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
 
       this.metaRegionLocationCache = new MetaRegionLocationCache(this.zooKeeper);
-      this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
+      this.activeMasterManager = createActiveMasterManager(zooKeeper, getServerName(), this);
 
       cachedClusterId = new CachedClusterId(this, conf);
     } catch (Throwable t) {
@@ -735,7 +736,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     boolean wasUp = this.clusterStatusTracker.isClusterUp();
     if (!wasUp) this.clusterStatusTracker.setClusterUp();
 
-    LOG.info("Active/primary master=" + this.serverName +
+    LOG.info("Active/primary master=" + getServerName() +
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()) +
         ", setting cluster-up flag (Was=" + wasUp + ")");
@@ -841,6 +842,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // The below two managers must be created before loading procedures, as they will be used during
     // loading.
     this.serverManager = createServerManager(this);
+    this.compactionServerManager = createCompactionServerManager(this);
     this.syncReplicationReplayWALManager = new SyncReplicationReplayWALManager(this);
     if (!conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
       DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
@@ -1228,6 +1230,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     return new ServerManager(master);
   }
 
+  private CompactionServerManager createCompactionServerManager(final MasterServices master) {
+    return new CompactionServerManager(master);
+  }
+
   private void waitForRegionServers(final MonitoredTask status)
       throws IOException, InterruptedException {
     this.serverManager.waitForRegionServers(status);
@@ -1280,6 +1286,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public ServerManager getServerManager() {
     return this.serverManager;
+  }
+
+  @Override
+  public CompactionServerManager getCompactionServerManager() {
+    return this.compactionServerManager;
   }
 
   @Override
@@ -1965,7 +1976,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         return;
       }
       // TODO: deal with table on master for rs group.
-      if (dest.equals(serverName)) {
+      if (dest.equals(getServerName())) {
         // To avoid unnecessary region moving later by balancer. Don't put user
         // regions on master.
         LOG.debug("Skipping move of region " + hri.getRegionNameAsString() +
@@ -2086,7 +2097,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private void startActiveMasterManager(int infoPort) throws KeeperException {
     String backupZNode = ZNodePaths.joinZNode(
-      zooKeeper.getZNodePaths().backupMasterAddressesZNode, serverName.toString());
+      zooKeeper.getZNodePaths().backupMasterAddressesZNode, getServerName().toString());
     /*
     * Add a ZNode for ourselves in the backup master directory since we
     * may not become the active master. If so, we want the actual active
@@ -2098,8 +2109,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     * this node for us since it is ephemeral.
     */
     LOG.info("Adding backup master ZNode " + backupZNode);
-    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName, infoPort)) {
-      LOG.warn("Failed create of " + backupZNode + " by " + serverName);
+    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, getServerName(), infoPort)) {
+      LOG.warn("Failed create of " + backupZNode + " by " + getServerName());
     }
     this.activeMasterManager.setInfoPort(infoPort);
     int timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT, HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
@@ -2616,11 +2627,22 @@ public class HMaster extends HRegionServer implements MasterServices {
       HConstants.DEFAULT_REGIONSERVER_INFOPORT) : port;
   }
 
+  public int getCompactionServerInfoPort(final ServerName sn) {
+    int port = this.compactionServerManager.getInfoPort(sn);
+    return port == 0 ? conf.getInt(HConstants.COMPACTION_SERVER_PORT,
+      HConstants.DEFAULT_COMPACTION_SERVER_PORT) : port;
+  }
+
   @Override
   public String getRegionServerVersion(ServerName sn) {
     // Will return "0.0.0" if the server is not online to prevent move system region to unknown
     // version RS.
     return this.serverManager.getVersion(sn);
+  }
+
+  @Override
+  public String getCompactionServerVersion(ServerName sn) {
+    return this.compactionServerManager.getVersion(sn);
   }
 
   @Override
@@ -2681,10 +2703,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     return procedureExecutor;
   }
 
-  @Override
-  public ServerName getServerName() {
-    return this.serverName;
-  }
 
   @Override
   public AssignmentManager getAssignmentManager() {
@@ -2879,8 +2897,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   public static HMaster constructMaster(Class<? extends HMaster> masterClass,
       final Configuration conf)  {
     try {
-      Constructor<? extends HMaster> c = masterClass.getConstructor(Configuration.class);
-      return c.newInstance(conf);
+      return (HMaster) constructServer(masterClass, conf);
     } catch(Exception e) {
       Throwable error = e;
       if (e instanceof InvocationTargetException &&

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -48,6 +47,7 @@ import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.AbstractRpcServices;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
@@ -63,14 +63,12 @@ import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RegionTooBusyException;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
-import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -84,14 +82,11 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
-import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
@@ -101,13 +96,9 @@ import org.apache.hadoop.hbase.ipc.RpcCallback;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
-import org.apache.hadoop.hbase.ipc.RpcServerFactory;
-import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
@@ -142,7 +133,6 @@ import org.apache.hadoop.hbase.security.access.NoopAccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -268,9 +258,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
-public class RSRpcServices implements HBaseRPCErrorHandler,
-    AdminService.BlockingInterface, ClientService.BlockingInterface, PriorityFunction,
-    ConfigurationObserver {
+public class RSRpcServices extends AbstractRpcServices implements
+    AdminService.BlockingInterface, ClientService.BlockingInterface {
   private static final Logger LOG = LoggerFactory.getLogger(RSRpcServices.class);
 
   /** RPC scheduler to use for the region server. */
@@ -324,10 +313,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // Request counter for rpc mutate
   final LongAdder rpcMutateRequestCount = new LongAdder();
 
-  // Server to handle client requests.
-  final RpcServerInterface rpcServer;
-  final InetSocketAddress isa;
-
   protected final HRegionServer regionServer;
   private final long maxScannerResultSize;
 
@@ -369,7 +354,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   private AccessChecker accessChecker;
   private ZKPermissionWatcher zkPermissionWatcher;
-
   /**
    * Services launched in RSRpcServices. By default they are on but you can use the below
    * booleans to selectively enable/disable either Admin or Client Service (Rare is the case
@@ -1201,50 +1185,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   // Directly invoked only for testing
   public RSRpcServices(final HRegionServer rs) throws IOException {
+    super(rs);
     final Configuration conf = rs.getConfiguration();
     regionServer = rs;
-    rowSizeWarnThreshold = conf.getInt(
-      HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
+    rowSizeWarnThreshold =
+        conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     rejectRowsWithSizeOverThreshold =
-      conf.getBoolean(REJECT_BATCH_ROWS_OVER_THRESHOLD, DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD);
-
-    final RpcSchedulerFactory rpcSchedulerFactory;
-    try {
-      rpcSchedulerFactory = getRpcSchedulerFactoryClass().asSubclass(RpcSchedulerFactory.class)
-          .getDeclaredConstructor().newInstance();
-    } catch (NoSuchMethodException | InvocationTargetException |
-        InstantiationException | IllegalAccessException e) {
-      throw new IllegalArgumentException(e);
-    }
-    // Server to handle client requests.
-    final InetSocketAddress initialIsa;
-    final InetSocketAddress bindAddress;
-    if(this instanceof MasterRpcServices) {
-      String hostname = DNS.getHostname(conf, DNS.ServerType.MASTER);
-      int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
-      // Creation of a HSA will force a resolve.
-      initialIsa = new InetSocketAddress(hostname, port);
-      bindAddress = new InetSocketAddress(conf.get("hbase.master.ipc.address", hostname), port);
-    } else {
-      String hostname = DNS.getHostname(conf, DNS.ServerType.REGIONSERVER);
-      int port = conf.getInt(HConstants.REGIONSERVER_PORT,
-        HConstants.DEFAULT_REGIONSERVER_PORT);
-      // Creation of a HSA will force a resolve.
-      initialIsa = new InetSocketAddress(hostname, port);
-      bindAddress =
-          new InetSocketAddress(conf.get("hbase.regionserver.ipc.address", hostname), port);
-    }
-    if (initialIsa.getAddress() == null) {
-      throw new IllegalArgumentException("Failed resolve of " + initialIsa);
-    }
-    priority = createPriority();
-    // Using Address means we don't get the IP too. Shorten it more even to just the host name
-    // w/o the domain.
-    final String name = rs.getProcessName() + "/" +
-        Address.fromParts(initialIsa.getHostName(), initialIsa.getPort()).toStringWithoutDomain();
-    // Set how many times to retry talking to another server over Connection.
-    ConnectionUtils.setServerSideHConnectionRetriesConfig(conf, name, LOG);
-    rpcServer = createRpcServer(rs, rpcSchedulerFactory, bindAddress, name);
+        conf.getBoolean(REJECT_BATCH_ROWS_OVER_THRESHOLD, DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD);
     rpcServer.setRsRpcServices(this);
     if (!(rs instanceof HMaster)) {
       rpcServer.setNamedQueueRecorder(rs.getNamedQueueRecorder());
@@ -1261,50 +1208,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     minimumScanTimeLimitDelta = conf.getLong(
       REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA,
       DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA);
-
-    final InetSocketAddress address = rpcServer.getListenerAddress();
-    if (address == null) {
-      throw new IOException("Listener channel is closed");
-    }
-    // Set our address, however we need the final port that was given to rpcServer
-    isa = new InetSocketAddress(initialIsa.getHostName(), address.getPort());
-    rpcServer.setErrorHandler(this);
-    rs.setName(name);
-
+    priority = createPriority();
     closedScanners = CacheBuilder.newBuilder()
         .expireAfterAccess(scannerLeaseTimeoutPeriod, TimeUnit.MILLISECONDS).build();
   }
 
-  protected RpcServerInterface createRpcServer(
-      final Server server,
-      final RpcSchedulerFactory rpcSchedulerFactory,
-      final InetSocketAddress bindAddress,
-      final String name
-  ) throws IOException {
-    final Configuration conf = server.getConfiguration();
-    boolean reservoirEnabled = conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true);
-    try {
-      return RpcServerFactory.createRpcServer(server, name, getServices(),
-          bindAddress, // use final bindAddress for this server.
-          conf, rpcSchedulerFactory.create(conf, this, server), reservoirEnabled);
-    } catch (BindException be) {
-      throw new IOException(be.getMessage() + ". To switch ports use the '"
-          + HConstants.REGIONSERVER_PORT + "' configuration property.",
-          be.getCause() != null ? be.getCause() : be);
-    }
-  }
-
+  @Override
   protected Class<?> getRpcSchedulerFactoryClass() {
     final Configuration conf = regionServer.getConfiguration();
     return conf.getClass(REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
       SimpleRpcSchedulerFactory.class);
-  }
-
-  @Override
-  public void onConfigurationChange(Configuration newConf) {
-    if (rpcServer instanceof ConfigurationObserver) {
-      ((ConfigurationObserver)rpcServer).onConfigurationChange(newConf);
-    }
   }
 
   protected PriorityFunction createPriority() {
@@ -1522,16 +1435,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (KeeperException e) {
       LOG.error("ZooKeeper permission watcher initialization failed", e);
     }
-    this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.serverName);
+    this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.getServerName());
     rpcServer.start();
   }
 
-  void stop() {
+  @Override
+  protected void stop() {
     if (zkPermissionWatcher != null) {
       zkPermissionWatcher.close();
     }
     closeAllScanners();
-    rpcServer.stop();
+    super.stop();
   }
 
   /**
@@ -1540,17 +1454,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // TODO : Rename this and HMaster#checkInitialized to isRunning() (or a better name).
   protected void checkOpen() throws IOException {
     if (regionServer.isAborted()) {
-      throw new RegionServerAbortedException("Server " + regionServer.serverName + " aborting");
+      throw new RegionServerAbortedException(
+          "Server " + regionServer.getServerName() + " aborting");
     }
     if (regionServer.isStopped()) {
-      throw new RegionServerStoppedException("Server " + regionServer.serverName + " stopping");
+      throw new RegionServerStoppedException(
+          "Server " + regionServer.getServerName() + " stopping");
     }
     if (!regionServer.isDataFileSystemOk()) {
       throw new RegionServerStoppedException("File system not available");
     }
     if (!regionServer.isOnline()) {
-      throw new ServerNotRunningYetException("Server " + regionServer.serverName
-          + " is not running yet");
+      throw new ServerNotRunningYetException(
+          "Server " + regionServer.getServerName() + " is not running yet");
     }
   }
 
@@ -1562,6 +1478,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @return immutable list of blocking services and the security info classes that this server
    * supports
    */
+  @Override
   protected List<BlockingServiceAndInterface> getServices() {
     boolean admin =
       getConfiguration().getBoolean(REGIONSERVER_ADMIN_SERVICE_CONFIG, true);
@@ -1594,38 +1511,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public long getDeadline(RequestHeader header, Message param) {
     return priority.getDeadline(header, param);
-  }
-
-  /*
-   * Check if an OOME and, if so, abort immediately to avoid creating more objects.
-   *
-   * @param e
-   *
-   * @return True if we OOME'd and are aborting.
-   */
-  @Override
-  public boolean checkOOME(final Throwable e) {
-    return exitIfOOME(e);
-  }
-
-  public static boolean exitIfOOME(final Throwable e ){
-    boolean stop = false;
-    try {
-      if (e instanceof OutOfMemoryError
-          || (e.getCause() != null && e.getCause() instanceof OutOfMemoryError)
-          || (e.getMessage() != null && e.getMessage().contains(
-              "java.lang.OutOfMemoryError"))) {
-        stop = true;
-        LOG.error(HBaseMarkers.FATAL, "Run out of memory; "
-          + RSRpcServices.class.getSimpleName() + " will abort itself immediately",
-          e);
-      }
-    } finally {
-      if (stop) {
-        Runtime.getRuntime().halt(1);
-      }
-    }
-    return stop;
   }
 
   /**
@@ -1927,7 +1812,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     requestCount.increment();
     int infoPort = regionServer.infoServer != null ? regionServer.infoServer.getPort() : -1;
-    return ResponseConverter.buildGetServerInfoResponse(regionServer.serverName, infoPort);
+    return ResponseConverter.buildGetServerInfoResponse(regionServer.getServerName(), infoPort);
   }
 
   @Override
@@ -1976,10 +1861,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   private void throwOnWrongStartCode(long serverStartCode) throws ServiceException {
     // check that we are the same server that this RPC is intended for.
-    if (regionServer.serverName.getStartcode() != serverStartCode) {
+    if (regionServer.getServerName().getStartcode() != serverStartCode) {
       throw new ServiceException(new DoNotRetryIOException(
         "This RPC was intended for a " + "different server with startCode: " + serverStartCode +
-          ", this server is: " + regionServer.serverName));
+          ", this server is: " + regionServer.getServerName()));
     }
   }
 
@@ -2051,7 +1936,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         try {
           while (System.currentTimeMillis() <= endTime
               && !regionServer.isStopped() && !regionServer.isOnline()) {
-            regionServer.online.wait(regionServer.msgInterval);
+            regionServer.online.wait(regionServer.getMsgInterval());
           }
           checkOpen();
         } catch (InterruptedException t) {
@@ -2406,10 +2291,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final BulkLoadHFileRequest request) throws ServiceException {
     long start = EnvironmentEdgeManager.currentTime();
     List<String> clusterIds = new ArrayList<>(request.getClusterIdsList());
-    if(clusterIds.contains(this.regionServer.clusterId)){
+    if(clusterIds.contains(this.regionServer.getClusterId())){
       return BulkLoadHFileResponse.newBuilder().setLoaded(true).build();
     } else {
-      clusterIds.add(this.regionServer.clusterId);
+      clusterIds.add(this.regionServer.getClusterId());
     }
     try {
       checkOpen();

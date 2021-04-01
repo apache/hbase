@@ -305,6 +305,29 @@ public final class HConstants {
   public static final String REGIONSERVER_INFO_PORT_AUTO =
       REGIONSERVER_INFO_PORT + ".auto";
 
+
+  /** Parameter name for port compaction server listens on. */
+  public static final String COMPACTION_SERVER_PORT = "hbase.compaction.server.port";
+
+  /** Default port compaction server listens on. */
+  public static final int DEFAULT_COMPACTION_SERVER_PORT = 16040;
+
+  /** default port for compaction server web api */
+  public static final int DEFAULT_COMPACTION_SERVER_INFOPORT = 16050;
+
+  /** A configuration key for compaction server info port */
+  public static final String COMPACTION_SERVER_INFO_PORT =
+    "hbase.compaction.server.info.port";
+
+  /** A flag that enables automatic selection of compaction server info port */
+  public static final String COMPACTION_SERVER_INFO_PORT_AUTO =
+    COMPACTION_SERVER_INFO_PORT + ".auto";
+
+  /** Parameter name for what compaction server implementation to use. */
+  public static final String COMPACTION_SERVER_IMPL= "hbase.compaction.server.impl";
+
+  public static final String COMPACTION_SERVER_MSG_INTERVAL = "hbase.compaction.server.msginterval";
+
   /** Parameter name for what region server implementation to use. */
   public static final String REGION_SERVER_IMPL= "hbase.regionserver.impl";
 
