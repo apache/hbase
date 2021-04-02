@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
@@ -188,7 +187,6 @@ public class RegionState {
   // The duration of region in transition
   private long ritDuration;
 
-  @VisibleForTesting
   public static RegionState createForTesting(RegionInfo region, State state) {
     return new RegionState(region, state, System.currentTimeMillis(), null);
   }

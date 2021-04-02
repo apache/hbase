@@ -586,4 +586,39 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     }
 
   }
+
+  @Test
+  public void testTableConstraint() throws Exception {
+    String prefix = name.getMethodName();
+    String ns = prefix + "_ns";
+    TableName tableName = TableName.valueOf(ns + ":" + "t");
+    String nsGroup = prefix + "_nsg";
+    String tableGroup = prefix + "_tg";
+    addGroup(nsGroup, 1);
+    addGroup(tableGroup, 1);
+    ADMIN.createNamespace(NamespaceDescriptor.create(ns).build());
+    TEST_UTIL.createTable(tableName, "C");
+    TEST_UTIL.waitTableAvailable(tableName);
+    assertEquals(ADMIN.getRSGroup(tableName).getName(), RSGroupInfo.DEFAULT_GROUP);
+    // set table's rsgroup
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
+        .setRegionServerGroup(tableGroup).build();
+    ADMIN.modifyTable(td);
+    TEST_UTIL.waitUntilNoRegionsInTransition();
+    assertEquals(ADMIN.getRSGroup(tableName).getName(), tableGroup);
+    // set namespace's rsgroup
+    NamespaceDescriptor nd = NamespaceDescriptor.create(ADMIN.getNamespaceDescriptor(ns))
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, nsGroup).build();
+    ADMIN.modifyNamespace(nd);
+    assertEquals(ADMIN.getRSGroup(tableName).getName(), tableGroup);
+    // clear table's rsgroup
+    td = TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
+        .setRegionServerGroup(null).build();
+    ADMIN.modifyTable(td);
+    TEST_UTIL.waitUntilNoRegionsInTransition();
+    assertEquals(ADMIN.getRSGroup(tableName).getName(), nsGroup);
+
+    TEST_UTIL.deleteTable(tableName);
+    ADMIN.deleteNamespace(ns);
+  }
 }

@@ -25,7 +25,7 @@ pipeline {
         // N.B. this is per-branch, which means per PR
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '15'))
-        timeout (time: 7, unit: 'HOURS')
+        timeout (time: 10, unit: 'HOURS')
         timestamps()
         skipDefaultCheckout()
     }
@@ -37,14 +37,14 @@ pipeline {
         DOCKERFILE_REL = "${SRC_REL}/dev-support/docker/Dockerfile"
         YETUS_DRIVER_REL = "${SRC_REL}/dev-support/jenkins_precommit_github_yetus.sh"
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION = 'rel/0.11.1'
-        GENERAL_CHECK_PLUGINS = 'all,-compile,-javac,-javadoc,-jira,-shadedjars,-unit'
+        YETUS_VERSION = 'rel/0.12.0'
+        GENERAL_CHECK_PLUGINS = 'all,-javadoc,-jira,-shadedjars,-unit'
         JDK_SPECIFIC_PLUGINS = 'compile,github,htmlout,javac,javadoc,maven,mvninstall,shadedjars,unit'
         // output from surefire; sadly the archive function in yetus only works on file names.
         ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump'
         // These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
         TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite'
-        EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${CHANGE_TARGET}/lastSuccessfulBuild/artifact/excludes"
+        EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${CHANGE_TARGET}/lastSuccessfulBuild/artifact/output/excludes"
 
         // a global view of paths. parallel stages can land on the same host concurrently, so each
         // stage works in its own subdirectory. there is an "output" under each of these
@@ -168,6 +168,7 @@ pipeline {
                         BUILD_URL_ARTIFACTS = "artifact/${WORKDIR_REL}/${PATCH_REL}"
                         DOCKERFILE = "${WORKDIR}/${DOCKERFILE_REL}"
                         YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
+                        SKIP_ERRORPRONE = true
                     }
                     steps {
                         dir("${SOURCEDIR}") {
@@ -222,7 +223,7 @@ pipeline {
                               // Has to be relative to WORKSPACE
                               reportDir: "${WORKDIR_REL}/${PATCH_REL}",
                               reportFiles: 'report.html',
-                              reportName: 'PR JDK8 Hadoop2 Check Report'
+                              reportName: 'PR JDK8 Hadoop3 Check Report'
                             ]
                         }
                         // Jenkins pipeline jobs fill slaves on PRs without this :(
@@ -268,6 +269,7 @@ pipeline {
                         BUILD_URL_ARTIFACTS = "artifact/${WORKDIR_REL}/${PATCH_REL}"
                         DOCKERFILE = "${WORKDIR}/${DOCKERFILE_REL}"
                         YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
+                        SKIP_ERRORPRONE = true
                     }
                     steps {
                         dir("${SOURCEDIR}") {

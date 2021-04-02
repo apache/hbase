@@ -155,6 +155,21 @@ public final class HConstants {
   /** Default value for the balancer period */
   public static final int DEFAULT_HBASE_BALANCER_PERIOD = 300000;
 
+  /**
+   * Config key for enable/disable automatically separate child regions to different region servers
+   * in the procedure of split regions. One child will be kept to the server where parent
+   * region is on, and the other child will be assigned to a random server.
+   * See HBASE-25518.
+   */
+  public static final String HBASE_ENABLE_SEPARATE_CHILD_REGIONS =
+    "hbase.master.auto.separate.child.regions.after.split.enabled";
+
+  /**
+   * Default value for automatically separate child regions to different region servers
+   * (set to "false" to keep all child regions to the server where parent region is on)
+   */
+  public static final boolean DEFAULT_HBASE_ENABLE_SEPARATE_CHILD_REGIONS = false;
+
   /** The name of the ensemble table */
   public static final TableName ENSEMBLE_TABLE_NAME = TableName.valueOf("hbase:ensemble");
 
@@ -689,6 +704,14 @@ public final class HConstants {
   public static final int HOUR_IN_SECONDS = 60 * 60;
   public static final int MINUTE_IN_SECONDS = 60;
 
+  /**
+   * KB, MB, GB, TB equivalent to how many bytes
+   */
+  public static final long KB_IN_BYTES = 1024;
+  public static final long MB_IN_BYTES = 1024 * KB_IN_BYTES;
+  public static final long GB_IN_BYTES = 1024 * MB_IN_BYTES;
+  public static final long TB_IN_BYTES = 1024 * GB_IN_BYTES;
+
   //TODO: although the following are referenced widely to format strings for
   //      the shell. They really aren't a part of the public API. It would be
   //      nice if we could put them somewhere where they did not need to be
@@ -945,6 +968,17 @@ public final class HConstants {
    * Default value of {@link #HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY}
    */
   public static final int DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT = 10000;
+
+  /**
+   * Retry pause time for short operation RPC
+   */
+  public static final String HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME =
+      "hbase.rpc.shortoperation.retry.pause.time";
+
+  /**
+   * Default value of {@link #HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME}
+   */
+  public static final long DEFAULT_HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME = 1000;
 
   /**
    * Value indicating the server name was saved with no sequence number.
@@ -1298,7 +1332,9 @@ public final class HConstants {
 
   /**
    * Drop edits for tables that been deleted from the replication source and target
-   * @deprecated moved it into HBaseInterClusterReplicationEndpoint
+   * @deprecated since 3.0.0. Will be removed in 4.0.0.
+   *             Moved it into HBaseInterClusterReplicationEndpoint.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24359">HBASE-24359</a>
    */
   @Deprecated
   public static final String REPLICATION_DROP_ON_DELETED_TABLE_KEY =
@@ -1327,9 +1363,7 @@ public final class HConstants {
   public static final String BUCKET_CACHE_IOENGINE_KEY = "hbase.bucketcache.ioengine";
 
   /**
-   * When using bucket cache, this is a float that EITHER represents a percentage of total heap
-   * memory size to give to the cache (if &lt; 1.0) OR, it is the capacity in
-   * megabytes of the cache.
+   * When using bucket cache, it is the capacity in megabytes of the cache.
    */
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
 
@@ -1525,6 +1559,13 @@ public final class HConstants {
   public static final String MASTER_SERVER_OPERATIONS_THREADS =
       "hbase.master.executor.serverops.threads";
   public static final int MASTER_SERVER_OPERATIONS_THREADS_DEFAULT = 5;
+
+  /**
+   * Number of threads used to dispatch merge operations to the regionservers.
+   */
+  public static final String MASTER_MERGE_DISPATCH_THREADS =
+      "hbase.master.executor.merge.dispatch.threads";
+  public static final int MASTER_MERGE_DISPATCH_THREADS_DEFAULT = 2;
 
   public static final String MASTER_META_SERVER_OPERATIONS_THREADS =
       "hbase.master.executor.meta.serverops.threads";

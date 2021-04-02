@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
-
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
 public class CurrentHourProvider {
-  private CurrentHourProvider() { throw new AssertionError(); }
+
+  private CurrentHourProvider() {
+    throw new AssertionError();
+  }
 
   private static final class Tick {
     final int currentHour;
@@ -38,8 +40,7 @@ public class CurrentHourProvider {
     }
   }
 
-  @VisibleForTesting
-  static Tick nextTick() {
+  private static Tick nextTick() {
     Calendar calendar = new GregorianCalendar();
     calendar.setTimeInMillis(EnvironmentEdgeManager.currentTime());
     int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
@@ -54,16 +55,21 @@ public class CurrentHourProvider {
     calendar.set(Calendar.MILLISECOND, 0);
   }
 
-  @VisibleForTesting
-  static volatile Tick tick = nextTick();
+  private static volatile Tick tick = nextTick();
 
   public static int getCurrentHour() {
     Tick tick = CurrentHourProvider.tick;
     if (EnvironmentEdgeManager.currentTime() < tick.expirationTimeInMillis) {
       return tick.currentHour;
     }
-
-    CurrentHourProvider.tick = tick = nextTick();
+    tick = nextTick();
+    CurrentHourProvider.tick = tick;
     return tick.currentHour;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  static void advanceTick() {
+    tick = nextTick();
   }
 }

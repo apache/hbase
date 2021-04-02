@@ -58,7 +58,7 @@ Example code.
 
     * CPP: hbase-examples/src/main/cpp/DemoClient.cpp
       1. Make sure you have Thrift C++ libraries; modify Makefile if necessary.
-        The recent (0.13.0 as of this writing) version of Thrift can be downloaded from http://thrift.apache.org/download/.
+        The recent (0.14.1 as of this writing) version of Thrift can be downloaded from http://thrift.apache.org/download/.
       2. Execute {make}.
       3. Execute {./DemoClient <host> <port>}.
 

@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -106,7 +105,6 @@ public final class ExportUtils {
     return new Triple<>(TableName.valueOf(args[0]), getScanFromCommandLine(conf, args), new Path(args[1]));
   }
 
-  @VisibleForTesting
   static Scan getScanFromCommandLine(Configuration conf, String[] args) throws IOException {
     Scan s = new Scan();
     // Optional arguments.

@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,7 +41,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
@@ -122,7 +120,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     } else if (poolSize.matches("0.[0-9]+|1.0")) {
       // if poolSize is a double, return poolSize * availableProcessors;
       // Ensure that we always return at least one.
-      int computedThreads = (int) (AVAIL_PROCESSORS * Double.valueOf(poolSize));
+      int computedThreads = (int) (AVAIL_PROCESSORS * Double.parseDouble(poolSize));
       if (computedThreads < 1) {
         LOG.debug("Computed {} threads for CleanerChore, using 1 instead", computedThreads);
         return 1;
@@ -373,7 +371,6 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     }
   }
 
-  @VisibleForTesting
   int getChorePoolSize() {
     return pool.getSize();
   }
@@ -471,9 +468,14 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       LOG.debug("Couldn't delete '{}' yet because it isn't empty w/exception.", dir, exception);
       deleted = false;
     } catch (IOException ioe) {
-      LOG.info("Could not delete {} under {}. might be transient; we'll retry. if it keeps "
-          + "happening, use following exception when asking on mailing list.",
-        type, dir, ioe);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Could not delete {} under {}; will retry. If it keeps happening, " +
+            "quote the exception when asking on mailing list.", type, dir, ioe);
+      } else {
+        LOG.info("Could not delete {} under {} because {}; will retry. If it  keeps happening, enable" +
+            "TRACE-level logging and quote the exception when asking on mailing list.",
+            type, dir, ioe.getMessage());
+      }
       deleted = false;
     } catch (Exception e) {
       LOG.info("unexpected exception: ", e);

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
@@ -101,7 +102,7 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
   }
 
   private void waitForRSShutdownToStartAndFinish(JVMClusterUtil.MasterThread activeMaster,
-      ServerName serverName) throws InterruptedException {
+      ServerName serverName) throws InterruptedException, IOException {
     ServerManager sm = activeMaster.getMaster().getServerManager();
     // First wait for it to be in dead list
     while (!sm.getDeadServers().isDeadServer(serverName)) {

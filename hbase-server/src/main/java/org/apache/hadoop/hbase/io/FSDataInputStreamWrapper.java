@@ -21,20 +21,17 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
  * Wrapper for input stream(s) that takes care of the interaction of FS and HBase checksums,
@@ -173,13 +170,11 @@ public class FSDataInputStreamWrapper implements Closeable {
   }
 
   /** For use in tests. */
-  @VisibleForTesting
   public FSDataInputStreamWrapper(FSDataInputStream fsdis) {
     this(fsdis, fsdis);
   }
 
   /** For use in tests. */
-  @VisibleForTesting
   public FSDataInputStreamWrapper(FSDataInputStream fsdis, FSDataInputStream noChecksum) {
     doCloseStreams = false;
     stream = fsdis;
@@ -294,11 +289,11 @@ public class FSDataInputStreamWrapper implements Closeable {
     }
     updateInputStreamStatistics(this.streamNoFsChecksum);
     // we do not care about the close exception as it is for reading, no data loss issue.
-    IOUtils.closeQuietly(streamNoFsChecksum);
+    Closeables.closeQuietly(streamNoFsChecksum);
 
 
     updateInputStreamStatistics(stream);
-    IOUtils.closeQuietly(stream);
+    Closeables.closeQuietly(stream);
   }
 
   public HFileSystem getHfs() {

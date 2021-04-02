@@ -254,8 +254,11 @@ class MutableRegionInfo implements RegionInfo {
 
   /**
    * @return True if this region is offline.
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-25210">HBASE-25210</a>
    */
   @Override
+  @Deprecated
   public boolean isOffline() {
     return this.offLine;
   }
@@ -273,8 +276,11 @@ class MutableRegionInfo implements RegionInfo {
 
   /**
    * @return True if this is a split parent region.
+   * @deprecated since 3.0.0 and will be removed in 4.0.0, Use {@link #isSplit()} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-25210">HBASE-25210</a>
    */
   @Override
+  @Deprecated
   public boolean isSplitParent() {
     if (!isSplit()) {
       return false;

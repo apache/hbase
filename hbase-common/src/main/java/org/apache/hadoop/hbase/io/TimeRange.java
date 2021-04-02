@@ -18,24 +18,23 @@
 
 package org.apache.hadoop.hbase.io;
 
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Represents an interval of version timestamps. Presumes timestamps between
  * {@link #INITIAL_MIN_TIMESTAMP} and {@link #INITIAL_MAX_TIMESTAMP} only. Gets freaked out if
  * passed a timestamp that is < {@link #INITIAL_MIN_TIMESTAMP},
- * <p>
+ * <p/>
  * Evaluated according to minStamp &lt;= timestamp &lt; maxStamp or [minStamp,maxStamp) in interval
  * notation.
- * <p>
+ * <p/>
  * Can be returned and read by clients. Should not be directly created by clients. Thus, all
  * constructors are purposely @InterfaceAudience.Private.
- * <p>
+ * <p/>
  * Immutable. Thread-safe.
  */
 @InterfaceAudience.Public
-public class TimeRange {
+public final class TimeRange {
   public static final long INITIAL_MIN_TIMESTAMP = 0L;
   public static final long INITIAL_MAX_TIMESTAMP = Long.MAX_VALUE;
   private static final TimeRange ALL_TIME = new TimeRange(INITIAL_MIN_TIMESTAMP,
@@ -85,66 +84,12 @@ public class TimeRange {
   private final boolean allTime;
 
   /**
-   * Default constructor.
-   * Represents interval [0, Long.MAX_VALUE) (allTime)
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   * changed to private or removed in 3.0.
-   */
-  @Deprecated
-  @InterfaceAudience.Private
-  public TimeRange() {
-    this(INITIAL_MIN_TIMESTAMP, INITIAL_MAX_TIMESTAMP);
-  }
-
-  /**
-   * Represents interval [minStamp, Long.MAX_VALUE)
-   * @param minStamp the minimum timestamp value, inclusive
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   * changed to private or removed in 3.0.
-   */
-  @Deprecated
-  @InterfaceAudience.Private
-  public TimeRange(long minStamp) {
-    this(minStamp, INITIAL_MAX_TIMESTAMP);
-  }
-
-  /**
-   * Represents interval [minStamp, Long.MAX_VALUE)
-   * @param minStamp the minimum timestamp value, inclusive
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   * changed to private or removed in 3.0.
-   */
-  @Deprecated
-  @InterfaceAudience.Private
-  public TimeRange(byte [] minStamp) {
-    this(Bytes.toLong(minStamp));
-  }
-
-  /**
-   * Represents interval [minStamp, maxStamp)
-   * @param minStamp the minimum timestamp, inclusive
-   * @param maxStamp the maximum timestamp, exclusive
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   * changed to private or removed in 3.0.
-   */
-  @Deprecated
-  @InterfaceAudience.Private
-  public TimeRange(byte [] minStamp, byte [] maxStamp) {
-    this(Bytes.toLong(minStamp), Bytes.toLong(maxStamp));
-  }
-
-  /**
    * Represents interval [minStamp, maxStamp)
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
    * @throws IllegalArgumentException if either <0,
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   * changed to private or removed in 3.0.
    */
-  @Deprecated
-  @InterfaceAudience.Private
-  public TimeRange(long minStamp, long maxStamp) {
-    check(minStamp, maxStamp);
+  private TimeRange(long minStamp, long maxStamp) {
     this.minStamp = minStamp;
     this.maxStamp = maxStamp;
     this.allTime = isAllTime(minStamp, maxStamp);
@@ -188,27 +133,8 @@ public class TimeRange {
 
   /**
    * Check if the specified timestamp is within this TimeRange.
-   * <p>
+   * <p/>
    * Returns true if within interval [minStamp, maxStamp), false if not.
-   * @param bytes timestamp to check
-   * @param offset offset into the bytes
-   * @return true if within TimeRange, false if not
-   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
-   *   changed to private or removed in 3.0. Use {@link #withinTimeRange(long)} instead
-   */
-  @Deprecated
-  public boolean withinTimeRange(byte [] bytes, int offset) {
-    if (allTime) {
-      return true;
-    }
-    return withinTimeRange(Bytes.toLong(bytes, offset));
-  }
-
-  /**
-   * Check if the specified timestamp is within this TimeRange.
-   * <p>
-   * Returns true if within interval [minStamp, maxStamp), false
-   * if not.
    * @param timestamp timestamp to check
    * @return true if within TimeRange, false if not
    */

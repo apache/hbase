@@ -37,9 +37,9 @@ pipeline {
   stages {
     stage ('generate hbase website') {
       tools {
-        maven 'Maven (latest)'
+        maven 'maven_latest'
         // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
-        jdk "JDK 1.8 (latest)"
+        jdk "jdk_1.8_latest"
       }
       steps {
         dir('hbase') {

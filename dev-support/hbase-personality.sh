@@ -318,7 +318,7 @@ function get_include_exclude_tests_arg
       fi
   else
     # Use branch specific exclude list when EXCLUDE_TESTS_URL and INCLUDE_TESTS_URL are empty
-    FLAKY_URL="https://ci-hadoop.apache.org/job/HBase/job/HBase-Find-Flaky-Tests/job/${PATCH_BRANCH}/lastSuccessfulBuild/artifact/excludes/"
+    FLAKY_URL="https://ci-hadoop.apache.org/job/HBase/job/HBase-Find-Flaky-Tests/job/${PATCH_BRANCH}/lastSuccessfulBuild/artifact/output/excludes"
     if wget "${FLAKY_URL}" -O "excludes"; then
       excludes=$(cat excludes)
         yetus_debug "excludes=${excludes}"
@@ -563,9 +563,9 @@ function hadoopcheck_rebuild
   elif [[ "${PATCH_BRANCH}" = branch-1 ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-1 rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.8.5 2.9.2"
+      hbase_hadoop2_versions="2.10.0"
     else
-      hbase_hadoop2_versions="2.8.5 2.9.2"
+      hbase_hadoop2_versions="2.10.0"
     fi
   elif [[ "${PATCH_BRANCH}" = branch-2.0 ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-2.0 rules."

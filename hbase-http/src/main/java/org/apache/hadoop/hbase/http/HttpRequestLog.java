@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase.http;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.CustomRequestLog;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLog;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLogWriter;
 
 /**
  * RequestLog object for use with Http
@@ -38,9 +39,9 @@ public final class HttpRequestLog {
       name = lookup;
     }
     String loggerName = "http.requests." + name;
-    Slf4jRequestLog logger = new Slf4jRequestLog();
-    logger.setLoggerName(loggerName);
-    return logger;
+    Slf4jRequestLogWriter writer = new Slf4jRequestLogWriter();
+    writer.setLoggerName(loggerName);
+    return new CustomRequestLog(writer, CustomRequestLog.EXTENDED_NCSA_FORMAT);
   }
 
   private HttpRequestLog() {

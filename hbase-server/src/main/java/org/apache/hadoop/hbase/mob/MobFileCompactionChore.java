@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactionState;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
@@ -41,9 +40,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 
 /**
  * Periodic MOB compaction chore.
@@ -75,7 +71,6 @@ public class MobFileCompactionChore extends ScheduledChore {
 
   }
 
-  @VisibleForTesting
   public MobFileCompactionChore(Configuration conf, int batchSize) {
     this.regionBatchSize = batchSize;
   }
@@ -85,9 +80,7 @@ public class MobFileCompactionChore extends ScheduledChore {
 
     boolean reported = false;
 
-    try (Connection conn = master.getConnection();
-        Admin admin = conn.getAdmin();) {
-
+    try (Admin admin = master.getConnection().getAdmin()) {
       TableDescriptors htds = master.getTableDescriptors();
       Map<String, TableDescriptor> map = htds.getAll();
       for (TableDescriptor htd : map.values()) {
@@ -146,7 +139,6 @@ public class MobFileCompactionChore extends ScheduledChore {
     }
   }
 
-  @VisibleForTesting
   public void performMajorCompactionInBatches(Admin admin, TableDescriptor htd,
       ColumnFamilyDescriptor hcd) throws IOException, InterruptedException {
 

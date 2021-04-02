@@ -127,7 +127,7 @@ public class ZKLeaderManager extends ZKListener {
           ZKUtil.deleteNode(watcher, leaderZNode);
           leaderExists.set(false);
         } else {
-          LOG.info("Found existing leader with ID: {}", Bytes.toStringBinary(nodeId));
+          LOG.info("Found existing leader with ID: {}", Bytes.toStringBinary(currentId));
           leaderExists.set(true);
         }
       } catch (KeeperException ke) {

@@ -571,6 +571,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String RPC_SCAN_REQUEST_COUNT = "rpcScanRequestCount";
   String RPC_SCAN_REQUEST_COUNT_DESC =
       "Number of rpc scan requests this RegionServer has answered.";
+  String RPC_FULL_SCAN_REQUEST_COUNT = "rpcFullScanRequestCount";
+  String RPC_FULL_SCAN_REQUEST_COUNT_DESC =
+      "Number of rpc scan requests that were possible full region scans.";
   String RPC_MULTI_REQUEST_COUNT = "rpcMultiRequestCount";
   String RPC_MULTI_REQUEST_COUNT_DESC =
       "Number of rpc multi requests this RegionServer has answered.";

@@ -26,15 +26,15 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
-import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.NoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
+import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
@@ -52,7 +52,6 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation that can handle all hfile versions of {@link HFile.Reader}.
@@ -233,7 +232,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     return this.hfileContext.getCellComparator();
   }
 
-  @VisibleForTesting
   public Compression.Algorithm getCompressionAlgorithm() {
     return trailer.getCompressionCodec();
   }
@@ -322,6 +320,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     private long currMemstoreTS;
     protected final HFile.Reader reader;
     private int currTagsLen;
+    private short rowLen;
     // buffer backed keyonlyKV
     private ByteBufferKeyOnlyKeyValue bufBackedKeyOnlyKv = new ByteBufferKeyOnlyKeyValue();
     // A pair for reusing in blockSeek() so that we don't garbage lot of objects
@@ -446,6 +445,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       this.currKeyLen = (int)(ll >> Integer.SIZE);
       this.currValueLen = (int)(Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
       checkKeyValueLen();
+      this.rowLen = blockBuffer.getShortAfterPosition(Bytes.SIZEOF_LONG);
       // Move position past the key and value lengths and then beyond the key and value
       int p = (Bytes.SIZEOF_LONG + currKeyLen + currValueLen);
       if (reader.getFileContext().isIncludesTags()) {
@@ -554,8 +554,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
               + " path=" + reader.getPath());
         }
         offsetFromPos += Bytes.SIZEOF_LONG;
+        this.rowLen = blockBuffer.getShortAfterPosition(offsetFromPos);
         blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
-        bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen);
+        bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen, rowLen);
         int comp =
             PrivateCellUtil.compareKeyIgnoresMvcc(reader.getComparator(), key, bufBackedKeyOnlyKv);
         offsetFromPos += klen + vlen;
@@ -790,23 +791,28 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         // we can handle the 'no tags' case.
         if (currTagsLen > 0) {
           ret = new SizeCachedKeyValue(blockBuffer.array(),
-              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId);
+              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId, currKeyLen,
+              rowLen);
         } else {
           ret = new SizeCachedNoTagsKeyValue(blockBuffer.array(),
-              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId);
+              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId, currKeyLen,
+              rowLen);
         }
       } else {
         ByteBuffer buf = blockBuffer.asSubByteBuffer(cellBufSize);
         if (buf.isDirect()) {
-          ret = currTagsLen > 0 ? new ByteBufferKeyValue(buf, buf.position(), cellBufSize, seqId)
-              : new NoTagsByteBufferKeyValue(buf, buf.position(), cellBufSize, seqId);
+          ret = currTagsLen > 0
+              ? new SizeCachedByteBufferKeyValue(buf, buf.position(), cellBufSize, seqId,
+                  currKeyLen, rowLen)
+              : new SizeCachedNoTagsByteBufferKeyValue(buf, buf.position(), cellBufSize, seqId,
+                  currKeyLen, rowLen);
         } else {
           if (currTagsLen > 0) {
             ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
-                cellBufSize, seqId);
+                cellBufSize, seqId, currKeyLen, rowLen);
           } else {
             ret = new SizeCachedNoTagsKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
-                cellBufSize, seqId);
+                cellBufSize, seqId, currKeyLen, rowLen);
           }
         }
       }
@@ -1060,7 +1066,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     public int compareKey(CellComparator comparator, Cell key) {
       blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, pair);
-      this.bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), currKeyLen);
+      this.bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), currKeyLen, rowLen);
       return PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, this.bufBackedKeyOnlyKv);
     }
 
@@ -1619,7 +1625,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * not completed, true otherwise
    */
   @Override
-  @VisibleForTesting
   public boolean prefetchComplete() {
     return PrefetchExecutor.isCompleted(path);
   }
@@ -1637,7 +1642,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * @return Scanner on this file.
    */
   @Override
-  @VisibleForTesting
   public HFileScanner getScanner(boolean cacheBlocks, final boolean pread) {
     return getScanner(cacheBlocks, pread, false);
   }

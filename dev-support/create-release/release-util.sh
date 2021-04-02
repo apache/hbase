@@ -16,6 +16,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+# Source this file if you want to use any of its utiilty (also useful
+# testing the below functions). Do "$ . ./release-util.sh" and then
+# you can do stuff like call the CHANGES updating function
+# update_releasenotes:
+#
+#  $ update_releasenotes ~/checkouts/hbase.apache.git 2.3.4
+#
+# Just make sure any environment variables needed are predefined
+# in your context.
+#
 DRY_RUN=${DRY_RUN:-1} #default to dry run
 DEBUG=${DEBUG:-0}
 GPG=${GPG:-gpg}
@@ -26,10 +37,8 @@ fi
 # Maven Profiles for publishing snapshots and release to Maven Central and Dist
 PUBLISH_PROFILES=("-P" "apache-release,release")
 
-set -e
-
 function error {
-  echo "Error: $*" >&2
+  log "Error: $*" >&2
   exit 1
 }
 
@@ -54,8 +63,12 @@ function parse_version {
 function banner {
   local msg="$1"
   echo "========================"
-  echo "=== ${msg}"
+  log "${msg}"
   echo
+}
+
+function log {
+  echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") ${1}"
 }
 
 # current number of seconds since epoch
@@ -71,17 +84,17 @@ function run_silent {
   local -i stop_time
 
   banner "${BANNER}"
-  echo "Command: $*"
-  echo "Log file: $LOG_FILE"
+  log "Command: $*"
+  log "Log file: $LOG_FILE"
   start_time="$(get_ctime)"
 
   if ! "$@" 1>"$LOG_FILE" 2>&1; then
-    echo "Command FAILED. Check full logs for details."
+    log "Command FAILED. Check full logs for details."
     tail "$LOG_FILE"
     exit 1
   fi
   stop_time="$(get_ctime)"
-  echo "=== SUCCESS ($((stop_time - start_time)) seconds)"
+  log "SUCCESS ($((stop_time - start_time)) seconds)"
 }
 
 function fcreate_secure {
@@ -147,7 +160,7 @@ function get_release_info {
   local version
   version="$(curl -s "$ASF_REPO_WEBUI;a=blob_plain;f=pom.xml;hb=refs/heads/$GIT_BRANCH" |
     parse_version)"
-  echo "Current branch VERSION is $version."
+  log "Current branch VERSION is $version."
 
   NEXT_VERSION="$version"
   RELEASE_VERSION=""
@@ -199,7 +212,7 @@ function get_release_info {
   if git ls-remote --tags "$ASF_REPO" "$RELEASE_TAG" | grep -q "refs/tags/${RELEASE_TAG}$" ; then
     read -r -p "$RELEASE_TAG already exists. Continue anyway [y/n]? " ANSWER
     if [ "$ANSWER" != "y" ]; then
-      echo "Exiting."
+      log "Exiting."
       exit 1
     fi
     SKIP_TAG=1
@@ -209,7 +222,7 @@ function get_release_info {
 
   GIT_REF="$RELEASE_TAG"
   if is_dry_run; then
-    echo "This is a dry run. If tag does not actually exist, please confirm the ref that will be built for testing."
+    log "This is a dry run. If tag does not actually exist, please confirm the ref that will be built for testing."
     GIT_REF="$(read_config "GIT_REF" "$GIT_REF")"
   fi
   export GIT_REF
@@ -252,7 +265,7 @@ EOF
 
   read -r -p "Is this info correct [y/n]? " ANSWER
   if [ "$ANSWER" != "y" ]; then
-    echo "Exiting."
+    log "Exiting."
     exit 1
   fi
   GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
@@ -279,7 +292,7 @@ function is_debug {
 function check_get_passwords {
   for env in "$@"; do
     if [ -z "${!env}" ]; then
-      echo "The environment variable $env is not set. Please enter the password or passphrase."
+      log "The environment variable $env is not set. Please enter the password or passphrase."
       echo
       # shellcheck disable=SC2229
       stty -echo && printf "%s : " "$env" && read -r "$env" && printf '\n' && stty echo
@@ -293,7 +306,7 @@ function check_needed_vars {
   local missing=0
   for env in "$@"; do
     if [ -z "${!env}" ]; then
-      echo "$env must be set to run this script"
+      log "$env must be set to run this script"
       (( missing++ ))
     else
       # shellcheck disable=SC2163
@@ -322,7 +335,7 @@ function init_java {
     error "JAVA_HOME is not set."
   fi
   JAVA_VERSION=$("${JAVA_HOME}"/bin/javac -version 2>&1 | cut -d " " -f 2)
-  echo "java version: $JAVA_VERSION"
+  log "java version: $JAVA_VERSION"
   export JAVA_VERSION
 }
 
@@ -330,7 +343,7 @@ function init_python {
   if ! [ -x "$(command -v python2)"  ]; then
     error 'python2 needed by yetus. Install or add link? E.g: sudo ln -sf /usr/bin/python2.7 /usr/local/bin/python2'
   fi
-  echo "python version: $(python2 --version)"
+  log "python version: $(python2 --version)"
 }
 
 # Set MVN
@@ -357,7 +370,7 @@ function init_yetus {
   fi
   # Work around yetus bug by asking test-patch for the version instead of rdm.
   YETUS_VERSION=$("${YETUS_HOME}/bin/test-patch" --version)
-  echo "Apache Yetus version ${YETUS_VERSION}"
+  log "Apache Yetus version ${YETUS_VERSION}"
 }
 
 function configure_maven {
@@ -409,7 +422,7 @@ function git_clone_overwrite {
 
   if [[ -z "${GIT_REPO}" ]]; then
     asf_repo="gitbox.apache.org/repos/asf/${PROJECT}.git"
-    echo "[INFO] clone will be of the gitbox repo for ${PROJECT}."
+    log "Clone will be of the gitbox repo for ${PROJECT}."
     if [ -n "${ASF_USERNAME}" ] && [ -n "${ASF_PASSWORD}" ]; then
       # Ugly!
       encoded_username=$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''', '')")
@@ -419,7 +432,7 @@ function git_clone_overwrite {
       GIT_REPO="https://${asf_repo}"
     fi
   else
-    echo "[INFO] clone will be of provided git repo."
+    log "Clone will be of provided git repo."
   fi
   # N.B. we use the shared flag because the clone is short lived and if a local repo repo was
   #      given this will let us refer to objects there directly instead of hardlinks or copying.
@@ -440,7 +453,7 @@ function start_step {
   if [ -z "${name}" ]; then
     name="${FUNCNAME[1]}"
   fi
-  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') ${name} start" >&2
+  log "${name} start" >&2
   get_ctime
 }
 
@@ -452,7 +465,7 @@ function stop_step {
     name="${FUNCNAME[1]}"
   fi
   stop_time="$(get_ctime)"
-  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') ${name} stop ($((stop_time - start_time)) seconds)"
+  log "${name} stop ($((stop_time - start_time)) seconds)"
 }
 
 # Writes report into cwd!
@@ -465,8 +478,18 @@ function generate_api_report {
   local timing_token
   timing_token="$(start_step)"
   # Generate api report.
+  # Filter out some jar types. Filters are tricky. Python regex on
+  # file basename. Exclude the saved-aside original jars... they are
+  # not included in resulting artifact. Also, do not include the
+  # hbase-shaded-testing-util.*  jars. This jar is unzip'able on mac
+  # os x as is because has it a META_INF/LICENSE file and then a
+  # META_INF/license directory for the included jar's licenses;
+  # it fails to unjar on mac os x which this tool does making its checks
+  # (Its exclusion should be fine; it is just an aggregate of other jars).
   "${project}"/dev-support/checkcompatibility.py --annotation \
     org.apache.yetus.audience.InterfaceAudience.Public  \
+    -e "original-hbase.*.jar" \
+    -e "hbase-shaded-testing-util.*.jar" \
     "$previous_tag" "$release_tag"
   previous_version="$(echo "${previous_tag}" | sed -e 's/rel\///')"
   cp "${project}/target/compat-check/report.html" "./api_compare_${previous_version}_to_${release_tag}.html"
@@ -474,6 +497,7 @@ function generate_api_report {
 }
 
 # Look up the Jira name associated with project.
+# Returns result on stdout.
 # Currently all the 'hbase-*' projects share the same HBASE jira name.  This works because,
 # by convention, the HBASE jira "Fix Version" field values have the sub-project name pre-pended,
 # as in "hbase-operator-tools-1.0.0".
@@ -501,10 +525,17 @@ function update_releasenotes {
   local jira_project
   local timing_token
   timing_token="$(start_step)"
+  changelog="CHANGELOG.${jira_fix_version}.md"
+  releasenotes="RELEASENOTES.${jira_fix_version}.md"
+  if [ -f ${changelog} ]; then
+    rm ${changelog}
+  fi
+  if [ -f ${releasenotes} ]; then
+    rm ${releasenotes}
+  fi
   jira_project="$(get_jira_name "$(basename "$project_dir")")"
   "${YETUS_HOME}/bin/releasedocmaker" -p "${jira_project}" --fileversions -v "${jira_fix_version}" \
-      -l --sortorder=newer --skip-credits
-  pwd
+      -l --sortorder=newer --skip-credits || true
   # First clear out the changes written by previous RCs.
   if [ -f "${project_dir}/CHANGES.md" ]; then
     sed -i -e \
@@ -517,24 +548,35 @@ function update_releasenotes {
         "${project_dir}/RELEASENOTES.md" || true
   fi
 
+  # Yetus will not generate CHANGES if no JIRAs fixed against the release version
+  # (Could happen if a release were bungled such that we had to make a new one
+  # without changes)
+  if [ ! -f "${changelog}" ]; then
+    echo -e "## Release ${jira_fix_version} - Unreleased (as of `date`)\nNo changes\n" > "${changelog}"
+  fi
+  if [ ! -f "${releasenotes}" ]; then
+    echo -e "# hbase ${jira_fix_version} Release Notes\nNo changes\n" > "${releasenotes}"
+  fi
+
   # The releasedocmaker call above generates RELEASENOTES.X.X.X.md and CHANGELOG.X.X.X.md.
   if [ -f "${project_dir}/CHANGES.md" ]; then
     # To insert into project's CHANGES.md...need to cut the top off the
     # CHANGELOG.X.X.X.md file removing license and first line and then
     # insert it after the license comment closing where we have a
     # DO NOT REMOVE marker text!
-    sed -i -e '/## Release/,$!d' "CHANGELOG.${jira_fix_version}.md"
-    sed -i -e "/DO NOT REMOVE/r CHANGELOG.${jira_fix_version}.md" "${project_dir}/CHANGES.md"
+    sed -i -e '/## Release/,$!d' "${changelog}"
+    sed -i -e '2,${/^# HBASE Changelog/d;}' "${project_dir}/CHANGES.md"
+    sed -i -e "/DO NOT REMOVE/r ${changelog}" "${project_dir}/CHANGES.md"
   else
-    mv "CHANGELOG.${jira_fix_version}.md" "${project_dir}/CHANGES.md"
+    mv "${changelog}" "${project_dir}/CHANGES.md"
   fi
   if [ -f "${project_dir}/RELEASENOTES.md" ]; then
     # Similar for RELEASENOTES but slightly different.
-    sed -i -e '/Release Notes/,$!d' "RELEASENOTES.${jira_fix_version}.md"
-    sed -i -e "/DO NOT REMOVE/r RELEASENOTES.${jira_fix_version}.md" \
-        "${project_dir}/RELEASENOTES.md"
+    sed -i -e '/Release Notes/,$!d' "${releasenotes}"
+    sed -i -e '2,${/^# RELEASENOTES/d;}' "${project_dir}/RELEASENOTES.md"
+    sed -i -e "/DO NOT REMOVE/r ${releasenotes}" "${project_dir}/RELEASENOTES.md"
   else
-    mv "RELEASENOTES.${jira_fix_version}.md" "${project_dir}/RELEASENOTES.md"
+    mv "${releasenotes}" "${project_dir}/RELEASENOTES.md"
   fi
   stop_step "${timing_token}"
 }
@@ -607,7 +649,7 @@ make_binary_release() {
     done
   else
     cd .. || exit
-    echo "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
+    log "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
   fi
 
   stop_step "${timing_token}"
@@ -630,7 +672,7 @@ function kick_gpg_agent {
 # Do maven command to set version into local pom
 function maven_set_version { #input: <version_to_set>
   local this_version="$1"
-  echo "${MVN[@]}" versions:set -DnewVersion="$this_version"
+  log "${MVN[@]}" versions:set -DnewVersion="$this_version"
   "${MVN[@]}" versions:set -DnewVersion="$this_version" | grep -v "no value" # silence logs
 }
 
@@ -661,19 +703,18 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   fi
   # Publish ${PROJECT} to Maven repo
   # shellcheck disable=SC2154
-  echo "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
-  echo "Publish version is $RELEASE_VERSION"
+  log "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
+  log "Publish version is $RELEASE_VERSION"
   # Coerce the requested version
   maven_set_version "$RELEASE_VERSION"
   # Prepare for signing
   kick_gpg_agent
-  declare -a mvn_goals=(clean install)
+  declare -a mvn_goals=(clean)
   if ! is_dry_run; then
     mvn_goals=("${mvn_goals[@]}" deploy)
   fi
-  echo "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
-      "${mvn_goals[@]}"
-  echo "Logging to ${mvn_log_file}.  This will take a while..."
+  log "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" "${mvn_goals[@]}"
+  log "Logging to ${mvn_log_file}.  This will take a while..."
   rm -f "$mvn_log_file"
   # The tortuous redirect in the next command allows mvn's stdout and stderr to go to mvn_log_file,
   # while also sending stderr back to the caller.
@@ -682,7 +723,7 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
       "${mvn_goals[@]}" 1>> "$mvn_log_file" 2> >( tee -a "$mvn_log_file" >&2 ); then
     error "Deploy build failed, for details see log at '$mvn_log_file'."
   fi
-  echo "BUILD SUCCESS."
+  log "BUILD SUCCESS."
   stop_step "${timing_token}"
   return 0
 }

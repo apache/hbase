@@ -41,7 +41,6 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -271,7 +270,6 @@ public class SnapshotFileCache implements Stoppable {
     this.snapshots.putAll(newSnapshots);
   }
 
-  @VisibleForTesting
   List<String> getSnapshotsInProgress() throws IOException {
     List<String> snapshotInProgress = Lists.newArrayList();
     // only add those files to the cache, but not to the known snapshots

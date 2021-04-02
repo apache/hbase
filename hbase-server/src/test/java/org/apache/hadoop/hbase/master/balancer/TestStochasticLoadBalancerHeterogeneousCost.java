@@ -76,6 +76,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
       RULES_FILE);
     BalancerTestBase.loadBalancer = new StochasticLoadBalancer();
     BalancerTestBase.loadBalancer.setConf(BalancerTestBase.conf);
+    BalancerTestBase.loadBalancer.getCandidateGenerators().add(new FairRandomCandidateGenerator());
   }
 
   @Test
@@ -278,5 +279,27 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     long startCode = rand.nextLong();
     ServerName sn = ServerName.valueOf(host, port, startCode);
     return new ServerAndLoad(sn, 0);
+  }
+
+  static class FairRandomCandidateGenerator extends
+    StochasticLoadBalancer.RandomCandidateGenerator {
+
+    @Override
+    public BaseLoadBalancer.Cluster.Action pickRandomRegions(BaseLoadBalancer.Cluster cluster,
+      int thisServer, int otherServer) {
+      if (thisServer < 0 || otherServer < 0) {
+        return BaseLoadBalancer.Cluster.NullAction;
+      }
+
+      int thisRegion = pickRandomRegion(cluster, thisServer, 0.5);
+      int otherRegion = pickRandomRegion(cluster, otherServer, 0.5);
+
+      return getAction(thisServer, thisRegion, otherServer, otherRegion);
+    }
+
+    @Override
+    BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
+      return super.generate(cluster);
+    }
   }
 }

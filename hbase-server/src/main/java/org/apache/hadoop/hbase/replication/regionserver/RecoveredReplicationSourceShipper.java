@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Threads;
@@ -40,9 +38,9 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   private final ReplicationQueueStorage replicationQueues;
 
   public RecoveredReplicationSourceShipper(Configuration conf, String walGroupId,
-      PriorityBlockingQueue<Path> queue, RecoveredReplicationSource source,
+      ReplicationSourceLogQueue logQueue, RecoveredReplicationSource source,
       ReplicationQueueStorage queueStorage) {
-    super(conf, walGroupId, queue, source);
+    super(conf, walGroupId, logQueue, source);
     this.source = source;
     this.replicationQueues = queueStorage;
   }
@@ -58,7 +56,7 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
     int numRetries = 0;
     while (numRetries <= maxRetriesMultiplier) {
       try {
-        source.locateRecoveredPaths(queue);
+        source.locateRecoveredPaths(walGroupId);
         break;
       } catch (IOException e) {
         LOG.error("Error while locating recovered queue paths, attempt #" + numRetries);
@@ -75,9 +73,9 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
     String peerClusterZNode = source.getQueueId();
     try {
       startPosition = this.replicationQueues.getWALPosition(source.getServer().getServerName(),
-        peerClusterZNode, this.queue.peek().getName());
-      LOG.trace("Recovered queue started with log {} at position {}", this.queue.peek(),
-        startPosition);
+        peerClusterZNode, this.logQueue.getQueue(walGroupId).peek().getName());
+      LOG.trace("Recovered queue started with log {} at position {}",
+        this.logQueue.getQueue(walGroupId).peek(), startPosition);
     } catch (ReplicationException e) {
       terminate("Couldn't get the position of this recovered queue " + peerClusterZNode, e);
     }

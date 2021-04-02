@@ -199,7 +199,8 @@ public interface Region extends ConfigurationObserver {
    */
   enum Operation {
     ANY, GET, PUT, DELETE, SCAN, APPEND, INCREMENT, SPLIT_REGION, MERGE_REGION, BATCH_MUTATE,
-    REPLAY_BATCH_MUTATE, COMPACT_REGION, REPLAY_EVENT, SNAPSHOT, COMPACT_SWITCH
+    REPLAY_BATCH_MUTATE, COMPACT_REGION, REPLAY_EVENT, SNAPSHOT, COMPACT_SWITCH,
+    CHECK_AND_MUTATE
   }
 
   /**
@@ -256,7 +257,6 @@ public interface Region extends ConfigurationObserver {
   }
 
   /**
-   *
    * Get a row lock for the specified row. All locks are reentrant.
    *
    * Before calling this function make sure that a region operation has already been
@@ -274,8 +274,6 @@ public interface Region extends ConfigurationObserver {
    * @see #startRegionOperation()
    * @see #startRegionOperation(Operation)
    */
-  // TODO this needs to be exposed as we have RowProcessor now. If RowProcessor is removed, we can
-  // remove this too..
   RowLock getRowLock(byte[] row, boolean readLock) throws IOException;
 
   ///////////////////////////////////////////////////////////////////////////
@@ -292,8 +290,9 @@ public interface Region extends ConfigurationObserver {
   /**
    * Perform a batch of mutations.
    * <p>
-   * Note this supports only Put, Delete, Increment and Append mutations and will ignore other
-   * types passed.
+   * Please do not operate on a same column of a single row in a batch, we will not consider the
+   * previous operation in the same batch when performing the operations in the batch.
+   *
    * @param mutations the list of mutations
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
@@ -530,13 +529,14 @@ public interface Region extends ConfigurationObserver {
   Result increment(Increment increment) throws IOException;
 
   /**
-   * Performs multiple mutations atomically on a single row. Currently
-   * {@link Put} and {@link Delete} are supported.
+   * Performs multiple mutations atomically on a single row.
    *
    * @param mutations object that specifies the set of mutations to perform atomically
+   * @return results of Increment/Append operations. If no Increment/Append operations, it returns
+   *   null
    * @throws IOException
    */
-  void mutateRow(RowMutations mutations) throws IOException;
+  Result mutateRow(RowMutations mutations) throws IOException;
 
   /**
    * Perform atomic mutations within the region.
@@ -552,51 +552,9 @@ public interface Region extends ConfigurationObserver {
    * @throws IOException
    */
   // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
-  // Changing processRowsWithLocks and RowProcessor
+  // Changing processRowsWithLocks
   void mutateRowsWithLocks(Collection<Mutation> mutations, Collection<byte[]> rowsToLock,
       long nonceGroup, long nonce) throws IOException;
-
-  /**
-   * Performs atomic multiple reads and writes on a given row.
-   *
-   * @param processor The object defines the reads and writes to a row.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
-   * Coprocessors instead.
-   */
-  @Deprecated
-  void processRowsWithLocks(RowProcessor<?,?> processor) throws IOException;
-
-  /**
-   * Performs atomic multiple reads and writes on a given row.
-   *
-   * @param processor The object defines the reads and writes to a row.
-   * @param nonceGroup Optional nonce group of the operation (client Id)
-   * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
-   * Coprocessors instead.
-   */
-  // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
-  // Changing processRowsWithLocks and RowProcessor
-  @Deprecated
-  void processRowsWithLocks(RowProcessor<?,?> processor, long nonceGroup, long nonce)
-      throws IOException;
-
-  /**
-   * Performs atomic multiple reads and writes on a given row.
-   *
-   * @param processor The object defines the reads and writes to a row.
-   * @param timeout The timeout of the processor.process() execution
-   *                Use a negative number to switch off the time bound
-   * @param nonceGroup Optional nonce group of the operation (client Id)
-   * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
-   * Coprocessors instead.
-   */
-  // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
-  // Changing processRowsWithLocks and RowProcessor
-  @Deprecated
-  void processRowsWithLocks(RowProcessor<?,?> processor, long timeout, long nonceGroup, long nonce)
-      throws IOException;
 
   /**
    * Puts some data in the table.

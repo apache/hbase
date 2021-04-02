@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * A list of segment managers coupled with the version of the memstore (version at the time it was
  * created).
@@ -65,7 +63,6 @@ public class VersionedSegmentsList {
   }
 
   // Estimates fraction of unique keys
-  @VisibleForTesting
   double getEstimatedUniquesFrac() {
     int segmentCells = 0;
     int maxCells = 0;

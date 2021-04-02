@@ -71,7 +71,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -165,8 +164,7 @@ public class RegionStateStore {
       ServerName regionLocation = MetaTableAccessor.getTargetServerName(result, replicaId);
       final long openSeqNum = hrl.getSeqNum();
 
-      // TODO: move under trace, now is visible for debugging
-      LOG.info(
+      LOG.debug(
         "Load hbase:meta entry region={}, regionState={}, lastHost={}, " +
           "regionLocation={}, openSeqNum={}",
         regionInfo.getEncodedName(), state, lastHost, regionLocation, openSeqNum);
@@ -464,7 +462,6 @@ public class RegionStateStore {
       qualifiers.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", ")));
   }
 
-  @VisibleForTesting
   static Put addMergeRegions(Put put, Collection<RegionInfo> mergeRegions) throws IOException {
     int limit = 10000; // Arbitrary limit. No room in our formatted 'task0000' below for more.
     int max = mergeRegions.size();

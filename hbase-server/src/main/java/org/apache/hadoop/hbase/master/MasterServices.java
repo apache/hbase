@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -55,7 +56,7 @@ import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
@@ -139,7 +140,6 @@ public interface MasterServices extends Server {
   /**
    * @return Tripped when Master has finished initialization.
    */
-  @VisibleForTesting
   public ProcedureEvent<?> getInitializedEvent();
 
   /**
@@ -570,4 +570,11 @@ public interface MasterServices extends Server {
    */
   boolean normalizeRegions(
     final NormalizeTableFilterParams ntfp, final boolean isHighPriority) throws IOException;
+
+  /**
+   * Get the meta location syncer.
+   * <p/>
+   * We need to get this in MTP to tell the syncer the new meta replica count.
+   */
+  MetaLocationSyncer getMetaLocationSyncer();
 }

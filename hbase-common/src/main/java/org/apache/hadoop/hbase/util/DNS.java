@@ -35,12 +35,21 @@ public final class DNS {
   // the specification of server hostname is optional. The hostname should be resolvable from
   // both master and region server
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-  public static final String RS_HOSTNAME_KEY = "hbase.regionserver.hostname";
+  public static final String UNSAFE_RS_HOSTNAME_KEY = "hbase.unsafe.regionserver.hostname";
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   public static final String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
 
   private static boolean HAS_NEW_DNS_GET_DEFAULT_HOST_API;
   private static Method GET_DEFAULT_HOST_METHOD;
+
+  /**
+   * @deprecated since 2.4.0 and will be removed in 4.0.0.
+   * Use {@link DNS#UNSAFE_RS_HOSTNAME_KEY} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24667">HBASE-24667</a>
+   */
+  @Deprecated
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+  public static final String RS_HOSTNAME_KEY = "hbase.regionserver.hostname";
 
   static {
     try {
@@ -50,6 +59,7 @@ public final class DNS {
     } catch (Exception e) {
       HAS_NEW_DNS_GET_DEFAULT_HOST_API = false; // FindBugs: Causes REC_CATCH_EXCEPTION. Suppressed
     }
+    Configuration.addDeprecation(RS_HOSTNAME_KEY, UNSAFE_RS_HOSTNAME_KEY);
   }
 
   public enum ServerType {
@@ -106,7 +116,7 @@ public final class DNS {
         hostname = conf.get(MASTER_HOSTNAME_KEY);
         break;
       case REGIONSERVER:
-        hostname = conf.get(RS_HOSTNAME_KEY);
+        hostname = conf.get(UNSAFE_RS_HOSTNAME_KEY);
         break;
       default:
         hostname = null;

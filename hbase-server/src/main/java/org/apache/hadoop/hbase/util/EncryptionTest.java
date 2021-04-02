@@ -66,7 +66,7 @@ public class EncryptionTest {
         throw new IOException("Key provider " + providerClassName + " failed test: " +
           e.getMessage(), e);
       }
-    } else if (result.booleanValue() == false) {
+    } else if (!result) {
       throw new IOException("Key provider " + providerClassName + " previously failed test");
     }
   }
@@ -91,7 +91,7 @@ public class EncryptionTest {
         throw new IOException("Cipher provider " + providerClassName + " failed test: " +
           e.getMessage(), e);
       }
-    } else if (result.booleanValue() == false) {
+    } else if (!result) {
       throw new IOException("Cipher provider " + providerClassName + " previously failed test");
     }
   }
@@ -99,17 +99,22 @@ public class EncryptionTest {
   /**
    * Check that the specified cipher can be loaded and initialized, or throw
    * an exception. Verifies key and cipher provider configuration as a
-   * prerequisite for cipher verification.
+   * prerequisite for cipher verification. Also verifies if encryption is enabled globally.
    *
-   * @param conf
-   * @param cipher
-   * @param key
-   * @throws IOException
+   * @param conf HBase configuration
+   * @param cipher chiper algorith to use for the column family
+   * @param key encryption key
+   * @throws IOException in case of encryption configuration error
    */
   public static void testEncryption(final Configuration conf, final String cipher,
       byte[] key) throws IOException {
     if (cipher == null) {
       return;
+    }
+    if(!Encryption.isEncryptionEnabled(conf)) {
+      String message = String.format("Cipher %s failed test: encryption is disabled on the cluster",
+        cipher);
+      throw new IOException(message);
     }
     testKeyProvider(conf);
     testCipherProvider(conf);
@@ -149,7 +154,7 @@ public class EncryptionTest {
         cipherResults.put(cipher, false);
         throw new IOException("Cipher " + cipher + " failed test: " + e.getMessage(), e);
       }
-    } else if (result.booleanValue() == false) {
+    } else if (!result) {
       throw new IOException("Cipher " + cipher + " previously failed test");
     }
   }

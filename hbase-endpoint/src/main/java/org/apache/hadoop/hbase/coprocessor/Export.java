@@ -71,7 +71,6 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -103,7 +102,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     System.exit(response == null ? -1 : 0);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], Response> run(final Configuration conf, final String[] args) throws Throwable {
     String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
     if (!ExportUtils.isValidArguements(args)) {

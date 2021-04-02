@@ -16,10 +16,11 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
+import static java.lang.String.format;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.DigestException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -36,6 +37,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -50,6 +52,50 @@ import org.slf4j.LoggerFactory;
 public final class Encryption {
 
   private static final Logger LOG = LoggerFactory.getLogger(Encryption.class);
+
+
+  /**
+   * Configuration key for globally enable / disable column family encryption
+   */
+  public static final String CRYPTO_ENABLED_CONF_KEY = "hbase.crypto.enabled";
+
+  /**
+   * Default value for globally enable / disable column family encryption
+   * (set to "true" for backward compatibility)
+   */
+  public static final boolean CRYPTO_ENABLED_CONF_DEFAULT = true;
+
+  /**
+   * Configuration key for the hash algorithm used for generating key hash in encrypted HFiles.
+   * This is a MessageDigest algorithm identifier string, like "MD5", "SHA-256" or "SHA-384".
+   * (default: "MD5" for backward compatibility reasons)
+   */
+  public static final String CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY = "hbase.crypto.key.hash.algorithm";
+
+  /**
+   * Default hash algorithm used for generating key hash in encrypted HFiles.
+   * (we use "MD5" for backward compatibility reasons)
+   */
+  public static final String CRYPTO_KEY_HASH_ALGORITHM_CONF_DEFAULT = "MD5";
+
+  /**
+   * Configuration key for specifying the behaviour if the configured hash algorithm
+   * differs from the one used for generating key hash in encrypted HFiles currently being read.
+   *
+   * - "false" (default): we won't fail but use the hash algorithm stored in the HFile
+   * - "true": we throw an exception (this can be useful if regulations are enforcing the usage
+   *           of certain algorithms, e.g. on FIPS compliant clusters)
+   */
+  public static final String CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY =
+    "hbase.crypto.key.hash.algorithm.failOnMismatch";
+
+  /**
+   * Default behaviour is not to fail if the hash algorithm configured differs from the one
+   * used in the HFile. (this is the more fail-safe approach, allowing us to read
+   * encrypted HFiles written using a different encryption key hash algorithm)
+   */
+  public static final boolean CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_DEFAULT = false;
+
 
   /**
    * Crypto context
@@ -99,6 +145,14 @@ public final class Encryption {
     super();
   }
 
+
+  /**
+   * Returns true if the column family encryption feature is enabled globally.
+   */
+  public static boolean isEncryptionEnabled(Configuration conf) {
+    return conf.getBoolean(CRYPTO_ENABLED_CONF_KEY, CRYPTO_ENABLED_CONF_DEFAULT);
+  }
+
   /**
    * Get an cipher given a name
    * @param name the cipher name
@@ -127,79 +181,63 @@ public final class Encryption {
   }
 
   /**
+   * Returns the Hash Algorithm defined in the crypto configuration.
+   */
+  public static String getConfiguredHashAlgorithm(Configuration conf) {
+    return conf.getTrimmed(CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY,
+                    CRYPTO_KEY_HASH_ALGORITHM_CONF_DEFAULT);
+  }
+
+  /**
+   * Returns the Hash Algorithm mismatch behaviour defined in the crypto configuration.
+   */
+  public static boolean failOnHashAlgorithmMismatch(Configuration conf) {
+    return conf.getBoolean(CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY,
+                           CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_DEFAULT);
+  }
+
+  /**
+   * Returns the hash of the supplied argument, using the hash algorithm
+   * specified in the given config.
+   */
+  public static byte[] computeCryptoKeyHash(Configuration conf, byte[] arg) {
+    String algorithm = getConfiguredHashAlgorithm(conf);
+    try {
+      return hashWithAlg(algorithm, arg);
+    } catch (RuntimeException e) {
+      String message = format("Error in computeCryptoKeyHash (please check your configuration " +
+                              "parameter %s and the security provider configuration of the JVM)",
+                              CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY);
+      throw new RuntimeException(message, e);
+    }
+  }
+
+  /**
    * Return the MD5 digest of the concatenation of the supplied arguments.
    */
   public static byte[] hash128(String... args) {
-    byte[] result = new byte[16];
-    try {
-      MessageDigest md = MessageDigest.getInstance("MD5");
-      for (String arg: args) {
-        md.update(Bytes.toBytes(arg));
-      }
-      md.digest(result, 0, result.length);
-      return result;
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (DigestException e) {
-      throw new RuntimeException(e);
-    }
+    return hashWithAlg("MD5", Bytes.toByteArrays(args));
   }
 
   /**
    * Return the MD5 digest of the concatenation of the supplied arguments.
    */
   public static byte[] hash128(byte[]... args) {
-    byte[] result = new byte[16];
-    try {
-      MessageDigest md = MessageDigest.getInstance("MD5");
-      for (byte[] arg: args) {
-        md.update(arg);
-      }
-      md.digest(result, 0, result.length);
-      return result;
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (DigestException e) {
-      throw new RuntimeException(e);
-    }
+    return hashWithAlg("MD5", args);
   }
 
   /**
    * Return the SHA-256 digest of the concatenation of the supplied arguments.
    */
   public static byte[] hash256(String... args) {
-    byte[] result = new byte[32];
-    try {
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      for (String arg: args) {
-        md.update(Bytes.toBytes(arg));
-      }
-      md.digest(result, 0, result.length);
-      return result;
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (DigestException e) {
-      throw new RuntimeException(e);
-    }
+    return hashWithAlg("SHA-256", Bytes.toByteArrays(args));
   }
 
   /**
    * Return the SHA-256 digest of the concatenation of the supplied arguments.
    */
   public static byte[] hash256(byte[]... args) {
-    byte[] result = new byte[32];
-    try {
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      for (byte[] arg: args) {
-        md.update(arg);
-      }
-      md.digest(result, 0, result.length);
-      return result;
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (DigestException e) {
-      throw new RuntimeException(e);
-    }
+    return hashWithAlg("SHA-256", args);
   }
 
   /**
@@ -208,21 +246,11 @@ public final class Encryption {
    *
    */
   public static byte[] pbkdf128(String... args) {
-    byte[] salt = new byte[128];
-    Bytes.random(salt);
     StringBuilder sb = new StringBuilder();
     for (String s: args) {
       sb.append(s);
     }
-    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 128);
-    try {
-      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-        .generateSecret(spec).getEncoded();
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (InvalidKeySpecException e) {
-      throw new RuntimeException(e);
-    }
+    return generateSecretKey("PBKDF2WithHmacSHA1", AES.KEY_LENGTH, sb.toString().toCharArray());
   }
 
   /**
@@ -231,19 +259,69 @@ public final class Encryption {
    *
    */
   public static byte[] pbkdf128(byte[]... args) {
-    byte[] salt = new byte[128];
-    Bytes.random(salt);
     StringBuilder sb = new StringBuilder();
     for (byte[] b: args) {
       sb.append(Arrays.toString(b));
     }
-    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 128);
+    return generateSecretKey("PBKDF2WithHmacSHA1", AES.KEY_LENGTH, sb.toString().toCharArray());
+  }
+
+  /**
+   * Return a key derived from the concatenation of the supplied arguments using
+   * PBKDF2WithHmacSHA384 key derivation algorithm at 10,000 iterations.
+   *
+   * The length of the returned key is determined based on the need of the cypher algorithm.
+   * E.g. for the default "AES"  we will need a 128 bit long key, while if the user is using
+   * a custom cipher, we might generate keys with other length.
+   *
+   * This key generation method is used currently e.g. in the HBase Shell (admin.rb) to generate a
+   * column family data encryption key, if the user provided an ENCRYPTION_KEY parameter.
+   */
+  public static byte[] generateSecretKey(Configuration conf, String cypherAlg, String... args) {
+    StringBuilder sb = new StringBuilder();
+    for (String s: args) {
+      sb.append(s);
+    }
+    int keyLengthBytes = Encryption.getCipher(conf, cypherAlg).getKeyLength();
+    return generateSecretKey("PBKDF2WithHmacSHA384", keyLengthBytes, sb.toString().toCharArray());
+  }
+
+  /**
+   * Return a key derived from the concatenation of the supplied arguments using
+   * PBKDF2WithHmacSHA384 key derivation algorithm at 10,000 iterations.
+   *
+   * The length of the returned key is determined based on the need of the cypher algorithm.
+   * E.g. for the default "AES"  we will need a 128 bit long key, while if the user is using
+   * a custom cipher, we might generate keys with other length.
+   *
+   * This key generation method is used currently e.g. in the HBase Shell (admin.rb) to generate a
+   * column family data encryption key, if the user provided an ENCRYPTION_KEY parameter.
+   */
+  public static byte[] generateSecretKey(Configuration conf, String cypherAlg, byte[]... args) {
+    StringBuilder sb = new StringBuilder();
+    for (byte[] b: args) {
+      sb.append(Arrays.toString(b));
+    }
+    int keyLength = Encryption.getCipher(conf, cypherAlg).getKeyLength();
+    return generateSecretKey("PBKDF2WithHmacSHA384", keyLength, sb.toString().toCharArray());
+  }
+
+  /**
+   * Return a key (byte array) derived from the supplied password argument using the given
+   * algorithm with a random salt at 10,000 iterations.
+   *
+   * @param algorithm the secret key generation algorithm to use
+   * @param keyLengthBytes the length of the key to be derived (in bytes, not in bits)
+   * @param password char array to use as password for the key generation algorithm
+   * @return secret key encoded as a byte array
+   */
+  private static byte[] generateSecretKey(String algorithm, int keyLengthBytes, char[] password) {
+    byte[] salt = new byte[keyLengthBytes];
+    Bytes.random(salt);
+    PBEKeySpec spec = new PBEKeySpec(password, salt, 10000, keyLengthBytes*8);
     try {
-      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-        .generateSecret(spec).getEncoded();
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (InvalidKeySpecException e) {
+      return SecretKeyFactory.getInstance(algorithm).generateSecret(spec).getEncoded();
+    } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
       throw new RuntimeException(e);
     }
   }
@@ -576,6 +654,22 @@ public final class Encryption {
       }
       v--;
     } while (v > 0);
+  }
+
+  /**
+   * Return the hash of the concatenation of the supplied arguments, using the 
+   * hash algorithm provided.
+   */
+  public static byte[] hashWithAlg(String algorithm, byte[]... args) {
+    try {
+      MessageDigest md = MessageDigest.getInstance(algorithm);
+      for (byte[] arg: args) {
+        md.update(arg);
+      }
+      return md.digest();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("unable to use hash algorithm: " + algorithm, e);
+    }
   }
 
 }

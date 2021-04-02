@@ -26,23 +26,35 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+/**
+ * This is not a unit test. It is not run as part of the general unit test suite. It is for
+ * comparing compaction policies. You must run it explicitly;
+ * e.g. mvn test -Dtest=PerfTestCompactionPolicies
+ */
 @Category({RegionServerTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(PerfTestCompactionPolicies.class);
 
   private final RatioBasedCompactionPolicy cp;
   private final StoreFileListGenerator generator;
@@ -120,12 +132,9 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
     this.ratio = inRatio;
 
     // Hide lots of logging so the system out is usable as a tab delimited file.
-    org.apache.log4j.Logger.getLogger(CompactionConfiguration.class).
-        setLevel(org.apache.log4j.Level.ERROR);
-    org.apache.log4j.Logger.getLogger(RatioBasedCompactionPolicy.class).
-        setLevel(org.apache.log4j.Level.ERROR);
-
-    org.apache.log4j.Logger.getLogger(cpClass).setLevel(org.apache.log4j.Level.ERROR);
+    Log4jUtils.setLogLevel(CompactionConfiguration.class.getName(), "ERROR");
+    Log4jUtils.setLogLevel(RatioBasedCompactionPolicy.class.getName(), "ERROR");
+    Log4jUtils.setLogLevel(cpClass.getName(), "ERROR");
 
 
     Configuration configuration = HBaseConfiguration.create();
@@ -197,6 +206,7 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
     HStore s = mock(HStore.class);
     when(s.getStoreFileTtl()).thenReturn(Long.MAX_VALUE);
     when(s.getBlockingFileCount()).thenReturn(7L);
+    when(s.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
     return s;
   }
 

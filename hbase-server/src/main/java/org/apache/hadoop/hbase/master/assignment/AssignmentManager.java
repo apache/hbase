@@ -86,8 +86,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
@@ -181,7 +179,6 @@ public class AssignmentManager {
     this(master, new RegionStateStore(master));
   }
 
-  @VisibleForTesting
   AssignmentManager(final MasterServices master, final RegionStateStore stateStore) {
     this.master = master;
     this.regionStateStore = stateStore;
@@ -505,8 +502,15 @@ public class AssignmentManager {
     return metaLoadEvent.suspendIfNotReady(proc);
   }
 
-  @VisibleForTesting
-  void wakeMetaLoadedEvent() {
+  /**
+   * This method will be called in master initialization method after calling
+   * {@link #processOfflineRegions()}, as in processOfflineRegions we will generate assign
+   * procedures for offline regions, which may be conflict with creating table.
+   * <p/>
+   * This is a bit dirty, should be reconsidered after we decide whether to keep the
+   * {@link #processOfflineRegions()} method.
+   */
+  public void wakeMetaLoadedEvent() {
     metaLoadEvent.wake(getProcedureScheduler());
     assert isMetaLoaded() : "expected meta to be loaded";
   }
@@ -728,6 +732,17 @@ public class AssignmentManager {
     return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
   }
 
+  public Future<byte[]> balance(RegionPlan regionPlan) throws HBaseIOException {
+    ServerName current =
+      this.getRegionStates().getRegionAssignments().get(regionPlan.getRegionInfo());
+    if (!current.equals(regionPlan.getSource())) {
+      LOG.debug("Skip region plan {}, source server not match, current region location is {}",
+        regionPlan, current);
+      return null;
+    }
+    return moveAsync(regionPlan);
+  }
+
   // ============================================================================================
   //  RegionTransition procedures helpers
   // ============================================================================================
@@ -775,7 +790,6 @@ public class AssignmentManager {
     return createRoundRobinAssignProcedures(hris, null);
   }
 
-  @VisibleForTesting
   static int compare(TransitRegionStateProcedure left, TransitRegionStateProcedure right) {
     if (left.getRegion().isMetaRegion()) {
       if (right.getRegion().isMetaRegion()) {
@@ -883,8 +897,13 @@ public class AssignmentManager {
   private TransitRegionStateProcedure forceCreateUnssignProcedure(RegionStateNode regionNode) {
     regionNode.lock();
     try {
-      if (!regionStates.include(regionNode, false) ||
-        regionStates.isRegionOffline(regionNode.getRegionInfo())) {
+      if (regionNode.isInState(State.OFFLINE, State.CLOSED, State.SPLIT)) {
+        return null;
+      }
+      // in general, a split parent should be in CLOSED or SPLIT state, but anyway, let's check it
+      // here for safety
+      if (regionNode.getRegionInfo().isSplit()) {
+        LOG.warn("{} is a split parent but not in CLOSED or SPLIT state", regionNode);
         return null;
       }
       // As in DisableTableProcedure or ModifyTableProcedure, we will hold the xlock for table, so
@@ -1355,7 +1374,6 @@ public class AssignmentManager {
     private int totalRITsTwiceThreshold = 0;
     private int totalRITs = 0;
 
-    @VisibleForTesting
     public RegionInTransitionStat(final Configuration conf) {
       this.ritThreshold =
         conf.getInt(METRICS_RIT_STUCK_WARNING_THRESHOLD, DEFAULT_RIT_STUCK_WARNING_THRESHOLD);
@@ -1418,6 +1436,13 @@ public class AssignmentManager {
       this.statTimestamp = EnvironmentEdgeManager.currentTime();
       update(regionStates.getRegionsStateInTransition(), statTimestamp);
       update(regionStates.getRegionFailedOpen(), statTimestamp);
+
+      if (LOG.isDebugEnabled() && ritsOverThreshold != null && !ritsOverThreshold.isEmpty()) {
+        LOG.debug("RITs over threshold: {}",
+          ritsOverThreshold.entrySet().stream()
+            .map(e -> e.getKey() + ":" + e.getValue().getState().name())
+            .collect(Collectors.joining("\n")));
+      }
     }
 
     private void update(final Collection<RegionState> regions, final long currentTime) {
@@ -1500,12 +1525,23 @@ public class AssignmentManager {
   // Public so can be run by the Master as part of the startup. Needs hbase:meta to be online.
   // Needs to be done after the table state manager has been started.
   public void processOfflineRegions() {
-    List<RegionInfo> offlineRegions = regionStates.getRegionStates().stream()
-      .filter(RegionState::isOffline).filter(s -> isTableEnabled(s.getRegion().getTable()))
-      .map(RegionState::getRegion).collect(Collectors.toList());
-    if (!offlineRegions.isEmpty()) {
-      master.getMasterProcedureExecutor().submitProcedures(
-        master.getAssignmentManager().createRoundRobinAssignProcedures(offlineRegions));
+    TransitRegionStateProcedure[] procs =
+      regionStates.getRegionStateNodes().stream().filter(rsn -> rsn.isInState(State.OFFLINE))
+        .filter(rsn -> isTableEnabled(rsn.getRegionInfo().getTable())).map(rsn -> {
+          rsn.lock();
+          try {
+            if (rsn.getProcedure() != null) {
+              return null;
+            } else {
+              return rsn.setProcedure(TransitRegionStateProcedure.assign(getProcedureEnvironment(),
+                rsn.getRegionInfo(), null));
+            }
+          } finally {
+            rsn.unlock();
+          }
+        }).filter(p -> p != null).toArray(TransitRegionStateProcedure[]::new);
+    if (procs.length > 0) {
+      master.getMasterProcedureExecutor().submitProcedures(procs);
     }
   }
 
@@ -1585,8 +1621,6 @@ public class AssignmentManager {
   private void loadMeta() throws IOException {
     // TODO: use a thread pool
     regionStateStore.visitMeta(new RegionMetaLoadingVisitor());
-    // every assignment is blocked until meta is loaded.
-    wakeMetaLoadedEvent();
   }
 
   /**
@@ -1922,6 +1956,14 @@ public class AssignmentManager {
     nodeB.setState(State.SPLITTING_NEW);
 
     TableDescriptor td = master.getTableDescriptors().get(parent.getTable());
+    // TODO: here we just update the parent region info in meta, to set split and offline to true,
+    // without changing the one in the region node. This is a bit confusing but the region info
+    // field in RegionStateNode is not expected to be changed in the current design. Need to find a
+    // possible way to address this problem, or at least adding more comments about the trick to
+    // deal with this problem, that when you want to filter out split parent, you need to check both
+    // the RegionState on whether it is split, and also the region info. If one of them matches then
+    // it is a split parent. And usually only one of them can match, as after restart, the region
+    // state will be changed from SPLIT to CLOSED.
     regionStateStore.splitRegion(parent, daughterA, daughterB, serverName, td);
     if (shouldAssignFavoredNodes(parent)) {
       List<ServerName> onlineServers = this.master.getServerManager().getOnlineServersList();
@@ -2240,7 +2282,6 @@ public class AssignmentManager {
         .collect(Collectors.toList());
   }
 
-  @VisibleForTesting
   MasterServices getMaster() {
     return master;
   }

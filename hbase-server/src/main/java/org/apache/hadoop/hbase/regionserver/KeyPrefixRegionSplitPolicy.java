@@ -41,6 +41,12 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
   private int prefixLength = 0;
 
   @Override
+  public String toString() {
+    return "KeyPrefixRegionSplitPolicy{" + "prefixLength=" + prefixLength + ", " +
+      super.toString() + '}';
+  }
+
+  @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     prefixLength = 0;

@@ -34,8 +34,8 @@ pipeline {
   }
   tools {
     // this should match what the yetus nightly job for the branch will use
-    maven 'Maven (latest)'
-    jdk "JDK 1.8 (latest)"
+    maven 'maven_latest'
+    jdk "jdk_1.8_latest"
   }
   stages {
     stage ('run flaky tests') {
@@ -49,7 +49,7 @@ pipeline {
             mvn_args=("${mvn_args[@]}" -X)
             set -x
           fi
-          curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/includes"
+          curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/includes"
           if [ -s includes.txt ]; then
             rm -rf local-repository/org/apache/hbase
             mvn clean "${mvn_args[@]}"

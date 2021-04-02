@@ -25,9 +25,6 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
-
 /**
  * CombinedBlockCache is an abstraction layer that combines
  * {@link FirstLevelBlockCache} and {@link BucketCache}. The smaller lruCache is used
@@ -397,7 +394,6 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     this.l1Cache.setMaxSize(size);
   }
 
-  @VisibleForTesting
   public int getRpcRefCount(BlockCacheKey cacheKey) {
     return (this.l2Cache instanceof BucketCache)
         ? ((BucketCache) this.l2Cache).getRpcRefCount(cacheKey)

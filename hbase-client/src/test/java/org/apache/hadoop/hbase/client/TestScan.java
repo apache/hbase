@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -291,5 +292,16 @@ public class TestScan {
 
     assertTrue("Make sure copy constructor adds all the fields in the copied object",
       EqualsBuilder.reflectionEquals(scan, scanCopy));
+  }
+
+  @Test
+  public void testScanReadType() throws Exception {
+    Scan scan = new Scan();
+    assertFalse(scan.isSmall());
+    assertEquals(ReadType.DEFAULT, scan.getReadType());
+    Scan copyScan = new Scan(scan);
+    copyScan.setSmall(scan.isSmall());
+    assertFalse(copyScan.isSmall());
+    assertEquals(ReadType.DEFAULT, copyScan.getReadType());
   }
 }

@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.CellSet;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.EntryBuffers.RegionEntryBuffer;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -199,8 +199,8 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
         new StoreFileWriter.Builder(walSplitter.conf, CacheConfig.DISABLED, walSplitter.rootFS)
             .withOutputDir(outputDir);
     HFileContext hFileContext = new HFileContextBuilder().
-      withChecksumType(HStore.getChecksumType(walSplitter.conf)).
-      withBytesPerCheckSum(HStore.getBytesPerChecksum(walSplitter.conf)).
+      withChecksumType(StoreUtils.getChecksumType(walSplitter.conf)).
+      withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(walSplitter.conf)).
       withCellComparator(isMetaTable?
         MetaCellComparator.META_COMPARATOR: CellComparatorImpl.COMPARATOR).build();
     return writerBuilder.withFileContext(hFileContext).build();

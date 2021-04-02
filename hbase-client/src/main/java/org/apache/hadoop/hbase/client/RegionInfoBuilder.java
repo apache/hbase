@@ -100,6 +100,7 @@ public class RegionInfoBuilder {
     return this;
   }
 
+  @Deprecated
   public RegionInfoBuilder setOffline(boolean offLine) {
     this.offLine = offLine;
     return this;

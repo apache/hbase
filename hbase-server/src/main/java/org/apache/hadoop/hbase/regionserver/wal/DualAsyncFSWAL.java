@@ -29,7 +29,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -61,7 +60,6 @@ public class DualAsyncFSWAL extends AsyncFSWAL {
   }
 
   // will be overridden in testcase
-  @VisibleForTesting
   protected AsyncWriter createCombinedAsyncWriter(AsyncWriter localWriter,
       AsyncWriter remoteWriter) {
     return CombinedAsyncWriter.create(remoteWriter, localWriter);

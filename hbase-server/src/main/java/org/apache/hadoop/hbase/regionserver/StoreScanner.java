@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -47,11 +46,9 @@ import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.UserScanQueryMatcher;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
@@ -94,9 +91,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private final int minVersions;
   private final long maxRowSize;
   private final long cellsPerHeartbeatCheck;
-  @VisibleForTesting
   long memstoreOnlyReads;
-  @VisibleForTesting
   long mixedReads;
 
   // 1) Collects all the KVHeap that are eagerly getting closed during the
@@ -138,9 +133,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   public static final long DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK = 10000;
 
   /**
-   * If the read type if Scan.ReadType.DEFAULT, we will start with pread, and if the kvs we scanned
+   * If the read type is Scan.ReadType.DEFAULT, we will start with pread, and if the kvs we scanned
    * reaches this limit, we will reopen the scanner with stream. The default value is 4 times of
    * block size for this store.
+   * If configured with a value <0, for all scans with ReadType DEFAULT, we will open scanner with
+   * stream mode itself.
    */
   public static final String STORESCANNER_PREAD_MAX_BYTES = "hbase.storescanner.pread.max.bytes";
 
@@ -156,7 +153,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // Since CompactingMemstore is now default, we get three memstore scanners from a flush
   private final List<KeyValueScanner> memStoreScannersAfterFlush = new ArrayList<>(3);
   // The current list of scanners
-  @VisibleForTesting
   final List<KeyValueScanner> currentScanners = new ArrayList<>();
   // flush update lock
   private final ReentrantLock flushLock = new ReentrantLock();
@@ -187,6 +183,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.useRowColBloom = numColumns > 1 || (!get && numColumns == 1)
         && (store == null || store.getColumnFamilyDescriptor().getBloomFilterType() == BloomType.ROWCOL);
     this.maxRowSize = scanInfo.getTableMaxRowSize();
+    this.preadMaxBytes = scanInfo.getPreadMaxBytes();
     if (get) {
       this.readType = Scan.ReadType.PREAD;
       this.scanUsePread = true;
@@ -197,7 +194,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       this.scanUsePread = false;
     } else {
       if (scan.getReadType() == Scan.ReadType.DEFAULT) {
-        this.readType = scanInfo.isUsePread() ? Scan.ReadType.PREAD : Scan.ReadType.DEFAULT;
+        if (scanInfo.isUsePread()) {
+          this.readType = Scan.ReadType.PREAD;
+        } else if (this.preadMaxBytes < 0) {
+          this.readType = Scan.ReadType.STREAM;
+        } else {
+          this.readType = Scan.ReadType.DEFAULT;
+        }
       } else {
         this.readType = scan.getReadType();
       }
@@ -205,7 +208,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // readType is default if the scan keeps running for a long time.
       this.scanUsePread = this.readType != Scan.ReadType.STREAM;
     }
-    this.preadMaxBytes = scanInfo.getPreadMaxBytes();
     this.cellsPerHeartbeatCheck = scanInfo.getCellsPerTimeoutCheck();
     // Parallel seeking is on if the config allows and more there is more than one store file.
     if (store != null && store.getStorefilesCount() > 1) {
@@ -345,7 +347,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   // Used to instantiate a scanner for user scan in test
-  @VisibleForTesting
   StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
       List<? extends KeyValueScanner> scanners, ScanType scanType) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
@@ -362,7 +363,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   // Used to instantiate a scanner for user scan in test
-  @VisibleForTesting
   StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
       List<? extends KeyValueScanner> scanners) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
@@ -374,7 +374,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   // Used to instantiate a scanner for compaction in test
-  @VisibleForTesting
   StoreScanner(ScanInfo scanInfo, int maxVersions, ScanType scanType,
       List<? extends KeyValueScanner> scanners) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
@@ -385,7 +384,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     seekAllScanner(scanInfo, scanners);
   }
 
-  @VisibleForTesting
   boolean isScanUsePread() {
     return this.scanUsePread;
   }
@@ -428,7 +426,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
   }
 
-  @VisibleForTesting
   protected void resetKVHeap(List<? extends KeyValueScanner> scanners,
       CellComparator comparator) throws IOException {
     // Combine all seeked scanners with a heap
@@ -445,7 +442,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * <p>
    * Will be overridden by testcase so declared as protected.
    */
-  @VisibleForTesting
   protected List<KeyValueScanner> selectScannersFrom(HStore store,
       List<? extends KeyValueScanner> allScanners) {
     boolean memOnly;
@@ -871,7 +867,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param cell current cell
    * @return true means skip to next row, false means not
    */
-  @VisibleForTesting
   protected boolean trySkipToNextRow(Cell cell) throws IOException {
     Cell nextCell = null;
     // used to guard against a changed next indexed key by doing a identity comparison
@@ -897,7 +892,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param cell current cell
    * @return true means skip to next column, false means not
    */
-  @VisibleForTesting
   protected boolean trySkipToNextColumn(Cell cell) throws IOException {
     Cell nextCell = null;
     // used to guard against a changed next indexed key by doing a identity comparison
@@ -1097,7 +1091,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return heap.reseek(kv);
   }
 
-  @VisibleForTesting
   void trySwitchToStreamRead() {
     if (readType != Scan.ReadType.DEFAULT || !scanUsePread || closing ||
         heap.peek() == null || bytesRead < preadMaxBytes) {
@@ -1209,7 +1202,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * Used in testing.
    * @return all scanners in no particular order
    */
-  @VisibleForTesting
   List<KeyValueScanner> getAllScannersForTesting() {
     List<KeyValueScanner> allScanners = new ArrayList<>();
     KeyValueScanner current = heap.getCurrentForTesting();

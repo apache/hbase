@@ -41,9 +41,6 @@ class RemoteProcedureResultReporter extends Thread {
 
   private static final Logger LOG = LoggerFactory.getLogger(RemoteProcedureResultReporter.class);
 
-  // Time to pause if master says 'please hold'. Make configurable if needed.
-  private static final int INIT_PAUSE_TIME_MS = 1000;
-
   private static final int MAX_BATCH = 100;
 
   private final HRegionServer server;
@@ -98,9 +95,9 @@ class RemoteProcedureResultReporter extends Thread {
         long pauseTime;
         if (pause) {
           // Do backoff else we flood the Master with requests.
-          pauseTime = ConnectionUtils.getPauseTime(INIT_PAUSE_TIME_MS, tries);
+          pauseTime = ConnectionUtils.getPauseTime(server.getRetryPauseTime(), tries);
         } else {
-          pauseTime = INIT_PAUSE_TIME_MS; // Reset.
+          pauseTime = server.getRetryPauseTime(); // Reset.
         }
         LOG.info("Failed procedure report " + TextFormat.shortDebugString(request) + "; retry (#" +
           tries + ")" + (pause ? " after " + pauseTime + "ms delay (Master is coming online...)."

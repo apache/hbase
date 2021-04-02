@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -132,5 +134,32 @@ public class TestHBaseMetaEdit {
     } catch (HBaseIOException hioe) {
       assertTrue(hioe.getMessage().contains("Delete of hbase:meta"));
     }
+  }
+
+  /**
+   * Validate whether meta table can be altered as READ only, shouldn't be allowed otherwise it will
+   * break assignment functionalities. See HBASE-24977.
+   */
+  @Test
+  public void testAlterMetaWithReadOnly() throws IOException {
+    Admin admin = UTIL.getAdmin();
+    TableDescriptor origMetaTableDesc = admin.getDescriptor(TableName.META_TABLE_NAME);
+    assertFalse(origMetaTableDesc.isReadOnly());
+    TableDescriptor newTD =
+        TableDescriptorBuilder.newBuilder(origMetaTableDesc).setReadOnly(true).build();
+    try {
+      admin.modifyTable(newTD);
+      fail("Meta table can't be set as read only");
+    } catch (Exception e) {
+      assertFalse(admin.getDescriptor(TableName.META_TABLE_NAME).isReadOnly());
+    }
+
+    // Create a table to check region assignment & meta operation
+    TableName tableName = TableName.valueOf("tempTable");
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName).setReadOnly(true)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
+        .build();
+    UTIL.getAdmin().createTable(td);
+    UTIL.deleteTable(tableName);
   }
 }

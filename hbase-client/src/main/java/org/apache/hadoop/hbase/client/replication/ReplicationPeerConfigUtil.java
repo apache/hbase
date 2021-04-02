@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -40,12 +39,12 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
@@ -246,7 +245,7 @@ public final class ReplicationPeerConfigUtil {
   /**
    * @param bytes Content of a peer znode.
    * @return ClusterKey parsed from the passed bytes.
-   * @throws DeserializationException
+   * @throws DeserializationException deserialization exception
    */
   public static ReplicationPeerConfig parsePeerFrom(final byte[] bytes)
       throws DeserializationException {
@@ -390,7 +389,7 @@ public final class ReplicationPeerConfigUtil {
   }
 
   /**
-   * @param peerConfig
+   * @param peerConfig peer config of replication peer
    * @return Serialized protobuf of <code>peerConfig</code> with pb magic prefix prepended suitable
    *         for use as content of a this.peersZNode; i.e. the content of PEER_ID znode under
    *         /hbase/replication/peers/PEER_ID
@@ -454,37 +453,42 @@ public final class ReplicationPeerConfigUtil {
   }
 
   /**
-   * Helper method to add base peer configs from Configuration to ReplicationPeerConfig
-   * if not present in latter.
+   * Helper method to add/removev base peer configs from Configuration to ReplicationPeerConfig
    *
    * This merges the user supplied peer configuration
    * {@link org.apache.hadoop.hbase.replication.ReplicationPeerConfig} with peer configs
    * provided as property hbase.replication.peer.base.configs in hbase configuration.
-   * Expected format for this hbase configuration is "k1=v1;k2=v2,v2_1". Original value
-   * of conf is retained if already present in ReplicationPeerConfig.
+   * Expected format for this hbase configuration is "k1=v1;k2=v2,v2_1;k3=""".
+   * If value is empty, it will remove the existing key-value from peer config.
    *
    * @param conf Configuration
    * @return ReplicationPeerConfig containing updated configs.
    */
-  public static ReplicationPeerConfig addBasePeerConfigsIfNotPresent(Configuration conf,
+  public static ReplicationPeerConfig updateReplicationBasePeerConfigs(Configuration conf,
     ReplicationPeerConfig receivedPeerConfig) {
-    String basePeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG, "");
     ReplicationPeerConfigBuilder copiedPeerConfigBuilder = ReplicationPeerConfig.
       newBuilder(receivedPeerConfig);
-    Map<String,String> receivedPeerConfigMap = receivedPeerConfig.getConfiguration();
 
+    Map<String, String> receivedPeerConfigMap = receivedPeerConfig.getConfiguration();
+    String basePeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG, "");
     if (basePeerConfigs.length() != 0) {
       Map<String, String> basePeerConfigMap = Splitter.on(';').trimResults().omitEmptyStrings()
         .withKeyValueSeparator("=").split(basePeerConfigs);
-      for (Map.Entry<String,String> entry : basePeerConfigMap.entrySet()) {
+      for (Map.Entry<String, String> entry : basePeerConfigMap.entrySet()) {
         String configName = entry.getKey();
         String configValue = entry.getValue();
-        // Only override if base config does not exist in existing peer configs
-        if (!receivedPeerConfigMap.containsKey(configName)) {
+        // If the config is provided with empty value, for eg. k1="",
+        // we remove it from peer config. Providing config with empty value
+        // is required so that it doesn't remove any other config unknowingly.
+        if (Strings.isNullOrEmpty(configValue)) {
+          copiedPeerConfigBuilder.removeConfiguration(configName);
+        } else if (!receivedPeerConfigMap.getOrDefault(configName, "").equals(configValue)) {
+          // update the configuration if exact config and value doesn't exists
           copiedPeerConfigBuilder.putConfiguration(configName, configValue);
         }
       }
     }
+
     return copiedPeerConfigBuilder.build();
   }
 

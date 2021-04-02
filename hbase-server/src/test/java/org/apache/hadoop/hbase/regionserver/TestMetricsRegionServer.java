@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -151,9 +154,11 @@ public class TestMetricsRegionServer {
     for (int i=0; i < 17; i ++) {
       rsm.updatePut(null, 17);
       rsm.updateDelete(null, 17);
-      rsm.updateCheckAndDelete(17);
-      rsm.updateCheckAndPut(17);
-      rsm.updateCheckAndMutate(17);
+      rsm.updatePut(null, 1006);
+      rsm.updateDelete(null, 1003);
+      rsm.updateCheckAndDelete(null, 17);
+      rsm.updateCheckAndPut(null, 17);
+      rsm.updateCheckAndMutate(null, 17);
     }
 
     HELPER.assertCounter("appendNumOps", 24, serverSource);
@@ -161,29 +166,18 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("getNumOps", 28, serverSource);
     HELPER.assertCounter("incrementNumOps", 30, serverSource);
     HELPER.assertCounter("putBatchNumOps", 32, serverSource);
-    HELPER.assertCounter("putNumOps", 17, serverSource);
-    HELPER.assertCounter("deleteNumOps", 17, serverSource);
+    HELPER.assertCounter("putNumOps", 34, serverSource);
+    HELPER.assertCounter("deleteNumOps", 34, serverSource);
     HELPER.assertCounter("checkAndDeleteNumOps", 17, serverSource);
     HELPER.assertCounter("checkAndPutNumOps", 17, serverSource);
     HELPER.assertCounter("checkAndMutateNumOps", 17, serverSource);
 
     HELPER.assertCounter("slowAppendCount", 12, serverSource);
-    HELPER.assertCounter("slowDeleteCount", 13, serverSource);
+    HELPER.assertCounter("slowDeleteCount", 17, serverSource);
     HELPER.assertCounter("slowGetCount", 14, serverSource);
     HELPER.assertCounter("slowIncrementCount", 15, serverSource);
-    HELPER.assertCounter("slowPutCount", 16, serverSource);
+    HELPER.assertCounter("slowPutCount", 17, serverSource);
   }
-
-  String FLUSH_TIME = "flushTime";
-  String FLUSH_TIME_DESC = "Histogram for the time in millis for memstore flush";
-  String FLUSH_MEMSTORE_SIZE = "flushMemstoreSize";
-  String FLUSH_MEMSTORE_SIZE_DESC = "Histogram for number of bytes in the memstore for a flush";
-  String FLUSH_FILE_SIZE = "flushFileSize";
-  String FLUSH_FILE_SIZE_DESC = "Histogram for number of bytes in the resulting file for a flush";
-  String FLUSHED_OUTPUT_BYTES = "flushedOutputBytes";
-  String FLUSHED_OUTPUT_BYTES_DESC = "Total number of bytes written from flush";
-  String FLUSHED_MEMSTORE_BYTES = "flushedMemstoreBytes";
-  String FLUSHED_MEMSTORE_BYTES_DESC = "Total number of bytes of cells in memstore from flush";
 
   @Test
   public void testFlush() {
@@ -256,5 +250,26 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("pauseTimeWithGc_num_ops", 1, serverSource);
   }
 
+  @Test
+  public void testTableQueryMeterSwitch() {
+    TableName tn1 = TableName.valueOf("table1");
+    Configuration conf = new Configuration(false);
+    // disable
+    rsm.updateReadQueryMeter(tn1, 500L);
+    assertFalse(HELPER.checkGaugeExists("ServerReadQueryPerSecond_count", serverSource));
+    rsm.updateWriteQueryMeter(tn1, 500L);
+    assertFalse(HELPER.checkGaugeExists("ServerWriteQueryPerSecond_count", serverSource));
+
+    // enable
+    conf.setBoolean(MetricsRegionServer.RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY, true);
+    rsm = new MetricsRegionServer(wrapper, conf, null);
+    serverSource = rsm.getMetricsSource();
+    rsm.updateReadQueryMeter(tn1, 500L);
+    assertTrue(HELPER.checkGaugeExists("ServerWriteQueryPerSecond_count", serverSource));
+    HELPER.assertGauge("ServerReadQueryPerSecond_count", 500L, serverSource);
+    assertTrue(HELPER.checkGaugeExists("ServerWriteQueryPerSecond_count", serverSource));
+    rsm.updateWriteQueryMeter(tn1, 500L);
+    HELPER.assertGauge("ServerWriteQueryPerSecond_count", 500L, serverSource);
+  }
 }
 

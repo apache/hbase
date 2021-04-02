@@ -58,8 +58,9 @@ public class TestGetReplicationLoad {
     }
 
     @Override
-    protected void tryRegionServerReport(long reportStartTime, long reportEndTime) {
+    protected boolean tryRegionServerReport(long reportStartTime, long reportEndTime) {
       // do nothing
+      return true;
     }
   }
 

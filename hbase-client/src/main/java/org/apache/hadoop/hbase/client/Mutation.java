@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IndividualBytesFieldCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.RawCell;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -1000,25 +999,16 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
 
     @Override
     public Optional<Tag> getTag(byte type) {
-      if (cell instanceof RawCell) {
-        return ((RawCell) cell).getTag(type);
-      }
       return PrivateCellUtil.getTag(cell, type);
     }
 
     @Override
     public Iterator<Tag> getTags() {
-      if (cell instanceof RawCell) {
-        return ((RawCell) cell).getTags();
-      }
       return PrivateCellUtil.tagsIterator(cell);
     }
 
     @Override
     public byte[] cloneTags() {
-      if (cell instanceof RawCell) {
-        return ((RawCell) cell).cloneTags();
-      }
       return PrivateCellUtil.cloneTags(cell);
     }
 

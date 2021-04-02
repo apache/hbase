@@ -534,7 +534,7 @@ module Hbase
           File.foreach(splits_file) do |line|
             arg[SPLITS].push(line.chomp)
           end
-          tdb.setValue(SPLITS_FILE, arg[SPLITS_FILE])
+          tdb.setValue(SPLITS_FILE, splits_file)
         end
 
         if arg.key?(SPLITS)
@@ -1108,7 +1108,7 @@ module Hbase
       end
       cfdb.setTimeToLive(arg.delete(ColumnFamilyDescriptorBuilder::TTL)) if arg.include?(ColumnFamilyDescriptorBuilder::TTL)
       cfdb.setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::DATA_BLOCK_ENCODING))) if arg.include?(ColumnFamilyDescriptorBuilder::DATA_BLOCK_ENCODING)
-      cfdb.setBlocksize(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::BLOCKSIZE))) if arg.include?(ColumnFamilyDescriptorBuilder::BLOCKSIZE)
+      cfdb.setBlocksize(arg.delete(ColumnFamilyDescriptorBuilder::BLOCKSIZE)) if arg.include?(ColumnFamilyDescriptorBuilder::BLOCKSIZE)
       cfdb.setMaxVersions(JInteger.valueOf(arg.delete(HConstants::VERSIONS))) if arg.include?(HConstants::VERSIONS)
       cfdb.setMinVersions(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::MIN_VERSIONS))) if arg.include?(ColumnFamilyDescriptorBuilder::MIN_VERSIONS)
       cfdb.setKeepDeletedCells(org.apache.hadoop.hbase.KeepDeletedCells.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::KEEP_DELETED_CELLS).to_s.upcase)) if arg.include?(ColumnFamilyDescriptorBuilder::KEEP_DELETED_CELLS)
@@ -1137,8 +1137,8 @@ module Hbase
         algorithm = arg.delete(ColumnFamilyDescriptorBuilder::ENCRYPTION).upcase
         cfdb.setEncryptionType(algorithm)
         if arg.include?(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY)
-          key = org.apache.hadoop.hbase.io.crypto.Encryption.pbkdf128(
-            arg.delete(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY)
+          key = org.apache.hadoop.hbase.io.crypto.Encryption.generateSecretKey(
+            @conf, algorithm, arg.delete(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY)
           )
           cfdb.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,
                                                                                           algorithm))
@@ -1206,6 +1206,9 @@ module Hbase
           ttl = ttl ? ttl.to_java(:long) : -1
           snapshot_props = java.util.HashMap.new
           snapshot_props.put("TTL", ttl)
+          max_filesize = arg[MAX_FILESIZE]
+          max_filesize = max_filesize ? max_filesize.to_java(:long) : -1
+          snapshot_props.put("MAX_FILESIZE", max_filesize)
           if arg[SKIP_FLUSH] == true
             @admin.snapshot(snapshot_name, table_name,
                             org.apache.hadoop.hbase.client.SnapshotType::SKIPFLUSH, snapshot_props)
@@ -1414,7 +1417,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # modify a namespace
     def alter_namespace(namespace_name, *args)
-      # Fail if table name is not a string
+      # Fail if namespace name is not a string
       raise(ArgumentError, 'Namespace name must be of type String') unless namespace_name.is_a?(String)
 
       nsd = @admin.getNamespaceDescriptor(namespace_name)
@@ -1448,6 +1451,16 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Get namespace's rsgroup
+    def get_namespace_rsgroup(namespace_name)
+      # Fail if namespace name is not a string
+      raise(ArgumentError, 'Namespace name must be of type String') unless namespace_name.is_a?(String)
+      nsd = @admin.getNamespaceDescriptor(namespace_name)
+      raise(ArgumentError, 'Namespace does not exist') unless nsd
+      nsd.getConfigurationValue("hbase.rsgroup.name")
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Drops a table
     def drop_namespace(namespace_name)
       @admin.deleteNamespace(namespace_name)
@@ -1470,9 +1483,9 @@ module Hbase
     end
 
     # Parse arguments and update TableDescriptorBuilder accordingly
+    # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     def update_tdb_from_arg(tdb, arg)
-      tdb.setOwnerString(arg.delete(TableDescriptorBuilder::OWNER)) if arg.include?(TableDescriptorBuilder::OWNER)
-      tdb.setMaxFileSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::MAX_FILESIZE))) if arg.include?(TableDescriptorBuilder::MAX_FILESIZE)
+      tdb.setMaxFileSize(arg.delete(TableDescriptorBuilder::MAX_FILESIZE)) if arg.include?(TableDescriptorBuilder::MAX_FILESIZE)
       tdb.setReadOnly(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::READONLY))) if arg.include?(TableDescriptorBuilder::READONLY)
       tdb.setCompactionEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::COMPACTION_ENABLED))) if arg.include?(TableDescriptorBuilder::COMPACTION_ENABLED)
       tdb.setSplitEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::SPLIT_ENABLED))) if arg.include?(TableDescriptorBuilder::SPLIT_ENABLED)
@@ -1480,7 +1493,7 @@ module Hbase
       tdb.setNormalizationEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZATION_ENABLED))) if arg.include?(TableDescriptorBuilder::NORMALIZATION_ENABLED)
       tdb.setNormalizerTargetRegionCount(JInteger.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_COUNT))) if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_COUNT)
       tdb.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE))) if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE)
-      tdb.setMemStoreFlushSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::MEMSTORE_FLUSHSIZE))) if arg.include?(TableDescriptorBuilder::MEMSTORE_FLUSHSIZE)
+      tdb.setMemStoreFlushSize(arg.delete(TableDescriptorBuilder::MEMSTORE_FLUSHSIZE)) if arg.include?(TableDescriptorBuilder::MEMSTORE_FLUSHSIZE)
       tdb.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf(arg.delete(TableDescriptorBuilder::DURABILITY))) if arg.include?(TableDescriptorBuilder::DURABILITY)
       tdb.setPriority(JInteger.valueOf(arg.delete(TableDescriptorBuilder::PRIORITY))) if arg.include?(TableDescriptorBuilder::PRIORITY)
       tdb.setFlushPolicyClassName(arg.delete(TableDescriptorBuilder::FLUSH_POLICY)) if arg.include?(TableDescriptorBuilder::FLUSH_POLICY)
@@ -1490,6 +1503,7 @@ module Hbase
       set_user_metadata(tdb, arg.delete(METADATA)) if arg[METADATA]
       set_descriptor_config(tdb, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
     #----------------------------------------------------------------------------------------------
     # clear compaction queues

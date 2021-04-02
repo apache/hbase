@@ -203,6 +203,9 @@ public class RSGroupInfo {
     sb.append(", ");
     sb.append(" Tables:");
     sb.append(this.tables);
+    sb.append(", ");
+    sb.append(" Configurations:");
+    sb.append(this.configuration);
     return sb.toString();
 
   }
@@ -239,6 +242,7 @@ public class RSGroupInfo {
     int result = servers.hashCode();
     result = 31 * result + tables.hashCode();
     result = 31 * result + name.hashCode();
+    result = 31 * result + configuration.hashCode();
     return result;
   }
 }

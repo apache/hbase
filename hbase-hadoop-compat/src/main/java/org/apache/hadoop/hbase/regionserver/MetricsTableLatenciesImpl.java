@@ -25,8 +25,6 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Implementation of {@link MetricsTableLatencies} to track latencies for one table in a
  * RegionServer.
@@ -36,7 +34,6 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
 
   private final HashMap<TableName,TableHistograms> histogramsByTable = new HashMap<>();
 
-  @VisibleForTesting
   public static class TableHistograms {
     final MetricHistogram getTimeHisto;
     final MetricHistogram incrementTimeHisto;
@@ -47,6 +44,9 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
     final MetricHistogram deleteBatchTimeHisto;
     final MetricHistogram scanTimeHisto;
     final MetricHistogram scanSizeHisto;
+    final MetricHistogram checkAndDeleteTimeHisto;
+    final MetricHistogram checkAndPutTimeHisto;
+    final MetricHistogram checkAndMutateTimeHisto;
 
     TableHistograms(DynamicMetricsRegistry registry, TableName tn) {
       getTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, GET_TIME));
@@ -60,6 +60,12 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
           qualifyMetricsName(tn, DELETE_BATCH_TIME));
       scanTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, SCAN_TIME));
       scanSizeHisto = registry.newSizeHistogram(qualifyMetricsName(tn, SCAN_SIZE));
+      checkAndDeleteTimeHisto =
+        registry.newTimeHistogram(qualifyMetricsName(tn, CHECK_AND_DELETE_TIME));
+      checkAndPutTimeHisto =
+        registry.newTimeHistogram(qualifyMetricsName(tn, CHECK_AND_PUT_TIME));
+      checkAndMutateTimeHisto =
+        registry.newTimeHistogram(qualifyMetricsName(tn, CHECK_AND_MUTATE_TIME));
     }
 
     public void updatePut(long time) {
@@ -97,9 +103,20 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
     public void updateScanTime(long t) {
       scanTimeHisto.add(t);
     }
+
+    public void updateCheckAndDeleteTime(long t) {
+      checkAndDeleteTimeHisto.add(t);
+    }
+
+    public void updateCheckAndPutTime(long t) {
+      checkAndPutTimeHisto.add(t);
+    }
+
+    public void updateCheckAndMutateTime(long t) {
+      checkAndMutateTimeHisto.add(t);
+    }
   }
 
-  @VisibleForTesting
   public static String qualifyMetricsName(TableName tableName, String metric) {
     StringBuilder sb = new StringBuilder();
     sb.append("Namespace_").append(tableName.getNamespaceAsString());
@@ -108,7 +125,6 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
     return sb.toString();
   }
 
-  @VisibleForTesting
   public TableHistograms getOrCreateTableHistogram(String tableName) {
     // TODO Java8's ConcurrentHashMap#computeIfAbsent would be stellar instead
     final TableName tn = TableName.valueOf(tableName);
@@ -172,6 +188,21 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
   @Override
   public void updateScanTime(String tableName, long t) {
     getOrCreateTableHistogram(tableName).updateScanTime(t);
+  }
+
+  @Override
+  public void updateCheckAndDelete(String tableName, long time) {
+    getOrCreateTableHistogram(tableName).updateCheckAndDeleteTime(time);
+  }
+
+  @Override
+  public void updateCheckAndPut(String tableName, long time) {
+    getOrCreateTableHistogram(tableName).updateCheckAndPutTime(time);
+  }
+
+  @Override
+  public void updateCheckAndMutate(String tableName, long time) {
+    getOrCreateTableHistogram(tableName).updateCheckAndMutateTime(time);
   }
 
   @Override
