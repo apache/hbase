@@ -2842,7 +2842,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     String s = "Finished memstore snapshotting " + this + ", syncing WAL and waiting on mvcc, " +
         "flushsize=" + totalSizeOfFlushableStores;
     status.setStatus(s);
-    doSyncOfUnflushedWALChanges(wal, getRegionInfo());
+
+    try {
+      doSyncOfUnflushedWALChanges(wal, getRegionInfo());
+    } catch (Throwable t) {
+      status.abort("Sync unflushed WAL changes failed: " + StringUtils.stringifyException(t));
+      fatalForFlushCache(t);
+    }
     return new PrepareFlushResult(storeFlushCtxs, committedFiles, storeFlushableSize, startTime,
         flushOpSeqId, flushedSeqId, totalSizeOfFlushableStores);
   }
@@ -3032,22 +3038,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         wal.abortCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
       }
-      DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
-        Bytes.toStringBinary(getRegionInfo().getRegionName()), t);
       status.abort("Flush failed: " + StringUtils.stringifyException(t));
-
-      // Callers for flushcache() should catch DroppedSnapshotException and abort the region server.
-      // However, since we may have the region read lock, we cannot call close(true) here since
-      // we cannot promote to a write lock. Instead we are setting closing so that all other region
-      // operations except for close will be rejected.
-      this.closing.set(true);
-
-      if (rsServices != null) {
-        // This is a safeguard against the case where the caller fails to explicitly handle aborting
-        rsServices.abort("Replay of WAL required. Forcing server shutdown", dse);
-      }
-
-      throw dse;
+      fatalForFlushCache(t);
     }
 
     // If we get to here, the HStores have been written.
@@ -3091,6 +3083,24 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return new FlushResultImpl(compactionRequested ?
         FlushResult.Result.FLUSHED_COMPACTION_NEEDED :
           FlushResult.Result.FLUSHED_NO_COMPACTION_NEEDED, flushOpSeqId);
+  }
+
+  private void fatalForFlushCache(Throwable t) throws DroppedSnapshotException {
+    DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
+      Bytes.toStringBinary(getRegionInfo().getRegionName()), t);
+
+    // Callers for flushcache() should catch DroppedSnapshotException and abort the region server.
+    // However, since we may have the region read lock, we cannot call close(true) here since
+    // we cannot promote to a write lock. Instead we are setting closing so that all other region
+    // operations except for close will be rejected.
+    this.closing.set(true);
+
+    if (rsServices != null) {
+      // This is a safeguard against the case where the caller fails to explicitly handle aborting
+      rsServices.abort("Replay of WAL required. Forcing server shutdown", dse);
+    }
+
+    throw dse;
   }
 
   /**
