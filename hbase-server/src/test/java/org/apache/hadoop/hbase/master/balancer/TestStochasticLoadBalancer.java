@@ -35,6 +35,7 @@ import java.util.Queue;
 import java.util.TimeZone;
 import java.util.TreeMap;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,8 +56,8 @@ import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
-import org.junit.Ignore;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -716,13 +717,34 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   @Test
   public void testAdditionalCostFunction() {
     conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY,
-            DummyCostFunction.class.getName());
+      DummyCostFunction.class.getName());
 
     loadBalancer.setConf(conf);
     System.out.println(Arrays.toString(loadBalancer.getCostFunctionNames()));
     assertTrue(Arrays.
             asList(loadBalancer.getCostFunctionNames()).
             contains(DummyCostFunction.class.getSimpleName()));
+  }
+
+  @Test
+  public void testDefaultCostFunctionList() {
+    List<String> expected = Arrays.asList(
+      StochasticLoadBalancer.RegionCountSkewCostFunction.class.getSimpleName(),
+      StochasticLoadBalancer.PrimaryRegionCountSkewCostFunction.class.getSimpleName(),
+      StochasticLoadBalancer.MoveCostFunction.class.getSimpleName(),
+      StochasticLoadBalancer.RackLocalityCostFunction.class.getSimpleName(),
+      StochasticLoadBalancer.TableSkewCostFunction.class.getSimpleName(),
+      StochasticLoadBalancer.RegionReplicaHostCostFunction.class.getSimpleName(),
+      StochasticLoadBalancer.RegionReplicaRackCostFunction.class.getSimpleName(),
+      StochasticLoadBalancer.ReadRequestCostFunction.class.getSimpleName(),
+      StochasticLoadBalancer.WriteRequestCostFunction.class.getSimpleName(),
+      StochasticLoadBalancer.MemstoreSizeCostFunction.class.getSimpleName(),
+      StochasticLoadBalancer.StoreFileCostFunction.class.getSimpleName()
+    );
+
+    List<String> actual = Arrays.asList(loadBalancer.getCostFunctionNames());
+    assertTrue("ExpectedCostFunctions: " + expected + " ActualCostFunctions: " + actual,
+      CollectionUtils.isEqualCollection(expected, actual));
   }
 
   private boolean needsBalanceIdleRegion(int[] clusters) {
