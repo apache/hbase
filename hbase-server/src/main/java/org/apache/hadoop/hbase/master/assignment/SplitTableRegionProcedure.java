@@ -869,7 +869,7 @@ public class SplitTableRegionProcedure
     List<RegionInfo> hris = new ArrayList<RegionInfo>(2);
     hris.add(daughterOneRI);
     hris.add(daughterTwoRI);
-    return AssignmentManagerUtil.createAssignProceduresForOpeningNewRegions(env, hris,
+    return AssignmentManagerUtil.createAssignProceduresForSplitDaughters(env, hris,
       getRegionReplication(env), getParentRegionServerName(env));
   }
 

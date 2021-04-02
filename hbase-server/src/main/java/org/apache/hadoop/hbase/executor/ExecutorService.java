@@ -127,25 +127,14 @@ public class ExecutorService {
     return getExecutor(type).getThreadPoolExecutor();
   }
 
-  public void startExecutorService(final ExecutorType type, final ExecutorConfig config) {
-    String name = type.getExecutorName(this.servername);
-    if (isExecutorServiceRunning(name)) {
-      LOG.debug("Executor service {} already running on {}", this,
-          this.servername);
-      return;
-    }
-    startExecutorService(config.setName(name));
-  }
-
   /**
    * Initialize the executor lazily, Note if an executor need to be initialized lazily, then all
    * paths should use this method to get the executor, should not start executor by using
    * {@link ExecutorService#startExecutorService(ExecutorConfig)}
    */
-  public ThreadPoolExecutor getExecutorLazily(ExecutorType type, ExecutorConfig config) {
-    String name = type.getExecutorName(this.servername);
-    return executorMap.computeIfAbsent(name, (executorName) ->
-        new Executor(config.setName(name))).getThreadPoolExecutor();
+  public ThreadPoolExecutor getExecutorLazily(ExecutorConfig config) {
+    return executorMap.computeIfAbsent(config.getName(), (executorName) ->
+        new Executor(config)).getThreadPoolExecutor();
   }
 
   public void submit(final EventHandler eh) {
@@ -184,7 +173,7 @@ public class ExecutorService {
   /**
    * Configuration wrapper for {@link Executor}.
    */
-  public static class ExecutorConfig {
+  public class ExecutorConfig {
     // Refer to ThreadPoolExecutor javadoc for details of these configuration.
     // Argument validation and bound checks delegated to the underlying ThreadPoolExecutor
     // implementation.
@@ -192,7 +181,16 @@ public class ExecutorService {
     private int corePoolSize = -1;
     private boolean allowCoreThreadTimeout = false;
     private long keepAliveTimeMillis = KEEP_ALIVE_TIME_MILLIS_DEFAULT;
-    private String name;
+    private ExecutorType executorType;
+
+    public ExecutorConfig setExecutorType(ExecutorType type) {
+      this.executorType = type;
+      return this;
+    }
+
+    private ExecutorType getExecutorType() {
+      return Preconditions.checkNotNull(executorType, "ExecutorType not set.");
+    }
 
     public int getCorePoolSize() {
       return corePoolSize;
@@ -217,13 +215,11 @@ public class ExecutorService {
       return this;
     }
 
+    /**
+     * @return the executor name inferred from the type and the servername on which this is running.
+     */
     public String getName() {
-      return Preconditions.checkNotNull(name);
-    }
-
-    public ExecutorConfig setName(String name) {
-      this.name = name;
-      return this;
+      return getExecutorType().getExecutorName(servername);
     }
 
     public long getKeepAliveTimeMillis() {

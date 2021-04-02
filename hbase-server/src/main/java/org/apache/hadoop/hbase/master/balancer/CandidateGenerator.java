@@ -124,12 +124,12 @@ abstract class CandidateGenerator {
     if (fromServer < 0 || toServer < 0) {
       return BaseLoadBalancer.Cluster.NullAction;
     }
-    if (fromRegion > 0 && toRegion > 0) {
+    if (fromRegion >= 0 && toRegion >= 0) {
       return new BaseLoadBalancer.Cluster.SwapRegionsAction(fromServer, fromRegion,
         toServer, toRegion);
-    } else if (fromRegion > 0) {
+    } else if (fromRegion >= 0) {
       return new BaseLoadBalancer.Cluster.MoveRegionAction(fromRegion, fromServer, toServer);
-    } else if (toRegion > 0) {
+    } else if (toRegion >= 0) {
       return new BaseLoadBalancer.Cluster.MoveRegionAction(toRegion, toServer, fromServer);
     } else {
       return BaseLoadBalancer.Cluster.NullAction;

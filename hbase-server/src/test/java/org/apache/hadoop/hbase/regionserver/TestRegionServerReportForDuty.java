@@ -42,11 +42,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.log4j.Appender;
-import org.apache.log4j.Layout;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.WriterAppender;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -55,6 +50,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @Category(LargeTests.class)
 public class TestRegionServerReportForDuty {
@@ -91,26 +88,15 @@ public class TestRegionServerReportForDuty {
     testUtil.shutdownMiniDFSCluster();
   }
 
-  /**
-   * LogCapturer is similar to {@link org.apache.hadoop.test.GenericTestUtils.LogCapturer}
-   * except that this implementation has a default appender to the root logger.
-   * Hadoop 2.8+ supports the default appender in the LogCapture it ships and this can be replaced.
-   * TODO: This class can be removed after we upgrade Hadoop dependency.
-   */
-  static class LogCapturer {
+  private static class LogCapturer {
     private StringWriter sw = new StringWriter();
-    private WriterAppender appender;
-    private org.apache.log4j.Logger logger;
+    private org.apache.logging.log4j.core.appender.WriterAppender appender;
+    private org.apache.logging.log4j.core.Logger logger;
 
-    LogCapturer(org.apache.log4j.Logger logger) {
+    LogCapturer(org.apache.logging.log4j.core.Logger logger) {
       this.logger = logger;
-      Appender defaultAppender = org.apache.log4j.Logger.getRootLogger().getAppender("stdout");
-      if (defaultAppender == null) {
-        defaultAppender = org.apache.log4j.Logger.getRootLogger().getAppender("console");
-      }
-      final Layout layout = (defaultAppender == null) ? new PatternLayout() :
-          defaultAppender.getLayout();
-      this.appender = new WriterAppender(layout, sw);
+      this.appender = org.apache.logging.log4j.core.appender.WriterAppender.newBuilder()
+        .setName("test").setTarget(sw).build();
       this.logger.addAppender(this.appender);
     }
 
@@ -146,7 +132,9 @@ public class TestRegionServerReportForDuty {
     master = cluster.addMaster();
     master.start();
 
-    LogCapturer capturer = new LogCapturer(org.apache.log4j.Logger.getLogger(HRegionServer.class));
+    LogCapturer capturer =
+      new LogCapturer((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+        .getLogger(HRegionServer.class));
     // Set sleep interval relatively low so that exponential backoff is more demanding.
     int msginterval = 100;
     cluster.getConfiguration().setInt("hbase.regionserver.msginterval", msginterval);

@@ -59,8 +59,8 @@ public class TestExecutorStatusChore {
 
     // Start an executor service pool with max 5 threads
     ExecutorService executorService = new ExecutorService("unit_test");
-    executorService.startExecutorService(ExecutorType.RS_PARALLEL_SEEK,
-        new ExecutorConfig().setCorePoolSize(maxThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_PARALLEL_SEEK).setCorePoolSize(maxThreads));
 
     MetricsRegionServerSource serverSource = CompatibilitySingletonFactory
         .getInstance(MetricsRegionServerSourceFactory.class).createServer(null);

@@ -27,6 +27,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -40,6 +41,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_ENABLE_SEPARATE_CHILD_REGIONS;
 
 /**
  * Utility for this assignment package only.
@@ -187,6 +189,67 @@ final class AssignmentManagerUtil {
           Collections.singletonList(targetServer));
     // combine both the procs and return the result
     return ArrayUtils.addAll(primaryRegionProcs, replicaRegionAssignProcs);
+  }
+
+  /**
+   * Create round robin assign procedures for the given regions,
+   * according to the {@code regionReplication}.
+   * <p/>
+   * For rolling back, we will submit procedures directly to the {@code ProcedureExecutor}, so it is
+   * possible that we persist the newly scheduled procedures, and then crash before persisting the
+   * rollback state, so when we arrive here the second time, it is possible that some regions have
+   * already been associated with a TRSP.
+   * @param ignoreIfInTransition if true, will skip creating TRSP for the given region if it is
+   *          already in transition, otherwise we will add an assert that it should not in
+   *          transition.
+   */
+  private static TransitRegionStateProcedure[] createRoundRobinAssignProcedures(
+    MasterProcedureEnv env, List<RegionInfo> regions, int regionReplication,
+    List<ServerName> serversToExclude, boolean ignoreIfInTransition) {
+    List<RegionInfo> regionsAndReplicas = new ArrayList<>(regions);
+    if (regionReplication != DEFAULT_REGION_REPLICA) {
+
+      // collect the replica region infos
+      List<RegionInfo> replicaRegionInfos =
+        new ArrayList<RegionInfo>(regions.size() * (regionReplication - 1));
+      for (RegionInfo hri : regions) {
+        // start the index from 1
+        for (int i = 1; i < regionReplication; i++) {
+          replicaRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(hri, i));
+        }
+      }
+      regionsAndReplicas.addAll(replicaRegionInfos);
+    }
+    if (ignoreIfInTransition) {
+      for (RegionInfo region : regionsAndReplicas) {
+        if (env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(region)
+          .isInTransition()) {
+          return null;
+        }
+      }
+    }
+    // create round robin procs. Note that we exclude the primary region's target server
+    return env.getAssignmentManager()
+      .createRoundRobinAssignProcedures(regionsAndReplicas, serversToExclude);
+  }
+
+  static TransitRegionStateProcedure[] createAssignProceduresForSplitDaughters(
+    MasterProcedureEnv env, List<RegionInfo> daughters, int regionReplication,
+    ServerName parentServer) {
+    if(env.getMasterConfiguration().getBoolean(HConstants.HBASE_ENABLE_SEPARATE_CHILD_REGIONS,
+      DEFAULT_HBASE_ENABLE_SEPARATE_CHILD_REGIONS)){
+      // keep one daughter on the parent region server
+      TransitRegionStateProcedure[] daughterOne =
+        createAssignProcedures(env, Collections.singletonList(daughters.get(0)),
+          regionReplication, parentServer, false);
+      // round robin assign the other daughter
+      TransitRegionStateProcedure[] daughterTwo =
+        createRoundRobinAssignProcedures(env, Collections.singletonList(daughters.get(1)),
+          regionReplication, Collections.singletonList(parentServer), false);
+      return ArrayUtils.addAll(daughterOne, daughterTwo);
+    }
+    return createAssignProceduresForOpeningNewRegions(env, daughters, regionReplication,
+      parentServer);
   }
 
   static TransitRegionStateProcedure[] createAssignProceduresForOpeningNewRegions(

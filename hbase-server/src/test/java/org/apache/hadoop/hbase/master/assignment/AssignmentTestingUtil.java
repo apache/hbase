@@ -24,12 +24,16 @@ import java.io.IOException;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -151,5 +155,34 @@ public final class AssignmentTestingUtil {
     ProcedureSyncWait.waitForProcedureToCompleteIOE(am.getMaster().getMasterProcedureExecutor(),
       proc, 5L * 60 * 1000);
     return true;
+  }
+
+  public static void insertData(final HBaseTestingUtility UTIL, final TableName tableName,
+    int rowCount, int startRowNum, String... cfs) throws IOException {
+    insertData(UTIL, tableName, rowCount, startRowNum, false, cfs);
+  }
+
+  public static void insertData(final HBaseTestingUtility UTIL, final TableName tableName,
+    int rowCount, int startRowNum, boolean flushOnce, String... cfs) throws IOException {
+    Table t = UTIL.getConnection().getTable(tableName);
+    Put p;
+    for (int i = 0; i < rowCount / 2; i++) {
+      p = new Put(Bytes.toBytes("" + (startRowNum + i)));
+      for (String cf : cfs) {
+        p.addColumn(Bytes.toBytes(cf), Bytes.toBytes("q"), Bytes.toBytes(i));
+      }
+      t.put(p);
+      p = new Put(Bytes.toBytes("" + (startRowNum + rowCount - i - 1)));
+      for (String cf : cfs) {
+        p.addColumn(Bytes.toBytes(cf), Bytes.toBytes("q"), Bytes.toBytes(i));
+      }
+      t.put(p);
+      if (i % 5 == 0 && !flushOnce) {
+        UTIL.getAdmin().flush(tableName);
+      }
+    }
+    if (flushOnce) {
+      UTIL.getAdmin().flush(tableName);
+    }
   }
 }

@@ -263,6 +263,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     this.candidateGenerators = customCandidateGenerators;
   }
 
+  /**
+   * Exposed for Testing!
+   */
+  public List<CandidateGenerator> getCandidateGenerators() {
+    return this.candidateGenerators;
+  }
+
   @Override
   protected void setSlop(Configuration conf) {
     this.slop = conf.getFloat("hbase.regions.slop", 0.001F);

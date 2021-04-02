@@ -26,10 +26,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -260,35 +259,21 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
   }
 
+  @InterfaceAudience.Private
+  public Map<String, PriorityBlockingQueue<Path>> getQueues() {
+    return logQueue.getQueues();
+  }
+
   @Override
   public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
       throws ReplicationException {
     String peerId = replicationPeer.getId();
-    Set<String> namespaces = replicationPeer.getNamespaces();
-    Map<TableName, List<String>> tableCFMap = replicationPeer.getTableCFs();
-    if (tableCFMap != null) { // All peers with TableCFs
-      List<String> tableCfs = tableCFMap.get(tableName);
-      if (tableCFMap.containsKey(tableName)
-          && (tableCfs == null || tableCfs.contains(Bytes.toString(family)))) {
-        this.queueStorage.addHFileRefs(peerId, pairs);
-        metrics.incrSizeOfHFileRefsQueue(pairs.size());
-      } else {
-        LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
-            tableName, Bytes.toString(family), peerId);
-      }
-    } else if (namespaces != null) { // Only for set NAMESPACES peers
-      if (namespaces.contains(tableName.getNamespaceAsString())) {
-        this.queueStorage.addHFileRefs(peerId, pairs);
-        metrics.incrSizeOfHFileRefsQueue(pairs.size());
-      } else {
-        LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
-            tableName, Bytes.toString(family), peerId);
-      }
-    } else {
-      // user has explicitly not defined any table cfs for replication, means replicate all the
-      // data
+    if (replicationPeer.getPeerConfig().needToReplicate(tableName, family)) {
       this.queueStorage.addHFileRefs(peerId, pairs);
       metrics.incrSizeOfHFileRefsQueue(pairs.size());
+    } else {
+      LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
+        tableName, Bytes.toString(family), peerId);
     }
   }
 
@@ -550,7 +535,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
           sleepMultiplier++;
         } else {
           retryStartup.set(!this.abortOnError);
-          this.startupOngoing.set(false);
+          setSourceStartupStatus(false);
           throw new RuntimeException("Exhausted retries to start replication endpoint.");
         }
       }
@@ -558,7 +543,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     if (!this.isSourceActive()) {
       retryStartup.set(!this.abortOnError);
-      this.startupOngoing.set(false);
+      setSourceStartupStatus(false);
       throw new IllegalStateException("Source should be active.");
     }
 
@@ -582,7 +567,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     if(!this.isSourceActive()) {
       retryStartup.set(!this.abortOnError);
-      this.startupOngoing.set(false);
+      setSourceStartupStatus(false);
       throw new IllegalStateException("Source should be active.");
     }
     LOG.info("{} queueId={} (queues={}) is replicating from cluster={} to cluster={}",
@@ -593,7 +578,16 @@ public class ReplicationSource implements ReplicationSourceInterface {
     for (String walGroupId: logQueue.getQueues().keySet()) {
       tryStartNewShipper(walGroupId);
     }
-    this.startupOngoing.set(false);
+    setSourceStartupStatus(false);
+  }
+
+  private synchronized void setSourceStartupStatus(boolean initializing) {
+    startupOngoing.set(initializing);
+    if (initializing) {
+      metrics.incrSourceInitializing();
+    } else {
+      metrics.decrSourceInitializing();
+    }
   }
 
   @Override
@@ -602,7 +596,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       return this;
     }
     this.sourceRunning = true;
-    startupOngoing.set(true);
+    setSourceStartupStatus(true);
     initThread = new Thread(this::initialize);
     Threads.setDaemonThreadRunning(initThread,
       Thread.currentThread().getName() + ".replicationSource," + this.queueId,
@@ -616,12 +610,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
         do {
           if(retryStartup.get()) {
             this.sourceRunning = true;
-            startupOngoing.set(true);
+            setSourceStartupStatus(true);
             retryStartup.set(false);
             try {
               initialize();
             } catch(Throwable error){
-              sourceRunning = false;
+              setSourceStartupStatus(false);
               uncaughtException(t, error, null, null);
               retryStartup.set(!this.abortOnError);
             }
