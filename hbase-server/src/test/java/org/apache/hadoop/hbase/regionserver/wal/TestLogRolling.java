@@ -535,20 +535,6 @@ public class TestLogRolling extends AbstractTestLogRolling {
       assertTrue(loggedRows.contains("row1004"));
       assertTrue(loggedRows.contains("row1005"));
 
-      // flush all regions
-      for (HRegion r : server.getOnlineRegionsLocalContext()) {
-        try {
-          r.flush(true);
-        } catch (Exception e) {
-          // This try/catch was added by HBASE-14317. It is needed
-          // because this issue tightened up the semantic such that
-          // a failed append could not be followed by a successful
-          // sync. What is coming out here is a failed sync, a sync
-          // that used to 'pass'.
-          LOG.info(e.toString(), e);
-        }
-      }
-
       ResultScanner scanner = table.getScanner(new Scan());
       try {
         for (int i = 2; i <= 5; i++) {
