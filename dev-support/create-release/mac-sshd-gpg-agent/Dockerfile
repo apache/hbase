@@ -83,7 +83,7 @@ FROM ubuntu:18.04
 # into the container rather than launching a new docker container.
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
   && DEBIAN_FRONTEND=noninteractive apt-get -qq -y install --no-install-recommends \
-  openssh-server=1:7.6p1-4ubuntu0.3 gnupg2=2.2.4-1ubuntu1.2 && mkdir /run/sshd \
+  openssh-server=1:7.6p1-4ubuntu0.3 gnupg2=2.2.4-1ubuntu1.3 && mkdir /run/sshd \
   && echo "StreamLocalBindUnlink yes" >> /etc/ssh/sshd_config \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*

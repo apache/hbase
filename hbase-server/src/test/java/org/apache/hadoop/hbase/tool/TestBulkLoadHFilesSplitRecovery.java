@@ -407,6 +407,33 @@ public class TestBulkLoadHFilesSplitRecovery {
     assertEquals(20, countedLqis.get());
   }
 
+  @Test
+  public void testCorrectSplitPoint() throws Exception {
+    final TableName table = TableName.valueOf(name.getMethodName());
+    byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
+        Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
+        Bytes.toBytes("row_00000050"), Bytes.toBytes("row_00000060"),
+        Bytes.toBytes("row_00000070") };
+    setupTableWithSplitkeys(table, NUM_CFS, SPLIT_KEYS);
+
+    final AtomicInteger bulkloadRpcTimes = new AtomicInteger();
+    BulkLoadHFilesTool loader = new BulkLoadHFilesTool(util.getConfiguration()) {
+
+      @Override
+      protected void bulkLoadPhase(AsyncClusterConnection conn, TableName tableName,
+          Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+          boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        bulkloadRpcTimes.addAndGet(1);
+        super.bulkLoadPhase(conn, tableName, queue, regionGroups, copyFiles, item2RegionMap);
+      }
+    };
+
+    Path dir = buildBulkFiles(table, 1);
+    loader.bulkLoad(table, dir);
+    // before HBASE-25281 we need invoke bulkload rpc 8 times
+    assertEquals(4, bulkloadRpcTimes.get());
+  }
+
   /**
    * This test creates a table with many small regions. The bulk load files would be splitted
    * multiple times before all of them can be loaded successfully.

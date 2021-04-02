@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -702,6 +702,66 @@ public class TestCheckAndMutate {
     }
   }
 
+  @Test
+  public void testCheckAndRowMutations() throws Throwable {
+    final byte[] q1 = Bytes.toBytes("q1");
+    final byte[] q2 = Bytes.toBytes("q2");
+    final byte[] q3 = Bytes.toBytes("q3");
+    final byte[] q4 = Bytes.toBytes("q4");
+    final String v1 = "v1";
+
+    try (Table table = createTable()) {
+      // Initial values
+      table.put(Arrays.asList(
+        new Put(ROWKEY).addColumn(FAMILY, q2, Bytes.toBytes("toBeDeleted")),
+        new Put(ROWKEY).addColumn(FAMILY, q3, Bytes.toBytes(5L)),
+        new Put(ROWKEY).addColumn(FAMILY, q4, Bytes.toBytes("a"))));
+
+      // Do CheckAndRowMutations
+      CheckAndMutate checkAndMutate = CheckAndMutate.newBuilder(ROWKEY)
+        .ifNotExists(FAMILY, q1)
+        .build(new RowMutations(ROWKEY).add(Arrays.asList(
+          new Put(ROWKEY).addColumn(FAMILY, q1, Bytes.toBytes(v1)),
+          new Delete(ROWKEY).addColumns(FAMILY, q2),
+          new Increment(ROWKEY).addColumn(FAMILY, q3, 1),
+          new Append(ROWKEY).addColumn(FAMILY, q4, Bytes.toBytes("b"))))
+        );
+
+      CheckAndMutateResult result = table.checkAndMutate(checkAndMutate);
+      assertTrue(result.isSuccess());
+      assertEquals(6L, Bytes.toLong(result.getResult().getValue(FAMILY, q3)));
+      assertEquals("ab", Bytes.toString(result.getResult().getValue(FAMILY, q4)));
+
+      // Verify the value
+      Result r = table.get(new Get(ROWKEY));
+      assertEquals(v1, Bytes.toString(r.getValue(FAMILY, q1)));
+      assertNull(r.getValue(FAMILY, q2));
+      assertEquals(6L, Bytes.toLong(r.getValue(FAMILY, q3)));
+      assertEquals("ab", Bytes.toString(r.getValue(FAMILY, q4)));
+
+      // Do CheckAndRowMutations again
+      checkAndMutate = CheckAndMutate.newBuilder(ROWKEY)
+        .ifNotExists(FAMILY, q1)
+        .build(new RowMutations(ROWKEY).add(Arrays.asList(
+          new Delete(ROWKEY).addColumns(FAMILY, q1),
+          new Put(ROWKEY).addColumn(FAMILY, q2, Bytes.toBytes(v1)),
+          new Increment(ROWKEY).addColumn(FAMILY, q3, 1),
+          new Append(ROWKEY).addColumn(FAMILY, q4, Bytes.toBytes("b"))))
+        );
+
+      result = table.checkAndMutate(checkAndMutate);
+      assertFalse(result.isSuccess());
+      assertNull(result.getResult());
+
+      // Verify the value
+      r = table.get(new Get(ROWKEY));
+      assertEquals(v1, Bytes.toString(r.getValue(FAMILY, q1)));
+      assertNull(r.getValue(FAMILY, q2));
+      assertEquals(6L, Bytes.toLong(r.getValue(FAMILY, q3)));
+      assertEquals("ab", Bytes.toString(r.getValue(FAMILY, q4)));
+    }
+  }
+
   // Tests for batch version of checkAndMutate
 
   @Test
@@ -1096,6 +1156,64 @@ public class TestCheckAndMutate {
 
       result = table.get(new Get(ROWKEY2).addColumn(FAMILY, Bytes.toBytes("D")));
       assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+    }
+  }
+
+  @Test
+  public void testCheckAndRowMutationsBatch() throws Throwable {
+    try (Table table = createTable()) {
+      table.put(Arrays.asList(
+        new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))
+          .addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes(1L))
+          .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")),
+        new Put(ROWKEY2).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f"))
+          .addColumn(FAMILY, Bytes.toBytes("G"), Bytes.toBytes(1L))
+          .addColumn(FAMILY, Bytes.toBytes("H"), Bytes.toBytes("h")))
+      );
+
+      // CheckAndIncrement with correct value
+      CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(ROWKEY)
+        .ifEquals(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))
+        .build(new RowMutations(ROWKEY).add(Arrays.asList(
+          new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
+          new Delete(ROWKEY).addColumns(FAMILY, Bytes.toBytes("B")),
+          new Increment(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C"), 1L),
+          new Append(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))
+        )));
+
+      // CheckAndIncrement with wrong value
+      CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(ROWKEY2)
+        .ifEquals(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("a"))
+        .build(new RowMutations(ROWKEY2).add(Arrays.asList(
+          new Put(ROWKEY2).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")),
+          new Delete(ROWKEY2).addColumns(FAMILY, Bytes.toBytes("F")),
+          new Increment(ROWKEY2).addColumn(FAMILY, Bytes.toBytes("G"), 1L),
+          new Append(ROWKEY2).addColumn(FAMILY, Bytes.toBytes("H"), Bytes.toBytes("h"))
+        )));
+
+      List<CheckAndMutateResult> results =
+        table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
+
+      assertTrue(results.get(0).isSuccess());
+      assertEquals(2, Bytes.toLong(results.get(0).getResult()
+        .getValue(FAMILY, Bytes.toBytes("C"))));
+      assertEquals("dd", Bytes.toString(results.get(0).getResult()
+        .getValue(FAMILY, Bytes.toBytes("D"))));
+
+      assertFalse(results.get(1).isSuccess());
+      assertNull(results.get(1).getResult());
+
+      Result result = table.get(new Get(ROWKEY));
+      assertEquals("a", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("A"))));
+      assertNull(result.getValue(FAMILY, Bytes.toBytes("B")));
+      assertEquals(2, Bytes.toLong(result.getValue(FAMILY, Bytes.toBytes("C"))));
+      assertEquals("dd", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+
+      result = table.get(new Get(ROWKEY2));
+      assertNull(result.getValue(FAMILY, Bytes.toBytes("E")));
+      assertEquals("f", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("F"))));
+      assertEquals(1, Bytes.toLong(result.getValue(FAMILY, Bytes.toBytes("G"))));
+      assertEquals("h", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("H"))));
     }
   }
 }

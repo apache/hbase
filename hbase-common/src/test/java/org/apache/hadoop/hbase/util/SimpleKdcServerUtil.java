@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
@@ -26,7 +27,7 @@ import org.apache.kerby.kerberos.kerb.KrbException;
 import org.apache.kerby.kerberos.kerb.server.SimpleKdcServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -58,7 +59,6 @@ public final class SimpleKdcServerUtil {
    * @return A running SimpleKdcServer on loopback/'localhost' on a random port
    * @see #getRunningSimpleKdcServer(File, Supplier)
    */
-  @VisibleForTesting
   static SimpleKdcServer getRunningSimpleKdcServer(File testDir,
       Supplier<Integer> randomPortGenerator, final boolean portClash)
         throws KrbException, IOException {

@@ -29,7 +29,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 
 /**
  * Performs multiple mutations atomically on a single row.
- * Currently {@link Put} and {@link Delete} are supported.
  *
  * The mutations are performed in the order in which they
  * were added.
@@ -75,8 +74,6 @@ public class RowMutations implements Row {
   }
 
   /**
-   * Currently only supports {@link Put} and {@link Delete} mutations.
-   *
    * @param mutation The data to send.
    * @throws IOException if the row of added mutation doesn't match the original row
    */
@@ -85,15 +82,13 @@ public class RowMutations implements Row {
   }
 
   /**
-   * Currently only supports {@link Put} and {@link Delete} mutations.
-   *
    * @param mutations The data to send.
    * @throws IOException if the row of added mutation doesn't match the original row
    */
   public RowMutations add(List<? extends Mutation> mutations) throws IOException {
     for (Mutation mutation : mutations) {
       if (!Bytes.equals(row, mutation.getRow())) {
-        throw new WrongRowIOException("The row in the recently added Put/Delete <" +
+        throw new WrongRowIOException("The row in the recently added Mutation <" +
           Bytes.toStringBinary(mutation.getRow()) + "> doesn't match the original one <" +
           Bytes.toStringBinary(this.row) + ">");
       }

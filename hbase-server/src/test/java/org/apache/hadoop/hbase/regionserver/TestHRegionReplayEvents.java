@@ -62,6 +62,8 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
+import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
@@ -192,8 +194,8 @@ public class TestHRegionReplayEvents {
     String string = org.apache.hadoop.hbase.executor.EventType.RS_COMPACTED_FILES_DISCHARGER
         .toString();
     ExecutorService es = new ExecutorService(string);
-    es.startExecutorService(
-      string+"-"+string, 1);
+    es.startExecutorService(es.new ExecutorConfig().setCorePoolSize(1).setExecutorType(
+        ExecutorType.RS_COMPACTED_FILES_DISCHARGER));
     when(rss.getExecutorService()).thenReturn(es);
     primaryRegion = HRegion.createHRegion(primaryHri, rootDir, CONF, htd, walPrimary);
     primaryRegion.close();
@@ -1709,6 +1711,6 @@ public class TestHRegionReplayEvents {
 
   private static HRegion initHRegion(byte[] tableName, byte[]... families) throws IOException {
     return TEST_UTIL.createLocalHRegion(TableName.valueOf(tableName), HConstants.EMPTY_START_ROW,
-      HConstants.EMPTY_END_ROW, false, Durability.SYNC_WAL, null, families);
+      HConstants.EMPTY_END_ROW, CONF, false, Durability.SYNC_WAL, null, families);
   }
 }

@@ -60,8 +60,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * A janitor for the catalog tables. Scans the <code>hbase:meta</code> catalog table on a period.
  * Makes a lastReport on state of hbase:meta. Looks for unused regions to garbage collect. Scan of
@@ -168,6 +166,7 @@ public class CatalogJanitor extends ScheduledChore {
       if (!this.lastReport.isEmpty()) {
         LOG.warn(this.lastReport.toString());
       }
+      updateAssignmentManagerMetrics();
 
       if (isRIT(this.services.getAssignmentManager())) {
         LOG.warn("Playing-it-safe skipping merge/split gc'ing of regions from hbase:meta while " +
@@ -218,7 +217,6 @@ public class CatalogJanitor extends ScheduledChore {
    * @return Return generated {@link Report}
    */
   // will be override in tests.
-  @VisibleForTesting
   protected Report scanForReport() throws IOException {
     ReportMakingVisitor visitor = new ReportMakingVisitor(this.services);
     // Null tablename means scan all of meta.
@@ -304,7 +302,6 @@ public class CatalogJanitor extends ScheduledChore {
     }
   }
 
-  @VisibleForTesting
   static boolean cleanParent(MasterServices services, RegionInfo parent, Result rowContent)
     throws IOException {
     // Check whether it is a merged region and if it is clean of references.
@@ -409,11 +406,21 @@ public class CatalogJanitor extends ScheduledChore {
     return this.services.getTableDescriptors().get(tableName);
   }
 
+  private void updateAssignmentManagerMetrics() {
+    services.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateHoles(lastReport.getHoles().size());
+    services.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateOverlaps(lastReport.getOverlaps().size());
+    services.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateUnknownServerRegions(lastReport.getUnknownServers().size());
+    services.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateEmptyRegionInfoRegions(lastReport.getEmptyRegionInfo().size());
+  }
+
   private static void checkLog4jProperties() {
     String filename = "log4j.properties";
-    try {
-      final InputStream inStream =
-        CatalogJanitor.class.getClassLoader().getResourceAsStream(filename);
+    try (final InputStream inStream =
+      CatalogJanitor.class.getClassLoader().getResourceAsStream(filename)) {
       if (inStream != null) {
         new Properties().load(inStream);
       } else {

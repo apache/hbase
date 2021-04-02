@@ -804,10 +804,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
             + PermissionStorage.ACL_TABLE_NAME + " is not yet created. "
             + getClass().getSimpleName() + " should be configured as the first Coprocessor");
       } else {
-        String owner = desc.getOwnerString();
-        // default the table owner to current user, if not specified.
-        if (owner == null)
-          owner = getActiveUser(c).getShortName();
+        String owner = getActiveUser(c).getShortName();
         final UserPermission userPermission = new UserPermission(owner,
             Permission.newBuilder(desc.getTableName()).withActions(Action.values()).build());
         // switch to the real hbase master user for doing the RPC on the ACL table
@@ -906,8 +903,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     TableDescriptor oldDesc, TableDescriptor currentDesc) throws IOException {
     final Configuration conf = c.getEnvironment().getConfiguration();
     // default the table owner to current user, if not specified.
-    final String owner = (currentDesc.getOwnerString() != null) ? currentDesc.getOwnerString() :
-      getActiveUser(c).getShortName();
+    final String owner = getActiveUser(c).getShortName();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -1850,13 +1846,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       final InternalScanner s) throws IOException {
     // clean up any associated owner mapping
     scannerOwners.remove(s);
-  }
-
-  @Override
-  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
-    return hasMore;
   }
 
   /**

@@ -24,6 +24,8 @@ import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -35,11 +37,11 @@ import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
@@ -97,7 +99,8 @@ class NettyRpcConnection extends RpcConnection {
 
   NettyRpcConnection(NettyRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
-      rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
+      rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor,
+      rpcClient.metrics);
     this.rpcClient = rpcClient;
     this.eventLoop = rpcClient.group.next();
     byte[] connectionHeaderPreamble = getConnectionHeaderPreamble();
@@ -207,7 +210,8 @@ class NettyRpcConnection extends RpcConnection {
     final NettyHBaseSaslRpcClientHandler saslHandler;
     try {
       saslHandler = new NettyHBaseSaslRpcClientHandler(saslPromise, ticket, provider, token,
-        serverAddress, securityInfo, rpcClient.fallbackAllowed, this.rpcClient.conf);
+        ((InetSocketAddress) ch.remoteAddress()).getAddress(), securityInfo,
+        rpcClient.fallbackAllowed, this.rpcClient.conf);
     } catch (IOException e) {
       failInit(ch, e);
       return;
@@ -265,23 +269,23 @@ class NettyRpcConnection extends RpcConnection {
     });
   }
 
-  private void connect() {
+  private void connect() throws UnknownHostException {
     assert eventLoop.inEventLoop();
-    LOG.trace("Connecting to {}", remoteId.address);
-
+    LOG.trace("Connecting to {}", remoteId.getAddress());
+    InetSocketAddress remoteAddr = getRemoteInetAddress(rpcClient.metrics);
     this.channel = new Bootstrap().group(eventLoop).channel(rpcClient.channelClass)
       .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
       .option(ChannelOption.SO_KEEPALIVE, rpcClient.tcpKeepAlive)
       .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, rpcClient.connectTO)
       .handler(new BufferCallBeforeInitHandler()).localAddress(rpcClient.localAddr)
-      .remoteAddress(remoteId.address).connect().addListener(new ChannelFutureListener() {
+      .remoteAddress(remoteAddr).connect().addListener(new ChannelFutureListener() {
 
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
           Channel ch = future.channel();
           if (!future.isSuccess()) {
             failInit(ch, toIOE(future.cause()));
-            rpcClient.failedServers.addToFailedServers(remoteId.address, future.cause());
+            rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), future.cause());
             return;
           }
           ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());

@@ -629,4 +629,9 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   public long getAverageRegionSize() {
     return 10000000;
   }
+
+  @Override
+  public  long getRpcFullScanRequestsCount() {
+    return 10;
+  }
 }

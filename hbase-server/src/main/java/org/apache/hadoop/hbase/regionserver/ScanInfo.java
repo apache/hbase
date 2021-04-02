@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -26,15 +25,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Immutable information for scans over a store.
  */
 // Has to be public for PartitionedMobCompactor to access; ditto on tests making use of a few of
 // the accessors below. Shutdown access. TODO
-@VisibleForTesting
 @InterfaceAudience.Private
 public class ScanInfo {
   private byte[] family;

@@ -92,7 +92,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -151,6 +150,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   /** number of current operations running on the master */
   public static final int SNAPSHOT_POOL_THREADS_DEFAULT = 1;
 
+  /** Conf key for preserving original max file size configs */
+  public static final String SNAPSHOT_MAX_FILE_SIZE_PRESERVE =
+    "hbase.snapshot.max.filesize.preserve";
+
   private boolean stopped;
   private MasterServices master;  // Needed by TableEventHandlers
   private ProcedureCoordinator coordinator;
@@ -196,7 +199,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param coordinator procedure coordinator instance.  exposed for testing.
    * @param pool HBase ExecutorServcie instance, exposed for testing.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   SnapshotManager(final MasterServices master, ProcedureCoordinator coordinator,
       ExecutorService pool, int sentinelCleanInterval)
       throws IOException, UnsupportedOperationException {

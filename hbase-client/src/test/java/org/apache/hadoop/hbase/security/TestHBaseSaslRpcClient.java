@@ -30,7 +30,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
-
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
@@ -39,7 +38,6 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -55,16 +53,15 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
@@ -83,16 +80,11 @@ public class TestHBaseSaslRpcClient {
   static final String DEFAULT_USER_NAME = "principal";
   static final String DEFAULT_USER_PASSWORD = "password";
 
-  private static final Logger LOG = Logger.getLogger(TestHBaseSaslRpcClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseSaslRpcClient.class);
 
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
-
-  @BeforeClass
-  public static void before() {
-    Logger.getRootLogger().setLevel(Level.DEBUG);
-  }
 
   @Test
   public void testSaslClientUsesGivenRpcProtection() throws Exception {

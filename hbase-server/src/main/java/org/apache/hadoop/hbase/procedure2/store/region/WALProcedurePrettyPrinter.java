@@ -105,7 +105,7 @@ public class WALProcedurePrettyPrinter extends AbstractHBaseTool {
           if (!Bytes.equals(PROC_FAMILY, 0, PROC_FAMILY.length, cell.getFamilyArray(),
             cell.getFamilyOffset(), cell.getFamilyLength())) {
             // We could have cells other than procedure edits, for example, a flush marker
-            WALPrettyPrinter.printCell(out, op, false);
+            WALPrettyPrinter.printCell(out, op, false, false);
             continue;
           }
           long procId = Bytes.toLong(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());

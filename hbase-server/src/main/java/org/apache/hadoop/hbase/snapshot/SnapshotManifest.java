@@ -51,12 +51,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
@@ -197,7 +196,6 @@ public final class SnapshotManifest {
     addMobRegion(regionInfo, visitor);
   }
 
-  @VisibleForTesting
   protected void addMobRegion(RegionInfo regionInfo, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     final String snapshotName = desc.getName();
@@ -245,7 +243,6 @@ public final class SnapshotManifest {
     addRegion(region, visitor);
   }
 
-  @VisibleForTesting
   protected void addRegion(final HRegion region, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     final String snapshotName = desc.getName();
@@ -294,7 +291,6 @@ public final class SnapshotManifest {
     addRegion(tableDir, regionInfo, visitor);
   }
 
-  @VisibleForTesting
   protected void addRegion(final Path tableDir, final RegionInfo regionInfo, RegionVisitor visitor)
       throws IOException {
     boolean isMobRegion = MobUtils.isMobRegionInfo(regionInfo);
@@ -582,11 +578,8 @@ public final class SnapshotManifest {
    */
   private void writeDataManifest(final SnapshotDataManifest manifest)
       throws IOException {
-    FSDataOutputStream stream = workingDirFs.create(new Path(workingDir, DATA_MANIFEST_NAME));
-    try {
+    try (FSDataOutputStream stream = workingDirFs.create(new Path(workingDir, DATA_MANIFEST_NAME))) {
       manifest.writeTo(stream);
-    } finally {
-      stream.close();
     }
   }
 
@@ -594,9 +587,7 @@ public final class SnapshotManifest {
    * Read the SnapshotDataManifest file
    */
   private SnapshotDataManifest readDataManifest() throws IOException {
-    FSDataInputStream in = null;
-    try {
-      in = workingDirFs.open(new Path(workingDir, DATA_MANIFEST_NAME));
+    try (FSDataInputStream in = workingDirFs.open(new Path(workingDir, DATA_MANIFEST_NAME))) {
       CodedInputStream cin = CodedInputStream.newInstance(in);
       cin.setSizeLimit(manifestSizeLimit);
       return SnapshotDataManifest.parseFrom(cin);
@@ -604,8 +595,6 @@ public final class SnapshotManifest {
       return null;
     } catch (InvalidProtocolBufferException e) {
       throw new CorruptedSnapshotException("unable to parse data manifest " + e.getMessage(), e);
-    } finally {
-      if (in != null) in.close();
     }
   }
 

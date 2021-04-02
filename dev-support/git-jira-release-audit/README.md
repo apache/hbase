@@ -62,6 +62,7 @@ usage: git_jira_release_audit.py [-h] [--populate-from-git POPULATE_FROM_GIT]
                                  [--release-line-regexp RELEASE_LINE_REGEXP]
                                  [--parse-release-tags PARSE_RELEASE_TAGS]
                                  [--fallback-actions-path FALLBACK_ACTIONS_PATH]
+                                 [--branch-filter-regexp BRANCH_FILTER_REGEXP]
                                  [--jira-url JIRA_URL] --branch-1-fix-version
                                  BRANCH_1_FIX_VERSION --branch-2-fix-version
                                  BRANCH_2_FIX_VERSION
@@ -119,6 +120,9 @@ Interactions with the Git repo:
   --fallback-actions-path FALLBACK_ACTIONS_PATH
                         Path to a file containing _DB.Actions applicable to
                         specific git shas. (default: fallback_actions.csv)
+  --branch-filter-regexp BRANCH_FILTER_REGEXP
+                        Limit repo parsing to branch names that match this
+                        filter expression. (default: .*)
   --branch-1-fix-version BRANCH_1_FIX_VERSION
                         The Jira fixVersion used to indicate an issue is
                         committed to the specified release line branch
@@ -175,8 +179,9 @@ fetch from Jira 100%|███████████████████�
 
 Optionally, the database can be build to include release tags, by specifying
 `--parse-release-tags=true`. This is more time-consuming, but is necessary for
-auditing discrepancies between git and Jira. Running the same command but
-including this flag looks like this:
+auditing discrepancies between git and Jira. Optionally, limit the branches
+under consideration by specifying a regex filter with `--branch-filter-regexp`.
+Running the same command but including this flag looks like this:
 
 ```shell script
 origin/branch-1 100%|███████████████████████████████████████| 4084/4084 [08:58<00:00, 7.59 commit/s]

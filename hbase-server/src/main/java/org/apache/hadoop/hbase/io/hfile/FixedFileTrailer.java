@@ -204,7 +204,6 @@ public class FixedFileTrailer {
     baos.writeTo(outputStream);
   }
 
-  @org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting
   HFileProtos.FileTrailerProto toProtobuf() {
     HFileProtos.FileTrailerProto.Builder builder = HFileProtos.FileTrailerProto.newBuilder()
       .setFileInfoOffset(fileInfoOffset)
@@ -613,6 +612,8 @@ public class FixedFileTrailer {
       comparatorKlass = CellComparatorImpl.class;
     } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
       || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
+      || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator"))      
+      || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator"))      
       || (comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator"))) {
       comparatorKlass = MetaCellComparator.class;
     } else if (comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$RawBytesComparator")

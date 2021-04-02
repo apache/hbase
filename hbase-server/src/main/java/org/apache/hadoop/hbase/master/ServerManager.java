@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -67,7 +68,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
@@ -204,7 +204,8 @@ public class ServerManager {
   }
 
   /**
-   * Let the server manager know a new regionserver has come online
+   * Let the server manager know a regionserver is requesting configurations.
+   * Regionserver will not be added here, but in its first report.
    * @param request the startup request
    * @param versionNumber the version number of the new regionserver
    * @param version the version of the new regionserver, could contain strings like "SNAPSHOT"
@@ -227,10 +228,6 @@ public class ServerManager {
     ServerName sn = ServerName.valueOf(hostname, request.getPort(), request.getServerStartCode());
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");
-    if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn, versionNumber, version))) {
-      LOG.warn(
-        "THIS SHOULD NOT HAPPEN, RegionServerStartup" + " could not record the server: " + sn);
-    }
     return sn;
   }
 
@@ -275,14 +272,12 @@ public class ServerManager {
     }
   }
 
-  @VisibleForTesting
   public void regionServerReport(ServerName sn,
     ServerMetrics sl) throws YouAreDeadException {
     checkIsDead(sn, "REPORT");
     if (null == this.onlineServers.replace(sn, sl)) {
       // Already have this host+port combo and its just different start code?
       // Just let the server in. Presume master joining a running cluster.
-      // recordNewServer is what happens at the end of reportServerStartup.
       // The only thing we are skipping is passing back to the regionserver
       // the ServerName to use. Here we presume a master has already done
       // that so we'll press on with whatever it gave us for ServerName.
@@ -427,13 +422,11 @@ public class ServerManager {
    * Adds the onlineServers list. onlineServers should be locked.
    * @param serverName The remote servers name.
    */
-  @VisibleForTesting
   void recordNewServerWithLock(final ServerName serverName, final ServerMetrics sl) {
     LOG.info("Registering regionserver=" + serverName);
     this.onlineServers.put(serverName, sl);
   }
 
-  @VisibleForTesting
   public ConcurrentNavigableMap<byte[], Long> getFlushedSequenceIdByRegion() {
     return flushedSequenceIdByRegion;
   }
@@ -503,8 +496,9 @@ public class ServerManager {
    * Checks if any dead servers are currently in progress.
    * @return true if any RS are being processed as dead, false if not
    */
-  public boolean areDeadServersInProgress() {
-    return this.deadservers.areDeadServersInProgress();
+  public boolean areDeadServersInProgress() throws IOException {
+    return master.getProcedures().stream()
+      .anyMatch(p -> !p.isFinished() && p instanceof ServerCrashProcedure);
   }
 
   void letRegionServersShutdown() {
@@ -569,7 +563,7 @@ public class ServerManager {
    *         going down or we already have queued an SCP for this server or SCP processing is
    *         currently disabled because we are in startup phase).
    */
-  @VisibleForTesting // Redo test so we can make this protected.
+  // Redo test so we can make this protected.
   public synchronized long expireServer(final ServerName serverName) {
     return expireServer(serverName, false);
 
@@ -628,7 +622,6 @@ public class ServerManager {
    * Called when server has expired.
    */
   // Locking in this class needs cleanup.
-  @VisibleForTesting
   public synchronized void moveFromOnlineToDeadServers(final ServerName sn) {
     synchronized (this.onlineServers) {
       boolean online = this.onlineServers.containsKey(sn);
@@ -904,6 +897,17 @@ public class ServerManager {
     return serverName == null || deadservers.isDeadServer(serverName);
   }
 
+  /**
+   * Check if a server is unknown.  A server can be online,
+   * or known to be dead, or unknown to this manager (i.e, not online,
+   * not known to be dead either; it is simply not tracked by the
+   * master any more, for example, a very old previous instance).
+   */
+  public boolean isServerUnknown(ServerName serverName) {
+    return serverName == null
+      || (!onlineServers.containsKey(serverName) && !deadservers.isDeadServer(serverName));
+  }
+
   public void shutdownCluster() {
     String statusStr = "Cluster shutdown requested of master=" + this.master.getServerName();
     LOG.info(statusStr);
@@ -924,8 +928,13 @@ public class ServerManager {
   public void startChore() {
     Configuration c = master.getConfiguration();
     if (persistFlushedSequenceId) {
-      // when reach here, RegionStates should loaded, firstly, we call remove deleted regions
-      removeDeletedRegionFromLoadedFlushedSequenceIds();
+      new Thread(() -> {
+        // after AM#loadMeta, RegionStates should be loaded, and some regions are
+        // deleted by drop/split/merge during removeDeletedRegionFromLoadedFlushedSequenceIds,
+        // but these deleted regions are not added back to RegionStates,
+        // so we can safely remove deleted regions.
+        removeDeletedRegionFromLoadedFlushedSequenceIds();
+      }, "RemoveDeletedRegionSyncThread").start();
       int flushPeriod = c.getInt(FLUSHEDSEQUENCEID_FLUSHER_INTERVAL,
           FLUSHEDSEQUENCEID_FLUSHER_INTERVAL_DEFAULT);
       flushedSeqIdFlusher = new FlushedSequenceIdFlusher(
@@ -939,7 +948,7 @@ public class ServerManager {
    */
   public void stop() {
     if (flushedSeqIdFlusher != null) {
-      flushedSeqIdFlusher.cancel();
+      flushedSeqIdFlusher.shutdown();
     }
     if (persistFlushedSequenceId) {
       try {
@@ -995,7 +1004,6 @@ public class ServerManager {
     flushedSequenceIdByRegion.remove(encodedName);
   }
 
-  @VisibleForTesting
   public boolean isRegionInServerManagerStates(final RegionInfo hri) {
     final byte[] encodedName = hri.getEncodedNameAsBytes();
     return (storeFlushedSequenceIdsByRegion.containsKey(encodedName)

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,6 +40,8 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String logReadInBytesKey;
   private final String shippedHFilesKey;
   private final String sizeOfHFileRefsQueueKey;
+  private final String oldestWalAgeKey;
+  private final String sourceInitializingKey;
 
   private final MutableHistogram ageOfLastShippedOpHist;
   private final MutableGaugeLong sizeOfLogQueueGauge;
@@ -65,6 +68,8 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableFastCounter repeatedFileBytes;
   private final MutableFastCounter completedWAL;
   private final MutableFastCounter completedRecoveryQueue;
+  private final MutableGaugeLong oldestWalAge;
+  private final MutableGaugeInt sourceInitializing;
 
   public MetricsReplicationSourceSourceImpl(MetricsReplicationSourceImpl rms, String id) {
     this.rms = rms;
@@ -121,6 +126,12 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     completedRecoveryKey = this.keyPrefix + "completedRecoverQueues";
     completedRecoveryQueue = rms.getMetricsRegistry().getCounter(completedRecoveryKey, 0L);
+
+    oldestWalAgeKey = this.keyPrefix + "oldestWalAge";
+    oldestWalAge = rms.getMetricsRegistry().getGauge(oldestWalAgeKey, 0L);
+
+    sourceInitializingKey = this.keyPrefix + "isInitializing";
+    sourceInitializing = rms.getMetricsRegistry().getGaugeInt(sourceInitializingKey, 0);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -183,6 +194,8 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     rms.removeMetric(repeatedBytesKey);
     rms.removeMetric(completedLogsKey);
     rms.removeMetric(completedRecoveryKey);
+    rms.removeMetric(oldestWalAgeKey);
+    rms.removeMetric(sourceInitializingKey);
   }
 
   @Override
@@ -247,6 +260,28 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override
   public void incrFailedRecoveryQueue() {/*no op*/}
+
+  @Override public void setOldestWalAge(long age) {
+    oldestWalAge.set(age);
+  }
+
+  @Override public long getOldestWalAge() {
+    return oldestWalAge.value();
+  }
+
+  @Override
+  public void incrSourceInitializing() {
+    sourceInitializing.incr(1);
+  }
+
+  @Override
+  public int getSourceInitializing() {
+    return sourceInitializing.value();
+  }
+
+  @Override public void decrSourceInitializing() {
+    sourceInitializing.decr(1);
+  }
 
   @Override
   public void init() {

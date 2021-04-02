@@ -216,6 +216,7 @@ public class TestSecureExport {
             Permission.Action.EXEC,
             Permission.Action.READ,
             Permission.Action.WRITE);
+    SecureTestUtil.grantGlobal(UTIL, USER_OWNER, Permission.Action.CREATE);
     addLabels(UTIL.getConfiguration(), Arrays.asList(USER_OWNER),
             Arrays.asList(PRIVATE, CONFIDENTIAL, SECRET, TOPSECRET));
   }
@@ -236,11 +237,11 @@ public class TestSecureExport {
   public void testAccessCase() throws Throwable {
     final String exportTable = name.getMethodName();
     TableDescriptor exportHtd = TableDescriptorBuilder
-            .newBuilder(TableName.valueOf(name.getMethodName()))
+            .newBuilder(TableName.valueOf(exportTable))
             .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
-            .setOwnerString(USER_OWNER)
             .build();
-    SecureTestUtil.createTable(UTIL, exportHtd, new byte[][]{Bytes.toBytes("s")});
+    User owner = User.createUserForTesting(UTIL.getConfiguration(), USER_OWNER, new String[0]);
+    SecureTestUtil.createTable(UTIL, owner, exportHtd, new byte[][]{Bytes.toBytes("s")});
     SecureTestUtil.grantOnTable(UTIL, USER_RO,
             TableName.valueOf(exportTable), null, null,
             Permission.Action.READ);
@@ -340,9 +341,9 @@ public class TestSecureExport {
     final TableDescriptor exportHtd = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(exportTable))
             .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
-            .setOwnerString(USER_OWNER)
             .build();
-    SecureTestUtil.createTable(UTIL, exportHtd, new byte[][]{Bytes.toBytes("s")});
+    User owner = User.createUserForTesting(UTIL.getConfiguration(), USER_OWNER, new String[0]);
+    SecureTestUtil.createTable(UTIL, owner, exportHtd, new byte[][]{Bytes.toBytes("s")});
     AccessTestAction putAction = () -> {
       Put p1 = new Put(ROW1);
       p1.addColumn(FAMILYA, QUAL, NOW, QUAL);
@@ -398,9 +399,8 @@ public class TestSecureExport {
       final TableDescriptor importHtd = TableDescriptorBuilder
               .newBuilder(TableName.valueOf(importTable))
               .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYB))
-              .setOwnerString(USER_OWNER)
               .build();
-      SecureTestUtil.createTable(UTIL, importHtd, new byte[][]{Bytes.toBytes("s")});
+      SecureTestUtil.createTable(UTIL, owner, importHtd, new byte[][]{Bytes.toBytes("s")});
       AccessTestAction importAction = () -> {
         String[] args = new String[]{
           "-D" + Import.CF_RENAME_PROP + "=" + FAMILYA_STRING + ":" + FAMILYB_STRING,

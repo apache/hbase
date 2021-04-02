@@ -99,7 +99,7 @@ hbase> transit_peer_sync_replication_state '1', 'ACTIVE'
 Case.3 How to operate when active cluster crashed::
 
 If the active cluster has been crashed (it may be not reachable now), so let's just transit the standby cluster to
-DOWNGRANDE_ACTIVE state, and after that, we should redirect all the requests from client to the DOWNGRADE_ACTIVE cluster.
+DOWNGRADE_ACTIVE state, and after that, we should redirect all the requests from client to the DOWNGRADE_ACTIVE cluster.
 
 [source,ruby]
 ----

@@ -41,9 +41,10 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -93,6 +94,7 @@ public class RSProcedureDispatcher
     if (!super.start()) {
       return false;
     }
+    setTimeoutExecutorUncaughtExceptionHandler(this::abort);
     if (master.isStopped()) {
       LOG.debug("Stopped");
       return false;
@@ -123,6 +125,13 @@ public class RSProcedureDispatcher
       return false;
     }
     return true;
+  }
+
+  private void abort(Thread t, Throwable e) {
+    LOG.error("Caught error", e);
+    if (!master.isStopped() && !master.isStopping() && !master.isAborted()) {
+      master.abort("Aborting master", e);
+    }
   }
 
   @Override
@@ -377,7 +386,6 @@ public class RSProcedureDispatcher
     }
 
     // will be overridden in test.
-    @VisibleForTesting
     protected ExecuteProceduresResponse sendRequest(final ServerName serverName,
         final ExecuteProceduresRequest request) throws IOException {
       return FutureUtils.get(getRsAdmin().executeProcedures(request));

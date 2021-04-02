@@ -22,11 +22,23 @@
 
 # Stop hadoop hbase daemons.  Run this on master node.
 
+usage="Usage: stop-hbase.sh can only be used for shutting down entire cluster\
+ to shut down (HMaster|HRegionServer) use hbase-daemon.sh stop (master|regionserver)"
+
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin">/dev/null; pwd`
 
 . "$bin"/hbase-config.sh
 . "$bin"/hbase-common.sh
+
+show_usage() {
+  echo "$usage"
+}
+
+if [ "--help" = "$1" ] || [ "-h" = "$1" ]; then
+  show_usage
+  exit 0
+fi
 
 # variables needed for stop command
 if [ "$HBASE_LOG_DIR" = "" ]; then
@@ -50,7 +62,7 @@ if [[ -e $pid ]]; then
 
   nohup nice -n ${HBASE_NICENESS:-0} "$HBASE_HOME"/bin/hbase \
      --config "${HBASE_CONF_DIR}" \
-     master stop "$@" > "$logout" 2>&1 < /dev/null &
+     master stop --shutDownCluster "$@" > "$logout" 2>&1 < /dev/null &
 
   waitForProcessEnd `cat $pid` 'stop-master-command'
 

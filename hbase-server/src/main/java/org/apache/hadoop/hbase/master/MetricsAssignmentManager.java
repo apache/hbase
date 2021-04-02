@@ -104,6 +104,34 @@ public class MetricsAssignmentManager {
     assignmentManagerSource.updateUnknownServerOpenRegions(unknownRegions);
   }
 
+  public void updateOrphanRegionsOnRs(int orphanRegionsOnRs) {
+    assignmentManagerSource.setOrphanRegionsOnRs(orphanRegionsOnRs);
+  }
+
+  public void updateOrphanRegionsOnFs(int orphanRegionsOnFs) {
+    assignmentManagerSource.setOrphanRegionsOnFs(orphanRegionsOnFs);
+  }
+
+  public void updateInconsistentRegions(int inconsistentRegions) {
+    assignmentManagerSource.setInconsistentRegions(inconsistentRegions);
+  }
+
+  public void updateHoles(int holes) {
+    assignmentManagerSource.setHoles(holes);
+  }
+
+  public void updateOverlaps(int overlaps) {
+    assignmentManagerSource.setOverlaps(overlaps);
+  }
+
+  public void updateUnknownServerRegions(int unknownServerRegions) {
+    assignmentManagerSource.setUnknownServerRegions(unknownServerRegions);
+  }
+
+  public void updateEmptyRegionInfoRegions(int emptyRegionInfoRegions) {
+    assignmentManagerSource.setEmptyRegionInfoRegions(emptyRegionInfoRegions);
+  }
+
   /**
    * @return Set of common metrics for assign procedure
    */

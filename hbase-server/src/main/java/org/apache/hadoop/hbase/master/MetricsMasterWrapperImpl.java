@@ -55,11 +55,17 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public long getSplitPlanCount() {
+    if (master.getRegionNormalizerManager() == null) {
+      return 0;
+    }
     return master.getRegionNormalizerManager().getSplitPlanCount();
   }
 
   @Override
   public long getMergePlanCount() {
+    if (master.getRegionNormalizerManager() == null) {
+      return 0;
+    }
     return master.getRegionNormalizerManager().getMergePlanCount();
   }
 
@@ -136,6 +142,24 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override public boolean isRunning() {
     return !(master.isStopped() || master.isStopping());
+  }
+
+  @Override
+  public String getDrainingRegionServers() {
+    ServerManager serverManager = this.master.getServerManager();
+    if (serverManager == null) {
+        return "";
+    }
+    return StringUtils.join(serverManager.getDrainingServersList()  , ";");
+  }
+
+  @Override
+  public int getNumDrainingRegionServers() {
+    ServerManager serverManager = this.master.getServerManager();
+    if (serverManager == null) {
+        return 0;
+    }
+    return serverManager.getDrainingServersList().size();
   }
 
   @Override

@@ -27,13 +27,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.NonceKey;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation of nonce manager that stores nonces in a hash map and cleans them up after
@@ -134,7 +132,6 @@ public class ServerNonceManager {
     }
   }
 
-  @VisibleForTesting
   public void setConflictWaitIterationMs(int conflictWaitIterationMs) {
     this.conflictWaitIterationMs = conflictWaitIterationMs;
   }

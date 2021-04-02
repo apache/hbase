@@ -40,8 +40,6 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * TableSnapshotInputFormat allows a MapReduce job to run over a table snapshot. The job
  * bypasses HBase servers, and directly accesses the underlying files (hfile, recovered edits,
@@ -131,7 +129,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class TableSnapshotRegionRecordReader extends
       RecordReader<ImmutableBytesWritable, Result> {
     private TableSnapshotInputFormatImpl.RecordReader delegate =

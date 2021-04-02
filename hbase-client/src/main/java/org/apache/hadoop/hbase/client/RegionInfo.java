@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.util.HashKey;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -218,12 +219,18 @@ public interface RegionInfo extends Comparable<RegionInfo> {
 
   /**
    * @return True if this region is offline.
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-25210">HBASE-25210</a>
    */
+  @Deprecated
   boolean isOffline();
 
   /**
    * @return True if this is a split parent region.
+   * @deprecated since 3.0.0 and will be removed in 4.0.0, Use {@link #isSplit()} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-25210">HBASE-25210</a>
    */
+  @Deprecated
   boolean isSplitParent();
 
   /**
@@ -357,7 +364,23 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   @InterfaceAudience.Private // For use by internals only.
   public static boolean isEncodedRegionName(byte[] regionName) {
     // If not parseable as region name, presume encoded. TODO: add stringency; e.g. if hex.
-    return parseRegionNameOrReturnNull(regionName) == null && regionName.length <= MD5_HEX_LENGTH;
+    if (parseRegionNameOrReturnNull(regionName) == null) {
+      if (regionName.length > MD5_HEX_LENGTH) {
+        return false;
+      } else if (regionName.length == MD5_HEX_LENGTH) {
+        return true;
+      } else {
+        String encodedName = Bytes.toString(regionName);
+        try {
+          Integer.parseInt(encodedName);
+          // If this is a valid integer, it could be hbase:meta's encoded region name.
+          return true;
+        } catch(NumberFormatException er) {
+          return false;
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -730,8 +753,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
     }
 
     //assumption: if Writable serialization, it should be longer than pblen.
-    int read = in.read(pbuf);
-    if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
+    IOUtils.readFully(in, pbuf, 0, pblen);
     if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
       return ProtobufUtil.toRegionInfo(HBaseProtos.RegionInfo.parseDelimitedFrom(in));
     } else {

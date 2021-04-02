@@ -23,9 +23,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
@@ -81,10 +83,11 @@ public final class TableDescriptorChecker {
 
     // check max file size
     long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit
-    long maxFileSize = td.getMaxFileSize();
-    if (maxFileSize < 0) {
-      maxFileSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE, maxFileSizeLowerLimit);
-    }
+    // if not set MAX_FILESIZE in TableDescriptor, and not set HREGION_MAX_FILESIZE in
+    // hbase-site.xml, use maxFileSizeLowerLimit instead to skip this check
+    long maxFileSize = td.getValue(TableDescriptorBuilder.MAX_FILESIZE) == null ?
+      conf.getLong(HConstants.HREGION_MAX_FILESIZE, maxFileSizeLowerLimit) :
+      Long.parseLong(td.getValue(TableDescriptorBuilder.MAX_FILESIZE));
     if (maxFileSize < conf.getLong("hbase.hregion.max.filesize.limit", maxFileSizeLowerLimit)) {
       String message =
           "MAX_FILESIZE for table descriptor or " + "\"hbase.hregion.max.filesize\" (" +
@@ -95,10 +98,11 @@ public final class TableDescriptorChecker {
 
     // check flush size
     long flushSizeLowerLimit = 1024 * 1024L; // 1M is the default lower limit
-    long flushSize = td.getMemStoreFlushSize();
-    if (flushSize < 0) {
-      flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeLowerLimit);
-    }
+    // if not set MEMSTORE_FLUSHSIZE in TableDescriptor, and not set HREGION_MEMSTORE_FLUSH_SIZE in
+    // hbase-site.xml, use flushSizeLowerLimit instead to skip this check
+    long flushSize = td.getValue(TableDescriptorBuilder.MEMSTORE_FLUSHSIZE) == null ?
+      conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeLowerLimit) :
+      Long.parseLong(td.getValue(TableDescriptorBuilder.MEMSTORE_FLUSHSIZE));
     if (flushSize < conf.getLong("hbase.hregion.memstore.flush.size.limit", flushSizeLowerLimit)) {
       String message = "MEMSTORE_FLUSHSIZE for table descriptor or " +
           "\"hbase.hregion.memstore.flush.size\" (" + flushSize +
@@ -148,6 +152,11 @@ public final class TableDescriptorChecker {
     if (regionReplicas < 1) {
       String message = "Table region replication should be at least one.";
       warnOrThrowExceptionForFailure(logWarn, message, null);
+    }
+
+    // Meta table shouldn't be set as read only, otherwise it will impact region assignments
+    if (td.isReadOnly() && TableName.isMetaTableName(td.getTableName())) {
+      warnOrThrowExceptionForFailure(false, "Meta table can't be set as read only.", null);
     }
 
     for (ColumnFamilyDescriptor hcd : td.getColumnFamilies()) {

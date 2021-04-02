@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_BACK
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,11 +88,21 @@ public class FullTableBackupClient extends TableBackupClient {
       // calculate the real files' size for the percentage in the future.
       // backupCopier.setSubTaskPercntgInWholeTask(1f / numOfSnapshots);
       int res;
-      String[] args = new String[4];
-      args[0] = "-snapshot";
-      args[1] = backupInfo.getSnapshotName(table);
-      args[2] = "-copy-to";
-      args[3] = backupInfo.getTableBackupDir(table);
+      ArrayList<String> argsList = new ArrayList<>();
+      argsList.add("-snapshot");
+      argsList.add(backupInfo.getSnapshotName(table));
+      argsList.add("-copy-to");
+      argsList.add(backupInfo.getTableBackupDir(table));
+      if (backupInfo.getBandwidth() > -1) {
+        argsList.add("-bandwidth");
+        argsList.add(String.valueOf(backupInfo.getBandwidth()));
+      }
+      if (backupInfo.getWorkers() > -1) {
+        argsList.add("-mappers");
+        argsList.add(String.valueOf(backupInfo.getWorkers()));
+      }
+
+      String[] args = argsList.toArray(new String[0]);
 
       String jobname = "Full-Backup_" + backupInfo.getBackupId() + "_" + table.getNameAsString();
       if (LOG.isDebugEnabled()) {

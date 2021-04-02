@@ -132,8 +132,8 @@ message GetResponse {
 }
 
 /**
- * Condition to check if the value of a given cell (row,
- * family, qualifier) matches a value via a given comparator.
+ * Condition to check if the value of a given cell (row, family, qualifier) matches a value via a
+ * given comparator or the value of a given cell matches a given filter.
  *
  * Condition is used in check and mutate operations.
  */

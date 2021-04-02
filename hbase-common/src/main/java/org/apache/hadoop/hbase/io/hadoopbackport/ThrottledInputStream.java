@@ -27,8 +27,6 @@ import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * The ThrottleInputStream provides bandwidth throttling on a specified
  * InputStream. It is implemented as a wrapper on top of another InputStream
@@ -126,7 +124,6 @@ public class ThrottledInputStream extends InputStream {
       EnvironmentEdgeManager.currentTime() - startTime);
   }
 
-  @VisibleForTesting
   static long calSleepTimeMs(long bytesRead, long maxBytesPerSec, long elapsed) {
     assert elapsed > 0 : "The elapsed time should be greater than zero";
     if (bytesRead <= 0 || maxBytesPerSec <= 0) {

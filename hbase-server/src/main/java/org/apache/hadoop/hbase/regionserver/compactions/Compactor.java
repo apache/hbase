@@ -321,10 +321,10 @@ public abstract class Compactor<T extends CellSink> {
       dropCache = this.dropCacheMinor;
     }
 
-    List<StoreFileScanner> scanners =
-        createFileScanners(request.getFiles(), smallestReadPoint, dropCache);
     InternalScanner scanner = null;
     boolean finished = false;
+    List<StoreFileScanner> scanners =
+      createFileScanners(request.getFiles(), smallestReadPoint, dropCache);
     try {
       /* Include deletes, unless we are doing a major compaction */
       ScanType scanType = scannerFactory.getScanType(request);
@@ -345,7 +345,18 @@ public abstract class Compactor<T extends CellSink> {
             + store.getRegionInfo().getRegionNameAsString() + " because it was interrupted.");
       }
     } finally {
-      Closeables.close(scanner, true);
+      // createScanner may fail when seeking hfiles encounter Exception, e.g. even only one hfile
+      // reader encounters java.io.IOException: Invalid HFile block magic:
+      // \x00\x00\x00\x00\x00\x00\x00\x00
+      // and then scanner will be null, but scanners for all the hfiles should be closed,
+      // or else we will find leak of ESTABLISHED sockets.
+      if (scanner == null) {
+        for (StoreFileScanner sfs : scanners) {
+          sfs.close();
+        }
+      } else {
+        Closeables.close(scanner, true);
+      }
       if (!finished && writer != null) {
         abortWriter(writer);
       }

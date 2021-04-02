@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 /**
  * A configuration for the replication peer cluster.
  */
@@ -79,41 +81,6 @@ public class ReplicationPeerConfig {
     return Collections.unmodifiableMap(newTableCFsMap);
   }
 
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder} to create new ReplicationPeerConfig.
-   */
-  @Deprecated
-  public ReplicationPeerConfig() {
-    this.peerData = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    this.configuration = new HashMap<>(0);
-    this.serial = false;
-  }
-
-  /**
-   * Set the clusterKey which is the concatenation of the slave cluster's:
-   * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setClusterKey(String)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setClusterKey(String clusterKey) {
-    this.clusterKey = clusterKey;
-    return this;
-  }
-
-  /**
-   * Sets the ReplicationEndpoint plugin class for this peer.
-   * @param replicationEndpointImpl a class implementing ReplicationEndpoint
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setReplicationEndpointImpl(String)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setReplicationEndpointImpl(String replicationEndpointImpl) {
-    this.replicationEndpointImpl = replicationEndpointImpl;
-    return this;
-  }
-
   public String getClusterKey() {
     return clusterKey;
   }
@@ -134,86 +101,24 @@ public class ReplicationPeerConfig {
     return (Map<TableName, List<String>>) tableCFsMap;
   }
 
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setTableCFsMap(Map)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setTableCFsMap(Map<TableName,
-                                              ? extends Collection<String>> tableCFsMap) {
-    this.tableCFsMap = tableCFsMap;
-    return this;
-  }
-
   public Set<String> getNamespaces() {
     return this.namespaces;
-  }
-
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setNamespaces(Set)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setNamespaces(Set<String> namespaces) {
-    this.namespaces = namespaces;
-    return this;
   }
 
   public long getBandwidth() {
     return this.bandwidth;
   }
 
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setBandwidth(long)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setBandwidth(long bandwidth) {
-    this.bandwidth = bandwidth;
-    return this;
-  }
-
   public boolean replicateAllUserTables() {
     return this.replicateAllUserTables;
-  }
-
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setReplicateAllUserTables(boolean)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setReplicateAllUserTables(boolean replicateAllUserTables) {
-    this.replicateAllUserTables = replicateAllUserTables;
-    return this;
   }
 
   public Map<TableName, List<String>> getExcludeTableCFsMap() {
     return (Map<TableName, List<String>>) excludeTableCFsMap;
   }
 
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setExcludeTableCFsMap(Map)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setExcludeTableCFsMap(Map<TableName,
-                                              ? extends Collection<String>> tableCFsMap) {
-    this.excludeTableCFsMap = tableCFsMap;
-    return this;
-  }
-
   public Set<String> getExcludeNamespaces() {
     return this.excludeNamespaces;
-  }
-
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setExcludeNamespaces(Set)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setExcludeNamespaces(Set<String> namespaces) {
-    this.excludeNamespaces = namespaces;
-    return this;
   }
 
   public String getRemoteWALDir() {
@@ -291,6 +196,12 @@ public class ReplicationPeerConfig {
     @Override
     public ReplicationPeerConfigBuilder putConfiguration(String key, String value) {
       this.configuration.put(key, value);
+      return this;
+    }
+
+    @Override
+    public ReplicationPeerConfigBuilder removeConfiguration(String key) {
+      this.configuration.remove(key);
       return this;
     }
 
@@ -392,6 +303,19 @@ public class ReplicationPeerConfig {
    * @return true if the table need replicate to the peer cluster
    */
   public boolean needToReplicate(TableName table) {
+    return needToReplicate(table, null);
+  }
+
+  /**
+   * Decide whether the passed family of the table need replicate to the peer cluster according to
+   * this peer config.
+   * @param table name of the table
+   * @param family family name
+   * @return true if (the family of) the table need replicate to the peer cluster.
+   *         If passed family is null, return true if any CFs of the table need replicate;
+   *         If passed family is not null, return true if the passed family need replicate.
+   */
+  public boolean needToReplicate(TableName table, byte[] family) {
     String namespace = table.getNamespaceAsString();
     if (replicateAllUserTables) {
       // replicate all user tables, but filter by exclude namespaces and table-cfs config
@@ -403,9 +327,12 @@ public class ReplicationPeerConfig {
         return true;
       }
       Collection<String> cfs = excludeTableCFsMap.get(table);
-      // if cfs is null or empty then we can make sure that we do not need to replicate this table,
+      // If cfs is null or empty then we can make sure that we do not need to replicate this table,
       // otherwise, we may still need to replicate the table but filter out some families.
-      return cfs != null && !cfs.isEmpty();
+      return cfs != null && !cfs.isEmpty()
+        // If exclude-table-cfs contains passed family then we make sure that we do not need to
+        // replicate this family.
+        && (family == null || !cfs.contains(Bytes.toString(family)));
     } else {
       // Not replicate all user tables, so filter by namespaces and table-cfs config
       if (namespaces == null && tableCFsMap == null) {
@@ -416,7 +343,12 @@ public class ReplicationPeerConfig {
       if (namespaces != null && namespaces.contains(namespace)) {
         return true;
       }
-      return tableCFsMap != null && tableCFsMap.containsKey(table);
+      // If table-cfs contains this table then we can make sure that we need replicate some CFs of
+      // this table. Further we need all CFs if tableCFsMap.get(table) is null or empty.
+      return tableCFsMap != null && tableCFsMap.containsKey(table)
+        && (family == null || CollectionUtils.isEmpty(tableCFsMap.get(table))
+        // If table-cfs must contain passed family then we need to replicate this family.
+        || tableCFsMap.get(table).contains(Bytes.toString(family)));
     }
   }
 }

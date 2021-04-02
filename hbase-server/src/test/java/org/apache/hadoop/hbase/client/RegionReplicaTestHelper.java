@@ -142,6 +142,21 @@ public final class RegionReplicaTestHelper {
       locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, false)
         .getDefaultRegionLocation().getServerName());
     // should get the new location when reload = true
+    // when meta replica LoadBalance mode is enabled, it may delay a bit.
+    util.waitFor(3000, new ExplainingPredicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        ServerName sn = locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID,
+          true).getDefaultRegionLocation().getServerName();
+        return newServerName.equals(sn);
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return "New location does not show up in meta (replica) region";
+      }
+    });
+
     assertEquals(newServerName,
       locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, true)
         .getDefaultRegionLocation().getServerName());

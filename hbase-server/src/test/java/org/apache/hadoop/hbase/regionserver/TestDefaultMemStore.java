@@ -26,7 +26,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
@@ -971,28 +973,23 @@ public class TestDefaultMemStore {
   }
 
   /**
-   * Inserts a new region's meta information into the passed
-   * <code>meta</code> region. Used by the HMaster bootstrap code adding
-   * new table to hbase:meta table.
-   *
+   * Inserts a new region's meta information into the passed <code>meta</code> region.
    * @param meta hbase:meta HRegion to be updated
    * @param r HRegion to add to <code>meta</code>
-   *
-   * @throws IOException
    */
-  public static void addRegionToMETA(final HRegion meta, final HRegion r) throws IOException {
-    meta.checkResources();
+  private static void addRegionToMETA(final HRegion meta, final HRegion r) throws IOException {
     // The row key is the region name
     byte[] row = r.getRegionInfo().getRegionName();
     final long now = EnvironmentEdgeManager.currentTime();
     final List<Cell> cells = new ArrayList<>(2);
-    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-      HConstants.REGIONINFO_QUALIFIER, now, RegionInfo.toByteArray(r.getRegionInfo())));
+    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, now,
+      RegionInfo.toByteArray(r.getRegionInfo())));
     // Set into the root table the version of the meta table.
-    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-      HConstants.META_VERSION_QUALIFIER, now,
+    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY, HConstants.META_VERSION_QUALIFIER, now,
       Bytes.toBytes(HConstants.META_VERSION)));
-    meta.put(row, HConstants.CATALOG_FAMILY, cells);
+    NavigableMap<byte[], List<Cell>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    familyMap.put(HConstants.CATALOG_FAMILY, cells);
+    meta.put(new Put(row, HConstants.LATEST_TIMESTAMP, familyMap));
   }
 
   private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {

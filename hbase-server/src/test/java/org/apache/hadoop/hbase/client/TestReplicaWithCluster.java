@@ -395,8 +395,8 @@ public class TestReplicaWithCluster {
 
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
       Admin admin = connection.getAdmin()) {
-      ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-      rpc.setClusterKey(HTU2.getClusterKey());
+      ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+        .setClusterKey(HTU2.getClusterKey()).build();
       admin.addReplicationPeer("2", rpc);
     }
 

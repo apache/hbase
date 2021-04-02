@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -65,7 +64,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
@@ -179,8 +177,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       // 1. Create table directories to make HDFS acls can be inherited
       hdfsAclHelper.createTableDirectories(tableName);
       // 2. Add table owner HDFS acls
-      String owner =
-          desc.getOwnerString() == null ? getActiveUser(c).getShortName() : desc.getOwnerString();
+      String owner = getActiveUser(c).getShortName();
       hdfsAclHelper.addTableAcl(tableName, Sets.newHashSet(owner), "create");
       // 3. Record table owner permission is synced to HDFS in acl table
       SnapshotScannerHDFSAclStorage.addUserTableHdfsAcl(c.getEnvironment().getConnection(), owner,
@@ -543,7 +540,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
     return isSet;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   boolean checkInitialized(String operation) {
     if (initialized) {
       if (aclTableInitialized) {

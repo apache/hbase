@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -40,6 +41,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,6 +51,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationListener;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
@@ -64,12 +69,14 @@ import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -126,7 +133,15 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final ConcurrentMap<String, ReplicationSourceInterface> sources;
   // List of all the sources we got from died RSs
   private final List<ReplicationSourceInterface> oldsources;
+
+  /**
+   * Storage for queues that need persistance; e.g. Replication state so can be recovered
+   * after a crash. queueStorage upkeep is spread about this class and passed
+   * to ReplicationSource instances for these to do updates themselves. Not all ReplicationSource
+   * instances keep state.
+   */
   private final ReplicationQueueStorage queueStorage;
+
   private final ReplicationTracker replicationTracker;
   private final ReplicationPeers replicationPeers;
   // UUID for this cluster
@@ -153,7 +168,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Path logDir;
   // Path to the wal archive
   private final Path oldLogDir;
-  private final WALFileLengthProvider walFileLengthProvider;
+  private final WALFactory walFactory;
   // The number of ms that we wait before moving znodes, HBASE-3596
   private final long sleepBeforeFailover;
   // Homemade executer service for replication
@@ -174,21 +189,28 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final MetricsReplicationGlobalSourceSource globalMetrics;
 
   /**
+   * A special ReplicationSource for hbase:meta Region Read Replicas.
+   * Usually this reference remains empty. If an hbase:meta Region is opened on this server, we
+   * will create an instance of a hbase:meta CatalogReplicationSource and it will live the life of
+   * the Server thereafter; i.e. we will not shut it down even if the hbase:meta moves away from
+   * this server (in case it later gets moved back). We synchronize on this instance testing for
+   * presence and if absent, while creating so only created and started once.
+   */
+  AtomicReference<ReplicationSourceInterface> catalogReplicationSource = new AtomicReference<>();
+
+  /**
    * Creates a replication manager and sets the watch on all the other registered region servers
    * @param queueStorage the interface for manipulating replication queues
-   * @param replicationPeers
-   * @param replicationTracker
    * @param conf the configuration to use
    * @param server the server for this region server
    * @param fs the file system to use
    * @param logDir the directory that contains all wal directories of live RSs
    * @param oldLogDir the directory where old logs are archived
-   * @param clusterId
    */
   public ReplicationSourceManager(ReplicationQueueStorage queueStorage,
       ReplicationPeers replicationPeers, ReplicationTracker replicationTracker, Configuration conf,
       Server server, FileSystem fs, Path logDir, Path oldLogDir, UUID clusterId,
-      WALFileLengthProvider walFileLengthProvider,
+      WALFactory walFactory,
       SyncReplicationPeerMappingManager syncReplicationPeerMappingManager,
       MetricsReplicationGlobalSourceSource globalMetrics) throws IOException {
     this.sources = new ConcurrentHashMap<>();
@@ -206,7 +228,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     // 30 seconds
     this.sleepBeforeFailover = conf.getLong("replication.sleep.before.failover", 30000);
     this.clusterId = clusterId;
-    this.walFileLengthProvider = walFileLengthProvider;
+    this.walFactory = walFactory;
     this.syncReplicationPeerMappingManager = syncReplicationPeerMappingManager;
     this.replicationTracker.registerListener(this);
     // It's preferable to failover 1 RS at a time, but with good zk servers
@@ -260,8 +282,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     if (currentReplicators == null || currentReplicators.isEmpty()) {
       return;
     }
-    List<ServerName> otherRegionServers = replicationTracker.getListOfRegionServers().stream()
-        .map(ServerName::valueOf).collect(Collectors.toList());
+    List<ServerName> otherRegionServers = replicationTracker.getListOfRegionServers();
     LOG.info(
       "Current list of replicators: " + currentReplicators + " other RSs: " + otherRegionServers);
 
@@ -346,18 +367,21 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   /**
-   * Factory method to create a replication source
-   * @param queueId the id of the replication queue
-   * @return the created source
+   * @return a new 'classic' user-space replication source.
+   * @param queueId the id of the replication queue to associate the ReplicationSource with.
+   * @see #createCatalogReplicationSource(RegionInfo) for creating a ReplicationSource for meta.
    */
   private ReplicationSourceInterface createSource(String queueId, ReplicationPeer replicationPeer)
       throws IOException {
     ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
-
-    MetricsSource metrics = new MetricsSource(queueId);
-    // init replication source
+    // Init the just created replication source. Pass the default walProvider's wal file length
+    // provider. Presumption is we replicate user-space Tables only. For hbase:meta region replica
+    // replication, see #createCatalogReplicationSource().
+    WALFileLengthProvider walFileLengthProvider =
+      this.walFactory.getWALProvider() != null?
+        this.walFactory.getWALProvider().getWALFileLengthProvider() : p -> OptionalLong.empty();
     src.init(conf, fs, this, queueStorage, replicationPeer, server, queueId, clusterId,
-      walFileLengthProvider, metrics);
+      walFileLengthProvider, new MetricsSource(queueId));
     return src;
   }
 
@@ -368,7 +392,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param peerId the id of the replication peer
    * @return the source that was created
    */
-  @VisibleForTesting
   ReplicationSourceInterface addSource(String peerId) throws IOException {
     ReplicationPeer peer = replicationPeers.getPeer(peerId);
     ReplicationSourceInterface src = createSource(peerId, peer);
@@ -646,7 +669,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param inclusive whether we should also remove the given log file
    * @param source the replication source
    */
-  @VisibleForTesting
   void cleanOldLogs(String log, boolean inclusive, ReplicationSourceInterface source) {
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log);
     if (source.isRecovered()) {
@@ -750,7 +772,6 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   // public because of we call it in TestReplicationEmptyWALRecovery
-  @VisibleForTesting
   public void preLogRoll(Path newLog) throws IOException {
     String logName = newLog.getName();
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(logName);
@@ -800,7 +821,6 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   // public because of we call it in TestReplicationEmptyWALRecovery
-  @VisibleForTesting
   public void postLogRoll(Path newLog) throws IOException {
     // This only updates the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources.values()) {
@@ -852,7 +872,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     // the rs will abort (See HBASE-20475).
     private final Map<String, ReplicationPeerImpl> peersSnapshot;
 
-    @VisibleForTesting
     public NodeFailoverWorker(ServerName deadRS) {
       super("Failover-for-" + deadRS);
       this.deadRS = deadRS;
@@ -978,7 +997,7 @@ public class ReplicationSourceManager implements ReplicationListener {
               wals.add(wal);
             }
             oldsources.add(src);
-            LOG.trace("Added source for recovered queue: " + src.getQueueId());
+            LOG.info("Added source for recovered queue {}", src.getQueueId());
             for (String wal : walsSet) {
               LOG.trace("Enqueueing log from recovered queue for source: " + src.getQueueId());
               src.enqueueLog(new Path(oldLogDir, wal));
@@ -1001,13 +1020,15 @@ public class ReplicationSourceManager implements ReplicationListener {
     for (ReplicationSourceInterface source : this.sources.values()) {
       source.terminate("Region server is closing");
     }
+    for (ReplicationSourceInterface source : this.oldsources) {
+      source.terminate("Region server is closing");
+    }
   }
 
   /**
    * Get a copy of the wals of the normal sources on this rs
    * @return a sorted set of wal names
    */
-  @VisibleForTesting
   public Map<String, Map<String, NavigableSet<String>>> getWALs() {
     return Collections.unmodifiableMap(walsById);
   }
@@ -1016,7 +1037,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Get a copy of the wals of the recovered sources on this rs
    * @return a sorted set of wal names
    */
-  @VisibleForTesting
   Map<String, Map<String, NavigableSet<String>>> getWalsByIdRecoveredQueues() {
     return Collections.unmodifiableMap(walsByIdRecoveredQueues);
   }
@@ -1041,12 +1061,10 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Get the normal source for a given peer
    * @return the normal source for the give peer if it exists, otherwise null.
    */
-  @VisibleForTesting
   public ReplicationSourceInterface getSource(String peerId) {
     return this.sources.get(peerId);
   }
 
-  @VisibleForTesting
   List<String> getAllQueues() throws IOException {
     List<String> allQueues = Collections.emptyList();
     try {
@@ -1057,21 +1075,18 @@ public class ReplicationSourceManager implements ReplicationListener {
     return allQueues;
   }
 
-  @VisibleForTesting
   int getSizeOfLatestPath() {
     synchronized (latestPaths) {
       return latestPaths.size();
     }
   }
 
-  @VisibleForTesting
   Set<Path> getLastestPath() {
     synchronized (latestPaths) {
       return Sets.newHashSet(latestPaths.values());
     }
   }
 
-  @VisibleForTesting
   public AtomicLong getTotalBufferUsed() {
     return totalBufferUsed;
   }
@@ -1153,5 +1168,77 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   MetricsReplicationGlobalSourceSource getGlobalMetrics() {
     return this.globalMetrics;
+  }
+
+  /**
+   * Add an hbase:meta Catalog replication source. Called on open of an hbase:meta Region.
+   * Create it once only. If exists already, use the existing one.
+   * @see #removeCatalogReplicationSource(RegionInfo)
+   * @see #addSource(String) This is specialization on the addSource method.
+   */
+  public ReplicationSourceInterface addCatalogReplicationSource(RegionInfo regionInfo)
+      throws IOException {
+    // Poor-man's putIfAbsent
+    synchronized (this.catalogReplicationSource) {
+      ReplicationSourceInterface rs = this.catalogReplicationSource.get();
+      return rs != null ? rs :
+        this.catalogReplicationSource.getAndSet(createCatalogReplicationSource(regionInfo));
+    }
+  }
+
+  /**
+   * Remove the hbase:meta Catalog replication source.
+   * Called when we close hbase:meta.
+   * @see #addCatalogReplicationSource(RegionInfo regionInfo)
+   */
+  public void removeCatalogReplicationSource(RegionInfo regionInfo) {
+    // Nothing to do. Leave any CatalogReplicationSource in place in case an hbase:meta Region
+    // comes back to this server.
+  }
+
+  /**
+   * Create, initialize, and start the Catalog ReplicationSource.
+   * Presumes called one-time only (caller must ensure one-time only call).
+   * This ReplicationSource is NOT created via {@link ReplicationSourceFactory}.
+   * @see #addSource(String) This is a specialization of the addSource call.
+   * @see #catalogReplicationSource for a note on this ReplicationSource's lifecycle (and more on
+   * why the special handling).
+   */
+  private ReplicationSourceInterface createCatalogReplicationSource(RegionInfo regionInfo)
+      throws IOException {
+    // Instantiate meta walProvider. Instantiated here or over in the #warmupRegion call made by the
+    // Master on a 'move' operation. Need to do extra work if we did NOT instantiate the provider.
+    WALProvider walProvider = this.walFactory.getMetaWALProvider();
+    boolean instantiate = walProvider == null;
+    if (instantiate) {
+      walProvider = this.walFactory.getMetaProvider();
+    }
+    // Here we do a specialization on what {@link ReplicationSourceFactory} does. There is no need
+    // for persisting offset into WALs up in zookeeper (via ReplicationQueueInfo) as the catalog
+    // read replicas feature that makes use of the source does a reset on a crash of the WAL
+    // source process. See "4.1 Skip maintaining zookeeper replication queue (offsets/WALs)" in the
+    // design doc attached to HBASE-18070 'Enable memstore replication for meta replica' for detail.
+    CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
+      this.clusterId.toString());
+    final ReplicationSourceInterface crs = new CatalogReplicationSource();
+    crs.init(conf, fs, this, new NoopReplicationQueueStorage(), peer, server, peer.getId(),
+      clusterId, walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
+    // Add listener on the provider so we can pick up the WAL to replicate on roll.
+    WALActionsListener listener = new WALActionsListener() {
+      @Override public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+        crs.enqueueLog(newPath);
+      }
+    };
+    walProvider.addWALActionsListener(listener);
+    if (!instantiate) {
+      // If we did not instantiate provider, need to add our listener on already-created WAL
+      // instance too (listeners are passed by provider to WAL instance on creation but if provider
+      // created already, our listener add above is missed). And add the current WAL file to the
+      // Replication Source so it can start replicating it.
+      WAL wal = walProvider.getWAL(regionInfo);
+      wal.registerWALActionsListener(listener);
+      crs.enqueueLog(((AbstractFSWAL)wal).getCurrentFileName());
+    }
+    return crs.startup();
   }
 }

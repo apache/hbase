@@ -52,12 +52,20 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * Master can carry regions as of hbase-2.0.0.
    * By default, it carries no tables.
    * TODO: Add any | system as flags to indicate what it can do.
+   *
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
+  @Deprecated
   String TABLES_ON_MASTER = "hbase.balancer.tablesOnMaster";
 
   /**
    * Master carries system tables.
+   *
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
+  @Deprecated
   String SYSTEM_TABLES_ON_MASTER = "hbase.balancer.tablesOnMaster.systemTablesOnly";
 
   // Used to signal to the caller that the region(s) cannot be assigned
@@ -159,15 +167,28 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
 
   /**
    * @return true if Master carries regions
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
+  @Deprecated
   static boolean isTablesOnMaster(Configuration conf) {
     return conf.getBoolean(TABLES_ON_MASTER, false);
   }
 
+  /**
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
+   */
+  @Deprecated
   static boolean isSystemTablesOnlyOnMaster(Configuration conf) {
     return conf.getBoolean(SYSTEM_TABLES_ON_MASTER, false);
   }
 
+  /**
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
+   */
+  @Deprecated
   static boolean isMasterCanHostUserRegions(Configuration conf) {
     return isTablesOnMaster(conf) && !isSystemTablesOnlyOnMaster(conf);
   }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -27,8 +29,9 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.CustomRequestLog;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLog;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLogWriter;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestHttpRequestLog {
@@ -41,6 +44,9 @@ public class TestHttpRequestLog {
   public void testAppenderDefined() {
     RequestLog requestLog = HttpRequestLog.getRequestLog("test");
     assertNotNull("RequestLog should not be null", requestLog);
-    assertEquals("Class mismatch", Slf4jRequestLog.class, requestLog.getClass());
+    assertThat(requestLog, instanceOf(CustomRequestLog.class));
+    CustomRequestLog crl = (CustomRequestLog) requestLog;
+    assertThat(crl.getWriter(), instanceOf(Slf4jRequestLogWriter.class));
+    assertEquals(CustomRequestLog.EXTENDED_NCSA_FORMAT, crl.getFormatString());
   }
 }

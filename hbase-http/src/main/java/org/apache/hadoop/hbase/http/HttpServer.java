@@ -67,7 +67,6 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
@@ -174,7 +173,6 @@ public class HttpServer implements FilterContainer {
 
   private final List<ListenerInfo> listeners = Lists.newArrayList();
 
-  @VisibleForTesting
   public List<ServerConnector> getServerConnectors() {
     return listeners.stream().map(info -> info.listener).collect(Collectors.toList());
   }
@@ -1122,7 +1120,6 @@ public class HttpServer implements FilterContainer {
    * Open the main listener for the server
    * @throws Exception if the listener cannot be opened or the appropriate port is already in use
    */
-  @VisibleForTesting
   void openListeners() throws Exception {
     for (ListenerInfo li : listeners) {
       ServerConnector listener = li.listener;

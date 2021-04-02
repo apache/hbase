@@ -17,6 +17,10 @@
 # limitations under the License.
 #
 
+# Make a tmp dir into which we put files cleaned-up on exit.
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
 set -e
 # Use the adjacent do-release-docker.sh instead, if you can.
 # Otherwise, this runs core of the release creation.
@@ -86,17 +90,19 @@ else
   get_release_info
 fi
 
-GPG_TTY="$(tty)"
-export GPG_TTY
-echo "Testing gpg signing."
-echo "foo" > gpg_test.txt
-if ! "${GPG}" "${GPG_ARGS[@]}" --detach --armor --sign gpg_test.txt ; then
+# Check GPG
+gpg_test_file="${TMPDIR}/gpg_test.$$.txt"
+echo "Testing gpg signing ${GPG} ${GPG_ARGS[@]} --detach --armor --sign ${gpg_test_file}"
+echo "foo" > "${gpg_test_file}"
+if ! "${GPG}" "${GPG_ARGS[@]}" --detach --armor --sign "${gpg_test_file}" ; then
   gpg_agent_help
 fi
 # In --batch mode we have to be explicit about what we are verifying
-if ! "${GPG}" "${GPG_ARGS[@]}" --verify gpg_test.txt.asc gpg_test.txt ; then
+if ! "${GPG}" "${GPG_ARGS[@]}" --verify "${gpg_test_file}.asc" "${gpg_test_file}" ; then
   gpg_agent_help
 fi
+GPG_TTY="$(tty)"
+export GPG_TTY
 
 if [[ -z "$RELEASE_STEP" ]]; then
   # If doing all stages, leave out 'publish-snapshot'
@@ -118,9 +124,9 @@ function should_build {
 
 if should_build "tag" && [ "$SKIP_TAG" = 0 ]; then
   if [ -z "${YETUS_HOME}" ] && [ "${RUNNING_IN_DOCKER}" != "1" ]; then
-    declare local_yetus="/opt/apache-yetus/0.11.1/"
+    declare local_yetus="/opt/apache-yetus/0.12.0/"
     if [ "$(get_host_os)" = "DARWIN" ]; then
-      local_yetus="/usr/local/Cellar/yetus/0.11.1/"
+      local_yetus="/usr/local/Cellar/yetus/0.12.0/"
     fi
     YETUS_HOME="$(read_config "YETUS_HOME not defined. Absolute path to local install of Apache Yetus" "${local_yetus}")"
     export YETUS_HOME

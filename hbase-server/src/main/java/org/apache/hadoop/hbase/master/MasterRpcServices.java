@@ -963,6 +963,12 @@ public class MasterRpcServices extends RSRpcServices implements
       if (execController.getFailedOn() != null) {
         throw execController.getFailedOn();
       }
+
+      String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+      User caller = RpcServer.getRequestUser().orElse(null);
+      AUDITLOG.info("User {} (remote address: {}) master service request for {}.{}", caller,
+        remoteAddress, serviceName, methodName);
+
       return CoprocessorRpcUtils.getResponse(execResult, HConstants.EMPTY_BYTE_ARRAY);
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -2440,6 +2446,15 @@ public class MasterRpcServices extends RSRpcServices implements
         Set<Address> clearedServers = new HashSet<>();
         for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
           ServerName server = ProtobufUtil.toServerName(pbServer);
+
+          final boolean deadInProcess = master.getProcedures().stream().anyMatch(
+            p -> (p instanceof ServerCrashProcedure)
+              && ((ServerCrashProcedure) p).getServerName().equals(server));
+          if (deadInProcess) {
+            throw new ServiceException(
+              String.format("Dead server '%s' is not 'dead' in fact...", server));
+          }
+
           if (!deadServer.removeDeadServer(server)) {
             response.addServerName(pbServer);
           } else {
@@ -2518,6 +2533,7 @@ public class MasterRpcServices extends RSRpcServices implements
   @Override
   public GetTableStateResponse setTableStateInMeta(RpcController controller,
       SetTableStateInMetaRequest request) throws ServiceException {
+    rpcPreCheck("setTableStateInMeta");
     TableName tn = ProtobufUtil.toTableName(request.getTableName());
     try {
       TableState prevState = this.master.getTableStateManager().getTableState(tn);
@@ -2540,6 +2556,7 @@ public class MasterRpcServices extends RSRpcServices implements
   @Override
   public SetRegionStateInMetaResponse setRegionStateInMeta(RpcController controller,
     SetRegionStateInMetaRequest request) throws ServiceException {
+    rpcPreCheck("setRegionStateInMeta");
     SetRegionStateInMetaResponse.Builder builder = SetRegionStateInMetaResponse.newBuilder();
     try {
       for (RegionSpecifierAndState s : request.getStatesList()) {
@@ -2721,8 +2738,34 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
+  public MasterProtos.ScheduleSCPsForUnknownServersResponse scheduleSCPsForUnknownServers(
+      RpcController controller, MasterProtos.ScheduleSCPsForUnknownServersRequest request)
+      throws ServiceException {
+
+    List<Long> pids = new ArrayList<>();
+    final Set<ServerName> serverNames =
+      master.getAssignmentManager().getRegionStates().getRegionStates().stream()
+        .map(RegionState::getServerName).collect(Collectors.toSet());
+
+    final Set<ServerName> unknownServerNames = serverNames.stream()
+      .filter(sn -> master.getServerManager().isServerUnknown(sn)).collect(Collectors.toSet());
+
+    for (ServerName sn: unknownServerNames) {
+      LOG.info("{} schedule ServerCrashProcedure for unknown {}",
+        this.master.getClientIdAuditPrefix(), sn);
+      if (shouldSubmitSCP(sn)) {
+        pids.add(this.master.getServerManager().expireServer(sn, true));
+      } else {
+        pids.add(Procedure.NO_PROC_ID);
+      }
+    }
+    return MasterProtos.ScheduleSCPsForUnknownServersResponse.newBuilder().addAllPid(pids).build();
+  }
+
+  @Override
   public FixMetaResponse fixMeta(RpcController controller, FixMetaRequest request)
       throws ServiceException {
+    rpcPreCheck("fixMeta");
     try {
       MetaFixer mf = new MetaFixer(this.master);
       mf.fix();

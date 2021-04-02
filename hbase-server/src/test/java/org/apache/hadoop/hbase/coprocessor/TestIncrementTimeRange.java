@@ -165,7 +165,7 @@ public class TestIncrementTimeRange {
 
     time = EnvironmentEdgeManager.currentTime();
     mee.setValue(time);
-    TimeRange range10 = new TimeRange(1, time+10);
+    TimeRange range10 = TimeRange.between(1, time+10);
     hTableInterface.increment(new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 10L)
         .setTimeRange(range10.getMin(), range10.getMax()));
     checkRowValue(ROW_A, Bytes.toBytes(11L));
@@ -174,7 +174,7 @@ public class TestIncrementTimeRange {
 
     time = EnvironmentEdgeManager.currentTime();
     mee.setValue(time);
-    TimeRange range2 = new TimeRange(1, time+20);
+    TimeRange range2 = TimeRange.between(1, time + 20);
     List<Row> actions =
         Arrays.asList(new Row[] { new Increment(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, 2L)
             .setTimeRange(range2.getMin(), range2.getMax()),

@@ -426,7 +426,7 @@ module Hbase
     define_test "create should fail without columns when called with options" do
       drop_test_table(@create_test_name)
       assert_raise(ArgumentError) do
-        command(:create, @create_test_name, { OWNER => 'a' })
+        command(:create, @create_test_name, { VERSIONS => '1' })
       end
     end
 
@@ -460,7 +460,6 @@ module Hbase
     define_test "create should be able to set table options" do
       drop_test_table(@create_test_name)
       command(:create, @create_test_name, 'a', 'b', 'MAX_FILESIZE' => 12345678,
-              OWNER => '987654321',
               PRIORITY => '77',
               FLUSH_POLICY => 'org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy',
               REGION_MEMSTORE_REPLICATION => 'TRUE',
@@ -470,7 +469,6 @@ module Hbase
               MERGE_ENABLED => 'false')
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@create_test_name))
-      assert_match(/987654321/, admin.describe(@create_test_name))
       assert_match(/77/, admin.describe(@create_test_name))
       assert_match(/'COMPACTION_ENABLED' => 'false'/, admin.describe(@create_test_name))
       assert_match(/'SPLIT_ENABLED' => 'false'/, admin.describe(@create_test_name))
@@ -484,9 +482,8 @@ module Hbase
 
     define_test "create should ignore table_att" do
       drop_test_table(@create_test_name)
-      command(:create, @create_test_name, 'a', 'b', METHOD => 'table_att', OWNER => '987654321')
+      command(:create, @create_test_name, 'a', 'b', METHOD => 'table_att')
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
-      assert_match(/987654321/, admin.describe(@create_test_name))
     end
 
     define_test "create should work with SPLITALGO" do
@@ -1016,6 +1013,21 @@ module Hbase
       assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
     end
 
+    define_test "alter should be able to remove a list of table attributes when value is empty" do
+      drop_test_table(@test_name)
+
+      key_1 = "TestAttr1"
+      key_2 = "TestAttr2"
+      command(:create, @test_name, { NAME => 'i'}, METADATA => { key_1 => 1, key_2 => 2 })
+
+      # eval() is used to convert a string to regex
+      assert_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+
+      command(:alter, @test_name, METADATA => { key_1 => '', key_2 => '' })
+      assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+    end
 
     define_test "alter should raise error trying to remove nonexistent attributes" do
       drop_test_table(@test_name)
@@ -1063,6 +1075,38 @@ module Hbase
       assert_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
 
       command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => [ key_1, key_2 ])
+      assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+    end
+
+    define_test "alter should be able to remove a list of table configuration  when value is empty" do
+      drop_test_table(@test_name)
+
+      key_1 = "TestConf1"
+      key_2 = "TestConf2"
+      command(:create, @test_name, { NAME => 'i'}, CONFIGURATION => { key_1 => 1, key_2 => 2 })
+
+      # eval() is used to convert a string to regex
+      assert_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+
+      command(:alter, @test_name, CONFIGURATION => { key_1 => '', key_2 => '' })
+      assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+    end
+
+    define_test "alter should be able to remove a list of column family configuration when value is empty" do
+      drop_test_table(@test_name)
+
+      key_1 = "TestConf1"
+      key_2 = "TestConf2"
+      command(:create, @test_name, { NAME => 'i', CONFIGURATION => { key_1 => 1, key_2 => 2 }})
+
+      # eval() is used to convert a string to regex
+      assert_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+
+      command(:alter, @test_name, { NAME => 'i', CONFIGURATION => { key_1 => '', key_2 => '' }})
       assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
       assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
     end

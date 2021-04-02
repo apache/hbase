@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -48,7 +47,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -250,7 +248,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       }
       if (!fallbackRegions.isEmpty()) {
         List<ServerName> candidates = null;
-        if (fallbackEnabled) {
+        if (isFallbackEnabled()) {
           candidates = getFallBackCandidates(servers);
         }
         candidates = (candidates == null || candidates.isEmpty()) ?
@@ -385,6 +383,9 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     return this.rsGroupInfoManager.isOnline();
   }
 
+  public boolean isFallbackEnabled() {
+    return fallbackEnabled;
+  }
 
   @Override
   public void regionOnline(RegionInfo regionInfo, ServerName sn) {
@@ -396,7 +397,12 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    //DO nothing for now
+    boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
+    if (fallbackEnabled != newFallbackEnabled) {
+      LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY,
+        fallbackEnabled, newFallbackEnabled);
+      fallbackEnabled = newFallbackEnabled;
+    }
   }
 
   @Override
@@ -408,7 +414,6 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     return false;
   }
 
-  @VisibleForTesting
   public void setRsGroupInfoManager(RSGroupInfoManager rsGroupInfoManager) {
     this.rsGroupInfoManager = rsGroupInfoManager;
   }

@@ -51,6 +51,10 @@ public interface Constants {
   String REST_SSL_ENABLED = "hbase.rest.ssl.enabled";
   String REST_SSL_KEYSTORE_STORE = "hbase.rest.ssl.keystore.store";
   String REST_SSL_KEYSTORE_PASSWORD = "hbase.rest.ssl.keystore.password";
+  String REST_SSL_KEYSTORE_TYPE = "hbase.rest.ssl.keystore.type";
+  String REST_SSL_TRUSTSTORE_STORE = "hbase.rest.ssl.truststore.store";
+  String REST_SSL_TRUSTSTORE_PASSWORD = "hbase.rest.ssl.truststore.password";
+  String REST_SSL_TRUSTSTORE_TYPE = "hbase.rest.ssl.truststore.type";
   String REST_SSL_KEYSTORE_KEYPASSWORD = "hbase.rest.ssl.keystore.keypassword";
   String REST_SSL_EXCLUDE_CIPHER_SUITES = "hbase.rest.ssl.exclude.cipher.suites";
   String REST_SSL_INCLUDE_CIPHER_SUITES = "hbase.rest.ssl.include.cipher.suites";
@@ -85,4 +89,12 @@ public interface Constants {
   /** If this query parameter is present when processing row or scanner resources,
       it disables server side block caching */
   String NOCACHE_PARAM_NAME = "nocache";
+
+  /** Configuration parameter to set rest client connection timeout */
+  String REST_CLIENT_CONN_TIMEOUT = "hbase.rest.client.conn.timeout";
+  int DEFAULT_REST_CLIENT_CONN_TIMEOUT = 2 * 1000;
+
+  /** Configuration parameter to set rest client socket timeout */
+  String REST_CLIENT_SOCKET_TIMEOUT = "hbase.rest.client.socket.timeout";
+  int DEFAULT_REST_CLIENT_SOCKET_TIMEOUT = 30 * 1000;
 }

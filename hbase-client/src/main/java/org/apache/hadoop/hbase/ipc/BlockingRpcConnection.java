@@ -32,9 +32,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayDeque;
 import java.util.Locale;
@@ -43,7 +43,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.security.sasl.SaslException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -67,11 +66,13 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -207,7 +208,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
      */
     public void cleanup(IOException e) {
       IOException ie = new ConnectionClosingException(
-          "Connection to " + remoteId.address + " is closing.");
+          "Connection to " + remoteId.getAddress() + " is closing.");
       for (Call call : callsToWrite) {
         call.setException(ie);
       }
@@ -217,12 +218,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
   BlockingRpcConnection(BlockingRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
-        rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
+        rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor,
+        rpcClient.metrics);
     this.rpcClient = rpcClient;
-    if (remoteId.getAddress().isUnresolved()) {
-      throw new UnknownHostException("unknown host: " + remoteId.getAddress().getHostName());
-    }
-
     this.connectionHeaderPreamble = getConnectionHeaderPreamble();
     ConnectionHeader header = getConnectionHeader();
     ByteArrayOutputStream baos = new ByteArrayOutputStream(4 + header.getSerializedSize());
@@ -257,7 +255,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (this.rpcClient.localAddr != null) {
           this.socket.bind(this.rpcClient.localAddr);
         }
-        NetUtils.connect(this.socket, remoteId.getAddress(), this.rpcClient.connectTO);
+        InetSocketAddress remoteAddr = getRemoteInetAddress(rpcClient.metrics);
+        NetUtils.connect(this.socket, remoteAddr, this.rpcClient.connectTO);
         this.socket.setSoTimeout(this.rpcClient.readTO);
         return;
       } catch (SocketTimeoutException toe) {
@@ -343,13 +342,13 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   @Override
   public void run() {
     if (LOG.isTraceEnabled()) {
-      LOG.trace(threadName + ": starting, connections " + this.rpcClient.connections.size());
+      LOG.trace(threadName + ": starting");
     }
     while (waitForWork()) {
       readResponse();
     }
     if (LOG.isTraceEnabled()) {
-      LOG.trace(threadName + ": stopped, connections " + this.rpcClient.connections.size());
+      LOG.trace(threadName + ": stopped");
     }
   }
 
@@ -362,8 +361,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
   private boolean setupSaslConnection(final InputStream in2, final OutputStream out2)
       throws IOException {
+    if (this.metrics != null) {
+      this.metrics.incrNsLookups();
+    }
     saslRpcClient = new HBaseSaslRpcClient(this.rpcClient.conf, provider, token,
-        serverAddress, securityInfo, this.rpcClient.fallbackAllowed,
+        socket.getInetAddress(), securityInfo, this.rpcClient.fallbackAllowed,
         this.rpcClient.conf.get("hbase.rpc.protection",
             QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
         this.rpcClient.conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT));
@@ -440,16 +442,16 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
     if (this.rpcClient.failedServers.isFailedServer(remoteId.getAddress())) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Not trying to connect to " + remoteId.address
+        LOG.debug("Not trying to connect to " + remoteId.getAddress()
             + " this server is in the failed servers list");
       }
       throw new FailedServerException(
-          "This server is in the failed servers list: " + remoteId.address);
+          "This server is in the failed servers list: " + remoteId.getAddress());
     }
 
     try {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Connecting to " + remoteId.address);
+        LOG.debug("Connecting to " + remoteId.getAddress());
       }
 
       short numRetries = 0;
@@ -504,14 +506,14 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       closeSocket();
       IOException e = ExceptionUtil.asInterrupt(t);
       if (e == null) {
-        this.rpcClient.failedServers.addToFailedServers(remoteId.address, t);
+        this.rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), t);
         if (t instanceof LinkageError) {
           // probably the hbase hadoop version does not match the running hadoop version
           e = new DoNotRetryIOException(t);
         } else if (t instanceof IOException) {
           e = (IOException) t;
         } else {
-          e = new IOException("Could not set up IO Streams to " + remoteId.address, t);
+          e = new IOException("Could not set up IO Streams to " + remoteId.getAddress(), t);
         }
       }
       throw e;
@@ -768,7 +770,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     if (callSender != null) {
       callSender.interrupt();
     }
-    closeConn(new IOException("connection to " + remoteId.address + " closed"));
+    closeConn(new IOException("connection to " + remoteId.getAddress() + " closed"));
   }
 
   @Override

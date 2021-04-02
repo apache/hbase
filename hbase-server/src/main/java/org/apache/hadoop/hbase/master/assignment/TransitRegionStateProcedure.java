@@ -41,8 +41,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionStateTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionStateTransitionStateData;
@@ -143,7 +141,6 @@ public class TransitRegionStateProcedure
     }
   }
 
-  @VisibleForTesting
   protected TransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri,
       ServerName assignCandidate, boolean forceNewPlan, TransitionType type) {
     super(env, hri);
@@ -348,6 +345,7 @@ public class TransitRegionStateProcedure
               LOG.error(
                 "Cannot assign replica region {} because its primary region {} does not exist.",
                 regionNode.getRegionInfo(), defaultRI);
+              regionNode.unsetProcedure(this);
               return Flow.NO_MORE_STATE;
             }
           }
@@ -416,13 +414,8 @@ public class TransitRegionStateProcedure
 
   // Should be called with RegionStateNode locked
   public void serverCrashed(MasterProcedureEnv env, RegionStateNode regionNode,
-      ServerName serverName) throws IOException {
-    // force to assign to a new candidate server
-    // AssignmentManager#regionClosedAbnormally will set region location to null
-    // TODO: the forceNewPlan flag not be persistent so if master crash then the flag will be lost.
-    // But assign to old server is not big deal because it not effect correctness.
-    // See HBASE-23035 for more details.
-    forceNewPlan = true;
+      ServerName serverName, boolean forceNewPlan) throws IOException {
+    this.forceNewPlan = forceNewPlan;
     if (remoteProc != null) {
       // this means we are waiting for the sub procedure, so wake it up
       remoteProc.serverCrashed(env, regionNode, serverName);

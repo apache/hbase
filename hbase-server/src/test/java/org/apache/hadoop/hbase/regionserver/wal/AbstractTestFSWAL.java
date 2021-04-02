@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -563,7 +563,7 @@ public abstract class AbstractTestFSWAL {
     RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
       0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    TEST_UTIL.createLocalHRegion(hri, htd, wal).close();
+    TEST_UTIL.createLocalHRegion(hri, CONF, htd, wal).close();
     RegionServerServices rsServices = mock(RegionServerServices.class);
     when(rsServices.getServerName()).thenReturn(ServerName.valueOf("localhost:12345", 123456));
     when(rsServices.getConfiguration()).thenReturn(conf);

@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -56,9 +55,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
 
 /**
  * <p>This is a best effort load balancer. Given a Cost function F(C) =&gt; x It will
@@ -266,6 +263,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     this.candidateGenerators = customCandidateGenerators;
   }
 
+  /**
+   * Exposed for Testing!
+   */
+  public List<CandidateGenerator> getCandidateGenerators() {
+    return this.candidateGenerators;
+  }
+
   @Override
   protected void setSlop(Configuration conf) {
     this.slop = conf.getFloat("hbase.regions.slop", 0.001F);
@@ -365,7 +369,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return !balanced;
   }
 
-  @VisibleForTesting
   Cluster.Action nextAction(Cluster cluster) {
     return candidateGenerators.get(RANDOM.nextInt(candidateGenerators.size()))
             .generate(cluster);
@@ -897,6 +900,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       this.conf = conf;
       // What percent of the number of regions a single run of the balancer can move.
       maxMovesPercent = conf.getFloat(MAX_MOVES_PERCENT_KEY, DEFAULT_MAX_MOVE_PERCENT);
+
+      // Initialize the multiplier so that addCostFunction will add this cost function.
+      // It may change during later evaluations, due to OffPeakHours.
+      this.setMultiplier(conf.getFloat(MOVE_COST_KEY, DEFAULT_MOVE_COST));
     }
 
     @Override

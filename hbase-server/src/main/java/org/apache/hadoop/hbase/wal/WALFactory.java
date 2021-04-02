@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Entry point for users of the Write Ahead Log.
@@ -67,7 +66,7 @@ public class WALFactory {
   /**
    * Maps between configuration names for providers and implementation classes.
    */
-  static enum Providers {
+  enum Providers {
     defaultProvider(AsyncFSWALProvider.class),
     filesystem(FSHLogProvider.class),
     multiwal(RegionGroupingProvider.class),
@@ -124,12 +123,10 @@ public class WALFactory {
     this.abortable = null;
   }
 
-  @VisibleForTesting
   Providers getDefaultProvider() {
     return Providers.defaultProvider;
   }
 
-  @VisibleForTesting
   public Class<? extends WALProvider> getProviderClass(String key, String defaultValue) {
     try {
       Providers provider = Providers.valueOf(conf.get(key, defaultValue));
@@ -260,8 +257,12 @@ public class WALFactory {
     return provider.getWALs();
   }
 
-  @VisibleForTesting
-  WALProvider getMetaProvider() throws IOException {
+  /**
+   * Called when we lazily create a hbase:meta WAL OR from ReplicationSourceManager ahead of
+   * creating the first hbase:meta WAL so we can register a listener.
+   * @see #getMetaWALProvider()
+   */
+  public WALProvider getMetaProvider() throws IOException {
     for (;;) {
       WALProvider provider = this.metaProvider.get();
       if (provider != null) {
@@ -291,10 +292,10 @@ public class WALFactory {
   }
 
   /**
-   * @param region the region which we want to get a WAL for it. Could be null.
+   * @param region the region which we want to get a WAL for. Could be null.
    */
   public WAL getWAL(RegionInfo region) throws IOException {
-    // use different WAL for hbase:meta
+    // Use different WAL for hbase:meta. Instantiates the meta WALProvider if not already up.
     if (region != null && region.isMetaRegion() &&
       region.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
       return getMetaProvider().getWAL(region);
@@ -312,7 +313,6 @@ public class WALFactory {
    * to reopen it multiple times, use {@link WAL.Reader#reset()} instead of this method
    * then just seek back to the last known good position.
    * @return A WAL reader.  Close when done with it.
-   * @throws IOException
    */
   public Reader createReader(final FileSystem fs, final Path path,
       CancelableProgressable reporter) throws IOException {
@@ -336,7 +336,9 @@ public class WALFactory {
           reader = lrClass.getDeclaredConstructor().newInstance();
           reader.init(fs, path, conf, null);
           return reader;
-        } catch (IOException e) {
+        } catch (Exception e) {
+          // catch Exception so that we close reader for all exceptions. If we don't
+          // close the reader, we leak a socket.
           if (reader != null) {
             try {
               reader.close();
@@ -346,34 +348,38 @@ public class WALFactory {
             }
           }
 
-          String msg = e.getMessage();
-          if (msg != null
-              && (msg.contains("Cannot obtain block length")
-                  || msg.contains("Could not obtain the last block") || msg
-                    .matches("Blocklist for [^ ]* has changed.*"))) {
-            if (++nbAttempt == 1) {
-              LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
-            }
-            if (reporter != null && !reporter.progress()) {
-              throw new InterruptedIOException("Operation is cancelled");
-            }
-            if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTime()) {
-              LOG.error("Can't open after " + nbAttempt + " attempts and "
-                  + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms " + " for " + path);
-            } else {
-              try {
-                Thread.sleep(nbAttempt < 3 ? 500 : 1000);
-                continue; // retry
-              } catch (InterruptedException ie) {
-                InterruptedIOException iioe = new InterruptedIOException();
-                iioe.initCause(ie);
-                throw iioe;
+          // Only inspect the Exception to consider retry when it's an IOException
+          if (e instanceof IOException) {
+            String msg = e.getMessage();
+            if (msg != null
+                && (msg.contains("Cannot obtain block length")
+                    || msg.contains("Could not obtain the last block") || msg
+                      .matches("Blocklist for [^ ]* has changed.*"))) {
+              if (++nbAttempt == 1) {
+                LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
               }
+              if (reporter != null && !reporter.progress()) {
+                throw new InterruptedIOException("Operation is cancelled");
+              }
+              if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTime()) {
+                LOG.error("Can't open after " + nbAttempt + " attempts and "
+                    + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms " + " for " + path);
+              } else {
+                try {
+                  Thread.sleep(nbAttempt < 3 ? 500 : 1000);
+                  continue; // retry
+                } catch (InterruptedException ie) {
+                  InterruptedIOException iioe = new InterruptedIOException();
+                  iioe.initCause(ie);
+                  throw iioe;
+                }
+              }
+              throw new LeaseNotRecoveredException(e);
             }
-            throw new LeaseNotRecoveredException(e);
-          } else {
-            throw e;
           }
+
+          // Rethrow the original exception if we are not retrying due to HDFS-isms.
+          throw e;
         }
       }
     } catch (IOException ie) {
@@ -400,7 +406,6 @@ public class WALFactory {
    * Uses defaults.
    * @return an overwritable writer for recovered edits. caller should close.
    */
-  @VisibleForTesting
   public Writer createRecoveredEditsWriter(final FileSystem fs, final Path path)
       throws IOException {
     return FSHLogProvider.createWriter(conf, fs, path, true);
@@ -480,7 +485,6 @@ public class WALFactory {
    * Uses defaults.
    * @return a writer that won't overwrite files. Caller must close.
    */
-  @VisibleForTesting
   public static Writer createWALWriter(final FileSystem fs, final Path path,
       final Configuration configuration)
       throws IOException {
@@ -491,6 +495,10 @@ public class WALFactory {
     return this.provider;
   }
 
+  /**
+   * @return Current metaProvider... may be null if not yet initialized.
+   * @see #getMetaProvider()
+   */
   public final WALProvider getMetaWALProvider() {
     return this.metaProvider.get();
   }

@@ -47,8 +47,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -319,7 +319,6 @@ public class HStoreFile implements StoreFile {
     return compactedAway;
   }
 
-  @VisibleForTesting
   public int getRefCount() {
     return fileInfo.refCount.get();
   }
