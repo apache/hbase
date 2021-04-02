@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -85,7 +86,7 @@ abstract class StoreFlusher {
     }
     final long smallestReadPoint = store.getSmallestReadPoint();
     InternalScanner scanner = new StoreScanner(store, scanInfo, snapshotScanners,
-        ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
+        ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, PrivateConstants.OLDEST_TIMESTAMP);
 
     if (store.getCoprocessorHost() != null) {
       try {

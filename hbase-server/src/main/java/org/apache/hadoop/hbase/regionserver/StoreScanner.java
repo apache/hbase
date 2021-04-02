@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -355,7 +356,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
     } else {
       this.matcher = CompactionScanQueryMatcher.create(scanInfo, scanType, Long.MAX_VALUE,
-        HConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
+        PrivateConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
     }
     seekAllScanner(scanInfo, scanners);
   }
@@ -380,7 +381,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this(null, maxVersions > 0 ? new Scan().readVersions(maxVersions)
       : SCAN_FOR_COMPACTION, scanInfo, 0, 0L, false, scanType);
     this.matcher = CompactionScanQueryMatcher.create(scanInfo, scanType, Long.MAX_VALUE,
-      HConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
+      PrivateConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
     seekAllScanner(scanInfo, scanners);
   }
 

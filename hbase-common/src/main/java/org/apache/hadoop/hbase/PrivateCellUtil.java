@@ -1742,7 +1742,7 @@ public final class PrivateCellUtil {
 
     @Override
     public long getTimestamp() {
-      return HConstants.OLDEST_TIMESTAMP;
+      return PrivateConstants.OLDEST_TIMESTAMP;
     }
 
     @Override
@@ -1977,7 +1977,7 @@ public final class PrivateCellUtil {
 
     @Override
     public long getTimestamp() {
-      return HConstants.OLDEST_TIMESTAMP;
+      return PrivateConstants.OLDEST_TIMESTAMP;
     }
 
     @Override
@@ -2738,7 +2738,7 @@ public final class PrivateCellUtil {
     byte type = cell.getTypeByte();
     if (type != KeyValue.Type.Minimum.getCode()) {
       type = KeyValue.Type.values()[KeyValue.Type.codeToType(type).ordinal() - 1].getCode();
-    } else if (ts != HConstants.OLDEST_TIMESTAMP) {
+    } else if (ts != PrivateConstants.OLDEST_TIMESTAMP) {
       ts = ts - 1;
       type = KeyValue.Type.Maximum.getCode();
     } else {
