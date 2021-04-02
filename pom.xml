@@ -587,6 +587,7 @@
             <systemPropertyVariables>
               <test.build.classes>${test.build.classes}</test.build.classes>
               <java.io.tmpdir>${test.tmp.dir}</java.io.tmpdir>
+              <java.util.logging.config.class>org.apache.hadoop.hbase.logging.JulToSlf4jInitializer</java.util.logging.config.class>
             </systemPropertyVariables>
             <excludes>
               <!-- users can add -D option to skip particular test classes
