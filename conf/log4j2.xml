@@ -27,7 +27,8 @@
     <!-- Daily Rolling File Appender -->
     <RollingFile name="DRFA"
       fileName="${sys:hbase.log.dir:-.}/${sys:hbase.log.file:-hbase.log}"
-      filePattern="${sys:hbase.log.dir:-.}/${sys:hbase.log.file:-hbase.log}.%d{yyyy-MM-dd}">
+      filePattern="${sys:hbase.log.dir:-.}/${sys:hbase.log.file:-hbase.log}.%d{yyyy-MM-dd}"
+      createOnDemand="true">
       <PatternLayout pattern="%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n" />
       <Policies>
         <TimeBasedTriggeringPolicy interval="1" />
@@ -37,7 +38,8 @@
     <!-- Rolling File Appender -->
     <RollingFile name="RFA"
       fileName="${sys:hbase.log.dir:-.}/${sys:hbase.log.file:-hbase.log}"
-      filePattern="${sys:hbase.log.dir:-.}/${sys:hbase.log.file:-hbase.log}.%i">
+      filePattern="${sys:hbase.log.dir:-.}/${sys:hbase.log.file:-hbase.log}.%i"
+      createOnDemand="true">
       <PatternLayout pattern="%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n" />
       <Policies>
         <SizeBasedTriggeringPolicy size="256MB" />
@@ -47,7 +49,8 @@
     <!-- Security audit appender -->
     <RollingFile name="RFAS"
       fileName="${sys:hbase.log.dir:-.}/${sys:hbase.security.log.file:-SecurityAuth.audit}"
-      filePattern="${sys:hbase.log.dir:-.}/${sys:hbase.security.log.file:-SecurityAuth.audit}.%i">
+      filePattern="${sys:hbase.log.dir:-.}/${sys:hbase.security.log.file:-SecurityAuth.audit}.%i"
+      createOnDemand="true">
       <PatternLayout pattern="%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n" />
       <Policies>
         <SizeBasedTriggeringPolicy size="256MB" />
@@ -58,7 +61,8 @@
       Http Access Log RFA, uncomment this if you want an http access.log
     <RollingFile name="AccessRFA"
       fileName="/var/log/hbase/access.log"
-      filePattern="/var/log/hbase/access.log.%i">
+      filePattern="/var/log/hbase/access.log.%i"
+      createOnDemand="true">
       <PatternLayout pattern="%m%n" />
       <Policies>
         <SizeBasedTriggeringPolicy size="200MB" />
