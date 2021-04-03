@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.master.assignment.MockMasterServices;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
-import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -133,7 +133,8 @@ public class TestCatalogJanitor {
     Path rootdir = this.masterServices.getMasterFileSystem().getRootDir();
     Path tabledir = CommonFSUtils.getTableDir(rootdir, td.getTableName());
     Path parentdir = new Path(tabledir, parent.getEncodedName());
-    Path storedir = HStore.getStoreHomedir(tabledir, splita, td.getColumnFamilies()[0].getName());
+    Path storedir = HRegionFileSystem.getStoreHomedir(tabledir, splita,
+      td.getColumnFamilies()[0].getName());
     Reference ref = Reference.createTopReference(Bytes.toBytes("ccc"));
     long now = System.currentTimeMillis();
     // Reference name has this format: StoreFile#REF_NAME_PARSER
@@ -448,10 +449,10 @@ public class TestCatalogJanitor {
     // the single test passes, but when the full suite is run, things get borked).
     CommonFSUtils.setRootDir(fs.getConf(), rootdir);
     Path tabledir = CommonFSUtils.getTableDir(rootdir, td.getTableName());
-    Path storedir = HStore.getStoreHomedir(tabledir, parent, td.getColumnFamilies()[0].getName());
-    Path storeArchive =
-        HFileArchiveUtil.getStoreArchivePath(this.masterServices.getConfiguration(), parent,
-            tabledir, td.getColumnFamilies()[0].getName());
+    Path storedir = HRegionFileSystem.getStoreHomedir(tabledir, parent,
+      td.getColumnFamilies()[0].getName());
+    Path storeArchive = HFileArchiveUtil.getStoreArchivePath(this.masterServices.getConfiguration(),
+      parent, tabledir, td.getColumnFamilies()[0].getName());
     LOG.debug("Table dir:" + tabledir);
     LOG.debug("Store dir:" + storedir);
     LOG.debug("Store archive dir:" + storeArchive);
@@ -523,7 +524,8 @@ public class TestCatalogJanitor {
     // the single test passes, but when the full suite is run, things get borked).
     CommonFSUtils.setRootDir(fs.getConf(), rootdir);
     Path tabledir = CommonFSUtils.getTableDir(rootdir, parent.getTable());
-    Path storedir = HStore.getStoreHomedir(tabledir, parent, td.getColumnFamilies()[0].getName());
+    Path storedir = HRegionFileSystem.getStoreHomedir(tabledir, parent,
+      td.getColumnFamilies()[0].getName());
     LOG.info("Old root:" + rootdir);
     LOG.info("Old table:" + tabledir);
     LOG.info("Old store:" + storedir);
@@ -618,7 +620,7 @@ public class TestCatalogJanitor {
   throws IOException {
     Path rootdir = services.getMasterFileSystem().getRootDir();
     Path tabledir = CommonFSUtils.getTableDir(rootdir, parent.getTable());
-    Path storedir = HStore.getStoreHomedir(tabledir, daughter,
+    Path storedir = HRegionFileSystem.getStoreHomedir(tabledir, daughter,
       td.getColumnFamilies()[0].getName());
     Reference ref =
       top? Reference.createTopReference(midkey): Reference.createBottomReference(midkey);
