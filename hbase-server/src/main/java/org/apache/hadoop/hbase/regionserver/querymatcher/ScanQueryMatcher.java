@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Scan;
@@ -191,7 +192,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     // check if this is a fake cell. The fake cell is an optimization, we should make the scanner
     // seek to next column or next row. See StoreFileScanner.requestSeek for more details.
     // check for early out based on timestamp alone
-    if (timestamp == HConstants.OLDEST_TIMESTAMP || columns.isDone(timestamp)) {
+    if (timestamp == PrivateConstants.OLDEST_TIMESTAMP || columns.isDone(timestamp)) {
       return columns.getNextRowOrNextColumn(cell);
     }
     // check if the cell is expired by cell TTL
@@ -319,7 +320,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    */
   public int compareKeyForNextRow(Cell nextIndexed, Cell currentCell) {
     return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null, 0,
-      0, HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+      0, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
   }
 
   /**
@@ -331,7 +332,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
       return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null,
-        0, 0, HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+        0, 0, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
     } else {
       return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell,
         currentCell.getFamilyOffset(), currentCell.getFamilyLength(), nextColumn.getBuffer(),

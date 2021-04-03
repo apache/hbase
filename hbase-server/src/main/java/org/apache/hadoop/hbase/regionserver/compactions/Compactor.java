@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
@@ -196,7 +197,7 @@ public abstract class Compactor<T extends CellSink> {
         if (tmp == null) {
           // There's a file with no information, must be an old one
           // assume we have very old puts
-          fd.earliestPutTs = earliestPutTs = HConstants.OLDEST_TIMESTAMP;
+          fd.earliestPutTs = earliestPutTs = PrivateConstants.OLDEST_TIMESTAMP;
         } else {
           earliestPutTs = Bytes.toLong(tmp);
           fd.earliestPutTs = Math.min(fd.earliestPutTs, earliestPutTs);
