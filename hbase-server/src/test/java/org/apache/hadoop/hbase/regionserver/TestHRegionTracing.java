@@ -178,7 +178,6 @@ public class TestHRegionTracing {
     }
     assertSpan("Region.getScanner");
     assertSpan("RegionScanner.reseek");
-    assertSpan("RegionScanner.next");
     assertSpan("RegionScanner.close");
   }
 }
