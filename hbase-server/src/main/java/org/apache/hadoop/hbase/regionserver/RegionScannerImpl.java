@@ -255,41 +255,39 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   @Override
   public boolean nextRaw(List<Cell> outResults, ScannerContext scannerContext) throws IOException {
-    return TraceUtil.trace(() -> {
-      if (storeHeap == null) {
-        // scanner is closed
-        throw new UnknownScannerException("Scanner was closed");
-      }
-      boolean moreValues = false;
-      if (outResults.isEmpty()) {
-        // Usually outResults is empty. This is true when next is called
-        // to handle scan or get operation.
-        moreValues = nextInternal(outResults, scannerContext);
-      } else {
-        List<Cell> tmpList = new ArrayList<>();
-        moreValues = nextInternal(tmpList, scannerContext);
-        outResults.addAll(tmpList);
-      }
+    if (storeHeap == null) {
+      // scanner is closed
+      throw new UnknownScannerException("Scanner was closed");
+    }
+    boolean moreValues = false;
+    if (outResults.isEmpty()) {
+      // Usually outResults is empty. This is true when next is called
+      // to handle scan or get operation.
+      moreValues = nextInternal(outResults, scannerContext);
+    } else {
+      List<Cell> tmpList = new ArrayList<>();
+      moreValues = nextInternal(tmpList, scannerContext);
+      outResults.addAll(tmpList);
+    }
 
-      if (!outResults.isEmpty()) {
-        region.addReadRequestsCount(1);
-        if (region.getMetrics() != null) {
-          region.getMetrics().updateReadRequestCount();
-        }
+    if (!outResults.isEmpty()) {
+      region.addReadRequestsCount(1);
+      if (region.getMetrics() != null) {
+        region.getMetrics().updateReadRequestCount();
       }
+    }
 
-      // If the size limit was reached it means a partial Result is being returned. Returning a
-      // partial Result means that we should not reset the filters; filters should only be reset in
-      // between rows
-      if (!scannerContext.mayHaveMoreCellsInRow()) {
-        resetFilters();
-      }
+    // If the size limit was reached it means a partial Result is being returned. Returning a
+    // partial Result means that we should not reset the filters; filters should only be reset in
+    // between rows
+    if (!scannerContext.mayHaveMoreCellsInRow()) {
+      resetFilters();
+    }
 
-      if (isFilterDoneInternal()) {
-        moreValues = false;
-      }
-      return moreValues;
-    }, () -> region.createRegionSpan("RegionScanner.next"));
+    if (isFilterDoneInternal()) {
+      moreValues = false;
+    }
+    return moreValues;
   }
 
   /**
