@@ -523,32 +523,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   /**
-   * @param tabledir {@link Path} to where the table is being stored
-   * @param hri {@link RegionInfo} for the region.
-   * @param family {@link ColumnFamilyDescriptor} describing the column family
-   * @return Path to family/Store home directory.
-   * @deprecated Since 05/05/2013, HBase-7808, hbase-1.0.0
-   */
-  @Deprecated
-  public static Path getStoreHomedir(final Path tabledir,
-      final RegionInfo hri, final byte[] family) {
-    return getStoreHomedir(tabledir, hri.getEncodedName(), family);
-  }
-
-  /**
-   * @param tabledir {@link Path} to where the table is being stored
-   * @param encodedName Encoded region name.
-   * @param family {@link ColumnFamilyDescriptor} describing the column family
-   * @return Path to family/Store home directory.
-   * @deprecated Since 05/05/2013, HBase-7808, hbase-1.0.0
-   */
-  @Deprecated
-  public static Path getStoreHomedir(final Path tabledir,
-      final String encodedName, final byte[] family) {
-    return new Path(tabledir, new Path(encodedName, Bytes.toString(family)));
-  }
-
-  /**
    * @return the data block encoder
    */
   public HFileDataBlockEncoder getDataBlockEncoder() {
