@@ -41,6 +41,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema;
+import static org.apache.hadoop.hbase.client.ColumnFamilyDescriptor.REPLICATION_SCOPE_BYTES;
 
 /**
  * @since 2.0.0
@@ -282,6 +283,8 @@ public class ColumnFamilyDescriptorBuilder {
 
   private final static Set<Bytes> RESERVED_KEYWORDS = new HashSet<>();
 
+  private final static Map<Bytes,Function<Bytes,Object>> ATTRIBUTE_VALIDATOR = new HashMap<>();
+
   static {
     DEFAULT_VALUES.put(BLOOMFILTER, DEFAULT_BLOOMFILTER.name());
     DEFAULT_VALUES.put(REPLICATION_SCOPE, String.valueOf(DEFAULT_REPLICATION_SCOPE));
@@ -305,6 +308,30 @@ public class ColumnFamilyDescriptorBuilder {
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(IS_MOB)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(MOB_THRESHOLD)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(MOB_COMPACT_PARTITION_POLICY)));
+    initValidator();
+  }
+
+  private static void initValidator() {
+    ATTRIBUTE_VALIDATOR.put(DATA_BLOCK_ENCODING_BYTES,
+      (d) -> DataBlockEncoding.valueOf(d.toString()));
+    ATTRIBUTE_VALIDATOR.put(COMPRESSION_BYTES,
+      (ca) -> Compression.Algorithm.valueOf(ca.toString()));
+    ATTRIBUTE_VALIDATOR.put(BLOOMFILTER_BYTES, (bl) -> BloomType.valueOf(bl.toString()));
+    ATTRIBUTE_VALIDATOR.put(REPLICATION_SCOPE_BYTES, (rs) -> Integer.valueOf(rs.toString()));
+    ATTRIBUTE_VALIDATOR.put(MIN_VERSIONS_BYTES, (min) -> Integer.valueOf(min.toString()));
+    ATTRIBUTE_VALIDATOR.put(MAX_VERSIONS_BYTES, (max) -> Integer.valueOf(max.toString()));
+    ATTRIBUTE_VALIDATOR.put(BLOCKSIZE_BYTES, (bs) -> Integer.valueOf(bs.toString()));
+    ATTRIBUTE_VALIDATOR.put(KEEP_DELETED_CELLS_BYTES,
+      (k) -> KeepDeletedCells.valueOf(k.toString()));
+    ATTRIBUTE_VALIDATOR.put(TTL_BYTES, (ttl) -> Integer.valueOf(ttl.toString()));
+    ATTRIBUTE_VALIDATOR.put(DFS_REPLICATION_BYTES, (dr) -> Integer.valueOf(dr.toString()));
+    ATTRIBUTE_VALIDATOR.put(MOB_THRESHOLD_BYTES, (mt) -> Long.valueOf(mt.toString()));
+    ATTRIBUTE_VALIDATOR.put(MOB_COMPACT_PARTITION_POLICY_BYTES,
+      (mc) -> MobCompactPartitionPolicy.valueOf(mc.toString()));
+    ATTRIBUTE_VALIDATOR.put(IN_MEMORY_COMPACTION_BYTES,
+      (im) -> MemoryCompactionPolicy.valueOf(im.toString()));
+    ATTRIBUTE_VALIDATOR.put(COMPRESSION_COMPACT_BYTES,
+      (ca) -> Compression.Algorithm.valueOf(ca.toString()));
   }
 
   public static Unit getUnit(String key) {
@@ -687,6 +714,7 @@ public class ColumnFamilyDescriptorBuilder {
       if (value == null || value.getLength() == 0) {
         values.remove(key);
       } else {
+        validateAttributeValue(key, value);
         values.put(key, value);
       }
       return this;
@@ -1376,5 +1404,16 @@ public class ColumnFamilyDescriptorBuilder {
       return setValue(STORAGE_POLICY_BYTES, policy);
     }
 
+    /**
+     * Validates values of HBase defined column family attributes.
+     * Throws {@link IllegalArgumentException} if the value of attribute is not proper format.
+     * @param key
+     * @param value
+     */
+    public void validateAttributeValue(Bytes key, Bytes value) {
+      if(ATTRIBUTE_VALIDATOR.containsKey(key)) {
+        ATTRIBUTE_VALIDATOR.get(key).apply(value);
+      }
+    }
   }
 }
