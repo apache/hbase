@@ -81,3 +81,8 @@ set HBASE_OPTS=%HBASE_OPTS% "-XX:+UseConcMarkSweepGC" "-Djava.net.preferIPv4Stac
 
 @rem Tell HBase whether it should manage it's own instance of ZooKeeper or not.
 @rem set HBASE_MANAGES_ZK=true
+
+@rem Uncomment to enable trace, you can change the options to use other exporters such as jaeger or
+@rem zipkin. See https://github.com/open-telemetry/opentelemetry-java-instrumentation on how to
+@rem configure exporters and other components through system properties.
+@rem set HBASE_TRACE_OPTS="-Dotel.resource.attributes=service.name=HBase -Dotel.traces.exporter=logging otel.metrics.exporter=none"
