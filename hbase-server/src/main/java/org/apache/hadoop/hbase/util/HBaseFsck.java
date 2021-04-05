@@ -1772,7 +1772,7 @@ public class HBaseFsck extends Configured implements Closeable {
       try {
         f.get();
       } catch(ExecutionException e) {
-        LOG.warn("Could not process regionserver " + item.rsinfo.getHostAndPort(),
+        LOG.warn("Could not process regionserver {}", item.rsinfo.getAddress(),
             e.getCause());
       }
     }

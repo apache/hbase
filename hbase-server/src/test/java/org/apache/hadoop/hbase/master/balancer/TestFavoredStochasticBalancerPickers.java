@@ -212,7 +212,8 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
           assertEquals(cluster.servers[moveRegionAction.fromServer], mostLoadedServer);
           if (!region.getTable().isSystemTable()) {
             List<ServerName> favNodes = fnm.getFavoredNodes(region);
-            assertTrue(favNodes.contains(ServerName.valueOf(destinationServer.getHostAndPort(), -1)));
+            assertTrue(favNodes.contains(
+              ServerName.valueOf(destinationServer.getAddress(), -1)));
             userRegionPicked = true;
           }
         }

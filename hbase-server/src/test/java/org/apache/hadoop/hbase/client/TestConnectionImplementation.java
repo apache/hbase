@@ -664,7 +664,7 @@ public class TestConnectionImplementation {
     }
     Assert.assertNotNull("Cached connection is null", conn.getCachedLocation(TABLE_NAME, ROW));
     Assert.assertEquals(
-        "Previous server was " + curServer.getServerName().getHostAndPort(),
+        "Previous server was " + curServer.getServerName().getAddress(),
         destServerName.getPort(),
         conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort());
 
@@ -715,7 +715,7 @@ public class TestConnectionImplementation {
     // Cache is updated with the right value.
     Assert.assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
     Assert.assertEquals(
-      "Previous server was "+destServer.getServerName().getHostAndPort(),
+      "Previous server was "+destServer.getServerName().getAddress(),
       curServer.getServerName().getPort(),
       conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort());
 
