@@ -611,7 +611,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   static CellProtos.Cell getServer(final ByteString row, final ServerName sn) {
     CellProtos.Cell.Builder cellBuilder = getBaseCellBuilder(row);
     cellBuilder.setQualifier(SERVER_QUALIFIER_BYTESTRING);
-    cellBuilder.setValue(ByteString.copyFromUtf8(sn.getHostAndPort()));
+    cellBuilder.setValue(ByteString.copyFromUtf8(sn.getAddress().toString()));
     return cellBuilder.build();
   }
 
