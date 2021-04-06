@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
@@ -32,7 +33,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Optionally carries Cells across the proxy/service interface down into ipc. On its way out it
  * optionally carries a set of result Cell data. We stick the Cells here when we want to avoid
  * having to protobuf them (for performance reasons). This class is used ferrying data across the
- * proxy/protobuf service chasm. Also does call timeout. Used by client and server ipc'ing.
+ * proxy/protobuf service chasm. Also does call timeout and on client-side, carries the target
+ * RegionInfo we're making the call against if relevant (useful adding info to exceptions and logs).
+ * Used by client and server ipc'ing.
  */
 @InterfaceAudience.Private
 public interface HBaseRpcController extends RpcController, CellScannable {
@@ -103,4 +106,18 @@ public interface HBaseRpcController extends RpcController, CellScannable {
    * cancellation state does not change during this call.
    */
   void notifyOnCancel(RpcCallback<Object> callback, CancellationCallback action) throws IOException;
+
+  /**
+   * @return True if this Controller is carrying the RPC target Region's RegionInfo.
+   */
+  default boolean hasRegionInfo() {
+    return false;
+  }
+
+  /**
+   * @return Target Region's RegionInfo or null if not available or pertinent.
+   */
+  default RegionInfo getRegionInfo() {
+    return null;
+  }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,12 +52,13 @@ public class RpcControllerFactory {
     return new HBaseRpcControllerImpl();
   }
 
-  public HBaseRpcController newController(final CellScanner cellScanner) {
-    return new HBaseRpcControllerImpl(cellScanner);
+  public HBaseRpcController newController(RegionInfo regionInfo, CellScanner cellScanner) {
+    return new HBaseRpcControllerImpl(regionInfo, cellScanner);
   }
 
-  public HBaseRpcController newController(final List<CellScannable> cellIterables) {
-    return new HBaseRpcControllerImpl(cellIterables);
+  public HBaseRpcController newController(RegionInfo regionInfo,
+      final List<CellScannable> cellIterables) {
+    return new HBaseRpcControllerImpl(regionInfo, cellIterables);
   }
 
 
