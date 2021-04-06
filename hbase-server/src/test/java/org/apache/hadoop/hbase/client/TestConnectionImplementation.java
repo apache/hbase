@@ -20,24 +20,29 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -52,12 +57,16 @@ import org.junit.experimental.categories.Category;
 public class TestConnectionImplementation {
   private static HBaseTestingUtility testUtil;
   private static ConnectionManager.HConnectionImplementation conn;
+  private static HBaseProtos.RegionSpecifier specifier;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     testUtil = HBaseTestingUtility.createLocalHTU();
     testUtil.startMiniCluster();
     conn = (ConnectionManager.HConnectionImplementation) testUtil.getConnection();
+    specifier = HBaseProtos.RegionSpecifier.
+      newBuilder().setValue(ByteStringer.wrap(Bytes.toBytes("region")))
+      .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).build();
   }
 
   @AfterClass
@@ -66,42 +75,69 @@ public class TestConnectionImplementation {
     testUtil.shutdownMiniCluster();
   }
 
-  @Test(expected = UnknownHostException.class)
+  @Test
   public void testGetAdminBadHostname() throws Exception {
     // verify that we can get an instance with the cluster hostname
     ServerName master = testUtil.getHBaseCluster().getMaster().getServerName();
-    try {
-      conn.getAdmin(master);
-    } catch (UnknownHostException uhe) {
-      fail("Obtaining admin to the cluster master should have succeeded");
-    }
+    HBaseRpcController controller = conn.getRpcControllerFactory().newController();
+
+    AdminProtos.GetRegionInfoRequest request =
+      AdminProtos.GetRegionInfoRequest.newBuilder().setRegion(specifier).build();
+    AdminProtos.AdminService.BlockingInterface goodAdmin = conn.getAdmin(master);
+    verifyAdminCall(goodAdmin, controller, request, false);
 
     // test that we fail to get a client to an unresolvable hostname, which
     // means it won't be cached
-    ServerName badHost =
-        ServerName.valueOf("unknownhost.invalid:" + HConstants.DEFAULT_MASTER_PORT,
-        System.currentTimeMillis());
-    conn.getAdmin(badHost);
-    fail("Obtaining admin to unresolvable hostname should have failed");
+    ServerName badHost = ServerName
+      .valueOf("unknownhost.invalid:" + HConstants.DEFAULT_MASTER_PORT, System.currentTimeMillis());
+    AdminProtos.AdminService.BlockingInterface badAdmin = conn.getAdmin(badHost);
+    verifyAdminCall(badAdmin, controller, request, true);
   }
 
-  @Test(expected = UnknownHostException.class)
-  public void testGetClientBadHostname() throws Exception {
+  private void verifyAdminCall(AdminProtos.AdminService.BlockingInterface admin,
+    HBaseRpcController rpcController, AdminProtos.GetRegionInfoRequest request,
+    boolean shouldHaveHostException) {
+
+    try {
+      admin.getRegionInfo(rpcController, request);
+    } catch (ServiceException se) {
+      assertEquals(shouldHaveHostException, se.getCause() instanceof UnknownHostException);
+    } catch (Exception e) {
+      assertEquals(!shouldHaveHostException, e instanceof NotServingRegionException);
+    }
+  }
+
+  @Test
+  public void testGetClientBadHostname()
+    throws Exception {
     // verify that we can get an instance with the cluster hostname
     ServerName rs = testUtil.getHBaseCluster().getRegionServer(0).getServerName();
-    try {
-      conn.getClient(rs);
-    } catch (UnknownHostException uhe) {
-      fail("Obtaining client to the cluster regionserver should have succeeded");
-    }
+    HBaseRpcController controller = conn.getRpcControllerFactory().newController();
+    ClientProtos.Get get = ClientProtos.Get.newBuilder()
+      .setRow(ByteStringer.wrap(Bytes.toBytes("r"))).build();
+    ClientProtos.GetRequest request = ClientProtos.GetRequest.newBuilder().setGet(get)
+      .setRegion(specifier).build();
 
-    // test that we fail to get a client to an unresolvable hostname, which
-    // means it won't be cached
-    ServerName badHost =
-        ServerName.valueOf("unknownhost.invalid:" + HConstants.DEFAULT_REGIONSERVER_PORT,
+    ClientProtos.ClientService.BlockingInterface goodClient = conn.getClient(rs);
+    verifyClientCall(goodClient, controller, request, false);
+
+    ServerName badHost = ServerName
+      .valueOf("unknownhost.invalid:" + HConstants.DEFAULT_REGIONSERVER_PORT,
         System.currentTimeMillis());
-    conn.getAdmin(badHost);
-    fail("Obtaining client to unresolvable hostname should have failed");
+    ClientProtos.ClientService.BlockingInterface badClient = conn.getClient(badHost);
+    verifyClientCall(badClient, controller, request, true);
+  }
+
+  private void verifyClientCall(ClientProtos.ClientService.BlockingInterface client,
+    HBaseRpcController rpcController, ClientProtos.GetRequest request,
+    boolean shouldHaveHostException) {
+    try {
+      client.get(rpcController, request);
+    } catch (ServiceException se) {
+      assertEquals(shouldHaveHostException, se.getCause() instanceof UnknownHostException);
+    } catch (Exception e) {
+      assertEquals(!shouldHaveHostException, e instanceof NotServingRegionException);
+    }
   }
 
   @Test
