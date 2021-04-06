@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.SocketTimeoutException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -246,7 +247,8 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
 
   @Override
   public String toString() {
-    return "RpcRetryingCaller{" + "globalStartTime=" + tracker.getStartTime() +
+    return "RpcRetryingCaller{" + "globalStartTime=" +
+      Instant.ofEpochMilli(tracker.getStartTime()) +
         ", pause=" + pause + ", maxAttempts=" + maxAttempts + '}';
   }
 }

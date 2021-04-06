@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -132,8 +132,8 @@ abstract class RpcConnection {
         @Override
         public void run(Timeout timeout) throws Exception {
           call.setTimeout(new CallTimeoutException(call.toShortString() + ", waitTime="
-              + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
-              + call.timeout));
+              + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + "ms, rpcTimeout="
+              + call.timeout + "ms"));
           callTimeout(call);
         }
       }, call.timeout, TimeUnit.MILLISECONDS);
