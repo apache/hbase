@@ -380,7 +380,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
         call.error.fillInStackTrace();
         hrc.setFailed(call.error);
       } else {
-        hrc.setFailed(wrapException(addr, call.error));
+        hrc.setFailed(wrapException(addr, hrc.getRegionInfo(), call.error));
       }
       callback.run(null);
     } else {

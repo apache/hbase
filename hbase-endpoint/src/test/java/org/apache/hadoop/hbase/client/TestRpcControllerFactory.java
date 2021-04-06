@@ -71,13 +71,14 @@ public class TestRpcControllerFactory {
     }
 
     @Override
-    public HBaseRpcController newController(final CellScanner cellScanner) {
-      return new CountingRpcController(super.newController(cellScanner));
+    public HBaseRpcController newController(RegionInfo regionInfo, CellScanner cellScanner) {
+      return new CountingRpcController(super.newController(regionInfo, cellScanner));
     }
 
     @Override
-    public HBaseRpcController newController(final List<CellScannable> cellIterables) {
-      return new CountingRpcController(super.newController(cellIterables));
+    public HBaseRpcController newController(RegionInfo regionInfo,
+        List<CellScannable> cellIterables) {
+      return new CountingRpcController(super.newController(regionInfo, cellIterables));
     }
   }
 

@@ -29,6 +29,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
@@ -159,15 +160,21 @@ class IPCUtil {
     }
   }
 
+  private static String getCallTarget(InetSocketAddress addr, RegionInfo regionInfo) {
+    return "address=" + addr +
+      (regionInfo != null? ", region=" + regionInfo.getRegionNameAsString(): null);
+  }
+
   /**
-   * Takes an Exception and the address we were trying to connect to and return an IOException with
-   * the input exception as the cause. The new exception provides the stack trace of the place where
-   * the exception is thrown and some extra diagnostics information.
+   * Takes an Exception, the address, and if pertinent, the RegionInfo for the Region we were trying
+   * to connect to and returns an IOException with the input exception as the cause. The new
+   * exception provides the stack trace of the place where the exception is thrown and some extra
+   * diagnostics information.
    * <p/>
    * Notice that we will try our best to keep the original exception type when creating a new
    * exception, especially for the 'connection' exceptions, as it is used to determine whether this
-   * is a network issue or the remote side tells us clearly what is wrong, which is very important
-   * to decide whether to retry. If it is not possible to create a new exception with the same type,
+   * is a network issue or the remote side tells us clearly what is wrong, which is important
+   * deciding whether to retry. If it is not possible to create a new exception with the same type,
    * for example, the {@code error} is not an {@link IOException}, an {@link IOException} will be
    * created.
    * @param addr target address
@@ -175,17 +182,18 @@ class IPCUtil {
    * @return an exception to throw
    * @see ClientExceptionsUtil#isConnectionException(Throwable)
    */
-  static IOException wrapException(InetSocketAddress addr, Throwable error) {
+  static IOException wrapException(InetSocketAddress addr, RegionInfo regionInfo,
+      Throwable error) {
     if (error instanceof ConnectException) {
       // connection refused; include the host:port in the error
-      return (IOException) new ConnectException(
-        "Call to " + addr + " failed on connection exception: " + error).initCause(error);
+      return (IOException) new ConnectException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on connection exception: " + error).initCause(error);
     } else if (error instanceof SocketTimeoutException) {
       return (IOException) new SocketTimeoutException(
-        "Call to " + addr + " failed because " + error).initCause(error);
+        "Call to " + getCallTarget(addr, regionInfo) + " failed because " + error).initCause(error);
     } else if (error instanceof ConnectionClosingException) {
-      return new ConnectionClosingException("Call to " + addr + " failed on local exception: "
-        + error, error);
+      return new ConnectionClosingException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     } else if (error instanceof ServerTooBusyException) {
       // we already have address in the exception message
       return (IOException) error;
@@ -194,42 +202,44 @@ class IPCUtil {
       try {
         return (IOException) error.getClass().asSubclass(DoNotRetryIOException.class)
           .getConstructor(String.class)
-          .newInstance("Call to " + addr + " failed on local exception: " + error).initCause(error);
+          .newInstance("Call to " + getCallTarget(addr, regionInfo) +
+            " failed on local exception: " + error).initCause(error);
       } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
           | InvocationTargetException | NoSuchMethodException | SecurityException e) {
         // just ignore, will just new a DoNotRetryIOException instead below
       }
-      return new DoNotRetryIOException("Call to " + addr + " failed on local exception: "
-        + error, error);
+      return new DoNotRetryIOException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     } else if (error instanceof ConnectionClosedException) {
-      return new ConnectionClosedException("Call to " + addr + " failed on local exception: "
-        + error, error);
+      return new ConnectionClosedException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     } else if (error instanceof CallTimeoutException) {
-      return new CallTimeoutException("Call to " + addr + " failed on local exception: "
-        + error, error);
+      return new CallTimeoutException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     } else if (error instanceof ClosedChannelException) {
       // ClosedChannelException does not have a constructor which takes a String but it is a
       // connection exception so we keep its original type
       return (IOException) error;
     } else if (error instanceof TimeoutException) {
       // TimeoutException is not an IOException, let's convert it to TimeoutIOException.
-      return new TimeoutIOException("Call to " + addr + " failed on local exception: "
-        + error, error);
+      return new TimeoutIOException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     } else {
       // try our best to keep the original exception type
       if (error instanceof IOException) {
         try {
           return (IOException) error.getClass().asSubclass(IOException.class)
             .getConstructor(String.class)
-            .newInstance("Call to " + addr + " failed on local exception: " + error)
+            .newInstance("Call to " + getCallTarget(addr, regionInfo) +
+              " failed on local exception: " + error)
             .initCause(error);
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
             | InvocationTargetException | NoSuchMethodException | SecurityException e) {
           // just ignore, will just new an IOException instead below
         }
       }
-      return new HBaseIOException("Call to " + addr + " failed on local exception: "
-        + error, error);
+      return new HBaseIOException("Call to " + getCallTarget(addr, regionInfo) +
+        " failed on local exception: " + error, error);
     }
   }
 
