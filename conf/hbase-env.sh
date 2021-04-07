@@ -144,6 +144,6 @@
 # export SED="${SED-sed}"
 
 # Uncomment to enable trace, you can change the options to use other exporters such as jaeger or
-# zipkin. See https://github.com/open-telemetry/opentelemetry-java-instrumentation on how to config
-# exporters and other components through system properties.
-# export HBASE_TRACE_OPTS="-Dotel.config.sampler.probability=0.1 -Dotel.exporter=logging"
+# zipkin. See https://github.com/open-telemetry/opentelemetry-java-instrumentation on how to
+# configure exporters and other components through system properties.
+# export HBASE_TRACE_OPTS="-Dotel.resource.attributes=service.name=HBase -Dotel.traces.exporter=logging otel.metrics.exporter=none"
