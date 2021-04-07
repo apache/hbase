@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.junit.Assert.assertEquals;
 
+import com.google.common.collect.Lists;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
-import com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
