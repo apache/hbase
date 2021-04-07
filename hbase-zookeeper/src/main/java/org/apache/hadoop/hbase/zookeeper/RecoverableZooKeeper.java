@@ -184,9 +184,8 @@ public class RecoverableZooKeeper {
               throw e;
 
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "delete");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "delete");
               break;
 
@@ -215,9 +214,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "exists");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "exists");
               break;
 
@@ -285,9 +283,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "getChildren");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "getChildren");
               break;
 
@@ -347,9 +344,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "getData");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "getData");
               break;
 
@@ -414,9 +410,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "setData");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "setData");
               break;
             case BADVERSION:
@@ -461,9 +456,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "getAcl");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "getAcl");
               break;
 
@@ -492,8 +486,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "setAcl");
-              break;
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "setAcl");
               break;
@@ -575,9 +567,8 @@ public class RecoverableZooKeeper {
             throw e;
 
           case CONNECTIONLOSS:
-            retryOrThrow(retryCounter, e, "create");
-            break;
           case OPERATIONTIMEOUT:
+          case REQUESTTIMEOUT:
             retryOrThrow(retryCounter, e, "create");
             break;
 
@@ -612,9 +603,8 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
-            retryOrThrow(retryCounter, e, "create");
-            break;
           case OPERATIONTIMEOUT:
+          case REQUESTTIMEOUT:
             retryOrThrow(retryCounter, e, "create");
             break;
 
@@ -670,9 +660,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "multi");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "multi");
               break;
 
