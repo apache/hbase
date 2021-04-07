@@ -24,7 +24,10 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 @InterfaceAudience.Private
 public class CurrentHourProvider {
-  private CurrentHourProvider() { throw new AssertionError(); }
+
+  private CurrentHourProvider() {
+    throw new AssertionError();
+  }
 
   private static final class Tick {
     final int currentHour;
@@ -36,7 +39,7 @@ public class CurrentHourProvider {
     }
   }
 
-  static Tick nextTick() {
+  private static Tick nextTick() {
     Calendar calendar = new GregorianCalendar();
     calendar.setTimeInMillis(EnvironmentEdgeManager.currentTime());
     int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
@@ -51,15 +54,20 @@ public class CurrentHourProvider {
     calendar.set(Calendar.MILLISECOND, 0);
   }
 
-  static volatile Tick tick = nextTick();
+  private static volatile Tick tick = nextTick();
 
   public static int getCurrentHour() {
     Tick tick = CurrentHourProvider.tick;
     if (EnvironmentEdgeManager.currentTime() < tick.expirationTimeInMillis) {
       return tick.currentHour;
     }
-
-    CurrentHourProvider.tick = tick = nextTick();
+    tick = nextTick();
+    CurrentHourProvider.tick = tick;
     return tick.currentHour;
+  }
+
+  //RestrictedApi - only to be called for tests
+  static void advanceTick() {
+    tick = nextTick();
   }
 }
