@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -51,7 +53,7 @@ public class TestMetricsTableLatencies {
     assertTrue("'latencies' is actually " + latencies.getClass(),
         latencies instanceof MetricsTableLatenciesImpl);
     MetricsTableLatenciesImpl latenciesImpl = (MetricsTableLatenciesImpl) latencies;
-    RegionServerTableMetrics tableMetrics = new RegionServerTableMetrics();
+    RegionServerTableMetrics tableMetrics = new RegionServerTableMetrics(false);
 
     // Metrics to each table should be disjoint
     // N.B. each call to assertGauge removes all previously acquired metrics so we have to
@@ -71,5 +73,54 @@ public class TestMetricsTableLatencies {
     tableMetrics.updatePut(tn2, 75L);
     HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(
         tn2, MetricsTableLatencies.PUT_TIME + "_" + "99th_percentile"), 75L, latenciesImpl);
+  }
+
+  @Test
+  public void testTableQueryMeterSwitch() {
+    TableName tn1 = TableName.valueOf("table1");
+    MetricsTableLatencies latencies = CompatibilitySingletonFactory.getInstance(
+      MetricsTableLatencies.class);
+    assertTrue("'latencies' is actually " + latencies.getClass(),
+      latencies instanceof MetricsTableLatenciesImpl);
+    MetricsTableLatenciesImpl latenciesImpl = (MetricsTableLatenciesImpl) latencies;
+
+    Configuration conf = new Configuration();
+    conf.setBoolean(MetricsRegionServer.RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY, false);
+    boolean enableTableQueryMeter = conf.getBoolean(
+      MetricsRegionServer.RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY,
+      MetricsRegionServer.RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT);
+    // disable
+    assertFalse(enableTableQueryMeter);
+    RegionServerTableMetrics tableMetrics = new RegionServerTableMetrics(enableTableQueryMeter);
+    tableMetrics.updateTableReadQueryMeter(tn1, 500L);
+    assertFalse(HELPER.checkGaugeExists(MetricsTableLatenciesImpl.qualifyMetricsName(
+      tn1, MetricsTableQueryMeterImpl.TABLE_READ_QUERY_PER_SECOND + "_" + "count"),
+      latenciesImpl));
+    tableMetrics.updateTableWriteQueryMeter(tn1, 500L);
+    assertFalse(HELPER.checkGaugeExists(MetricsTableLatenciesImpl.qualifyMetricsName(
+      tn1, MetricsTableQueryMeterImpl.TABLE_WRITE_QUERY_PER_SECOND + "_" + "count"),
+      latenciesImpl));
+
+    // enable
+    conf.setBoolean(MetricsRegionServer.RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY, true);
+    enableTableQueryMeter = conf.getBoolean(
+      MetricsRegionServer.RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY,
+      MetricsRegionServer.RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT);
+    assertTrue(enableTableQueryMeter);
+    tableMetrics = new RegionServerTableMetrics(true);
+    tableMetrics.updateTableReadQueryMeter(tn1, 500L);
+    assertTrue(HELPER.checkGaugeExists(MetricsTableLatenciesImpl.qualifyMetricsName(
+      tn1, MetricsTableQueryMeterImpl.TABLE_READ_QUERY_PER_SECOND + "_" + "count"),
+      latenciesImpl));
+    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(
+      tn1, MetricsTableQueryMeterImpl.TABLE_READ_QUERY_PER_SECOND + "_" + "count"),
+      500L, latenciesImpl);
+    tableMetrics.updateTableWriteQueryMeter(tn1, 500L);
+    assertTrue(HELPER.checkGaugeExists(MetricsTableLatenciesImpl.qualifyMetricsName(
+      tn1, MetricsTableQueryMeterImpl.TABLE_WRITE_QUERY_PER_SECOND + "_" + "count"),
+      latenciesImpl));
+    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(
+      tn1, MetricsTableQueryMeterImpl.TABLE_WRITE_QUERY_PER_SECOND + "_" + "count"),
+      500L, latenciesImpl);
   }
 }
