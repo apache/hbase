@@ -234,6 +234,11 @@ public class TimeBasedLimiter implements QuotaLimiter {
   }
 
   @Override
+  public long getReadCapacityUnitAvailable() {
+    return readCapacityUnitLimiter.getAvailable();
+  }
+
+  @Override
   public long getReadAvailable() {
     return readSizeLimiter.getAvailable();
   }

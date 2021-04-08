@@ -41,6 +41,7 @@ public class DefaultOperationQuota implements OperationQuota {
   // the available read/write quota size in bytes
   protected long writeAvailable = 0;
   protected long readAvailable = 0;
+  protected long readCapacityUnitAvailable = 0;
   // estimated quota
   protected long writeConsumed = 0;
   protected long readConsumed = 0;
@@ -83,6 +84,7 @@ public class DefaultOperationQuota implements OperationQuota {
 
     writeAvailable = Long.MAX_VALUE;
     readAvailable = Long.MAX_VALUE;
+    readCapacityUnitAvailable = Long.MAX_VALUE;
     for (final QuotaLimiter limiter : limiters) {
       if (limiter.isBypass()) continue;
 
@@ -90,6 +92,8 @@ public class DefaultOperationQuota implements OperationQuota {
         writeCapacityUnitConsumed, readCapacityUnitConsumed);
       readAvailable = Math.min(readAvailable, limiter.getReadAvailable());
       writeAvailable = Math.min(writeAvailable, limiter.getWriteAvailable());
+      readCapacityUnitAvailable =
+          Math.min(readCapacityUnitAvailable, limiter.getReadCapacityUnitAvailable());
     }
 
     for (final QuotaLimiter limiter : limiters) {
@@ -122,6 +126,9 @@ public class DefaultOperationQuota implements OperationQuota {
 
   @Override
   public long getReadAvailable() {
+    if (readAvailable == Long.MAX_VALUE && readCapacityUnitAvailable != Long.MAX_VALUE) {
+      return readCapacityUnitAvailable * readCapacityUnit;
+    }
     return readAvailable;
   }
 

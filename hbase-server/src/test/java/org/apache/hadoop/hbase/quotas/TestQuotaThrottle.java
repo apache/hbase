@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.doGets;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.doPuts;
+import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.doScan;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerExceedThrottleQuotaCacheRefresh;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerNamespaceCacheRefresh;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerRegionServerCacheRefresh;
@@ -26,6 +27,7 @@ import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerTableC
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerUserCacheRefresh;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.waitMinuteQuota;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 
@@ -649,6 +651,30 @@ public class TestQuotaThrottle {
     // disable exceed throttle quota
     admin.exceedThrottleQuotaSwitch(false);
     triggerExceedThrottleQuotaCacheRefresh(TEST_UTIL, false);
+    // unthrottle table
+    admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
+    triggerTableCacheRefresh(TEST_UTIL, true, TABLE_NAMES[0]);
+  }
+
+  @Test
+  public void testScanReadCapacityUnitThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+    assertEquals(100, doPuts(100, 1000, FAMILY, QUALIFIER, tables[0]));
+    // read size and capacity unit quotas are not set
+    assertEquals(100, doScan(tables[0]));
+
+    // set table read capacity unit quota
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0],
+      ThrottleType.READ_CAPACITY_UNIT, 5, TimeUnit.MINUTES));
+    triggerTableCacheRefresh(TEST_UTIL, false, TABLE_NAMES[0]);
+    assertTrue(doScan(tables[0]) <= 5);
+
+    // set table read size quota
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0],
+      ThrottleType.READ_SIZE, 10000, TimeUnit.MINUTES));
+    triggerTableCacheRefresh(TEST_UTIL, false, TABLE_NAMES[0]);
+    assertTrue(doScan(tables[0]) <= 10);
+
     // unthrottle table
     admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
     triggerTableCacheRefresh(TEST_UTIL, true, TABLE_NAMES[0]);

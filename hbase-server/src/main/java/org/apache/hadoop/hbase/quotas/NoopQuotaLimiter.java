@@ -67,6 +67,11 @@ class NoopQuotaLimiter implements QuotaLimiter {
   }
 
   @Override
+  public long getReadCapacityUnitAvailable() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public long getReadAvailable() {
     throw new UnsupportedOperationException();
   }
