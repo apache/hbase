@@ -262,7 +262,7 @@ public class MasterProcedureTestingUtility {
           if (location == null) continue;
           ServerName serverName = location.getServerName();
           // Make sure that regions are assigned to server
-          if (serverName != null && serverName.getHostAndPort() != null) {
+          if (serverName != null && serverName.getAddress() != null) {
             actualRegCount.incrementAndGet();
           }
         }
