@@ -803,7 +803,7 @@ public class TestAdmin2 {
    * a UT for HBASE-18014
    * @throws Exception
    */
-  @Test (timeout=30000)
+  @Test (timeout=300000)
   public void testEnableTableAfterprocessedServersCleaned() throws Exception {
     String TABLENAME = "testEnableTableAfterprocessedServersCleaned";
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
