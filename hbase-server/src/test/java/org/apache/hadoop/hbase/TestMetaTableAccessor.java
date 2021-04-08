@@ -531,7 +531,7 @@ public class TestMetaTableAccessor {
     Result result = meta.get(get);
     assertTrue(Bytes.equals(
       result.getValue(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(replicaId)),
-      Bytes.toBytes(serverName.getHostAndPort())));
+      Bytes.toBytes(serverName.getAddress().toString())));
     assertTrue(Bytes.equals(
       result.getValue(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(replicaId)),
       Bytes.toBytes(serverName.getStartcode())));
