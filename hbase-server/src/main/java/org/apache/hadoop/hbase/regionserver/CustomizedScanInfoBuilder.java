@@ -39,6 +39,8 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
 
   private Integer minVersions;
 
+  private long timeToPurgeDeletes;
+
   private final Scan scan;
 
   public CustomizedScanInfoBuilder(ScanInfo scanInfo) {
@@ -76,7 +78,8 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
     if (maxVersions == null && ttl == null && keepDeletedCells == null) {
       return scanInfo;
     }
-    return scanInfo.customize(getMaxVersions(), getTTL(), getKeepDeletedCells(), getMinVersions());
+    return scanInfo.customize(getMaxVersions(), getTTL(), getKeepDeletedCells(), getMinVersions(),
+      getTimeToPurgeDeletes());
   }
 
   @Override
@@ -103,6 +106,14 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
   @Override
   public void setMinVersions(int minVersions) {
     this.minVersions = minVersions;
+  }
+
+  @Override public long getTimeToPurgeDeletes() {
+    return timeToPurgeDeletes;
+  }
+
+  @Override public void setTimeToPurgeDeletes(long ttl) {
+    this.timeToPurgeDeletes = ttl;
   }
 
   @Override
