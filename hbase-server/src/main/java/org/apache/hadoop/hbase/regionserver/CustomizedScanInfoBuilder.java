@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.ImmutableScan;
 import org.apache.hadoop.hbase.client.Scan;
@@ -108,11 +107,13 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
     this.minVersions = minVersions;
   }
 
-  @Override public long getTimeToPurgeDeletes() {
+  @Override
+  public long getTimeToPurgeDeletes() {
     return timeToPurgeDeletes;
   }
 
-  @Override public void setTimeToPurgeDeletes(long ttl) {
+  @Override
+  public void setTimeToPurgeDeletes(long ttl) {
     this.timeToPurgeDeletes = ttl;
   }
 
