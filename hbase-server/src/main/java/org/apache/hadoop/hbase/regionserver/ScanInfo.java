@@ -168,12 +168,16 @@ public class ScanInfo {
   }
 
   /**
-   * Used for CP users for customizing max versions, ttl and keepDeletedCells.
+   * Used by CP users for customizing max versions, ttl and keepDeletedCells.
    */
   ScanInfo customize(int maxVersions, long ttl, KeepDeletedCells keepDeletedCells) {
     return customize(maxVersions, ttl, keepDeletedCells, minVersions, timeToPurgeDeletes);
   }
 
+  /**
+   * Used by CP users for customizing max versions, ttl, keepDeletedCells, min versions,
+   * and time to purge deletes.
+   */
   ScanInfo customize(int maxVersions, long ttl, KeepDeletedCells keepDeletedCells,
     int minVersions, long timeToPurgeDeletes) {
     return new ScanInfo(family, minVersions, maxVersions, ttl, keepDeletedCells, timeToPurgeDeletes,
