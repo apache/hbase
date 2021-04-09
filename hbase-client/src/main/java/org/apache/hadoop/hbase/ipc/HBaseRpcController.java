@@ -24,9 +24,11 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Optionally carries Cells across the proxy/service interface down into ipc. On its way out it
@@ -34,7 +36,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * having to protobuf them (for performance reasons). This class is used ferrying data across the
  * proxy/protobuf service chasm. Also does call timeout. Used by client and server ipc'ing.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX,
+  HBaseInterfaceAudience.REPLICATION})
+@InterfaceStability.Evolving
 public interface HBaseRpcController extends RpcController, CellScannable {
 
   /**
