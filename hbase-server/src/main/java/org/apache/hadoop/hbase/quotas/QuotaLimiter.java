@@ -78,4 +78,7 @@ public interface QuotaLimiter {
 
   /** @return the number of bytes available to write to avoid exceeding the quota */
   long getWriteAvailable();
+
+  /** @return the number of capacity unit available to read to avoid exceeding the quota */
+  long getReadCapacityUnitAvailable();
 }
