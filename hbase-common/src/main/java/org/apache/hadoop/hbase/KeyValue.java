@@ -1214,7 +1214,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     if (timestamp == HConstants.LATEST_TIMESTAMP) {
       return "LATEST_TIMESTAMP";
     }
-    if (timestamp == HConstants.OLDEST_TIMESTAMP) {
+    if (timestamp == PrivateConstants.OLDEST_TIMESTAMP) {
       return "OLDEST_TIMESTAMP";
     }
     return String.valueOf(timestamp);

@@ -53,9 +53,8 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
   private static final Logger LOG = LoggerFactory.getLogger(TestUserScanQueryMatcher.class);
 
   /**
-   * This is a cryptic test. It is checking that we don't include a fake cell, one that has a
-   * timestamp of {@link HConstants#OLDEST_TIMESTAMP}. See HBASE-16074 for background.
-   * @throws IOException
+   * This is a cryptic test. It is checking that we don't include a fake cell. See HBASE-16074 for
+   * background.
    */
   @Test
   public void testNeverIncludeFakeCell() throws IOException {

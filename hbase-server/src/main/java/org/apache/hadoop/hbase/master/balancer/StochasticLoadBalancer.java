@@ -900,6 +900,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       this.conf = conf;
       // What percent of the number of regions a single run of the balancer can move.
       maxMovesPercent = conf.getFloat(MAX_MOVES_PERCENT_KEY, DEFAULT_MAX_MOVE_PERCENT);
+
+      // Initialize the multiplier so that addCostFunction will add this cost function.
+      // It may change during later evaluations, due to OffPeakHours.
+      this.setMultiplier(conf.getFloat(MOVE_COST_KEY, DEFAULT_MOVE_COST));
     }
 
     @Override

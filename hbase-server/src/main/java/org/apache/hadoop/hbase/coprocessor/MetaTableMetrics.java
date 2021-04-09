@@ -20,10 +20,10 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -58,7 +58,7 @@ public class MetaTableMetrics implements RegionCoprocessor {
   private MetricRegistry registry;
   private LossyCounting<String> clientMetricsLossyCounting, regionMetricsLossyCounting;
   private boolean active = false;
-  private Set<String> metrics = new HashSet<>();
+  private Set<String> metrics = ConcurrentHashMap.newKeySet();
 
   enum MetaTableOps {
     GET, PUT, DELETE,

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,19 +18,22 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * Factory to create a {@link HBaseRpcController}
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceStability.Evolving
 public class RpcControllerFactory {
   private static final Logger LOG = LoggerFactory.getLogger(RpcControllerFactory.class);
 
@@ -51,14 +54,22 @@ public class RpcControllerFactory {
     return new HBaseRpcControllerImpl();
   }
 
-  public HBaseRpcController newController(final CellScanner cellScanner) {
-    return new HBaseRpcControllerImpl(cellScanner);
+  public HBaseRpcController newController(CellScanner cellScanner) {
+    return new HBaseRpcControllerImpl(null, cellScanner);
+  }
+
+  public HBaseRpcController newController(RegionInfo regionInfo, CellScanner cellScanner) {
+    return new HBaseRpcControllerImpl(regionInfo, cellScanner);
   }
 
   public HBaseRpcController newController(final List<CellScannable> cellIterables) {
-    return new HBaseRpcControllerImpl(cellIterables);
+    return new HBaseRpcControllerImpl(null, cellIterables);
   }
 
+  public HBaseRpcController newController(RegionInfo regionInfo,
+      final List<CellScannable> cellIterables) {
+    return new HBaseRpcControllerImpl(regionInfo, cellIterables);
+  }
 
   public static RpcControllerFactory instantiate(Configuration configuration) {
     String rpcControllerFactoryClazz =

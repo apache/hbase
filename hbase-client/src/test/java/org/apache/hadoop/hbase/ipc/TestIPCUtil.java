@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -29,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.net.Address;
@@ -91,8 +93,7 @@ public class TestIPCUtil {
   }
 
   /**
-   * See HBASE-21862, it is very important to keep the original exception type for connection
-   * exceptions.
+   * See HBASE-21862, it is important to keep original exception type for connection exceptions.
    */
   @Test
   public void testWrapConnectionException() throws Exception {
@@ -103,9 +104,17 @@ public class TestIPCUtil {
     Address addr = Address.fromParts("127.0.0.1", 12345);
     for (Throwable exception : exceptions) {
       if (exception instanceof TimeoutException) {
-        assertThat(IPCUtil.wrapException(addr, exception), instanceOf(TimeoutIOException.class));
+        assertThat(IPCUtil.wrapException(addr, null, exception), instanceOf(TimeoutIOException.class));
       } else {
-        assertThat(IPCUtil.wrapException(addr, exception), instanceOf(exception.getClass()));
+        IOException ioe = IPCUtil.wrapException(addr, RegionInfoBuilder.FIRST_META_REGIONINFO,
+          exception);
+        // Assert that the exception contains the Region name if supplied. HBASE-25735.
+        // Not all exceptions get the region stuffed into it.
+        if (ioe.getMessage() != null) {
+          assertTrue(ioe.getMessage().
+            contains(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionNameAsString()));
+        }
+        assertThat(ioe, instanceOf(exception.getClass()));
       }
     }
   }
