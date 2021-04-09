@@ -94,10 +94,22 @@ public interface ColumnFamilyDescriptor {
    * @return Compression type setting.
    */
   Compression.Algorithm getCompactionCompressionType();
+
+  /**
+   * @return Compression type setting for major compactions.
+   */
+  Compression.Algorithm getMajorCompactionCompressionType();
+
+  /**
+   * @return Compression type setting for minor compactions.
+   */
+  Compression.Algorithm getMinorCompactionCompressionType();
+
   /**
    * @return Compression type setting.
    */
   Compression.Algorithm getCompressionType();
+
   /**
    * @return an unmodifiable map.
    */

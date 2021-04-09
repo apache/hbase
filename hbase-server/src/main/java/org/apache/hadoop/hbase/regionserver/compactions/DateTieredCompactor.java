@@ -68,11 +68,11 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
 
         @Override
         public DateTieredMultiFileWriter createWriter(InternalScanner scanner, FileDetails fd,
-            boolean shouldDropBehind) throws IOException {
+            boolean shouldDropBehind, boolean major) throws IOException {
           DateTieredMultiFileWriter writer = new DateTieredMultiFileWriter(lowerBoundaries,
               lowerBoundariesPolicies,
               needEmptyFile(request));
-          initMultiWriter(writer, scanner, fd, shouldDropBehind);
+          initMultiWriter(writer, scanner, fd, shouldDropBehind, major);
           return writer;
         }
       }, throughputController, user);

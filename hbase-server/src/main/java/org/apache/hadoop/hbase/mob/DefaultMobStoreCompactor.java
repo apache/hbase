@@ -147,10 +147,11 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         @Override
         public StoreFileWriter createWriter(InternalScanner scanner,
             org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-            boolean shouldDropBehind) throws IOException {
+            boolean shouldDropBehind, boolean major) throws IOException {
           // make this writer with tags always because of possible new cells with tags.
-          return store.createWriterInTmp(fd.maxKeyCount, compactionCompression, true, true, true,
-            shouldDropBehind);
+          return store.createWriterInTmp(fd.maxKeyCount,
+            major ? majorCompactionCompression : minorCompactionCompression,
+            true, true, true, shouldDropBehind);
         }
       };
 
@@ -350,7 +351,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     Cell mobCell = null;
     try {
 
-      mobFileWriter = newMobWriter(fd);
+      mobFileWriter = newMobWriter(fd, major);
       fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
 
       do {
@@ -428,7 +429,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                       LOG.debug("Closing output MOB File, length={} file={}, store={}", len,
                         mobFileWriter.getPath().getName(), getStoreInfo());
                       commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                      mobFileWriter = newMobWriter(fd);
+                      mobFileWriter = newMobWriter(fd, major);
                       fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                       mobCells = 0;
                     }
@@ -472,7 +473,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                   long len = mobFileWriter.getPos();
                   if (len > maxMobFileSize) {
                     commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                    mobFileWriter = newMobWriter(fd);
+                    mobFileWriter = newMobWriter(fd, major);
                     fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                     mobCells = 0;
                   }
@@ -524,7 +525,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               long len = mobFileWriter.getPos();
               if (len > maxMobFileSize) {
                 commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                mobFileWriter = newMobWriter(fd);
+                mobFileWriter = newMobWriter(fd, major);
                 fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                 mobCells = 0;
               }
@@ -611,11 +612,12 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     }
   }
 
-  private StoreFileWriter newMobWriter(FileDetails fd)
+  private StoreFileWriter newMobWriter(FileDetails fd, boolean major)
       throws IOException {
     try {
       StoreFileWriter mobFileWriter = mobStore.createWriterInTmp(new Date(fd.latestPutTs),
-        fd.maxKeyCount, compactionCompression, store.getRegionInfo().getStartKey(), true);
+        fd.maxKeyCount, major ? majorCompactionCompression : minorCompactionCompression,
+        store.getRegionInfo().getStartKey(), true);
       LOG.debug("New MOB writer created={} store={}", mobFileWriter.getPath().getName(),
         getStoreInfo());
       // Add reference we get for compact MOB
