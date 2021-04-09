@@ -75,8 +75,6 @@ public interface ScanOptions {
 
   void setTimeToPurgeDeletes(long ttl);
 
-
-
   /**
    * Returns a copy of the Scan object. Modifying it will have no effect.
    */
