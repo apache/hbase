@@ -308,6 +308,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>gjacoby</id>
+      <name>Geoffrey Jacoby</name>
+      <email>gjacoby@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
         <id>gxcheng</id>
         <name>Guangxu Cheng</name>
         <email>gxcheng@apache.org</email>
