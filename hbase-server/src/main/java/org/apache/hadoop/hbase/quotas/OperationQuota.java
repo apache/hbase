@@ -70,7 +70,4 @@ public interface OperationQuota {
 
   /** @return the number of bytes available to read to avoid exceeding the quota */
   long getReadAvailable();
-
-  /** @return the number of bytes available to write to avoid exceeding the quota */
-  long getWriteAvailable();
 }
