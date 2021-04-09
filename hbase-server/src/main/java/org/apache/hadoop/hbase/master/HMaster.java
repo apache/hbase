@@ -1707,7 +1707,6 @@ public class HMaster extends HRegionServer implements MasterServices {
           LOG.error("Error invoking master coprocessor postBalance()", ioe);
         }
       }
-
     } catch (IOException e) {
       LOG.error("Balance cluster error", e);
     }

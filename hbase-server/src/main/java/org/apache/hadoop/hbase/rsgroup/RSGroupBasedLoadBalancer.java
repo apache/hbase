@@ -532,11 +532,6 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     ReadWriteLock groupBalanceLock = groupLocks.getLock(groupInfo.getName());
     if (groupBalanceLock.writeLock().tryLock()) {
       try {
-        if (masterServices.getAssignmentManager().isMetaRegionInTransition()) {
-          LOG.info("Not running balancer for RSGroup {} because meta regions in transition",
-            groupName);
-          return balancedPlans;
-        }
         if (masterServices.getServerManager().areDeadServersInProgress()) {
           LOG.debug("Not running balancer for RSGroup {}, "
               + "because processing dead regionserver(s): {}", groupName,
