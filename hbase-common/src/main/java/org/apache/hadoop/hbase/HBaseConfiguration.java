@@ -80,7 +80,9 @@ public class HBaseConfiguration extends Configuration {
       new DeprecationDelta("hlog.input.tables", "wal.input.tables"),
       new DeprecationDelta("hlog.input.tablesmap", "wal.input.tablesmap"),
       new DeprecationDelta("hbase.master.mob.ttl.cleaner.period",
-        "hbase.master.mob.cleaner.period")
+        "hbase.master.mob.cleaner.period"),
+      new DeprecationDelta("hbase.normalizer.min.region.count",
+        "hbase.normalizer.merge.min.region.count")
     });
   }
 
