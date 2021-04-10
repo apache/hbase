@@ -34,7 +34,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -54,10 +53,11 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestStochasticLoadBalancer extends BalancerTestBase {
@@ -277,7 +277,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     MockNoopMasterServices master = new MockNoopMasterServices();
     StochasticLoadBalancer.CostFunction
-        costFunction = new ServerLocalityCostFunction(conf, master);
+        costFunction = new ServerLocalityCostFunction(conf);
 
     for (int test = 0; test < clusterRegionLocationMocks.length; test++) {
       int[][] clusterRegionLocations = clusterRegionLocationMocks[test];
