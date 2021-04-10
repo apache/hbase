@@ -398,7 +398,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // instantiating the storefile infos can be quite expensive.
     // Allow turning this feature off if the locality cost is not going to
     // be used in any computations.
-    RegionLocationFinder finder = null;
+    RegionHDFSBlockLocationFinder finder = null;
     if ((this.localityCost != null && this.localityCost.getMultiplier() > 0)
         || (this.rackLocalityCost != null && this.rackLocalityCost.getMultiplier() > 0)) {
       finder = this.regionFinder;

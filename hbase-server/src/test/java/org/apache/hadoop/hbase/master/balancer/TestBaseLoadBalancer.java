@@ -524,7 +524,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assignRegions(regions, servers, clusterState);
 
     // mock block locality for some regions
-    RegionLocationFinder locationFinder = mock(RegionLocationFinder.class);
+    RegionHDFSBlockLocationFinder locationFinder = mock(RegionHDFSBlockLocationFinder.class);
     // block locality: region:0   => {server:0}
     //                 region:1   => {server:0, server:1}
     //                 region:42 => {server:4, server:9, server:5}

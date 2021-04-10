@@ -88,7 +88,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   static final Predicate<ServerMetrics> IDLE_SERVER_PREDICATOR
     = load -> load.getRegionMetrics().isEmpty();
 
-  protected RegionLocationFinder regionFinder;
+  protected RegionHDFSBlockLocationFinder regionFinder;
   protected boolean useRegionFinder;
   protected boolean isByTable = false;
 
@@ -124,7 +124,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   private void createRegionFinder() {
     useRegionFinder = config.getBoolean("hbase.master.balancer.uselocality", true);
     if (useRegionFinder) {
-      regionFinder = new RegionLocationFinder();
+      regionFinder = new RegionHDFSBlockLocationFinder();
     }
   }
 
@@ -147,7 +147,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     ArrayList<String> tables;
     RegionInfo[] regions;
     Deque<BalancerRegionLoad>[] regionLoads;
-    private RegionLocationFinder regionFinder;
+    private RegionHDFSBlockLocationFinder regionFinder;
 
     int[][] regionLocations; //regionIndex -> list of serverIndex sorted by locality
 
@@ -200,7 +200,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     protected Cluster(
         Map<ServerName, List<RegionInfo>> clusterState,
         Map<String, Deque<BalancerRegionLoad>> loads,
-        RegionLocationFinder regionFinder,
+        RegionHDFSBlockLocationFinder regionFinder,
         RackManager rackManager) {
       this(null, clusterState, loads, regionFinder, rackManager);
     }
@@ -210,7 +210,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         Collection<RegionInfo> unassignedRegions,
         Map<ServerName, List<RegionInfo>> clusterState,
         Map<String, Deque<BalancerRegionLoad>> loads,
-        RegionLocationFinder regionFinder,
+        RegionHDFSBlockLocationFinder regionFinder,
         RackManager rackManager) {
 
       if (unassignedRegions == null) {
@@ -476,7 +476,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     /** Helper for Cluster constructor to handle a region */
     private void registerRegion(RegionInfo region, int regionIndex,
         int serverIndex, Map<String, Deque<BalancerRegionLoad>> loads,
-        RegionLocationFinder regionFinder) {
+        RegionHDFSBlockLocationFinder regionFinder) {
       String tableName = region.getTable().getNameAsString();
       if (!tablesToIndex.containsKey(tableName)) {
         tables.add(tableName);
@@ -1185,7 +1185,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     masterServerName = masterServices.getServerName();
     this.services = masterServices;
     if (useRegionFinder) {
-      this.regionFinder.setServices(masterServices);
+      this.regionFinder.setClusterInfoProvider(new MasterClusterInfoProvider(services));
     }
     if (this.services.isInMaintenanceMode()) {
       this.maintenanceMode = true;
