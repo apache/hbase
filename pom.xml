@@ -2257,8 +2257,8 @@
         <version>${thrift.version}</version>
         <exclusions>
           <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
