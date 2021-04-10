@@ -33,19 +33,16 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
-import org.apache.hadoop.hbase.snapshot.TestRestoreFlushSnapshotFromClient;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
@@ -137,8 +134,7 @@ public class TestSnapshotCloneIndependence {
     System.out.println("Original table has: " + countOriginalTable + " rows");
   }
 
-  @After
-  public void tearDown() throws Exception {
+  private void tearDown() throws Exception {
     UTIL.deleteTable(originalTableName);
     UTIL.deleteTable(cloneTableName);
     SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
@@ -158,72 +154,80 @@ public class TestSnapshotCloneIndependence {
    * Verify that adding data to the cloned table will not affect the original, and vice-versa when
    * it is taken as an online snapshot.
    */
-  @Test
+  @Test(timeout = 30000)
   public void testOnlineSnapshotAppendIndependent() throws Exception {
     createAndCloneSnapshot(true);
     runTestSnapshotAppendIndependent();
+    tearDown();
   }
 
   /**
    * Verify that adding data to the cloned table will not affect the original, and vice-versa when
    * it is taken as an offline snapshot.
    */
-  @Test
+  @Test(timeout = 30000)
   public void testOfflineSnapshotAppendIndependent() throws Exception {
     createAndCloneSnapshot(false);
     runTestSnapshotAppendIndependent();
+    tearDown();
   }
 
   /**
    * Verify that adding metadata to the cloned table will not affect the original, and vice-versa
    * when it is taken as an online snapshot.
    */
-  @Test
+  @Test(timeout = 30000)
   public void testOnlineSnapshotMetadataChangesIndependent() throws Exception {
     createAndCloneSnapshot(true);
     runTestSnapshotMetadataChangesIndependent();
+    tearDown();
   }
 
   /**
    * Verify that adding netadata to the cloned table will not affect the original, and vice-versa
    * when is taken as an online snapshot.
    */
-  @Test
+  @Test(timeout = 30000)
   public void testOfflineSnapshotMetadataChangesIndependent() throws Exception {
     createAndCloneSnapshot(false);
     runTestSnapshotMetadataChangesIndependent();
+    tearDown();
   }
 
   /**
    * Verify that region operations, in this case splitting a region, are independent between the
    * cloned table and the original.
    */
-  @Test
+  @Test(timeout = 30000)
   public void testOfflineSnapshotRegionOperationsIndependent() throws Exception {
     createAndCloneSnapshot(false);
     runTestRegionOperationsIndependent();
+    tearDown();
   }
 
   /**
    * Verify that region operations, in this case splitting a region, are independent between the
    * cloned table and the original.
    */
-  @Test
+  @Test(timeout = 30000)
   public void testOnlineSnapshotRegionOperationsIndependent() throws Exception {
     createAndCloneSnapshot(true);
     runTestRegionOperationsIndependent();
+    tearDown();
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testOfflineSnapshotDeleteIndependent() throws Exception {
     createAndCloneSnapshot(false);
     runTestSnapshotDeleteIndependent();
+    tearDown();
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testOnlineSnapshotDeleteIndependent() throws Exception {
     createAndCloneSnapshot(true);
     runTestSnapshotDeleteIndependent();
+    tearDown();
   }
 
   private static void waitOnSplit(Connection c, final Table t, int originalCount) throws Exception {
