@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.RegionSplitPointRestriction;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -110,6 +111,15 @@ public class SplitTableRegionProcedure
     // we fail-fast on construction. There it skips the split with just a warning.
     checkOnline(env, regionToSplit);
     this.bestSplitRow = splitRow;
+    TableDescriptor tableDescriptor = env.getMasterServices().getTableDescriptors()
+      .get(getTableName());
+    Configuration conf = env.getMasterConfiguration();
+    if (hasBestSplitRow()) {
+      // Apply the split point restriction for the table to the user-specified split point
+      RegionSplitPointRestriction splitPointRestriction =
+        RegionSplitPointRestriction.create(tableDescriptor, conf);
+      bestSplitRow = splitPointRestriction.getRestrictedSplitPoint(bestSplitRow);
+    }
     checkSplittable(env, regionToSplit);
     final TableName table = regionToSplit.getTable();
     final long rid = getDaughterRegionIdTimestamp(regionToSplit);
@@ -125,15 +135,14 @@ public class SplitTableRegionProcedure
         .setSplit(false)
         .setRegionId(rid)
         .build();
-    TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
-    if(htd.getRegionSplitPolicyClassName() != null) {
+    if(tableDescriptor.getRegionSplitPolicyClassName() != null) {
       // Since we don't have region reference here, creating the split policy instance without it.
       // This can be used to invoke methods which don't require Region reference. This instantiation
       // of a class on Master-side though it only makes sense on the RegionServer-side is
       // for Phoenix Local Indexing. Refer HBASE-12583 for more information.
       Class<? extends RegionSplitPolicy> clazz =
-          RegionSplitPolicy.getSplitPolicyClass(htd, env.getMasterConfiguration());
-      this.splitPolicy = ReflectionUtils.newInstance(clazz, env.getMasterConfiguration());
+        RegionSplitPolicy.getSplitPolicyClass(tableDescriptor, conf);
+      this.splitPolicy = ReflectionUtils.newInstance(clazz, conf);
     }
   }
 
@@ -219,7 +228,7 @@ public class SplitTableRegionProcedure
       throw e;
     }
 
-    if (bestSplitRow == null || bestSplitRow.length == 0) {
+    if (!hasBestSplitRow()) {
       throw new DoNotRetryIOException("Region not splittable because bestSplitPoint = null, " +
         "maybe table is too small for auto split. For force split, try specifying split row");
     }
