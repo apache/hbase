@@ -20,6 +20,164 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.2.7 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-25738](https://issues.apache.org/jira/browse/HBASE-25738) | *Minor* | **Backport HBASE-24305 to branch-2.2**
+
+The following method was added to ServerName
+
+- #valueOf(Address, long)
+
+
+---
+
+* [HBASE-25587](https://issues.apache.org/jira/browse/HBASE-25587) | *Major* | **[hbck2] Schedule SCP for all unknown servers**
+
+Adds scheduleSCPsForUnknownServers to Hbck Service.
+
+
+---
+
+* [HBASE-25460](https://issues.apache.org/jira/browse/HBASE-25460) | *Major* | **Expose drainingServers as cluster metric**
+
+Exposed new jmx metrics: "draininigRegionServers" and "numDrainingRegionServers" to provide "comma separated names for regionservers that are put in draining mode" and "num of such regionservers" respectively.
+
+
+---
+
+* [HBASE-25449](https://issues.apache.org/jira/browse/HBASE-25449) | *Major* | **'dfs.client.read.shortcircuit' should not be set in hbase-default.xml**
+
+The presence of HDFS short-circuit read configuration properties in hbase-default.xml inadvertently causes short-circuit reads to not happen inside of RegionServers, despite short-circuit reads being enabled in hdfs-site.xml.
+
+
+---
+
+* [HBASE-25441](https://issues.apache.org/jira/browse/HBASE-25441) | *Critical* | **add security check for some APIs in RSRpcServices**
+
+RsRpcServices APIs that can be accessed only through Admin rights:
+- stopServer
+- updateFavoredNodes
+- updateConfiguration
+- clearRegionBlockCache
+- clearSlowLogsResponses
+
+
+---
+
+* [HBASE-25432](https://issues.apache.org/jira/browse/HBASE-25432) | *Blocker* | **we should add security checks for setTableStateInMeta and fixMeta**
+
+setTableStateInMeta and fixMeta can be accessed only through Admin rights
+
+
+---
+
+* [HBASE-25318](https://issues.apache.org/jira/browse/HBASE-25318) | *Minor* | **Configure where IntegrationTestImportTsv generates HFiles**
+
+Added IntegrationTestImportTsv.generatedHFileFolder configuration property to override the default location in IntegrationTestImportTsv. Useful for running the integration test when HDFS Transparent Encryption is enabled.
+
+
+---
+
+* [HBASE-25237](https://issues.apache.org/jira/browse/HBASE-25237) | *Major* | **'hbase master stop' shuts down the cluster, not the master only**
+
+\`hbase master stop\` should shutdown only master by default.
+1. Help added to \`hbase master stop\`:
+To stop cluster, use \`stop-hbase.sh\` or \`hbase master stop --shutDownCluster\`
+
+2. Help added to \`stop-hbase.sh\`:
+stop-hbase.sh can only be used for shutting down entire cluster. To shut down (HMaster\|HRegionServer) use hbase-daemon.sh stop (master\|regionserver)
+
+
+---
+
+* [HBASE-25238](https://issues.apache.org/jira/browse/HBASE-25238) | *Critical* | **Upgrading HBase from 2.2.0 to 2.3.x fails because of “Message missing required fields: state”**
+
+Fixes master procedure store migration issues going from 2.0.x to 2.2.x and/or 2.3.x. Also fixes failed heartbeat parse during rolling upgrade from 2.0.x. to 2.3.x.
+
+
+---
+
+* [HBASE-25224](https://issues.apache.org/jira/browse/HBASE-25224) | *Major* | **Maximize sleep for checking meta and namespace regions availability**
+
+Changed the max sleep time during meta and namespace regions availability check to be 60 sec. Previously there was no such cap
+
+
+---
+
+* [HBASE-25163](https://issues.apache.org/jira/browse/HBASE-25163) | *Major* | **Increase the timeout value for nightly jobs**
+
+Increase timeout value for nightly jobs to 16 hours since the new build machines are dedicated to hbase project, so we are allowed to use it all the time.
+
+
+---
+
+* [HBASE-22976](https://issues.apache.org/jira/browse/HBASE-22976) | *Major* | **[HBCK2] Add RecoveredEditsPlayer**
+
+WALPlayer can replay the content of recovered.edits directories.
+
+Side-effect is that WAL filename timestamp is now factored when setting start/end times for WALInputFormat; i.e. wal.start.time and wal.end.time values on a job context. Previous we looked at wal.end.time only. Now we consider wal.start.time too. If a file has a name outside of wal.start.time\<-\>wal.end.time, it'll be by-passed. This change-in-behavior will make it easier on operator crafting timestamp filters processing WALs.
+
+
+---
+
+* [HBASE-25154](https://issues.apache.org/jira/browse/HBASE-25154) | *Major* | **Set java.io.tmpdir to project build directory to avoid writing std\*deferred files to /tmp**
+
+Change the java.io.tmpdir to project.build.directory in surefire-maven-plugin, to avoid writing std\*deferred files to /tmp which may blow up the /tmp disk on our jenkins build node.
+
+
+---
+
+* [HBASE-25109](https://issues.apache.org/jira/browse/HBASE-25109) | *Major* | **Add MR Counters to WALPlayer; currently hard to tell if it is doing anything**
+
+Adds a WALPlayer to MR Counter output:
+
+  org.apache.hadoop.hbase.mapreduce.WALPlayer$Counter
+    CELLS\_READ=89574
+    CELLS\_WRITTEN=89572
+    DELETES=64
+    PUTS=5305
+    WALEDITS=4375
+
+
+---
+
+* [HBASE-24776](https://issues.apache.org/jira/browse/HBASE-24776) | *Major* | **[hbtop] Support Batch mode**
+
+HBASE-24776 added the following command line parameters to hbtop:
+\| Argument \| Description \|
+\|---\|---\|
+\| -n,--numberOfIterations \<arg\> \| The number of iterations \|
+\| -O,--outputFieldNames \| Print each of the available field names on a separate line, then quit \|
+\| -f,--fields \<arg\> \| Show only the given fields. Specify comma separated fields to show multiple fields \|
+\| -s,--sortField \<arg\> \| The initial sort field. You can prepend a \`+' or \`-' to the field name to also override the sort direction. A leading \`+' will force sorting high to low, whereas a \`-' will ensure a low to high ordering \|
+\| -i,--filters \<arg\> \| The initial filters. Specify comma separated filters to set multiple filters \|
+\| -b,--batchMode \| Starts hbtop in Batch mode, which could be useful for sending output from hbtop to other programs or to a file. In this mode, hbtop will not accept input and runs until the iterations limit you've set with the \`-n' command-line option or until killed \|
+
+
+---
+
+* [HBASE-24305](https://issues.apache.org/jira/browse/HBASE-24305) | *Minor* | **Handle deprecations in ServerName**
+
+The following methods were removed or made private from ServerName (due to HBASE-17624):
+
+- getHostNameMinusDomain(String): Was made private without a replacement.
+- parseHostname(String): Use #valueOf(String) instead.
+- parsePort(String): Use #valueOf(String) instead.
+- parseStartcode(String): Use #valueOf(String) instead.
+- getServerName(String, int, long): Was made private. Use #valueOf(String, int, long) instead.
+- getServerName(String, long): Use #valueOf(String, long) instead.
+- getHostAndPort(): Use #getAddress() instead.
+- getServerStartcodeFromServerName(String): Use instance of ServerName to pull out start code)
+- getServerNameLessStartCode(String): Use #getAddress() instead.
+
+
+
+
 # HBASE  2.2.6 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
