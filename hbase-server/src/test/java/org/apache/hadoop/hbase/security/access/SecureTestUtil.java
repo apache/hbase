@@ -71,7 +71,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 public class SecureTestUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(SecureTestUtil.class);
-  private static final int WAIT_TIME = 10000;
+  private static final int WAIT_TIME = 30000;
 
   public static void configureSuperuser(Configuration conf) throws IOException {
     // The secure minicluster creates separate service principals based on the
