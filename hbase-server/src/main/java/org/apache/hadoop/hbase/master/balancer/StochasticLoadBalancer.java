@@ -184,8 +184,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (localityCandidateGenerator == null) {
       localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
     }
-    localityCost = new ServerLocalityCostFunction(conf, services);
-    rackLocalityCost = new RackLocalityCostFunction(conf, services);
+    localityCost = new ServerLocalityCostFunction(conf);
+    rackLocalityCost = new RackLocalityCostFunction(conf);
 
     if (this.candidateGenerators == null) {
       candidateGenerators = Lists.newArrayList();
@@ -303,8 +303,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @Override
   public synchronized void setMasterServices(MasterServices masterServices) {
     super.setMasterServices(masterServices);
-    this.localityCost.setServices(masterServices);
-    this.rackLocalityCost.setServices(masterServices);
     this.localityCandidateGenerator.setServices(masterServices);
   }
 
@@ -1015,17 +1013,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     private double bestLocality; // best case locality across cluster weighted by local data size
     private double locality; // current locality across cluster weighted by local data size
 
-    private MasterServices services;
-
-    LocalityBasedCostFunction(Configuration conf,
-                              MasterServices srv,
-                              LocalityType type,
-                              String localityCostKey,
-                              float defaultLocalityCost) {
+    LocalityBasedCostFunction(Configuration conf, LocalityType type, String localityCostKey,
+      float defaultLocalityCost) {
       super(conf);
       this.type = type;
       this.setMultiplier(conf.getFloat(localityCostKey, defaultLocalityCost));
-      this.services = srv;
       this.locality = 0.0;
       this.bestLocality = 0.0;
     }
@@ -1035,20 +1027,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
      */
     abstract int regionIndexToEntityIndex(int region);
 
-    public void setServices(MasterServices srvc) {
-      this.services = srvc;
-    }
-
     @Override
     void init(Cluster cluster) {
       super.init(cluster);
       locality = 0.0;
       bestLocality = 0.0;
-
-      // If no master, no computation will work, so assume 0 cost
-      if (this.services == null) {
-        return;
-      }
 
       for (int region = 0; region < cluster.numRegions; region++) {
         locality += getWeightedLocality(region, regionIndexToEntityIndex(region));
@@ -1065,9 +1048,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     protected void regionMoved(int region, int oldServer, int newServer) {
       int oldEntity = type == LocalityType.SERVER ? oldServer : cluster.serverIndexToRackIndex[oldServer];
       int newEntity = type == LocalityType.SERVER ? newServer : cluster.serverIndexToRackIndex[newServer];
-      if (this.services == null) {
-        return;
-      }
       double localityDelta = getWeightedLocality(region, newEntity) - getWeightedLocality(region, oldEntity);
       double normalizedDelta = bestLocality == 0 ? 0.0 : localityDelta / bestLocality;
       locality += normalizedDelta;
@@ -1093,14 +1073,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     private static final String LOCALITY_COST_KEY = "hbase.master.balancer.stochastic.localityCost";
     private static final float DEFAULT_LOCALITY_COST = 25;
 
-    ServerLocalityCostFunction(Configuration conf, MasterServices srv) {
-      super(
-          conf,
-          srv,
-          LocalityType.SERVER,
-          LOCALITY_COST_KEY,
-          DEFAULT_LOCALITY_COST
-      );
+    ServerLocalityCostFunction(Configuration conf) {
+      super(conf, LocalityType.SERVER, LOCALITY_COST_KEY, DEFAULT_LOCALITY_COST);
     }
 
     @Override
@@ -1114,14 +1088,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     private static final String RACK_LOCALITY_COST_KEY = "hbase.master.balancer.stochastic.rackLocalityCost";
     private static final float DEFAULT_RACK_LOCALITY_COST = 15;
 
-    public RackLocalityCostFunction(Configuration conf, MasterServices services) {
-      super(
-          conf,
-          services,
-          LocalityType.RACK,
-          RACK_LOCALITY_COST_KEY,
-          DEFAULT_RACK_LOCALITY_COST
-      );
+    public RackLocalityCostFunction(Configuration conf) {
+      super(conf, LocalityType.RACK, RACK_LOCALITY_COST_KEY, DEFAULT_RACK_LOCALITY_COST);
     }
 
     @Override
