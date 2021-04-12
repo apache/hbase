@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
-import java.io.IOException;
 
 /**
  * A RegionSplitPointRestriction implementation that does nothing.

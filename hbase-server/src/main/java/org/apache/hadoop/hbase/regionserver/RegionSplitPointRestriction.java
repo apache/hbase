@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 
 /**
  * A split point restriction that restricts the pattern of the split point.
