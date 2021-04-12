@@ -1,5 +1,243 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.7.0 07/04/2021
+
+** Sub-task
+    * [HBASE-25712] Port failure to close InputStream to 1.x
+    * [HBASE-25670] Backport HBASE-25665 to branch-1
+    * [HBASE-25687] Backport "HBASE-25681 Add a switch for server/table queryMeter" to branch-2 and branch-1
+    * [HBASE-25677] Server+table counters on each scan #nextRaw invocation becomes a bottleneck when heavy load
+    * [HBASE-25672] Backport HBASE-25608 to branch-1
+    * [HBASE-25258] Backport HBASE-24776 "[hbtop] Support Batch mode" to branch-1
+    * [HBASE-24395] ServerName#getHostname() is case sensitive
+    * [HBASE-25405] Backport HBASE-25287 to branch-1
+    * [HBASE-25203] Change the reference url to flaky list in our jenkins jobs
+    * [HBASE-25194] Do not publish workspace in flaky find job
+    * [HBASE-23935] Backport HBASE-22978(with sub-tasks), HBASE-24718, HBASE-24528 to branch-1
+    * [HBASE-25162] Make flaky tests run more aggressively
+    * [HBASE-25163] Increase the timeout value for nightly jobs
+    * [HBASE-25154] Set java.io.tmpdir to project build directory to avoid writing std*deferred files to /tmp
+    * [HBASE-25133] Migrate HBase Nightly jenkins job from Hadoop to hbase
+    * [HBASE-25132] Migrate flaky test jenkins job from Hadoop to hbase
+    * [HBASE-25107] Migrate flaky reporting jenkins job from Hadoop to hbase
+    * [HBASE-23330] Expose cluster ID for clients using it for delegation token based auth
+    * [HBASE-24765] Dynamic master discovery
+    * [HBASE-23305] Master based registry implementation
+    * [HBASE-7767] Get rid of ZKTable, and table enable/disable state in ZK
+    * [HBASE-23304] Implement RPCs needed for master based registry
+    * [HBASE-23281] Track meta region changes on masters
+    * [HBASE-23275] Track active master server name in ActiveMasterManager
+    * [HBASE-23257] Track ClusterID in stand by masters
+    * [HBASE-24876] Fix the flaky job url in hbase-personality.sh
+    * [HBASE-24841] Change the jenkins job urls in our jenkinsfile
+    * [HBASE-24846] Address compaction races in TestFIFOCompactionPolicy
+    * [HBASE-22982] Send SIGSTOP to hang or SIGCONT to resume rs and add graceful rolling restart
+    * [HBASE-24218] Add hadoop 3.2.x in hadoop check
+    * [HBASE-24045] Support setting `-Dhadoop.profile` in adhoc_run_tests.sh
+    * [HBASE-24009] Backport the personality changes in HBASE-23989 to all active branches
+    * [HBASE-23631] Backport HBASE-23350 (Make compaction files cacheonWrite configurable based on threshold) to branch-1
+    * [HBASE-23631] Backport HBASE-23588 Cache index & bloom blocks on write if CacheCompactedBlocksOnWrite is enabled
+
+** Bug
+    * [HBASE-25726] MoveCostFunction is not included in the list of cost functions for StochasticLoadBalancer
+    * [HBASE-25699] [branch-1] UnsupportedOperationException in DumpClusterStatusAction
+    * [HBASE-25032] Wait for region server to become online before adding it to online servers in Master
+    * [HBASE-25648] Fix normalizer and TestSimpleRegionNormalizerOnCluster in branch-1 after HBASE-25592 HBASE-23932
+    * [HBASE-25626] Possible Resource Leak in HeterogeneousRegionCountCostFunction
+    * [HBASE-25596] Fix NPE in ReplicationSourceManager as well as avoid permanently unreplicated data due to EOFException from WAL
+    * [HBASE-25583] Handle the NoNode exception in remove log replication and avoid RS crash
+    * [HBASE-25543] When configuration "hadoop.security.authorization" is set to false, the system will still try to authorize an RPC and raise AccessDeniedException
+    * [HBASE-25533] The metadata of the table and family should not be an empty string
+    * [HBASE-25523] Region normalizer chore thread is getting killed
+    * [HBASE-25525] WALKey Extended Attributes don't serialize to ReplicationSink
+    * [HBASE-25463] Fix comment error of append.rb
+    * [HBASE-25441] add security check for some APIs in RSRpcServices
+    * [HBASE-25432] we should add security checks for setTableStateInMeta and fixMeta
+    * [HBASE-25292] Improve InetSocketAddress usage discipline
+    * [HBASE-25230] Embedded zookeeper server not clean up the old data
+    * [HBASE-25321] The sort icons not shown after Upgrade JQuery to 3.5.1
+    * [HBASE-25313] [branch-1] Fix the broken pre-commit
+    * [HBASE-25090] CompactionConfiguration logs unrealistic store file sizes
+    * [HBASE-25227] [branch-1] Fix Java 11 runtime issue in UnsafeAccess
+    * [HBASE-24768] Clear cached service kerberos ticket in case of SASL failures thrown from server side
+    * [HBASE-25204] Nightly job failed as the name of jdk and maven changed
+    * [HBASE-24849] Branch-1 Backport : HBASE-24665 MultiWAL : Avoid rolling of ALL WALs when one of the WAL needs a roll
+    * [HBASE-25105] Fix log line in SimpleRegionNormalizer
+    * [HBASE-25096] WAL size in RegionServer UI is wrong
+    * [HBASE-24481] HBase Rest: Request for region detail of a table which doesn't exits is success(200 success code) instead of 404
+    * [HBASE-24956] ConnectionManager#locateRegionInMeta waits for user region lock indefinitely.
+    * [HBASE-24988] Donot merge regions if they are non adjacent in MergeNormalizationPlan.execute
+    * [HBASE-24893] TestLogLevel failing on hadoop-ci (branch-1)
+    * [HBASE-24971] Upgrade JQuery to 3.5.1
+    * [HBASE-24957] ZKTableStateClientSideReader#isDisabledTable doesn't check if table exists or not.
+    * [HBASE-24844] RecoverableZookeeper#close followed by ExecutorService shutdown
+    * [HBASE-24807] Backport HBASE-20417 to branch-1
+    * [HBASE-24816] Remove unused credential hbaseqa-at-asf-jira
+    * [HBASE-24805] HBaseTestingUtility.getConnection should be threadsafe
+    * [HBASE-24794] hbase.rowlock.wait.duration should not be <= 0
+    * [HBASE-24788] Fix the connection leaks on getting hbase admin from unclosed connection
+    * [HBASE-24775] [hbtop] StoreFile size should be rounded off
+    * [HBASE-24675] On Master restart all servers are assigned to default rsgroup.
+    * [HBASE-24742] Improve performance of SKIP vs SEEK logic
+    * [HBASE-24739] [Build] branch-1's build seems broken because of pylint
+    * [HBASE-24721] rename_rsgroup overwriting the existing rsgroup.
+    * [HBASE-24615] MutableRangeHistogram#updateSnapshotRangeMetrics doesn't calculate the distribution for last bucket.
+    * [HBASE-24693] regioninfo#isLast() has a logic error
+    * [HBASE-23744] FastPathBalancedQueueRpcExecutor should enforce queue length of 0
+    * [HBASE-24657] JsonBean representation of metrics at /jmx endpoint now quotes all numbers
+    * [HBASE-24618] Backport HBASE-21204 (NPE when scan raw DELETE_FAMILY_VERSION and codec is not set) to branch-1
+    * [HBASE-24550] Passing '-h' or '--help' to bin/hbase doesn't do as expected
+    * [HBASE-19365] FSTableDescriptors#get() can return null reference, in some cases, it is not checked
+    * [HBASE-24564] Make RS abort call idempotent
+    * [HBASE-22870] reflection fails to access a private nested class
+    * [HBASE-24189] WALSplit recreates region dirs for deleted table with recovered edits data
+    * [HBASE-24184] Backport HBASE-23896 to branch-1: Snapshot owner cannot delete snapshot when ACL is enabled and Kerberos is not enabled
+    * [HBASE-24499] Use a client property for SaslConnection MAX_ATTEMPTS (currently hardcoded to 5)
+    * [HBASE-24446] Use EnvironmentEdgeManager to compute clock skew in Master
+    * [HBASE-24480] Deflake TestRSGroupsBasics#testClearDeadServers
+    * [HBASE-24479] Deflake TestCompaction#testStopStartCompaction
+    * [HBASE-24454] BucketCache disabled instantly before error duration toleration is reached due to timing issue
+    * [HBASE-24453] BackPort HBASE-20220 to branch-1
+    * [HBASE-24434] fix building cpp-example DemoClient
+    * [HBASE-24190] Make kerberos value of hbase.security.authentication property case insensitive
+    * [HBASE-24336] [Metrics] FSDataInputStream's localBytesRead is wrong
+    * [HBASE-24322] UnsafeAvailChecker should also check that required methods are available
+    * [HBASE-24282] 'scandetail' log message is missing when responseTooSlow happens on the first scan rpc call
+    * [HBASE-24211] Create table is slow in large cluster when AccessController is enabled.
+    * [HBASE-24213] Backport the pre commit changes for HBASE-24169 to all branches
+    * [HBASE-24174] Fix findbugs warning on ServiceAuthorizationManager
+    * [HBASE-24191] HRegion#processRowsWithLocks count memstore size wrong when sync failed
+    * [HBASE-24121] [Authorization] ServiceAuthorizationManager isn't dynamically updatable. And it should be.
+    * [HBASE-24130] rat plugin complains about having an unlicensed file.
+    * [HBASE-24040] WALFactory.Providers.multiwal causes StackOverflowError
+    * [HBASE-24016] Change nightly poll from cron @daily to pollSCM @daily; i.e. run nightly if a change ONLY
+    * [HBASE-23909] list_regions fails if table is under split
+
+** New Feature
+    * [HBASE-25460] Expose drainingServers as cluster metric
+    * [HBASE-25569] Adding region count and average region size in a table at regionserver level
+    * [HBASE-24620] Add a ClusterManager which submits command to ZooKeeper and its Agent which picks and execute those Commands.
+    * [HBASE-24260] Add a ClusterManager that issues commands via coprocessor
+
+** Improvement
+    * [HBASE-25686] [hbtop] Add some javadoc
+    * [HBASE-25593] Backport changes from HBASE-24418 to branch-1
+    * [HBASE-25627] HBase replication should have a metric to represent if the source is stuck getting initialized
+    * [HBASE-25679] Size of log queue metric is incorrect in branch-1/branch-2
+    * [HBASE-25622] Result#compareResults should compare tags.
+    * [HBASE-25592] Improve normalizer code in line with HBASE-23932
+    * [HBASE-25539] Add metric for age of oldest wal.
+    * [HBASE-25541] In WALEntryStream, set the current path to null while dequeing the log
+    * [HBASE-25528] Dedicated merge dispatch threadpool on master
+    * [HBASE-25536] Remove 0 length wal file from logQueue if it belongs to old sources.
+    * [HBASE-25329] Dump region hashes in logs for the regions that are stuck in transition for more than a configured amount of time
+    * [HBASE-25084] RegexStringComparator in ParseFilter should support case-insensitive regexes
+    * [HBASE-25246] Backup/Restore hbase cell tags.
+    * [HBASE-25237] 'hbase master stop' shuts down the cluster, not the master only
+    * [HBASE-25285] [branch-1] Fix two methods removed problems reported by compat-check
+    * [HBASE-25261] Upgrade Bootstrap to 3.4.1
+    * [HBASE-25240] gson format of RpcServer.logResponse is abnormal
+    * [HBASE-25212] Optionally abort requests in progress after deciding a region should close
+    * [HBASE-24859] Optimize in-memory representation of mapreduce TableSplit objects
+    * [HBASE-25189] [Metrics] Add checkAndPut and checkAndDelete latency metrics at table level
+    * [HBASE-25193] Add support for row prefix and type in the WAL Pretty Printer and some minor fixes
+    * [HBASE-25195] [branch-1] getNumOpenConnections is not effective
+    * [HBASE-25179] Assert format is incorrect in HFilePerformanceEvaluation class.
+    * [HBASE-25119] Fix property name added as part of HBASE-24764 in branch-1
+    * [HBASE-25082] Per table WAL metrics: appendCount and appendSize
+    * [HBASE-25079] Upgrade Bootstrap to 3.3.7
+    * [HBASE-24764] Add support of adding base peer configs via hbase-site.xml for all replication peers.
+    * [HBASE-25006] Make the cost functions optional for StochastoicBalancer
+    * [HBASE-24974] Provide a flexibility to print only row key and filter for multiple tables in the WALPrettyPrinter
+    * [HBASE-24994] Add hedgedReadOpsInCurThread metric
+    * [HBASE-24940] runCatalogJanitor() API should return -1 to indicate already running status
+    * [HBASE-24970] Backport HBASE-20985 to branch-1
+    * [HBASE-24569] Get hostAndWeights in addition using localhost if it is null in local mode
+    * [HBASE-24898] Use EnvironmentEdge.currentTime() instead of System.currentTimeMillis() in CurrentHourProvider
+    * [HBASE-21721] FSHLog : reduce write#syncs() times
+    * [HBASE-24704] Make the Table Schema easier to view even there are multiple families
+    * [HBASE-20226] Parallelize region manifest deletes
+    * [HBASE-24757] ReplicationSink should limit the batch rowcount for batch mutations based on hbase.rpc.rows.warning.threshold
+    * [HBASE-24777] InfoServer support ipv6 host and port
+    * [HBASE-24696] Include JVM information on Web UI under "Software Attributes"
+    * [HBASE-24709] Support MoveCostFunction use a lower multiplier in offpeak hours
+    * [HBASE-24740] Enable journal logging for HBase snapshot operation
+    * [HBASE-24578] [WAL] Add a parameter to config RingBufferEventHandler's SyncFuture count
+    * [HBASE-24603] Zookeeper sync() call is async
+    * [HBASE-24380] Improve WAL splitting log lines to enable sessionization
+    * [HBASE-24525] [branch-1] Support ZooKeeper 3.6.0+
+    * [HBASE-24483] Add repeated prefix logging for MultipleColumnPrefixFilter
+    * [HBASE-24485] Backport to branch-1 HBASE-17738 BucketCache startup is slow
+    * [HBASE-24501] Backport to branch-1 HBASE-15785 Unnecessary lock in ByteBufferArray
+    * [HBASE-24455] Correct the doc of "On the number of column families"
+    * [HBASE-24069] Extend HBASE-16209 strategy (Provide an ExponentialBackOffPolicy sleep between failed region open requests) to region close and split requests
+    * [HBASE-24470] Add store file info when log meessages in HStore.
+    * [HBASE-24435] Bring back hedged reads metrics to branch-1
+    * [HBASE-24428] Priority compaction for recently split daughter regions
+    * [HBASE-24423] No need to get lock in canSplit because hasReferences will get lock too
+    * [HBASE-24386] TableSnapshotScanner support scan limit
+    * [HBASE-24350] HBase table level replication metrics for shippedBytes are always 0
+    * [HBASE-24355] Fix typos in the HStore#compact annotation
+    * [HBASE-24351] Backport HBASE-24302 to branch-1
+    * [HBASE-24345] [ACL] renameRSGroup should require Admin level permission
+    * [HBASE-24311] Add more details in MultiVersionConcurrencyControl STUCK log message
+    * [HBASE-23264] Resolve a TODO of BucketAllocator: "Why we add the extra 1024 bytes? Slop?"
+    * [HBASE-24024] Optionally reject multi() requests with very high no of rows
+    * [HBASE-24196] [Shell] Add rename rsgroup command in hbase shell
+    * [HBASE-24139] Balancer should avoid leaving idle region servers
+    * [HBASE-24229] [Build] Pin rubocop version <= 0.81
+    * [HBASE-24148] Upgrade Thrift to 0.13.0: 0.12.0 has outstanding CVEs.
+    * [HBASE-24193] BackPort HBASE-18651 to branch-1
+    * [HBASE-24112] [RSGroup] Support renaming rsgroup
+    * [HBASE-8868]  add metric to report client shortcircuit reads
+    * [HBASE-24077] When encounter RowTooBigException, log the row info.
+    * [HBASE-24099] Use a fair ReentrantReadWriteLock for the region close lock
+    * [HBASE-23678] Literate builder API for version management in schema
+    * [HBASE-24032] [RSGroup] Assign created tables to respective rsgroup automatically instead of manual operations
+    * [HBASE-23967] Improve the accuracy of the method sizeToString
+    * [HBASE-23066] Allow cache on write during compactions when prefetching is enabled
+
+** Test
+    * [HBASE-25753] [Flake Test][branch-1] TestSnapshotCloneIndependence's teardown() is always timeout
+    * [HBASE-25748] [Flake Test][branch-1] TestAdmin2
+    * [HBASE-25740] Backport HBASE-25629 to branch-1
+    * [HBASE-25731] TestConnectionImplementation BadHostname tests fail in branch-1
+    * [HBASE-25156] TestMasterFailover.testSimpleMasterFailover is flaky
+    * [HBASE-25122] [Flake Test][branch-1] TestExportSnapshotWithTemporaryDirectory
+    * [HBASE-25114] [Flake Test][branch-1] TestFromClientSide#testCacheOnWriteEvictOnClose
+    * [HBASE-25025] [Flaky Test][branch-1] TestFromClientSide#testCheckAndDeleteWithCompareOp
+    * [HBASE-25030] [Flaky Test] TestRestartCluster#testClusterRestart
+    * [HBASE-25031] [Flaky Test] TestReplicationDisableInactivePeer#testDisableInactivePeer
+    * [HBASE-24894] [Flakey Test] TestStochasticLoadBalancer.testMoveCostMultiplier
+    * [HBASE-24360] RollingBatchRestartRsAction loses track of dead servers
+    * [HBASE-21905] TestFIFOCompactionPolicy is flaky
+    * [HBASE-24115] Relocate test-only REST "client" from src/ to test/ and mark Private
+    * [HBASE-23957] [flakey test] client.TestMultiParallel fails to read hbase-site.xml
+    * [HBASE-23943] Rubocop configuration needs updated
+
+** Task
+    * [HBASE-25601] Remove search hadoop references in book
+    * [HBASE-24640] Purge use of VisibleForTesting
+    * [HBASE-25228] Delete dev-support/jenkins_precommit_jira_yetus.sh
+    * [HBASE-24200] Upgrade to Yetus 0.12.0
+    * [HBASE-23604] Clarify AsyncRegistry usage in the code
+    * [HBASE-25004] Log RegionTooBusyException details
+    * [HBASE-14847] Add FIFO compaction section to HBase book
+    * [HBASE-24662] Update DumpClusterStatusAction to notice changes in region server count
+    * [HBASE-24295] [Chaos Monkey] abstract logging through the class hierarchy
+    * [HBASE-24658] Update PolicyBasedChaosMonkey to handle uncaught exceptions
+    * [HBASE-24492] ProtobufLogReader.readNext does not need looping
+    * [HBASE-24477] Move ConfigurationObserver and related classes to hbase-common
+    * [HBASE-24271] Set values in `conf/hbase-site.xml` that enable running on `LocalFileSystem` out of the box
+    * [HBASE-24301] Update Apache POM to version 23
+    * [HBASE-24194] Refactor BufferedEncodedSeeker anonymous classes to named inner class
+    * [HBASE-24138] Ensure StochasticLoadBalancer can log details of decision to not run balancer
+    * [HBASE-24081] Provide documentation for running Yetus with HBase
+    * [HBASE-23980] Use enforcer plugin to print JVM info in maven output
+    * [HBASE-23874] Move Jira-attached file precommit definition from script in Jenkins config to dev-support
+    * [HBASE-23862] Fix flaky TestSnapshotFromMaster in 1.x versions
+
+
 Release Notes - HBase - Version 1.6.0 02/21/2020
 
 ** Sub-task
