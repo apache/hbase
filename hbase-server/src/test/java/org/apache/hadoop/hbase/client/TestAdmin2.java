@@ -205,11 +205,9 @@ public class TestAdmin2 {
       // Use 80 bit numbers to make sure we aren't limited
       byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
       byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
-      Admin hbaseadmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
       htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-      hbaseadmin.createTable(htd, startKey, endKey, expectedRegions);
-      hbaseadmin.close();
+      admin.createTable(htd, startKey, endKey, expectedRegions);
     } finally {
       TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, oldTimeout);
     }
