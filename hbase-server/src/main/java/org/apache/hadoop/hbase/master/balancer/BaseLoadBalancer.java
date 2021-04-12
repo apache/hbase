@@ -584,6 +584,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
       // Compute localities and find most local server per region
       for (int region = 0; region < numRegions; region++) {
+        // Skip locality calculation for replica regions
+        if (!RegionReplicaUtil.isDefaultReplica(this.regions[region])) {
+          continue;
+        }
         int serverWithBestLocality = 0;
         float bestLocalityForRegion = 0;
         for (int server = 0; server < numServers; server++) {

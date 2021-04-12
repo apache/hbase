@@ -429,19 +429,19 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.ReadRequestCostFunction readCostFunction =
         new StochasticLoadBalancer.ReadRequestCostFunction(conf);
-    double rateResult = readCostFunction.getRegionLoadCost(regionLoads);
+    double rateResult = readCostFunction.getRegionLoadCost(regionLoads,true);
     // read requests are treated as a rate so the average rate here is simply 1
     assertEquals(1, rateResult, 0.01);
 
     StochasticLoadBalancer.CPRequestCostFunction cpCostFunction =
         new StochasticLoadBalancer.CPRequestCostFunction(conf);
-    rateResult = cpCostFunction.getRegionLoadCost(regionLoads);
+    rateResult = cpCostFunction.getRegionLoadCost(regionLoads, true);
     // coprocessor requests are treated as a rate so the average rate here is simply 1
     assertEquals(1, rateResult, 0.01);
 
     StochasticLoadBalancer.StoreFileCostFunction storeFileCostFunction =
         new StochasticLoadBalancer.StoreFileCostFunction(conf);
-    double result = storeFileCostFunction.getRegionLoadCost(regionLoads);
+    double result = storeFileCostFunction.getRegionLoadCost(regionLoads, true);
     // storefile size cost is simply an average of it's value over time
     assertEquals(2.5, result, 0.01);
   }
@@ -545,39 +545,5 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
   private boolean needsBalanceIdleRegion(int[] cluster){
     return (Arrays.stream(cluster).anyMatch(x -> x>1)) && (Arrays.stream(cluster).anyMatch(x -> x<1));
-  }
-
-  // This mock allows us to test the LocalityCostFunction
-  private class MockCluster extends BaseLoadBalancer.Cluster {
-
-    private int[][] localities = null;   // [region][server] = percent of blocks
-
-    public MockCluster(int[][] regions) {
-
-      // regions[0] is an array where index = serverIndex an value = number of regions
-      super(mockClusterServers(regions[0], 1), null, null, null);
-
-      localities = new int[regions.length - 1][];
-      for (int i = 1; i < regions.length; i++) {
-        int regionIndex = i - 1;
-        localities[regionIndex] = new int[regions[i].length - 1];
-        regionIndexToServerIndex[regionIndex] = regions[i][0];
-        for (int j = 1; j < regions[i].length; j++) {
-          int serverIndex = j - 1;
-          localities[regionIndex][serverIndex] = regions[i][j] > 100 ? regions[i][j] % 100 : regions[i][j];
-        }
-      }
-    }
-
-    @Override
-    float getLocalityOfRegion(int region, int server) {
-      // convert the locality percentage to a fraction
-      return localities[region][server] / 100.0f;
-    }
-
-    @Override
-    public int getRegionSizeMB(int region) {
-      return 1;
-    }
   }
 }

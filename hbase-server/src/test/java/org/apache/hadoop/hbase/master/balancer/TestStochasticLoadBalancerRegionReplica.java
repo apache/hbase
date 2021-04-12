@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -48,6 +50,41 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplica.class);
+
+  // Mapping of locality test -> expected locality
+  private float[] expectedLocalities = {1.0f, 0.5f};
+
+  /**
+   * Data set for testLocalityCost:
+   * [test][0][0] = mapping of server to number of regions it hosts
+   * [test][region + 1][0] = server that region is hosted on
+   * [test][region + 1][server + 1] = locality for region on server
+   */
+
+  private int[][][] clusterRegionLocationMocks = new int[][][]{
+
+    // Test 1: each region is entirely on server that hosts it, except the replica region
+    new int[][]{
+      new int[]{2, 1, 1},
+      new int[]{0, 25, 75, 0},   // region 0 is hosted at server 0, 25% at server 0 and 75%
+                                 // at server 1, a replica region.
+      new int[]{2, 0, 0, 100},   // region 1 is hosted and entirely on server 2
+      new int[]{0, 100, 0, 0},   // region 2 is hosted and entirely on server 0
+      new int[]{1, 0, 100, 0},   // region 3 is hosted and entirely on server 1
+    },
+    // Test 2: each region is 25% local on the server that hosts it (and 50% locality is possible)
+    new int[][]{
+      new int[]{1, 2, 1},
+      new int[]{0, 25, 0, 60},   // region 0 is hosted at server 0, 25% at server 0 and 60%
+                                 // at server 1, a replica region.
+      new int[]{1, 50, 25, 0},   // region 1 is hosted at server 1, 25% at server 1 and 50%
+                                 // at server 0
+      new int[]{1, 50, 25, 0},   // region 2 is hosted at server 1, 25% at server 1 and 50%
+                                 // at server 0
+      new int[]{2, 0, 50, 25},   // region 3 is hosted at server 2, 25% at server 2 and 50%
+                                 // at server 1
+    }
+  };
 
   @Test
   public void testReplicaCost() {
@@ -166,6 +203,23 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
     assertTrue(
       loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
         new Cluster(map, null, null, new ForTestRackManagerOne())));
+  }
+
+  @Test
+  public void testLocalityCost() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    MockNoopMasterServices master = new MockNoopMasterServices();
+    StochasticLoadBalancer.CostFunction
+      costFunction = new StochasticLoadBalancer.ServerLocalityCostFunction(conf, master);
+
+    for (int test = 0; test < clusterRegionLocationMocks.length; test++) {
+      int[][] clusterRegionLocations = clusterRegionLocationMocks[test];
+      MockCluster cluster = new MockCluster(clusterRegionLocations, true);
+      costFunction.init(cluster);
+      double cost = costFunction.cost();
+      double expected = 1 - expectedLocalities[test];
+      assertEquals(expected, cost, 0.001);
+    }
   }
 
   @Test

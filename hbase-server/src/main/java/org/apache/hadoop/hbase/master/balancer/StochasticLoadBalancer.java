@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action;
@@ -1082,8 +1083,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       bestLocality = 0.0;
 
       for (int region = 0; region < cluster.numRegions; region++) {
-        locality += getWeightedLocality(region, regionIndexToEntityIndex(region));
-        bestLocality += getWeightedLocality(region, getMostLocalEntityForRegion(region));
+        // Skip Replica regions, data locality should not be a factor for replica regions.
+        if (RegionReplicaUtil.isDefaultReplica(this.cluster.regions[region])) {
+          locality += getWeightedLocality(region, regionIndexToEntityIndex(region));
+          bestLocality += getWeightedLocality(region, getMostLocalEntityForRegion(region));
+        }
       }
 
       // We normalize locality to be a score between 0 and 1.0 representing how good it
@@ -1094,6 +1098,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     @Override
     protected void regionMoved(int region, int oldServer, int newServer) {
+      // Ignore replica regions for data locality.
+      if (!RegionReplicaUtil.isDefaultReplica(this.cluster.regions[region])) {
+        return;
+      }
       int oldEntity = type == LocalityType.SERVER ? oldServer : cluster.serverIndexToRackIndex[oldServer];
       int newEntity = type == LocalityType.SERVER ? newServer : cluster.serverIndexToRackIndex[newServer];
       double localityDelta = getWeightedLocality(region, newEntity) - getWeightedLocality(region, oldEntity);
@@ -1187,7 +1195,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
           // Now if we found a region load get the type of cost that was requested.
           if (regionLoadList != null) {
-            cost = (long) (cost + getRegionLoadCost(regionLoadList));
+            cost = (long) (cost + getRegionLoadCost(regionLoadList,
+              RegionReplicaUtil.isDefaultReplica(this.cluster.regions[regionIndex])));
           }
         }
 
@@ -1199,15 +1208,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return costFromArray(stats);
     }
 
-    protected double getRegionLoadCost(Collection<BalancerRegionLoad> regionLoadList) {
+    protected double getRegionLoadCost(Collection<BalancerRegionLoad> regionLoadList,
+      boolean isPrimaryRegion) {
       double cost = 0;
       for (BalancerRegionLoad rl : regionLoadList) {
-        cost += getCostFromRl(rl);
+        cost += getCostFromRl(rl, isPrimaryRegion);
       }
       return cost / regionLoadList.size();
     }
 
-    protected abstract double getCostFromRl(BalancerRegionLoad rl);
+    protected abstract double getCostFromRl(BalancerRegionLoad rl, boolean isPrimaryRegion);
   }
 
   /**
@@ -1222,12 +1232,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getRegionLoadCost(Collection<BalancerRegionLoad> regionLoadList) {
+    protected double getRegionLoadCost(Collection<BalancerRegionLoad> regionLoadList,
+      boolean isPrimaryRegion) {
       double cost = 0;
       double previous = 0;
       boolean isFirst = true;
       for (BalancerRegionLoad rl : regionLoadList) {
-        double current = getCostFromRl(rl);
+        double current = getCostFromRl(rl, isPrimaryRegion);
         if (isFirst) {
           isFirst = false;
         } else {
@@ -1256,7 +1267,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getCostFromRl(BalancerRegionLoad rl) {
+    protected double getCostFromRl(BalancerRegionLoad rl, boolean isPrimaryRegion) {
       return rl.getReadRequestsCount();
     }
   }
@@ -1278,7 +1289,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getCostFromRl(BalancerRegionLoad rl) {
+    protected double getCostFromRl(BalancerRegionLoad rl, boolean isPrimaryRegion) {
       return rl.getCpRequestsCount();
     }
   }
@@ -1299,7 +1310,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getCostFromRl(BalancerRegionLoad rl) {
+    protected double getCostFromRl(BalancerRegionLoad rl, boolean isPrimaryRegion) {
       return rl.getWriteRequestsCount();
     }
   }
@@ -1482,7 +1493,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getCostFromRl(BalancerRegionLoad rl) {
+    protected double getCostFromRl(BalancerRegionLoad rl, boolean isPrimaryRegion) {
       return rl.getMemStoreSizeMB();
     }
   }
@@ -1503,8 +1514,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getCostFromRl(BalancerRegionLoad rl) {
-      return rl.getStorefileSizeMB();
+    protected double getCostFromRl(BalancerRegionLoad rl, boolean isPrimaryRegion) {
+      // Do not count replica region's file size, as replica regions serve very little
+      // read requests, this may be changed if there are enough data from production showing
+      // different.
+      if (isPrimaryRegion) {
+        return rl.getStorefileSizeMB();
+      }
+      return 0d;
     }
   }
 
