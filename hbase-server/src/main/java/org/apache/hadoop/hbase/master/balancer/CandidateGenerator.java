@@ -18,13 +18,8 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.client.RegionInfo;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -135,17 +130,4 @@ abstract class CandidateGenerator {
       return BaseLoadBalancer.Cluster.NullAction;
     }
   }
-
-  /**
-   * Returns a random iteration order of indexes of an array with size length
-   */
-  List<Integer> getRandomIterationOrder(int length) {
-    ArrayList<Integer> order = new ArrayList<>(length);
-    for (int i = 0; i < length; i++) {
-      order.add(i);
-    }
-    Collections.shuffle(order);
-    return order;
-  }
-
 }
