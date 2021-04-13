@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
@@ -187,7 +186,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
     minCostNeedBalance = conf.getFloat(MIN_COST_NEED_BALANCE_KEY, minCostNeedBalance);
     if (localityCandidateGenerator == null) {
-      localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
+      localityCandidateGenerator = new LocalityBasedCandidateGenerator();
     }
     localityCost = new ServerLocalityCostFunction(conf);
     rackLocalityCost = new RackLocalityCostFunction(conf);
@@ -308,17 +307,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
-  public synchronized void setMasterServices(MasterServices masterServices) {
-    super.setMasterServices(masterServices);
-    this.localityCandidateGenerator.setServices(masterServices);
-  }
-
-  @Override
   protected synchronized boolean areSomeRegionReplicasColocated(Cluster c) {
     regionReplicaHostCostFunction.init(c);
-    if (regionReplicaHostCostFunction.cost() > 0) return true;
+    if (regionReplicaHostCostFunction.cost() > 0) {
+      return true;
+    }
     regionReplicaRackCostFunction.init(c);
-    if (regionReplicaRackCostFunction.cost() > 0) return true;
+    if (regionReplicaRackCostFunction.cost() > 0) {
+      return true;
+    }
     return false;
   }
 
