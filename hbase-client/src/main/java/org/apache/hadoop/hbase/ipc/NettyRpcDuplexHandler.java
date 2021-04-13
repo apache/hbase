@@ -150,9 +150,9 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
       // to return a response. There is nothing we can do w/ the response at this stage. Clean
       // out the wire of the response so its out of the way and we can get other responses on
       // this connection.
-      int readSoFar = IPCUtil.getTotalSizeWhenWrittenDelimited(responseHeader);
-      int whatIsLeftToRead = totalSize - readSoFar;
       if (LOG.isDebugEnabled()) {
+        int readSoFar = IPCUtil.getTotalSizeWhenWrittenDelimited(responseHeader);
+        int whatIsLeftToRead = totalSize - readSoFar;
         LOG.debug("Unknown callId: " + id + ", skipping over this response of " + whatIsLeftToRead
             + " bytes");
       }
