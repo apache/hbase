@@ -403,9 +403,9 @@ public class ChoreService {
    * Prints a summary of important details about the chore. Used for debugging purposes
    */
   private void printChoreDetails(final String header, ScheduledChore chore) {
-    if (!LOG.isTraceEnabled())
+    if (!LOG.isTraceEnabled()) {
       return;
-
+    }
     LinkedHashMap<String, String> output = new LinkedHashMap<>();
     output.put(header, "");
     output.put("Chore name: ", chore.getName());
@@ -421,9 +421,9 @@ public class ChoreService {
    * Prints a summary of important details about the service. Used for debugging purposes
    */
   private void printChoreServiceDetails(final String header) {
-    if (!LOG.isTraceEnabled())
+    if (!LOG.isTraceEnabled()) {
       return;
-
+    }
     LinkedHashMap<String, String> output = new LinkedHashMap<>();
     output.put(header, "");
     output.put("ChoreService corePoolSize: ", Integer.toString(getCorePoolSize()));
