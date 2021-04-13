@@ -403,6 +403,9 @@ public class ChoreService {
    * Prints a summary of important details about the chore. Used for debugging purposes
    */
   private void printChoreDetails(final String header, ScheduledChore chore) {
+    if (!LOG.isTraceEnabled()) {
+      return;
+    }
     LinkedHashMap<String, String> output = new LinkedHashMap<>();
     output.put(header, "");
     output.put("Chore name: ", chore.getName());
@@ -410,7 +413,7 @@ public class ChoreService {
     output.put("Chore timeBetweenRuns: ", Long.toString(chore.getTimeBetweenRuns()));
 
     for (Entry<String, String> entry : output.entrySet()) {
-      if (LOG.isTraceEnabled()) LOG.trace(entry.getKey() + entry.getValue());
+      LOG.trace(entry.getKey() + entry.getValue());
     }
   }
 
@@ -418,6 +421,9 @@ public class ChoreService {
    * Prints a summary of important details about the service. Used for debugging purposes
    */
   private void printChoreServiceDetails(final String header) {
+    if (!LOG.isTraceEnabled()) {
+      return;
+    }
     LinkedHashMap<String, String> output = new LinkedHashMap<>();
     output.put(header, "");
     output.put("ChoreService corePoolSize: ", Integer.toString(getCorePoolSize()));
@@ -426,7 +432,7 @@ public class ChoreService {
       Integer.toString(getNumberOfChoresMissingStartTime()));
 
     for (Entry<String, String> entry : output.entrySet()) {
-      if (LOG.isTraceEnabled()) LOG.trace(entry.getKey() + entry.getValue());
+      LOG.trace(entry.getKey() + entry.getValue());
     }
   }
 }
