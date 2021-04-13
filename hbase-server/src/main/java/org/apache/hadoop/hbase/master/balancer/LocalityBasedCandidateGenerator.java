@@ -18,42 +18,30 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.hadoop.hbase.master.MasterServices;
-
-import org.apache.hbase.thirdparty.com.google.common.base.Optional;
-
+import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 class LocalityBasedCandidateGenerator extends CandidateGenerator {
 
-  private MasterServices masterServices;
-
-  LocalityBasedCandidateGenerator(MasterServices masterServices) {
-    this.masterServices = masterServices;
-  }
-
   @Override
   BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
-    if (this.masterServices == null) {
-      int thisServer = pickRandomServer(cluster);
-      // Pick the other server
-      int otherServer = pickOtherRandomServer(cluster, thisServer);
-      return pickRandomRegions(cluster, thisServer, otherServer);
-    }
-
-    // Randomly iterate through regions until you find one that is not on ideal host
-    for (int region : getRandomIterationOrder(cluster.numRegions)) {
-      int currentServer = cluster.regionIndexToServerIndex[region];
-      if (currentServer != cluster.getOrComputeRegionsToMostLocalEntities(
-        BaseLoadBalancer.Cluster.LocalityType.SERVER)[region]) {
-        Optional<BaseLoadBalancer.Cluster.Action> potential = tryMoveOrSwap(cluster,
-          currentServer, region,
-          cluster.getOrComputeRegionsToMostLocalEntities(
-            BaseLoadBalancer.Cluster.LocalityType.SERVER)[region]
-        );
-        if (potential.isPresent()) {
-          return potential.get();
+    // iterate through regions until you find one that is not on ideal host
+    // start from a random point to avoid always balance the regions in front
+    if (cluster.numRegions > 0) {
+      int startIndex = ThreadLocalRandom.current().nextInt(cluster.numRegions);
+      for (int i = 0; i < cluster.numRegions; i++) {
+        int region = (startIndex + i) % cluster.numRegions;
+        int currentServer = cluster.regionIndexToServerIndex[region];
+        if (currentServer != cluster.getOrComputeRegionsToMostLocalEntities(
+          BaseLoadBalancer.Cluster.LocalityType.SERVER)[region]) {
+          Optional<BaseLoadBalancer.Cluster.Action> potential = tryMoveOrSwap(cluster,
+            currentServer, region, cluster.getOrComputeRegionsToMostLocalEntities(
+              BaseLoadBalancer.Cluster.LocalityType.SERVER)[region]);
+          if (potential.isPresent()) {
+            return potential.get();
+          }
         }
       }
     }
@@ -69,25 +57,25 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
     // Compare locality gain/loss from swapping fromRegion with regions on toServer
     double fromRegionLocalityDelta = getWeightedLocality(cluster, fromRegion, toServer)
       - getWeightedLocality(cluster, fromRegion, fromServer);
-    for (int toRegionIndex : getRandomIterationOrder(cluster.regionsPerServer[toServer].length)) {
-      int toRegion = cluster.regionsPerServer[toServer][toRegionIndex];
-      double toRegionLocalityDelta = getWeightedLocality(cluster, toRegion, fromServer)
-        - getWeightedLocality(cluster, toRegion, toServer);
-      // If locality would remain neutral or improve, attempt the swap
-      if (fromRegionLocalityDelta + toRegionLocalityDelta >= 0) {
-        return Optional.of(getAction(fromServer, fromRegion, toServer, toRegion));
+    int toServertotalRegions =  cluster.regionsPerServer[toServer].length;
+    if (toServertotalRegions > 0) {
+      int startIndex = ThreadLocalRandom.current().nextInt(toServertotalRegions);
+      for (int i = 0; i < toServertotalRegions; i++) {
+        int toRegionIndex = (startIndex + i) % toServertotalRegions;
+        int toRegion = cluster.regionsPerServer[toServer][toRegionIndex];
+        double toRegionLocalityDelta = getWeightedLocality(cluster, toRegion, fromServer) -
+          getWeightedLocality(cluster, toRegion, toServer);
+        // If locality would remain neutral or improve, attempt the swap
+        if (fromRegionLocalityDelta + toRegionLocalityDelta >= 0) {
+          return Optional.of(getAction(fromServer, fromRegion, toServer, toRegion));
+        }
       }
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 
   private double getWeightedLocality(BaseLoadBalancer.Cluster cluster, int region, int server) {
     return cluster.getOrComputeWeightedLocality(region, server,
       BaseLoadBalancer.Cluster.LocalityType.SERVER);
   }
-
-  void setServices(MasterServices services) {
-    this.masterServices = services;
-  }
-
 }
