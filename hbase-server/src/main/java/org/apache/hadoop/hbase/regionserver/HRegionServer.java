@@ -2635,7 +2635,9 @@ public class HRegionServer extends AbstractServer implements
     if (this.masterless) return RegionServerStartupResponse.getDefaultInstance();
     createRegionServerStatusStub(true);
     RegionServerStatusService.BlockingInterface rss = rssStub;
-    if (rss == null) return null;
+    if (rss == null) {
+      return null;
+    }
     RegionServerStartupResponse result = null;
     try {
       rpcServices.requestCount.reset();

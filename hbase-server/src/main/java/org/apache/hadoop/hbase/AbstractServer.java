@@ -34,8 +34,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -48,6 +46,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
 @InterfaceAudience.Private
 public abstract class AbstractServer extends Thread implements Server {
@@ -255,8 +256,8 @@ public abstract class AbstractServer extends Thread implements Server {
   }
 
   /**
-   * @return True if we should break loop because cluster is going down or
-   * this server has been stopped or hdfs has gone bad.
+   * @return True if we should break loop because cluster is going down or this server has been
+   *         stopped or hdfs has gone bad.
    */
   protected boolean keepLooping() {
     return !this.stopped && isClusterUp();
