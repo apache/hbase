@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -85,6 +86,8 @@ public class TestSnapshotScannerHDFSAclController2 {
           + SnapshotScannerHDFSAclController.class.getName());
 
     TEST_UTIL.startMiniCluster();
+    ProcedureTestingUtility.waitAllProcedures(
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
     TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
     admin = TEST_UTIL.getAdmin();
     Path rootDir = TEST_UTIL.getDefaultRootDirPath();
