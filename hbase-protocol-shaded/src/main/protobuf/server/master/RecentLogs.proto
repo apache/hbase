@@ -37,3 +37,8 @@ message BalancerDecision {
   repeated string region_plans = 6;
 
 }
+
+message BalancerRejection {
+  required string reason = 1;
+  repeated string cost_func_info = 2;
+}

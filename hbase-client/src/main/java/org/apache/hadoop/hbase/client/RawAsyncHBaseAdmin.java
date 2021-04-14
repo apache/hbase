@@ -4202,6 +4202,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .call();
   }
 
+  private CompletableFuture<List<LogEntry>> getBalancerRejections(final int limit) {
+    return this.<List<LogEntry>>newMasterCaller()
+      .action((controller, stub) ->
+        this.call(controller, stub,
+          ProtobufUtil.toBalancerRejectionRequest(limit),
+          MasterService.Interface::getLogEntries, ProtobufUtil::toBalancerRejectionResponse))
+      .call();
+  }
+
   @Override
   public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
       String logType, ServerType serverType, int limit,
@@ -4220,6 +4229,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           "Balancer Decision logs are not maintained by HRegionServer");
       }
       return getBalancerDecisions(limit);
+    } else if (logType.equals("BALANCER_REJECTION")){
+      if (ServerType.REGION_SERVER.equals(serverType)) {
+        throw new IllegalArgumentException(
+          "Balancer Rejection logs are not maintained by HRegionServer");
+      }
+      return getBalancerRejections(limit);
     }
     return CompletableFuture.completedFuture(Collections.emptyList());
   }

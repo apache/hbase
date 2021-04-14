@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedu
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
+import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
@@ -3396,6 +3397,16 @@ public class MasterRpcServices extends RSRpcServices implements
           .setLogClassName(balancerDecisionsResponse.getClass().getName())
           .setLogMessage(balancerDecisionsResponse.toByteString())
           .build();
+      }else if (logClassName.contains("BalancerRejectionsRequest")){
+        MasterProtos.BalancerRejectionsRequest balancerRejectionsRequest =
+          (MasterProtos.BalancerRejectionsRequest) method
+            .invoke(null, request.getLogMessage());
+        MasterProtos.BalancerRejectionsResponse balancerRejectionsResponse =
+          getBalancerRejections(balancerRejectionsRequest);
+        return HBaseProtos.LogEntry.newBuilder()
+          .setLogClassName(balancerRejectionsResponse.getClass().getName())
+          .setLogMessage(balancerRejectionsResponse.toByteString())
+          .build();
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
         | InvocationTargetException e) {
@@ -3421,6 +3432,24 @@ public class MasterRpcServices extends RSRpcServices implements
       namedQueueGetResponse.getBalancerDecisions();
     return MasterProtos.BalancerDecisionsResponse.newBuilder()
       .addAllBalancerDecision(balancerDecisions).build();
+  }
+
+  private MasterProtos.BalancerRejectionsResponse getBalancerRejections(
+    MasterProtos.BalancerRejectionsRequest request) {
+    final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
+    if (namedQueueRecorder == null) {
+      return MasterProtos.BalancerRejectionsResponse.newBuilder()
+        .addAllBalancerRejection(Collections.emptyList()).build();
+    }
+    final NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
+    namedQueueGetRequest.setNamedQueueEvent(BalancerRejectionDetails.BALANCER_REJECTION_EVENT);
+    namedQueueGetRequest.setBalancerRejectionsRequest(request);
+    NamedQueueGetResponse namedQueueGetResponse =
+      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+    List<RecentLogs.BalancerRejection> balancerRejections =
+      namedQueueGetResponse.getBalancerRejections();
+    return MasterProtos.BalancerRejectionsResponse.newBuilder()
+      .addAllBalancerRejection(balancerRejections).build();
   }
 
 }
