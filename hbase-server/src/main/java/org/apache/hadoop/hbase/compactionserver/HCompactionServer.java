@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
@@ -39,13 +38,11 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.ipc.RemoteException;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -53,7 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusP
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos.CompactionServerStatusService;
 
 @InterfaceAudience.Private
-public class HCompactionServer extends AbstractServer implements CompactionServerServices {
+public class HCompactionServer extends AbstractServer {
 
   /** compaction server process name */
   public static final String COMPACTIONSERVER = "compactionserver";
@@ -84,63 +81,13 @@ public class HCompactionServer extends AbstractServer implements CompactionServe
    * You can break from this block by requesting the server stop.
    * @return master + port, or null if server has been stopped
    */
-  private synchronized ServerName createCompactionServerStatusStub() {
-    if (this.cssStub != null) {
-      return masterAddressTracker.getMasterAddress();
+  private synchronized void createCompactionServerStatusStub() {
+    // Create RS stub without refreshing the master node from ZK, use cached data
+    if (cssStub == null) {
+      cssStub = (CompactionServerStatusService.BlockingInterface) createMasterStub(
+        CompactionServerStatusService.class, false);
     }
-    ServerName sn = null;
-    long previousLogTime = 0;
-    CompactionServerStatusProtos.CompactionServerStatusService.BlockingInterface intCssStub = null;
-    boolean interrupted = false;
-    try {
-      while (!isStopped()) {
-        sn = this.masterAddressTracker.getMasterAddress(true);
-        if (sn == null) {
-          if (isStopped()) {
-            // give up with no connection.
-            LOG.debug("No master found and cluster is stopped; bailing out");
-            return null;
-          }
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
-            LOG.debug("No master found; retry");
-            previousLogTime = System.currentTimeMillis();
-          }
-          if (sleepInterrupted(200)) {
-            interrupted = true;
-          }
-          continue;
-        }
-
-        try {
-          BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn,
-            userProvider.getCurrent(), shortOperationTimeout);
-          intCssStub =
-              CompactionServerStatusProtos.CompactionServerStatusService.newBlockingStub(channel);
-          break;
-        } catch (IOException e) {
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
-            e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
-            if (e instanceof ServerNotRunningYetException) {
-              LOG.info("Master isn't available yet, retrying");
-            } else {
-              LOG.warn("Unable to connect to master. Retrying. Error was:", e);
-            }
-            previousLogTime = System.currentTimeMillis();
-          }
-          if (sleepInterrupted(200)) {
-            interrupted = true;
-          }
-        }
-      }
-    } finally {
-      if (interrupted) {
-        Thread.currentThread().interrupt();
-      }
-    }
-    this.cssStub = intCssStub;
-    return sn;
   }
-
 
   protected CSRpcServices createRpcServices() throws IOException {
     return new CSRpcServices(this);
@@ -181,11 +128,10 @@ public class HCompactionServer extends AbstractServer implements CompactionServe
       SecurityConstants.COMPACTION_SERVER_KRB_PRINCIPAL, host);
   }
 
-
-  private void tryCompactionServerReport() throws IOException {
-    LOG.info("compaction server invoke tryCompactionServerReport");
-    if (this.cssStub == null) {
-      LOG.error("master servername is " + createCompactionServerStatusStub());
+  private boolean tryCompactionServerReport() throws IOException {
+    CompactionServerStatusService.BlockingInterface css = cssStub;
+    if (css == null) {
+      return false;
     }
     try {
       CompactionServerStatusProtos.CompactionServerReportRequest.Builder request =
@@ -195,11 +141,17 @@ public class HCompactionServer extends AbstractServer implements CompactionServe
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {
-        // This will be caught and handled as a fatal error in run()
         throw ioe;
       }
-      this.cssStub = null;
+      if (cssStub == css) {
+        cssStub = null;
+      }
+      // Couldn't connect to the master, get location from zk and reconnect
+      // Method blocks until new master is found or we are stopped
+      createCompactionServerStatusStub();
+      return false;
     }
+    return true;
   }
 
   @Override

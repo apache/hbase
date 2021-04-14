@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
@@ -25,18 +27,27 @@ import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterRpcServicesVersionWrapper;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 
 @InterfaceAudience.Private
 public abstract class AbstractServer extends Thread implements Server {
@@ -87,7 +98,8 @@ public abstract class AbstractServer extends Thread implements Server {
 
   // master address tracker
   protected MasterAddressTracker masterAddressTracker;
-
+  // Cluster Status Tracker
+  protected ClusterStatusTracker clusterStatusTracker;
   /**
    * Setup our cluster connection if not already initialized.
    */
@@ -242,6 +254,102 @@ public abstract class AbstractServer extends Thread implements Server {
     return interrupted;
   }
 
+  /**
+   * @return True if we should break loop because cluster is going down or
+   * this server has been stopped or hdfs has gone bad.
+   */
+  protected boolean keepLooping() {
+    return !this.stopped && isClusterUp();
+  }
+
+  /**
+   * @return True if the cluster is up.
+   */
+  public boolean isClusterUp() {
+    return this.masterless ||
+      (this.clusterStatusTracker != null && this.clusterStatusTracker.isClusterUp());
+  }
+
+  /**
+   * Get the current master from ZooKeeper and open the RPC connection to it. To get a fresh
+   * connection, the current rssStub must be null. Method will block until a master is available.
+   * You can break from this block by requesting the server stop.
+   * @param refresh If true then master address will be read from ZK, otherwise use cached data
+   * @return master + port, or null if server has been stopped
+   */
+  @InterfaceAudience.Private
+  protected synchronized <T extends org.apache.hbase.thirdparty.com.google.protobuf.Service> Object
+      createMasterStub(Class<T> tClass, boolean refresh) {
+    ServerName sn;
+    long previousLogTime = 0;
+    boolean interrupted = false;
+    try {
+      while (keepLooping()) {
+        sn = this.masterAddressTracker.getMasterAddress(refresh);
+        if (sn == null) {
+          if (!keepLooping()) {
+            // give up with no connection.
+            LOG.debug("No master found and cluster is stopped; bailing out");
+            return null;
+          }
+          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+            LOG.debug("No master found; retry");
+            previousLogTime = System.currentTimeMillis();
+          }
+          refresh = true; // let's try pull it from ZK directly
+          if (sleepInterrupted(200)) {
+            interrupted = true;
+          }
+          continue;
+        }
+
+        // If we are on the active master, use the shortcut
+        if (this instanceof HMaster && sn.equals(getServerName())) {
+          // Wrap the shortcut in a class providing our version to the calls where it's relevant.
+          // Normally, RpcServer-based threadlocals do that.
+          if (tClass.getName()
+              .equals(RegionServerStatusProtos.RegionServerStatusService.class.getName())) {
+            return new MasterRpcServicesVersionWrapper(((HMaster) this).getMasterRpcServices());
+          }
+          if (tClass.getName()
+              .equals(CompactionServerStatusProtos.CompactionServerStatusService.class.getName())) {
+            return ((HMaster) this).getMasterRpcServices();
+          }
+        }
+        try {
+          BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn,
+            userProvider.getCurrent(), shortOperationTimeout);
+          try {
+            Method newBlockingStubMethod =
+                tClass.getMethod("newBlockingStub", BlockingRpcChannel.class);
+            return newBlockingStubMethod.invoke(null, channel);
+          } catch (IllegalArgumentException | IllegalAccessException | InvocationTargetException
+              | NoSuchMethodException ite) {
+            LOG.error("Unable to create class {}, master is {}", tClass.getName(), sn, ite);
+            return null;
+          }
+        } catch (IOException e) {
+          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+            e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
+            if (e instanceof ServerNotRunningYetException) {
+              LOG.info("Master {} isn't available yet, retrying", sn);
+            } else {
+              LOG.warn("Unable to connect to master {} . Retrying. Error was:", sn, e);
+            }
+            previousLogTime = System.currentTimeMillis();
+          }
+          if (sleepInterrupted(200)) {
+            interrupted = true;
+          }
+        }
+      }
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
+    }
+    return null;
+  }
 
   /**
    * @return true if a stop has been requested.

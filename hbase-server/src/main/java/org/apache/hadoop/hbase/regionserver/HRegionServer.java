@@ -102,7 +102,6 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
@@ -119,7 +118,6 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.master.MasterRpcServicesVersionWrapper;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobFileCache;
@@ -197,7 +195,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
-import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -403,9 +400,6 @@ public class HRegionServer extends AbstractServer implements
 
   // flag set after we're done setting up server threads
   final AtomicBoolean online = new AtomicBoolean(false);
-
-  // Cluster Status Tracker
-  protected final ClusterStatusTracker clusterStatusTracker;
 
   // Log Splitting Worker
   private SplitLogWorker splitLogWorker;
@@ -872,14 +866,6 @@ public class HRegionServer extends AbstractServer implements
     }
   }
 
-  /**
-   * @return True if the cluster is up.
-   */
-  @Override
-  public boolean isClusterUp() {
-    return this.masterless ||
-        (this.clusterStatusTracker != null && this.clusterStatusTracker.isClusterUp());
-  }
 
   /**
    * The HRegionServer sticks in this loop until closed.
@@ -2622,95 +2608,21 @@ public class HRegionServer extends AbstractServer implements
    *
    * @return master + port, or null if server has been stopped
    */
-  private synchronized ServerName createRegionServerStatusStub() {
+
+  private synchronized void createRegionServerStatusStub(){
+    createRegionServerStatusStub(false);
+  }
+
+
+  protected synchronized void createRegionServerStatusStub(boolean refresh) {
     // Create RS stub without refreshing the master node from ZK, use cached data
-    return createRegionServerStatusStub(false);
-  }
-
-  /**
-   * Get the current master from ZooKeeper and open the RPC connection to it. To get a fresh
-   * connection, the current rssStub must be null. Method will block until a master is available.
-   * You can break from this block by requesting the server stop.
-   * @param refresh If true then master address will be read from ZK, otherwise use cached data
-   * @return master + port, or null if server has been stopped
-   */
-  @InterfaceAudience.Private
-  protected synchronized ServerName createRegionServerStatusStub(boolean refresh) {
-    if (rssStub != null) {
-      return masterAddressTracker.getMasterAddress();
+    if (rssStub == null) {
+      rssStub = (RegionServerStatusService.BlockingInterface) createMasterStub(
+        RegionServerStatusService.class, refresh);
     }
-    ServerName sn = null;
-    long previousLogTime = 0;
-    RegionServerStatusService.BlockingInterface intRssStub = null;
-    LockService.BlockingInterface intLockStub = null;
-    boolean interrupted = false;
-    try {
-      while (keepLooping()) {
-        sn = this.masterAddressTracker.getMasterAddress(refresh);
-        if (sn == null) {
-          if (!keepLooping()) {
-            // give up with no connection.
-            LOG.debug("No master found and cluster is stopped; bailing out");
-            return null;
-          }
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
-            LOG.debug("No master found; retry");
-            previousLogTime = System.currentTimeMillis();
-          }
-          refresh = true; // let's try pull it from ZK directly
-          if (sleepInterrupted(200)) {
-            interrupted = true;
-          }
-          continue;
-        }
-
-        // If we are on the active master, use the shortcut
-        if (this instanceof HMaster && sn.equals(getServerName())) {
-          // Wrap the shortcut in a class providing our version to the calls where it's relevant.
-          // Normally, RpcServer-based threadlocals do that.
-          intRssStub = new MasterRpcServicesVersionWrapper(((HMaster)this).getMasterRpcServices());
-          intLockStub = ((HMaster)this).getMasterRpcServices();
-          break;
-        }
-        try {
-          BlockingRpcChannel channel =
-            this.rpcClient.createBlockingRpcChannel(sn, userProvider.getCurrent(),
-              shortOperationTimeout);
-          intRssStub = RegionServerStatusService.newBlockingStub(channel);
-          intLockStub = LockService.newBlockingStub(channel);
-          break;
-        } catch (IOException e) {
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
-            e = e instanceof RemoteException ?
-              ((RemoteException)e).unwrapRemoteException() : e;
-            if (e instanceof ServerNotRunningYetException) {
-              LOG.info("Master isn't available yet, retrying");
-            } else {
-              LOG.warn("Unable to connect to master. Retrying. Error was:", e);
-            }
-            previousLogTime = System.currentTimeMillis();
-          }
-          if (sleepInterrupted(200)) {
-            interrupted = true;
-          }
-        }
-      }
-    } finally {
-      if (interrupted) {
-        Thread.currentThread().interrupt();
-      }
+    if (lockStub == null) {
+      lockStub = (LockService.BlockingInterface) createMasterStub(LockService.class, refresh);
     }
-    this.rssStub = intRssStub;
-    this.lockStub = intLockStub;
-    return sn;
-  }
-
-  /**
-   * @return True if we should break loop because cluster is going down or
-   * this server has been stopped or hdfs has gone bad.
-   */
-  private boolean keepLooping() {
-    return !this.stopped && isClusterUp();
   }
 
   /*
@@ -2721,9 +2633,9 @@ public class HRegionServer extends AbstractServer implements
    */
   private RegionServerStartupResponse reportForDuty() throws IOException {
     if (this.masterless) return RegionServerStartupResponse.getDefaultInstance();
-    ServerName masterServerName = createRegionServerStatusStub(true);
+    createRegionServerStatusStub(true);
     RegionServerStatusService.BlockingInterface rss = rssStub;
-    if (masterServerName == null || rss == null) return null;
+    if (rss == null) return null;
     RegionServerStartupResponse result = null;
     try {
       rpcServices.requestCount.reset();
@@ -2732,7 +2644,7 @@ public class HRegionServer extends AbstractServer implements
       rpcServices.rpcFullScanRequestCount.reset();
       rpcServices.rpcMultiRequestCount.reset();
       rpcServices.rpcMutateRequestCount.reset();
-      LOG.info("reportForDuty to master=" + masterServerName + " with port="
+      LOG.info("reportForDuty to master with port="
         + rpcServices.getIsa().getPort() + ", startcode=" + this.startcode);
       long now = EnvironmentEdgeManager.currentTime();
       int port = rpcServices.getIsa().getPort();
@@ -2756,7 +2668,9 @@ public class HRegionServer extends AbstractServer implements
       } else {
         LOG.warn("error telling master we are up", se);
       }
-      rssStub = null;
+      if (rssStub == rss) {
+        rssStub = null;
+      }
     }
     return result;
   }
