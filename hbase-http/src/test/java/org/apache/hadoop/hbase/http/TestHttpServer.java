@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import static org.hamcrest.Matchers.greaterThan;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.CharBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -58,6 +63,13 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.ajax.JSON;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.hamcrest.MatcherAssert;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -266,6 +278,60 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     // conn.connect();
     // assertEquals(200, conn.getResponseCode());
     // assertEquals("text/html; charset=utf-8", conn.getContentType());
+  }
+
+  @Test
+  public void testNegotiatesEncodingGzip() throws IOException {
+    final InputStream stream = ClassLoader.getSystemResourceAsStream("webapps/static/test.css");
+    assertNotNull(stream);
+    final String sourceContent = readFully(stream);
+
+    try (final CloseableHttpClient client = HttpClients.createMinimal()) {
+      final HttpGet request = new HttpGet(new URL(baseUrl, "/static/test.css").toString());
+
+      request.setHeader(HttpHeaders.ACCEPT_ENCODING, null);
+      final long unencodedContentLength;
+      try (final CloseableHttpResponse response = client.execute(request)) {
+        final HttpEntity entity = response.getEntity();
+        assertNotNull(entity);
+        assertNull(entity.getContentEncoding());
+        unencodedContentLength = entity.getContentLength();
+        MatcherAssert.assertThat(unencodedContentLength, greaterThan(0L));
+        final String unencodedEntityBody = readFully(entity.getContent());
+        assertEquals(sourceContent, unencodedEntityBody);
+      }
+
+      request.setHeader(HttpHeaders.ACCEPT_ENCODING, "gzip");
+      final long encodedContentLength;
+      try (final CloseableHttpResponse response = client.execute(request)) {
+        final HttpEntity entity = response.getEntity();
+        assertNotNull(entity);
+        assertNotNull(entity.getContentEncoding());
+        assertEquals("gzip", entity.getContentEncoding().getValue());
+        encodedContentLength = entity.getContentLength();
+        MatcherAssert.assertThat(encodedContentLength, greaterThan(0L));
+        final String encodedEntityBody = readFully(entity.getContent());
+        // the encoding/decoding process, as implemented in this specific combination of dependency
+        // versions, does not perfectly preserve trailing whitespace. thus, `trim()`.
+        assertEquals(sourceContent.trim(), encodedEntityBody.trim());
+      }
+      MatcherAssert.assertThat(unencodedContentLength, greaterThan(encodedContentLength));
+    }
+  }
+
+  private static String readFully(final InputStream input) throws IOException {
+    // TODO: when the time comes, delete me and replace with a JDK11 IO helper API.
+    try (final BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+      final StringBuilder sb = new StringBuilder();
+      final CharBuffer buffer = CharBuffer.allocate(1024 * 2);
+      while (reader.read(buffer) > 0) {
+        sb.append(buffer);
+        buffer.clear();
+      }
+      return sb.toString();
+    } finally {
+      input.close();
+    }
   }
 
   /**
