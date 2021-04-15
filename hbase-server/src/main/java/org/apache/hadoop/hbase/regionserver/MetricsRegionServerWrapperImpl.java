@@ -234,37 +234,26 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public int getSplitQueueSize() {
-    if (this.regionServer.compactSplitThread == null) {
-      return 0;
-    }
-    return this.regionServer.compactSplitThread.getSplitQueueSize();
+    final CompactSplit compactSplit = regionServer.getCompactSplitThread();
+    return compactSplit == null ? 0 : compactSplit.getSplitQueueSize();
   }
 
   @Override
   public int getCompactionQueueSize() {
-    //The thread could be zero.  if so assume there is no queue.
-    if (this.regionServer.compactSplitThread == null) {
-      return 0;
-    }
-    return this.regionServer.compactSplitThread.getCompactionQueueSize();
+    final CompactSplit compactSplit = regionServer.getCompactSplitThread();
+    return compactSplit == null ? 0 : compactSplit.getCompactionQueueSize();
   }
 
   @Override
   public int getSmallCompactionQueueSize() {
-    //The thread could be zero.  if so assume there is no queue.
-    if (this.regionServer.compactSplitThread == null) {
-      return 0;
-    }
-    return this.regionServer.compactSplitThread.getSmallCompactionQueueSize();
+    final CompactSplit compactSplit = regionServer.getCompactSplitThread();
+    return compactSplit == null ? 0 : compactSplit.getSmallCompactionQueueSize();
   }
 
   @Override
   public int getLargeCompactionQueueSize() {
-    //The thread could be zero.  if so assume there is no queue.
-    if (this.regionServer.compactSplitThread == null) {
-      return 0;
-    }
-    return this.regionServer.compactSplitThread.getLargeCompactionQueueSize();
+    final CompactSplit compactSplit = regionServer.getCompactSplitThread();
+    return compactSplit == null ? 0 : compactSplit.getLargeCompactionQueueSize();
   }
 
   @Override
