@@ -236,7 +236,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
             .map(c -> {
               Class<? extends CostFunction> klass = null;
               try {
-                klass = (Class<? extends CostFunction>) Class.forName(c);
+                klass = Class.forName(c).asSubclass(CostFunction.class);
               } catch (ClassNotFoundException e) {
                 LOG.warn("Cannot load class " + c + "': " + e.getMessage());
               }
