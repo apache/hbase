@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -91,26 +91,25 @@ public class TestRegionServerOnlineConfigChange {
 
   /**
    * Check if the number of compaction threads changes online
-   * @throws IOException
    */
   @Test
-  public void testNumCompactionThreadsOnlineChange() throws IOException {
-    assertTrue(rs1.compactSplitThread != null);
+  public void testNumCompactionThreadsOnlineChange() {
+    assertNotNull(rs1.getCompactSplitThread());
     int newNumSmallThreads =
-            rs1.compactSplitThread.getSmallCompactionThreadNum() + 1;
+      rs1.getCompactSplitThread().getSmallCompactionThreadNum() + 1;
     int newNumLargeThreads =
-            rs1.compactSplitThread.getLargeCompactionThreadNum() + 1;
+      rs1.getCompactSplitThread().getLargeCompactionThreadNum() + 1;
 
     conf.setInt("hbase.regionserver.thread.compaction.small",
-            newNumSmallThreads);
+      newNumSmallThreads);
     conf.setInt("hbase.regionserver.thread.compaction.large",
-            newNumLargeThreads);
+      newNumLargeThreads);
     rs1.getConfigurationManager().notifyAllObservers(conf);
 
     assertEquals(newNumSmallThreads,
-                  rs1.compactSplitThread.getSmallCompactionThreadNum());
+      rs1.getCompactSplitThread().getSmallCompactionThreadNum());
     assertEquals(newNumLargeThreads,
-                  rs1.compactSplitThread.getLargeCompactionThreadNum());
+      rs1.getCompactSplitThread().getLargeCompactionThreadNum());
   }
 
   /**

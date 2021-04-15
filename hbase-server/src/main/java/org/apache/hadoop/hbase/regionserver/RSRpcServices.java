@@ -1707,17 +1707,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public CompactionSwitchResponse compactionSwitch(RpcController controller,
       CompactionSwitchRequest request) throws ServiceException {
+    final CompactSplit compactSplitThread = regionServer.getCompactSplitThread();
     try {
       checkOpen();
       requestCount.increment();
-      boolean prevState = regionServer.compactSplitThread.isCompactionsEnabled();
+      boolean prevState = compactSplitThread.isCompactionsEnabled();
       CompactionSwitchResponse response =
           CompactionSwitchResponse.newBuilder().setPrevState(prevState).build();
       if (prevState == request.getEnabled()) {
         // passed in requested state is same as current state. No action required
         return response;
       }
-      regionServer.compactSplitThread.switchCompaction(request.getEnabled());
+      compactSplitThread.switchCompaction(request.getEnabled());
       return response;
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -1760,7 +1761,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         boolean compactionNeeded = flushResult.isCompactionNeeded();
         if (compactionNeeded) {
-          regionServer.compactSplitThread.requestSystemCompaction(region,
+          regionServer.getCompactSplitThread().requestSystemCompaction(region,
             "Compaction through user triggered flush");
         }
         builder.setFlushed(flushResult.isFlushSucceeded());
@@ -1876,6 +1877,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     ClearCompactionQueuesResponse.Builder respBuilder = ClearCompactionQueuesResponse.newBuilder();
     requestCount.increment();
     if (clearCompactionQueues.compareAndSet(false,true)) {
+      final CompactSplit compactSplitThread = regionServer.getCompactSplitThread();
       try {
         checkOpen();
         regionServer.getRegionServerCoprocessorHost().preClearCompactionQueues();
@@ -1883,10 +1885,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           LOG.debug("clear " + queueName + " compaction queue");
           switch (queueName) {
             case "long":
-              regionServer.compactSplitThread.clearLongCompactionsQueue();
+              compactSplitThread.clearLongCompactionsQueue();
               break;
             case "short":
-              regionServer.compactSplitThread.clearShortCompactionsQueue();
+              compactSplitThread.clearShortCompactionsQueue();
               break;
             default:
               LOG.warn("Unknown queue name " + queueName);

@@ -124,19 +124,20 @@ public class RSDumpServlet extends StateDumpServlet {
     }
   }
 
-  public static void dumpQueue(HRegionServer hrs, PrintWriter out)
-      throws IOException {
-    if (hrs.compactSplitThread != null) {
+  public static void dumpQueue(HRegionServer hrs, PrintWriter out) {
+    final CompactSplit compactSplit = hrs.getCompactSplitThread();
+    if (compactSplit != null) {
       // 1. Print out Compaction/Split Queue
-      out.println("Compaction/Split Queue summary: "
-          + hrs.compactSplitThread.toString() );
-      out.println(hrs.compactSplitThread.dumpQueue());
+      out.println("Compaction/Split Queue summary: " + compactSplit);
+      out.println(compactSplit.dumpQueue());
     }
 
-    if (hrs.getMemStoreFlusher() != null) {
+    final MemStoreFlusher memStoreFlusher = hrs.getMemStoreFlusher();
+    if (memStoreFlusher != null) {
       // 2. Print out flush Queue
-      out.println("\nFlush Queue summary: " + hrs.getMemStoreFlusher().toString());
-      out.println(hrs.getMemStoreFlusher().dumpQueue());
+      out.println();
+      out.println("Flush Queue summary: " + memStoreFlusher);
+      out.println(memStoreFlusher.dumpQueue());
     }
   }
 

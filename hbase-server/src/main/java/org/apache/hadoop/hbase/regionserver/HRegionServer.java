@@ -304,7 +304,7 @@ public class HRegionServer extends Thread implements
   private ReplicationSinkService replicationSinkHandler;
 
   // Compactions
-  public CompactSplit compactSplitThread;
+  private CompactSplit compactSplitThread;
 
   /**
    * Map of regions currently being served by this region server. Key is the
