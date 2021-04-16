@@ -107,6 +107,7 @@ import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
+import org.apache.hadoop.hbase.master.balancer.MaintenanceLoadBalancer;
 import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
@@ -670,9 +671,13 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Initialize all ZK based system trackers. But do not include {@link RegionServerTracker}, it
    * should have already been initialized along with {@link ServerManager}.
    */
-  @InterfaceAudience.Private
-  protected void initializeZKBasedSystemTrackers()
-      throws IOException, InterruptedException, KeeperException, ReplicationException {
+  private void initializeZKBasedSystemTrackers()
+    throws IOException, KeeperException, ReplicationException {
+    if (maintenanceMode) {
+      // in maintenance mode, always use MaintenanceLoadBalancer.
+      conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MaintenanceLoadBalancer.class,
+        LoadBalancer.class);
+    }
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
