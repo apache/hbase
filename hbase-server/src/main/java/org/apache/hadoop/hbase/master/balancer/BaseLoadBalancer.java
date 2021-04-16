@@ -163,12 +163,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int[]   initialRegionIndexToServerIndex;    //regionIndex -> serverIndex (initial cluster state)
     int[]   regionIndexToTableIndex;     //regionIndex -> tableIndex
     int[][] numRegionsPerServerPerTable; //serverIndex -> tableIndex -> # regions
-    int[] numRegionsPerTable; // tableIndex -> region count
-    double[] meanRegionsPerTable; // mean region count per table
-    double regionSkewByTable;       // skew on RS per by table
-    double minRegionSkewByTable;       // min skew on RS per by table
-    double maxRegionSkewByTable;       // max skew on RS per by table
-
+    int[]   numMaxRegionsPerTable;       //tableIndex -> max number of regions in a single RS
     int[]   regionIndexToPrimaryIndex;   //regionIndex -> regionIndex of the primary
     boolean hasRegionReplicas = false;   //whether there is regions with replicas
 
@@ -376,7 +371,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
       numTables = tables.size();
       numRegionsPerServerPerTable = new int[numServers][numTables];
-      numRegionsPerTable = new int[numTables];
 
       for (int i = 0; i < numServers; i++) {
         for (int j = 0; j < numTables; j++) {
@@ -384,28 +378,20 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         }
       }
 
-      for (int i = 0; i < numTables; i++) {
-        numRegionsPerTable[i] = 0;
-      }
-
       for (int i=0; i < regionIndexToServerIndex.length; i++) {
         if (regionIndexToServerIndex[i] >= 0) {
           numRegionsPerServerPerTable[regionIndexToServerIndex[i]][regionIndexToTableIndex[i]]++;
-          numRegionsPerTable[regionIndexToTableIndex[i]]++;
         }
       }
 
-      // Avoid repeated computation for planning
-      meanRegionsPerTable = new double[numTables];
-      maxRegionSkewByTable = 0;
-      minRegionSkewByTable = 0;
-      for (int i = 0; i < numTables; i++) {
-        meanRegionsPerTable[i] = Double.valueOf(numRegionsPerTable[i]) / numServers;
-        minRegionSkewByTable += Cluster.getMinSkew(numRegionsPerTable[i], numServers);
-        maxRegionSkewByTable += Cluster.getMaxSkew(numRegionsPerTable[i], numServers);
+      numMaxRegionsPerTable = new int[numTables];
+      for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
+        for (tableIndex = 0; tableIndex < aNumRegionsPerServerPerTable.length; tableIndex++) {
+          if (aNumRegionsPerServerPerTable[tableIndex] > numMaxRegionsPerTable[tableIndex]) {
+            numMaxRegionsPerTable[tableIndex] = aNumRegionsPerServerPerTable[tableIndex];
+          }
+        }
       }
-
-      computeRegionSkewPerTable();
 
       for (int i = 0; i < regions.length; i ++) {
         RegionInfo info = regions[i];
@@ -532,53 +518,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
 
     /**
-     * Return the min skew of distribution
-     */
-    public static double getMinSkew(double total, double numServers) {
-      double mean = total / numServers;
-      // It's possible that there aren't enough regions to go around
-      double min;
-      if (numServers > total) {
-        min = ((numServers - total) * mean + (1 - mean) * total) ;
-      } else {
-        // Some will have 1 more than everything else.
-        int numHigh = (int) (total - (Math.floor(mean) * numServers));
-        int numLow = (int) (numServers - numHigh);
-        min = numHigh * (Math.ceil(mean) - mean) + numLow * (mean - Math.floor(mean));
-      }
-      return min;
-    }
-
-    /**
-     * Return the max deviation of distribution
-     * Compute max as if all region servers had 0 and one had the sum of all costs.  This must be
-     * a zero sum cost for this to make sense.
-     */
-    public static double getMaxSkew(double total, double numServers) {
-      double mean = total / numServers;
-      return (total - mean) + (numServers - 1) * mean;
-    }
-
-    /**
-     * Scale the value between 0 and 1.
-     *
-     * @param min   Min value
-     * @param max   The Max value
-     * @param value The value to be scaled.
-     * @return The scaled value.
-     */
-    public static double scale(double min, double max, double value) {
-      if (max <= min || value <= min) {
-        return 0;
-      }
-      if ((max - min) == 0) {
-        return 0;
-      }
-
-      return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
-    }
-
-    /**
      * Retrieves and lazily initializes a field storing the locality of
      * every region/server combination
      */
@@ -633,21 +572,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         return 0;
       }
       return regionLoads[region].getLast().getStorefileSizeMB();
-    }
-
-    /**
-     * Recompute the region skew during init or plan of moves.
-     */
-    private void computeRegionSkewPerTable() {
-      // reinitialize for recomputation
-      regionSkewByTable = 0;
-
-      for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
-        for (int tableIndex = 0; tableIndex < aNumRegionsPerServerPerTable.length; tableIndex++) {
-          regionSkewByTable += Math.abs(aNumRegionsPerServerPerTable[tableIndex]
-            - meanRegionsPerTable[tableIndex]);
-        }
-      }
     }
 
     /**
@@ -905,20 +829,22 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       int tableIndex = regionIndexToTableIndex[region];
       if (oldServer >= 0) {
         numRegionsPerServerPerTable[oldServer][tableIndex]--;
-        // update regionSkewPerTable for the move from old server
-        regionSkewByTable +=
-            Math.abs(numRegionsPerServerPerTable[oldServer][tableIndex]
-              - meanRegionsPerTable[tableIndex])
-              - Math.abs(numRegionsPerServerPerTable[oldServer][tableIndex] + 1
-              - meanRegionsPerTable[tableIndex]);
       }
       numRegionsPerServerPerTable[newServer][tableIndex]++;
-      // update regionSkewPerTable for the move to new server
-      regionSkewByTable +=
-        Math.abs(numRegionsPerServerPerTable[newServer][tableIndex]
-          - meanRegionsPerTable[tableIndex])
-          - Math.abs(numRegionsPerServerPerTable[newServer][tableIndex] - 1
-          - meanRegionsPerTable[tableIndex]);
+
+      //check whether this caused maxRegionsPerTable in the new Server to be updated
+      if (numRegionsPerServerPerTable[newServer][tableIndex] > numMaxRegionsPerTable[tableIndex]) {
+        numMaxRegionsPerTable[tableIndex] = numRegionsPerServerPerTable[newServer][tableIndex];
+      } else if (oldServer >= 0 && (numRegionsPerServerPerTable[oldServer][tableIndex] + 1)
+          == numMaxRegionsPerTable[tableIndex]) {
+        //recompute maxRegionsPerTable since the previous value was coming from the old server
+        numMaxRegionsPerTable[tableIndex] = 0;
+        for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
+          if (aNumRegionsPerServerPerTable[tableIndex] > numMaxRegionsPerTable[tableIndex]) {
+            numMaxRegionsPerTable[tableIndex] = aNumRegionsPerServerPerTable[tableIndex];
+          }
+        }
+      }
 
       // update for servers
       int primary = regionIndexToPrimaryIndex[region];
@@ -1088,7 +1014,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           .append(Arrays.toString(serverIndicesSortedByRegionCount))
           .append(", regionsPerServer=").append(Arrays.deepToString(regionsPerServer));
 
-      desc.append(", regionSkewByTable=").append(regionSkewByTable)
+      desc.append(", numMaxRegionsPerTable=").append(Arrays.toString(numMaxRegionsPerTable))
           .append(", numRegions=").append(numRegions).append(", numServers=").append(numServers)
           .append(", numTables=").append(numTables).append(", numMovedRegions=")
           .append(numMovedRegions).append('}');
