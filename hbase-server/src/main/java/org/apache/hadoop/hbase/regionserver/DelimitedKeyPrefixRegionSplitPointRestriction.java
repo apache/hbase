@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class DelimitedKeyPrefixRegionSplitPointRestriction extends RegionSplitPointRestriction {
-  private static final Logger LOGGER =
+  private static final Logger LOG =
     LoggerFactory.getLogger(DelimitedKeyPrefixRegionSplitPointRestriction.class);
 
   public static final String DELIMITER_KEY =
@@ -54,7 +54,7 @@ public class DelimitedKeyPrefixRegionSplitPointRestriction extends RegionSplitPo
     if (delimiterString == null || delimiterString.length() == 0) {
       delimiterString = conf.get(DELIMITER_KEY);
       if (delimiterString == null || delimiterString.length() == 0) {
-        LOGGER.error("{} not specified for table {}. "
+        LOG.error("{} not specified for table {}. "
           + "Using the default RegionSplitPointRestriction", DELIMITER_KEY,
           tableDescriptor.getTableName());
         return;
@@ -70,7 +70,7 @@ public class DelimitedKeyPrefixRegionSplitPointRestriction extends RegionSplitPo
       int index = org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.indexOf(
         splitPoint, delimiter);
       if (index < 0) {
-        LOGGER.warn("Delimiter {} not found for split key {}", Bytes.toString(delimiter),
+        LOG.warn("Delimiter {} not found for split key {}", Bytes.toString(delimiter),
           Bytes.toStringBinary(splitPoint));
         return splitPoint;
       }

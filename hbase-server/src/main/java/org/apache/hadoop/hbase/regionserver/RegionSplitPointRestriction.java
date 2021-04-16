@@ -28,13 +28,13 @@ import org.slf4j.LoggerFactory;
  * A split point restriction that restricts the pattern of the split point.
  *
  * There are three implementations as follows:
- * @see NoneRegionSplitPointRestriction
+ * @see NoRegionSplitPointRestriction
  * @see KeyPrefixRegionSplitPointRestriction
  * @see DelimitedKeyPrefixRegionSplitPointRestriction
  */
 @InterfaceAudience.Private
 public abstract class RegionSplitPointRestriction {
-  private static final Logger LOGGER = LoggerFactory.getLogger(RegionSplitPointRestriction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionSplitPointRestriction.class);
 
   public static final String RESTRICTION_TYPE_KEY =
     "hbase.regionserver.region.split_point_restriction.type";
@@ -61,7 +61,7 @@ public abstract class RegionSplitPointRestriction {
     RegionSplitPointRestriction ret;
     switch (type) {
       case RESTRICTION_TYPE_NONE:
-        ret = new NoneRegionSplitPointRestriction();
+        ret = new NoRegionSplitPointRestriction();
         break;
       case RESTRICTION_TYPE_KEY_PREFIX:
         ret = new KeyPrefixRegionSplitPointRestriction();
@@ -70,9 +70,9 @@ public abstract class RegionSplitPointRestriction {
         ret = new DelimitedKeyPrefixRegionSplitPointRestriction();
         break;
       default:
-        LOGGER.warn("Invalid RegionSplitPointRestriction type specified: {}. "
+        LOG.warn("Invalid RegionSplitPointRestriction type specified: {}. "
           + "Using the default RegionSplitPointRestriction", type);
-        ret = new NoneRegionSplitPointRestriction();
+        ret = new NoRegionSplitPointRestriction();
         break;
     }
     ret.initialize(tableDescriptor, conf);

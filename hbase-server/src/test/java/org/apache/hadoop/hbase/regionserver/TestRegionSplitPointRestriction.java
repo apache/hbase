@@ -59,7 +59,7 @@ public class TestRegionSplitPointRestriction {
 
     RegionSplitPointRestriction splitPointRestriction =
       RegionSplitPointRestriction.create(tableDescriptor, conf);
-    assertTrue(splitPointRestriction instanceof NoneRegionSplitPointRestriction);
+    assertTrue(splitPointRestriction instanceof NoRegionSplitPointRestriction);
   }
 
   @Test
@@ -89,7 +89,7 @@ public class TestRegionSplitPointRestriction {
 
     RegionSplitPointRestriction splitPointRestriction =
       RegionSplitPointRestriction.create(tableDescriptor, conf);
-    assertTrue(splitPointRestriction instanceof NoneRegionSplitPointRestriction);
+    assertTrue(splitPointRestriction instanceof NoRegionSplitPointRestriction);
   }
 
   @Test
@@ -116,7 +116,7 @@ public class TestRegionSplitPointRestriction {
   public void testWhenTableDescriptorAndConfigurationReturnNull() throws IOException {
     RegionSplitPointRestriction splitPointRestriction =
       RegionSplitPointRestriction.create(tableDescriptor, conf);
-    assertTrue(splitPointRestriction instanceof NoneRegionSplitPointRestriction);
+    assertTrue(splitPointRestriction instanceof NoRegionSplitPointRestriction);
   }
 
   @Test
@@ -126,7 +126,7 @@ public class TestRegionSplitPointRestriction {
 
     RegionSplitPointRestriction splitPointRestriction =
       RegionSplitPointRestriction.create(tableDescriptor, conf);
-    assertTrue(splitPointRestriction instanceof NoneRegionSplitPointRestriction);
+    assertTrue(splitPointRestriction instanceof NoRegionSplitPointRestriction);
   }
 
   @Test
@@ -134,11 +134,11 @@ public class TestRegionSplitPointRestriction {
     when(tableDescriptor.getValue(RegionSplitPointRestriction.RESTRICTION_TYPE_KEY))
       .thenReturn(RegionSplitPointRestriction.RESTRICTION_TYPE_NONE);
 
-    NoneRegionSplitPointRestriction noneRegionSplitPointRestriction =
-      (NoneRegionSplitPointRestriction) RegionSplitPointRestriction.create(tableDescriptor, conf);
+    NoRegionSplitPointRestriction noRegionSplitPointRestriction =
+      (NoRegionSplitPointRestriction) RegionSplitPointRestriction.create(tableDescriptor, conf);
 
     byte[] restrictedSplitPoint =
-      noneRegionSplitPointRestriction.getRestrictedSplitPoint(Bytes.toBytes("abcd"));
+      noRegionSplitPointRestriction.getRestrictedSplitPoint(Bytes.toBytes("abcd"));
     assertEquals("abcd", Bytes.toString(restrictedSplitPoint));
   }
 

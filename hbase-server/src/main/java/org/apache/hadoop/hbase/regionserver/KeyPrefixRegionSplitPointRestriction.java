@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class KeyPrefixRegionSplitPointRestriction extends RegionSplitPointRestriction {
-  private static final Logger LOGGER =
+  private static final Logger LOG =
     LoggerFactory.getLogger(KeyPrefixRegionSplitPointRestriction.class);
 
   public static final String PREFIX_LENGTH_KEY =
@@ -47,7 +47,7 @@ public class KeyPrefixRegionSplitPointRestriction extends RegionSplitPointRestri
     if (prefixLengthString == null) {
       prefixLengthString = conf.get(PREFIX_LENGTH_KEY);
       if (prefixLengthString == null) {
-        LOGGER.error("{} not specified for table {}. "
+        LOG.error("{} not specified for table {}. "
           + "Using the default RegionSplitPointRestriction", PREFIX_LENGTH_KEY,
           tableDescriptor.getTableName());
         return;
@@ -58,7 +58,7 @@ public class KeyPrefixRegionSplitPointRestriction extends RegionSplitPointRestri
     } catch (NumberFormatException ignored) {
     }
     if (prefixLength <= 0) {
-      LOGGER.error("Invalid value for {} for table {}:{}. "
+      LOG.error("Invalid value for {} for table {}:{}. "
         + "Using the default RegionSplitPointRestriction", PREFIX_LENGTH_KEY,
         tableDescriptor.getTableName(), prefixLengthString);
     }

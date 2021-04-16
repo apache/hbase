@@ -26,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * A RegionSplitPointRestriction implementation that does nothing.
  */
 @InterfaceAudience.Private
-public class NoneRegionSplitPointRestriction extends RegionSplitPointRestriction {
+public class NoRegionSplitPointRestriction extends RegionSplitPointRestriction {
 
   @Override
   public void initialize(TableDescriptor tableDescriptor, Configuration conf) throws IOException {
