@@ -99,6 +99,7 @@ public class SyncReplicationTestBase {
     conf.setInt("replication.source.maxretriesmultiplier", 10);
     conf.setFloat("replication.source.ratio", 1.0f);
     conf.setBoolean("replication.source.eof.autorecovery", true);
+    conf.setBoolean("replication.source.regionserver.abort", false);
   }
 
   @BeforeClass
