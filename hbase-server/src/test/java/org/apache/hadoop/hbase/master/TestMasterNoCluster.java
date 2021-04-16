@@ -289,8 +289,8 @@ public class TestMasterNoCluster {
       protected void initClusterSchemaService() throws IOException, InterruptedException {}
 
       @Override
-      protected void initializeZKBasedSystemTrackers() throws IOException, InterruptedException,
-          KeeperException, ReplicationException {
+      protected void initializeZKBasedSystemTrackers()
+        throws IOException, KeeperException, ReplicationException {
         super.initializeZKBasedSystemTrackers();
         // Record a newer server in server manager at first
         getServerManager().recordNewServerWithLock(newServer,
