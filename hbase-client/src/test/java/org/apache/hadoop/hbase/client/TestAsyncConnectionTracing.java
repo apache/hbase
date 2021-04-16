@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -72,6 +73,7 @@ public class TestAsyncConnectionTracing {
       UserProvider.instantiate(CONF).getCurrent());
   }
 
+  @After
   public void tearDown() throws IOException {
     Closeables.close(conn, true);
   }
