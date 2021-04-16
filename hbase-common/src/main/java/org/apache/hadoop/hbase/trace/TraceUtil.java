@@ -189,6 +189,20 @@ public final class TraceUtil {
     }
   }
 
+  public static <T> T trace(Supplier<T> action, String spanName) {
+    Span span = createSpan(spanName);
+    try (Scope scope = span.makeCurrent()) {
+      T ret = action.get();
+      span.setStatus(StatusCode.OK);
+      return ret;
+    } catch (Throwable e) {
+      setError(span, e);
+      throw e;
+    } finally {
+      span.end();
+    }
+  }
+
   @FunctionalInterface
   public interface IOExceptionCallable<V> {
     V call() throws IOException;
