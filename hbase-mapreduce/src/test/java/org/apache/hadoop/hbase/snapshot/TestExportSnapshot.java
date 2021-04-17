@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
@@ -48,7 +48,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -62,8 +61,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Test Export Snapshot Tool
  */
-@Ignore // HBASE-24493
-@Category({VerySlowMapReduceTests.class, LargeTests.class})
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestExportSnapshot {
 
   @ClassRule
@@ -97,12 +95,10 @@ public class TestExportSnapshot {
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(1);
-    TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -325,7 +321,7 @@ public class TestExportSnapshot {
     return files;
   }
 
-  private Path getHdfsDestinationDir() {
+  protected Path getHdfsDestinationDir() {
     Path rootDir = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     Path path = new Path(new Path(rootDir, "export-test"), "export-" + System.currentTimeMillis());
     LOG.info("HDFS export destination path: " + path);
