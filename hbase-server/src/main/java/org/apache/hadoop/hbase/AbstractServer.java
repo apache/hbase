@@ -180,7 +180,7 @@ public abstract class AbstractServer extends Thread implements Server {
   }
 
   @Override
-  public synchronized AsyncClusterConnection getAsyncClusterConnection() {
+  public AsyncClusterConnection getAsyncClusterConnection() {
     return asyncClusterConnection;
   }
 
@@ -312,10 +312,7 @@ public abstract class AbstractServer extends Thread implements Server {
               .equals(RegionServerStatusProtos.RegionServerStatusService.class.getName())) {
             return new MasterRpcServicesVersionWrapper(((HMaster) this).getMasterRpcServices());
           }
-          if (tClass.getName()
-              .equals(CompactionServerStatusProtos.CompactionServerStatusService.class.getName())) {
-            return ((HMaster) this).getMasterRpcServices();
-          }
+          return ((HMaster) this).getMasterRpcServices();
         }
         try {
           BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn,
