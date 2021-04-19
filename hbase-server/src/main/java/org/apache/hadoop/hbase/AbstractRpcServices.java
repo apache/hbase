@@ -111,9 +111,10 @@ public abstract class AbstractRpcServices
     rpcServer.stop();
   }
 
-  protected abstract Class<?> getRpcSchedulerFactoryClass();
+  protected abstract Class<?> getRpcSchedulerFactoryClass(final Configuration conf);
 
-  protected abstract List<RpcServer.BlockingServiceAndInterface> getServices();
+  protected abstract List<RpcServer.BlockingServiceAndInterface>
+      getServices(final Configuration conf);
 
   protected RpcServerInterface createRpcServer(final Server server,
       final RpcSchedulerFactory rpcSchedulerFactory, final InetSocketAddress bindAddress,
@@ -122,7 +123,7 @@ public abstract class AbstractRpcServices
     boolean reservoirEnabled = conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true);
     try {
       // use final bindAddress for this server.
-      return RpcServerFactory.createRpcServer(server, name, getServices(), bindAddress, conf,
+      return RpcServerFactory.createRpcServer(server, name, getServices(conf), bindAddress, conf,
         rpcSchedulerFactory.create(conf, this, server), reservoirEnabled);
     } catch (BindException be) {
       throw new IOException(
@@ -135,7 +136,7 @@ public abstract class AbstractRpcServices
     final Configuration conf = abstractServer.getConfiguration();
     final RpcSchedulerFactory rpcSchedulerFactory;
     try {
-      rpcSchedulerFactory = getRpcSchedulerFactoryClass().asSubclass(RpcSchedulerFactory.class)
+      rpcSchedulerFactory = getRpcSchedulerFactoryClass(conf).asSubclass(RpcSchedulerFactory.class)
           .getDeclaredConstructor().newInstance();
     } catch (NoSuchMethodException | InvocationTargetException | InstantiationException
         | IllegalAccessException e) {

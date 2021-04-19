@@ -45,7 +45,7 @@ public class CSRpcServices extends AbstractRpcServices {
    * @return immutable list of blocking services and the security info classes that this server
    *         supports
    */
-  protected List<RpcServer.BlockingServiceAndInterface> getServices() {
+  protected List<RpcServer.BlockingServiceAndInterface> getServices(final Configuration conf) {
     // now return empty, compaction server do not receive rpc request
     List<RpcServer.BlockingServiceAndInterface> bssi = new ArrayList<>();
     return new ImmutableList.Builder<RpcServer.BlockingServiceAndInterface>().addAll(bssi).build();
@@ -55,8 +55,7 @@ public class CSRpcServices extends AbstractRpcServices {
     rpcServer.start();
   }
 
-  protected Class<?> getRpcSchedulerFactoryClass() {
-    final Configuration conf = compactionServer.getConfiguration();
+  protected Class<?> getRpcSchedulerFactoryClass(Configuration conf) {
     return conf.getClass(COMPACTION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
       SimpleRpcSchedulerFactory.class);
   }

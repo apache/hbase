@@ -1214,8 +1214,7 @@ public class RSRpcServices extends AbstractRpcServices implements
   }
 
   @Override
-  protected Class<?> getRpcSchedulerFactoryClass() {
-    final Configuration conf = regionServer.getConfiguration();
+  protected Class<?> getRpcSchedulerFactoryClass(final Configuration conf) {
     return conf.getClass(REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
       SimpleRpcSchedulerFactory.class);
   }
@@ -1479,11 +1478,9 @@ public class RSRpcServices extends AbstractRpcServices implements
    * supports
    */
   @Override
-  protected List<BlockingServiceAndInterface> getServices() {
-    boolean admin =
-      getConfiguration().getBoolean(REGIONSERVER_ADMIN_SERVICE_CONFIG, true);
-    boolean client =
-      getConfiguration().getBoolean(REGIONSERVER_CLIENT_SERVICE_CONFIG, true);
+  protected List<BlockingServiceAndInterface> getServices(final Configuration conf) {
+    boolean admin = conf.getBoolean(REGIONSERVER_ADMIN_SERVICE_CONFIG, true);
+    boolean client = conf.getBoolean(REGIONSERVER_CLIENT_SERVICE_CONFIG, true);
     List<BlockingServiceAndInterface> bssi = new ArrayList<>();
     if (client) {
       bssi.add(new BlockingServiceAndInterface(

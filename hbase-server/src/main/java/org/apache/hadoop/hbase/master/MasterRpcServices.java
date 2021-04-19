@@ -447,12 +447,12 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
-  protected Class<?> getRpcSchedulerFactoryClass() {
-    Configuration conf = getConfiguration();
+  protected Class<?> getRpcSchedulerFactoryClass(Configuration conf) {
     if (conf != null) {
-      return conf.getClass(MASTER_RPC_SCHEDULER_FACTORY_CLASS, super.getRpcSchedulerFactoryClass());
+      return conf.getClass(MASTER_RPC_SCHEDULER_FACTORY_CLASS,
+        super.getRpcSchedulerFactoryClass(conf));
     } else {
-      return super.getRpcSchedulerFactoryClass();
+      return super.getRpcSchedulerFactoryClass(getConfiguration());
     }
   }
 
@@ -460,12 +460,12 @@ public class MasterRpcServices extends RSRpcServices implements
   protected RpcServerInterface createRpcServer(final Server server,
       final RpcSchedulerFactory rpcSchedulerFactory, final InetSocketAddress bindAddress,
       final String name) throws IOException {
-    final Configuration conf = regionServer.getConfiguration();
+    final Configuration conf = server.getConfiguration();
     // RpcServer at HM by default enable ByteBufferPool iff HM having user table region in it
     boolean reservoirEnabled = conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY,
       LoadBalancer.isMasterCanHostUserRegions(conf));
     try {
-      return RpcServerFactory.createRpcServer(server, name, getServices(),
+      return RpcServerFactory.createRpcServer(server, name, getServices(conf),
           bindAddress, // use final bindAddress for this server.
           conf, rpcSchedulerFactory.create(conf, this, server), reservoirEnabled);
     } catch (BindException be) {
@@ -546,7 +546,7 @@ public class MasterRpcServices extends RSRpcServices implements
    * @return list of blocking services and their security info classes that this server supports
    */
   @Override
-  protected List<BlockingServiceAndInterface> getServices() {
+  protected List<BlockingServiceAndInterface> getServices(final Configuration conf) {
     List<BlockingServiceAndInterface> bssi = new ArrayList<>(5);
     bssi.add(new BlockingServiceAndInterface(MasterService.newReflectiveBlockingService(this),
         MasterService.BlockingInterface.class));
@@ -562,7 +562,7 @@ public class MasterRpcServices extends RSRpcServices implements
     bssi.add(new BlockingServiceAndInterface(
         CompactionServerStatusService.newReflectiveBlockingService(this),
         CompactionServerStatusService.BlockingInterface.class));
-    bssi.addAll(super.getServices());
+    bssi.addAll(super.getServices(conf));
     return bssi;
   }
 
