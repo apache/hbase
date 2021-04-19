@@ -732,11 +732,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       epochAndState = currentEpochAndState | 1;
       readyForRolling = false;
       consumeExecutor.execute(consumer);
-      while (!readyForRolling) {
-        readyForRollingCond.awaitUninterruptibly();
-      }
     } finally {
       consumeLock.unlock();
+    }
+    while (!readyForRolling) {
+      readyForRollingCond.awaitUninterruptibly();
     }
   }
 
