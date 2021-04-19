@@ -76,7 +76,6 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -923,14 +922,7 @@ public class TestSplitTransactionOnCluster {
     // hbase:meta  We don't want hbase:meta replay polluting our test when we later crash
     // the table region serving server.
     int metaServerIndex = cluster.getServerWithMeta();
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TESTING_UTIL.getConfiguration());
-    if (tablesOnMaster) {
-      // Need to check master is supposed to host meta... perhaps it is not.
-      throw new UnsupportedOperationException();
-      // TODO: assertTrue(metaServerIndex == -1); // meta is on master now
-    }
-    HRegionServer metaRegionServer = tablesOnMaster?
-      cluster.getMaster(): cluster.getRegionServer(metaServerIndex);
+    HRegionServer metaRegionServer = cluster.getRegionServer(metaServerIndex);
     int tableRegionIndex = cluster.getServerWith(hri.getRegionName());
     assertTrue(tableRegionIndex != -1);
     HRegionServer tableRegionServer = cluster.getRegionServer(tableRegionIndex);

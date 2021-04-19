@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -368,19 +367,11 @@ public class TestAdmin extends TestAdminBase {
       }
       regs.add(loc.getRegion());
     }
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
-    if (tablesOnMaster) {
-      // Ignore the master region server,
-      // which contains less regions by intention.
-      numRS--;
-    }
     float average = (float) expectedRegions / numRS;
     int min = (int) Math.floor(average);
     int max = (int) Math.ceil(average);
     for (List<RegionInfo> regionList : server2Regions.values()) {
-      assertTrue(
-        "numRS=" + numRS + ", min=" + min + ", max=" + max + ", size=" + regionList.size() +
-          ", tablesOnMaster=" + tablesOnMaster,
+      assertTrue("numRS=" + numRS + ", min=" + min + ", max=" + max + ", size=" + regionList.size(),
         regionList.size() == min || regionList.size() == max);
     }
   }

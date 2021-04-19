@@ -26,13 +26,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,21 +142,6 @@ public final class ZNodeClearer {
   }
 
   /**
-   * @return true if cluster is configured with master-rs collocation
-   * @deprecated since 2.4.0, will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
-   */
-  @Deprecated
-  private static boolean tablesOnMaster(Configuration conf) {
-    boolean tablesOnMaster = true;
-    String confValue = conf.get(BaseLoadBalancer.TABLES_ON_MASTER);
-    if (confValue != null && confValue.equalsIgnoreCase("none")) {
-      tablesOnMaster = false;
-    }
-    return tablesOnMaster;
-  }
-
-  /**
    * Delete the master znode if its content (ServerName string) is the same
    *  as the one in the znode file. (env: HBASE_ZNODE_FILE). I case of master-rs
    *  colloaction we extract ServerName string from rsZnode path.(HBASE-14861)
@@ -185,24 +166,13 @@ public final class ZNodeClearer {
     String znodeFileContent;
     try {
       znodeFileContent = ZNodeClearer.readMyEphemeralNodeOnDisk();
-      if (ZNodeClearer.tablesOnMaster(conf)) {
-        // In case of master crash also remove rsZnode since master is also regionserver
-        ZKUtil.deleteNodeFailSilent(zkw,
-          ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, znodeFileContent));
-        return MasterAddressTracker.deleteIfEquals(zkw,
-          ZNodeClearer.parseMasterServerName(znodeFileContent));
-      } else {
-        return MasterAddressTracker.deleteIfEquals(zkw, znodeFileContent);
-      }
+      return MasterAddressTracker.deleteIfEquals(zkw, znodeFileContent);
     } catch (FileNotFoundException fnfe) {
       // If no file, just keep going -- return success.
       LOG.warn("Can't find the znode file; presume non-fatal", fnfe);
       return true;
     } catch (IOException e) {
       LOG.warn("Can't read the content of the znode file", e);
-      return false;
-    } catch (KeeperException e) {
-      LOG.warn("ZooKeeper exception deleting znode", e);
       return false;
     } finally {
       zkw.close();

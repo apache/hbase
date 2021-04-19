@@ -157,10 +157,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     hris.add(RegionInfoBuilder.FIRST_META_REGIONINFO);
     tmp.add(master);
     Map<ServerName, List<RegionInfo>> plans = loadBalancer.roundRobinAssignment(hris, tmp);
-    if (LoadBalancer.isTablesOnMaster(loadBalancer.getConf())) {
-      assertTrue(plans.get(master).contains(RegionInfoBuilder.FIRST_META_REGIONINFO));
-      assertEquals(1, plans.get(master).size());
-    }
     int totalRegion = 0;
     for (List<RegionInfo> regions: plans.values()) {
       totalRegion += regions.size();
@@ -244,12 +240,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     List<ServerName> allServers = new ArrayList<>(idleServers.size() + 1);
     allServers.add(ServerName.valueOf("server-" + numberOfIdleServers, 1000, 1L));
     allServers.addAll(idleServers);
-    LoadBalancer balancer = new MockBalancer() {
-      @Override
-      public boolean shouldBeOnMaster(RegionInfo region) {
-        return false;
-      }
-    };
+    LoadBalancer balancer = new MockBalancer();
     Configuration conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     balancer.setConf(conf);

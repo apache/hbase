@@ -99,7 +99,6 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 30000);
     conf.setInt("hbase.master.balancer.stochastic.moveCost", 0);
     conf.setBoolean("hbase.master.balancer.stochastic.execute.maxSteps", true);
-    conf.set(BaseLoadBalancer.TABLES_ON_MASTER, "none");
   }
 
   @Before
