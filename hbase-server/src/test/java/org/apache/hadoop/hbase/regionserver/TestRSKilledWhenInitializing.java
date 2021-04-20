@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -104,7 +103,7 @@ public class TestRSKilledWhenInitializing {
         cluster.getRegionServers().get(i).start();
       }
       // Expected total regionservers depends on whether Master can host regions or not.
-      int expectedTotalRegionServers = NUM_RS + (LoadBalancer.isTablesOnMaster(conf)? 1: 0);
+      int expectedTotalRegionServers = NUM_RS;
       List<ServerName> onlineServersList = null;
       do {
         onlineServersList = master.getMaster().getServerManager().getOnlineServersList();

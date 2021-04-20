@@ -27,12 +27,13 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -43,7 +44,6 @@ import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
@@ -114,27 +114,12 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   @NonNull
   public Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
       List<ServerName> servers) throws HBaseIOException {
-
     metricsBalancer.incrMiscInvocations();
-
-    Set<RegionInfo> regionSet = Sets.newHashSet(regions);
-    Map<ServerName, List<RegionInfo>> assignmentMap = assignMasterSystemRegions(regions, servers);
-    if (!assignmentMap.isEmpty()) {
-      servers = new ArrayList<>(servers);
-      // Guarantee not to put other regions on master
-      servers.remove(masterServerName);
-      List<RegionInfo> masterRegions = assignmentMap.get(masterServerName);
-      if (!masterRegions.isEmpty()) {
-        for (RegionInfo region: masterRegions) {
-          regionSet.remove(region);
-        }
-      }
+    if (regions.isEmpty()) {
+      return Collections.emptyMap();
     }
-
-    if (regionSet.isEmpty()) {
-      return assignmentMap;
-    }
-
+    Set<RegionInfo> regionSet = new HashSet<>(regions);
+    Map<ServerName, List<RegionInfo>> assignmentMap = new HashMap<>();
     try {
       FavoredNodeAssignmentHelper helper =
           new FavoredNodeAssignmentHelper(servers, fnm.getRackManager());
@@ -311,19 +296,6 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   @Override
   public ServerName randomAssignment(RegionInfo regionInfo, List<ServerName> servers)
       throws HBaseIOException {
-
-    if (servers != null && servers.contains(masterServerName)) {
-      if (shouldBeOnMaster(regionInfo)) {
-        metricsBalancer.incrMiscInvocations();
-        return masterServerName;
-      }
-      if (!LoadBalancer.isTablesOnMaster(getConf())) {
-        // Guarantee we do not put any regions on master
-        servers = new ArrayList<>(servers);
-        servers.remove(masterServerName);
-      }
-    }
-
     ServerName destination = null;
     if (!FavoredNodesManager.isFavoredNodeApplicable(regionInfo)) {
       return super.randomAssignment(regionInfo, servers);
@@ -373,18 +345,11 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   @NonNull
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
       List<ServerName> servers) throws HBaseIOException {
-
     Map<ServerName, List<RegionInfo>> assignmentMap = Maps.newHashMap();
     Map<ServerName, List<RegionInfo>> result = super.retainAssignment(regions, servers);
     if (result.isEmpty()) {
       LOG.warn("Nothing to assign to, probably no servers or no regions");
       return result;
-    }
-
-    // Guarantee not to put other regions on master
-    if (servers != null && servers.contains(masterServerName)) {
-      servers = new ArrayList<>(servers);
-      servers.remove(masterServerName);
     }
 
     // Lets check if favored nodes info is in META, if not generate now.

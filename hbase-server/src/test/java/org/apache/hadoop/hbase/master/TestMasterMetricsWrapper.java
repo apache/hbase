@@ -82,8 +82,7 @@ public class TestMasterMetricsWrapper {
     assertEquals(master.getMasterStartTime(), info.getStartTime());
     assertEquals(master.getMasterCoprocessors().length, info.getCoprocessors().length);
     assertEquals(master.getServerManager().getOnlineServersList().size(), info.getNumRegionServers());
-    int regionServerCount =
-      NUM_RS + (LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration())? 1: 0);
+    int regionServerCount = NUM_RS;
     assertEquals(regionServerCount, info.getNumRegionServers());
 
     String zkServers = info.getZookeeperQuorum();
