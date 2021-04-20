@@ -25,54 +25,54 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A split point restriction that restricts the pattern of the split point.
+ * A split restriction that restricts the pattern of the split point.
  *
  * There are three implementations as follows:
- * @see NoRegionSplitPointRestriction
- * @see KeyPrefixRegionSplitPointRestriction
- * @see DelimitedKeyPrefixRegionSplitPointRestriction
+ * @see NoRegionSplitRestriction
+ * @see KeyPrefixRegionSplitRestriction
+ * @see DelimitedKeyPrefixRegionSplitRestriction
  */
 @InterfaceAudience.Private
-public abstract class RegionSplitPointRestriction {
-  private static final Logger LOG = LoggerFactory.getLogger(RegionSplitPointRestriction.class);
+public abstract class RegionSplitRestriction {
+  private static final Logger LOG = LoggerFactory.getLogger(RegionSplitRestriction.class);
 
   public static final String RESTRICTION_TYPE_KEY =
-    "hbase.regionserver.region.split_point_restriction.type";
+    "hbase.regionserver.region.split_restriction.type";
 
   public static final String RESTRICTION_TYPE_NONE = "None";
   public static final String RESTRICTION_TYPE_KEY_PREFIX = "KeyPrefix";
   public static final String RESTRICTION_TYPE_DELIMITED_KEY_PREFIX = "DelimitedKeyPrefix";
 
   /**
-   * Create the RegionSplitPointRestriction configured for the given table.
+   * Create the RegionSplitRestriction configured for the given table.
    *
    * @param tableDescriptor the table descriptor
    * @param conf the configuration
-   * @return a RegionSplitPointRestriction instance
+   * @return a RegionSplitRestriction instance
    * @throws IOException if an error occurs
    */
-  public static RegionSplitPointRestriction create(TableDescriptor tableDescriptor,
+  public static RegionSplitRestriction create(TableDescriptor tableDescriptor,
     Configuration conf) throws IOException {
     String type = tableDescriptor.getValue(RESTRICTION_TYPE_KEY);
     if (type == null) {
       type = conf.get(RESTRICTION_TYPE_KEY, RESTRICTION_TYPE_NONE);
     }
 
-    RegionSplitPointRestriction ret;
+    RegionSplitRestriction ret;
     switch (type) {
       case RESTRICTION_TYPE_NONE:
-        ret = new NoRegionSplitPointRestriction();
+        ret = new NoRegionSplitRestriction();
         break;
       case RESTRICTION_TYPE_KEY_PREFIX:
-        ret = new KeyPrefixRegionSplitPointRestriction();
+        ret = new KeyPrefixRegionSplitRestriction();
         break;
       case RESTRICTION_TYPE_DELIMITED_KEY_PREFIX:
-        ret = new DelimitedKeyPrefixRegionSplitPointRestriction();
+        ret = new DelimitedKeyPrefixRegionSplitRestriction();
         break;
       default:
-        LOG.warn("Invalid RegionSplitPointRestriction type specified: {}. "
-          + "Using the default RegionSplitPointRestriction", type);
-        ret = new NoRegionSplitPointRestriction();
+        LOG.warn("Invalid RegionSplitRestriction type specified: {}. "
+          + "Using the default RegionSplitRestriction", type);
+        ret = new NoRegionSplitRestriction();
         break;
     }
     ret.initialize(tableDescriptor, conf);
@@ -80,7 +80,7 @@ public abstract class RegionSplitPointRestriction {
   }
 
   /**
-   * Initialize the RegionSplitPointRestriction instance
+   * Initialize the RegionSplitRestriction instance
    *
    * @param tableDescriptor the table descriptor
    * @param conf the configuration

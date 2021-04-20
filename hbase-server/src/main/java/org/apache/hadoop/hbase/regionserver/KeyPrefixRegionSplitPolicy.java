@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * This ensures that a region is not split "inside" a prefix of a row key.
  * I.e. rows can be co-located in a region by their prefix.
  *
- * @deprecated since 3.0.0 and will be removed in 4.0.0. Use {@link RegionSplitPointRestriction},
+ * @deprecated since 3.0.0 and will be removed in 4.0.0. Use {@link RegionSplitRestriction},
  *   instead.
  */
 @Deprecated

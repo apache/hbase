@@ -23,10 +23,10 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A RegionSplitPointRestriction implementation that does nothing.
+ * A RegionSplitRestriction implementation that does nothing.
  */
 @InterfaceAudience.Private
-public class NoRegionSplitPointRestriction extends RegionSplitPointRestriction {
+public class NoRegionSplitRestriction extends RegionSplitRestriction {
 
   @Override
   public void initialize(TableDescriptor tableDescriptor, Configuration conf) throws IOException {

@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * ensures that all rows starting with the same userid, belongs to the same region.
  * @see KeyPrefixRegionSplitPolicy
  *
- * @deprecated since 3.0.0 and will be removed in 4.0.0. Use {@link RegionSplitPointRestriction},
+ * @deprecated since 3.0.0 and will be removed in 4.0.0. Use {@link RegionSplitRestriction},
  *   instead.
  */
 @Deprecated

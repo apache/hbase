@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.RegionSplitPointRestriction;
+import org.apache.hadoop.hbase.regionserver.RegionSplitRestriction;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -115,10 +115,10 @@ public class SplitTableRegionProcedure
       .get(getTableName());
     Configuration conf = env.getMasterConfiguration();
     if (hasBestSplitRow()) {
-      // Apply the split point restriction for the table to the user-specified split point
-      RegionSplitPointRestriction splitPointRestriction =
-        RegionSplitPointRestriction.create(tableDescriptor, conf);
-      bestSplitRow = splitPointRestriction.getRestrictedSplitPoint(bestSplitRow);
+      // Apply the split restriction for the table to the user-specified split point
+      RegionSplitRestriction splitRestriction =
+        RegionSplitRestriction.create(tableDescriptor, conf);
+      bestSplitRow = splitRestriction.getRestrictedSplitPoint(bestSplitRow);
     }
     checkSplittable(env, regionToSplit);
     final TableName table = regionToSplit.getTable();
