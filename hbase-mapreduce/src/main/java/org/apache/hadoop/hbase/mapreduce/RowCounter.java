@@ -327,7 +327,7 @@ public class RowCounter extends AbstractHBaseTool {
     this.startTime = getOptionAsLong(cmd, OPT_START_TIME, 0L);
     this.endTime = getOptionAsLong(cmd, OPT_END_TIME, HConstants.LATEST_TIMESTAMP);
     this.expectedCount = getOptionAsLong(cmd, OPT_EXPECTED_COUNT, Long.MIN_VALUE);
-    this.cacheBlocks = cmd.hasOption(OPT_CACHE_BLOCKS) ? true : false;
+    this.cacheBlocks = cmd.hasOption(OPT_CACHE_BLOCKS);
 
     for(int i=1; i<cmd.getArgList().size(); i++){
       String argument = cmd.getArgList().get(i);
