@@ -541,6 +541,13 @@
                                       <exclude>keytab.txt</exclude>
                                     </excludes>
                                   </filter>
+                                  <filter>
+                                    <!-- Remove the shaded guava added in hadoop-3.3.1+-->
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                      <exclude>org/apache/hadoop/thirdparty/**/*</exclude>
+                                    </excludes>
+                                  </filter>
                                 </filters>
                             </configuration>
                         </execution>
