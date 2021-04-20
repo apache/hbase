@@ -520,6 +520,8 @@
                       <!-- We already concat NOTICE, safe to drop individual ones -->
                       <exclude>LICENSE</exclude>
                       <exclude>NOTICE</exclude>
+                      <!-- Remove the shaded guava added in hadoop-3.3.1+-->
+                      <exclude>org/apache/hadoop/thirdparty/**/*</exclude>
                     </excludes>
                   </filter>
                   <filter>
