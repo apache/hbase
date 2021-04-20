@@ -735,6 +735,7 @@ public class HRegionServer extends AbstractServer implements
    */
   protected void waitForMasterActive() {}
 
+  @Override
   protected String getProcessName() {
     return REGIONSERVER;
   }
@@ -2606,7 +2607,6 @@ public class HRegionServer extends AbstractServer implements
    * Method will block until a master is available. You can break from this
    * block by requesting the server stop.
    *
-   * @return master + port, or null if server has been stopped
    */
 
   private synchronized void createRegionServerStatusStub(){

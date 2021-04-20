@@ -55,6 +55,7 @@ public class HCompactionServer extends AbstractServer {
   public static final String COMPACTIONSERVER = "compactionserver";
   private static final Logger LOG = LoggerFactory.getLogger(HCompactionServer.class);
 
+  @Override
   protected String getProcessName() {
     return COMPACTIONSERVER;
   }

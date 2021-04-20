@@ -158,7 +158,7 @@ public abstract class AbstractServer extends Thread implements Server {
     }
   }
 
-  public AbstractServer(final Configuration conf, String processName) throws IOException {
+  protected AbstractServer(final Configuration conf, String processName) throws IOException {
     super(processName); // thread name
     this.startcode = System.currentTimeMillis();
     this.conf = conf;
@@ -275,8 +275,9 @@ public abstract class AbstractServer extends Thread implements Server {
    * Get the current master from ZooKeeper and open the RPC connection to it. To get a fresh
    * connection, the current rssStub must be null. Method will block until a master is available.
    * You can break from this block by requesting the server stop.
+   * @param tClass the protobuf generated service class
    * @param refresh If true then master address will be read from ZK, otherwise use cached data
-   * @return master + port, or null if server has been stopped
+   * @return the BlockingInterface of protobuf generated service class
    */
   @InterfaceAudience.Private
   protected synchronized <T extends org.apache.hbase.thirdparty.com.google.protobuf.Service> Object
