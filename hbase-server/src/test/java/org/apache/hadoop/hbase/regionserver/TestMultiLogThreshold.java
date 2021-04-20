@@ -130,15 +130,17 @@ public class TestMultiLogThreshold {
       }
     }).when(appender).append(any(org.apache.logging.log4j.core.LogEvent.class));
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(RSRpcServices.class)).addAppender(appender);
+        .getLogger(RSRpcServices.class)).addAppender(appender);
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(AbstractRpcServices.class)).addAppender(appender);
+        .getLogger(AbstractRpcServices.class)).addAppender(appender);
   }
 
   @After
   public void tearDown() throws Exception {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(RSRpcServices.class)).removeAppender(appender);
+        .getLogger(RSRpcServices.class)).removeAppender(appender);
+    ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+        .getLogger(AbstractRpcServices.class)).removeAppender(appender);
     util.shutdownMiniCluster();
   }
 
