@@ -410,7 +410,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       BaseLoadBalancer.Cluster cluster = mockCluster(mockCluster);
       costFunction.init(cluster);
       double cost = costFunction.cost();
-      assertTrue(cost >= 0);
+      assertTrue(cost >= -0.01);
       assertTrue(cost <= 1.01);
     }
   }
@@ -471,7 +471,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       statThree[i] = (0);
       statThree[i+100] = 100;
     }
-    assertEquals(0.5, costFunction.costFromArray(statThree), 0.01);
+    assertEquals(0.0708881205008336, costFunction.costFromArray(statThree), 0.01);
   }
 
   @Test
