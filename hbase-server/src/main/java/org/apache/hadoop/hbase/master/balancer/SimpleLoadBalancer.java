@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
@@ -113,11 +113,8 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     Map<ServerName, Integer> server2LoadMap = new HashMap<>();
     float sum = 0;
     for (Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> clusterEntry : clusterLoad
-        .entrySet()) {
+      .entrySet()) {
       for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterEntry.getValue().entrySet()) {
-        if (entry.getKey().equals(masterServerName)) {
-          continue; // we shouldn't include master as potential assignee
-        }
         int regionNum = entry.getValue().size();
         server2LoadMap.compute(entry.getKey(), (k, v) -> v == null ? regionNum : regionNum + v);
         sum += regionNum;
@@ -255,18 +252,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   @Override
   public List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
-    List<RegionPlan> regionsToReturn = balanceMasterRegions(loadOfOneTable);
-    if (regionsToReturn != null || loadOfOneTable == null || loadOfOneTable.size() <= 1) {
-      return regionsToReturn;
-    }
-    if (masterServerName != null && loadOfOneTable.containsKey(masterServerName)) {
-      if (loadOfOneTable.size() <= 2) {
-        return null;
-      }
-      loadOfOneTable = new HashMap<>(loadOfOneTable);
-      loadOfOneTable.remove(masterServerName);
-    }
-
     long startTime = System.currentTimeMillis();
 
     // construct a Cluster object with clusterMap and rest of the
@@ -294,7 +279,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     // TODO: Look at data block locality or a more complex load to do this
     MinMaxPriorityQueue<RegionPlan> regionsToMove =
       MinMaxPriorityQueue.orderedBy(rpComparator).create();
-    regionsToReturn = new ArrayList<>();
+    List<RegionPlan> regionsToReturn = new ArrayList<>();
 
     // Walk down most loaded, pruning each to the max
     int serversOverloaded = 0;
@@ -322,9 +307,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
           hri = regions.get(regions.size() - 1 - i);
         }
         i++;
-        // Don't rebalance special regions.
-        if (shouldBeOnMaster(hri)
-            && masterServerName.equals(sal.getServerName())) continue;
         regionsToMove.add(new RegionPlan(hri, sal.getServerName(), null));
         numTaken++;
         if (numTaken >= numToOffload) break;

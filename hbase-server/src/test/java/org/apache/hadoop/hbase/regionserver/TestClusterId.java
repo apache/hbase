@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -114,8 +113,7 @@ public class TestClusterId {
     }
     TEST_UTIL.startMiniHBaseCluster();
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    int expected = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration())? 2: 1;
-    assertEquals(expected, master.getServerManager().getOnlineServersList().size());
+    assertEquals(1, master.getServerManager().getOnlineServersList().size());
   }
 
 }

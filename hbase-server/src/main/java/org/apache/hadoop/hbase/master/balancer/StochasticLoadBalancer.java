@@ -381,19 +381,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @Override
   public synchronized List<RegionPlan> balanceTable(TableName tableName, Map<ServerName,
     List<RegionInfo>> loadOfOneTable) {
-    List<RegionPlan> plans = balanceMasterRegions(loadOfOneTable);
-    if (plans != null || loadOfOneTable == null || loadOfOneTable.size() <= 1) {
-      return plans;
-    }
-
-    if (masterServerName != null && loadOfOneTable.containsKey(masterServerName)) {
-      if (loadOfOneTable.size() <= 2) {
-        return null;
-      }
-      loadOfOneTable = new HashMap<>(loadOfOneTable);
-      loadOfOneTable.remove(masterServerName);
-    }
-
     // On clusters with lots of HFileLinks or lots of reference files,
     // instantiating the storefile infos can be quite expensive.
     // Allow turning this feature off if the locality cost is not going to
@@ -485,7 +472,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // update costs metrics
     updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
     if (initCost > currentCost) {
-      plans = createRegionPlans(cluster);
+      List<RegionPlan> plans = createRegionPlans(cluster);
       LOG.info("Finished computing new load balance plan. Computation took {}" +
         " to try {} different iterations.  Found a solution that moves " +
         "{} regions; Going from a computed cost of {}" +

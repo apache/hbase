@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -37,7 +36,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -1034,13 +1032,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected ServerName masterServerName;
   protected MasterServices services;
 
-  /**
-   * @deprecated since 2.4.0, will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
-   */
-  @Deprecated
-  protected boolean onlySystemTablesOnMaster;
-
   @Override
   public void setConf(Configuration conf) {
     this.config = conf;
@@ -1057,109 +1048,18 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       overallSlop = 1;
     }
 
-    this.onlySystemTablesOnMaster = LoadBalancer.isSystemTablesOnlyOnMaster(this.config);
-
     this.rackManager = new RackManager(getConf());
     if (useRegionFinder) {
       regionFinder.setConf(conf);
     }
     this.isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
     // Print out base configs. Don't print overallSlop since it for simple balancer exclusively.
-    LOG.info("slop={}, systemTablesOnMaster={}", this.slop, this.onlySystemTablesOnMaster);
+    LOG.info("slop={}", this.slop);
   }
 
   protected void setSlop(Configuration conf) {
     this.slop = conf.getFloat("hbase.regions.slop", (float) 0.2);
     this.overallSlop = conf.getFloat("hbase.regions.overallSlop", slop);
-  }
-
-  /**
-   * Check if a region belongs to some system table.
-   * If so, the primary replica may be expected to be put on the master regionserver.
-   *
-   * @deprecated since 2.4.0, will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
-   */
-  @Deprecated
-  public boolean shouldBeOnMaster(RegionInfo region) {
-    return this.onlySystemTablesOnMaster && region.getTable().isSystemTable();
-  }
-
-  /**
-   * Balance the regions that should be on master regionserver.
-   *
-   * @deprecated since 2.4.0, will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
-   */
-  @Deprecated
-  protected List<RegionPlan> balanceMasterRegions(Map<ServerName, List<RegionInfo>> clusterMap) {
-    if (masterServerName == null || clusterMap == null || clusterMap.size() <= 1) return null;
-    List<RegionPlan> plans = null;
-    List<RegionInfo> regions = clusterMap.get(masterServerName);
-    if (regions != null) {
-      Iterator<ServerName> keyIt = null;
-      for (RegionInfo region: regions) {
-        if (shouldBeOnMaster(region)) continue;
-
-        // Find a non-master regionserver to host the region
-        if (keyIt == null || !keyIt.hasNext()) {
-          keyIt = clusterMap.keySet().iterator();
-        }
-        ServerName dest = keyIt.next();
-        if (masterServerName.equals(dest)) {
-          if (!keyIt.hasNext()) {
-            keyIt = clusterMap.keySet().iterator();
-          }
-          dest = keyIt.next();
-        }
-
-        // Move this region away from the master regionserver
-        RegionPlan plan = new RegionPlan(region, masterServerName, dest);
-        if (plans == null) {
-          plans = new ArrayList<>();
-        }
-        plans.add(plan);
-      }
-    }
-    for (Map.Entry<ServerName, List<RegionInfo>> server: clusterMap.entrySet()) {
-      if (masterServerName.equals(server.getKey())) continue;
-      for (RegionInfo region: server.getValue()) {
-        if (!shouldBeOnMaster(region)) continue;
-
-        // Move this region to the master regionserver
-        RegionPlan plan = new RegionPlan(region, server.getKey(), masterServerName);
-        if (plans == null) {
-          plans = new ArrayList<>();
-        }
-        plans.add(plan);
-      }
-    }
-    return plans;
-  }
-
-  /**
-   * If master is configured to carry system tables only, in here is
-   * where we figure what to assign it.
-   *
-   * @deprecated since 2.4.0, will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
-   */
-  @Deprecated
-  @NonNull
-  protected Map<ServerName, List<RegionInfo>> assignMasterSystemRegions(
-      Collection<RegionInfo> regions, List<ServerName> servers) {
-    Map<ServerName, List<RegionInfo>> assignments = new TreeMap<>();
-    if (this.onlySystemTablesOnMaster) {
-      if (masterServerName != null && servers.contains(masterServerName)) {
-        assignments.put(masterServerName, new ArrayList<>());
-        for (RegionInfo region : regions) {
-          if (shouldBeOnMaster(region)) {
-            assignments.get(masterServerName).add(region);
-          }
-        }
-      }
-    }
-    return assignments;
   }
 
   @Override
@@ -1281,26 +1181,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   @Override
   @NonNull
   public Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
-      List<ServerName> servers) throws HBaseIOException {
+    List<ServerName> servers) throws HBaseIOException {
     metricsBalancer.incrMiscInvocations();
-    Map<ServerName, List<RegionInfo>> assignments = assignMasterSystemRegions(regions, servers);
-    if (!assignments.isEmpty()) {
-      servers = new ArrayList<>(servers);
-      // Guarantee not to put other regions on master
-      servers.remove(masterServerName);
-      List<RegionInfo> masterRegions = assignments.get(masterServerName);
-      if (!masterRegions.isEmpty()) {
-        regions = new ArrayList<>(regions);
-        regions.removeAll(masterRegions);
-      }
-    }
-    /**
-     * only need assign system table
-     */
-    if (regions.isEmpty()) {
-      return assignments;
-    }
-
     int numServers = servers == null ? 0 : servers.size();
     if (numServers == 0) {
       LOG.warn("Wanted to do round robin assignment but no servers to assign to");
@@ -1313,12 +1195,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     // and balanced. This should also run fast with fewer number of iterations.
 
     if (numServers == 1) { // Only one server, nothing fancy we can do here
-      ServerName server = servers.get(0);
-      assignments.put(server, new ArrayList<>(regions));
-      return assignments;
+      return Collections.singletonMap(servers.get(0), new ArrayList<>(regions));
     }
 
     Cluster cluster = createCluster(servers, regions);
+    Map<ServerName, List<RegionInfo>> assignments = new HashMap<>();
     roundRobinAssignment(cluster, regions, servers, assignments);
     return assignments;
   }
@@ -1374,17 +1255,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   public ServerName randomAssignment(RegionInfo regionInfo, List<ServerName> servers)
       throws HBaseIOException {
     metricsBalancer.incrMiscInvocations();
-    if (servers != null && servers.contains(masterServerName)) {
-      if (shouldBeOnMaster(regionInfo)) {
-        return masterServerName;
-      }
-      if (!LoadBalancer.isTablesOnMaster(getConf())) {
-        // Guarantee we do not put any regions on master
-        servers = new ArrayList<>(servers);
-        servers.remove(masterServerName);
-      }
-    }
-
     int numServers = servers == null ? 0 : servers.size();
     if (numServers == 0) {
       LOG.warn("Wanted to retain assignment but no servers to assign to");
@@ -1428,28 +1298,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       List<ServerName> servers) throws HBaseIOException {
     // Update metrics
     metricsBalancer.incrMiscInvocations();
-    Map<ServerName, List<RegionInfo>> assignments = assignMasterSystemRegions(regions.keySet(), servers);
-    if (!assignments.isEmpty()) {
-      servers = new ArrayList<>(servers);
-      // Guarantee not to put other regions on master
-      servers.remove(masterServerName);
-      List<RegionInfo> masterRegions = assignments.get(masterServerName);
-      regions = regions.entrySet().stream().filter(e -> !masterRegions.contains(e.getKey()))
-          .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-    if (regions.isEmpty()) {
-      return assignments;
-    }
-
     int numServers = servers == null ? 0 : servers.size();
     if (numServers == 0) {
       LOG.warn("Wanted to do retain assignment but no servers to assign to");
       return Collections.emptyMap();
     }
+
     if (numServers == 1) { // Only one server, nothing fancy we can do here
-      ServerName server = servers.get(0);
-      assignments.put(server, new ArrayList<>(regions.keySet()));
-      return assignments;
+      return Collections.singletonMap(servers.get(0), new ArrayList<>(regions.keySet()));
     }
 
     // Group all of the old assignments by their hostname.
@@ -1458,6 +1314,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     // Group the servers by their hostname. It's possible we have multiple
     // servers on the same host on different ports.
+    Map<ServerName, List<RegionInfo>> assignments = new HashMap<>();
     ArrayListMultimap<String, ServerName> serversByHostname = ArrayListMultimap.create();
     for (ServerName server : servers) {
       assignments.put(server, new ArrayList<>());

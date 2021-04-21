@@ -605,17 +605,14 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * If configured to put regions on active master,
-   * wait till a backup master becomes active.
-   * Otherwise, loop till the server is stopped or aborted.
+   * Loop till the server is stopped or aborted.
    */
   @Override
-  protected void waitForMasterActive(){
+  protected void waitForMasterActive() {
     if (maintenanceMode) {
       return;
     }
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(conf);
-    while (!(tablesOnMaster && activeMaster) && !isStopped() && !isAborted()) {
+    while (!isStopped() && !isAborted()) {
       sleeper.sleep();
     }
   }
@@ -658,7 +655,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   protected void configureInfoServer() {
     infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.setAttribute(MASTER, this);
-    if (LoadBalancer.isTablesOnMaster(conf)) {
+    if (maintenanceMode) {
       super.configureInfoServer();
     }
   }
@@ -3703,7 +3700,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public Map<String, ReplicationStatus> getWalGroupsReplicationStatus() {
-    if (!this.isOnline() || !LoadBalancer.isMasterCanHostUserRegions(conf)) {
+    if (!this.isOnline() || !maintenanceMode) {
       return new HashMap<>();
     }
     return super.getWalGroupsReplicationStatus();
