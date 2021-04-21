@@ -38,6 +38,8 @@ public class MetricsMasterSourceImpl
 
   private final MetricsMasterWrapper masterWrapper;
   private MutableFastCounter clusterRequestsCounter;
+  private MutableFastCounter clusterReadRequestsCounter;
+  private MutableFastCounter clusterWriteRequestsCounter;
 
   private OperationMetrics serverCrashMetrics;
 
@@ -63,6 +65,8 @@ public class MetricsMasterSourceImpl
   public void init() {
     super.init();
     clusterRequestsCounter = metricsRegistry.newCounter(CLUSTER_REQUESTS_NAME, "", 0L);
+    clusterReadRequestsCounter = metricsRegistry.newCounter(CLUSTER_READ_REQUESTS_NAME, "", 0L);
+    clusterWriteRequestsCounter = metricsRegistry.newCounter(CLUSTER_WRITE_REQUESTS_NAME, "", 0L);
 
     /*
      * NOTE: Please refer to HBASE-9774 and HBASE-14282. Based on these two issues, HBase is
@@ -75,6 +79,16 @@ public class MetricsMasterSourceImpl
   @Override
   public void incRequests(final long inc) {
     this.clusterRequestsCounter.incr(inc);
+  }
+
+  @Override
+  public void incReadRequests(final long inc) {
+    this.clusterReadRequestsCounter.incr(inc);
+  }
+
+  @Override
+  public void incWriteRequests(final long inc) {
+    this.clusterWriteRequestsCounter.incr(inc);
   }
 
   @Override

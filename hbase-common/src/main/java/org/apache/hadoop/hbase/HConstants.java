@@ -201,6 +201,9 @@ public final class HConstants {
   /** Configuration key for the list of master host:ports **/
   public static final String MASTER_ADDRS_KEY = "hbase.masters";
 
+  /** Configuration cluster read & write requests report **/
+  public static final String HBASE_CLUSTER_REQUEST_REPORT_ENABLED = "hbase.cluster.request.report.enabled";
+
   /** Full class name of the Zookeeper based connection registry implementation */
   public static final String ZK_CONNECTION_REGISTRY_CLASS =
       "org.apache.hadoop.hbase.client.ZKConnectionRegistry";

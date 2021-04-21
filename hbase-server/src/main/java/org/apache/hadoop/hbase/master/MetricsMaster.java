@@ -76,6 +76,20 @@ public class MetricsMaster {
   }
 
   /**
+   * @param inc How much to add to read requests.
+   */
+  public void incrementReadRequests(final long inc) {
+    masterSource.incReadRequests(inc);
+  }
+
+  /**
+   * @param inc How much to add to write requests.
+   */
+  public void incrementWriteRequests(final long inc) {
+    masterSource.incWriteRequests(inc);
+  }
+
+  /**
    * Sets the number of space quotas defined.
    *
    * @see MetricsMasterQuotaSource#updateNumSpaceQuotas(long)

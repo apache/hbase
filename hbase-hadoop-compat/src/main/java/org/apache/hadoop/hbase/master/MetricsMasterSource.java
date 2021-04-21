@@ -69,6 +69,8 @@ public interface MetricsMasterSource extends BaseSource {
   String OFFLINE_REGION_COUNT_NAME = "offlineRegionCount";
 
   String CLUSTER_REQUESTS_NAME = "clusterRequests";
+  String CLUSTER_READ_REQUESTS_NAME = "clusterReadRequests";
+  String CLUSTER_WRITE_REQUESTS_NAME = "clusterWriteRequests";
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
   String MASTER_FINISHED_INITIALIZATION_TIME_DESC =
@@ -97,6 +99,22 @@ public interface MetricsMasterSource extends BaseSource {
    * @param inc Ammount to increment the total by.
    */
   void incRequests(final long inc);
+
+  /**
+   * Increment the number of read requests the cluster has seen.
+   *
+   * @param inc Ammount to increment the total by.
+   */
+  void incReadRequests(final long inc);
+
+
+  /**
+   * Increment the number of write requests the cluster has seen.
+   *
+   * @param inc Ammount to increment the total by.
+   */
+  void incWriteRequests(final long inc);
+
 
   /**
    * @return {@link OperationMetrics} containing common metrics for server crash operation
