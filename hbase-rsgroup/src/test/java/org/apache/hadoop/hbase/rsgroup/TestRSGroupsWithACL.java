@@ -119,6 +119,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
         getMasterCoprocessorHost().findCoprocessor(RSGroupAdminEndpoint.class.getName());
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME);
+    TEST_UTIL.waitUntilNoRegionsInTransition();
 
     // create a set of test users
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
