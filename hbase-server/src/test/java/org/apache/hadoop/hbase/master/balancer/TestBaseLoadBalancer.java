@@ -531,7 +531,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       new BalancerClusterState(clusterState, null, locationFinder, null);
 
     // this is ok, it is just a test
-    int r0 = ArrayUtils.indexOf(cluster.regions, regions.get(0)); 
+    int r0 = ArrayUtils.indexOf(cluster.regions, regions.get(0));
     int r1 = ArrayUtils.indexOf(cluster.regions, regions.get(1));
     int r10 = ArrayUtils.indexOf(cluster.regions, regions.get(10));
     int r42 = ArrayUtils.indexOf(cluster.regions, regions.get(42));

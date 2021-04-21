@@ -26,7 +26,6 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -214,7 +213,7 @@ class BalancerClusterState {
 
     int tableIndex = 0, regionIndex = 0, regionPerServerIndex = 0;
 
-    for (Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
+    for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
       if (entry.getKey() == null) {
         LOG.warn("SERVERNAME IS NULL, skipping " + entry.getValue());
         continue;
@@ -242,15 +241,15 @@ class BalancerClusterState {
     }
 
     hosts = new String[numHosts];
-    for (Entry<String, Integer> entry : hostsToIndex.entrySet()) {
+    for (Map.Entry<String, Integer> entry : hostsToIndex.entrySet()) {
       hosts[entry.getValue()] = entry.getKey();
     }
     racks = new String[numRacks];
-    for (Entry<String, Integer> entry : racksToIndex.entrySet()) {
+    for (Map.Entry<String, Integer> entry : racksToIndex.entrySet()) {
       racks[entry.getValue()] = entry.getKey();
     }
 
-    for (Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
+    for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
       int serverIndex = serversToIndex.get(entry.getKey().getAddress());
       regionPerServerIndex = serverIndexToRegionsOffset[serverIndex];
 
@@ -678,16 +677,16 @@ class BalancerClusterState {
     // check whether this caused maxRegionsPerTable in the new Server to be updated
     if (numRegionsPerServerPerTable[newServer][tableIndex] > numMaxRegionsPerTable[tableIndex]) {
       numMaxRegionsPerTable[tableIndex] = numRegionsPerServerPerTable[newServer][tableIndex];
-    } else if (oldServer >= 0 && (numRegionsPerServerPerTable[oldServer][tableIndex] +
-      1) == numMaxRegionsPerTable[tableIndex]) {
-        // recompute maxRegionsPerTable since the previous value was coming from the old server
-        numMaxRegionsPerTable[tableIndex] = 0;
-        for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
-          if (aNumRegionsPerServerPerTable[tableIndex] > numMaxRegionsPerTable[tableIndex]) {
-            numMaxRegionsPerTable[tableIndex] = aNumRegionsPerServerPerTable[tableIndex];
-          }
+    } else if (oldServer >= 0 && (numRegionsPerServerPerTable[oldServer][tableIndex]
+        + 1) == numMaxRegionsPerTable[tableIndex]) {
+      // recompute maxRegionsPerTable since the previous value was coming from the old server
+      numMaxRegionsPerTable[tableIndex] = 0;
+      for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
+        if (aNumRegionsPerServerPerTable[tableIndex] > numMaxRegionsPerTable[tableIndex]) {
+          numMaxRegionsPerTable[tableIndex] = aNumRegionsPerServerPerTable[tableIndex];
         }
       }
+    }
 
     // update for servers
     int primary = regionIndexToPrimaryIndex[region];

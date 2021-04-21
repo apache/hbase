@@ -766,22 +766,23 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
      * that this action is performed on. */
     void postAction(BalanceAction action) {
       switch (action.getType()) {
-      case NULL: break;
-      case ASSIGN_REGION:
-        AssignRegionAction ar = (AssignRegionAction) action;
-        regionMoved(ar.getRegion(), -1, ar.getServer());
-        break;
-      case MOVE_REGION:
-        MoveRegionAction mra = (MoveRegionAction) action;
-        regionMoved(mra.getRegion(), mra.getFromServer(), mra.getToServer());
-        break;
-      case SWAP_REGIONS:
-        SwapRegionsAction a = (SwapRegionsAction) action;
-        regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer());
-        regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer());
-        break;
-      default:
-        throw new RuntimeException("Uknown action:" + action.getType());
+        case NULL:
+          break;
+        case ASSIGN_REGION:
+          AssignRegionAction ar = (AssignRegionAction) action;
+          regionMoved(ar.getRegion(), -1, ar.getServer());
+          break;
+        case MOVE_REGION:
+          MoveRegionAction mra = (MoveRegionAction) action;
+          regionMoved(mra.getRegion(), mra.getFromServer(), mra.getToServer());
+          break;
+        case SWAP_REGIONS:
+          SwapRegionsAction a = (SwapRegionsAction) action;
+          regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer());
+          regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer());
+          break;
+        default:
+          throw new RuntimeException("Uknown action:" + action.getType());
       }
     }
 
