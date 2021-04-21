@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A RegionSplitRestriction implementation that does nothing.
+ * A {@link RegionSplitRestriction} implementation that does nothing.
  */
 @InterfaceAudience.Private
 public class NoRegionSplitRestriction extends RegionSplitRestriction {

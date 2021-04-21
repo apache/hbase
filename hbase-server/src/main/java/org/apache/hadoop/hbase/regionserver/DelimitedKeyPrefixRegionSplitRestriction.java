@@ -27,8 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A RegionSplitRestriction implementation that groups rows by a prefix of the row-key with a
- * delimiter. Only the first delimiter for the row key will define the prefix of the row key that
+ * A {@link RegionSplitRestriction} implementation that groups rows by a prefix of the row-key with
+ * a delimiter. Only the first delimiter for the row key will define the prefix of the row key that
  * is used for grouping.
  *
  * This ensures that a region is not split "inside" a prefix of a row key.

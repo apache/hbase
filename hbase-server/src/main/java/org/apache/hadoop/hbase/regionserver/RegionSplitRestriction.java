@@ -27,6 +27,10 @@ import org.slf4j.LoggerFactory;
 /**
  * A split restriction that restricts the pattern of the split point.
  *
+ * The difference between {@link RegionSplitPolicy} and RegionSplitRestriction is that
+ * RegionSplitRestriction defines how to split while {@link RegionSplitPolicy} defines when we need
+ * to split.
+ *
  * There are three implementations as follows:
  * @see NoRegionSplitRestriction
  * @see KeyPrefixRegionSplitRestriction
