@@ -26,12 +26,37 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A split restriction that restricts the pattern of the split point.
- *
+ * <p>
  * The difference between {@link RegionSplitPolicy} and RegionSplitRestriction is that
  * RegionSplitRestriction defines how to split while {@link RegionSplitPolicy} defines when we need
  * to split.
+ * <p>
+ * We can specify a split restriction, "KeyPrefix" or "DelimitedKeyPrefix", to a table with the
+ * "hbase.regionserver.region.split_restriction.type" property. The "KeyPrefix" split restriction
+ * groups rows by a prefix of the row-key. And the "DelimitedKeyPrefix" split restriction groups
+ * rows by a prefix of the row-key with a delimiter.
  *
- * There are three implementations as follows:
+ * For example:
+ * <pre>
+ * <code>
+ * # Create a table with a "KeyPrefix" split restriction, where the prefix length is 2 bytes
+ * hbase> create 'tbl1', 'fam',
+ *   {CONFIGURATION => {'hbase.regionserver.region.split_restriction.type' => 'KeyPrefix',
+ *                      'hbase.regionserver.region.split_restriction.prefix_length' => '2'}}
+ *
+ * # Create a table with a "DelimitedKeyPrefix" split restriction, where the delimiter is a comma
+ * hbase> create 'tbl2', 'fam',
+ *   {CONFIGURATION => {'hbase.regionserver.region.split_restriction.type' => 'DelimitedKeyPrefix',
+ *                      'hbase.regionserver.region.split_restriction.delimiter' => ','}}
+ * </code>
+ * </pre>
+ *
+ * Instead of specifying a split restriction to a table directly, we can also set the properties
+ * in hbase-site.xml. In this case, the specified split restriction is applied for all the tables.
+ * <p>
+ * Note that the split restriction is also applied to a user-specified split point so that we don't
+ * allow users to break the restriction.
+ *
  * @see NoRegionSplitRestriction
  * @see KeyPrefixRegionSplitRestriction
  * @see DelimitedKeyPrefixRegionSplitRestriction

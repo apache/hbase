@@ -118,7 +118,13 @@ public class SplitTableRegionProcedure
       // Apply the split restriction for the table to the user-specified split point
       RegionSplitRestriction splitRestriction =
         RegionSplitRestriction.create(tableDescriptor, conf);
-      bestSplitRow = splitRestriction.getRestrictedSplitPoint(bestSplitRow);
+      byte[] restrictedSplitRow = splitRestriction.getRestrictedSplitPoint(bestSplitRow);
+      if (!Bytes.equals(bestSplitRow, restrictedSplitRow)) {
+        LOG.warn("The specified split point {} violates the split restriction of the table. "
+            + "Using {} as a split point.", Bytes.toStringBinary(bestSplitRow),
+          Bytes.toStringBinary(restrictedSplitRow));
+        bestSplitRow = restrictedSplitRow;
+      }
     }
     checkSplittable(env, regionToSplit);
     final TableName table = regionToSplit.getTable();

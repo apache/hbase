@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A {@link RegionSplitRestriction} implementation that groups rows by a prefix of the row-key.
- *
+ * <p>
  * This ensures that a region is not split "inside" a prefix of a row key.
  * I.e. rows can be co-located in a region by their prefix.
  */
