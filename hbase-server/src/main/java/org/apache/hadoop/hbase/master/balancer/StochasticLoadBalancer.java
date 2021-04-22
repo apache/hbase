@@ -761,6 +761,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     boolean isNeeded() {
       return true;
     }
+
     float getMultiplier() {
       return multiplier;
     }
@@ -769,35 +770,39 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       this.multiplier = m;
     }
 
-    /** Called once per LB invocation to give the cost function
+    /**
+     * Called once per LB invocation to give the cost function
      * to initialize it's state, and perform any costly calculation.
      */
     void init(Cluster cluster) {
       this.cluster = cluster;
     }
 
-    /** Called once per cluster Action to give the cost function
+    /**
+     * Called once per cluster Action to give the cost function
      * an opportunity to update it's state. postAction() is always
      * called at least once before cost() is called with the cluster
-     * that this action is performed on. */
+     * that this action is performed on.
+     */
     void postAction(Action action) {
       switch (action.type) {
-      case NULL: break;
-      case ASSIGN_REGION:
-        AssignRegionAction ar = (AssignRegionAction) action;
-        regionMoved(ar.region, -1, ar.server);
-        break;
-      case MOVE_REGION:
-        MoveRegionAction mra = (MoveRegionAction) action;
-        regionMoved(mra.region, mra.fromServer, mra.toServer);
-        break;
-      case SWAP_REGIONS:
-        SwapRegionsAction a = (SwapRegionsAction) action;
-        regionMoved(a.fromRegion, a.fromServer, a.toServer);
-        regionMoved(a.toRegion, a.toServer, a.fromServer);
-        break;
-      default:
-        throw new RuntimeException("Uknown action:" + action.type);
+        case NULL:
+          break;
+        case ASSIGN_REGION:
+          AssignRegionAction ar = (AssignRegionAction) action;
+          regionMoved(ar.region, -1, ar.server);
+          break;
+        case MOVE_REGION:
+          MoveRegionAction mra = (MoveRegionAction) action;
+          regionMoved(mra.region, mra.fromServer, mra.toServer);
+          break;
+        case SWAP_REGIONS:
+          SwapRegionsAction a = (SwapRegionsAction) action;
+          regionMoved(a.fromRegion, a.fromServer, a.toServer);
+          regionMoved(a.toRegion, a.toServer, a.fromServer);
+          break;
+        default:
+          throw new RuntimeException("Uknown action:" + action.type);
       }
     }
 
@@ -821,58 +826,24 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       double total = getSum(stats);
 
       double count = stats.length;
-      double mean = total/count;
+      double mean = total / count;
 
-      // Compute max as if all region servers had 0 and one had the sum of all costs.  This must be
-      // a zero sum cost for this to make sense.
-      double max = ((count - 1) * mean) + (total - mean);
-
-      // It's possible that there aren't enough regions to go around
-      double min;
-      if (count > total) {
-        min = ((count - total) * mean) + ((1 - mean) * total);
-      } else {
-        // Some will have 1 more than everything else.
-        int numHigh = (int) (total - (Math.floor(mean) * count));
-        int numLow = (int) (count - numHigh);
-
-        min = (numHigh * (Math.ceil(mean) - mean)) + (numLow * (mean - Math.floor(mean)));
-
-      }
-      min = Math.max(0, min);
-      for (int i=0; i<stats.length; i++) {
+      for (int i = 0; i < stats.length; i++) {
         double n = stats[i];
         double diff = Math.abs(mean - n);
         totalCost += diff;
       }
 
-      double scaled =  scale(min, max, totalCost);
-      return scaled;
+      return Cluster
+        .scale(Cluster.getMinSkew(total, count), Cluster.getMaxSkew(total, count), totalCost);
     }
 
     private double getSum(double[] stats) {
       double total = 0;
-      for(double s:stats) {
+      for (double s : stats) {
         total += s;
       }
       return total;
-    }
-
-    /**
-     * Scale the value between 0 and 1.
-     *
-     * @param min   Min value
-     * @param max   The Max value
-     * @param value The value to be scaled.
-     * @return The scaled value.
-     */
-    protected double scale(double min, double max, double value) {
-      if (max <= min || value <= min) {
-        return 0;
-      }
-      if ((max - min) == 0) return 0;
-
-      return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
     }
   }
 
@@ -926,7 +897,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return 1000000;   // return a number much greater than any of the other cost
       }
 
-      return scale(0, Math.min(cluster.numRegions, maxMoves), moveCost);
+      return Cluster.scale(0, Math.min(cluster.numRegions, maxMoves), moveCost);
     }
   }
 
@@ -1034,15 +1005,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     @Override
     protected double cost() {
-      double max = cluster.numRegions;
-      double min = ((double) cluster.numRegions) / cluster.numServers;
-      double value = 0;
-
-      for (int i = 0; i < cluster.numMaxRegionsPerTable.length; i++) {
-        value += cluster.numMaxRegionsPerTable[i];
-      }
-
-      return scale(min, max, value);
+      return Cluster.scale(cluster.minRegionSkewByTable, cluster.maxRegionSkewByTable, cluster.regionSkewByTable);
     }
   }
 
@@ -1343,7 +1306,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       for (int i = 0 ; i < costsPerGroup.length; i++) {
         totalCost += costsPerGroup[i];
       }
-      return scale(0, maxCost, totalCost);
+      return Cluster.scale(0, maxCost, totalCost);
     }
 
     /**
