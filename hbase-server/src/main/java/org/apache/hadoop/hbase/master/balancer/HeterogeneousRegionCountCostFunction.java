@@ -120,7 +120,7 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
    * any costly calculation.
    */
   @Override
-  void init(final BaseLoadBalancer.Cluster cluster) {
+  void init(final BalancerClusterState cluster) {
     this.cluster = cluster;
     this.loadRules();
   }

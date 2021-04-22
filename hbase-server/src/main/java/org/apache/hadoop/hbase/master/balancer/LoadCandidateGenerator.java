@@ -24,14 +24,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 class LoadCandidateGenerator extends CandidateGenerator {
 
   @Override
-  BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
+  BalanceAction generate(BalancerClusterState cluster) {
     cluster.sortServersByRegionCount();
     int thisServer = pickMostLoadedServer(cluster, -1);
     int otherServer = pickLeastLoadedServer(cluster, thisServer);
     return pickRandomRegions(cluster, thisServer, otherServer);
   }
 
-  private int pickLeastLoadedServer(final BaseLoadBalancer.Cluster cluster, int thisServer) {
+  private int pickLeastLoadedServer(final BalancerClusterState cluster, int thisServer) {
     Integer[] servers = cluster.serverIndicesSortedByRegionCount;
 
     int index = 0;
@@ -44,7 +44,7 @@ class LoadCandidateGenerator extends CandidateGenerator {
     return servers[index];
   }
 
-  private int pickMostLoadedServer(final BaseLoadBalancer.Cluster cluster, int thisServer) {
+  private int pickMostLoadedServer(final BalancerClusterState cluster, int thisServer) {
     Integer[] servers = cluster.serverIndicesSortedByRegionCount;
 
     int index = servers.length - 1;
