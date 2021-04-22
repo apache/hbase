@@ -63,7 +63,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.AbstractRpcServices;
 import org.apache.hadoop.hbase.AbstractServer;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
@@ -88,7 +87,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -636,7 +634,7 @@ public class HRegionServer extends AbstractServer implements
     }
   }
   @Override
-  protected AbstractRpcServices getRpcService(){
+  protected RSRpcServices getRpcService(){
     return rpcServices;
   }
 
@@ -3639,12 +3637,6 @@ public class HRegionServer extends AbstractServer implements
 
   public NettyEventLoopGroupConfig getEventLoopGroupConfig() {
     return eventLoopGroupConfig;
-  }
-
-  @Override
-  public Connection createConnection(Configuration conf) throws IOException {
-    User user = UserProvider.instantiate(conf).getCurrent();
-    return ConnectionFactory.createConnection(conf, null, user);
   }
 
   void executeProcedure(long procId, RSProcedureCallable callable) {

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.compactionserver;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.AbstractRpcServices;
 import org.apache.hadoop.hbase.AbstractServer;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -119,7 +118,7 @@ public class HCompactionServer extends AbstractServer {
   }
 
   @Override
-  protected AbstractRpcServices getRpcService(){
+  protected CSRpcServices getRpcService(){
     return rpcServices;
   }
 

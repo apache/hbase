@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -176,7 +177,8 @@ public abstract class AbstractServer extends Thread implements Server {
 
   @Override
   public Connection createConnection(Configuration conf) throws IOException {
-    return null;
+    User user = UserProvider.instantiate(conf).getCurrent();
+    return ConnectionFactory.createConnection(conf, null, user);
   }
 
   @Override
