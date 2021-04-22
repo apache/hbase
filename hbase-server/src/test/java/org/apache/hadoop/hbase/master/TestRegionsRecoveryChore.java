@@ -316,6 +316,12 @@ public class TestRegionsRecoveryChore {
       }
 
       @Override
+      public long getReadRequestsCount() { return 0; }
+
+      @Override
+      public long getWriteRequestsCount() { return 0; }
+
+      @Override
       public Size getUsedHeapSize() {
         return null;
       }

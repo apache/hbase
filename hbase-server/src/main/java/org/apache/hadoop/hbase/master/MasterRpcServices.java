@@ -599,11 +599,12 @@ public class MasterRpcServices extends RSRpcServices implements
         // Up our metrics.
         master.metricsMaster.incrementRequests(
           sl.getTotalNumberOfRequests() - (oldLoad != null ? oldLoad.getRequestCount() : 0));
-        if (getConfiguration().getBoolean(HConstants.HBASE_CLUSTER_REQUEST_REPORT_ENABLED, true)) {
-          for (ClusterStatusProtos.RegionLoad rl : sl.getRegionLoadsList()) {
-            master.metricsMaster.incrementReadRequests(rl.getReadRequestsCount());
-            master.metricsMaster.incrementWriteRequests(rl.getWriteRequestsCount());
-          }
+        if (sl != null && master.metricsMaster != null) {
+          // Up our metrics.
+          master.metricsMaster.incrementRequests(
+                  sl.getTotalNumberOfRequests() - (oldLoad != null ? oldLoad.getRequestCount() : 0));
+          master.metricsMaster.incrementReadRequests(sl.getReadRequestsCount() - (oldLoad != null ? oldLoad.getReadRequestsCount() : 0));
+          master.metricsMaster.incrementWriteRequests(sl.getWriteRequestsCount() - (oldLoad != null ? oldLoad.getWriteRequestsCount() : 0));
         }
       }
     } catch (IOException ioe) {
