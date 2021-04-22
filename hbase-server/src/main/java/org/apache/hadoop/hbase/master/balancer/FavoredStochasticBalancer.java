@@ -525,13 +525,13 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   private class FavoredNodeLocalityPicker extends CandidateGenerator {
 
     @Override
-    protected Cluster.Action generate(Cluster cluster) {
+    protected BalanceAction generate(BalancerClusterState cluster) {
 
       int thisServer = pickRandomServer(cluster);
       int thisRegion;
       if (thisServer == -1) {
         LOG.trace("Could not pick lowest local region server");
-        return Cluster.NullAction;
+        return BalanceAction.NULL_ACTION;
       } else {
         // Pick lowest local region on this server
         thisRegion = pickLowestLocalRegionOnServer(cluster, thisServer);
@@ -541,7 +541,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
           LOG.trace("Could not pick lowest local region even when region server held "
             + cluster.regionsPerServer[thisServer].length + " regions");
         }
-        return Cluster.NullAction;
+        return BalanceAction.NULL_ACTION;
       }
 
       RegionInfo hri = cluster.regions[thisRegion];
@@ -553,7 +553,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         } else {
           // No FN, ignore
           LOG.trace("Ignoring, no favored nodes for region: " + hri);
-          return Cluster.NullAction;
+          return BalanceAction.NULL_ACTION;
         }
       } else {
         // Pick other favored node with the highest locality
@@ -562,7 +562,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
       return getAction(thisServer, thisRegion, otherServer, -1);
     }
 
-    private int getDifferentFavoredNode(Cluster cluster, List<ServerName> favoredNodes,
+    private int getDifferentFavoredNode(BalancerClusterState cluster, List<ServerName> favoredNodes,
         int currentServer) {
       List<Integer> fnIndex = new ArrayList<>();
       for (ServerName sn : favoredNodes) {
@@ -584,7 +584,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
       return highestLocalRSIndex;
     }
 
-    private int pickLowestLocalRegionOnServer(Cluster cluster, int server) {
+    private int pickLowestLocalRegionOnServer(BalancerClusterState cluster, int server) {
       return cluster.getLowestLocalityRegionOnServer(server);
     }
   }
@@ -596,7 +596,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   class FavoredNodeLoadPicker extends CandidateGenerator {
 
     @Override
-    Cluster.Action generate(Cluster cluster) {
+    BalanceAction generate(BalancerClusterState cluster) {
       cluster.sortServersByRegionCount();
       int thisServer = pickMostLoadedServer(cluster);
       int thisRegion = pickRandomRegion(cluster, thisServer, 0);
@@ -607,7 +607,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         if (!FavoredNodesManager.isFavoredNodeApplicable(hri)) {
           otherServer = pickLeastLoadedServer(cluster, thisServer);
         } else {
-          return Cluster.NullAction;
+          return BalanceAction.NULL_ACTION;
         }
       } else {
         otherServer = pickLeastLoadedFNServer(cluster, favoredNodes, thisServer);
@@ -615,7 +615,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
       return getAction(thisServer, thisRegion, otherServer, -1);
     }
 
-    private int pickLeastLoadedServer(final Cluster cluster, int thisServer) {
+    private int pickLeastLoadedServer(final BalancerClusterState cluster, int thisServer) {
       Integer[] servers = cluster.serverIndicesSortedByRegionCount;
       int index;
       for (index = 0; index < servers.length ; index++) {
@@ -626,8 +626,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
       return servers[index];
     }
 
-    private int pickLeastLoadedFNServer(final Cluster cluster, List<ServerName> favoredNodes,
-        int currentServerIndex) {
+    private int pickLeastLoadedFNServer(final BalancerClusterState cluster,
+      List<ServerName> favoredNodes, int currentServerIndex) {
       List<Integer> fnIndex = new ArrayList<>();
       for (ServerName sn : favoredNodes) {
         if (cluster.serversToIndex.containsKey(sn.getAddress())) {
@@ -648,7 +648,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
       return leastLoadedFN;
     }
 
-    private int pickMostLoadedServer(final Cluster cluster) {
+    private int pickMostLoadedServer(final BalancerClusterState cluster) {
       Integer[] servers = cluster.serverIndicesSortedByRegionCount;
       int index;
       for (index = servers.length - 1; index > 0 ; index--) {

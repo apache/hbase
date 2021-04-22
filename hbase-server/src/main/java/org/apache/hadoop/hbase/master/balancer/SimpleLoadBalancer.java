@@ -256,7 +256,8 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
 
     // construct a Cluster object with clusterMap and rest of the
     // argument as defaults
-    Cluster c = new Cluster(loadOfOneTable, null, this.regionFinder, this.rackManager);
+    BalancerClusterState c =
+      new BalancerClusterState(loadOfOneTable, null, this.regionFinder, this.rackManager);
     if (!this.needsBalance(tableName, c) && !this.overallNeedsBalance()) {
       return null;
     }

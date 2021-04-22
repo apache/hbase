@@ -376,8 +376,8 @@ public class BalancerTestBase {
     return mockClusterServers(mockCluster, -1);
   }
 
-  protected BaseLoadBalancer.Cluster mockCluster(int[] mockCluster) {
-    return new BaseLoadBalancer.Cluster(
+  protected BalancerClusterState mockCluster(int[] mockCluster) {
+    return new BalancerClusterState(
       mockClusterServers(mockCluster, -1), null, null, null);
   }
 
