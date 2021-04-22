@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -184,9 +183,10 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     regionFinder.setClusterMetrics(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
     regionFinder.setConf(conf);
     regionFinder.setServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
-    Cluster cluster = new Cluster(serverAssignments, null, regionFinder, new RackManager(conf));
+    BalancerClusterState cluster =
+      new BalancerClusterState(serverAssignments, null, regionFinder, new RackManager(conf));
     LoadOnlyFavoredStochasticBalancer balancer = (LoadOnlyFavoredStochasticBalancer) TEST_UTIL
-        .getMiniHBaseCluster().getMaster().getLoadBalancer();
+      .getMiniHBaseCluster().getMaster().getLoadBalancer();
 
     cluster.sortServersByRegionCount();
     Integer[] servers = cluster.serverIndicesSortedByRegionCount;
@@ -203,13 +203,13 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
       if (userRegionPicked) {
         break;
       } else {
-        Cluster.Action action = loadPicker.generate(cluster);
-        if (action.type == Cluster.Action.Type.MOVE_REGION) {
-          Cluster.MoveRegionAction moveRegionAction = (Cluster.MoveRegionAction) action;
-          RegionInfo region = cluster.regions[moveRegionAction.region];
-          assertNotEquals(-1, moveRegionAction.toServer);
-          ServerName destinationServer = cluster.servers[moveRegionAction.toServer];
-          assertEquals(cluster.servers[moveRegionAction.fromServer], mostLoadedServer);
+        BalanceAction action = loadPicker.generate(cluster);
+        if (action.getType() == BalanceAction.Type.MOVE_REGION) {
+          MoveRegionAction moveRegionAction = (MoveRegionAction) action;
+          RegionInfo region = cluster.regions[moveRegionAction.getRegion()];
+          assertNotEquals(-1, moveRegionAction.getToServer());
+          ServerName destinationServer = cluster.servers[moveRegionAction.getToServer()];
+          assertEquals(cluster.servers[moveRegionAction.getFromServer()], mostLoadedServer);
           if (!region.getTable().isSystemTable()) {
             List<ServerName> favNodes = fnm.getFavoredNodes(region);
             assertTrue(favNodes.contains(

@@ -26,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class LocalityBasedCandidateGenerator extends CandidateGenerator {
 
   @Override
-  BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
+  BalanceAction generate(BalancerClusterState cluster) {
     // iterate through regions until you find one that is not on ideal host
     // start from a random point to avoid always balance the regions in front
     if (cluster.numRegions > 0) {
@@ -35,20 +35,20 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
         int region = (startIndex + i) % cluster.numRegions;
         int currentServer = cluster.regionIndexToServerIndex[region];
         if (currentServer != cluster.getOrComputeRegionsToMostLocalEntities(
-          BaseLoadBalancer.Cluster.LocalityType.SERVER)[region]) {
-          Optional<BaseLoadBalancer.Cluster.Action> potential = tryMoveOrSwap(cluster,
+          BalancerClusterState.LocalityType.SERVER)[region]) {
+          Optional<BalanceAction> potential = tryMoveOrSwap(cluster,
             currentServer, region, cluster.getOrComputeRegionsToMostLocalEntities(
-              BaseLoadBalancer.Cluster.LocalityType.SERVER)[region]);
+              BalancerClusterState.LocalityType.SERVER)[region]);
           if (potential.isPresent()) {
             return potential.get();
           }
         }
       }
     }
-    return BaseLoadBalancer.Cluster.NullAction;
+    return BalanceAction.NULL_ACTION;
   }
 
-  private Optional<BaseLoadBalancer.Cluster.Action> tryMoveOrSwap(BaseLoadBalancer.Cluster cluster,
+  private Optional<BalanceAction> tryMoveOrSwap(BalancerClusterState cluster,
       int fromServer, int fromRegion, int toServer) {
     // Try move first. We know apriori fromRegion has the highest locality on toServer
     if (cluster.serverHasTooFewRegions(toServer)) {
@@ -74,8 +74,8 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
     return Optional.empty();
   }
 
-  private double getWeightedLocality(BaseLoadBalancer.Cluster cluster, int region, int server) {
+  private double getWeightedLocality(BalancerClusterState cluster, int region, int server) {
     return cluster.getOrComputeWeightedLocality(region, server,
-      BaseLoadBalancer.Cluster.LocalityType.SERVER);
+      BalancerClusterState.LocalityType.SERVER);
   }
 }

@@ -83,10 +83,10 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
   }
 
   @Override
-  BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
+  BalanceAction generate(BalancerClusterState cluster) {
     int serverIndex = pickRandomServer(cluster);
     if (cluster.numServers <= 1 || serverIndex == -1) {
-      return BaseLoadBalancer.Cluster.NullAction;
+      return BalanceAction.NULL_ACTION;
     }
 
     int regionIndex = selectCoHostedRegionPerGroup(

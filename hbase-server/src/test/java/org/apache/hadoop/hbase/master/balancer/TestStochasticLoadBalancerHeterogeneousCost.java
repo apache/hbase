@@ -197,8 +197,8 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
         final HeterogeneousRegionCountCostFunction cf =
             new HeterogeneousRegionCountCostFunction(conf);
         assertNotNull(cf);
-        BaseLoadBalancer.Cluster cluster =
-            new BaseLoadBalancer.Cluster(serverMap, null, null, null);
+        BalancerClusterState cluster =
+            new BalancerClusterState(serverMap, null, null, null);
         cf.init(cluster);
 
         // checking that we all hosts have a number of regions below their limit
@@ -285,10 +285,10 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     StochasticLoadBalancer.RandomCandidateGenerator {
 
     @Override
-    public BaseLoadBalancer.Cluster.Action pickRandomRegions(BaseLoadBalancer.Cluster cluster,
+    public BalanceAction pickRandomRegions(BalancerClusterState cluster,
       int thisServer, int otherServer) {
       if (thisServer < 0 || otherServer < 0) {
-        return BaseLoadBalancer.Cluster.NullAction;
+        return BalanceAction.NULL_ACTION;
       }
 
       int thisRegion = pickRandomRegion(cluster, thisServer, 0.5);
@@ -298,7 +298,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     }
 
     @Override
-    BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
+    BalanceAction generate(BalancerClusterState cluster) {
       return super.generate(cluster);
     }
   }
