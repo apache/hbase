@@ -2033,6 +2033,9 @@
       <activation>
         <jdk>1.8</jdk>
       </activation>
+      <modules>
+        <module>hbase-thrift</module>
+      </modules>
       <build>
         <pluginManagement>
           <plugins>
