@@ -1,0 +1,159 @@
+<%doc>
+Copyright The Apache Software Foundation
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+ </%doc>
+
+<%args>
+List<ServerName> servers = null;
+HMaster master;
+</%args>
+
+<%import>
+        java.util.*;
+        org.apache.hadoop.hbase.master.HMaster;
+        org.apache.hadoop.hbase.procedure2.util.StringUtils;
+        org.apache.hadoop.hbase.replication.ReplicationLoadSource;
+        org.apache.hadoop.hbase.RegionMetrics;
+        org.apache.hadoop.hbase.ServerMetrics;
+        org.apache.hadoop.hbase.ServerName;
+        org.apache.hadoop.hbase.Size;
+        org.apache.hadoop.hbase.util.VersionInfo;
+        org.apache.hadoop.hbase.util.Pair;
+        org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+</%import>
+
+<%if (servers != null && servers.size() > 0)%>
+
+<%java>
+ServerName [] serverNames = servers.toArray(new ServerName[servers.size()]);
+Arrays.sort(serverNames);
+</%java>
+
+<div class="tabbable">
+    <ul class="nav nav-pills">
+        <li class="active"><a href="#tab_compactionserver_baseStats" data-toggle="tab">Base Stats</a></li>
+    </ul>
+    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
+        <div class="tab-pane active" id="tab_compactionserver_baseStats">
+            <& baseStats; serverNames = serverNames; &>
+        </div>
+    </div>
+</div>
+
+</%if>
+
+<%def baseStats>
+<%args>
+        ServerName [] serverNames;
+</%args>
+<table id="baseStatsTable" class="tablesorter table table-striped">
+<thead>
+<tr>
+    <th>ServerName</th>
+    <th>Start time</th>
+    <th>Last contact</th>
+    <th>Version</th>
+</tr>
+</thead>
+<tbody>
+<%java>
+    int totalRegions = 0;
+    int totalRequestsPerSecond = 0;
+    int inconsistentNodeNum = 0;
+    String masterVersion = VersionInfo.getVersion();
+    for (ServerName serverName: serverNames) {
+
+    ServerMetrics sl = master.getServerManager().getLoad(serverName);
+    String version = master.getCompactionServerVersion(serverName);
+    if (!masterVersion.equals(version)) {
+        inconsistentNodeNum ++;
+    }
+
+    double requestsPerSecond = 0.0;
+    int numRegionsOnline = 0;
+    long lastContact = 0;
+
+    if (sl != null) {
+        requestsPerSecond = sl.getRequestCountPerSecond();
+        numRegionsOnline = sl.getRegionMetrics().size();
+        totalRegions += sl.getRegionMetrics().size();
+        totalRequestsPerSecond += sl.getRequestCountPerSecond();
+        lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
+    }
+    long startcode = serverName.getStartcode();
+</%java>
+<tr>
+    <td><& serverNameLink; serverName=serverName; &></td>
+    <td><% new Date(startcode) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(lastContact, "s", 1) %></td>
+    <td><% version %></td>
+</tr>
+<%java>
+}
+</%java>
+</tbody>
+<tr><td>Total:<% servers.size() %></td>
+<td></td>
+<td></td>
+<%if inconsistentNodeNum > 0%>
+  <td style="color:red;"><% inconsistentNodeNum %> nodes with inconsistent version</td>
+<%else>
+   <td></td>
+</%if>
+</tr>
+</table>
+</%def>
+
+
+<%def serverNameLink>
+        <%args>
+        ServerName serverName;
+        </%args>
+        <%java>
+        int infoPort = master.getCompactionServerInfoPort(serverName);
+        String url = "//" + serverName.getHostname() + ":" + infoPort + "/cs-status";
+        </%java>
+
+        <%if infoPort > 0%>
+            <a href="<% url %>"><% serverName.getServerName() %></a>
+        <%else>
+            <% serverName.getServerName() %>
+        </%if>
+</%def>
+
+<%def emptyStat>
+        <%args>
+        ServerName serverName;
+        </%args>
+    <tr>
+    <td><& serverNameLink; serverName=serverName; &></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    </tr>
+</%def>
+
+
+
+
+
+
+

@@ -160,6 +160,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos.CompactionServerReportRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos.CompactionServerReportResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos.CompactionServerStatusService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
@@ -410,7 +413,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.
 public class MasterRpcServices extends RSRpcServices implements
     MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
     LockService.BlockingInterface, HbckService.BlockingInterface,
-    ClientMetaService.BlockingInterface {
+    ClientMetaService.BlockingInterface, CompactionServerStatusService.BlockingInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(MasterRpcServices.class.getName());
   private static final Logger AUDITLOG =
@@ -444,12 +447,12 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
-  protected Class<?> getRpcSchedulerFactoryClass() {
-    Configuration conf = getConfiguration();
+  protected Class<?> getRpcSchedulerFactoryClass(Configuration conf) {
     if (conf != null) {
-      return conf.getClass(MASTER_RPC_SCHEDULER_FACTORY_CLASS, super.getRpcSchedulerFactoryClass());
+      return conf.getClass(MASTER_RPC_SCHEDULER_FACTORY_CLASS,
+        super.getRpcSchedulerFactoryClass(conf));
     } else {
-      return super.getRpcSchedulerFactoryClass();
+      return super.getRpcSchedulerFactoryClass(getConfiguration());
     }
   }
 
@@ -457,12 +460,12 @@ public class MasterRpcServices extends RSRpcServices implements
   protected RpcServerInterface createRpcServer(final Server server,
       final RpcSchedulerFactory rpcSchedulerFactory, final InetSocketAddress bindAddress,
       final String name) throws IOException {
-    final Configuration conf = regionServer.getConfiguration();
+    final Configuration conf = server.getConfiguration();
     // RpcServer at HM by default enable ByteBufferPool iff HM having user table region in it
     boolean reservoirEnabled = conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY,
       LoadBalancer.isMasterCanHostUserRegions(conf));
     try {
-      return RpcServerFactory.createRpcServer(server, name, getServices(),
+      return RpcServerFactory.createRpcServer(server, name, getServices(conf),
           bindAddress, // use final bindAddress for this server.
           conf, rpcSchedulerFactory.create(conf, this, server), reservoirEnabled);
     } catch (BindException be) {
@@ -543,21 +546,23 @@ public class MasterRpcServices extends RSRpcServices implements
    * @return list of blocking services and their security info classes that this server supports
    */
   @Override
-  protected List<BlockingServiceAndInterface> getServices() {
+  protected List<BlockingServiceAndInterface> getServices(final Configuration conf) {
     List<BlockingServiceAndInterface> bssi = new ArrayList<>(5);
-    bssi.add(new BlockingServiceAndInterface(
-        MasterService.newReflectiveBlockingService(this),
+    bssi.add(new BlockingServiceAndInterface(MasterService.newReflectiveBlockingService(this),
         MasterService.BlockingInterface.class));
-    bssi.add(new BlockingServiceAndInterface(
-        RegionServerStatusService.newReflectiveBlockingService(this),
-        RegionServerStatusService.BlockingInterface.class));
+    bssi.add(
+      new BlockingServiceAndInterface(RegionServerStatusService.newReflectiveBlockingService(this),
+          RegionServerStatusService.BlockingInterface.class));
     bssi.add(new BlockingServiceAndInterface(LockService.newReflectiveBlockingService(this),
         LockService.BlockingInterface.class));
     bssi.add(new BlockingServiceAndInterface(HbckService.newReflectiveBlockingService(this),
         HbckService.BlockingInterface.class));
     bssi.add(new BlockingServiceAndInterface(ClientMetaService.newReflectiveBlockingService(this),
         ClientMetaService.BlockingInterface.class));
-    bssi.addAll(super.getServices());
+    bssi.add(new BlockingServiceAndInterface(
+        CompactionServerStatusService.newReflectiveBlockingService(this),
+        CompactionServerStatusService.BlockingInterface.class));
+    bssi.addAll(super.getServices(conf));
     return bssi;
   }
 
@@ -647,6 +652,28 @@ public class MasterRpcServices extends RSRpcServices implements
     LOG.warn(msg);
     master.rsFatals.add(msg);
     return ReportRSFatalErrorResponse.newBuilder().build();
+  }
+
+  @Override
+  public CompactionServerReportResponse compactionServerReport(RpcController controller,
+      CompactionServerReportRequest request) throws ServiceException {
+    try {
+      master.checkServiceStarted();
+      int versionNumber = 0;
+      String version = "0.0.0";
+      VersionInfo versionInfo = VersionInfoUtil.getCurrentClientVersionInfo();
+      if (versionInfo != null) {
+        version = versionInfo.getVersion();
+        versionNumber = VersionInfoUtil.getVersionNumber(versionInfo);
+      }
+      ServerName serverName = ProtobufUtil.toServerName(request.getServer());
+      ServerMetrics newLoad = ServerMetricsBuilder.toServerMetrics(serverName, versionNumber,
+        version, ClusterStatusProtos.ServerLoad.newBuilder().build());
+      master.getCompactionServerManager().compactionServerReport(serverName, newLoad);
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+    return CompactionServerReportResponse.newBuilder().build();
   }
 
   @Override

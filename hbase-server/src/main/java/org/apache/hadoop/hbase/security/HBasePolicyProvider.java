@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -44,7 +45,9 @@ public class HBasePolicyProvider extends PolicyProvider {
       MasterProtos.ClientMetaService.BlockingInterface.class),
     new Service("security.admin.protocol.acl", MasterService.BlockingInterface.class),
     new Service("security.masterregion.protocol.acl",
-      RegionServerStatusService.BlockingInterface.class)
+      RegionServerStatusService.BlockingInterface.class),
+    new Service("security.masterregion.protocol.acl",
+      CompactionServerStatusProtos.CompactionServerStatusService.BlockingInterface.class)
   };
 
   @Override

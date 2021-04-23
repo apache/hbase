@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AbstractRpcServices;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -129,13 +130,17 @@ public class TestMultiLogThreshold {
       }
     }).when(appender).append(any(org.apache.logging.log4j.core.LogEvent.class));
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(RSRpcServices.class)).addAppender(appender);
+        .getLogger(RSRpcServices.class)).addAppender(appender);
+    ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+        .getLogger(AbstractRpcServices.class)).addAppender(appender);
   }
 
   @After
   public void tearDown() throws Exception {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(RSRpcServices.class)).removeAppender(appender);
+        .getLogger(RSRpcServices.class)).removeAppender(appender);
+    ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+        .getLogger(AbstractRpcServices.class)).removeAppender(appender);
     util.shutdownMiniCluster();
   }
 

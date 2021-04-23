@@ -434,6 +434,11 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public String getCompactionServerVersion(ServerName sn) {
+    return "0.0.0";
+  }
+
+  @Override
   public void checkIfShouldMoveSystemRegionAsync() {
   }
 

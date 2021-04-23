@@ -322,10 +322,10 @@ public class TestRegionServerReportForDuty {
     }
 
     @Override
-    protected synchronized ServerName createRegionServerStatusStub(boolean refresh) {
-      sn = super.createRegionServerStatusStub(refresh);
+    protected synchronized void createRegionServerStatusStub(boolean refresh) {
+      super.createRegionServerStatusStub(refresh);
       rpcStubCreatedFlag = true;
-
+      sn = super.getMasterAddressTracker().getMasterAddress(false);
       // Wait for master switch over. Only do this for the second region server.
       while (!masterChanged) {
         ServerName newSn = super.getMasterAddressTracker().getMasterAddress(true);
@@ -336,11 +336,10 @@ public class TestRegionServerReportForDuty {
         try {
           Thread.sleep(SLEEP_INTERVAL);
         } catch (InterruptedException e) {
-          return null;
+          return;
         }
         LOG.debug("Waiting for master switch over ... ");
       }
-      return sn;
     }
 
     public boolean getRpcStubCreatedFlag() {
