@@ -1275,7 +1275,7 @@
     <commons-logging.version>1.2</commons-logging.version>
     <commons-math.version>2.2</commons-math.version>
     <commons-net.version>3.1</commons-net.version>
-    <disruptor.version>3.3.0</disruptor.version>
+    <disruptor.version>3.4.2</disruptor.version>
     <!-- Do not use versions earlier than 3.2.2 due to a security vulnerability -->
     <collections.version>3.2.2</collections.version>
     <httpclient.version>3.1</httpclient.version>
