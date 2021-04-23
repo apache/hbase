@@ -154,7 +154,12 @@ public class TestIllegalTableDescriptor {
     cfBuilder.setScope(0);
     checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
-    cfBuilder.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "INVALID");
+    try {
+      cfBuilder.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "INVALID");
+      fail("Illegal value for IN_MEMORY_COMPACTION did not throw");
+    } catch (IllegalArgumentException e) {
+      // pass
+    }
     checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
     cfBuilder.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "NONE");
     checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());

@@ -53,13 +53,13 @@ public class ColumnFamilyAttributeValidator {
 
   static {
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(DATA_BLOCK_ENCODING)),
-      (d) -> DataBlockEncoding.valueOf(d.toString()));
+      (d) -> DataBlockEncoding.valueOf(d.toString().toUpperCase()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(COMPRESSION)),
-      (ca) -> Compression.Algorithm.valueOf(ca.toString()));
+      (ca) -> Compression.Algorithm.valueOf(ca.toString().toUpperCase()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(BLOOMFILTER)),
-      (bl) -> BloomType.valueOf(bl.toString()));
+      (bl) -> BloomType.valueOf(bl.toString().toUpperCase()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(REPLICATION_SCOPE)),
-      (rs) -> Integer.valueOf(rs.toString()));
+      (rs) -> Integer.valueOf(rs.toString().toUpperCase()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(MIN_VERSIONS)),
       (min) -> Integer.valueOf(min.toString()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(MAX_VERSIONS)),
@@ -67,7 +67,7 @@ public class ColumnFamilyAttributeValidator {
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(BLOCKSIZE)),
       (bs) -> Integer.valueOf(bs.toString()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(KEEP_DELETED_CELLS)),
-      (k) -> KeepDeletedCells.valueOf(k.toString()));
+      (k) -> KeepDeletedCells.valueOf(k.toString().toUpperCase()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(TTL)),
       (ttl) -> Integer.valueOf(ttl.toString()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(DFS_REPLICATION)),
@@ -75,11 +75,11 @@ public class ColumnFamilyAttributeValidator {
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(MOB_THRESHOLD)),
       (mt) -> Long.valueOf(mt.toString()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(MOB_COMPACT_PARTITION_POLICY)),
-      (mc) -> MobCompactPartitionPolicy.valueOf(mc.toString()));
+      (mc) -> MobCompactPartitionPolicy.valueOf(mc.toString().toUpperCase()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(IN_MEMORY_COMPACTION)),
-      (im) -> MemoryCompactionPolicy.valueOf(im.toString()));
+      (im) -> MemoryCompactionPolicy.valueOf(im.toString().toUpperCase()));
     ATTRIBUTE_VALIDATOR.put(new Bytes(Bytes.toBytes(COMPRESSION_COMPACT)),
-      (ca) -> Compression.Algorithm.valueOf(ca.toString()));
+      (ca) -> Compression.Algorithm.valueOf(ca.toString().toUpperCase()));
   }
 
   /**
