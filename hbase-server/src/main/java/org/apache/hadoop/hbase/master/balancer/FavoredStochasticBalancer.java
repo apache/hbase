@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -275,7 +276,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         }
       } else {
         // We don't have one/more load, lets just choose a random node
-        s = RANDOM.nextBoolean() ? secondaryHost : tertiaryHost;
+        s = ThreadLocalRandom.current().nextBoolean() ? secondaryHost : tertiaryHost;
       }
       addRegionToMap(assignmentMapForFavoredNodes, region, s);
     } else if (secondaryHost != null) {
@@ -320,7 +321,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
 
     List<ServerName> onlineServers = getOnlineFavoredNodes(servers, favoredNodes);
     if (onlineServers.size() > 0) {
-      destination = onlineServers.get(RANDOM.nextInt(onlineServers.size()));
+      destination = onlineServers.get(ThreadLocalRandom.current().nextInt(onlineServers.size()));
     }
 
     boolean alwaysAssign = getConf().getBoolean(FAVORED_ALWAYS_ASSIGN_REGIONS, true);
@@ -398,7 +399,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
                 if (FavoredNodesPlan.getFavoredServerPosition(favoredNodes, sn) != null) {
                   addRegionToMap(assignmentMap, hri, sn);
                 } else {
-                  ServerName destination = onlineFN.get(RANDOM.nextInt(onlineFN.size()));
+                  ServerName destination =
+                    onlineFN.get(ThreadLocalRandom.current().nextInt(onlineFN.size()));
                   LOG.warn("Region: " + hri + " not hosted on favored nodes: " + favoredNodes
                     + " current: " + sn + " moving to: " + destination);
                   addRegionToMap(assignmentMap, hri, destination);

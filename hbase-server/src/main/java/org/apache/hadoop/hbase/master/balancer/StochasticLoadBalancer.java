@@ -27,7 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -106,6 +106,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
   justification="Complaint is about costFunctions not being synchronized; not end of the world")
 public class StochasticLoadBalancer extends BaseLoadBalancer {
 
+  private static final Logger LOG = LoggerFactory.getLogger(StochasticLoadBalancer.class);
+
   protected static final String STEPS_PER_REGION_KEY =
       "hbase.master.balancer.stochastic.stepsPerRegion";
   protected static final String MAX_STEPS_KEY =
@@ -121,9 +123,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       "hbase.master.balancer.stochastic.minCostNeedBalance";
   protected static final String COST_FUNCTIONS_COST_FUNCTIONS_KEY =
           "hbase.master.balancer.stochastic.additionalCostFunctions";
-
-  protected static final Random RANDOM = new Random(System.currentTimeMillis());
-  private static final Logger LOG = LoggerFactory.getLogger(StochasticLoadBalancer.class);
 
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
@@ -365,8 +364,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   BalanceAction nextAction(BalancerClusterState cluster) {
-    return candidateGenerators.get(RANDOM.nextInt(candidateGenerators.size()))
-            .generate(cluster);
+    return candidateGenerators.get(ThreadLocalRandom.current().nextInt(candidateGenerators.size()))
+      .generate(cluster);
   }
 
   /**
@@ -683,53 +682,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return total;
   }
 
-  static class RandomCandidateGenerator extends CandidateGenerator {
-
-    @Override
-    BalanceAction generate(BalancerClusterState cluster) {
-
-      int thisServer = pickRandomServer(cluster);
-
-      // Pick the other server
-      int otherServer = pickOtherRandomServer(cluster, thisServer);
-
-      return pickRandomRegions(cluster, thisServer, otherServer);
-    }
-  }
-
-  /**
-   * Generates candidates which moves the replicas out of the rack for
-   * co-hosted region replicas in the same rack
-   */
-  static class RegionReplicaRackCandidateGenerator extends RegionReplicaCandidateGenerator {
-    @Override
-    BalanceAction generate(BalancerClusterState cluster) {
-      int rackIndex = pickRandomRack(cluster);
-      if (cluster.numRacks <= 1 || rackIndex == -1) {
-        return super.generate(cluster);
-      }
-
-      int regionIndex = selectCoHostedRegionPerGroup(
-        cluster.primariesOfRegionsPerRack[rackIndex],
-        cluster.regionsPerRack[rackIndex],
-        cluster.regionIndexToPrimaryIndex);
-
-      // if there are no pairs of region replicas co-hosted, default to random generator
-      if (regionIndex == -1) {
-        // default to randompicker
-        return randomGenerator.generate(cluster);
-      }
-
-      int serverIndex = cluster.regionIndexToServerIndex[regionIndex];
-      int toRackIndex = pickOtherRandomRack(cluster, rackIndex);
-
-      int rand = RANDOM.nextInt(cluster.serversPerRack[toRackIndex].length);
-      int toServerIndex = cluster.serversPerRack[toRackIndex][rand];
-      int toRegionIndex = pickRandomRegion(cluster, toServerIndex, 0.9f);
-      return getAction(serverIndex, regionIndex, toServerIndex, toRegionIndex);
-    }
-  }
-
   /**
    * Base class of StochasticLoadBalancer's Cost Functions.
    */
@@ -745,6 +697,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     boolean isNeeded() {
       return true;
     }
+
     float getMultiplier() {
       return multiplier;
     }

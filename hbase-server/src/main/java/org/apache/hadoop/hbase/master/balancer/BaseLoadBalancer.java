@@ -33,7 +33,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -64,6 +63,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 @InterfaceAudience.Private
 public abstract class BaseLoadBalancer implements LoadBalancer {
 
+  private static final Logger LOG = LoggerFactory.getLogger(BaseLoadBalancer.class);
+
   public static final String BALANCER_DECISION_BUFFER_ENABLED =
     "hbase.master.balancer.decision.buffer.enabled";
   public static final boolean DEFAULT_BALANCER_DECISION_BUFFER_ENABLED = false;
@@ -71,21 +72,28 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
 
-  static final List<RegionInfo> EMPTY_REGION_LIST = Collections.emptyList();
-
-  static final Predicate<ServerMetrics> IDLE_SERVER_PREDICATOR
+  private static final Predicate<ServerMetrics> IDLE_SERVER_PREDICATOR
     = load -> load.getRegionMetrics().isEmpty();
 
   protected RegionHDFSBlockLocationFinder regionFinder;
   protected boolean useRegionFinder;
   protected boolean isByTable = false;
 
+  // slop for regions
+  protected float slop;
+  // overallSlop to control simpleLoadBalancer's cluster level threshold
+  protected float overallSlop;
+  protected Configuration config;
+  protected RackManager rackManager;
+  protected MetricsBalancer metricsBalancer = null;
+  protected ClusterMetrics clusterStatus = null;
+  protected ServerName masterServerName;
+  protected MasterServices services;
   /**
    * The constructor that uses the basic MetricsBalancer
    */
   protected BaseLoadBalancer() {
-    metricsBalancer = new MetricsBalancer();
-    createRegionFinder();
+    this(null);
   }
 
   /**
@@ -94,27 +102,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   protected BaseLoadBalancer(MetricsBalancer metricsBalancer) {
     this.metricsBalancer = (metricsBalancer != null) ? metricsBalancer : new MetricsBalancer();
-    createRegionFinder();
   }
-
-  private void createRegionFinder() {
-    useRegionFinder = config.getBoolean("hbase.master.balancer.uselocality", true);
-    if (useRegionFinder) {
-      regionFinder = new RegionHDFSBlockLocationFinder();
-    }
-  }
-
-  // slop for regions
-  protected float slop;
-  // overallSlop to control simpleLoadBalancer's cluster level threshold
-  protected float overallSlop;
-  protected Configuration config = HBaseConfiguration.create();
-  protected RackManager rackManager;
-  static final Logger LOG = LoggerFactory.getLogger(BaseLoadBalancer.class);
-  protected MetricsBalancer metricsBalancer = null;
-  protected ClusterMetrics clusterStatus = null;
-  protected ServerName masterServerName;
-  protected MasterServices services;
 
   @Override
   public void setConf(Configuration conf) {
@@ -133,7 +121,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
 
     this.rackManager = new RackManager(getConf());
+    useRegionFinder = config.getBoolean("hbase.master.balancer.uselocality", true);
     if (useRegionFinder) {
+      regionFinder = new RegionHDFSBlockLocationFinder();
       regionFinder.setConf(conf);
     }
     this.isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
@@ -195,7 +185,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
       return false;
     }
-    if(areSomeRegionReplicasColocated(c)) return true;
+    if (areSomeRegionReplicasColocated(c)) {
+      return true;
+    }
     if(idleRegionServerExist(c)) {
       return true;
     }
@@ -248,10 +240,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   /**
    * Generates a bulk assignment plan to be used on cluster startup using a
    * simple round-robin assignment.
-   * <p>
+   * <p/>
    * Takes a list of all the regions and all the servers in the cluster and
    * returns a map of each server to the regions that it should be assigned.
-   * <p>
+   * <p/>
    * Currently implemented as a round-robin assignment. Same invariant as load
    * balancing, all servers holding floor(avg) or ceiling(avg).
    *
@@ -288,7 +280,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return assignments;
   }
 
-  protected BalancerClusterState createCluster(List<ServerName> servers,
+  private BalancerClusterState createCluster(List<ServerName> servers,
     Collection<RegionInfo> regions) throws HBaseIOException {
     boolean hasRegionReplica = false;
     try {
@@ -320,7 +312,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     for (ServerName server : servers) {
       if (!clusterState.containsKey(server)) {
-        clusterState.put(server, EMPTY_REGION_LIST);
+        clusterState.put(server, Collections.emptyList());
       }
     }
     return new BalancerClusterState(regions, clusterState, null, this.regionFinder,
@@ -615,7 +607,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
   }
 
-  protected Map<ServerName, List<RegionInfo>> getRegionAssignmentsByServer(
+  private Map<ServerName, List<RegionInfo>> getRegionAssignmentsByServer(
     Collection<RegionInfo> regions) {
     if (this.services != null && this.services.getAssignmentManager() != null) {
       return this.services.getAssignmentManager().getSnapShotOfAssignment(regions);
