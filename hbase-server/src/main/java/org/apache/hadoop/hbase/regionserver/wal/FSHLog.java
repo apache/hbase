@@ -1940,7 +1940,8 @@ public class FSHLog implements WAL {
 
       try {
         if (truck.hasSyncFuturePayload()) {
-          this.syncFutures[this.syncFuturesCount.getAndIncrement()] = truck.unloadSyncFuturePayload();
+          this.syncFutures[this.syncFuturesCount.getAndIncrement()] =
+            truck.unloadSyncFuturePayload();
           // Force flush of syncs if we are carrying a full complement of syncFutures.
           if (this.syncFuturesCount.get() == this.syncFutures.length) {
             endOfBatch = true;
