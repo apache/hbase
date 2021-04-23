@@ -83,9 +83,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         @Override
         public StoreFileWriter createWriter(InternalScanner scanner,
             org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-            boolean shouldDropBehind) throws IOException {
+            boolean shouldDropBehind, boolean major) throws IOException {
           // make this writer with tags always because of possible new cells with tags.
-          return store.createWriterInTmp(fd.maxKeyCount, compactionCompression, true, true, true,
+          return store.createWriterInTmp(fd.maxKeyCount, 
+            major ? majorCompactionCompression : minorCompactionCompression, true, true, true,
             shouldDropBehind);
         }
       };
@@ -197,7 +198,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       try {
         // If the mob file writer could not be created, directly write the cell to the store file.
         mobFileWriter = mobStore.createWriterInTmp(new Date(fd.latestPutTs), fd.maxKeyCount,
-          compactionCompression, store.getRegionInfo().getStartKey(), true);
+          major ? majorCompactionCompression : minorCompactionCompression,
+          store.getRegionInfo().getStartKey(), true);
         fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
       } catch (IOException e) {
         LOG.warn("Failed to create mob writer, "
@@ -206,7 +208,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       if (major) {
         try {
           delFileWriter = mobStore.createDelFileWriterInTmp(new Date(fd.latestPutTs),
-            fd.maxKeyCount, compactionCompression, store.getRegionInfo().getStartKey());
+            fd.maxKeyCount, major ? majorCompactionCompression : minorCompactionCompression,
+            store.getRegionInfo().getStartKey());
         } catch (IOException e) {
           LOG.warn(
             "Failed to create del writer, "

@@ -1069,6 +1069,22 @@ module Hbase
           raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(' '))
         end
       end
+      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION_COMPACT_MAJOR)
+        compression = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION_COMPACT_MAJPR).upcase.to_sym
+        if org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
+          family.setMajorCompactionCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
+        else
+          raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(' '))
+        end
+      end
+      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION_COMPACT_MINOR)
+        compression = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION_COMPACT_MINOR).upcase.to_sym
+        if org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
+          family.setMinorCompactionCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
+        else
+          raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(' '))
+        end
+      end
       if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::STORAGE_POLICY)
         storage_policy = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::STORAGE_POLICY).upcase
         family.setStoragePolicy(storage_policy)

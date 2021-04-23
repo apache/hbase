@@ -45,6 +45,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   public static final String IN_MEMORY_COMPACTION = ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION;
   public static final String COMPRESSION = ColumnFamilyDescriptorBuilder.COMPRESSION;
   public static final String COMPRESSION_COMPACT = ColumnFamilyDescriptorBuilder.COMPRESSION_COMPACT;
+  public static final String COMPRESSION_COMPACT_MAJOR = ColumnFamilyDescriptorBuilder.COMPRESSION_COMPACT_MAJOR;
+  public static final String COMPRESSION_COMPACT_MINOR = ColumnFamilyDescriptorBuilder.COMPRESSION_COMPACT_MINOR;
   public static final String ENCODE_ON_DISK = "ENCODE_ON_DISK";
   public static final String DATA_BLOCK_ENCODING = ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING;
   public static final String BLOCKCACHE = ColumnFamilyDescriptorBuilder.BLOCKCACHE;
@@ -373,6 +375,16 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return delegatee.getCompactionCompressionType();
   }
 
+  @Override
+  public Compression.Algorithm getMajorCompactionCompressionType() {
+    return delegatee.getMajorCompactionCompressionType();
+  }
+
+  @Override
+  public Compression.Algorithm getMinorCompactionCompressionType() {
+    return delegatee.getMinorCompactionCompressionType();
+  }
+
   /**
    * Compression types supported in hbase.
    * LZO is not bundled as part of the hbase distribution.
@@ -383,6 +395,16 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    */
   public HColumnDescriptor setCompactionCompressionType(Compression.Algorithm value) {
     getDelegateeForModification().setCompactionCompressionType(value);
+    return this;
+  }
+
+  public HColumnDescriptor setMajorCompactionCompressionType(Compression.Algorithm value) {
+    getDelegateeForModification().setMajorCompactionCompressionType(value);
+    return this;
+  }
+
+  public HColumnDescriptor setMinorCompactionCompressionType(Compression.Algorithm value) {
+    getDelegateeForModification().setMinorCompactionCompressionType(value);
     return this;
   }
 
