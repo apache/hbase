@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -109,9 +108,6 @@ public class TestRegionServerReadRequestMetrics {
 
   @BeforeClass
   public static void setUpOnce() throws Exception {
-    // Default starts one regionserver only.
-    TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
-    // TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
     serverNames = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
@@ -146,16 +142,6 @@ public class TestRegionServerReadRequestMetrics {
 
     assertEquals(expectedReadRequests,
       requestsMap.get(Metric.REGION_READ) - requestsMapPrev.get(Metric.REGION_READ));
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
-    if (tablesOnMaster) {
-      // If NO tables on master, then the single regionserver in this test carries user-space
-      // tables and the meta table. The first time through, the read will be inflated by meta
-      // lookups. We don't know which test will be first through since junit randomizes. This
-      // method is used by a bunch of tests. Just do this check if master is hosting (system)
-      // regions only.
-      assertEquals(expectedReadRequests,
-      requestsMap.get(Metric.SERVER_READ) - requestsMapPrev.get(Metric.SERVER_READ));
-    }
     assertEquals(expectedFilteredReadRequests,
       requestsMap.get(Metric.FILTERED_REGION_READ)
         - requestsMapPrev.get(Metric.FILTERED_REGION_READ));

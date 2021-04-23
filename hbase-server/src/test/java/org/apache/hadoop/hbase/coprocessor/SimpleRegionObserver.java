@@ -745,6 +745,7 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
     options.setMinVersions(TestRegionCoprocessorHost.MIN_VERSIONS);
     options.setKeepDeletedCells(KeepDeletedCells.TRUE);
     options.setTTL(TestRegionCoprocessorHost.TTL);
+    options.setTimeToPurgeDeletes(TestRegionCoprocessorHost.TIME_TO_PURGE_DELETES);
   }
 
 

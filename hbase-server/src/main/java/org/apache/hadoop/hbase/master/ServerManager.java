@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerMetrics;
-import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -736,13 +735,6 @@ public class ServerManager {
     }
 
     int minimumRequired = 1;
-    if (LoadBalancer.isTablesOnMaster(master.getConfiguration()) &&
-        LoadBalancer.isSystemTablesOnlyOnMaster(master.getConfiguration())) {
-      // If Master is carrying regions it will show up as a 'server', but is not handling user-
-      // space regions, so we need a second server.
-      minimumRequired = 2;
-    }
-
     int minToStart = this.master.getConfiguration().getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
     // Ensure we are never less than minimumRequired else stuff won't work.
     return Math.max(minToStart, minimumRequired);

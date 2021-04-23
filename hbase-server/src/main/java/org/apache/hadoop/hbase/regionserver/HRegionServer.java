@@ -102,7 +102,6 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
@@ -119,7 +118,6 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterRpcServicesVersionWrapper;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
@@ -644,7 +642,7 @@ public class HRegionServer extends Thread implements
       regionServerAccounting = new RegionServerAccounting(conf);
 
       boolean isMasterNotCarryTable =
-          this instanceof HMaster && !LoadBalancer.isTablesOnMaster(conf);
+        this instanceof HMaster && !((HMaster) this).isInMaintenanceMode();
 
       // no need to instantiate block cache and mob file cache when master not carry table
       if (!isMasterNotCarryTable) {
@@ -1944,11 +1942,10 @@ public class HRegionServer extends Thread implements
    * be hooked up to WAL.
    */
   private void setupWALAndReplication() throws IOException {
-    boolean isMasterNoTableOrSystemTableOnly = this instanceof HMaster &&
-        !LoadBalancer.isMasterCanHostUserRegions(conf);
+    boolean isMaster = this instanceof HMaster;
     WALFactory factory =
-        new WALFactory(conf, serverName.toString(), this, !isMasterNoTableOrSystemTableOnly);
-    if (!isMasterNoTableOrSystemTableOnly) {
+        new WALFactory(conf, serverName.toString(), this, !isMaster);
+    if (!isMaster) {
       // TODO Replication make assumptions here based on the default filesystem impl
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
       String logName = AbstractFSWALProvider.getWALDirectoryName(this.serverName.toString());
