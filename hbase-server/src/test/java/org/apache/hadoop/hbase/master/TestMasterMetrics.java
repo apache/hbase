@@ -99,7 +99,7 @@ public class TestMasterMetrics {
     long expectedRequestNumber = 10000;
 
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
-      .setTotalNumberOfRequests(expectedRequestNumber).build();
+      .setTotalNumberOfRequests(expectedRequestNumber).setReadRequestsCount(expectedRequestNumber).setWriteRequestsCount(expectedRequestNumber).build();
     request.setLoad(sl);
 
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
@@ -108,15 +108,19 @@ public class TestMasterMetrics {
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
     metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
+    metricsHelper.assertCounter("cluster_read_requests", expectedRequestNumber, masterSource);
+    metricsHelper.assertCounter("cluster_write_requests", expectedRequestNumber, masterSource);
 
     expectedRequestNumber = 15000;
 
-    sl = ClusterStatusProtos.ServerLoad.newBuilder().setTotalNumberOfRequests(expectedRequestNumber)
+    sl = ClusterStatusProtos.ServerLoad.newBuilder().setTotalNumberOfRequests(expectedRequestNumber).setReadRequestsCount(expectedRequestNumber).setWriteRequestsCount(expectedRequestNumber)
       .build();
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
-    metricsHelper.assertCounter("cluster_requests", 20000, masterSource);
+    metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
+    metricsHelper.assertCounter("cluster_read_requests", expectedRequestNumber, masterSource);
+    metricsHelper.assertCounter("cluster_write_requests", expectedRequestNumber, masterSource);
   }
 
   @Test

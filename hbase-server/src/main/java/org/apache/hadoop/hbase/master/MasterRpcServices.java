@@ -599,13 +599,8 @@ public class MasterRpcServices extends RSRpcServices implements
         // Up our metrics.
         master.metricsMaster.incrementRequests(
           sl.getTotalNumberOfRequests() - (oldLoad != null ? oldLoad.getRequestCount() : 0));
-        if (sl != null && master.metricsMaster != null) {
-          // Up our metrics.
-          master.metricsMaster.incrementRequests(
-                  sl.getTotalNumberOfRequests() - (oldLoad != null ? oldLoad.getRequestCount() : 0));
-          master.metricsMaster.incrementReadRequests(sl.getReadRequestsCount() - (oldLoad != null ? oldLoad.getReadRequestsCount() : 0));
-          master.metricsMaster.incrementWriteRequests(sl.getWriteRequestsCount() - (oldLoad != null ? oldLoad.getWriteRequestsCount() : 0));
-        }
+        master.metricsMaster.incrementReadRequests(sl.getReadRequestsCount() - (oldLoad != null ? oldLoad.getReadRequestsCount() : 0));
+        master.metricsMaster.incrementWriteRequests(sl.getWriteRequestsCount() - (oldLoad != null ? oldLoad.getWriteRequestsCount() : 0));
       }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
