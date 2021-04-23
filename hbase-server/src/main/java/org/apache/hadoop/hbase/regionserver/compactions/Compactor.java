@@ -76,7 +76,8 @@ public abstract class Compactor<T extends CellSink> {
   protected final HStore store;
 
   protected final int compactionKVMax;
-  protected final Compression.Algorithm compactionCompression;
+  protected final Compression.Algorithm majorCompactionCompression;
+  protected final Compression.Algorithm minorCompactionCompression;
 
   /** specify how many days to keep MVCC values during major compaction **/
   protected int keepSeqIdPeriod;
@@ -96,8 +97,10 @@ public abstract class Compactor<T extends CellSink> {
     this.store = store;
     this.compactionKVMax =
       this.conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
-    this.compactionCompression = (this.store.getColumnFamilyDescriptor() == null) ?
-        Compression.Algorithm.NONE : this.store.getColumnFamilyDescriptor().getCompactionCompressionType();
+    this.majorCompactionCompression = (store.getColumnFamilyDescriptor() == null) ?
+        Compression.Algorithm.NONE : store.getColumnFamilyDescriptor().getMajorCompactionCompressionType();
+    this.minorCompactionCompression = (store.getColumnFamilyDescriptor() == null) ?
+        Compression.Algorithm.NONE : store.getColumnFamilyDescriptor().getMinorCompactionCompressionType();
     this.keepSeqIdPeriod = Math.max(this.conf.getInt(HConstants.KEEP_SEQID_PERIOD,
       HConstants.MIN_KEEP_SEQID_PERIOD), HConstants.MIN_KEEP_SEQID_PERIOD);
     this.dropCacheMajor = conf.getBoolean(MAJOR_COMPACTION_DROP_CACHE, true);
@@ -107,7 +110,7 @@ public abstract class Compactor<T extends CellSink> {
 
 
   protected interface CellSinkFactory<S> {
-    S createWriter(InternalScanner scanner, FileDetails fd, boolean shouldDropBehind)
+    S createWriter(InternalScanner scanner, FileDetails fd, boolean shouldDropBehind, boolean major)
         throws IOException;
   }
 
@@ -139,10 +142,11 @@ public abstract class Compactor<T extends CellSink> {
    * Extracts some details about the files to compact that are commonly needed by compactors.
    * @param filesToCompact Files.
    * @param allFiles Whether all files are included for compaction
+   * @parma major If major compaction
    * @return The result.
    */
   private FileDetails getFileDetails(
-      Collection<HStoreFile> filesToCompact, boolean allFiles) throws IOException {
+      Collection<HStoreFile> filesToCompact, boolean allFiles, boolean major) throws IOException {
     FileDetails fd = new FileDetails();
     long oldestHFileTimestampToKeepMVCC = System.currentTimeMillis() -
       (1000L * 60 * 60 * 24 * this.keepSeqIdPeriod);
@@ -212,7 +216,7 @@ public abstract class Compactor<T extends CellSink> {
           r.getBloomFilterType().toString(),
           TraditionalBinaryPrefix.long2String(r.length(), "", 1),
           r.getHFileReader().getDataBlockEncoding(),
-          compactionCompression,
+          major ? majorCompactionCompression : minorCompactionCompression,
           seqNum,
           (allFiles? ", earliestPutTs=" + earliestPutTs: ""));
     }
@@ -263,21 +267,23 @@ public abstract class Compactor<T extends CellSink> {
    * @return Writer for a new StoreFile in the tmp dir.
    * @throws IOException if creation failed
    */
-  protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind)
+  protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind, boolean major)
       throws IOException {
     // When all MVCC readpoints are 0, don't write them.
     // See HBASE-8166, HBASE-12600, and HBASE-13389.
-    return store
-      .createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true, fd.maxMVCCReadpoint > 0,
+    return store.createWriterInTmp(fd.maxKeyCount,
+        major ? majorCompactionCompression : minorCompactionCompression,
+        true, fd.maxMVCCReadpoint > 0,
         fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize,
         HConstants.EMPTY_STRING);
   }
 
   protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind,
-      String fileStoragePolicy) throws IOException {
-    return store
-      .createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true, fd.maxMVCCReadpoint > 0,
-        fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize, fileStoragePolicy);
+      String fileStoragePolicy, boolean major) throws IOException {
+    return store.createWriterInTmp(fd.maxKeyCount,
+      major ? majorCompactionCompression : minorCompactionCompression,
+      true, fd.maxMVCCReadpoint > 0,
+      fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize, fileStoragePolicy);
   }
 
   private ScanInfo preCompactScannerOpen(CompactionRequestImpl request, ScanType scanType,
@@ -308,7 +314,7 @@ public abstract class Compactor<T extends CellSink> {
   protected final List<Path> compact(final CompactionRequestImpl request,
       InternalScannerFactory scannerFactory, CellSinkFactory<T> sinkFactory,
       ThroughputController throughputController, User user) throws IOException {
-    FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles());
+    FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles(), request.isMajor());
     this.progress = new CompactionProgress(fd.maxKeyCount);
 
     // Find the smallest read point across all the Scanners.
@@ -338,7 +344,7 @@ public abstract class Compactor<T extends CellSink> {
         smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
         cleanSeqId = true;
       }
-      writer = sinkFactory.createWriter(scanner, fd, dropCache);
+      writer = sinkFactory.createWriter(scanner, fd, dropCache, request.isMajor());
       finished = performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId,
         throughputController, request.isAllFiles(), request.getFiles().size());
       if (!finished) {
