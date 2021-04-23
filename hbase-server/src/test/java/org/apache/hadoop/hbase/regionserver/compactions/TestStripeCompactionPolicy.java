@@ -36,6 +36,7 @@ import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -84,6 +86,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentMatcher;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -282,6 +285,35 @@ public class TestStripeCompactionPolicy {
 
     si = createStripes(3, KEY_A);
     verifyNoCompaction(policy, si);
+  }
+
+  @Test
+  public void testCheckExpiredStripeCompaction() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setInt(StripeStoreConfig.MIN_FILES_L0_KEY, 5);
+    conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 4);
+
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    long now = defaultTtl + 2;
+    edge.setValue(now);
+    EnvironmentEdgeManager.injectEdge(edge);
+    HStoreFile expiredFile = createFile(10), notExpiredFile = createFile(10);
+    when(expiredFile.getReader().getMaxTimestamp()).thenReturn(now - defaultTtl - 1);
+    when(notExpiredFile.getReader().getMaxTimestamp()).thenReturn(now - defaultTtl + 1);
+    List<HStoreFile> expired = Lists.newArrayList(expiredFile, expiredFile);
+    List<HStoreFile> mixed = Lists.newArrayList(expiredFile, notExpiredFile);
+
+    StripeCompactionPolicy policy =
+      createPolicy(conf, defaultSplitSize, defaultSplitCount, defaultInitialCount, true);
+    // Merge expired if there are eligible stripes.
+    StripeCompactionPolicy.StripeInformationProvider si =
+      createStripesWithFiles(mixed, mixed, mixed);
+    assertFalse(policy.needsCompactions(si, al()));
+
+    si = createStripesWithFiles(mixed, mixed, mixed, expired);
+    assertFalse(policy.needsSingleStripeCompaction(si));
+    assertTrue(policy.hasExpiredStripes(si));
+    assertTrue(policy.needsCompactions(si, al()));
   }
 
   @Test
@@ -772,6 +804,7 @@ public class TestStripeCompactionPolicy {
       anyBoolean())).thenReturn(mock(StoreFileScanner.class));
     when(sf.getReader()).thenReturn(r);
     when(sf.getBulkLoadTimestamp()).thenReturn(OptionalLong.empty());
+    when(r.getMaxTimestamp()).thenReturn(TimeRange.INITIAL_MAX_TIMESTAMP);
     return sf;
   }
 
