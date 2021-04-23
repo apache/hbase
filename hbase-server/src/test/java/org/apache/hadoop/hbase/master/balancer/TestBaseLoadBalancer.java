@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master.balancer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -57,7 +59,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,22 +94,22 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     loadBalancer = new MockBalancer();
     loadBalancer.setConf(conf);
-    MasterServices st = Mockito.mock(MasterServices.class);
-    Mockito.when(st.getServerName()).thenReturn(master);
+    MasterServices st = mock(MasterServices.class);
+    when(st.getServerName()).thenReturn(master);
     loadBalancer.setMasterServices(st);
 
     // Set up the rack topologies (5 machines per rack)
-    rackManager = Mockito.mock(RackManager.class);
+    rackManager = mock(RackManager.class);
     for (int i = 0; i < NUM_SERVERS; i++) {
       servers[i] = ServerName.valueOf("foo"+i+":1234",-1);
       if (i < 5) {
-        Mockito.when(rackManager.getRack(servers[i])).thenReturn("rack1");
+        when(rackManager.getRack(servers[i])).thenReturn("rack1");
       }
       if (i >= 5 && i < 10) {
-        Mockito.when(rackManager.getRack(servers[i])).thenReturn("rack2");
+        when(rackManager.getRack(servers[i])).thenReturn("rack2");
       }
       if (i >= 10) {
-        Mockito.when(rackManager.getRack(servers[i])).thenReturn("rack3");
+        when(rackManager.getRack(servers[i])).thenReturn("rack3");
       }
     }
   }
@@ -124,19 +125,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     public List<RegionPlan> balanceTable(TableName tableName,
         Map<ServerName, List<RegionInfo>> loadOfOneTable) {
       return null;
-    }
-  }
-
-  /**
-   * All regions have an assignment.
-   * @param regions
-   * @param servers
-   * @param assignments
-   */
-  private void assertImmediateAssignment(List<RegionInfo> regions, List<ServerName> servers,
-      Map<RegionInfo, ServerName> assignments) {
-    for (RegionInfo region : regions) {
-      assertTrue(assignments.containsKey(region));
     }
   }
 
@@ -242,11 +230,10 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     balancer.setConf(conf);
-    ServerManager sm = Mockito.mock(ServerManager.class);
-    Mockito.when(sm.getOnlineServersListWithPredicator(allServers, BaseLoadBalancer.IDLE_SERVER_PREDICATOR))
-           .thenReturn(idleServers);
-    MasterServices services = Mockito.mock(MasterServices.class);
-    Mockito.when(services.getServerManager()).thenReturn(sm);
+    ServerManager sm = mock(ServerManager.class);
+    when(sm.getOnlineServersListWithPredicator(anyList(), any())).thenReturn(idleServers);
+    MasterServices services = mock(MasterServices.class);
+    when(services.getServerManager()).thenReturn(sm);
     balancer.setMasterServices(services);
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
         .setStartKey(Bytes.toBytes("key1"))
@@ -254,7 +241,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
         .setSplit(false)
         .setRegionId(100)
         .build();
-    assertNull(balancer.randomAssignment(hri1, Collections.EMPTY_LIST));
+    assertNull(balancer.randomAssignment(hri1, Collections.emptyList()));
     assertNull(balancer.randomAssignment(hri1, null));
     for (int i = 0; i != 3; ++i) {
       ServerName sn = balancer.randomAssignment(hri1, allServers);

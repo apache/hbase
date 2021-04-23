@@ -695,6 +695,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private TableDescriptor htableDescriptor = null;
   private RegionSplitPolicy splitPolicy;
+  private RegionSplitRestriction splitRestriction;
   private FlushPolicy flushPolicy;
 
   private final MetricsRegion metricsRegion;
@@ -1036,6 +1037,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // Initialize split policy
     this.splitPolicy = RegionSplitPolicy.create(this, conf);
+
+    // Initialize split restriction
+    splitRestriction = RegionSplitRestriction.create(getTableDescriptor(), conf);
 
     // Initialize flush policy
     this.flushPolicy = FlushPolicyFactory.create(this, conf);
@@ -7870,6 +7874,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     byte[] ret = splitPolicy.getSplitPoint();
+    if (ret != null && ret.length > 0) {
+      ret = splitRestriction.getRestrictedSplitPoint(ret);
+    }
 
     if (ret != null) {
       try {

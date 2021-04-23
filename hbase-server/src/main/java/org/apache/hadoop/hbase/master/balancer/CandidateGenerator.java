@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -46,11 +47,11 @@ abstract class CandidateGenerator {
     double chanceOfNoSwap) {
     // Check to see if this is just a move.
     if (cluster.regionsPerServer[server].length == 0
-        || StochasticLoadBalancer.RANDOM.nextFloat() < chanceOfNoSwap) {
+        || ThreadLocalRandom.current().nextFloat() < chanceOfNoSwap) {
       // signal a move only.
       return -1;
     }
-    int rand = StochasticLoadBalancer.RANDOM.nextInt(cluster.regionsPerServer[server].length);
+    int rand = ThreadLocalRandom.current().nextInt(cluster.regionsPerServer[server].length);
     return cluster.regionsPerServer[server][rand];
   }
 
@@ -59,7 +60,7 @@ abstract class CandidateGenerator {
       return -1;
     }
 
-    return StochasticLoadBalancer.RANDOM.nextInt(cluster.numServers);
+    return ThreadLocalRandom.current().nextInt(cluster.numServers);
   }
 
   int pickRandomRack(BalancerClusterState cluster) {
@@ -67,7 +68,7 @@ abstract class CandidateGenerator {
       return -1;
     }
 
-    return StochasticLoadBalancer.RANDOM.nextInt(cluster.numRacks);
+    return ThreadLocalRandom.current().nextInt(cluster.numRacks);
   }
 
   int pickOtherRandomServer(BalancerClusterState cluster, int serverIndex) {
