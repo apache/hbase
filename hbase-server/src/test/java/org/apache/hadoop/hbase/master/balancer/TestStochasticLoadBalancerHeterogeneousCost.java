@@ -282,7 +282,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
   }
 
   static class FairRandomCandidateGenerator extends
-    StochasticLoadBalancer.RandomCandidateGenerator {
+    RandomCandidateGenerator {
 
     @Override
     public BalanceAction pickRandomRegions(BalancerClusterState cluster,
