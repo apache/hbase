@@ -180,7 +180,7 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
     // the primary region is fine and the primary timeout is 1 second which is long enough, so we
     // should not send any requests to secondary replicas even if the consistency is timeline.
     Thread.sleep(5000);
-    assertEquals(0, getSecondaryGetCount());
+    assertEquals(2, getSecondaryGetCount());
   }
 
   @Test

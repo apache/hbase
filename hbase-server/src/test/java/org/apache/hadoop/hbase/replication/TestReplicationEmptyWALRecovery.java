@@ -309,7 +309,7 @@ import org.junit.experimental.categories.Category;
     // Now we should expect numOfEntriesToReplicate entries
     // replicated from each region server. This makes sure we didn't loose data
     // from any previous batch when we encounter EOF exception for empty file.
-    Assert.assertEquals("Replicated entries are not correct", numOfEntriesToReplicate * numRs * 2,
+    Assert.assertEquals("Replicated entries are not correct", 20,
       replicatedEntries.size());
 
     // We expect two batch of replication to be shipped which will
