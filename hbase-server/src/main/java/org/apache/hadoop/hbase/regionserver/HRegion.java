@@ -8980,7 +8980,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // cost of some potential blocking on the object monitor that would not happen if
     // we had computeIfPresent. (The implementation of this method on branch-2 and up
     // uses computeIfPresent.)
-    synchronized (this) {
+    synchronized (regionLockHolders) {
       Thread currentThread = Thread.currentThread();
       Boolean value = regionLockHolders.get(currentThread);
       if (value != null) {
@@ -8999,7 +8999,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // cost of some potential blocking on the object monitor that would not happen if
     // we had computeIfPresent. (The implementation of this method on branch-2 and up
     // uses computeIfPresent.)
-    synchronized (this) {
+    synchronized (regionLockHolders) {
       Thread currentThread = Thread.currentThread();
       Boolean value = regionLockHolders.get(currentThread);
       if (value != null) {
