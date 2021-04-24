@@ -297,6 +297,12 @@
       <artifactId>hbase-balancer</artifactId>
     </dependency>
     <dependency>
+      <artifactId>hbase-balancer</artifactId>
+      <groupId>org.apache.hbase</groupId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-common</artifactId>
       <type>test-jar</type>

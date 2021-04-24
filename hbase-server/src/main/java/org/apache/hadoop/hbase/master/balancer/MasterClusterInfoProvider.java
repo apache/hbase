@@ -18,15 +18,21 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.ServerMetrics;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,11 +41,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Master based cluster info provider.
  */
 @InterfaceAudience.Private
-class MasterClusterInfoProvider implements ClusterInfoProvider {
+public class MasterClusterInfoProvider implements ClusterInfoProvider {
 
   private final MasterServices services;
 
-  MasterClusterInfoProvider(MasterServices services) {
+  public MasterClusterInfoProvider(MasterServices services) {
     this.services = services;
   }
 
@@ -59,5 +65,39 @@ class MasterClusterInfoProvider implements ClusterInfoProvider {
   public HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
     TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
     return HRegion.computeHDFSBlocksDistribution(conf, tableDescriptor, regionInfo);
+  }
+
+  @Override
+  public boolean hasRegionReplica(Collection<RegionInfo> regions) throws IOException {
+    TableDescriptors tds = services.getTableDescriptors();
+    if (tds == null) {
+      return false;
+    }
+    for (RegionInfo region : regions) {
+      TableDescriptor td = tds.get(region.getTable());
+      if (td != null && td.getRegionReplication() > 1) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
+    Predicate<ServerMetrics> filter) {
+    ServerManager sm = services.getServerManager();
+    return sm != null ? sm.getOnlineServersListWithPredicator(servers, filter) :
+      Collections.emptyList();
+  }
+
+  @Override
+  public Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(Collection<RegionInfo> regions) {
+    AssignmentManager am = services.getAssignmentManager();
+    return am != null ? am.getSnapShotOfAssignment(regions) : Collections.emptyMap();
+  }
+
+  @Override
+  public int getNumberOfTables() throws IOException {
+    return services.getTableDescriptors().getAll().size();
   }
 }

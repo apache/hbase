@@ -36,8 +36,8 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
         int currentServer = cluster.regionIndexToServerIndex[region];
         if (currentServer != cluster.getOrComputeRegionsToMostLocalEntities(
           BalancerClusterState.LocalityType.SERVER)[region]) {
-          Optional<BalanceAction> potential = tryMoveOrSwap(cluster,
-            currentServer, region, cluster.getOrComputeRegionsToMostLocalEntities(
+          Optional<BalanceAction> potential = tryMoveOrSwap(cluster, currentServer, region,
+            cluster.getOrComputeRegionsToMostLocalEntities(
               BalancerClusterState.LocalityType.SERVER)[region]);
           if (potential.isPresent()) {
             return potential.get();
@@ -48,16 +48,16 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
     return BalanceAction.NULL_ACTION;
   }
 
-  private Optional<BalanceAction> tryMoveOrSwap(BalancerClusterState cluster,
-      int fromServer, int fromRegion, int toServer) {
+  private Optional<BalanceAction> tryMoveOrSwap(BalancerClusterState cluster, int fromServer,
+    int fromRegion, int toServer) {
     // Try move first. We know apriori fromRegion has the highest locality on toServer
     if (cluster.serverHasTooFewRegions(toServer)) {
       return Optional.of(getAction(fromServer, fromRegion, toServer, -1));
     }
     // Compare locality gain/loss from swapping fromRegion with regions on toServer
-    double fromRegionLocalityDelta = getWeightedLocality(cluster, fromRegion, toServer)
-      - getWeightedLocality(cluster, fromRegion, fromServer);
-    int toServertotalRegions =  cluster.regionsPerServer[toServer].length;
+    double fromRegionLocalityDelta = getWeightedLocality(cluster, fromRegion, toServer) -
+      getWeightedLocality(cluster, fromRegion, fromServer);
+    int toServertotalRegions = cluster.regionsPerServer[toServer].length;
     if (toServertotalRegions > 0) {
       int startIndex = ThreadLocalRandom.current().nextInt(toServertotalRegions);
       for (int i = 0; i < toServertotalRegions; i++) {

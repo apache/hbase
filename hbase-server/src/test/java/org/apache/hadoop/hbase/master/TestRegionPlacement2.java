@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
+import org.apache.hadoop.hbase.master.balancer.MasterClusterInfoProvider;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -46,8 +47,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestRegionPlacement2 {
@@ -56,7 +55,6 @@ public class TestRegionPlacement2 {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionPlacement2.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement2.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static int SLAVES = 7;
   private final static int PRIMARY = Position.PRIMARY.ordinal();
@@ -83,7 +81,10 @@ public class TestRegionPlacement2 {
 
   @Test
   public void testFavoredNodesPresentForRoundRobinAssignment() throws IOException {
-    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
+    FavoredNodeLoadBalancer balancer =
+      (FavoredNodeLoadBalancer) LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
+    balancer.setClusterInfoProvider(
+      new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
     balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     balancer.initialize();
     List<ServerName> servers = new ArrayList<>();
@@ -144,7 +145,10 @@ public class TestRegionPlacement2 {
 
   @Test
   public void testFavoredNodesPresentForRandomAssignment() throws IOException {
-    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
+    FavoredNodeLoadBalancer balancer =
+      (FavoredNodeLoadBalancer) LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
+    balancer.setClusterInfoProvider(
+      new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
     balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     balancer.initialize();
     List<ServerName> servers = new ArrayList<>();

@@ -77,6 +77,12 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
 
   private static final Logger LOG = LoggerFactory.getLogger(FavoredStochasticBalancer.class);
   private FavoredNodesManager fnm;
+  private MasterServices services;
+
+  public void setMasterServices(MasterServices services) {
+    this.services = services;
+    this.fnm = services.getFavoredNodesManager();
+  }
 
   @Override
   public void initialize() throws HBaseIOException {
@@ -91,13 +97,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     setCandidateGenerators(fnPickers);
   }
 
-  @Override
-  public synchronized void setMasterServices(MasterServices masterServices) {
-    super.setMasterServices(masterServices);
-    fnm = masterServices.getFavoredNodesManager();
-  }
-
-  /*
+  /**
    * Round robin assignment: Segregate the regions into two types:
    *
    * 1. The regions that have favored node assignment where at least one of the favored node
@@ -183,12 +183,12 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     return assignmentMap;
   }
 
-  /*
+  /**
    * Return a pair - one with assignments when favored nodes are present and another with regions
    * without favored nodes.
    */
   private Pair<Map<ServerName, List<RegionInfo>>, List<RegionInfo>>
-  segregateRegionsAndAssignRegionsWithFavoredNodes(Collection<RegionInfo> regions,
+    segregateRegionsAndAssignRegionsWithFavoredNodes(Collection<RegionInfo> regions,
       List<ServerName> onlineServers) throws HBaseIOException {
 
     // Since we expect FN to be present most of the time, lets create map with same size
@@ -227,17 +227,16 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   }
 
   private void addRegionToMap(Map<ServerName, List<RegionInfo>> assignmentMapForFavoredNodes,
-      RegionInfo region, ServerName host) {
-
-    List<RegionInfo> regionsOnServer;
-    if ((regionsOnServer = assignmentMapForFavoredNodes.get(host)) == null) {
+    RegionInfo region, ServerName host) {
+    List<RegionInfo> regionsOnServer = assignmentMapForFavoredNodes.get(host);
+    if (regionsOnServer == null) {
       regionsOnServer = Lists.newArrayList();
       assignmentMapForFavoredNodes.put(host, regionsOnServer);
     }
     regionsOnServer.add(region);
   }
 
-  /*
+  /**
    * Get the ServerName for the FavoredNode. Since FN's startcode is -1, we could want to get the
    * ServerName with the correct start code from the list of provided servers.
    */
@@ -266,8 +265,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
 
       // Assign the region to the one with a lower load (both have the desired hdfs blocks)
       ServerName s;
-      ServerMetrics tertiaryLoad = super.services.getServerManager().getLoad(tertiaryHost);
-      ServerMetrics secondaryLoad = super.services.getServerManager().getLoad(secondaryHost);
+      ServerMetrics tertiaryLoad = services.getServerManager().getLoad(tertiaryHost);
+      ServerMetrics secondaryLoad = services.getServerManager().getLoad(secondaryHost);
       if (secondaryLoad != null && tertiaryLoad != null) {
         if (secondaryLoad.getRegionMetrics().size() < tertiaryLoad.getRegionMetrics().size()) {
           s = secondaryHost;
@@ -446,11 +445,11 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   }
 
   @Override
-  public synchronized List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
+  public List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
     return this.fnm.getFavoredNodes(regionInfo);
   }
 
-  /*
+  /**
    * Generate Favored Nodes for daughters during region split.
    *
    * If the parent does not have FN, regenerates them for the daughters.
@@ -463,7 +462,6 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   @Override
   public void generateFavoredNodesForDaughter(List<ServerName> servers, RegionInfo parent,
       RegionInfo regionA, RegionInfo regionB) throws IOException {
-
     Map<RegionInfo, List<ServerName>> result = new HashMap<>();
     FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, rackManager);
     helper.initialize();
@@ -662,16 +660,14 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     }
   }
 
-  /*
+  /**
    * For all regions correctly assigned to favored nodes, we just use the stochastic balancer
    * implementation. For the misplaced regions, we assign a bogus server to it and AM takes care.
    */
   @Override
-  public synchronized List<RegionPlan> balanceTable(TableName tableName,
+  public List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
-
     if (this.services != null) {
-
       List<RegionPlan> regionPlans = Lists.newArrayList();
       Map<ServerName, List<RegionInfo>> correctAssignments = new HashMap<>();
       int misplacedRegions = 0;
