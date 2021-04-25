@@ -145,7 +145,7 @@ public interface MetricsAssertHelper {
    * @param name   name of the counter.
    * @param source The BaseSource{@link BaseSource} that will provide the tags,
    *               gauges, and counters.
-   * @return boolean true id counter metric exists.
+   * @return boolean true if counter metric exists.
    */
   boolean checkCounterExists(String name, BaseSource source);
 
@@ -155,7 +155,7 @@ public interface MetricsAssertHelper {
    * @param name   name of the gauge.
    * @param source The BaseSource{@link BaseSource} that will provide the tags,
    *               gauges, and counters.
-   * @return
+   * @return boolean true if gauge metric exists.
    */
   boolean checkGaugeExists(String name, BaseSource source);
 

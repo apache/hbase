@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -190,12 +189,6 @@ public class TestFlushWithThroughputController {
     // assertion here.
     assertTrue(regionServer.getFlushPressure() < pressure);
     Thread.sleep(5000);
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(hbtu.getConfiguration());
-    if (tablesOnMaster) {
-      // If no tables on the master, this math is off and I'm not sure what it is supposed to be
-      // when meta is on the regionserver and not on the master.
-      assertEquals(10L * 1024 * 1024, throughputController.getMaxThroughput(), EPSILON);
-    }
     Table table = conn.getTable(tableName);
     Random rand = new Random();
     for (int i = 0; i < 10; i++) {

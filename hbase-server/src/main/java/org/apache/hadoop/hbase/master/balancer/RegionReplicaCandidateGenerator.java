@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -27,8 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class RegionReplicaCandidateGenerator extends CandidateGenerator {
 
-  StochasticLoadBalancer.RandomCandidateGenerator randomGenerator =
-    new StochasticLoadBalancer.RandomCandidateGenerator();
+  protected final RandomCandidateGenerator randomGenerator = new RandomCandidateGenerator();
 
   /**
    * Randomly select one regionIndex out of all region replicas co-hosted in the same group
@@ -56,7 +56,7 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
         int numReplicas = j - currentPrimaryIndex;
         if (numReplicas > 1) { // means consecutive primaries, indicating co-location
           // decide to select this primary region id or not
-          double currentRandom = StochasticLoadBalancer.RANDOM.nextDouble();
+          double currentRandom = ThreadLocalRandom.current().nextDouble();
           // we don't know how many region replicas are co-hosted, we will randomly select one
           // using reservoir sampling (http://gregable.com/2007/10/reservoir-sampling.html)
           if (currentRandom > currentLargestRandom) {
@@ -83,10 +83,10 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
   }
 
   @Override
-  BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
+  BalanceAction generate(BalancerClusterState cluster) {
     int serverIndex = pickRandomServer(cluster);
     if (cluster.numServers <= 1 || serverIndex == -1) {
-      return BaseLoadBalancer.Cluster.NullAction;
+      return BalanceAction.NULL_ACTION;
     }
 
     int regionIndex = selectCoHostedRegionPerGroup(

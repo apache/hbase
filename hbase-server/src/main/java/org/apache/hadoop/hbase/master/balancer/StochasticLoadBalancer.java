@@ -27,7 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -38,14 +38,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRegionAction;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.LocalityType;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
+import org.apache.hadoop.hbase.master.balancer.BalancerClusterState.LocalityType;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
@@ -112,6 +106,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
   justification="Complaint is about costFunctions not being synchronized; not end of the world")
 public class StochasticLoadBalancer extends BaseLoadBalancer {
 
+  private static final Logger LOG = LoggerFactory.getLogger(StochasticLoadBalancer.class);
+
   protected static final String STEPS_PER_REGION_KEY =
       "hbase.master.balancer.stochastic.stepsPerRegion";
   protected static final String MAX_STEPS_KEY =
@@ -127,9 +123,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       "hbase.master.balancer.stochastic.minCostNeedBalance";
   protected static final String COST_FUNCTIONS_COST_FUNCTIONS_KEY =
           "hbase.master.balancer.stochastic.additionalCostFunctions";
-
-  protected static final Random RANDOM = new Random(System.currentTimeMillis());
-  private static final Logger LOG = LoggerFactory.getLogger(StochasticLoadBalancer.class);
 
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
@@ -187,7 +180,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
     minCostNeedBalance = conf.getFloat(MIN_COST_NEED_BALANCE_KEY, minCostNeedBalance);
     if (localityCandidateGenerator == null) {
-      localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
+      localityCandidateGenerator = new LocalityBasedCandidateGenerator();
     }
     localityCost = new ServerLocalityCostFunction(conf);
     rackLocalityCost = new RackLocalityCostFunction(conf);
@@ -250,7 +243,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     costFunctions.addAll(Arrays.stream(functionsNames).map(c -> {
       Class<? extends CostFunction> klass = null;
       try {
-        klass = (Class<? extends CostFunction>) Class.forName(c);
+        klass = Class.forName(c).asSubclass(CostFunction.class);
       } catch (ClassNotFoundException e) {
         LOG.warn("Cannot load class " + c + "': " + e.getMessage());
       }
@@ -310,22 +303,20 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
-  public synchronized void setMasterServices(MasterServices masterServices) {
-    super.setMasterServices(masterServices);
-    this.localityCandidateGenerator.setServices(masterServices);
-  }
-
-  @Override
-  protected synchronized boolean areSomeRegionReplicasColocated(Cluster c) {
+  protected synchronized boolean areSomeRegionReplicasColocated(BalancerClusterState c) {
     regionReplicaHostCostFunction.init(c);
-    if (regionReplicaHostCostFunction.cost() > 0) return true;
+    if (regionReplicaHostCostFunction.cost() > 0) {
+      return true;
+    }
     regionReplicaRackCostFunction.init(c);
-    if (regionReplicaRackCostFunction.cost() > 0) return true;
+    if (regionReplicaRackCostFunction.cost() > 0) {
+      return true;
+    }
     return false;
   }
 
   @Override
-  protected boolean needsBalance(TableName tableName, Cluster cluster) {
+  protected boolean needsBalance(TableName tableName, BalancerClusterState cluster) {
     ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
     if (cs.getNumServers() < MIN_SERVER_BALANCE) {
       if (LOG.isDebugEnabled()) {
@@ -372,9 +363,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return !balanced;
   }
 
-  Cluster.Action nextAction(Cluster cluster) {
-    return candidateGenerators.get(RANDOM.nextInt(candidateGenerators.size()))
-            .generate(cluster);
+  BalanceAction nextAction(BalancerClusterState cluster) {
+    return candidateGenerators.get(ThreadLocalRandom.current().nextInt(candidateGenerators.size()))
+      .generate(cluster);
   }
 
   /**
@@ -384,19 +375,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @Override
   public synchronized List<RegionPlan> balanceTable(TableName tableName, Map<ServerName,
     List<RegionInfo>> loadOfOneTable) {
-    List<RegionPlan> plans = balanceMasterRegions(loadOfOneTable);
-    if (plans != null || loadOfOneTable == null || loadOfOneTable.size() <= 1) {
-      return plans;
-    }
-
-    if (masterServerName != null && loadOfOneTable.containsKey(masterServerName)) {
-      if (loadOfOneTable.size() <= 2) {
-        return null;
-      }
-      loadOfOneTable = new HashMap<>(loadOfOneTable);
-      loadOfOneTable.remove(masterServerName);
-    }
-
     // On clusters with lots of HFileLinks or lots of reference files,
     // instantiating the storefile infos can be quite expensive.
     // Allow turning this feature off if the locality cost is not going to
@@ -410,7 +388,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     //The clusterState that is given to this method contains the state
     //of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(loadOfOneTable, loads, finder, rackManager);
+    BalancerClusterState cluster =
+      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
 
     long startTime = EnvironmentEdgeManager.currentTime();
 
@@ -450,9 +429,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long step;
 
     for (step = 0; step < computedMaxSteps; step++) {
-      Cluster.Action action = nextAction(cluster);
+      BalanceAction action = nextAction(cluster);
 
-      if (action.type == Type.NULL) {
+      if (action.getType() == BalanceAction.Type.NULL) {
         continue;
       }
 
@@ -471,7 +450,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       } else {
         // Put things back the way they were before.
         // TODO: undo by remembering old values
-        Action undoAction = action.undoAction();
+        BalanceAction undoAction = action.undoAction();
         cluster.doAction(undoAction);
         updateCostsWithAction(cluster, undoAction);
       }
@@ -488,7 +467,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // update costs metrics
     updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
     if (initCost > currentCost) {
-      plans = createRegionPlans(cluster);
+      List<RegionPlan> plans = createRegionPlans(cluster);
       LOG.info("Finished computing new load balance plan. Computation took {}" +
         " to try {} different iterations.  Found a solution that moves " +
         "{} regions; Going from a computed cost of {}" +
@@ -592,7 +571,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @param cluster The state of the cluster
    * @return List of RegionPlan's that represent the moves needed to get to desired final state.
    */
-  private List<RegionPlan> createRegionPlans(Cluster cluster) {
+  private List<RegionPlan> createRegionPlans(BalancerClusterState cluster) {
     List<RegionPlan> plans = new LinkedList<>();
     for (int regionIndex = 0;
          regionIndex < cluster.regionIndexToServerIndex.length; regionIndex++) {
@@ -643,13 +622,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  protected void initCosts(Cluster cluster) {
+  protected void initCosts(BalancerClusterState cluster) {
     for (CostFunction c:costFunctions) {
       c.init(cluster);
     }
   }
 
-  protected void updateCostsWithAction(Cluster cluster, Action action) {
+  protected void updateCostsWithAction(BalancerClusterState cluster, BalanceAction action) {
     for (CostFunction c : costFunctions) {
       c.postAction(action);
     }
@@ -678,7 +657,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @return a double of a cost associated with the proposed cluster state.  This cost is an
    *         aggregate of all individual cost functions.
    */
-  protected double computeCost(Cluster cluster, double previousCost) {
+  protected double computeCost(BalancerClusterState cluster, double previousCost) {
     double total = 0;
 
     for (int i = 0; i < costFunctions.size(); i++) {
@@ -703,53 +682,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return total;
   }
 
-  static class RandomCandidateGenerator extends CandidateGenerator {
-
-    @Override
-    Cluster.Action generate(Cluster cluster) {
-
-      int thisServer = pickRandomServer(cluster);
-
-      // Pick the other server
-      int otherServer = pickOtherRandomServer(cluster, thisServer);
-
-      return pickRandomRegions(cluster, thisServer, otherServer);
-    }
-  }
-
-  /**
-   * Generates candidates which moves the replicas out of the rack for
-   * co-hosted region replicas in the same rack
-   */
-  static class RegionReplicaRackCandidateGenerator extends RegionReplicaCandidateGenerator {
-    @Override
-    Cluster.Action generate(Cluster cluster) {
-      int rackIndex = pickRandomRack(cluster);
-      if (cluster.numRacks <= 1 || rackIndex == -1) {
-        return super.generate(cluster);
-      }
-
-      int regionIndex = selectCoHostedRegionPerGroup(
-        cluster.primariesOfRegionsPerRack[rackIndex],
-        cluster.regionsPerRack[rackIndex],
-        cluster.regionIndexToPrimaryIndex);
-
-      // if there are no pairs of region replicas co-hosted, default to random generator
-      if (regionIndex == -1) {
-        // default to randompicker
-        return randomGenerator.generate(cluster);
-      }
-
-      int serverIndex = cluster.regionIndexToServerIndex[regionIndex];
-      int toRackIndex = pickOtherRandomRack(cluster, rackIndex);
-
-      int rand = RANDOM.nextInt(cluster.serversPerRack[toRackIndex].length);
-      int toServerIndex = cluster.serversPerRack[toRackIndex][rand];
-      int toRegionIndex = pickRandomRegion(cluster, toServerIndex, 0.9f);
-      return getAction(serverIndex, regionIndex, toServerIndex, toRegionIndex);
-    }
-  }
-
   /**
    * Base class of StochasticLoadBalancer's Cost Functions.
    */
@@ -757,7 +689,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     private float multiplier = 0;
 
-    protected Cluster cluster;
+    protected BalancerClusterState cluster;
 
     public CostFunction(Configuration c) {
     }
@@ -765,6 +697,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     boolean isNeeded() {
       return true;
     }
+
     float getMultiplier() {
       return multiplier;
     }
@@ -776,7 +709,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     /** Called once per LB invocation to give the cost function
      * to initialize it's state, and perform any costly calculation.
      */
-    void init(Cluster cluster) {
+    void init(BalancerClusterState cluster) {
       this.cluster = cluster;
     }
 
@@ -784,24 +717,25 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
      * an opportunity to update it's state. postAction() is always
      * called at least once before cost() is called with the cluster
      * that this action is performed on. */
-    void postAction(Action action) {
-      switch (action.type) {
-      case NULL: break;
-      case ASSIGN_REGION:
-        AssignRegionAction ar = (AssignRegionAction) action;
-        regionMoved(ar.region, -1, ar.server);
-        break;
-      case MOVE_REGION:
-        MoveRegionAction mra = (MoveRegionAction) action;
-        regionMoved(mra.region, mra.fromServer, mra.toServer);
-        break;
-      case SWAP_REGIONS:
-        SwapRegionsAction a = (SwapRegionsAction) action;
-        regionMoved(a.fromRegion, a.fromServer, a.toServer);
-        regionMoved(a.toRegion, a.toServer, a.fromServer);
-        break;
-      default:
-        throw new RuntimeException("Uknown action:" + action.type);
+    void postAction(BalanceAction action) {
+      switch (action.getType()) {
+        case NULL:
+          break;
+        case ASSIGN_REGION:
+          AssignRegionAction ar = (AssignRegionAction) action;
+          regionMoved(ar.getRegion(), -1, ar.getServer());
+          break;
+        case MOVE_REGION:
+          MoveRegionAction mra = (MoveRegionAction) action;
+          regionMoved(mra.getRegion(), mra.getFromServer(), mra.getToServer());
+          break;
+        case SWAP_REGIONS:
+          SwapRegionsAction a = (SwapRegionsAction) action;
+          regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer());
+          regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer());
+          break;
+        default:
+          throw new RuntimeException("Uknown action:" + action.getType());
       }
     }
 
@@ -952,7 +886,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    void init(Cluster cluster) {
+    void init(BalancerClusterState cluster) {
       super.init(cluster);
       LOG.debug("{} sees a total of {} servers and {} regions.", getClass().getSimpleName(),
           cluster.numServers, cluster.numRegions);
@@ -1076,7 +1010,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     abstract int regionIndexToEntityIndex(int region);
 
     @Override
-    void init(Cluster cluster) {
+    void init(BalancerClusterState cluster) {
       super.init(cluster);
       locality = 0.0;
       bestLocality = 0.0;
@@ -1326,7 +1260,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    void init(Cluster cluster) {
+    void init(BalancerClusterState cluster) {
       super.init(cluster);
       // max cost is the case where every region replica is hosted together regardless of host
       maxCost = cluster.numHosts > 1 ? getMaxCost(cluster) : 0;
@@ -1339,7 +1273,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
     }
 
-    long getMaxCost(Cluster cluster) {
+    long getMaxCost(BalancerClusterState cluster) {
       if (!cluster.hasRegionReplicas) {
         return 0; // short circuit
       }
@@ -1438,7 +1372,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    void init(Cluster cluster) {
+    void init(BalancerClusterState cluster) {
       this.cluster = cluster;
       if (cluster.numRacks <= 1) {
         maxCost = 0;

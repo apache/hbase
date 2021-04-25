@@ -102,7 +102,6 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
@@ -119,7 +118,6 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterRpcServicesVersionWrapper;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
@@ -154,8 +152,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
-import org.apache.hadoop.hbase.trace.SpanReceiverHost;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -392,7 +388,6 @@ public class HRegionServer extends Thread implements
 
   private MetricsRegionServer metricsRegionServer;
   MetricsRegionServerWrapperImpl metricsRegionServerImpl;
-  private SpanReceiverHost spanReceiverHost;
 
   /**
    * ChoreService used to schedule tasks that we want to run periodically
@@ -590,7 +585,6 @@ public class HRegionServer extends Thread implements
    */
   public HRegionServer(final Configuration conf) throws IOException {
     super("RegionServer");  // thread name
-    TraceUtil.initTracer(conf);
     try {
       this.startcode = System.currentTimeMillis();
       this.conf = conf;
@@ -644,7 +638,7 @@ public class HRegionServer extends Thread implements
       regionServerAccounting = new RegionServerAccounting(conf);
 
       boolean isMasterNotCarryTable =
-          this instanceof HMaster && !LoadBalancer.isTablesOnMaster(conf);
+        this instanceof HMaster && !((HMaster) this).isInMaintenanceMode();
 
       // no need to instantiate block cache and mob file cache when master not carry table
       if (!isMasterNotCarryTable) {
@@ -656,7 +650,6 @@ public class HRegionServer extends Thread implements
         (t, e) -> abort("Uncaught exception in executorService thread " + t.getName(), e);
 
       initializeFileSystem();
-      spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());
 
       this.configurationManager = new ConfigurationManager();
       setupWindows(getConfiguration(), getConfigurationManager());
@@ -1944,11 +1937,10 @@ public class HRegionServer extends Thread implements
    * be hooked up to WAL.
    */
   private void setupWALAndReplication() throws IOException {
-    boolean isMasterNoTableOrSystemTableOnly = this instanceof HMaster &&
-        !LoadBalancer.isMasterCanHostUserRegions(conf);
+    boolean isMaster = this instanceof HMaster;
     WALFactory factory =
-        new WALFactory(conf, serverName.toString(), this, !isMasterNoTableOrSystemTableOnly);
-    if (!isMasterNoTableOrSystemTableOnly) {
+        new WALFactory(conf, serverName.toString(), this, !isMaster);
+    if (!isMaster) {
       // TODO Replication make assumptions here based on the default filesystem impl
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
       String logName = AbstractFSWALProvider.getWALDirectoryName(this.serverName.toString());
@@ -2697,10 +2689,6 @@ public class HRegionServer extends Thread implements
 
     if (this.cacheFlusher != null) {
       this.cacheFlusher.join();
-    }
-
-    if (this.spanReceiverHost != null) {
-      this.spanReceiverHost.closeReceivers();
     }
     if (this.walRoller != null) {
       this.walRoller.close();

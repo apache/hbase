@@ -18,13 +18,9 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.client.RegionInfo;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -33,7 +29,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 abstract class CandidateGenerator {
 
-  abstract BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster);
+  abstract BalanceAction generate(BalancerClusterState cluster);
 
   /**
    * From a list of regions pick a random one. Null can be returned which
@@ -47,35 +43,35 @@ abstract class CandidateGenerator {
    * @return a random {@link RegionInfo} or null if an asymmetrical move is
    *   suggested.
    */
-  int pickRandomRegion(BaseLoadBalancer.Cluster cluster, int server,
+  int pickRandomRegion(BalancerClusterState cluster, int server,
     double chanceOfNoSwap) {
     // Check to see if this is just a move.
     if (cluster.regionsPerServer[server].length == 0
-        || StochasticLoadBalancer.RANDOM.nextFloat() < chanceOfNoSwap) {
+        || ThreadLocalRandom.current().nextFloat() < chanceOfNoSwap) {
       // signal a move only.
       return -1;
     }
-    int rand = StochasticLoadBalancer.RANDOM.nextInt(cluster.regionsPerServer[server].length);
+    int rand = ThreadLocalRandom.current().nextInt(cluster.regionsPerServer[server].length);
     return cluster.regionsPerServer[server][rand];
   }
 
-  int pickRandomServer(BaseLoadBalancer.Cluster cluster) {
+  int pickRandomServer(BalancerClusterState cluster) {
     if (cluster.numServers < 1) {
       return -1;
     }
 
-    return StochasticLoadBalancer.RANDOM.nextInt(cluster.numServers);
+    return ThreadLocalRandom.current().nextInt(cluster.numServers);
   }
 
-  int pickRandomRack(BaseLoadBalancer.Cluster cluster) {
+  int pickRandomRack(BalancerClusterState cluster) {
     if (cluster.numRacks < 1) {
       return -1;
     }
 
-    return StochasticLoadBalancer.RANDOM.nextInt(cluster.numRacks);
+    return ThreadLocalRandom.current().nextInt(cluster.numRacks);
   }
 
-  int pickOtherRandomServer(BaseLoadBalancer.Cluster cluster, int serverIndex) {
+  int pickOtherRandomServer(BalancerClusterState cluster, int serverIndex) {
     if (cluster.numServers < 2) {
       return -1;
     }
@@ -87,7 +83,7 @@ abstract class CandidateGenerator {
     }
   }
 
-  int pickOtherRandomRack(BaseLoadBalancer.Cluster cluster, int rackIndex) {
+  int pickOtherRandomRack(BalancerClusterState cluster, int rackIndex) {
     if (cluster.numRacks < 2) {
       return -1;
     }
@@ -99,10 +95,10 @@ abstract class CandidateGenerator {
     }
   }
 
-  BaseLoadBalancer.Cluster.Action pickRandomRegions(BaseLoadBalancer.Cluster cluster,
+  BalanceAction pickRandomRegions(BalancerClusterState cluster,
     int thisServer, int otherServer) {
     if (thisServer < 0 || otherServer < 0) {
-      return BaseLoadBalancer.Cluster.NullAction;
+      return BalanceAction.NULL_ACTION;
     }
 
     // Decide who is most likely to need another region
@@ -119,33 +115,20 @@ abstract class CandidateGenerator {
     return getAction(thisServer, thisRegion, otherServer, otherRegion);
   }
 
-  protected BaseLoadBalancer.Cluster.Action getAction(int fromServer, int fromRegion,
+  protected BalanceAction getAction(int fromServer, int fromRegion,
       int toServer, int toRegion) {
     if (fromServer < 0 || toServer < 0) {
-      return BaseLoadBalancer.Cluster.NullAction;
+      return BalanceAction.NULL_ACTION;
     }
     if (fromRegion >= 0 && toRegion >= 0) {
-      return new BaseLoadBalancer.Cluster.SwapRegionsAction(fromServer, fromRegion,
+      return new SwapRegionsAction(fromServer, fromRegion,
         toServer, toRegion);
     } else if (fromRegion >= 0) {
-      return new BaseLoadBalancer.Cluster.MoveRegionAction(fromRegion, fromServer, toServer);
+      return new MoveRegionAction(fromRegion, fromServer, toServer);
     } else if (toRegion >= 0) {
-      return new BaseLoadBalancer.Cluster.MoveRegionAction(toRegion, toServer, fromServer);
+      return new MoveRegionAction(toRegion, toServer, fromServer);
     } else {
-      return BaseLoadBalancer.Cluster.NullAction;
+      return BalanceAction.NULL_ACTION;
     }
   }
-
-  /**
-   * Returns a random iteration order of indexes of an array with size length
-   */
-  List<Integer> getRandomIterationOrder(int length) {
-    ArrayList<Integer> order = new ArrayList<>(length);
-    for (int i = 0; i < length; i++) {
-      order.add(i);
-    }
-    Collections.shuffle(order);
-    return order;
-  }
-
 }

@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.ipc.IPCUtil.isFatalConnectionException;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.write;
 
+import io.opentelemetry.context.Scope;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -54,7 +55,6 @@ import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.io.IOUtils;
@@ -62,7 +62,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -190,8 +189,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           if (call.isDone()) {
             continue;
           }
-          try {
-            tracedWriteRequest(call);
+          try (Scope scope = call.span.makeCurrent()) {
+            writeRequest(call);
           } catch (IOException e) {
             // exception here means the call has not been added to the pendingCalls yet, so we need
             // to fail it by our own.
@@ -592,13 +591,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     this.out = new DataOutputStream(new BufferedOutputStream(saslRpcClient.getOutputStream()));
   }
 
-  private void tracedWriteRequest(Call call) throws IOException {
-    try (TraceScope ignored = TraceUtil.createTrace("RpcClientImpl.tracedWriteRequest",
-          call.span)) {
-      writeRequest(call);
-    }
-  }
-
   /**
    * Initiates a call by sending the parameter to the remote server. Note: this is not called from
    * the Connection thread, but by other threads.
@@ -806,7 +798,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (callSender != null) {
           callSender.sendCall(call);
         } else {
-          tracedWriteRequest(call);
+          // this is in the same thread with the caller so do not need to attach the trace context
+          // again.
+          writeRequest(call);
         }
       }
     });

@@ -293,6 +293,8 @@ public final class TableDescriptorChecker {
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
       CompressionTest.testCompression(cfd.getCompressionType());
       CompressionTest.testCompression(cfd.getCompactionCompressionType());
+      CompressionTest.testCompression(cfd.getMajorCompactionCompressionType());
+      CompressionTest.testCompression(cfd.getMinorCompactionCompressionType());
     }
   }
 

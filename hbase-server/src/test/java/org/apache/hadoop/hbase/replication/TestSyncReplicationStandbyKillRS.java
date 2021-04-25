@@ -68,12 +68,14 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
     UTIL1.shutdownMiniCluster();
 
     JVMClusterUtil.MasterThread activeMaster = UTIL2.getMiniHBaseCluster().getMasterThread();
+    String threadName = "RegionServer-Restarter";
     Thread t = new Thread(() -> {
       try {
         List<JVMClusterUtil.RegionServerThread> regionServers =
             UTIL2.getMiniHBaseCluster().getLiveRegionServerThreads();
         for (JVMClusterUtil.RegionServerThread rst : regionServers) {
           ServerName serverName = rst.getRegionServer().getServerName();
+          LOG.debug("Going to stop [{}]", serverName);
           rst.getRegionServer().stop("Stop RS for test");
           waitForRSShutdownToStartAndFinish(activeMaster, serverName);
           JVMClusterUtil.RegionServerThread restarted =
@@ -83,9 +85,11 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
       } catch (Exception e) {
         LOG.error("Failed to kill RS", e);
       }
-    });
+    }, threadName);
     t.start();
 
+    LOG.debug("Going to transit peer {} to {} state", PEER_ID,
+      SyncReplicationState.DOWNGRADE_ACTIVE);
     // Transit standby to DA to replay logs
     try {
       UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
@@ -94,11 +98,18 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
       LOG.error("Failed to transit standby cluster to " + SyncReplicationState.DOWNGRADE_ACTIVE, e);
     }
 
-    while (UTIL2.getAdmin().getReplicationPeerSyncReplicationState(PEER_ID)
-        != SyncReplicationState.DOWNGRADE_ACTIVE) {
+    LOG.debug("Waiting for the restarter thread {} to quit", threadName);
+    t.join();
+
+    while (UTIL2.getAdmin()
+      .getReplicationPeerSyncReplicationState(PEER_ID) != SyncReplicationState.DOWNGRADE_ACTIVE) {
+      LOG.debug("Waiting for peer {} to be in {} state", PEER_ID,
+        SyncReplicationState.DOWNGRADE_ACTIVE);
       Thread.sleep(SLEEP_TIME);
     }
+    LOG.debug("Going to verify the result, {} records expected", COUNT);
     verify(UTIL2, 0, COUNT);
+    LOG.debug("Verification successfully done");
   }
 
   private void waitForRSShutdownToStartAndFinish(JVMClusterUtil.MasterThread activeMaster,
@@ -106,15 +117,14 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
     ServerManager sm = activeMaster.getMaster().getServerManager();
     // First wait for it to be in dead list
     while (!sm.getDeadServers().isDeadServer(serverName)) {
-      LOG.debug("Waiting for [" + serverName + "] to be listed as dead in master");
+      LOG.debug("Waiting for {} to be listed as dead in master", serverName);
       Thread.sleep(SLEEP_TIME);
     }
-    LOG.debug("Server [" + serverName + "] marked as dead, waiting for it to " +
-        "finish dead processing");
+    LOG.debug("Server {} marked as dead, waiting for it to finish dead processing", serverName);
     while (sm.areDeadServersInProgress()) {
-      LOG.debug("Server [" + serverName + "] still being processed, waiting");
+      LOG.debug("Server {} still being processed, waiting", serverName);
       Thread.sleep(SLEEP_TIME);
     }
-    LOG.debug("Server [" + serverName + "] done with server shutdown processing");
+    LOG.debug("Server {} done with server shutdown processing", serverName);
   }
 }
