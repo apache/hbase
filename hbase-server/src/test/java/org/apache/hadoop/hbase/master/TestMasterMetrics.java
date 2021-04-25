@@ -119,7 +119,6 @@ public class TestMasterMetrics {
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
     metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
-
     metricsHelper.assertCounter("cluster_read_requests", expectedRequestNumber, masterSource);
     metricsHelper.assertCounter("cluster_write_requests", expectedRequestNumber, masterSource);
   }
