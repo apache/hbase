@@ -99,8 +99,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * The constructor that uses the basic MetricsBalancer
    */
   protected BaseLoadBalancer() {
-    metricsBalancer = new MetricsBalancer();
-    createRegionFinder();
+    this(null);
   }
 
   /**
@@ -1052,7 +1051,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     this.onlySystemTablesOnMaster = LoadBalancer.isSystemTablesOnlyOnMaster(this.config);
 
     this.rackManager = new RackManager(getConf());
+    useRegionFinder = config.getBoolean("hbase.master.balancer.uselocality", true);
     if (useRegionFinder) {
+      regionFinder = new RegionLocationFinder();
       regionFinder.setConf(conf);
     }
     this.isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
