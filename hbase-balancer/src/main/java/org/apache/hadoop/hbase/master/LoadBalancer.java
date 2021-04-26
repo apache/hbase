@@ -30,21 +30,19 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.master.balancer.ClusterInfoProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Makes decisions about the placement and movement of Regions across
- * RegionServers.
- *
- * <p>Cluster-wide load balancing will occur only when there are no regions in
- * transition and according to a fixed period of a time using {@link #balanceCluster(Map)}.
- *
- * <p>On cluster startup, bulk assignment can be used to determine
- * locations for all Regions in a cluster.
- *
- * <p>This class produces plans for the
- * {@link org.apache.hadoop.hbase.master.assignment.AssignmentManager}
- * to execute.
+ * Makes decisions about the placement and movement of Regions across RegionServers.
+ * <p/>
+ * Cluster-wide load balancing will occur only when there are no regions in transition and according
+ * to a fixed period of a time using {@link #balanceCluster(Map)}.
+ * <p/>
+ * On cluster startup, bulk assignment can be used to determine locations for all Regions in a
+ * cluster.
+ * <p/>
+ * This class produces plans for the {@code AssignmentManager} to execute.
  */
 @InterfaceAudience.Private
 public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObserver {
@@ -69,15 +67,14 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
 
 
   /**
-   * Set the master service.
+   * Set the cluster info provider. Usually it is just a wrapper of master.
    */
-  void setMasterServices(MasterServices masterServices);
+  void setClusterInfoProvider(ClusterInfoProvider provider);
 
   /**
    * Perform the major balance operation for cluster, will invoke {@link #balanceTable} to do actual
-   * balance. Normally not need override this method, except
-   * {@link org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer} and
-   * {@link org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer}
+   * balance. Normally not need override this method, except {@link SimpleLoadBalancer} and
+   * {@code RSGroupBasedLoadBalancer}
    * @param loadOfAllTable region load of servers for all table
    * @return a list of regions to be moved, including source and destination, or null if cluster is
    *         already balanced

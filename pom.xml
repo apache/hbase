@@ -1928,6 +1928,13 @@
         <version>${project.version}</version>
       </dependency>
       <dependency>
+        <artifactId>hbase-balancer</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <artifactId>hbase-http</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>

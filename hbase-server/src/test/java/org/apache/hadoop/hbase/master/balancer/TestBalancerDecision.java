@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
  * Test BalancerDecision ring buffer using namedQueue interface
  */
 @Category({ MasterTests.class, MediumTests.class })
-public class TestBalancerDecision extends BalancerTestBase {
+public class TestBalancerDecision extends StochasticBalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

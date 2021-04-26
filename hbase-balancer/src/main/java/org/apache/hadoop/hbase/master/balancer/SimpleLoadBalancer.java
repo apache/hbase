@@ -48,8 +48,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue
  * On cluster startup, bulk assignment can be used to determine locations for all Regions in a
  * cluster.
  * <p/>
- * This classes produces plans for the
- * {@link org.apache.hadoop.hbase.master.assignment.AssignmentManager} to execute.
+ * This classes produces plans for the {@code AssignmentManager} to execute.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SimpleLoadBalancer extends BaseLoadBalancer {
@@ -313,7 +312,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         }
       }
       serverBalanceInfo.put(sal.getServerName(),
-              new BalanceInfo(numToOffload, (-1)*numTaken, server.getValue()));
+        new BalanceInfo(numToOffload, -numTaken, server.getValue()));
     }
     int totalNumMoved = regionsToMove.size();
 

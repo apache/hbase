@@ -25,7 +25,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestStochasticLoadBalancerLargeCluster extends BalancerTestBase {
+public class TestStochasticLoadBalancerLargeCluster extends StochasticBalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
