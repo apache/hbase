@@ -20,6 +20,137 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.3 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-25766](https://issues.apache.org/jira/browse/HBASE-25766) | *Major* | **Introduce RegionSplitRestriction that restricts the pattern of the split point**
+
+After HBASE-25766, we can specify a split restriction, "KeyPrefix" or "DelimitedKeyPrefix", to a table with the "hbase.regionserver.region.split\_restriction.type" property. The "KeyPrefix" split restriction groups rows by a prefix of the row-key. And the "DelimitedKeyPrefix" split restriction groups rows by a prefix of the row-key with a delimiter.
+
+For example:
+\`\`\`
+# Create a table with a "KeyPrefix" split restriction, where the prefix length is 2 bytes
+hbase\> create 'tbl1', 'fam', {CONFIGURATION =\> {'hbase.regionserver.region.split\_restriction.type' =\> 'KeyPrefix', 'hbase.regionserver.region.split\_restriction.prefix\_length' =\> '2'}}
+
+# Create a table with a "DelimitedKeyPrefix" split restriction, where the delimiter is a comma (,)
+hbase\> create 'tbl2', 'fam', {CONFIGURATION =\> {'hbase.regionserver.region.split\_restriction.type' =\> 'DelimitedKeyPrefix', 'hbase.regionserver.region.split\_restriction.delimiter' =\> ','}}
+\`\`\`
+
+Instead of specifying a split restriction to a table directly, we can also set the properties in hbase-site.xml. In this case, the specified split restriction is applied for all the tables.
+
+Note that the split restriction is also applied to a user-specified split point so that we don't allow users to break the restriction, which is different behavior from the existing KeyPrefixRegionSplitPolicy and DelimitedKeyPrefixRegionSplitPolicy.
+
+
+---
+
+* [HBASE-25775](https://issues.apache.org/jira/browse/HBASE-25775) | *Major* | **Use a special balancer to deal with maintenance mode**
+
+Introduced a MaintenanceLoadBalancer to be used only under maintenance mode. Typically you should not use it as your balancer implementation.
+
+
+---
+
+* [HBASE-25767](https://issues.apache.org/jira/browse/HBASE-25767) | *Major* | **CandidateGenerator.getRandomIterationOrder is too slow on large cluster**
+
+In the actual implementation classes of CandidateGenerator, now we just random select a start point and then iterate sequentially, instead of using the old way, where we will create a big array to hold all the integers in [0, num\_regions\_in\_cluster), shuffle the array, and then iterate on the array.
+The new implementation is 'random' enough as every time we just select one candidate. The problem for the old implementation is that, it will create an array every time when we want to get a candidate, if we have tens of thousands regions, we will create an array with tens of thousands length everytime, which causes big GC pressure and slow down the balancer execution.
+
+
+---
+
+* [HBASE-25734](https://issues.apache.org/jira/browse/HBASE-25734) | *Minor* | **Backport HBASE-24305 to branch-2.4**
+
+The following method was added to ServerName
+
+- #valueOf(Address, long)
+
+
+---
+
+* [HBASE-25199](https://issues.apache.org/jira/browse/HBASE-25199) | *Minor* | **Remove HStore#getStoreHomedir**
+
+Moved the following methods from HStore to HRegionFileSystem
+
+- #getStoreHomedir(Path, RegionInfo, byte[])
+- #getStoreHomedir(Path, String, byte[])
+
+
+---
+
+* [HBASE-25032](https://issues.apache.org/jira/browse/HBASE-25032) | *Major* | **Wait for region server to become online before adding it to online servers in Master**
+
+<!-- markdown -->
+
+After this change a region server is marked online and ready to accept regions (as seen by master) after it's first report to master is sent successfully. Prior to this change there could be cases where the region server is marked online but is actually stuck during initialization due to issues like misconfiguration and master tries to assign regions and they are stuck because the region server is in a weird state and not ready to serve them.
+
+
+---
+
+* [HBASE-25685](https://issues.apache.org/jira/browse/HBASE-25685) | *Major* | **asyncprofiler2.0 no longer supports svg; wants html**
+
+If asyncprofiler 1.x, all is good. If asyncprofiler 2.x and it is hbase-2.3.x or hbase-2.4.x, add '?output=html' to get flamegraphs from the profiler.
+
+Otherwise, if hbase-2.5+ and asyncprofiler2, all works. If asyncprofiler1 and hbase-2.5+, you may have to add '?output=svg' to the query.
+
+
+---
+
+* [HBASE-25518](https://issues.apache.org/jira/browse/HBASE-25518) | *Major* | **Support separate child regions to different region servers**
+
+Config key for enable/disable automatically separate child regions to different region servers in the procedure of split regions. One child will be kept to the server where parent region is on, and the other child will be assigned to a random server.
+
+hbase.master.auto.separate.child.regions.after.split.enabled
+
+Default setting is false/off.
+
+
+---
+
+* [HBASE-25374](https://issues.apache.org/jira/browse/HBASE-25374) | *Minor* | **Make REST Client connection and socket time out configurable**
+
+Configuration parameter to set rest client connection timeout
+
+"hbase.rest.client.conn.timeout" Default is 2 \* 1000
+
+"hbase.rest.client.socket.timeout" Default of 30 \* 1000
+
+
+---
+
+* [HBASE-25587](https://issues.apache.org/jira/browse/HBASE-25587) | *Major* | **[hbck2] Schedule SCP for all unknown servers**
+
+Adds scheduleSCPsForUnknownServers to Hbck Service.
+
+
+---
+
+* [HBASE-25636](https://issues.apache.org/jira/browse/HBASE-25636) | *Minor* | **Expose HBCK report as metrics**
+
+Expose HBCK repost results in metrics, includes: "orphanRegionsOnRS", "orphanRegionsOnFS", "inconsistentRegions", "holes", "overlaps", "unknownServerRegions" and "emptyRegionInfoRegions".
+
+
+---
+
+* [HBASE-24305](https://issues.apache.org/jira/browse/HBASE-24305) | *Minor* | **Handle deprecations in ServerName**
+
+The following methods were removed or made private from ServerName (due to HBASE-17624):
+
+- getHostNameMinusDomain(String): Was made private without a replacement.
+- parseHostname(String): Use #valueOf(String) instead.
+- parsePort(String): Use #valueOf(String) instead.
+- parseStartcode(String): Use #valueOf(String) instead.
+- getServerName(String, int, long): Was made private. Use #valueOf(String, int, long) instead.
+- getServerName(String, long): Use #valueOf(String, long) instead.
+- getHostAndPort(): Use #getAddress() instead.
+- getServerStartcodeFromServerName(String): Use instance of ServerName to pull out start code)
+- getServerNameLessStartCode(String): Use #getAddress() instead.
+
+
+
 # HBASE  2.4.2 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
