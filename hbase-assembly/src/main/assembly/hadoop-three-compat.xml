@@ -210,6 +210,7 @@
         <include>org.apache.yetus:audience-annotations</include>
         <include>org.slf4j:*</include>
         <include>org.apache.logging.log4j:*</include>
+        <include>io.opentelemetry:*</include>
       </includes>
     </dependencySet>
     <dependencySet>
