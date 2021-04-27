@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.throttle;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -41,6 +42,10 @@ public class NoLimitThroughputController implements ThroughputController {
 
   @Override
   public void finish(String compactionName) {
+  }
+
+  @Override
+  public void updateConfig(Configuration conf,final RegionServerServices server) {
   }
 
   private boolean stopped;

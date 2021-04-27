@@ -35,6 +35,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
@@ -740,12 +741,24 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
       }
     }
 
-    ThroughputController old = this.compactionThroughputController;
-    if (old != null) {
-      old.stop("configuration change");
+    String newCompactClass = newConf.get(
+        CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
+        CompactionThroughputControllerFactory.DEFAULT_THROUGHPUT_CONTROLLER_CLASS
+            .getName());
+
+    String oldCompactClass =
+        compactionThroughputController.getClass().getName();
+
+    if (oldCompactClass.equals(newCompactClass)) {
+      compactionThroughputController.updateConfig(newConf, server);
+    } else {
+      LOG.info(
+          CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY
+              + " is changed from " + oldCompactClass + " to "
+              + newCompactClass);
+      this.compactionThroughputController =
+          CompactionThroughputControllerFactory.create(server, newConf);
     }
-    this.compactionThroughputController =
-        CompactionThroughputControllerFactory.create(server, newConf);
 
     // We change this atomically here instead of reloading the config in order that upstream
     // would be the only one with the flexibility to reload the config.

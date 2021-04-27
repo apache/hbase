@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.throttle;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A utility that constrains the total throughput of one or more simultaneous flows by
@@ -49,4 +50,7 @@ public interface ThroughputController extends Stoppable {
    * Finish the controller. Should call this method in a finally block.
    */
   void finish(String name);
+
+  void updateConfig(Configuration conf,final RegionServerServices server);
+
 }

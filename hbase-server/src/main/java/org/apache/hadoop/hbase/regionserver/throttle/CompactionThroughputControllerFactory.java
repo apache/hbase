@@ -17,13 +17,16 @@
  */
 package org.apache.hadoop.hbase.regionserver.throttle;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.util.ReflectionUtils;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public final class CompactionThroughputControllerFactory {
@@ -36,7 +39,10 @@ public final class CompactionThroughputControllerFactory {
   private CompactionThroughputControllerFactory() {
   }
 
-  private static final Class<? extends ThroughputController>
+  static Map<Class<? extends ThroughputController>,ThroughputController> controllerMap =new
+      ConcurrentHashMap<Class<? extends ThroughputController>,ThroughputController>();
+
+  public static final Class<? extends ThroughputController>
       DEFAULT_THROUGHPUT_CONTROLLER_CLASS = PressureAwareCompactionThroughputController.class;
 
   // for backward compatibility and may not be supported in the future
@@ -47,24 +53,35 @@ public final class CompactionThroughputControllerFactory {
 
   public static ThroughputController create(RegionServerServices server,
       Configuration conf) {
-    Class<? extends ThroughputController> clazz = getThroughputControllerClass(conf);
-    ThroughputController controller = ReflectionUtils.newInstance(clazz, conf);
-    controller.setup(server);
+    Class<? extends ThroughputController> clazz =
+        getThroughputControllerClass(conf);
+    ThroughputController controller = controllerMap.get(clazz);
+    if (controller == null) {
+      controller = ReflectionUtils.newInstance(clazz, conf);
+      controller.setup(server);
+      controllerMap.put(clazz, controller);
+    } else {
+      controller.updateConfig(conf, server);
+      return controller;
+    }
+
     return controller;
   }
 
   public static Class<? extends ThroughputController> getThroughputControllerClass(
       Configuration conf) {
-    String className =
-        conf.get(HBASE_THROUGHPUT_CONTROLLER_KEY, DEFAULT_THROUGHPUT_CONTROLLER_CLASS.getName());
+    String className = conf.get(HBASE_THROUGHPUT_CONTROLLER_KEY,
+        DEFAULT_THROUGHPUT_CONTROLLER_CLASS.getName());
     className = resolveDeprecatedClassName(className);
+
     try {
-      return Class.forName(className).asSubclass(ThroughputController.class);
+      Class<? extends ThroughputController> classObj =
+          Class.forName(className).asSubclass(ThroughputController.class);
+      return classObj;
     } catch (Exception e) {
-      LOG.warn(
-        "Unable to load configured throughput controller '" + className
-            + "', load default throughput controller "
-            + DEFAULT_THROUGHPUT_CONTROLLER_CLASS.getName() + " instead", e);
+      LOG.warn("Unable to load configured throughput controller '" + className
+          + "', load default throughput controller "
+          + DEFAULT_THROUGHPUT_CONTROLLER_CLASS.getName() + " instead", e);
       return DEFAULT_THROUGHPUT_CONTROLLER_CLASS;
     }
   }
@@ -86,4 +103,5 @@ public final class CompactionThroughputControllerFactory {
     }
     return className;
   }
+
 }
