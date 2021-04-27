@@ -29,6 +29,7 @@ option optimize_for = SPEED;
 import "HBase.proto";
 import "server/ClusterStatus.proto";
 import "server/ErrorHandling.proto";
+import "server/master/Master.proto";
 
 message RegionServerStartupRequest {
   /** Port number this regionserver is up on */
@@ -147,22 +148,6 @@ message RegionSpaceUseReportRequest {
 message RegionSpaceUseReportResponse {
 }
 
-message RemoteProcedureResult {
-  required uint64 proc_id = 1;
-  enum Status {
-    SUCCESS = 1;
-    ERROR = 2;
-  }
-  required Status status = 2;
-  optional ForeignExceptionMessage error = 3;
-}
-message ReportProcedureDoneRequest {
-  repeated RemoteProcedureResult result = 1;
-}
-
-message ReportProcedureDoneResponse {
-}
-
 message FileArchiveNotificationRequest {
   message FileWithSize {
     optional TableName table_name = 1;
@@ -211,6 +196,10 @@ service RegionServerStatusService {
   rpc ReportRegionSpaceUse(RegionSpaceUseReportRequest)
     returns(RegionSpaceUseReportResponse);
 
+  /**
+   * In HBASE-25807 this method was moved to Master.proto as replication server also need this.
+   * To avoid problems during upgrading, still keep this method here.
+   */
   rpc ReportProcedureDone(ReportProcedureDoneRequest)
     returns(ReportProcedureDoneResponse);
 

@@ -724,6 +724,23 @@ message ListReplicationSinkServersResponse {
   repeated ServerName server_name = 1;
 }
 
+message RemoteProcedureResult {
+  required uint64 proc_id = 1;
+  enum Status {
+    SUCCESS = 1;
+    ERROR = 2;
+  }
+  required Status status = 2;
+  optional ForeignExceptionMessage error = 3;
+}
+
+message ReportProcedureDoneRequest {
+  repeated RemoteProcedureResult result = 1;
+}
+
+message ReportProcedureDoneResponse {
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -1160,6 +1177,9 @@ service MasterService {
 
   rpc ListReplicationSinkServers(ListReplicationSinkServersRequest)
     returns (ListReplicationSinkServersResponse);
+
+  rpc ReportProcedureDone(ReportProcedureDoneRequest)
+      returns(ReportProcedureDoneResponse);
 }
 
 // HBCK Service definitions.

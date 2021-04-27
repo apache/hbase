@@ -30,8 +30,8 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RemoteProcedureResult;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportProcedureDoneRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoteProcedureResult;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReportProcedureDoneRequest;
 
 /**
  * A thread which calls {@code reportProcedureDone} to tell master the result of a remote procedure.
@@ -101,8 +101,7 @@ class RemoteProcedureResultReporter extends Thread {
         }
         LOG.info("Failed procedure report " + TextFormat.shortDebugString(request) + "; retry (#" +
           tries + ")" + (pause ? " after " + pauseTime + "ms delay (Master is coming online...)."
-            : " immediately."),
-          e);
+            : " immediately."), e);
         Threads.sleep(pauseTime);
         tries++;
       }

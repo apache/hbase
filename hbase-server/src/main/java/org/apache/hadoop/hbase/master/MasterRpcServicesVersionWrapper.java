@@ -24,6 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
 /**
@@ -96,8 +97,8 @@ public class MasterRpcServicesVersionWrapper
   }
 
   @Override
-  public RegionServerStatusProtos.ReportProcedureDoneResponse reportProcedureDone(
-      RpcController controller, RegionServerStatusProtos.ReportProcedureDoneRequest request)
+  public MasterProtos.ReportProcedureDoneResponse reportProcedureDone(
+      RpcController controller, MasterProtos.ReportProcedureDoneRequest request)
       throws ServiceException {
     return masterRpcServices.reportProcedureDone(controller, request);
   }
