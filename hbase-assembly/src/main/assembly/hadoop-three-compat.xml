@@ -213,6 +213,7 @@
         <include>org.slf4j:jcl-over-slf4j</include>
         <include>org.slf4j:jul-to-slf4j</include>
         <include>org.slf4j:slf4j-log4j12</include>
+        <include>io.opentelemetry:*</include>
       </includes>
     </dependencySet>
     <dependencySet>
