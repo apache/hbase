@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import java.io.IOException;
 import java.util.OptionalLong;
 
 import org.apache.hadoop.fs.Path;
@@ -33,5 +34,5 @@ import org.apache.yetus.audience.InterfaceAudience;
 @FunctionalInterface
 public interface WALFileLengthProvider {
 
-  OptionalLong getLogFileSizeIfBeingWritten(Path path);
+  OptionalLong getLogFileSizeIfBeingWritten(Path path) throws IOException;
 }
