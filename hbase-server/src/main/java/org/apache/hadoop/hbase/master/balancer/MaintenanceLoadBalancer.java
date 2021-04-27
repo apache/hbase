@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -57,7 +56,7 @@ public class MaintenanceLoadBalancer extends Configured implements LoadBalancer 
   }
 
   @Override
-  public void setMasterServices(MasterServices masterServices) {
+  public void setClusterInfoProvider(ClusterInfoProvider provider) {
   }
 
   @Override
@@ -129,4 +128,5 @@ public class MaintenanceLoadBalancer extends Configured implements LoadBalancer 
   @Override
   public void updateBalancerStatus(boolean status) {
   }
+
 }

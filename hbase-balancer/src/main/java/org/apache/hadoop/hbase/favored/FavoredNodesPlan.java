@@ -75,7 +75,7 @@ public class FavoredNodesPlan {
   }
 
   /**
-   * @return the list of favored region server for this region based on the plan
+   * Returns the list of favored region server for this region based on the plan
    */
   public List<ServerName> getFavoredNodes(RegionInfo region) {
     return favoredNodesMap.get(region.getRegionNameAsString());

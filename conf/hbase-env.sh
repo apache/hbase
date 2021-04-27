@@ -142,3 +142,8 @@
 # Override text processing tools for use by these launch scripts.
 # export GREP="${GREP-grep}"
 # export SED="${SED-sed}"
+
+# Uncomment to enable trace, you can change the options to use other exporters such as jaeger or
+# zipkin. See https://github.com/open-telemetry/opentelemetry-java-instrumentation on how to
+# configure exporters and other components through system properties.
+# export HBASE_TRACE_OPTS="-Dotel.resource.attributes=service.name=HBase -Dotel.traces.exporter=logging otel.metrics.exporter=none"

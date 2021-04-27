@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, LargeTests.class })
-public class TestStochasticLoadBalancerBalanceCluster extends BalancerTestBase {
+public class TestStochasticLoadBalancerBalanceCluster extends StochasticBalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

@@ -59,7 +59,7 @@ import org.junit.experimental.categories.Category;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestStochasticLoadBalancer extends BalancerTestBase {
+public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

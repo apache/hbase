@@ -18,9 +18,14 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.ServerMetrics;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -46,10 +51,31 @@ public interface ClusterInfoProvider {
   TableDescriptor getTableDescriptor(TableName tableName) throws IOException;
 
   /**
+   * Returns the number of tables on this cluster.
+   */
+  int getNumberOfTables() throws IOException;
+
+  /**
    * Compute the block distribution for the given region.
    * <p/>
    * Used to refresh region block locations on HDFS.
    */
   HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
     TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException;
+
+  /**
+   * Check whether we have region replicas enabled for the tables of the given regions.
+   */
+  boolean hasRegionReplica(Collection<RegionInfo> regions) throws IOException;
+
+  /**
+   * Returns a copy of the internal list of online servers matched by the given {@code filter}.
+   */
+  List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
+    Predicate<ServerMetrics> filter);
+
+  /**
+   * Get a snapshot of the current assignment status.
+   */
+  Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(Collection<RegionInfo> regions);
 }

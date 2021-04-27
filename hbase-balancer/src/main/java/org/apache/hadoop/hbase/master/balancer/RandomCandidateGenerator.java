@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,20 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-syntax = "proto2";
-package hbase.pb;
+package org.apache.hadoop.hbase.master.balancer;
 
-option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
-option java_outer_classname = "TracingProtos";
-option java_generate_equals_and_hash = true;
-option optimize_for = SPEED;
+import org.apache.yetus.audience.InterfaceAudience;
 
-// OpenTelemetry propagates trace context through https://www.w3.org/TR/trace-context/, which
-// is a text-based approach that passes properties with http headers. Here we will also use this
-// approach so we just need a map to store the key value pair.
+@InterfaceAudience.Private
+class RandomCandidateGenerator extends CandidateGenerator {
 
-message RPCTInfo {
-  optional int64 trace_id = 1 [deprecated = true];
-  optional int64 parent_id = 2 [deprecated = true];
-  map<string, string> headers = 3;
+  @Override
+  BalanceAction generate(BalancerClusterState cluster) {
+
+    int thisServer = pickRandomServer(cluster);
+
+    // Pick the other server
+    int otherServer = pickOtherRandomServer(cluster, thisServer);
+
+    return pickRandomRegions(cluster, thisServer, otherServer);
+  }
 }

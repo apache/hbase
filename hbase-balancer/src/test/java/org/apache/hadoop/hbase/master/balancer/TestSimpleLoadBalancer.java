@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -68,57 +67,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
     loadBalancer.setConf(conf);
   }
 
-  // int[testnum][servernumber] -> numregions
-  int[][] clusterStateMocks = new int[][] {
-      // 1 node
-      new int[] { 0 },
-      new int[] { 1 },
-      new int[] { 10 },
-      // 2 node
-      new int[] { 0, 0 },
-      new int[] { 2, 0 },
-      new int[] { 2, 1 },
-      new int[] { 2, 2 },
-      new int[] { 2, 3 },
-      new int[] { 2, 4 },
-      new int[] { 1, 1 },
-      new int[] { 0, 1 },
-      new int[] { 10, 1 },
-      new int[] { 14, 1432 },
-      new int[] { 47, 53 },
-      // 3 node
-      new int[] { 0, 1, 2 },
-      new int[] { 1, 2, 3 },
-      new int[] { 0, 2, 2 },
-      new int[] { 0, 3, 0 },
-      new int[] { 0, 4, 0 },
-      new int[] { 20, 20, 0 },
-      // 4 node
-      new int[] { 0, 1, 2, 3 },
-      new int[] { 4, 0, 0, 0 },
-      new int[] { 5, 0, 0, 0 },
-      new int[] { 6, 6, 0, 0 },
-      new int[] { 6, 2, 0, 0 },
-      new int[] { 6, 1, 0, 0 },
-      new int[] { 6, 0, 0, 0 },
-      new int[] { 4, 4, 4, 7 },
-      new int[] { 4, 4, 4, 8 },
-      new int[] { 0, 0, 0, 7 },
-      // 5 node
-      new int[] { 1, 1, 1, 1, 4 },
-      // more nodes
-      new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-      new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 10 }, new int[] { 6, 6, 5, 6, 6, 6, 6, 6, 6, 1 },
-      new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 54 }, new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 55 },
-      new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 56 }, new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 16 },
-      new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 8 }, new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 9 },
-      new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 10 }, new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 123 },
-      new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 155 },
-      new int[] { 0, 0, 144, 1, 1, 1, 1, 1123, 133, 138, 12, 1444 },
-      new int[] { 0, 0, 144, 1, 0, 4, 1, 1123, 133, 138, 12, 1444 },
-      new int[] { 1538, 1392, 1561, 1557, 1535, 1553, 1385, 1542, 1619 } };
-
-  int [] mockUniformCluster = new int[] { 5, 5, 5, 5, 5 ,0};
+  int[] mockUniformCluster = new int[] { 5, 5, 5, 5, 5, 0 };
 
   @Rule
   public TestName name = new TestName();
@@ -140,7 +89,6 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
           mockClusterServersWithTables(clusterServers);
       loadBalancer.setClusterLoad(clusterLoad);
       List<RegionPlan> clusterplans = new ArrayList<>();
-      List<Pair<TableName, Integer>> regionAmountList = new ArrayList<>();
       for (Map.Entry<TableName, TreeMap<ServerName, List<RegionInfo>>> mapEntry : result
           .entrySet()) {
         TableName tableName = mapEntry.getKey();
@@ -169,7 +117,6 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
    * ceiling(average) at both table level and cluster level
    * Deliberately generate a special case to show the overall strategy can achieve cluster
    * level balance while the bytable strategy cannot
-   * @throws Exception
    */
   @Test
   public void testImpactOfBalanceClusterOverall() throws Exception {
@@ -196,7 +143,6 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
       loadBalancer.setClusterLoad(clusterLoad);
     }
     List<RegionPlan> clusterplans1 = new ArrayList<RegionPlan>();
-    List<Pair<TableName, Integer>> regionAmountList = new ArrayList<Pair<TableName, Integer>>();
     for (Map.Entry<TableName, TreeMap<ServerName, List<RegionInfo>>> mapEntry : LoadOfAllTable
         .entrySet()) {
       TableName tableName = mapEntry.getKey();
