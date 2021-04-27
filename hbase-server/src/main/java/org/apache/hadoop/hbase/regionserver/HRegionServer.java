@@ -2307,7 +2307,7 @@ public class HRegionServer extends Thread implements
     return walRoller;
   }
 
-  WALFactory getWalFactory() {
+  public WALFactory getWalFactory() {
     return walFactory;
   }
 

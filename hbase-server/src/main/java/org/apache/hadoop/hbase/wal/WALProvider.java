@@ -130,7 +130,18 @@ public interface WALProvider {
   void addWALActionsListener(WALActionsListener listener);
 
   default WALFileLengthProvider getWALFileLengthProvider() {
-    return path -> getWALs().stream().map(w -> w.getLogFileSizeIfBeingWritten(path))
-        .filter(o -> o.isPresent()).findAny().orElse(OptionalLong.empty());
+    return path -> getWALs().stream().map(w -> {
+      try {
+        return w.getLogFileSizeIfBeingWritten(path);
+      } catch (IOException e) {
+        // Won't go here. For supporting replication offload in HBASE-24737, we introduce
+        // RemoteWALFileLengthProvider implementing WALFileLengthProvider, it is hold by
+        // ReplicationServer and gets the length of WALs from RS through RPC, it may throw an IOE.
+        // So we need declare WALFileLengthProvider.getLogFileSizeIfBeingWritten as throwing IOE.
+        // But this is safe here, WALProvider is only used by RS, getWALs returns WAL that extents
+        // WALFileLengthProvider and won't throw IOE.
+        return OptionalLong.empty();
+      }
+    }).filter(o -> o.isPresent()).findAny().orElse(OptionalLong.empty());
   }
 }

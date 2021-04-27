@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -135,6 +136,7 @@ import org.apache.hadoop.hbase.regionserver.handler.UnassignRegionHandler;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.RejectReplicationRequestStateChecker;
 import org.apache.hadoop.hbase.replication.regionserver.RejectRequestsFromClientStateChecker;
+import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -188,6 +190,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetLogFileSizeIfBeingWrittenRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetLogFileSizeIfBeingWrittenResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -4017,6 +4021,26 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       throw new ServiceException(e);
     }
     throw new ServiceException("Invalid request params");
+  }
+
+  @Override
+  public GetLogFileSizeIfBeingWrittenResponse getLogFileSizeIfBeingWritten(
+    RpcController controller, GetLogFileSizeIfBeingWrittenRequest request) throws ServiceException {
+    GetLogFileSizeIfBeingWrittenResponse.Builder builder =
+      GetLogFileSizeIfBeingWrittenResponse.newBuilder();
+    try {
+      WALFileLengthProvider walLengthProvider =
+        this.regionServer.getWalFactory().getWALProvider().getWALFileLengthProvider();
+      OptionalLong lengthOptional =
+        walLengthProvider.getLogFileSizeIfBeingWritten(new Path(request.getWalPath()));
+      if (lengthOptional.isPresent()) {
+        return builder.setIsBeingWritten(true).setLength(lengthOptional.getAsLong()).build();
+      } else {
+        return builder.setIsBeingWritten(false).build();
+      }
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
   }
 
   public RpcScheduler getRpcScheduler() {

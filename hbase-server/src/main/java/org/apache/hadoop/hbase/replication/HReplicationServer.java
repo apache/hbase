@@ -56,6 +56,8 @@ import org.apache.hadoop.hbase.replication.regionserver.RecoveredReplicationSour
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceFactory;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
+import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
+import org.apache.hadoop.hbase.replication.replicationserver.RemoteWALFileLengthProvider;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
@@ -718,7 +720,7 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
     ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
     // init replication source
     src.init(conf, walFs, walDir, this, queueStorage, replicationPeers.getPeer(peerId), this,
-      producer, queueId, clusterId, p -> OptionalLong.empty(), metrics);
+      producer, queueId, clusterId, createWALFileLengthProvider(producer, queueId), metrics);
     queueStorage.getWALsInQueue(producer, queueId)
       .forEach(walName -> src.enqueueLog(new Path(walDir, walName)));
     src.startup();
@@ -745,5 +747,12 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
     } catch (ReplicationException e) {
       abort("Failed to operate on replication queue", e);
     }
+  }
+
+  private WALFileLengthProvider createWALFileLengthProvider(ServerName producer, String queueId) {
+    if (new ReplicationQueueInfo(queueId).isQueueRecovered()) {
+      return p -> OptionalLong.empty();
+    }
+    return new RemoteWALFileLengthProvider(asyncClusterConnection, producer);
   }
 }
