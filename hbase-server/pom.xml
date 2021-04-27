@@ -36,8 +36,7 @@
     <license.bundles.jquery>true</license.bundles.jquery>
   </properties>
   <build>
-    <!-- Make sure resources get added before they are processed
-      by placing this first
+    <!-- Make sure resources get added before they are processed by placing this first
      -->
     <resources>
       <!-- Add the build webabpps to the classpth -->
