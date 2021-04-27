@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
 import org.apache.hadoop.hbase.master.LoadBalancer;
@@ -48,7 +49,10 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
+import org.apache.hadoop.hbase.master.balancer.ClusterInfoProvider;
+import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
+import org.apache.hadoop.hbase.master.balancer.MasterClusterInfoProvider;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
@@ -130,7 +134,6 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     }
   }
 
-  @Override
   public void setMasterServices(MasterServices masterServices) {
     this.masterServices = masterServices;
   }
@@ -378,14 +381,23 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       balancerClass = LoadBalancerFactory.getDefaultLoadBalancerClass();
     }
     internalBalancer = ReflectionUtils.newInstance(balancerClass);
-    if (internalBalancer instanceof FavoredNodesPromoter) {
-      favoredNodesManager = new FavoredNodesManager(masterServices);
-    }
     internalBalancer.setConf(config);
-    internalBalancer.setMasterServices(masterServices);
+    internalBalancer.setClusterInfoProvider(new MasterClusterInfoProvider(masterServices));
     if(clusterStatus != null) {
       internalBalancer.setClusterMetrics(clusterStatus);
     }
+    // special handling for favor node balancers
+    if (internalBalancer instanceof FavoredNodesPromoter) {
+      favoredNodesManager = new FavoredNodesManager(masterServices);
+      if (internalBalancer instanceof FavoredNodeLoadBalancer) {
+        ((FavoredNodeLoadBalancer) internalBalancer).setMasterServices(masterServices);
+      }
+      if (internalBalancer instanceof FavoredStochasticBalancer) {
+        ((FavoredStochasticBalancer) internalBalancer).setMasterServices(masterServices);
+      }
+    }
+
+
     internalBalancer.initialize();
     // init fallback groups
     this.fallbackEnabled = config.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
@@ -614,5 +626,10 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       LOG.error("Failed to get default rsgroup info to fallback", e);
     }
     return serverNames == null || serverNames.isEmpty() ? servers : serverNames;
+  }
+
+  @Override
+  public void setClusterInfoProvider(ClusterInfoProvider provider) {
+    throw new UnsupportedOperationException("Just call set master service instead");
   }
 }

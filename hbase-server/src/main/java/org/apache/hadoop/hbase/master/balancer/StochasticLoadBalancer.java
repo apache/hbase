@@ -277,14 +277,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   public synchronized void setClusterMetrics(ClusterMetrics st) {
     super.setClusterMetrics(st);
     updateRegionLoad();
-    for(CostFromRegionLoadFunction cost : regionLoadFunctions) {
+    for (CostFromRegionLoadFunction cost : regionLoadFunctions) {
       cost.setClusterMetrics(st);
     }
 
     // update metrics size
     try {
       // by-table or ensemble mode
-      int tablesCount = isByTable ? services.getTableDescriptors().getAll().size() : 1;
+      int tablesCount = isByTable ? provider.getNumberOfTables() : 1;
       int functionsCount = getCostFunctionNames().length;
 
       updateMetricsSize(tablesCount * (functionsCount + 1)); // +1 for overall
@@ -298,7 +298,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   public void updateMetricsSize(int size) {
     if (metricsBalancer instanceof MetricsStochasticBalancer) {
-        ((MetricsStochasticBalancer) metricsBalancer).updateMetricsSize(size);
+      ((MetricsStochasticBalancer) metricsBalancer).updateMetricsSize(size);
     }
   }
 
@@ -507,7 +507,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * update costs to JMX
    */
   private void updateStochasticCosts(TableName tableName, Double overall, Double[] subCosts) {
-    if (tableName == null) return;
+    if (tableName == null) {
+      return;
+    }
 
     // check if the metricsBalancer is MetricsStochasticBalancer before casting
     if (metricsBalancer instanceof MetricsStochasticBalancer) {
@@ -638,7 +640,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Get the names of the cost functions
    */
   public String[] getCostFunctionNames() {
-    if (costFunctions == null) return null;
+    if (costFunctions == null) {
+      return null;
+    }
     String[] ret = new String[costFunctions.size()];
     for (int i = 0; i < costFunctions.size(); i++) {
       CostFunction c = costFunctions.get(i);
@@ -808,7 +812,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       if (max <= min || value <= min) {
         return 0;
       }
-      if ((max - min) == 0) return 0;
+      if ((max - min) == 0) {
+        return 0;
+      }
 
       return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
     }
@@ -1028,9 +1034,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     @Override
     protected void regionMoved(int region, int oldServer, int newServer) {
-      int oldEntity = type == LocalityType.SERVER ? oldServer : cluster.serverIndexToRackIndex[oldServer];
-      int newEntity = type == LocalityType.SERVER ? newServer : cluster.serverIndexToRackIndex[newServer];
-      double localityDelta = getWeightedLocality(region, newEntity) - getWeightedLocality(region, oldEntity);
+      int oldEntity =
+        type == LocalityType.SERVER ? oldServer : cluster.serverIndexToRackIndex[oldServer];
+      int newEntity =
+        type == LocalityType.SERVER ? newServer : cluster.serverIndexToRackIndex[newServer];
+      double localityDelta =
+        getWeightedLocality(region, newEntity) - getWeightedLocality(region, oldEntity);
       double normalizedDelta = bestLocality == 0 ? 0.0 : localityDelta / bestLocality;
       locality += normalizedDelta;
     }
@@ -1067,7 +1076,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   static class RackLocalityCostFunction extends LocalityBasedCostFunction {
 
-    private static final String RACK_LOCALITY_COST_KEY = "hbase.master.balancer.stochastic.rackLocalityCost";
+    private static final String RACK_LOCALITY_COST_KEY =
+      "hbase.master.balancer.stochastic.rackLocalityCost";
     private static final float DEFAULT_RACK_LOCALITY_COST = 15;
 
     public RackLocalityCostFunction(Configuration conf) {

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -725,8 +726,9 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     return c > 0 || (c == 0 && !includeStopRow);
   }
 
-  @Override
-  public synchronized void close() {
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
+    justification = "this method is only called inside close which is synchronized")
+  private void closeInternal() {
     if (storeHeap != null) {
       storeHeap.close();
       storeHeap = null;
@@ -741,23 +743,30 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   @Override
+  public synchronized void close() {
+    TraceUtil.trace(this::closeInternal, () -> region.createRegionSpan("RegionScanner.close"));
+  }
+
+  @Override
   public synchronized boolean reseek(byte[] row) throws IOException {
-    if (row == null) {
-      throw new IllegalArgumentException("Row cannot be null.");
-    }
-    boolean result = false;
-    region.startRegionOperation();
-    Cell kv = PrivateCellUtil.createFirstOnRow(row, 0, (short) row.length);
-    try {
-      // use request seek to make use of the lazy seek option. See HBASE-5520
-      result = this.storeHeap.requestSeek(kv, true, true);
-      if (this.joinedHeap != null) {
-        result = this.joinedHeap.requestSeek(kv, true, true) || result;
+    return TraceUtil.trace(() -> {
+      if (row == null) {
+        throw new IllegalArgumentException("Row cannot be null.");
       }
-    } finally {
-      region.closeRegionOperation();
-    }
-    return result;
+      boolean result = false;
+      region.startRegionOperation();
+      Cell kv = PrivateCellUtil.createFirstOnRow(row, 0, (short) row.length);
+      try {
+        // use request seek to make use of the lazy seek option. See HBASE-5520
+        result = this.storeHeap.requestSeek(kv, true, true);
+        if (this.joinedHeap != null) {
+          result = this.joinedHeap.requestSeek(kv, true, true) || result;
+        }
+      } finally {
+        region.closeRegionOperation();
+      }
+      return result;
+    }, () -> region.createRegionSpan("RegionScanner.reseek"));
   }
 
   @Override

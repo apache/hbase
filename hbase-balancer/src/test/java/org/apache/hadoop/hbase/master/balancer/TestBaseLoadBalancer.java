@@ -45,10 +45,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -94,9 +92,8 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     loadBalancer = new MockBalancer();
     loadBalancer.setConf(conf);
-    MasterServices st = mock(MasterServices.class);
-    when(st.getServerName()).thenReturn(master);
-    loadBalancer.setMasterServices(st);
+    ClusterInfoProvider provider = mock(ClusterInfoProvider.class);
+    loadBalancer.setClusterInfoProvider(provider);
 
     // Set up the rack topologies (5 machines per rack)
     rackManager = mock(RackManager.class);
@@ -133,8 +130,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    *
    * Round-robin. Should yield a balanced cluster so same invariant as the load
    * balancer holds, all servers holding either floor(avg) or ceiling(avg).
-   *
-   * @throws Exception
    */
   @Test
   public void testBulkAssignment() throws Exception {
@@ -171,7 +166,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   /**
    * Test the cluster startup bulk assignment which attempts to retain
    * assignment info.
-   * @throws Exception
    */
   @Test
   public void testRetainAssignment() throws Exception {
@@ -230,11 +224,11 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     balancer.setConf(conf);
-    ServerManager sm = mock(ServerManager.class);
-    when(sm.getOnlineServersListWithPredicator(anyList(), any())).thenReturn(idleServers);
-    MasterServices services = mock(MasterServices.class);
-    when(services.getServerManager()).thenReturn(sm);
-    balancer.setMasterServices(services);
+    ClusterInfoProvider provider = mock(ClusterInfoProvider.class);
+    when(
+      provider.getOnlineServersListWithPredicator(anyList(), any()))
+      .thenReturn(idleServers);
+    balancer.setClusterInfoProvider(provider);
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
         .setStartKey(Bytes.toBytes("key1"))
         .setEndKey(Bytes.toBytes("key2"))
@@ -406,9 +400,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    * <li>If a region had an existing assignment to a server with the same
    * address a a currently online server, it will be assigned to it
    * </ul>
-   * @param existing
-   * @param servers
-   * @param assignment
    */
   private void assertRetainedAssignment(Map<RegionInfo, ServerName> existing,
       List<ServerName> servers, Map<ServerName, List<RegionInfo>> assignment) {

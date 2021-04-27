@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.io.hfile;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -27,13 +29,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
-
 import net.spy.memcached.CachedData;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.transcoders.Transcoder;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,12 +128,12 @@ public class MemcachedBlockCache implements BlockCache {
   }
 
   @Override
-  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching,
-                            boolean repeat, boolean updateCacheMetrics) {
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
+    boolean updateCacheMetrics) {
     // Assume that nothing is the block cache
     HFileBlock result = null;
-
-    try (TraceScope traceScope = TraceUtil.createTrace("MemcachedBlockCache.getBlock")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("MemcachedBlockCache.getBlock").startSpan();
+    try (Scope traceScope = span.makeCurrent()) {
       result = client.get(cacheKey.toString(), tc);
     } catch (Exception e) {
       // Catch a pretty broad set of exceptions to limit any changes in the memecache client
@@ -146,6 +145,7 @@ public class MemcachedBlockCache implements BlockCache {
       }
       result = null;
     } finally {
+      span.end();
       // Update stats if this request doesn't have it turned off 100% of the time
       if (updateCacheMetrics) {
         if (result == null) {

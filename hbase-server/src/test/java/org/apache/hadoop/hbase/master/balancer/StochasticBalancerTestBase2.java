@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.balancer;
 import org.junit.After;
 import org.junit.Before;
 
-public class BalancerTestBase2 extends BalancerTestBase {
+public class StochasticBalancerTestBase2 extends StochasticBalancerTestBase {
 
   @Before
   public void before() {

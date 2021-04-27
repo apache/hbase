@@ -30,18 +30,14 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -55,10 +51,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * The base class for load balancers. It provides the the functions used to by
- * {@link org.apache.hadoop.hbase.master.assignment.AssignmentManager} to assign regions
- * in the edge cases. It doesn't provide an implementation of the
- * actual balancing algorithm.
- *
+ * {@code AssignmentManager} to assign regions in the edge cases. It doesn't provide an
+ * implementation of the actual balancing algorithm.
  */
 @InterfaceAudience.Private
 public abstract class BaseLoadBalancer implements LoadBalancer {
@@ -71,9 +65,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   protected static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
-
-  private static final Predicate<ServerMetrics> IDLE_SERVER_PREDICATOR
-    = load -> load.getRegionMetrics().isEmpty();
 
   protected RegionHDFSBlockLocationFinder regionFinder;
   protected boolean useRegionFinder;
@@ -88,7 +79,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected MetricsBalancer metricsBalancer = null;
   protected ClusterMetrics clusterStatus = null;
   protected ServerName masterServerName;
-  protected MasterServices services;
+  protected ClusterInfoProvider provider;
+
   /**
    * The constructor that uses the basic MetricsBalancer
    */
@@ -151,24 +143,17 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
 
   @Override
-  public void setMasterServices(MasterServices masterServices) {
-    masterServerName = masterServices.getServerName();
-    this.services = masterServices;
+  public void setClusterInfoProvider(ClusterInfoProvider provider) {
+    this.provider = provider;
     if (useRegionFinder) {
-      this.regionFinder.setClusterInfoProvider(new MasterClusterInfoProvider(services));
+      this.regionFinder.setClusterInfoProvider(provider);
     }
   }
 
   @Override
   public void postMasterStartupInitialize() {
-    if (services != null && regionFinder != null) {
-      try {
-        Set<RegionInfo> regions =
-            services.getAssignmentManager().getRegionStates().getRegionAssignments().keySet();
-        regionFinder.refreshAndWait(regions);
-      } catch (Exception e) {
-        LOG.warn("Refreshing region HDFS Block dist failed with exception, ignoring", e);
-      }
+    if (provider != null && regionFinder != null) {
+      regionFinder.refreshAndWait(provider.getAssignedRegions());
     }
   }
 
@@ -277,22 +262,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     BalancerClusterState cluster = createCluster(servers, regions);
     Map<ServerName, List<RegionInfo>> assignments = new HashMap<>();
     roundRobinAssignment(cluster, regions, servers, assignments);
-    return assignments;
+    return Collections.unmodifiableMap(assignments);
   }
 
   private BalancerClusterState createCluster(List<ServerName> servers,
     Collection<RegionInfo> regions) throws HBaseIOException {
-    boolean hasRegionReplica = false;
+    boolean hasRegionReplica= false;
     try {
-      if (services != null && services.getTableDescriptors() != null) {
-        Map<String, TableDescriptor> tds = services.getTableDescriptors().getAll();
-        for (RegionInfo regionInfo : regions) {
-          TableDescriptor td = tds.get(regionInfo.getTable().getNameWithNamespaceInclAsString());
-          if (td != null && td.getRegionReplication() > 1) {
-            hasRegionReplica = true;
-            break;
-          }
-        }
+      if (provider != null) {
+        hasRegionReplica = provider.hasRegionReplica(regions);
       }
     } catch (IOException ioe) {
       throw new HBaseIOException(ioe);
@@ -320,8 +298,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   private List<ServerName> findIdleServers(List<ServerName> servers) {
-    return this.services.getServerManager()
-            .getOnlineServersListWithPredicator(servers, IDLE_SERVER_PREDICATOR);
+    return provider.getOnlineServersListWithPredicator(servers,
+      metrics -> metrics.getRegionMetrics().isEmpty());
   }
 
   /**
@@ -474,7 +452,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     LOG.info("Reassigned " + regions.size() + " regions. " + numRetainedAssigments
         + " retained the pre-restart assignment. " + randomAssignMsg);
-    return assignments;
+    return Collections.unmodifiableMap(assignments);
   }
 
   @Override
@@ -503,6 +481,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   /**
   * Updates the balancer status tag reported to JMX
   */
+  @Override
   public void updateBalancerStatus(boolean status) {
     metricsBalancer.balancerStatus(status);
   }
@@ -607,13 +586,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
   }
 
-  private Map<ServerName, List<RegionInfo>> getRegionAssignmentsByServer(
-    Collection<RegionInfo> regions) {
-    if (this.services != null && this.services.getAssignmentManager() != null) {
-      return this.services.getAssignmentManager().getSnapShotOfAssignment(regions);
-    } else {
-      return new HashMap<>();
-    }
+  // return a modifiable map, as we may add more entries into the returned map.
+  private Map<ServerName, List<RegionInfo>>
+    getRegionAssignmentsByServer(Collection<RegionInfo> regions) {
+    return provider != null ? new HashMap<>(provider.getSnapShotOfAssignment(regions)) :
+      new HashMap<>();
   }
 
   private Map<ServerName, List<RegionInfo>> toEnsumbleTableLoad(
