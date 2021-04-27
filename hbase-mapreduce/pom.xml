@@ -51,9 +51,8 @@
         <configuration>
           <archive>
             <manifest>
-              <!--Include the Driver class as the 'main'.
-                   Executing the jar will then show a list of the basic MR jobs.
-                   -->
+              <!--Include the Driver class as the 'main'. Executing the jar will then show a
+                list of the basic MR jobs.-->
               <mainClass>org/apache/hadoop/hbase/mapreduce/Driver</mainClass>
             </manifest>
           </archive>
