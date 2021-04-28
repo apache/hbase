@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,26 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-public class DummyCostFunction extends CostFunction {
+import org.apache.hadoop.conf.Configuration;
+import org.apache.yetus.audience.InterfaceAudience;
+
+/**
+ * Compute the cost of total number of coprocessor requests  The more unbalanced the higher the
+ * computed cost will be.  This uses a rolling average of regionload.
+ */
+@InterfaceAudience.Private
+class CPRequestCostFunction extends CostFromRegionLoadAsRateFunction {
+
+  private static final String CP_REQUEST_COST_KEY =
+      "hbase.master.balancer.stochastic.cpRequestCost";
+  private static final float DEFAULT_CP_REQUEST_COST = 5;
+
+  CPRequestCostFunction(Configuration conf) {
+    this.setMultiplier(conf.getFloat(CP_REQUEST_COST_KEY, DEFAULT_CP_REQUEST_COST));
+  }
 
   @Override
-  protected double cost() {
-    return 0;
+  protected double getCostFromRl(BalancerRegionLoad rl) {
+    return rl.getCpRequestsCount();
   }
 }

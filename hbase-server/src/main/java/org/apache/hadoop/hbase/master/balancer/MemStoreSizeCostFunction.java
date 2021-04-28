@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,26 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-public class DummyCostFunction extends CostFunction {
+import org.apache.hadoop.conf.Configuration;
+import org.apache.yetus.audience.InterfaceAudience;
+
+/**
+ * Compute the cost of total memstore size. The more unbalanced the higher the computed cost will
+ * be. This uses a rolling average of regionload.
+ */
+@InterfaceAudience.Private
+class MemStoreSizeCostFunction extends CostFromRegionLoadAsRateFunction {
+
+  private static final String MEMSTORE_SIZE_COST_KEY =
+    "hbase.master.balancer.stochastic.memstoreSizeCost";
+  private static final float DEFAULT_MEMSTORE_SIZE_COST = 5;
+
+  MemStoreSizeCostFunction(Configuration conf) {
+    this.setMultiplier(conf.getFloat(MEMSTORE_SIZE_COST_KEY, DEFAULT_MEMSTORE_SIZE_COST));
+  }
 
   @Override
-  protected double cost() {
-    return 0;
+  protected double getCostFromRl(BalancerRegionLoad rl) {
+    return rl.getMemStoreSizeMB();
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,31 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-public class DummyCostFunction extends CostFunction {
+import java.util.Collection;
+import org.apache.yetus.audience.InterfaceAudience;
+
+/**
+ * Class to be used for the subset of RegionLoad costs that should be treated as rates. We do not
+ * compare about the actual rate in requests per second but rather the rate relative to the rest of
+ * the regions.
+ */
+@InterfaceAudience.Private
+abstract class CostFromRegionLoadAsRateFunction extends CostFromRegionLoadFunction {
 
   @Override
-  protected double cost() {
-    return 0;
+  protected double getRegionLoadCost(Collection<BalancerRegionLoad> regionLoadList) {
+    double cost = 0;
+    double previous = 0;
+    boolean isFirst = true;
+    for (BalancerRegionLoad rl : regionLoadList) {
+      double current = getCostFromRl(rl);
+      if (isFirst) {
+        isFirst = false;
+      } else {
+        cost += current - previous;
+      }
+      previous = current;
+    }
+    return Math.max(0, cost / (regionLoadList.size() - 1));
   }
 }
