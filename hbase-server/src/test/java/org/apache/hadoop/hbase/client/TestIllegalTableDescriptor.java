@@ -160,7 +160,6 @@ public class TestIllegalTableDescriptor {
     } catch (IllegalArgumentException e) {
       // pass
     }
-    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
     cfBuilder.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "NONE");
     checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
