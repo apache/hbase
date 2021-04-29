@@ -152,6 +152,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
   protected static byte[] CRC_QUALIFIER = Bytes.toBytes("c");
   protected static byte[] DATE_QUALIFIER = Bytes.toBytes("d");
   protected static byte[] IP_ADDRESS_QUALIFIER = Bytes.toBytes("a");
+  protected static byte[] RECORD_ID_QUALIFIER = Bytes.toBytes("r");
   protected static byte[] TARGET_URI_QUALIFIER = Bytes.toBytes("u");
 
   public static enum Counts {
@@ -267,12 +268,13 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     private byte[] qualifier;
     private int qualifierOffset;
     private int qualifierLength;
+    private long ts;
 
     public HBaseKeyWritable() { }
 
     public HBaseKeyWritable(byte[] row, int rowOffset, int rowLength,
         byte[] family, int familyOffset, int familyLength,
-        byte[] qualifier, int qualifierOffset, int qualifierLength) {
+        byte[] qualifier, int qualifierOffset, int qualifierLength, long ts) {
       this.row = row;
       this.rowOffset = rowOffset;
       this.rowLength = rowLength;
@@ -282,22 +284,24 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       this.qualifier = qualifier;
       this.qualifierOffset = qualifierOffset;
       this.qualifierLength = qualifierLength;
+      this.ts = ts;
     }
 
-    public HBaseKeyWritable(byte[] row, byte[] family, byte[] qualifier) {
+    public HBaseKeyWritable(byte[] row, byte[] family, byte[] qualifier, long ts) {
       this(row, 0, row.length,
         family, 0, family.length,
-        qualifier, 0, qualifier != null ? qualifier.length : 0);
+        qualifier, 0, qualifier != null ? qualifier.length : 0, ts);
     }
 
-    public HBaseKeyWritable(byte[] row, byte[] family) {
-      this(row, family, HConstants.EMPTY_BYTE_ARRAY);
+    public HBaseKeyWritable(byte[] row, byte[] family, long ts) {
+      this(row, family, HConstants.EMPTY_BYTE_ARRAY, ts);
     }
 
     public HBaseKeyWritable(Cell cell) {
       this(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
         cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
-        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+        cell.getTimestamp());
     }
 
     @Override
@@ -311,6 +315,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       this.qualifier = Bytes.toBytes(in.readUTF());
       this.qualifierOffset = 0;
       this.qualifierLength = qualifier.length;
+      this.ts = in.readLong();
     }
 
     @Override
@@ -323,6 +328,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       } else {
         out.writeUTF("");
       }
+      out.writeLong(ts);
     }
 
     public byte[] getRowArray() {
@@ -397,6 +403,13 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       this.qualifierLength = qualifierLength;
     }
 
+    public long getTimestamp() {
+      return ts;
+    }
+
+    public void setTimestamp(long ts) {
+      this.ts = ts;
+    }
   }
 
   public static class Loader extends Configured implements Tool {
@@ -414,13 +427,17 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             ColumnFamilyDescriptorBuilder.newBuilder(CONTENT_FAMILY_NAME)
               .setDataBlockEncoding(DataBlockEncoding.NONE)
               .setBloomFilterType(BloomType.ROW)
-              .setBlocksize(256 * 1024);
+              .setMaxVersions(1000)
+              .setBlocksize(256 * 1024)
+              ;
 
           ColumnFamilyDescriptorBuilder infoFamilyBuilder =
             ColumnFamilyDescriptorBuilder.newBuilder(INFO_FAMILY_NAME)
               .setDataBlockEncoding(DataBlockEncoding.NONE)
               .setBloomFilterType(BloomType.ROWCOL)
-              .setBlocksize(8 * 1024);
+              .setMaxVersions(1000)
+              .setBlocksize(8 * 1024)
+              ;
 
           Set<ColumnFamilyDescriptor> families = new HashSet<>();
           families.add(contentFamilyBuilder.build());
@@ -531,7 +548,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
       Configuration conf;
       Connection conn;
-      Table table;
+      Table table; 
 
       @Override
       protected void setup(Context context) throws IOException, InterruptedException {
@@ -541,19 +558,30 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
       @Override
       protected void cleanup(Context context) throws IOException, InterruptedException {
-        table.close();
-        conn.close();
+        try {
+          table.close();
+        } catch (Exception e) {
+          LOG.warn("Exception closing Table", e);
+        }
+        try {
+          conn.close();
+        } catch (Exception e) {
+          LOG.warn("Exception closing Connection", e);
+        }
       }
 
       @Override
       protected void map(LongWritable key, WARCWritable value, Context output)
           throws IOException, InterruptedException {
         WARCRecord.Header warcHeader = value.getRecord().getHeader();
+        String recordID = warcHeader.getRecordID();
         String targetURI;
         if (warcHeader.getRecordType().equals("response") &&
             (targetURI = warcHeader.getTargetURI()) != null) {
           String contentType = warcHeader.getField("WARC-Identified-Payload-Type");
           if (contentType != null) {
+            LOG.debug("Processing record id=" + recordID + ", targetURI=\"" + targetURI + "\"");
+            long now = System.currentTimeMillis();
 
             // Make row key
 
@@ -561,12 +589,10 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             try {
               rowKey = rowKeyFromTargetURI(targetURI);
             } catch (IllegalArgumentException e) {
-              LOG.debug("URI for record " + warcHeader.getRecordID() +
-                " did not parse with a host component");
+              LOG.debug("URI for record " + recordID + " did not parse with a host component");
               return;
             } catch (URISyntaxException e) {
-              LOG.warn("Could not parse URI \"" + targetURI + "\" for record " +
-                warcHeader.getRecordID());
+              LOG.warn("Could not parse URI \"" + targetURI + "\" for record " + recordID);
               return;
             }
 
@@ -580,37 +606,39 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             // Store to HBase
 
             Put put = new Put(rowKey);
-
-            put.addColumn(CONTENT_FAMILY_NAME, CONTENT_QUALIFIER, content);
-
-            put.addColumn(INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER,
+            put.addColumn(CONTENT_FAMILY_NAME, CONTENT_QUALIFIER, now, content);
+            put.addColumn(INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER, now,
               Bytes.toBytes(content.length));
-            put.addColumn(INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER, Bytes.toBytes(contentType));
-            put.addColumn(INFO_FAMILY_NAME, CRC_QUALIFIER, Bytes.toBytes(crc64));
-            put.addColumn(INFO_FAMILY_NAME, TARGET_URI_QUALIFIER, Bytes.toBytes(targetURI));
-            put.addColumn(INFO_FAMILY_NAME, DATE_QUALIFIER,
+            put.addColumn(INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER, now,
+              Bytes.toBytes(contentType));
+            put.addColumn(INFO_FAMILY_NAME, CRC_QUALIFIER, now, Bytes.toBytes(crc64));
+            put.addColumn(INFO_FAMILY_NAME, RECORD_ID_QUALIFIER, now, Bytes.toBytes(recordID));
+            put.addColumn(INFO_FAMILY_NAME, TARGET_URI_QUALIFIER, now, Bytes.toBytes(targetURI));
+            put.addColumn(INFO_FAMILY_NAME, DATE_QUALIFIER, now,
               Bytes.toBytes(warcHeader.getDateString()));
             if (warcHeader.getField("WARC-IP-Address") != null) {
-              put.addColumn(INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER,
+              put.addColumn(INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER, now,
                 Bytes.toBytes(warcHeader.getField("WARC-IP-Address")));
             }
-
             table.put(put);
 
-            // If we succeeded in storing to HBase, write records for later verification
+            // Write records out for later verification, one per HBase field except for the
+            // content record, which will be verified by CRC64.
 
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CRC_QUALIFIER),
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CRC_QUALIFIER, now),
               new BytesWritable(Bytes.toBytes(crc64)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER),
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER, now),
               new BytesWritable(Bytes.toBytes(content.length)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER),
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER, now),
               new BytesWritable(Bytes.toBytes(contentType)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, TARGET_URI_QUALIFIER),
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, RECORD_ID_QUALIFIER, now),
+              new BytesWritable(Bytes.toBytes(recordID)));
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, TARGET_URI_QUALIFIER, now),
               new BytesWritable(Bytes.toBytes(targetURI)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, DATE_QUALIFIER),
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, DATE_QUALIFIER, now),
               new BytesWritable(Bytes.toBytes(warcHeader.getDateString())));
             if (warcHeader.getField("WARC-IP-Address") != null) {
-              output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER),
+              output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER, now),
                 new BytesWritable(Bytes.toBytes(warcHeader.getField("WARC-IP-Address"))));
             }
           }
@@ -735,15 +763,19 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           key.getFamilyLength());
         byte[] qualifier = Bytes.copy(key.getQualifierArray(), key.getQualifierOffset(),
           key.getQualifierLength());
+        long ts = key.getTimestamp();
 
         if (Bytes.equals(INFO_FAMILY_NAME, family) &&
             Bytes.equals(CRC_QUALIFIER, qualifier)) {
 
           long expectedCRC64 = Bytes.toLong(value.getBytes(), 0, value.getLength());
 
-          Result result = table.get(new Get(row)
-            .addColumn(CONTENT_FAMILY_NAME, CONTENT_QUALIFIER)
-            .addColumn(INFO_FAMILY_NAME, CRC_QUALIFIER));
+          Result result =
+            table.get(new Get(row)
+              .addColumn(CONTENT_FAMILY_NAME, CONTENT_QUALIFIER)
+              .addColumn(INFO_FAMILY_NAME, CRC_QUALIFIER)
+              .setTimestamp(ts));
+
           byte[] content = result.getValue(CONTENT_FAMILY_NAME, CONTENT_QUALIFIER);
           if (content == null) {
             LOG.info("Row " + Bytes.toStringBinary(row) + ": missing content");
@@ -772,7 +804,11 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
         } else {
 
-          Result result = table.get(new Get(row).addColumn(family, qualifier));
+          Result result =
+            table.get(new Get(row)
+              .addColumn(family, qualifier)
+              .setTimestamp(ts));
+
           byte[] bytes = result.getValue(family, qualifier);
           if (bytes == null) {
             LOG.info("Row " + Bytes.toStringBinary(row) + ": missing " +
