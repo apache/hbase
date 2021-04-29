@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,22 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-public class DummyCostFunction extends CostFunction {
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.master.balancer.BalancerClusterState.LocalityType;
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
+class ServerLocalityCostFunction extends LocalityBasedCostFunction {
+
+  private static final String LOCALITY_COST_KEY = "hbase.master.balancer.stochastic.localityCost";
+  private static final float DEFAULT_LOCALITY_COST = 25;
+
+  ServerLocalityCostFunction(Configuration conf) {
+    super(conf, LocalityType.SERVER, LOCALITY_COST_KEY, DEFAULT_LOCALITY_COST);
+  }
 
   @Override
-  protected double cost() {
-    return 0;
+  int regionIndexToEntityIndex(int region) {
+    return cluster.regionIndexToServerIndex[region];
   }
 }

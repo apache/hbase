@@ -1,0 +1,67 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.master.balancer;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Compute the cost of a potential cluster state from skew in number of regions on a cluster.
+ */
+@InterfaceAudience.Private
+class RegionCountSkewCostFunction extends CostFunction {
+
+  private static final Logger LOG = LoggerFactory.getLogger(RegionCountSkewCostFunction.class);
+
+  static final String REGION_COUNT_SKEW_COST_KEY =
+    "hbase.master.balancer.stochastic.regionCountCost";
+  static final float DEFAULT_REGION_COUNT_SKEW_COST = 500;
+
+  private double[] stats = null;
+
+  RegionCountSkewCostFunction(Configuration conf) {
+    // Load multiplier should be the greatest as it is the most general way to balance data.
+    this.setMultiplier(conf.getFloat(REGION_COUNT_SKEW_COST_KEY, DEFAULT_REGION_COUNT_SKEW_COST));
+  }
+
+  @Override
+  void init(BalancerClusterState cluster) {
+    super.init(cluster);
+    LOG.debug("{} sees a total of {} servers and {} regions.", getClass().getSimpleName(),
+      cluster.numServers, cluster.numRegions);
+    if (LOG.isTraceEnabled()) {
+      for (int i = 0; i < cluster.numServers; i++) {
+        LOG.trace("{} sees server '{}' has {} regions", getClass().getSimpleName(),
+          cluster.servers[i], cluster.regionsPerServer[i].length);
+      }
+    }
+  }
+
+  @Override
+  protected double cost() {
+    if (stats == null || stats.length != cluster.numServers) {
+      stats = new double[cluster.numServers];
+    }
+    for (int i = 0; i < cluster.numServers; i++) {
+      stats[i] = cluster.regionsPerServer[i].length;
+    }
+    return costFromArray(stats);
+  }
+}

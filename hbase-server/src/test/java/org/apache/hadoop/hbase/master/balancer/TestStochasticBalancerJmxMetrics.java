@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertTrue;
 
@@ -35,10 +35,14 @@ import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.JMXListener;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.master.balancer.BalancerTestBase;
-import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Threads;
@@ -270,14 +274,5 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     }
 
     return ret;
-  }
-
-  private static void printMetrics(Set<String> metrics, String info) {
-    if (null != info) LOG.info("++++ ------ " + info + " ------");
-
-    LOG.info("++++ metrics count = " + metrics.size());
-    for (String str : metrics) {
-      LOG.info(" ++++ " + str);
-    }
   }
 }

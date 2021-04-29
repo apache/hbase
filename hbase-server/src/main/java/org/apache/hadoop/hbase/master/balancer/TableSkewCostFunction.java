@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,34 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-public class DummyCostFunction extends CostFunction {
+import org.apache.hadoop.conf.Configuration;
+import org.apache.yetus.audience.InterfaceAudience;
+
+/**
+ * Compute the cost of a potential cluster configuration based upon how evenly distributed tables
+ * are.
+ */
+@InterfaceAudience.Private
+class TableSkewCostFunction extends CostFunction {
+
+  private static final String TABLE_SKEW_COST_KEY =
+    "hbase.master.balancer.stochastic.tableSkewCost";
+  private static final float DEFAULT_TABLE_SKEW_COST = 35;
+
+  TableSkewCostFunction(Configuration conf) {
+    this.setMultiplier(conf.getFloat(TABLE_SKEW_COST_KEY, DEFAULT_TABLE_SKEW_COST));
+  }
 
   @Override
   protected double cost() {
-    return 0;
+    double max = cluster.numRegions;
+    double min = ((double) cluster.numRegions) / cluster.numServers;
+    double value = 0;
+
+    for (int i = 0; i < cluster.numMaxRegionsPerTable.length; i++) {
+      value += cluster.numMaxRegionsPerTable[i];
+    }
+
+    return scale(min, max, value);
   }
 }
