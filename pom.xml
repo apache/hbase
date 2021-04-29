@@ -63,7 +63,6 @@
   <modules>
     <module>hbase-resource-bundle</module>
     <module>hbase-server</module>
-    <module>hbase-thrift</module>
     <module>hbase-rest</module>
     <module>hbase-shell</module>
     <module>hbase-protocol</module>
@@ -2033,6 +2032,9 @@
       <activation>
         <jdk>1.8</jdk>
       </activation>
+      <modules>
+        <module>hbase-thrift</module>
+      </modules>
       <build>
         <pluginManagement>
           <plugins>
