@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.shaded.protobuf;
 
-import org.apache.hadoop.hbase.client.BalancerRejection;
 import static org.apache.hadoop.hbase.protobuf.ProtobufMagic.PB_MAGIC;
 
 import java.io.ByteArrayOutputStream;
@@ -69,6 +68,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ClientUtil;

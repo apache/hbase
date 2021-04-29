@@ -15,7 +15,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# Retrieve latest balancer decisions maintained in memory by HMaster
+# Retrieve latest balancer rejections maintained in memory by HMaster
 
 module Shell
   module Commands

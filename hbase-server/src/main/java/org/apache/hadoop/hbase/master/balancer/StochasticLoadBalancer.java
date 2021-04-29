@@ -369,7 +369,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     boolean balanced = total <= 0 || sumMultiplier <= 0 ||
         (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance);
     if(balanced && isBalancerRejectionRecording){
-      String reason;
+      String reason = "";
       if (total <= 0) {
         reason = "(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern) = " + total + " <= 0";
       } else if (sumMultiplier <= 0) {
@@ -378,8 +378,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         reason =
           "[(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern)]/sumMultiplier = " + (total
             / sumMultiplier) + " <= minCostNeedBalance(" + minCostNeedBalance + ")";
-      } else {
-        reason = "Unknown reason, please check the code for bugs";
       }
       sendRejectionReasonToRingBuffer(reason, costFunctions);
     }

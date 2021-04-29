@@ -77,7 +77,7 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
     }
   }
 
-  @Ignore
+  @Test
   public void testBalancerRejections() throws Exception{
     try {
       //enabled balancer rejection recording

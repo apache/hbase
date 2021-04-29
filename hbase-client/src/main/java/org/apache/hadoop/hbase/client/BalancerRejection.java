@@ -92,7 +92,7 @@ final public class BalancerRejection extends LogEntry {
       return this;
     }
 
-    public Builder addCostFuncInfo(String funcName, double cost, float multiplier){
+    public void addCostFuncInfo(String funcName, double cost, float multiplier){
       if(costFuncInfoList == null){
         costFuncInfoList = new ArrayList<>();
       }
@@ -102,7 +102,6 @@ final public class BalancerRejection extends LogEntry {
           .append(" cost:").append(cost)
           .append(" multiplier:").append(multiplier)
           .toString());
-      return this;
     }
 
     public Builder setCostFuncInfoList(List<String> costFuncInfoList){

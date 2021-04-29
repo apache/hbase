@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Balancer decision details that would be passed on to ring buffer for history
+ * Balancer rejection details that would be passed on to ring buffer for history
  */
 @InterfaceAudience.Private
 public class BalancerRejectionDetails extends NamedQueuePayload {
