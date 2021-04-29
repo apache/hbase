@@ -549,7 +549,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       protected void map(LongWritable key, WARCWritable value, Context output)
           throws IOException, InterruptedException {
         WARCRecord.Header warcHeader = value.getRecord().getHeader();
-        if (warcHeader.getRecordType().equals("response") && warcHeader.getTargetURI() != null) {
+        String targetURI;
+        if (warcHeader.getRecordType().equals("response") &&
+            (targetURI = warcHeader.getTargetURI()) != null) {
           String contentType = warcHeader.getField("WARC-Identified-Payload-Type");
           if (contentType != null) {
 
@@ -557,9 +559,13 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
             byte[] rowKey;
             try {
-              rowKey = rowKeyFromTargetURI(warcHeader.getTargetURI());
+              rowKey = rowKeyFromTargetURI(targetURI);
+            } catch (IllegalArgumentException e) {
+              LOG.debug("URI for record " + warcHeader.getRecordID() +
+                " did not parse with a host component");
+              return;
             } catch (URISyntaxException e) {
-              LOG.warn("Could not parse URI \"" + warcHeader.getTargetURI() + "\" for record " +
+              LOG.warn("Could not parse URI \"" + targetURI + "\" for record " +
                 warcHeader.getRecordID());
               return;
             }
@@ -578,11 +584,10 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             put.addColumn(CONTENT_FAMILY_NAME, CONTENT_QUALIFIER, content);
 
             put.addColumn(INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER,
-              Bytes.toBytes(warcHeader.getContentLength()));
+              Bytes.toBytes(content.length));
             put.addColumn(INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER, Bytes.toBytes(contentType));
             put.addColumn(INFO_FAMILY_NAME, CRC_QUALIFIER, Bytes.toBytes(crc64));
-            put.addColumn(INFO_FAMILY_NAME, TARGET_URI_QUALIFIER,
-              Bytes.toBytes(warcHeader.getTargetURI()));
+            put.addColumn(INFO_FAMILY_NAME, TARGET_URI_QUALIFIER, Bytes.toBytes(targetURI));
             put.addColumn(INFO_FAMILY_NAME, DATE_QUALIFIER,
               Bytes.toBytes(warcHeader.getDateString()));
             if (warcHeader.getField("WARC-IP-Address") != null) {
@@ -597,11 +602,11 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CRC_QUALIFIER),
               new BytesWritable(Bytes.toBytes(crc64)));
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER),
-              new BytesWritable(Bytes.toBytes(warcHeader.getContentLength())));
+              new BytesWritable(Bytes.toBytes(content.length)));
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER),
               new BytesWritable(Bytes.toBytes(contentType)));
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, TARGET_URI_QUALIFIER),
-              new BytesWritable(Bytes.toBytes(warcHeader.getTargetURI())));
+              new BytesWritable(Bytes.toBytes(targetURI)));
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, DATE_QUALIFIER),
               new BytesWritable(Bytes.toBytes(warcHeader.getDateString())));
             if (warcHeader.getField("WARC-IP-Address") != null) {
@@ -612,21 +617,26 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         }
       }
 
-      private byte[] rowKeyFromTargetURI(String targetURI) throws URISyntaxException {
+      private byte[] rowKeyFromTargetURI(String targetURI)
+          throws URISyntaxException, IllegalArgumentException {
         URI uri = new URI(targetURI);
         StringBuffer sb = new StringBuffer();
         // Ignore the scheme
         // Reverse the components of the hostname
-        String[] hostComponents = uri.getHost().split("\\.");
-        for (int i = hostComponents.length - 1; i >= 0; i--) {
-          sb.append(hostComponents[i]);
-          if (i != 0) {
-            sb.append('.');
+        if (uri.getHost() != null) {
+          String[] hostComponents = uri.getHost().split("\\.");
+          for (int i = hostComponents.length - 1; i >= 0; i--) {
+            sb.append(hostComponents[i]);
+            if (i != 0) {
+              sb.append('.');
+            }
           }
+        } else {
+          throw new IllegalArgumentException("URI is missing host component");
         }
         // Port
         if (uri.getPort() != -1) {
-          sb.append(":");
+          sb.append(':');
           sb.append(uri.getPort());
         }
         // Ignore the rest of the authority
