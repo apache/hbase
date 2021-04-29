@@ -23,6 +23,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -36,7 +38,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTestBase;
@@ -52,7 +53,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -64,26 +64,18 @@ import org.apache.hadoop.hbase.test.util.warc.WARCInputFormat;
 import org.apache.hadoop.hbase.test.util.warc.WARCRecord;
 import org.apache.hadoop.hbase.test.util.warc.WARCWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Counters;
-import org.apache.hadoop.mapreduce.InputFormat;
-import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -560,11 +552,26 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         if (warcHeader.getRecordType().equals("response") && warcHeader.getTargetURI() != null) {
           String contentType = warcHeader.getField("WARC-Identified-Payload-Type");
           if (contentType != null) {
-            byte[] rowKey = Bytes.toBytes(warcHeader.getTargetURI());
+
+            // Make row key
+
+            byte[] rowKey;
+            try {
+              rowKey = rowKeyFromTargetURI(warcHeader.getTargetURI());
+            } catch (URISyntaxException e) {
+              LOG.warn("Could not parse URI \"" + warcHeader.getTargetURI() + "\" for record " +
+                warcHeader.getRecordID());
+              return;
+            }
+
+            // Get the content and calculate the CRC64
+
             byte[] content = value.getRecord().getContent();
             CRC64 crc = new CRC64();
             crc.update(content);
             long crc64 = crc.getValue();
+
+            // Store to HBase
 
             Put put = new Put(rowKey);
 
@@ -585,6 +592,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
             table.put(put);
 
+            // If we succeeded in storing to HBase, write records for later verification
+
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CRC_QUALIFIER),
               new BytesWritable(Bytes.toBytes(crc64)));
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER),
@@ -602,6 +611,42 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           }
         }
       }
+
+      private byte[] rowKeyFromTargetURI(String targetURI) throws URISyntaxException {
+        URI uri = new URI(targetURI);
+        StringBuffer sb = new StringBuffer();
+        // Ignore the scheme
+        // Reverse the components of the hostname
+        String[] hostComponents = uri.getHost().split("\\.");
+        for (int i = hostComponents.length - 1; i >= 0; i--) {
+          sb.append(hostComponents[i]);
+          if (i != 0) {
+            sb.append('.');
+          }
+        }
+        // Port
+        if (uri.getPort() != -1) {
+          sb.append(":");
+          sb.append(uri.getPort());
+        }
+        // Ignore the rest of the authority
+        // Path, if present
+        if (uri.getRawPath() != null) {
+          sb.append(uri.getRawPath());
+        }
+        // Query, if present
+        if (uri.getRawQuery() != null) {
+          sb.append('?');
+          sb.append(uri.getRawQuery());
+        }
+        // Fragment, if present
+        if (uri.getRawFragment() != null) {
+          sb.append('#');
+          sb.append(uri.getRawFragment());
+        }
+        return Bytes.toBytes(sb.toString());
+      }
+
     }
   }
 
