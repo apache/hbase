@@ -82,6 +82,7 @@ public class WARCInputFormat extends FileInputFormat<LongWritable, WARCWritable>
   /**
    * Always returns false, as WARC files cannot be split.
    */
+  @Override
   protected boolean isSplitable(JobContext context, Path filename) {
     return false;
   }
@@ -92,7 +93,7 @@ public class WARCInputFormat extends FileInputFormat<LongWritable, WARCWritable>
     private WARCFileReader reader;
 
     @Override
-    public void initialize(InputSplit split, TaskAttemptContext context) 
+    public void initialize(InputSplit split, TaskAttemptContext context)
         throws IOException, InterruptedException {
       reader = new WARCFileReader(context.getConfiguration(), ((FileSplit) split).getPath());
     }

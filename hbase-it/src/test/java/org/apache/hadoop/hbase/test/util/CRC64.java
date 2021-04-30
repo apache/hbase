@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.test.util;
 
-// Cribbed from 
+// Cribbed from
 // hadoop-tools/hadoop-azure/src/main/java/org/apache/hadoop/fs/azurebfs/utils/CRC64.java
 
 public class CRC64 {

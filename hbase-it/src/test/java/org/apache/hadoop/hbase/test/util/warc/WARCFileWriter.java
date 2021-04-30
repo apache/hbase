@@ -95,7 +95,6 @@ public class WARCFileWriter {
    *              will be used. The codec's default file extension is appended to the filename.
    * @param workOutputPath The directory and filename prefix to which the data should be
    *                       written. We append a segment number and filename extensions to it.
-   * @throws IOException
    */
   public WARCFileWriter(Configuration conf, CompressionCodec codec, Path workOutputPath)
       throws IOException {
@@ -113,7 +112,6 @@ public class WARCFileWriter {
    * @param workOutputPath The directory and filename prefix to which the data should be
    *                       written. We append a segment number and filename extensions to it.
    * @param progress An object used by the mapred API for tracking a task's progress.
-   * @throws IOException
    */
   public WARCFileWriter(Configuration conf, CompressionCodec codec, Path workOutputPath,
       Progressable progress) throws IOException {
@@ -191,7 +189,6 @@ public class WARCFileWriter {
   /**
    * Appends a {@link WARCRecord} to the file, in WARC/1.0 format.
    * @param record The record to be written.
-   * @throws IOException
    */
   public void write(WARCRecord record) throws IOException {
     if (bytesWritten > maxSegmentSize) {
@@ -204,15 +201,15 @@ public class WARCFileWriter {
   /**
    * Appends a {@link WARCRecord} wrapped in a {@link WARCWritable} to the file.
    * @param record The wrapper around the record to be written.
-   * @throws IOException
    */
   public void write(WARCWritable record) throws IOException {
-    if (record.getRecord() != null) write(record.getRecord());
+    if (record.getRecord() != null) {
+      write(record.getRecord());
+    }
   }
 
   /**
    * Flushes any buffered data and closes the file.
-   * @throws IOException
    */
   public void close() throws IOException {
     dataStream.close();

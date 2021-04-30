@@ -72,7 +72,6 @@ public class WARCFileReader {
    * on the fly.
    * @param conf The Hadoop configuration.
    * @param filePath The Hadoop path to the file that should be read.
-   * @throws IOException
    */
   public WARCFileReader(Configuration conf, Path filePath) throws IOException {
     FileSystem fs = filePath.getFileSystem(conf);
@@ -82,13 +81,13 @@ public class WARCFileReader {
     CompressionCodec codec = filePath.getName().endsWith(".gz") ?
         WARCFileWriter.getGzipCodec(conf) : null;
     byteStream = new CountingInputStream(new BufferedInputStream(fs.open(filePath)));
-    dataStream = new DataInputStream(codec == null ? byteStream : codec.createInputStream(byteStream));
+    dataStream = new DataInputStream(codec == null ? byteStream :
+      codec.createInputStream(byteStream));
   }
 
   /**
    * Reads the next record from the file.
    * @return The record that was read.
-   * @throws IOException
    */
   public WARCRecord read() throws IOException {
     WARCRecord record = new WARCRecord(dataStream);
@@ -98,7 +97,6 @@ public class WARCFileReader {
 
   /**
    * Closes the file. No more reading is possible after the file has been closed.
-   * @throws IOException
    */
   public void close() throws IOException {
     if (dataStream != null) {
@@ -128,7 +126,9 @@ public class WARCFileReader {
    * and 1.0.
    */
   public float getProgress() {
-    if (fileSize == 0) return 1.0f;
+    if (fileSize == 0) {
+      return 1.0f;
+    }
     return (float) bytesRead / (float) fileSize;
   }
 
@@ -140,14 +140,18 @@ public class WARCFileReader {
     @Override
     public int read() throws IOException {
       int result = in.read();
-      if (result != -1) bytesRead++;
+      if (result != -1) {
+        bytesRead++;
+      }
       return result;
     }
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
       int result = in.read(b, off, len);
-      if (result != -1) bytesRead += result;
+      if (result != -1) {
+        bytesRead += result;
+      }
       return result;
     }
 

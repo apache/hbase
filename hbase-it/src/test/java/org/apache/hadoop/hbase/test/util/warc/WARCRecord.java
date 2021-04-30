@@ -69,7 +69,6 @@ import java.util.regex.Pattern;
 public class WARCRecord {
 
   public static final String WARC_VERSION = "WARC/1.0";
-  private static final int MAX_LINE_LENGTH = 10000;
   private static final Pattern VERSION_PATTERN = Pattern.compile("WARC/[0-9\\.]+");
   private static final Pattern CONTINUATION_PATTERN = Pattern.compile("^[\\t ]+.*");
   private static final String CRLF = "\r\n";
@@ -81,7 +80,6 @@ public class WARCRecord {
   /**
    * Creates a new WARCRecord by parsing it out of a {@link DataInput} stream.
    * @param in The input source from which one record will be read.
-   * @throws IOException
    */
   public WARCRecord(DataInput in) throws IOException {
     header = readHeader(in);
@@ -105,7 +103,9 @@ public class WARCRecord {
         headers.put(fieldName, headers.get(fieldName) + line);
       } else if (!line.isEmpty()) {
         String[] field = line.split(":", 2);
-        if (field.length < 2) throw new IllegalStateException("Malformed header line: " + line);
+        if (field.length < 2) {
+          throw new IllegalStateException("Malformed header line: " + line);
+        }
         fieldName = field[0].trim();
         headers.put(fieldName, field[1].trim());
       }
@@ -118,9 +118,6 @@ public class WARCRecord {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     boolean seenCR = false, seenCRLF = false;
     while (!seenCRLF) {
-      if (out.size() > MAX_LINE_LENGTH) {
-        throw new IllegalStateException("Exceeded maximum line length");
-      }
       byte b = in.readByte();
       if (!seenCR && b == 13) {
         seenCR = true;
@@ -166,7 +163,6 @@ public class WARCRecord {
    * cases, be not byte-for-byte identical to what was parsed from a {@link DataInput}.
    * However it has the same meaning and should not lose any information.
    * @param out The output stream to which this record should be appended.
-   * @throws IOException
    */
   public void write(DataOutput out) throws IOException {
     header.write(out);
@@ -193,7 +189,7 @@ public class WARCRecord {
    * [WARC 1.0 specification](http://bibnum.bnf.fr/warc/WARC_ISO_28500_version1_latestdraft.pdf).
    * Please see the specification for more detail.
    */
-  public static class Header {
+  public final static class Header {
     private final Map<String, String> fields;
 
     private Header(Map<String, String> fields) {
@@ -350,7 +346,9 @@ public class WARCRecord {
      */
     public int getContentLength() {
       String lengthStr = fields.get("Content-Length");
-      if (lengthStr == null) throw new IllegalStateException("Missing Content-Length header");
+      if (lengthStr == null) {
+        throw new IllegalStateException("Missing Content-Length header");
+      }
       try {
         return Integer.parseInt(lengthStr);
       } catch (NumberFormatException e) {
@@ -371,7 +369,6 @@ public class WARCRecord {
     /**
      * Appends this header to a {@link DataOutput} stream, in WARC/1.0 format.
      * @param out The data output to which the header should be written.
-     * @throws IOException
      */
     public void write(DataOutput out) throws IOException {
       out.write(toString().getBytes("UTF-8"));
@@ -383,7 +380,7 @@ public class WARCRecord {
      */
     @Override
     public String toString() {
-      StringBuffer buf = new StringBuffer();
+      StringBuilder buf = new StringBuilder();
       buf.append(WARC_VERSION);
       buf.append(CRLF);
       for (Map.Entry<String, String> field : fields.entrySet()) {
