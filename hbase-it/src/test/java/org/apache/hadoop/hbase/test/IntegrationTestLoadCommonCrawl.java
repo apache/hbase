@@ -40,11 +40,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -485,7 +485,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       job.setMapperClass(LoaderMapper.class);
       job.setInputFormatClass(WARCInputFormat.class);
       FileSystem fs = FileSystem.get(warcFileInput.toUri(), getConf());
-      if (fs.isDirectory(warcFileInput)) {
+      if (fs.getFileStatus(warcFileInput).isDirectory()) {
         LOG.info("Using directory as WARC input path: " + warcFileInput);
         FileInputFormat.setInputPaths(job, warcFileInput);
       } else {
@@ -548,7 +548,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
       Configuration conf;
       Connection conn;
-      Table table; 
+      Table table;
 
       @Override
       protected void setup(Context context) throws IOException, InterruptedException {
@@ -575,9 +575,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           throws IOException, InterruptedException {
         WARCRecord.Header warcHeader = value.getRecord().getHeader();
         String recordID = warcHeader.getRecordID();
-        String targetURI;
-        if (warcHeader.getRecordType().equals("response") &&
-            (targetURI = warcHeader.getTargetURI()) != null) {
+        String targetURI = warcHeader.getTargetURI();
+        if (warcHeader.getRecordType().equals("response") && targetURI != null) {
           String contentType = warcHeader.getField("WARC-Identified-Payload-Type");
           if (contentType != null) {
             LOG.debug("Processing record id=" + recordID + ", targetURI=\"" + targetURI + "\"");
@@ -616,9 +615,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             put.addColumn(INFO_FAMILY_NAME, TARGET_URI_QUALIFIER, now, Bytes.toBytes(targetURI));
             put.addColumn(INFO_FAMILY_NAME, DATE_QUALIFIER, now,
               Bytes.toBytes(warcHeader.getDateString()));
-            if (warcHeader.getField("WARC-IP-Address") != null) {
-              put.addColumn(INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER, now,
-                Bytes.toBytes(warcHeader.getField("WARC-IP-Address")));
+            String ipAddr = warcHeader.getField("WARC-IP-Address");
+            if (ipAddr != null) {
+              put.addColumn(INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER, now, Bytes.toBytes(ipAddr));
             }
             table.put(put);
 
@@ -627,19 +626,19 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CRC_QUALIFIER, now),
               new BytesWritable(Bytes.toBytes(crc64)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER, now),
-              new BytesWritable(Bytes.toBytes(content.length)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER, now),
-              new BytesWritable(Bytes.toBytes(contentType)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, RECORD_ID_QUALIFIER, now),
-              new BytesWritable(Bytes.toBytes(recordID)));
-            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, TARGET_URI_QUALIFIER, now),
-              new BytesWritable(Bytes.toBytes(targetURI)));
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_LENGTH_QUALIFIER,
+              now), new BytesWritable(Bytes.toBytes(content.length)));
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, CONTENT_TYPE_QUALIFIER,
+              now), new BytesWritable(Bytes.toBytes(contentType)));
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, RECORD_ID_QUALIFIER,
+              now), new BytesWritable(Bytes.toBytes(recordID)));
+            output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, TARGET_URI_QUALIFIER,
+              now), new BytesWritable(Bytes.toBytes(targetURI)));
             output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, DATE_QUALIFIER, now),
               new BytesWritable(Bytes.toBytes(warcHeader.getDateString())));
-            if (warcHeader.getField("WARC-IP-Address") != null) {
-              output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER, now),
-                new BytesWritable(Bytes.toBytes(warcHeader.getField("WARC-IP-Address"))));
+            if (ipAddr != null) {
+              output.write(new HBaseKeyWritable(rowKey, INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER,
+                now), new BytesWritable(Bytes.toBytes(ipAddr)));
             }
           }
         }
@@ -816,13 +815,12 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             output.getCounter(Counts.UNREFERENCED).increment(1);
             return;
           }
-          if (!Bytes.equals(bytes, 0, bytes.length,
-                value.getBytes(), 0, value.getLength())) {
+          if (!Bytes.equals(bytes, 0, bytes.length, value.getBytes(), 0, value.getLength())) {
             LOG.info("Row " + Bytes.toStringBinary(row) + ": " +
-                Bytes.toStringBinary(family) + ":" + Bytes.toStringBinary(qualifier) +
-                " mismatch");
-              output.getCounter(Counts.CORRUPT).increment(1);
-              return;
+              Bytes.toStringBinary(family) + ":" + Bytes.toStringBinary(qualifier) +
+              " mismatch");
+            output.getCounter(Counts.CORRUPT).increment(1);
+            return;
           }
 
         }

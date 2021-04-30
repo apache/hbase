@@ -54,40 +54,43 @@ import org.apache.hadoop.io.Writable;
  */
 public class WARCWritable implements Writable {
 
-    private WARCRecord record;
+  private WARCRecord record;
 
-    /** Creates an empty writable (with a null record). */
-    public WARCWritable() {
-        this.record = null;
-    }
+  /** Creates an empty writable (with a null record). */
+  public WARCWritable() {
+    this.record = null;
+  }
 
-    /** Creates a writable wrapper around a given WARCRecord. */
-    public WARCWritable(WARCRecord record) {
-        this.record = record;
-    }
+  /** Creates a writable wrapper around a given WARCRecord. */
+  public WARCWritable(WARCRecord record) {
+    this.record = record;
+  }
 
-    /** Returns the record currently wrapped by this writable. */
-    public WARCRecord getRecord() {
-        return record;
-    }
+  /** Returns the record currently wrapped by this writable. */
+  public WARCRecord getRecord() {
+    return record;
+  }
 
-    /** Updates the record held within this writable wrapper. */
-    public void setRecord(WARCRecord record) {
-        this.record = record;
-    }
+  /** Updates the record held within this writable wrapper. */
+  public void setRecord(WARCRecord record) {
+    this.record = record;
+  }
 
-    /** Appends the current record to a {@link DataOutput} stream. */
-    @Override
-    public void write(DataOutput out) throws IOException {
-        if (record != null) record.write(out);
+  /** Appends the current record to a {@link DataOutput} stream. */
+  @Override
+  public void write(DataOutput out) throws IOException {
+    if (record != null) {
+      record.write(out);
     }
+  }
 
-    /**
-     * Parses a {@link WARCRecord} out of a {@link DataInput} stream, and makes it the
-     * writable's current record.
-     */
-    @Override
-    public void readFields(DataInput in) throws IOException {
-        record = new WARCRecord(in);
-    }
+  /**
+   * Parses a {@link WARCRecord} out of a {@link DataInput} stream, and makes it the
+   * writable's current record.
+   */
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    record = new WARCRecord(in);
+  }
+
 }

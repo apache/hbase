@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.hbase.test.util;
 
-// Cribbed from hadoop-tools/hadoop-azure/src/main/java/org/apache/hadoop/fs/azurebfs/utils/CRC64.java
+// Cribbed from 
+// hadoop-tools/hadoop-azure/src/main/java/org/apache/hadoop/fs/azurebfs/utils/CRC64.java
 
 public class CRC64 {
   private static final long POLY = 0x9a6c9329ac4bc9b5L;
@@ -56,7 +57,7 @@ public class CRC64 {
   }
 
   public long getValue() {
-    // Return the compliment of 'value' to complete the calculation
+    // Return the compliment of 'value' to complete the calculation.
     return ~value;
   }
 

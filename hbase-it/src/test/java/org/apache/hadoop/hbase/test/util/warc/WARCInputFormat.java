@@ -68,63 +68,66 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
  */
 public class WARCInputFormat extends FileInputFormat<LongWritable, WARCWritable> {
 
-    /**
-     * Opens a WARC file (possibly compressed) for reading, and returns a RecordReader for accessing it.
-     */
+  /**
+   * Opens a WARC file (possibly compressed) for reading, and returns a RecordReader for
+   * accessing it.
+   */
+  @Override
+  public RecordReader<LongWritable, WARCWritable> createRecordReader(InputSplit split,
+      TaskAttemptContext context)
+          throws IOException, InterruptedException {
+    return new WARCReader();
+  }
+
+  /**
+   * Always returns false, as WARC files cannot be split.
+   */
+  protected boolean isSplitable(JobContext context, Path filename) {
+    return false;
+  }
+
+  private static class WARCReader extends RecordReader<LongWritable, WARCWritable> {
+    private final LongWritable key = new LongWritable();
+    private final WARCWritable value = new WARCWritable();
+    private WARCFileReader reader;
+
     @Override
-    public RecordReader<LongWritable, WARCWritable> createRecordReader(InputSplit split,
-                                                                       TaskAttemptContext context)
-            throws IOException, InterruptedException {
-        return new WARCReader();
+    public void initialize(InputSplit split, TaskAttemptContext context) 
+        throws IOException, InterruptedException {
+      reader = new WARCFileReader(context.getConfiguration(), ((FileSplit) split).getPath());
     }
 
-    /**
-     * Always returns false, as WARC files cannot be split.
-     */
-    protected boolean isSplitable(JobContext context, Path filename) {
+    @Override
+    public boolean nextKeyValue() throws IOException {
+      try {
+        WARCRecord record = reader.read();
+        key.set(reader.getRecordsRead());
+        value.setRecord(record);
+        return true;
+      } catch (EOFException eof) {
         return false;
+      }
     }
 
-    private static class WARCReader extends RecordReader<LongWritable, WARCWritable> {
-        private final LongWritable key = new LongWritable();
-        private final WARCWritable value = new WARCWritable();
-        private WARCFileReader reader;
-
-        @Override
-        public void initialize(InputSplit split, TaskAttemptContext context) throws IOException, InterruptedException {
-            reader = new WARCFileReader(context.getConfiguration(), ((FileSplit) split).getPath());
-        }
-
-        @Override
-        public boolean nextKeyValue() throws IOException {
-            try {
-                WARCRecord record = reader.read();
-                key.set(reader.getRecordsRead());
-                value.setRecord(record);
-                return true;
-            } catch (EOFException eof) {
-                return false;
-            }
-        }
-
-        @Override
-        public void close() throws IOException {
-            reader.close();
-        }
-
-        @Override
-        public float getProgress() throws IOException {
-            return reader.getProgress();
-        }
-
-        @Override
-        public LongWritable getCurrentKey() throws IOException, InterruptedException {
-            return key;
-        }
-
-        @Override
-        public WARCWritable getCurrentValue() throws IOException, InterruptedException {
-            return value;
-        }
+    @Override
+    public void close() throws IOException {
+      reader.close();
     }
+
+    @Override
+    public float getProgress() throws IOException {
+      return reader.getProgress();
+    }
+
+    @Override
+    public LongWritable getCurrentKey() throws IOException, InterruptedException {
+      return key;
+    }
+
+    @Override
+    public WARCWritable getCurrentValue() throws IOException, InterruptedException {
+      return value;
+    }
+  }
+
 }

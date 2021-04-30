@@ -68,33 +68,36 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
  */
 public class WARCOutputFormat extends FileOutputFormat<NullWritable, WARCWritable> {
 
-    /**
-     * Creates a new output file in WARC format, and returns a RecordWriter for writing to it.
-     */
+  /**
+   * Creates a new output file in WARC format, and returns a RecordWriter for writing to it.
+   */
+  @Override
+  public RecordWriter<NullWritable, WARCWritable> getRecordWriter(TaskAttemptContext context)
+      throws IOException, InterruptedException {
+    return new WARCWriter(context);
+  }
+
+  private class WARCWriter extends RecordWriter<NullWritable, WARCWritable> {
+    private final WARCFileWriter writer;
+
+    public WARCWriter(TaskAttemptContext context) throws IOException {
+      Configuration conf = context.getConfiguration();
+      CompressionCodec codec =
+        getCompressOutput(context) ? WARCFileWriter.getGzipCodec(conf) : null;
+      Path workFile = getDefaultWorkFile(context, "");
+      this.writer = new WARCFileWriter(conf, codec, workFile);
+    }
+
     @Override
-    public RecordWriter<NullWritable, WARCWritable> getRecordWriter(TaskAttemptContext context)
-            throws IOException, InterruptedException {
-        return new WARCWriter(context);
+    public void write(NullWritable key, WARCWritable value)
+        throws IOException, InterruptedException {
+      writer.write(value);
     }
 
-    private class WARCWriter extends RecordWriter<NullWritable, WARCWritable> {
-        private final WARCFileWriter writer;
-
-        public WARCWriter(TaskAttemptContext context) throws IOException {
-            Configuration conf = context.getConfiguration();
-            CompressionCodec codec = getCompressOutput(context) ? WARCFileWriter.getGzipCodec(conf) : null;
-            Path workFile = getDefaultWorkFile(context, "");
-            this.writer = new WARCFileWriter(conf, codec, workFile);
-        }
-
-        @Override
-        public void write(NullWritable key, WARCWritable value) throws IOException, InterruptedException {
-            writer.write(value);
-        }
-
-        @Override
-        public void close(TaskAttemptContext context) throws IOException, InterruptedException {
-            writer.close();
-        }
+    @Override
+    public void close(TaskAttemptContext context) throws IOException, InterruptedException {
+      writer.close();
     }
+  }
+
 }

@@ -72,171 +72,177 @@ import org.slf4j.LoggerFactory;
  * current record before opening a new file.)
  */
 public class WARCFileWriter {
-    private static final Logger logger = LoggerFactory.getLogger(WARCFileWriter.class);
-    public static final long DEFAULT_MAX_SEGMENT_SIZE = 1000000000L; // 1 GB
+  private static final Logger logger = LoggerFactory.getLogger(WARCFileWriter.class);
+  public static final long DEFAULT_MAX_SEGMENT_SIZE = 1000000000L; // 1 GB
 
-    private final Configuration conf;
-    private final CompressionCodec codec;
-    private final Path workOutputPath;
-    private final Progressable progress;
-    private final String extensionFormat;
-    private final long maxSegmentSize;
-    private long segmentsCreated = 0, segmentsAttempted = 0, bytesWritten = 0;
-    private CountingOutputStream byteStream;
-    private DataOutputStream dataStream;
+  private final Configuration conf;
+  private final CompressionCodec codec;
+  private final Path workOutputPath;
+  private final Progressable progress;
+  private final String extensionFormat;
+  private final long maxSegmentSize;
+  private long segmentsCreated = 0, segmentsAttempted = 0, bytesWritten = 0;
+  private CountingOutputStream byteStream;
+  private DataOutputStream dataStream;
 
-    /**
-     * Creates a WARC file, and opens it for writing. If a file with the same name already
-     * exists, an attempt number in the filename is incremented until we find a file that
-     * doesn't already exist.
-     *
-     * @param conf The Hadoop configuration.
-     * @param codec If null, the file is uncompressed. If non-null, this compression codec
-     *              will be used. The codec's default file extension is appended to the filename.
-     * @param workOutputPath The directory and filename prefix to which the data should be
-     *                       written. We append a segment number and filename extensions to it.
-     * @throws IOException
-     */
-    public WARCFileWriter(Configuration conf, CompressionCodec codec, Path workOutputPath) throws IOException {
-        this(conf, codec, workOutputPath, null);
+  /**
+   * Creates a WARC file, and opens it for writing. If a file with the same name already
+   * exists, an attempt number in the filename is incremented until we find a file that
+   * doesn't already exist.
+   *
+   * @param conf The Hadoop configuration.
+   * @param codec If null, the file is uncompressed. If non-null, this compression codec
+   *              will be used. The codec's default file extension is appended to the filename.
+   * @param workOutputPath The directory and filename prefix to which the data should be
+   *                       written. We append a segment number and filename extensions to it.
+   * @throws IOException
+   */
+  public WARCFileWriter(Configuration conf, CompressionCodec codec, Path workOutputPath)
+      throws IOException {
+    this(conf, codec, workOutputPath, null);
+  }
+
+  /**
+   * Creates a WARC file, and opens it for writing. If a file with the same name already
+   * exists, it is *overwritten*. Note that this is different behaviour from the other
+   * constructor. Yes, this sucks. It will probably change in a future version.
+   *
+   * @param conf The Hadoop configuration.
+   * @param codec If null, the file is uncompressed. If non-null, this compression codec
+   *              will be used. The codec's default file extension is appended to the filename.
+   * @param workOutputPath The directory and filename prefix to which the data should be
+   *                       written. We append a segment number and filename extensions to it.
+   * @param progress An object used by the mapred API for tracking a task's progress.
+   * @throws IOException
+   */
+  public WARCFileWriter(Configuration conf, CompressionCodec codec, Path workOutputPath,
+      Progressable progress) throws IOException {
+    this.conf = conf;
+    this.codec = codec;
+    this.workOutputPath = workOutputPath;
+    this.progress = progress;
+    this.extensionFormat = ".seg-%05d.attempt-%05d.warc" +
+        (codec == null ? "" : codec.getDefaultExtension());
+    this.maxSegmentSize = conf.getLong("warc.output.segment.size", DEFAULT_MAX_SEGMENT_SIZE);
+    createSegment();
+  }
+
+  /**
+   * Instantiates a Hadoop codec for compressing and decompressing Gzip files. This is the
+   * most common compression applied to WARC files.
+   *
+   * @param conf The Hadoop configuration.
+   */
+  public static CompressionCodec getGzipCodec(Configuration conf) {
+    try {
+      return (CompressionCodec) ReflectionUtils.newInstance(
+        conf.getClassByName("org.apache.hadoop.io.compress.GzipCodec")
+          .asSubclass(CompressionCodec.class),
+        conf);
+    } catch (ClassNotFoundException e) {
+      logger.warn("GzipCodec could not be instantiated", e);
+      return null;
     }
+  }
 
-    /**
-     * Creates a WARC file, and opens it for writing. If a file with the same name already
-     * exists, it is *overwritten*. Note that this is different behaviour from the other
-     * constructor. Yes, this sucks. It will probably change in a future version.
-     *
-     * @param conf The Hadoop configuration.
-     * @param codec If null, the file is uncompressed. If non-null, this compression codec
-     *              will be used. The codec's default file extension is appended to the filename.
-     * @param workOutputPath The directory and filename prefix to which the data should be
-     *                       written. We append a segment number and filename extensions to it.
-     * @param progress An object used by the mapred API for tracking a task's progress.
-     * @throws IOException
-     */
-    public WARCFileWriter(Configuration conf, CompressionCodec codec, Path workOutputPath, Progressable progress)
-            throws IOException {
-        this.conf = conf;
-        this.codec = codec;
-        this.workOutputPath = workOutputPath;
-        this.progress = progress;
-        this.extensionFormat = ".seg-%05d.attempt-%05d.warc" +
-                (codec == null ? "" : codec.getDefaultExtension());
-        this.maxSegmentSize = conf.getLong("warc.output.segment.size", DEFAULT_MAX_SEGMENT_SIZE);
-        createSegment();
-    }
+  /**
+   * Creates an output segment file and sets up the output streams to point at it.
+   * If the file already exists, retries with a different filename. This is a bit nasty --
+   * after all, {@link FileOutputFormat}'s work directory concept is supposed to prevent
+   * filename clashes -- but it looks like Amazon Elastic MapReduce prevents use of per-task
+   * work directories if the output of a job is on S3.
+   *
+   * TODO: Investigate this and find a better solution.
+   */
+  private void createSegment() throws IOException {
+    segmentsAttempted = 0;
+    bytesWritten = 0;
+    boolean success = false;
 
-    /**
-     * Instantiates a Hadoop codec for compressing and decompressing Gzip files. This is the
-     * most common compression applied to WARC files.
-     *
-     * @param conf The Hadoop configuration.
-     */
-    public static CompressionCodec getGzipCodec(Configuration conf) {
-        try {
-            return (CompressionCodec) ReflectionUtils.newInstance(
-                conf.getClassByName("org.apache.hadoop.io.compress.GzipCodec").asSubclass(CompressionCodec.class),
-                conf);
-        } catch (ClassNotFoundException e) {
-            logger.warn("GzipCodec could not be instantiated", e);
-            return null;
+    while (!success) {
+      Path path = workOutputPath.suffix(String.format(extensionFormat, segmentsCreated,
+        segmentsAttempted));
+      FileSystem fs = path.getFileSystem(conf);
+
+      try {
+        // The o.a.h.mapred OutputFormats overwrite existing files, whereas
+        // the o.a.h.mapreduce OutputFormats don't overwrite. Bizarre...
+        // Here, overwrite if progress != null, i.e. if using mapred API.
+        FSDataOutputStream fsStream = (progress == null) ? fs.create(path, false) :
+          fs.create(path, progress);
+        byteStream = new CountingOutputStream(new BufferedOutputStream(fsStream));
+        dataStream = new DataOutputStream(codec == null ? byteStream :
+          codec.createOutputStream(byteStream));
+        segmentsCreated++;
+        logger.info("Writing to output file: {}", path);
+        success = true;
+
+      } catch (IOException e) {
+        if (e.getMessage().startsWith("File already exists")) {
+          logger.warn("Tried to create file {} but it already exists; retrying.", path);
+          segmentsAttempted++; // retry
+        } else {
+          throw e;
         }
+      }
+    }
+  }
+
+  /**
+   * Appends a {@link WARCRecord} to the file, in WARC/1.0 format.
+   * @param record The record to be written.
+   * @throws IOException
+   */
+  public void write(WARCRecord record) throws IOException {
+    if (bytesWritten > maxSegmentSize) {
+      dataStream.close();
+      createSegment();
+    }
+    record.write(dataStream);
+  }
+
+  /**
+   * Appends a {@link WARCRecord} wrapped in a {@link WARCWritable} to the file.
+   * @param record The wrapper around the record to be written.
+   * @throws IOException
+   */
+  public void write(WARCWritable record) throws IOException {
+    if (record.getRecord() != null) write(record.getRecord());
+  }
+
+  /**
+   * Flushes any buffered data and closes the file.
+   * @throws IOException
+   */
+  public void close() throws IOException {
+    dataStream.close();
+  }
+
+  private class CountingOutputStream extends FilterOutputStream {
+    public CountingOutputStream(OutputStream out) {
+      super(out);
     }
 
-    /**
-     * Creates an output segment file and sets up the output streams to point at it.
-     * If the file already exists, retries with a different filename. This is a bit nasty --
-     * after all, {@link FileOutputFormat}'s work directory concept is supposed to prevent
-     * filename clashes -- but it looks like Amazon Elastic MapReduce prevents use of per-task
-     * work directories if the output of a job is on S3.
-     *
-     * TODO: Investigate this and find a better solution.
-     */
-    private void createSegment() throws IOException {
-        segmentsAttempted = 0;
-        bytesWritten = 0;
-        boolean success = false;
-
-        while (!success) {
-            Path path = workOutputPath.suffix(String.format(extensionFormat, segmentsCreated, segmentsAttempted));
-            FileSystem fs = path.getFileSystem(conf);
-
-            try {
-                // The o.a.h.mapred OutputFormats overwrite existing files, whereas
-                // the o.a.h.mapreduce OutputFormats don't overwrite. Bizarre...
-                // Here, overwrite if progress != null, i.e. if using mapred API.
-                FSDataOutputStream fsStream = (progress == null) ? fs.create(path, false): fs.create(path, progress);
-                byteStream = new CountingOutputStream(new BufferedOutputStream(fsStream));
-                dataStream = new DataOutputStream(codec == null ? byteStream : codec.createOutputStream(byteStream));
-                segmentsCreated++;
-                logger.info("Writing to output file: {}", path);
-                success = true;
-
-            } catch (IOException e) {
-                if (e.getMessage().startsWith("File already exists")) {
-                    logger.warn("Tried to create file {} but it already exists; retrying.", path);
-                    segmentsAttempted++; // retry
-                } else {
-                    throw e;
-                }
-            }
-        }
+    @Override
+    public void write(byte[] b, int off, int len) throws IOException {
+      out.write(b, off, len);
+      bytesWritten += len;
     }
 
-    /**
-     * Appends a {@link WARCRecord} to the file, in WARC/1.0 format.
-     * @param record The record to be written.
-     * @throws IOException
-     */
-    public void write(WARCRecord record) throws IOException {
-        if (bytesWritten > maxSegmentSize) {
-            dataStream.close();
-            createSegment();
-        }
-        record.write(dataStream);
+    @Override
+    public void write(int b) throws IOException {
+      out.write(b);
+      bytesWritten++;
     }
 
-    /**
-     * Appends a {@link WARCRecord} wrapped in a {@link WARCWritable} to the file.
-     * @param record The wrapper around the record to be written.
-     * @throws IOException
-     */
-    public void write(WARCWritable record) throws IOException {
-        if (record.getRecord() != null) write(record.getRecord());
-    }
-
-    /**
-     * Flushes any buffered data and closes the file.
-     * @throws IOException
-     */
+    // Overriding close() because FilterOutputStream's close() method pre-JDK8 has bad behavior:
+    // it silently ignores any exception thrown by flush(). Instead, just close the delegate
+    // stream. It should flush itself if necessary. (Thanks to the Guava project for noticing
+    // this.)
+    @Override
     public void close() throws IOException {
-        dataStream.close();
+      out.close();
     }
+  }
 
-
-    private class CountingOutputStream extends FilterOutputStream {
-        public CountingOutputStream(OutputStream out) {
-            super(out);
-        }
-
-        @Override
-        public void write(byte[] b, int off, int len) throws IOException {
-            out.write(b, off, len);
-            bytesWritten += len;
-        }
-
-        @Override
-        public void write(int b) throws IOException {
-            out.write(b);
-            bytesWritten++;
-        }
-
-        // Overriding close() because FilterOutputStream's close() method pre-JDK8 has bad behavior:
-        // it silently ignores any exception thrown by flush(). Instead, just close the delegate stream.
-        // It should flush itself if necessary. (Thanks to the Guava project for noticing this.)
-        @Override
-        public void close() throws IOException {
-            out.close();
-        }
-    }
 }
