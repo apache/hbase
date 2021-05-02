@@ -35,9 +35,11 @@ import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalancerDecision;
+import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
+import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -129,6 +131,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private long maxRunningTime = 30 * 1000 * 1; // 30 seconds.
   private int numRegionLoadsToRemember = 15;
   private float minCostNeedBalance = 0.05f;
+  private boolean isBalancerDecisionRecording = false;
+  private boolean isBalancerRejectionRecording = false;
 
   private List<CandidateGenerator> candidateGenerators;
   private CostFromRegionLoadFunction[] regionLoadFunctions;
@@ -217,10 +221,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     curFunctionCosts= new Double[costFunctions.size()];
     tempFunctionCosts= new Double[costFunctions.size()];
 
-    boolean isBalancerDecisionRecording = getConf()
+    isBalancerDecisionRecording = getConf()
       .getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
         BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
-    if (this.namedQueueRecorder == null && isBalancerDecisionRecording) {
+    isBalancerRejectionRecording = getConf()
+      .getBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED,
+        BaseLoadBalancer.DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED);
+
+    if (this.namedQueueRecorder == null && (isBalancerDecisionRecording
+      || isBalancerRejectionRecording)) {
       this.namedQueueRecorder = NamedQueueRecorder.getInstance(getConf());
     }
 
@@ -327,6 +336,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         LOG.debug("Not running balancer because only " + cs.getNumServers()
             + " active regionserver(s)");
       }
+      if (this.isBalancerRejectionRecording) {
+        sendRejectionReasonToRingBuffer("The number of RegionServers " +
+          cs.getNumServers() + " < MIN_SERVER_BALANCE(" + MIN_SERVER_BALANCE + ")", null);
+      }
       return false;
     }
     if (areSomeRegionReplicasColocated(cluster)) {
@@ -355,6 +368,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     boolean balanced = total <= 0 || sumMultiplier <= 0 ||
         (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance);
+    if(balanced && isBalancerRejectionRecording){
+      String reason = "";
+      if (total <= 0) {
+        reason = "(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern) = " + total + " <= 0";
+      } else if (sumMultiplier <= 0) {
+        reason = "sumMultiplier = " + sumMultiplier + " <= 0";
+      } else if ((total / sumMultiplier) < minCostNeedBalance) {
+        reason =
+          "[(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern)]/sumMultiplier = " + (total
+            / sumMultiplier) + " <= minCostNeedBalance(" + minCostNeedBalance + ")";
+      }
+      sendRejectionReasonToRingBuffer(reason, costFunctions);
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("{} {}; total cost={}, sum multiplier={}; cost/multiplier to need a balance is {}",
           balanced ? "Skipping load balancing because balanced" : "We need to load balance",
@@ -488,9 +514,27 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return null;
   }
 
+  private void sendRejectionReasonToRingBuffer(String reason, List<CostFunction> costFunctions){
+    if (this.isBalancerRejectionRecording){
+      BalancerRejection.Builder builder =
+        new BalancerRejection.Builder()
+        .setReason(reason);
+      if (costFunctions != null) {
+        for (CostFunction c : costFunctions) {
+          float multiplier = c.getMultiplier();
+          if (multiplier <= 0 || !c.isNeeded()) {
+            continue;
+          }
+          builder.addCostFuncInfo(c.getClass().getName(), c.cost(), c.getMultiplier());
+        }
+      }
+      namedQueueRecorder.addRecord(new BalancerRejectionDetails(builder.build()));
+    }
+  }
+
   private void sendRegionPlansToRingBuffer(List<RegionPlan> plans, double currentCost,
       double initCost, String initFunctionTotalCosts, long step) {
-    if (this.namedQueueRecorder != null) {
+    if (this.isBalancerDecisionRecording) {
       List<String> regionPlans = new ArrayList<>();
       for (RegionPlan plan : plans) {
         regionPlans.add(

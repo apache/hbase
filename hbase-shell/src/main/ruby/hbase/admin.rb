@@ -1761,6 +1761,25 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Retrieve latest balancer rejections made by LoadBalancers
+    def get_balancer_rejections(args)
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 250
+      end
+
+      log_type = 'BALANCER_REJECTION'
+      log_dest = org.apache.hadoop.hbase.client.ServerType::MASTER
+      balancer_rejections_responses = @admin.getLogEntries(nil, log_type, log_dest, limit, nil)
+      balancer_rejections_resp_arr = []
+      balancer_rejections_responses.each { |balancer_dec_resp|
+        balancer_rejections_resp_arr << balancer_dec_resp.toJsonPrettyPrint
+      }
+      balancer_rejections_resp_arr
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Stop the active Master
     def stop_master
       @admin.stopMaster
