@@ -588,10 +588,11 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             try {
               rowKey = rowKeyFromTargetURI(targetURI);
             } catch (IllegalArgumentException e) {
-              LOG.debug("URI for record " + recordID + " did not parse with a host component");
+              LOG.debug("Could not make a row key for record " + recordID + ", ignoring", e);
               return;
             } catch (URISyntaxException e) {
-              LOG.warn("Could not parse URI \"" + targetURI + "\" for record " + recordID);
+              LOG.warn("Could not parse URI \"" + targetURI + "\" for record " + recordID +
+                ", ignoring");
               return;
             }
 
@@ -644,9 +645,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         }
       }
 
-      private byte[] rowKeyFromTargetURI(String targetURI)
+      private byte[] rowKeyFromTargetURI(String targetUri)
           throws URISyntaxException, IllegalArgumentException {
-        URI uri = new URI(targetURI);
+        URI uri = new URI(targetUri);
         StringBuffer sb = new StringBuffer();
         // Ignore the scheme
         // Reverse the components of the hostname
@@ -666,20 +667,20 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           sb.append(':');
           sb.append(uri.getPort());
         }
-        // Ignore the rest of the authority
-        // Path, if present
         if (uri.getRawPath() != null) {
           sb.append(uri.getRawPath());
         }
-        // Query, if present
         if (uri.getRawQuery() != null) {
           sb.append('?');
           sb.append(uri.getRawQuery());
         }
-        // Fragment, if present
         if (uri.getRawFragment() != null) {
           sb.append('#');
           sb.append(uri.getRawFragment());
+        }
+        // Constrain the key size to the maximum allowed row key length
+        if (sb.length() >  HConstants.MAX_ROW_LENGTH) {
+          sb.setLength(HConstants.MAX_ROW_LENGTH);
         }
         return Bytes.toBytes(sb.toString());
       }
