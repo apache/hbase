@@ -4434,6 +4434,12 @@ public class HBaseAdmin implements Admin {
           "Balancer Decision logs are not maintained by HRegionServer");
       }
       return getBalancerDecisions(limit);
+    } else if (logType.equals("BALANCER_REJECTION")) {
+      if (ServerType.REGION_SERVER.equals(serverType)) {
+        throw new IllegalArgumentException(
+          "Balancer Rejection logs are not maintained by HRegionServer");
+      }
+      return getBalancerRejections(limit);
     }
     return Collections.emptyList();
   }
@@ -4446,6 +4452,18 @@ public class HBaseAdmin implements Admin {
         HBaseProtos.LogEntry logEntry =
           master.getLogEntries(getRpcController(), ProtobufUtil.toBalancerDecisionRequest(limit));
         return ProtobufUtil.toBalancerDecisionResponse(logEntry);
+      }
+    });
+  }
+
+  private List<LogEntry> getBalancerRejections(final int limit) throws IOException {
+    return executeCallable(new MasterCallable<List<LogEntry>>(getConnection(),
+      getRpcControllerFactory()) {
+      @Override
+      protected List<LogEntry> rpcCall() throws Exception {
+        HBaseProtos.LogEntry logEntry =
+          master.getLogEntries(getRpcController(), ProtobufUtil.toBalancerRejectionRequest(limit));
+        return ProtobufUtil.toBalancerRejectionResponse(logEntry);
       }
     });
   }
