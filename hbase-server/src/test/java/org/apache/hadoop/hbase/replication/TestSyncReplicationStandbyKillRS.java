@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-
+import java.util.stream.Collectors;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
@@ -72,16 +72,26 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
     Thread t = new Thread(() -> {
       try {
         List<JVMClusterUtil.RegionServerThread> regionServers =
-            UTIL2.getMiniHBaseCluster().getLiveRegionServerThreads();
+          UTIL2.getMiniHBaseCluster().getLiveRegionServerThreads();
+        LOG.debug("Going to stop {} RSes: [{}]", regionServers.size(),
+          regionServers.stream().map(rst -> rst.getRegionServer().getServerName().getServerName())
+            .collect(Collectors.joining(", ")));
         for (JVMClusterUtil.RegionServerThread rst : regionServers) {
           ServerName serverName = rst.getRegionServer().getServerName();
-          LOG.debug("Going to stop [{}]", serverName);
+          LOG.debug("Going to RS stop [{}]", serverName);
           rst.getRegionServer().stop("Stop RS for test");
           waitForRSShutdownToStartAndFinish(activeMaster, serverName);
+          LOG.debug("Going to start a new RS");
           JVMClusterUtil.RegionServerThread restarted =
-              UTIL2.getMiniHBaseCluster().startRegionServer();
+            UTIL2.getMiniHBaseCluster().startRegionServer();
+          LOG.debug("Waiting RS [{}] to online", restarted.getRegionServer().getServerName());
           restarted.waitForServerOnline();
+          LOG.debug("Waiting the old RS {} thread to quit", rst.getName());
+          rst.join();
+          LOG.debug("Done stop RS [{}] and restart [{}]", serverName,
+            restarted.getRegionServer().getServerName());
         }
+        LOG.debug("All RSes restarted");
       } catch (Exception e) {
         LOG.error("Failed to kill RS", e);
       }
