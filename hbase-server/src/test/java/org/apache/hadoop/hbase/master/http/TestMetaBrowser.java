@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.webapp;
+package org.apache.hadoop.hbase.master.http;
 
 import static org.apache.hadoop.hbase.client.hamcrest.BytesMatchers.bytesAsStringBinary;
 import static org.hamcrest.MatcherAssert.assertThat;
