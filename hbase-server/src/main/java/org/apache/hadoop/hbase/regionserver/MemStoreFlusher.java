@@ -65,7 +65,7 @@ import org.slf4j.LoggerFactory;
  * @see FlushRequester
  */
 @InterfaceAudience.Private
-class MemStoreFlusher implements FlushRequester {
+public class MemStoreFlusher implements FlushRequester {
   private static final Logger LOG = LoggerFactory.getLogger(MemStoreFlusher.class);
 
   private Configuration conf;

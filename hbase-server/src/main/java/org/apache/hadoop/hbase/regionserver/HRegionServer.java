@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import java.lang.reflect.Constructor;
@@ -144,6 +145,8 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
+import org.apache.hadoop.hbase.regionserver.http.RSDumpServlet;
+import org.apache.hadoop.hbase.regionserver.http.RSStatusServlet;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -826,6 +829,24 @@ public class HRegionServer extends Thread implements
 
   protected Class<? extends HttpServlet> getDumpServlet() {
     return RSDumpServlet.class;
+  }
+
+  /**
+   * Used by {@link RSDumpServlet} to generate debugging information.
+   */
+  public void dumpRowLocks(final PrintWriter out) {
+    StringBuilder sb = new StringBuilder();
+    for (HRegion region : getRegions()) {
+      if (region.getLockedRows().size() > 0) {
+        for (HRegion.RowLockContext rowLockContext : region.getLockedRows().values()) {
+          sb.setLength(0);
+          sb.append(region.getTableDescriptor().getTableName()).append(",")
+            .append(region.getRegionInfo().getEncodedName()).append(",");
+          sb.append(rowLockContext.toString());
+          out.println(sb);
+        }
+      }
+    }
   }
 
   @Override
@@ -3737,7 +3758,7 @@ public class HRegionServer extends Thread implements
     return hMemManager;
   }
 
-  MemStoreFlusher getMemStoreFlusher() {
+  public MemStoreFlusher getMemStoreFlusher() {
     return cacheFlusher;
   }
 
