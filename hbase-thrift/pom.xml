@@ -349,10 +349,10 @@
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
       <exclusions>
-        <exclusion>
-          <groupId>javax.annotation</groupId>
-          <artifactId>javax.annotation-api</artifactId>
-	      </exclusion>
+    <exclusion>
+      <groupId>javax.annotation</groupId>
+      <artifactId>javax.annotation-api</artifactId>
+    </exclusion>
       </exclusions>
     </dependency>
     <dependency>
