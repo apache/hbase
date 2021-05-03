@@ -515,6 +515,8 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       job.setOutputValueClass(BytesWritable.class);
       TableMapReduceUtil.addDependencyJars(job);
 
+      LOG.info("Submitting job." +
+        " This will take time proportional to the number of input files, please be patient.");
       boolean success = job.waitForCompletion(true);
       if (!success) {
         LOG.error("Failure during job " + job.getJobID());
