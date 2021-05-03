@@ -141,3 +141,6 @@
 # Override text processing tools for use by these launch scripts.
 # export GREP="${GREP-grep}"
 # export SED="${SED-sed}"
+
+# Additional argments passed to jshell invocation
+# export HBASE_JSHELL_ARGS="--startup DEFAULT --startup PRINTING --startup hbase_startup.jsh"
