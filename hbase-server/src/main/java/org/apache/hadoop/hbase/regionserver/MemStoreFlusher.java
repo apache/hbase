@@ -67,7 +67,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * @see FlushRequester
  */
 @InterfaceAudience.Private
-class MemStoreFlusher implements FlushRequester {
+public class MemStoreFlusher implements FlushRequester {
   private static final Logger LOG = LoggerFactory.getLogger(MemStoreFlusher.class);
 
   private Configuration conf;
