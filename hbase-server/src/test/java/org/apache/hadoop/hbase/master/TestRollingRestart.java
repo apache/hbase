@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -68,6 +69,7 @@ public class TestRollingRestart {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRollingRestart.class);
 
+  private static HBaseTestingUtility TEST_UTIL;
   @Rule
   public TestName name = new TestName();
 
@@ -89,7 +91,7 @@ public class TestRollingRestart {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
         splitWALCoordinatedByZK);
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL = new HBaseTestingUtility(conf);
     StartMiniClusterOption option = StartMiniClusterOption.builder()
         .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
     TEST_UTIL.startMiniCluster(option);
@@ -220,6 +222,16 @@ public class TestRollingRestart {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  /**
+   * Checks if the SCP of specific dead server has been executed.
+   * @return true if the SCP of specific serverName has been executed, false if not
+   */
+  private boolean isDeadServerSCPExecuted(ServerName serverName) throws IOException {
+    return TEST_UTIL.getMiniHBaseCluster().getMaster().getProcedures().stream()
+        .anyMatch(p -> p instanceof ServerCrashProcedure
+            && ((ServerCrashProcedure) p).getServerName().equals(serverName));
+  }
+
   private void waitForRSShutdownToStartAndFinish(MasterThread activeMaster,
       ServerName serverName) throws InterruptedException, IOException {
     ServerManager sm = activeMaster.getMaster().getServerManager();
@@ -230,6 +242,9 @@ public class TestRollingRestart {
     }
     log("Server [" + serverName + "] marked as dead, waiting for it to " +
         "finish dead processing");
+
+    TEST_UTIL.waitFor(60000, () -> isDeadServerSCPExecuted(serverName));
+
     while (sm.areDeadServersInProgress()) {
       log("Server [" + serverName + "] still being processed, waiting");
       Thread.sleep(100);
