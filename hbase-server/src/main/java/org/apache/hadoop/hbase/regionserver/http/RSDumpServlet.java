@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.http;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -29,6 +29,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ipc.CallQueueInfo;
 import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.CompactSplit;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.MemStoreFlusher;
 import org.apache.hadoop.hbase.util.LogMonitoring;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -70,7 +73,7 @@ public class RSDumpServlet extends StateDumpServlet {
 
       out.println("\n\nRowLocks:");
       out.println(LINE);
-      dumpRowLock(hrs, out);
+      hrs.dumpRowLocks(out);
 
       out.println("\n\nExecutors:");
       out.println(LINE);
@@ -108,22 +111,6 @@ public class RSDumpServlet extends StateDumpServlet {
     }
   }
 
-  public static void dumpRowLock(HRegionServer hrs, PrintWriter out) {
-    StringBuilder sb = new StringBuilder();
-    for (Region region : hrs.getRegions()) {
-      HRegion hRegion = (HRegion)region;
-      if (hRegion.getLockedRows().size() > 0) {
-        for (HRegion.RowLockContext rowLockContext : hRegion.getLockedRows().values()) {
-          sb.setLength(0);
-          sb.append(hRegion.getTableDescriptor().getTableName()).append(",")
-            .append(hRegion.getRegionInfo().getEncodedName()).append(",");
-          sb.append(rowLockContext.toString());
-          out.println(sb.toString());
-        }
-      }
-    }
-  }
-
   public static void dumpQueue(HRegionServer hrs, PrintWriter out) {
     final CompactSplit compactSplit = hrs.getCompactSplitThread();
     if (compactSplit != null) {
@@ -143,7 +130,7 @@ public class RSDumpServlet extends StateDumpServlet {
 
 
   public static void dumpCallQueues(HRegionServer hrs, PrintWriter out) {
-    CallQueueInfo callQueueInfo = hrs.rpcServices.rpcServer.getScheduler().getCallQueueInfo();
+    CallQueueInfo callQueueInfo = hrs.getRpcServer().getScheduler().getCallQueueInfo();
 
     for(String queueName: callQueueInfo.getCallQueueNames()) {
 
@@ -165,7 +152,5 @@ public class RSDumpServlet extends StateDumpServlet {
       out.println("Total call count for queue: "+totalCallCount);
       out.println("Total call size for queue (bytes): "+totalCallSize);
     }
-
   }
-
 }
