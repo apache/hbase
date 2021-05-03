@@ -168,10 +168,6 @@ public class CatalogJanitor extends ScheduledChore {
       }
       updateAssignmentManagerMetrics();
 
-      if (isRIT(this.services.getAssignmentManager())) {
-        LOG.warn("Playing-it-safe skipping merge/split gc'ing of regions from hbase:meta while " +
-          "regions-in-transition (RIT)");
-      }
       Map<RegionInfo, Result> mergedRegions = this.lastReport.mergedRegions;
       for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
