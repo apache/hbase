@@ -139,9 +139,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
 
   // to save and report costs to JMX
-  private Double curOverallCost = 0d;
-  private Double[] tempFunctionCosts;
-  private Double[] curFunctionCosts;
+  private double curOverallCost = 0d;
+  private double[] tempFunctionCosts;
+  private double[] curFunctionCosts;
 
   // Keep locality based picker and cost function to alert them
   // when new services are offered
@@ -218,8 +218,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     addCostFunction(regionLoadFunctions[4]);
     loadCustomCostFunctions(conf);
 
-    curFunctionCosts= new Double[costFunctions.size()];
-    tempFunctionCosts= new Double[costFunctions.size()];
+    curFunctionCosts= new double[costFunctions.size()];
+    tempFunctionCosts= new double[costFunctions.size()];
 
     isBalancerDecisionRecording = getConf()
       .getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
@@ -556,7 +556,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   /**
    * update costs to JMX
    */
-  private void updateStochasticCosts(TableName tableName, Double overall, Double[] subCosts) {
+  private void updateStochasticCosts(TableName tableName, double overall, double[] subCosts) {
     if (tableName == null) {
       return;
     }
@@ -572,7 +572,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       for (int i = 0; i < costFunctions.size(); i++) {
         CostFunction costFunction = costFunctions.get(i);
         String costFunctionName = costFunction.getClass().getSimpleName();
-        Double costPercent = (overall == 0) ? 0 : (subCosts[i] / overall);
+        double costPercent = (overall == 0) ? 0 : (subCosts[i] / overall);
         // TODO: cost function may need a specific description
         balancer.updateStochasticCost(tableName.getNameAsString(), costFunctionName,
           "The percent of " + costFunctionName, costPercent);
@@ -731,7 +731,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
 
       Float multiplier = c.getMultiplier();
-      Double cost = c.cost();
+      double cost = c.cost();
 
       this.tempFunctionCosts[i] = multiplier*cost;
       total += this.tempFunctionCosts[i];
