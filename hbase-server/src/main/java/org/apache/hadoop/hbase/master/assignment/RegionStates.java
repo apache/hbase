@@ -553,23 +553,37 @@ public class RegionStates {
    * wants to iterate this exported list.  We need to synchronize on regions
    * since all access to this.servers is under a lock on this.regions.
    *
-   * @return A clone of current assignments.
+   * @return A clone of current open or opening assignments.
    */
   public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsForBalancer(
       TableStateManager tableStateManager, List<ServerName> onlineServers) {
     final Map<TableName, Map<ServerName, List<RegionInfo>>> result = new HashMap<>();
     for (RegionStateNode node : regionsMap.values()) {
+      // DisableTableProcedure first sets the table state to DISABLED and then force unassigns
+      // the regions in a loop. The balancer should ignore all regions for tables in DISABLED
+      // state because even if still currently open we expect them to be offlined very soon.
       if (isTableDisabled(tableStateManager, node.getTable())) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Ignoring {} because table is disabled", node);
+        }
         continue;
       }
-      if (node.getRegionInfo().isSplitParent()) {
+      // When balancing, we are only interested in OPEN or OPENING regions. These can be
+      // expected to remain online until the next balancer iteration or unless the balancer
+      // decides to move it. Regions in other states are not eligible for balancing, because
+      // they are closing, splitting, merging, or otherwise already in transition.
+      if (!node.isInState(State.OPEN, State.OPENING)) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Ignoring {} because region is not OPEN or OPENING", node);
+        }
         continue;
       }
       Map<ServerName, List<RegionInfo>> tableResult =
           result.computeIfAbsent(node.getTable(), t -> new HashMap<>());
       final ServerName serverName = node.getRegionLocation();
+      // A region in ONLINE or OPENING state should have a location.
       if (serverName == null) {
-        LOG.info("Skipping, no server for " + node);
+        LOG.warn("Skipping, no server for {}", node);
         continue;
       }
       List<RegionInfo> serverResult =
