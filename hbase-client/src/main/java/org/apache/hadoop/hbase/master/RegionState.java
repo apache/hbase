@@ -354,6 +354,11 @@ public class RegionState {
       || isSplittingNew() || isMergingNew();
   }
 
+  public boolean isSplitOrMerge() {
+    return isMerged() || isMergingNew() || isMerging()
+      || isSplit() || isSplittingNew() || isSplitting();
+  }
+
   /**
    * Check if a region state can transition to online
    */
