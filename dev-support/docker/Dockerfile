@@ -61,6 +61,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     python2.7 \
     python-pip \
     pylint \
+    python-dateutil \
     rsync \
     snappy \
     xz-utils \
@@ -111,11 +112,6 @@ RUN mkdir -p /opt/findbugs && \
          -o /opt/findbugs.tar.gz && \
     tar xzf /opt/findbugs.tar.gz --strip-components 1 -C /opt/findbugs
 ENV FINDBUGS_HOME /opt/findbugs
-
-####
-# Install dateutil.parser
-####
-RUN pip install python-dateutil
 
 ####
 # Install Ruby 2, based on Yetus 0.4.0 dockerfile
