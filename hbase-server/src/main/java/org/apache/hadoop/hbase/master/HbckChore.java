@@ -241,11 +241,12 @@ public class HbckChore extends ScheduledChore {
       StringBuffer sb = new StringBuffer();
       sb.append("Regions by state: ");
       stateCountMap.entrySet().forEach(e -> {
-        sb.append(e.getKey());
-        sb.append('=');
-        sb.append(e.getValue());
-        sb.append(' ');
-        });
+          sb.append(e.getKey());
+          sb.append('=');
+          sb.append(e.getValue());
+          sb.append(' ');
+        }
+      );
       LOG.debug(sb.toString());
     }
     if (LOG.isTraceEnabled()) {

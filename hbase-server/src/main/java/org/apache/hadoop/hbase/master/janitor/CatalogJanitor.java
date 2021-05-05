@@ -161,7 +161,9 @@ public class CatalogJanitor extends ScheduledChore {
     int gcs = 0;
     try {
       if (!alreadyRunning.compareAndSet(false, true)) {
-        LOG.debug("CatalogJanitor already running");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("CatalogJanitor already running");
+        }
         // -1 indicates previous scan is in progress
         return -1;
       }
@@ -169,7 +171,9 @@ public class CatalogJanitor extends ScheduledChore {
       if (!this.lastReport.isEmpty()) {
         LOG.warn(this.lastReport.toString());
       } else {
-        LOG.debug(this.lastReport.toString());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(this.lastReport.toString());
+        }
       }
 
       updateAssignmentManagerMetrics();
@@ -247,7 +251,9 @@ public class CatalogJanitor extends ScheduledChore {
    */
   private boolean cleanMergeRegion(final RegionInfo mergedRegion, List<RegionInfo> parents)
     throws IOException {
-    LOG.debug("Cleaning merged region {}", mergedRegion);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Cleaning merged region {}", mergedRegion);
+    }
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = CommonFSUtils.getTableDir(rootdir, mergedRegion.getTable());
@@ -260,16 +266,20 @@ public class CatalogJanitor extends ScheduledChore {
       LOG.warn("Merged region does not exist: " + mergedRegion.getEncodedName());
     }
     if (regionFs == null || !regionFs.hasReferences(htd)) {
-      LOG.debug(
-        "Deleting parents ({}) from fs; merged child {} no longer holds references", parents
-          .stream().map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", ")),
-        mergedRegion);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+          "Deleting parents ({}) from fs; merged child {} no longer holds references", parents
+            .stream().map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", ")),
+          mergedRegion);
+      }
       ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
       GCMultipleMergedRegionsProcedure mergeRegionProcedure =
           new GCMultipleMergedRegionsProcedure(pe.getEnvironment(), mergedRegion, parents);
       pe.submitProcedure(mergeRegionProcedure);
-      LOG.debug("Submitted procedure {} for merged region {}", mergeRegionProcedure,
-        mergedRegion);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Submitted procedure {} for merged region {}", mergeRegionProcedure,
+          mergedRegion);
+      }
       // TODO: The above scheduled GCMultipleMergedRegionsProcedure does the below.
       // Do we need this?
       for (RegionInfo ri : parents) {
@@ -316,11 +326,15 @@ public class CatalogJanitor extends ScheduledChore {
 
   static boolean cleanParent(MasterServices services, RegionInfo parent, Result rowContent)
     throws IOException {
-    LOG.debug("Cleaning parent region {}", parent);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Cleaning parent region {}", parent);
+    }
     // Check whether it is a merged region and if it is clean of references.
     if (CatalogFamilyFormat.hasMergeRegions(rowContent.rawCells())) {
       // Wait until clean of merge parent regions first
-      LOG.debug("Region {} has merge parents, cleaning them first", parent);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Region {} has merge parents, cleaning them first", parent);
+      }
       return false;
     }
     // Run checks on each daughter split.
@@ -332,25 +346,31 @@ public class CatalogJanitor extends ScheduledChore {
         daughters.getFirst() != null ? daughters.getFirst().getShortNameToLog() : "null";
       String daughterB =
         daughters.getSecond() != null ? daughters.getSecond().getShortNameToLog() : "null";
-      LOG.debug("Deleting region " + parent.getShortNameToLog() + " because daughters -- " +
-        daughterA + ", " + daughterB + " -- no longer hold references");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Deleting region " + parent.getShortNameToLog() + " because daughters -- " +
+          daughterA + ", " + daughterB + " -- no longer hold references");
+      }
       ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
       GCRegionProcedure gcRegionProcedure = new GCRegionProcedure(pe.getEnvironment(), parent);
       pe.submitProcedure(gcRegionProcedure);
-      LOG.debug("Submitted procedure {} for split parent {}", gcRegionProcedure, parent);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Submitted procedure {} for split parent {}", gcRegionProcedure, parent);
+      }
       // Remove from in-memory states
       // TODO: The above scheduled GCRegionProcedure does the below. Do we need this?
       services.getAssignmentManager().getRegionStates().deleteRegion(parent);
       services.getServerManager().removeRegion(parent);
       return true;
     } else {
-      if (!hasNoReferences(a)) {
-        LOG.debug("Deferring removal of region {} because daughter {} still has references",
-          parent, daughters.getFirst());
-      }
-      if (!hasNoReferences(b)) {
-        LOG.debug("Deferring removal of region {} because daughter {} still has references",
-          parent, daughters.getSecond());
+      if (LOG.isDebugEnabled()) {
+        if (!hasNoReferences(a)) {
+          LOG.debug("Deferring removal of region {} because daughter {} still has references",
+            parent, daughters.getFirst());
+        }
+        if (!hasNoReferences(b)) {
+          LOG.debug("Deferring removal of region {} because daughter {} still has references",
+            parent, daughters.getSecond());
+        }
       }
     }
     return false;
