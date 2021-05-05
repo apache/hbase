@@ -329,7 +329,7 @@ public class HbckChore extends ScheduledChore {
       }
       numRegions += regionDirs.size();
     }
-    LOG.info("Loaded {} tables {} regions from filesyetem and found {} orphan regions",
+    LOG.info("Loaded {} tables {} regions from filesystem and found {} orphan regions",
         tableDirs.size(), numRegions, orphanRegionsOnFS.size());
   }
 
