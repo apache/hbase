@@ -280,12 +280,6 @@ public class CatalogJanitor extends ScheduledChore {
         LOG.debug("Submitted procedure {} for merged region {}", mergeRegionProcedure,
           mergedRegion);
       }
-      // TODO: The above scheduled GCMultipleMergedRegionsProcedure does the below.
-      // Do we need this?
-      for (RegionInfo ri : parents) {
-        this.services.getAssignmentManager().getRegionStates().deleteRegion(ri);
-        this.services.getServerManager().removeRegion(ri);
-      }
       return true;
     }
     return false;
@@ -356,10 +350,6 @@ public class CatalogJanitor extends ScheduledChore {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Submitted procedure {} for split parent {}", gcRegionProcedure, parent);
       }
-      // Remove from in-memory states
-      // TODO: The above scheduled GCRegionProcedure does the below. Do we need this?
-      services.getAssignmentManager().getRegionStates().deleteRegion(parent);
-      services.getServerManager().removeRegion(parent);
       return true;
     } else {
       if (LOG.isDebugEnabled()) {
