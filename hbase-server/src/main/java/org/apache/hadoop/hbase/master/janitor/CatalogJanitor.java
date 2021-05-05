@@ -74,6 +74,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class CatalogJanitor extends ScheduledChore {
 
+  public static final int DEFAULT_HBASE_CATALOGJANITOR_INTERVAL = 300 * 1000;
+
   private static final Logger LOG = LoggerFactory.getLogger(CatalogJanitor.class.getName());
 
   private final AtomicBoolean alreadyRunning = new AtomicBoolean(false);
@@ -88,7 +90,8 @@ public class CatalogJanitor extends ScheduledChore {
 
   public CatalogJanitor(final MasterServices services) {
     super("CatalogJanitor-" + services.getServerName().toShortString(), services,
-      services.getConfiguration().getInt("hbase.catalogjanitor.interval", 300000));
+      services.getConfiguration().getInt("hbase.catalogjanitor.interval",
+        DEFAULT_HBASE_CATALOGJANITOR_INTERVAL));
     this.services = services;
   }
 
@@ -165,13 +168,19 @@ public class CatalogJanitor extends ScheduledChore {
       this.lastReport = scanForReport();
       if (!this.lastReport.isEmpty()) {
         LOG.warn(this.lastReport.toString());
+      } else {
+        LOG.debug(this.lastReport.toString());
       }
+
       updateAssignmentManagerMetrics();
 
       Map<RegionInfo, Result> mergedRegions = this.lastReport.mergedRegions;
       for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("In maintenence mode, not cleaning");
+          }
           break;
         }
 
@@ -188,6 +197,9 @@ public class CatalogJanitor extends ScheduledChore {
       for (Map.Entry<RegionInfo, Result> e : splitParents.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("In maintenence mode, not cleaning");
+          }
           break;
         }
 
@@ -235,6 +247,7 @@ public class CatalogJanitor extends ScheduledChore {
    */
   private boolean cleanMergeRegion(final RegionInfo mergedRegion, List<RegionInfo> parents)
     throws IOException {
+    LOG.debug("Cleaning merged region {}", mergedRegion);
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = CommonFSUtils.getTableDir(rootdir, mergedRegion.getTable());
@@ -252,11 +265,14 @@ public class CatalogJanitor extends ScheduledChore {
           .stream().map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", ")),
         mergedRegion);
       ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
-      pe.submitProcedure(
-        new GCMultipleMergedRegionsProcedure(pe.getEnvironment(), mergedRegion, parents));
+      GCMultipleMergedRegionsProcedure mergeRegionProcedure =
+          new GCMultipleMergedRegionsProcedure(pe.getEnvironment(), mergedRegion, parents);
+      pe.submitProcedure(mergeRegionProcedure);
+      LOG.debug("Submitted procedure {} for merged region {}", mergeRegionProcedure,
+        mergedRegion);
+      // TODO: The above scheduled GCMultipleMergedRegionsProcedure does the below.
+      // Do we need this?
       for (RegionInfo ri : parents) {
-        // The above scheduled GCMultipleMergedRegionsProcedure does the below.
-        // Do we need this?
         this.services.getAssignmentManager().getRegionStates().deleteRegion(ri);
         this.services.getServerManager().removeRegion(ri);
       }
@@ -300,9 +316,11 @@ public class CatalogJanitor extends ScheduledChore {
 
   static boolean cleanParent(MasterServices services, RegionInfo parent, Result rowContent)
     throws IOException {
+    LOG.debug("Cleaning parent region {}", parent);
     // Check whether it is a merged region and if it is clean of references.
     if (CatalogFamilyFormat.hasMergeRegions(rowContent.rawCells())) {
       // Wait until clean of merge parent regions first
+      LOG.debug("Region {} has merge parents, cleaning them first", parent);
       return false;
     }
     // Run checks on each daughter split.
@@ -317,11 +335,23 @@ public class CatalogJanitor extends ScheduledChore {
       LOG.debug("Deleting region " + parent.getShortNameToLog() + " because daughters -- " +
         daughterA + ", " + daughterB + " -- no longer hold references");
       ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
-      pe.submitProcedure(new GCRegionProcedure(pe.getEnvironment(), parent));
+      GCRegionProcedure gcRegionProcedure = new GCRegionProcedure(pe.getEnvironment(), parent);
+      pe.submitProcedure(gcRegionProcedure);
+      LOG.debug("Submitted procedure {} for split parent {}", gcRegionProcedure, parent);
       // Remove from in-memory states
+      // TODO: The above scheduled GCRegionProcedure does the below. Do we need this?
       services.getAssignmentManager().getRegionStates().deleteRegion(parent);
       services.getServerManager().removeRegion(parent);
       return true;
+    } else {
+      if (!hasNoReferences(a)) {
+        LOG.debug("Deferring removal of region {} because daughter {} still has references",
+          parent, daughters.getFirst());
+      }
+      if (!hasNoReferences(b)) {
+        LOG.debug("Deferring removal of region {} because daughter {} still has references",
+          parent, daughters.getSecond());
+      }
     }
     return false;
   }
