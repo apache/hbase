@@ -123,6 +123,13 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
+  protected void
+    preBalanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+    // We need clusterLoad of all regions on every server to achieve overall balanced
+    setClusterLoad(loadOfAllTable);
+  }
+
+  @Override
   public void onConfigurationChange(Configuration conf) {
     float originSlop = slop;
     float originOverallSlop = overallSlop;
@@ -247,7 +254,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    *         or null if cluster is already balanced
    */
   @Override
-  public List<RegionPlan> balanceTable(TableName tableName,
+  protected List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     long startTime = System.currentTimeMillis();
 
@@ -466,7 +473,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    * max. Together with other regions left to be assigned, we distribute all regionToMove, to the RS
    * that have less regions in whole cluster scope.
    */
-  public void balanceOverall(List<RegionPlan> regionsToReturn,
+  private void balanceOverall(List<RegionPlan> regionsToReturn,
     Map<ServerName, BalanceInfo> serverBalanceInfo, boolean fetchFromTail,
     MinMaxPriorityQueue<RegionPlan> regionsToMove, int max, int min) {
     // Step 1.
@@ -612,16 +619,5 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     }
     rp.setDestination(sn);
     regionsToReturn.add(rp);
-  }
-
-  /**
-   * Override to invoke {@link #setClusterLoad} before balance, We need clusterLoad of all regions
-   * on every server to achieve overall balanced
-   */
-  @Override
-  public synchronized List<RegionPlan>
-      balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
-    setClusterLoad(loadOfAllTable);
-    return super.balanceCluster(loadOfAllTable);
   }
 }

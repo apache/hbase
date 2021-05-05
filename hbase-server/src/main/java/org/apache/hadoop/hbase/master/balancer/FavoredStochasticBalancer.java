@@ -665,7 +665,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * implementation. For the misplaced regions, we assign a bogus server to it and AM takes care.
    */
   @Override
-  public List<RegionPlan> balanceTable(TableName tableName,
+  protected List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     if (this.services != null) {
       List<RegionPlan> regionPlans = Lists.newArrayList();

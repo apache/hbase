@@ -405,7 +405,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * should always approach the optimal state given enough steps.
    */
   @Override
-  public synchronized List<RegionPlan> balanceTable(TableName tableName, Map<ServerName,
+  protected List<RegionPlan> balanceTable(TableName tableName, Map<ServerName,
     List<RegionInfo>> loadOfOneTable) {
     // On clusters with lots of HFileLinks or lots of reference files,
     // instantiating the storefile infos can be quite expensive.
