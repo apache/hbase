@@ -614,10 +614,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * Perform the major balance operation for table, all sub classes should override this method.
    * <p/>
    * Will be invoked by {@link #balanceCluster(Map)}. If
-   * {@value HConstants#HBASE_MASTER_LOADBALANCE_BYTABLE} is enabled, we will call this method
+   * {@link HConstants#HBASE_MASTER_LOADBALANCE_BYTABLE} is enabled, we will call this method
    * multiple times, one table a time, where we will only pass in the regions for a single table
    * each time. If not, we will pass in all the regions at once, and the {@code tableName} will be
-   * {@value HConstants#ENSEMBLE_TABLE_NAME}.
+   * {@link HConstants#ENSEMBLE_TABLE_NAME}.
    * @param tableName the table to be balanced
    * @param loadOfOneTable region load of servers for the specific one table
    * @return List of plans
