@@ -450,7 +450,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    //DO nothing for now
+    internalBalancer.onConfigurationChange(conf);
   }
 
   @Override
