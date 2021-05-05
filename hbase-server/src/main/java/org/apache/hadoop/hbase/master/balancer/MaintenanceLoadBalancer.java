@@ -67,12 +67,6 @@ public class MaintenanceLoadBalancer extends Configured implements LoadBalancer 
     return Collections.emptyList();
   }
 
-  @Override
-  public List<RegionPlan> balanceTable(TableName tableName,
-    Map<ServerName, List<RegionInfo>> loadOfOneTable) {
-    return Collections.emptyList();
-  }
-
   private Map<ServerName, List<RegionInfo>> assign(Collection<RegionInfo> regions,
     List<ServerName> servers) {
     // should only have 1 region server in maintenance mode
