@@ -123,8 +123,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   }
 
   /**
-   * Override to balance by RSGroup
-   * not invoke {@link #balanceTable(TableName, Map)}
+   * Balance by RSGroup.
    */
   @Override
   public List<RegionPlan> balanceCluster(
@@ -447,40 +446,6 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   public void updateBalancerStatus(boolean status) {
     internalBalancer.updateBalancerStatus(status);
-  }
-
-  /**
-   * can achieve table balanced rather than overall balanced
-   */
-  @Override
-  public List<RegionPlan> balanceTable(TableName tableName,
-      Map<ServerName, List<RegionInfo>> loadOfOneTable) {
-    if (!isOnline()) {
-      LOG.error(RSGroupInfoManager.class.getSimpleName()
-          + " is not online, unable to perform balanceTable");
-      return null;
-    }
-    Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfThisTable = new HashMap<>();
-    loadOfThisTable.put(tableName, loadOfOneTable);
-    Pair<Map<TableName, Map<ServerName, List<RegionInfo>>>, List<RegionPlan>>
-      correctedStateAndRegionPlans;
-    // Calculate correct assignments and a list of RegionPlan for mis-placed regions
-    try {
-      correctedStateAndRegionPlans = correctAssignments(loadOfThisTable);
-    } catch (IOException e) {
-      LOG.error("get correct assignments and mis-placed regions error ", e);
-      return null;
-    }
-    Map<TableName, Map<ServerName, List<RegionInfo>>> correctedLoadOfThisTable =
-        correctedStateAndRegionPlans.getFirst();
-    List<RegionPlan> regionPlans = correctedStateAndRegionPlans.getSecond();
-    List<RegionPlan> tablePlans =
-        this.internalBalancer.balanceTable(tableName, correctedLoadOfThisTable.get(tableName));
-
-    if (tablePlans != null) {
-      regionPlans.addAll(tablePlans);
-    }
-    return regionPlans;
   }
 
   private List<ServerName> getFallBackCandidates(List<ServerName> servers) {

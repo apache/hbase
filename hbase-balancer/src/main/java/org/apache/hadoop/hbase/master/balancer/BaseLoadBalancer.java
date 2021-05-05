@@ -610,13 +610,44 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return returnMap;
   }
 
-  @Override
-  public abstract List<RegionPlan> balanceTable(TableName tableName,
-      Map<ServerName, List<RegionInfo>> loadOfOneTable);
+  /**
+   * Perform the major balance operation for table, all sub classes should override this method.
+   * <p/>
+   * Will be invoked by {@link #balanceCluster(Map)}. If
+   * {@value HConstants#HBASE_MASTER_LOADBALANCE_BYTABLE} is enabled, we will call this method
+   * multiple times, one table a time, where we will only pass in the regions for a single table
+   * each time. If not, we will pass in all the regions at once, and the {@code tableName} will be
+   * {@value HConstants#ENSEMBLE_TABLE_NAME}.
+   * @param tableName the table to be balanced
+   * @param loadOfOneTable region load of servers for the specific one table
+   * @return List of plans
+   */
+  protected abstract List<RegionPlan> balanceTable(TableName tableName,
+    Map<ServerName, List<RegionInfo>> loadOfOneTable);
 
+  /**
+   * Called before actually executing balanceCluster. The sub classes could override this method to
+   * do some initialization work.
+   */
+  protected void
+    preBalanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+  }
+
+  /**
+   * Perform the major balance operation for cluster, will invoke
+   * {@link #balanceTable(TableName, Map)} to do actual balance.
+   * <p/>
+   * THIs method is marked as final which means you should not override this method. See the javadoc
+   * for {@link #balanceTable(TableName, Map)} for more details.
+   * @param loadOfAllTable region load of servers for all table
+   * @return a list of regions to be moved, including source and destination, or null if cluster is
+   *         already balanced
+   * @see #balanceTable(TableName, Map)
+   */
   @Override
-  public List<RegionPlan>
-      balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+  public final synchronized List<RegionPlan>
+    balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+    preBalanceCluster(loadOfAllTable);
     if (isByTable) {
       List<RegionPlan> result = new ArrayList<>();
       loadOfAllTable.forEach((tableName, loadOfOneTable) -> {
