@@ -22,7 +22,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -45,7 +44,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * This class produces plans for the {@code AssignmentManager} to execute.
  */
 @InterfaceAudience.Private
-public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObserver {
+public interface LoadBalancer extends Stoppable, ConfigurationObserver {
 
   // Used to signal to the caller that the region(s) cannot be assigned
   // We deliberately use 'localhost' so the operation will fail fast

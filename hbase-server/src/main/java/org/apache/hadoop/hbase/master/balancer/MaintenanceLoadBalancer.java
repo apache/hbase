@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -37,7 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * a balancer which is only used in maintenance mode.
  */
 @InterfaceAudience.Private
-public class MaintenanceLoadBalancer extends Configured implements LoadBalancer {
+public class MaintenanceLoadBalancer implements LoadBalancer {
 
   private volatile boolean stopped = false;
 
@@ -122,5 +121,4 @@ public class MaintenanceLoadBalancer extends Configured implements LoadBalancer 
   @Override
   public void updateBalancerStatus(boolean status) {
   }
-
 }

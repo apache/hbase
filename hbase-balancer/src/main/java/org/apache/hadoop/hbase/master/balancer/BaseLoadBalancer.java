@@ -78,7 +78,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected float slop;
   // overallSlop to control simpleLoadBalancer's cluster level threshold
   protected float overallSlop;
-  protected Configuration config;
   protected RackManager rackManager;
   protected MetricsBalancer metricsBalancer = null;
   protected ClusterMetrics clusterStatus = null;
@@ -100,9 +99,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     this.metricsBalancer = (metricsBalancer != null) ? metricsBalancer : new MetricsBalancer();
   }
 
-  @Override
-  public void setConf(Configuration conf) {
-    this.config = conf;
+  protected final Configuration getConf() {
+    return provider.getConfiguration();
+  }
+
+  protected void setConf(Configuration conf) {
     setSlop(conf);
     if (slop < 0) {
       slop = 0;
@@ -116,8 +117,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       overallSlop = 1;
     }
 
-    this.rackManager = new RackManager(getConf());
-    useRegionFinder = config.getBoolean("hbase.master.balancer.uselocality", true);
+    this.rackManager = new RackManager(conf);
+    useRegionFinder = conf.getBoolean("hbase.master.balancer.uselocality", true);
     if (useRegionFinder) {
       regionFinder = new RegionHDFSBlockLocationFinder();
       regionFinder.setConf(conf);
@@ -133,11 +134,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public Configuration getConf() {
-    return this.config;
-  }
-
-  @Override
   public synchronized void setClusterMetrics(ClusterMetrics st) {
     this.clusterStatus = st;
     if (useRegionFinder) {
@@ -149,6 +145,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   @Override
   public void setClusterInfoProvider(ClusterInfoProvider provider) {
     this.provider = provider;
+    setConf(provider.getConfiguration());
     if (useRegionFinder) {
       this.regionFinder.setClusterInfoProvider(provider);
     }

@@ -681,7 +681,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         LoadBalancer.class);
     }
     this.balancer = new RSGroupBasedLoadBalancer();
-    this.balancer.setConf(conf);
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
 

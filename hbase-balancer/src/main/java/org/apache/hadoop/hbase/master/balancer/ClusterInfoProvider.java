@@ -39,6 +39,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ClusterInfoProvider {
 
   /**
+   * Get the configuration.
+   */
+  Configuration getConfiguration();
+
+  /**
    * Get all the regions of this cluster.
    * <p/>
    * Used to refresh region block locations on HDFS.
