@@ -181,7 +181,7 @@ public class TestReplicationSource {
         TEST_UTIL.getConfiguration());
     for(int i = 0; i < 3; i++) {
       byte[] b = Bytes.toBytes(Integer.toString(i));
-      KeyValue kv = new KeyValue(b,b,b);
+      KeyValue kv = new KeyValue(b, b, b);
       WALEdit edit = new WALEdit();
       edit.add(kv);
       WALKey key = new WALKey(b, TableName.valueOf(b), 0, 0,
@@ -256,11 +256,10 @@ public class TestReplicationSource {
   private void appendEntries(WALProvider.Writer writer, int numEntries) throws IOException {
     for (int i = 0; i < numEntries; i++) {
       byte[] b = Bytes.toBytes(Integer.toString(i));
-      KeyValue kv = new KeyValue(b,b,b);
+      KeyValue kv = new KeyValue(b, b, b);
       WALEdit edit = new WALEdit();
       edit.add(kv);
-      WALKey key = new WALKey(b, TableName.valueOf(b), 0, 0,
-              HConstants.DEFAULT_CLUSTER_ID);
+      WALKey key = new WALKey(b, TableName.valueOf(b), 0, 0, HConstants.DEFAULT_CLUSTER_ID);
       NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
       scopes.put(b, HConstants.REPLICATION_SCOPE_GLOBAL);
       key.setScopes(scopes);
@@ -565,7 +564,13 @@ public class TestReplicationSource {
     };
 
     final ReplicationSource source = mocks.createReplicationSourceAndManagerWithMocks(endpoint);
-    source.run();
+    source.startup();
+    // source thread should be active
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return source.isAlive();
+      }
+    });
     source.enqueueLog(log1);
 
     // Wait for source to replicate
@@ -588,6 +593,14 @@ public class TestReplicationSource {
         return !source.isSourceActive();
       }
     });
+
+    // And the source thread be terminated
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return !source.isAlive();
+      }
+    });
+    assertTrue("Source should be removed", mocks.manager.getSources().isEmpty());
   }
 
   @Test

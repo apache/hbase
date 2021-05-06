@@ -22,6 +22,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -78,19 +79,27 @@ public class TestReplicationSourceWithoutReplicationZnodes
       wal.sync(txid);
 
       wal.rollWriter();
-      ZKUtil.deleteNodeRecursively(zkw, "/hbase/replication/peers/1");
-      ZKUtil.deleteNodeRecursively(zkw, "/hbase/replication/rs/" + server.getServerName() + "/1");
-
+      Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+        @Override public boolean evaluate() {
+          return !manager.getSources().isEmpty();
+        }
+      });
       Assert.assertEquals("There should be exactly one source",
         1, manager.getSources().size());
       Assert.assertEquals("Replication source is not correct",
         ReplicationSourceDummyWithNoTermination.class,
         manager.getSources().get(0).getClass());
+      // delete the znodes for peer
+      ZKUtil.deleteNodeRecursively(zkw, "/hbase/replication/peers/1");
+      ZKUtil.deleteNodeRecursively(zkw, "/hbase/replication/rs/" + server.getServerName() + "/1");
       manager
         .logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(), "1", 0, false,
           false);
-      Assert.assertTrue("Replication source should be terminated and removed",
-        manager.getSources().isEmpty());
+      Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+        @Override public boolean evaluate() {
+          return manager.getSources().isEmpty();
+        }
+      });
     } finally {
       conf.set("replication.replicationsource.implementation", replicationSourceImplName);
     }

@@ -241,7 +241,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       if (peerId.contains("-")) {
         peerId = peerId.split("-")[0];
       }
-      peerRemoved(peerId);
+      schedulePeerRemoval(peerId);
     }
     walSet.clear();
   }
@@ -651,6 +651,23 @@ public class ReplicationSourceManager implements ReplicationListener {
   @Override
   public void regionServerRemoved(String regionserver) {
     transferQueues(regionserver);
+  }
+
+  /**
+   * We want to run the peer removal in a separate thread when the peer removal
+   * is called from ReplicationSource shipper thread on encountering NoNodeException
+   * because peerRemoved terminate the source which might leave replication source
+   * in orphaned state.
+   * See HBASE-25741.
+   * @param peerId peer ID to be removed.
+   */
+  private void schedulePeerRemoval(final String peerId) {
+    LOG.info(String.format("Scheduling an async peer removal for peer %s", peerId));
+    this.executor.submit(new Runnable() {
+      @Override public void run() {
+        peerRemoved(peerId);
+      }
+    });
   }
 
   @Override
