@@ -34,11 +34,15 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestMetricsWAL {
+  @Rule
+  public TestName name = new TestName();
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -76,7 +80,8 @@ public class TestMetricsWAL {
 
   @Test
   public void testSlowAppend() throws Exception {
-    MetricsWALSource source = new MetricsWALSourceImpl();
+    String testName = name.getMethodName();
+    MetricsWALSource source = new MetricsWALSourceImpl(testName, testName, testName, testName);
     MetricsWAL metricsWAL = new MetricsWAL(source);
     TableName tableName = TableName.valueOf("foo");
     WALKey walKey = new WALKeyImpl(null, tableName, -1);
@@ -134,7 +139,8 @@ public class TestMetricsWAL {
 
   @Test
   public void testLogRolls() throws IOException {
-    MetricsWALSource source = new MetricsWALSourceImpl();
+    String testName = name.getMethodName();
+    MetricsWALSource source = new MetricsWALSourceImpl(testName, testName, testName, testName);
     MetricsWAL metricsWAL = new MetricsWAL(source);
     Path path1 = new Path("path-1");
     int count = 1;
