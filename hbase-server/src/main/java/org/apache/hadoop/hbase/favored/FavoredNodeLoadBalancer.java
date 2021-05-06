@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -71,21 +69,13 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   private static final Logger LOG = LoggerFactory.getLogger(FavoredNodeLoadBalancer.class);
 
   private RackManager rackManager;
-  private Configuration conf;
   private FavoredNodesManager fnm;
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
-  }
 
   @Override
   public synchronized void initialize() throws HBaseIOException {
     super.initialize();
-    super.setConf(conf);
     this.fnm = services.getFavoredNodesManager();
-    this.rackManager = new RackManager(conf);
-    super.setConf(conf);
+    this.rackManager = new RackManager(getConf());
   }
 
   @Override

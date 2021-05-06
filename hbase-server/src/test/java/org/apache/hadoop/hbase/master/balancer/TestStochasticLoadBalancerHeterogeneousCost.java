@@ -17,6 +17,9 @@ package org.apache.hadoop.hbase.master.balancer;
 import static junit.framework.TestCase.assertNotNull;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,6 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -75,7 +79,9 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
       RULES_FILE);
     BalancerTestBase.loadBalancer = new StochasticLoadBalancer();
-    BalancerTestBase.loadBalancer.setConf(BalancerTestBase.conf);
+    MasterServices services = mock(MasterServices.class);
+    when(services.getConfiguration()).thenReturn(conf);
+    BalancerTestBase.loadBalancer.setMasterServices(services);
     BalancerTestBase.loadBalancer.getCandidateGenerators().add(new FairRandomCandidateGenerator());
   }
 

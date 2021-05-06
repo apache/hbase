@@ -32,6 +32,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -73,6 +75,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
   static List<TableDescriptor> tableDescs;
   int[] regionAssignment = new int[] { 2, 5, 7, 10, 4, 3, 1 };
   static int regionId = 0;
+  static Configuration conf = HBaseConfiguration.create();
 
   /**
    * Invariant is that all servers of a group have load between floor(avg) and
@@ -416,6 +419,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
     Mockito.when(services.getTableDescriptors()).thenReturn(tds);
     AssignmentManager am = Mockito.mock(AssignmentManager.class);
     Mockito.when(services.getAssignmentManager()).thenReturn(am);
+    Mockito.when(services.getConfiguration()).thenReturn(conf);
     return services;
   }
 

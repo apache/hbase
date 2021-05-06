@@ -70,7 +70,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestBaseLoadBalancer.class);
 
-  private static LoadBalancer loadBalancer;
+  private static MockBalancer loadBalancer;
   private static final Logger LOG = LoggerFactory.getLogger(TestBaseLoadBalancer.class);
   private static final ServerName master = ServerName.valueOf("fake-master", 0, 1L);
   private static RackManager rackManager;
@@ -92,9 +92,9 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     loadBalancer = new MockBalancer();
-    loadBalancer.setConf(conf);
     MasterServices st = mock(MasterServices.class);
     when(st.getServerName()).thenReturn(master);
+    when(st.getConfiguration()).thenReturn(conf);
     loadBalancer.setMasterServices(st);
 
     // Set up the rack topologies (5 machines per rack)
@@ -232,11 +232,11 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     };
     Configuration conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
-    balancer.setConf(conf);
     ServerManager sm = mock(ServerManager.class);
     when(sm.getOnlineServersListWithPredicator(anyList(), any())).thenReturn(idleServers);
     MasterServices services = mock(MasterServices.class);
     when(services.getServerManager()).thenReturn(sm);
+    when(services.getConfiguration()).thenReturn(conf);
     balancer.setMasterServices(services);
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
         .setStartKey("key1".getBytes())

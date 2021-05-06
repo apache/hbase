@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +70,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupBasedLoadBalancer.class);
 
-  private Configuration config;
   private ClusterMetrics clusterStatus;
   private MasterServices masterServices;
   private volatile RSGroupInfoManager rsGroupInfoManager;
@@ -92,19 +91,6 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
    */
   @InterfaceAudience.Private
   public RSGroupBasedLoadBalancer() {}
-
-  @Override
-  public Configuration getConf() {
-    return config;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.config = conf;
-    if (internalBalancer != null) {
-      internalBalancer.setConf(conf);
-    }
-  }
 
   @Override
   public void setClusterMetrics(ClusterMetrics sm) {
@@ -353,23 +339,23 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       throw new HBaseIOException("Failed to initialize GroupInfoManagerImpl", e);
     }
 
+    Configuration conf = masterServices.getConfiguration();
     // Create the balancer
-    Class<? extends LoadBalancer> balancerClass = config.getClass(HBASE_RSGROUP_LOADBALANCER_CLASS,
+    Class<? extends LoadBalancer> balancerClass = conf.getClass(HBASE_RSGROUP_LOADBALANCER_CLASS,
         StochasticLoadBalancer.class, LoadBalancer.class);
     if (this.getClass().isAssignableFrom(balancerClass)) {
       LOG.warn("The internal balancer of RSGroupBasedLoadBalancer cannot be itself, " +
               "falling back to the default LoadBalancer class");
       balancerClass = LoadBalancerFactory.getDefaultLoadBalancerClass();
     }
-    internalBalancer = ReflectionUtils.newInstance(balancerClass, config);
+    internalBalancer = ReflectionUtils.newInstance(balancerClass);
     internalBalancer.setMasterServices(masterServices);
     if (clusterStatus != null) {
       internalBalancer.setClusterMetrics(clusterStatus);
     }
-    internalBalancer.setConf(config);
     internalBalancer.initialize();
     // init fallback groups
-    this.fallbackEnabled = config.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
+    this.fallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
   }
 
   public boolean isOnline() {
@@ -394,7 +380,6 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    this.config = conf;
     boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
     if (fallbackEnabled != newFallbackEnabled) {
       LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY,

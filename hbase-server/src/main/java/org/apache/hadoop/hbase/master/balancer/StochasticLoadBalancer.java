@@ -166,7 +166,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
-  public synchronized void setConf(Configuration conf) {
+  protected synchronized void setConf(Configuration conf) {
     super.setConf(conf);
     maxSteps = conf.getInt(MAX_STEPS_KEY, maxSteps);
     stepsPerRegion = conf.getInt(STEPS_PER_REGION_KEY, stepsPerRegion);
@@ -219,7 +219,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       .getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
         BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
     if (this.namedQueueRecorder == null && isBalancerDecisionRecording) {
-      this.namedQueueRecorder = NamedQueueRecorder.getInstance(getConf());
+      this.namedQueueRecorder = NamedQueueRecorder.getInstance(conf);
     }
 
     LOG.info("Loaded config; maxSteps=" + maxSteps + ", stepsPerRegion=" + stepsPerRegion +
