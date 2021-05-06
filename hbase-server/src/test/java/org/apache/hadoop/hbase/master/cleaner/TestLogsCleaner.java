@@ -436,9 +436,9 @@ public class TestLogsCleaner {
     }
   }
 
-  /*
-   Throw SessionExpiredException when zk#getData is called.
-  */
+  /**
+   * Throw SessionExpiredException when zk#getData is called.
+   */
   static class SessionExpiredZooKeeperWatcher extends ZooKeeperWatcher {
     private RecoverableZooKeeper zk;
 
@@ -459,10 +459,11 @@ public class TestLogsCleaner {
     }
   }
 
-  /*
-  Tests that HMaster#abort will be called if ReplicationLogCleaner
-   encounters SessionExpiredException which is unrecoverable.
- */
+  /**
+   * Tests that HMaster#abort will be called if ReplicationLogCleaner
+   * encounters SessionExpiredException which is unrecoverable.
+   * @throws Exception Exception
+   */
   @Test
   public void testZookeeperSessionExpired() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
