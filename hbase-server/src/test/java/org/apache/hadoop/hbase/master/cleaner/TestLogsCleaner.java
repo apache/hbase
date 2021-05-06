@@ -19,17 +19,25 @@ package org.apache.hadoop.hbase.master.cleaner;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -44,11 +52,11 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
@@ -59,10 +67,13 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -151,7 +162,7 @@ public class TestLogsCleaner {
 
     assertEquals(34, fs.listStatus(oldLogDir).length);
 
-    LogCleaner cleaner  = new LogCleaner(1000, server, conf, fs, oldLogDir, POOL);
+    LogCleaner cleaner  = new LogCleaner(1000, server, conf, fs, oldLogDir, POOL, null);
 
     cleaner.chore();
 
@@ -175,7 +186,7 @@ public class TestLogsCleaner {
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
     cleaner.setConf(conf);
 
-    ReplicationQueuesClient rqcMock = Mockito.mock(ReplicationQueuesClient.class);
+    ReplicationQueuesClient rqcMock = mock(ReplicationQueuesClient.class);
     Mockito.when(rqcMock.getQueuesZNodeCversion()).thenReturn(1, 2, 3, 4);
 
     Field rqc = ReplicationLogCleaner.class.getDeclaredField("replicationQueues");
@@ -201,11 +212,12 @@ public class TestLogsCleaner {
     FaultyZooKeeperWatcher faultyZK =
         new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);
     final AtomicBoolean getListOfReplicatorsFailed = new AtomicBoolean(false);
+    TestAbortable abortable = new TestAbortable();
 
     try {
       faultyZK.init();
       ReplicationQueuesClient replicationQueuesClient = spy(ReplicationFactory.getReplicationQueuesClient(
-        faultyZK, conf, new ReplicationLogCleaner.WarnOnlyAbortable()));
+        faultyZK, conf, abortable));
       doAnswer(new Answer<Object>() {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -219,11 +231,12 @@ public class TestLogsCleaner {
       }).when(replicationQueuesClient).getListOfReplicators();
       replicationQueuesClient.init();
 
-      cleaner.setConf(conf, faultyZK, replicationQueuesClient);
+      cleaner.init(conf, faultyZK, replicationQueuesClient);
       // should keep all files due to a ConnectionLossException getting the queues znodes
       Iterable<FileStatus> toDelete = cleaner.getDeletableFiles(dummyFiles);
 
       assertTrue(getListOfReplicatorsFailed.get());
+      assertTrue(abortable.isAborted());
       assertFalse(toDelete.iterator().hasNext());
       assertFalse(cleaner.isStopped());
     } finally {
@@ -247,7 +260,7 @@ public class TestLogsCleaner {
 
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testZooKeeperAbort-normal", null);
     try {
-      cleaner.setConf(conf, zkw);
+      cleaner.init(conf, zkw, null);
       Iterable<FileStatus> filesToDelete = cleaner.getDeletableFiles(dummyFiles);
       Iterator<FileStatus> iter = filesToDelete.iterator();
       assertTrue(iter.hasNext());
@@ -274,7 +287,7 @@ public class TestLogsCleaner {
     Path oldWALsDir = new Path(TEST_UTIL.getDefaultRootDirPath(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    final LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, oldWALsDir, POOL);
+    final LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, oldWALsDir, POOL, null);
     assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE, cleaner.getSizeOfCleaners());
     assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
         cleaner.getCleanerThreadTimeoutMsec());
@@ -391,7 +404,7 @@ public class TestLogsCleaner {
     private RecoverableZooKeeper zk;
 
     public FaultyZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable)
-        throws ZooKeeperConnectionException, IOException {
+        throws IOException {
       super(conf, identifier, abortable);
     }
 
@@ -403,6 +416,80 @@ public class TestLogsCleaner {
 
     public RecoverableZooKeeper getRecoverableZooKeeper() {
       return zk;
+    }
+  }
+
+  /**
+   * An {@link Abortable} implementation for tests.
+   */
+  class TestAbortable implements Abortable {
+    private volatile boolean aborted = false;
+
+    @Override
+    public void abort(String why, Throwable e) {
+      this.aborted = true;
+    }
+
+    @Override
+    public boolean isAborted() {
+      return this.aborted;
+    }
+  }
+
+  /**
+   * Throw SessionExpiredException when zk#getData is called.
+   */
+  static class SessionExpiredZooKeeperWatcher extends ZooKeeperWatcher {
+    private RecoverableZooKeeper zk;
+
+    public SessionExpiredZooKeeperWatcher(Configuration conf, String identifier,
+                                          Abortable abortable) throws IOException {
+      super(conf, identifier, abortable);
+    }
+
+    public void init() throws Exception {
+      this.zk = spy(super.getRecoverableZooKeeper());
+      doThrow(new KeeperException.SessionExpiredException())
+        .when(zk).getData(Mockito.anyString(), Mockito.any(Watcher.class), Mockito.any(Stat.class));
+    }
+
+    @Override
+    public RecoverableZooKeeper getRecoverableZooKeeper() {
+      return zk;
+    }
+  }
+
+  /**
+   * Tests that HMaster#abort will be called if ReplicationLogCleaner
+   * encounters SessionExpiredException which is unrecoverable.
+   * @throws Exception Exception
+   */
+  @Test
+  public void testZookeeperSessionExpired() throws Exception {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    try(SessionExpiredZooKeeperWatcher sessionExpiredZK =
+          new SessionExpiredZooKeeperWatcher(conf, "testSessionExpiredZk-faulty", null)) {
+      sessionExpiredZK.init();
+      ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
+      cleaner.setConf(conf);
+      // Mock HMaster
+      HMaster master  = mock(HMaster.class);
+      // Return SessionExpired Zookeeper.
+      doReturn(sessionExpiredZK).when(master).getZooKeeper();
+      doNothing().when(master).abort(Mockito.anyString(), Mockito.any(Throwable.class));
+      Map<String, Object> params = new HashMap<>();
+      params.put(HMaster.MASTER, master);
+      cleaner.init(params);
+      // This will throw SessionExpiredException
+      cleaner.getDeletableFiles(new LinkedList<FileStatus>());
+      // make sure that HMaster#abort was called.
+      ArgumentCaptor<Throwable> throwableCaptor = ArgumentCaptor.forClass(Throwable.class);
+
+      verify(master, times(1))
+        .abort(Mockito.anyString(), throwableCaptor.capture());
+      assertNotNull(throwableCaptor.getValue());
+      assertTrue("Should be SessionExpiredException",
+        throwableCaptor.getValue() instanceof KeeperException.SessionExpiredException);
     }
   }
 }

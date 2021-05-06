@@ -18,14 +18,18 @@
  */
 package org.apache.hadoop.hbase.replication.master;
 
+import com.google.common.base.Preconditions;
+import java.util.Map;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
@@ -49,10 +53,11 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   private static final Log LOG = LogFactory.getLog(ReplicationLogCleaner.class);
-  private ZooKeeperWatcher zkw;
+  private ZooKeeperWatcher zkw = null;
   private ReplicationQueuesClient replicationQueues;
   private boolean stopped = false;
-
+  private MasterServices master;
+  private boolean shareZK = false;
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
@@ -68,7 +73,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       // but they won't be deleted because they're not in the checking set.
       wals = loadWALsFromQueues();
     } catch (KeeperException e) {
-      LOG.warn("Failed to read zookeeper, skipping checking deletable files");
+      LOG.warn("Failed to read zookeeper, skipping checking deletable files", e);
       return Collections.emptyList();
     }
     return Iterables.filter(files, new Predicate<FileStatus>() {
@@ -132,42 +137,57 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       LOG.warn("Not configured - allowing all wals to be deleted");
       return;
     }
-    // Make my own Configuration.  Then I'll have my own connection to zk that
-    // I can close myself when comes time.
-    Configuration conf = new Configuration(config);
-    try {
-      setConf(conf, new ZooKeeperWatcher(conf, "replicationLogCleaner", null));
-    } catch (IOException e) {
-      LOG.error("Error while configuring " + this.getClass().getName(), e);
+    super.setConf(config);
+  }
+
+  @Override
+  public void init(Map<String, Object> params) {
+    if (getConf() == null) {
+      // Replication is disabled so do nothing.
+      return;
     }
+
+    if (MapUtils.isNotEmpty(params)) {
+      Object master = params.get(HMaster.MASTER);
+      if (master != null && master instanceof HMaster) {
+        this.master = (HMaster)master;
+        zkw = ((HMaster) master).getZooKeeper();
+        shareZK = true;
+      }
+    }
+    init(getConf(), this.zkw, null);
   }
 
   @InterfaceAudience.Private
-  public void setConf(Configuration conf, ZooKeeperWatcher zk) {
-    super.setConf(conf);
-    try {
-      this.zkw = zk;
-      this.replicationQueues = ReplicationFactory.getReplicationQueuesClient(zkw, conf,
-          new WarnOnlyAbortable());
-      this.replicationQueues.init();
-    } catch (ReplicationException e) {
-      LOG.error("Error while configuring " + this.getClass().getName(), e);
-    }
-  }
-
-  @InterfaceAudience.Private
-  public void setConf(Configuration conf, ZooKeeperWatcher zk, 
+  public void init(Configuration conf, ZooKeeperWatcher zk,
       ReplicationQueuesClient replicationQueuesClient) {
     super.setConf(conf);
-    this.zkw = zk;
-    this.replicationQueues = replicationQueuesClient;
+    try {
+      if (zk != null) {
+        this.zkw = zk;
+      } else {
+        this.zkw = new ZooKeeperWatcher(getConf(), "replicationLogCleaner", null);
+      }
+      Preconditions.checkNotNull(this.zkw, "Zookeeper watcher cannot be null");
+      if (replicationQueuesClient != null) {
+        this.replicationQueues = replicationQueuesClient;
+      } else {
+        this.replicationQueues =
+          ReplicationFactory.getReplicationQueuesClient(zkw, getConf(), master);
+        this.replicationQueues.init();
+      }
+      Preconditions.checkNotNull(this.replicationQueues,
+        "ReplicationQueues cannot be null");
+    } catch (IOException | ReplicationException e) {
+      LOG.error("Error while configuring " + this.getClass().getName(), e);
+    }
   }
 
   @Override
   public void stop(String why) {
     if (this.stopped) return;
     this.stopped = true;
-    if (this.zkw != null) {
+    if (!shareZK && this.zkw != null) {
       LOG.info("Stopping " + this.zkw);
       this.zkw.close();
     }
@@ -176,21 +196,5 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   @Override
   public boolean isStopped() {
     return this.stopped;
-  }
-
-  public static class WarnOnlyAbortable implements Abortable {
-
-    @Override
-    public void abort(String why, Throwable e) {
-      LOG.warn("ReplicationLogCleaner received abort, ignoring.  Reason: " + why);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(e);
-      }
-    }
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
   }
 }

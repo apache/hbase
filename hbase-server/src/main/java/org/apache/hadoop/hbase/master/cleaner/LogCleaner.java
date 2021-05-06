@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -71,8 +72,8 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
    * @param oldLogDir the path to the archived logs
    */
   public LogCleaner(final int p, final Stoppable s, Configuration conf, FileSystem fs,
-      Path oldLogDir, DirScanPool pool) {
-    super("LogsCleaner", p, s, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS, pool);
+      Path oldLogDir, DirScanPool pool, Map<String, Object> params) {
+    super("LogsCleaner", p, s, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS, pool, params);
     this.pendingDelete = new LinkedBlockingQueue<>();
     int size = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     this.oldWALsCleaner = createOldWalsCleaner(size);
