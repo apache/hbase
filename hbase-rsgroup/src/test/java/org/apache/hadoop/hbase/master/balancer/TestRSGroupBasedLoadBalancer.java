@@ -30,9 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -67,13 +65,11 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
     servers = generateServers(7);
     groupMap = constructGroupInfo(servers, groups);
     tableDescs = constructTableDesc(true);
-    Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.regions.slop", "0");
     conf.set("hbase.rsgroup.grouploadbalancer.class", SimpleLoadBalancer.class.getCanonicalName());
     loadBalancer = new RSGroupBasedLoadBalancer();
     loadBalancer.setRsGroupInfoManager(getMockedGroupInfoManager());
     loadBalancer.setMasterServices(getMockedMaster());
-    loadBalancer.setConf(conf);
     loadBalancer.initialize();
   }
 
@@ -88,9 +84,8 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
     // Test with/without per table balancer.
     boolean[] perTableBalancerConfigs = { true, false };
     for (boolean isByTable : perTableBalancerConfigs) {
-      Configuration conf = loadBalancer.getConf();
       conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
-      loadBalancer.setConf(conf);
+      loadBalancer.onConfigurationChange(conf);
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers();
       ArrayListMultimap<String, ServerAndLoad> list = convertToGroupBasedMap(servers);
       LOG.info("Mock Cluster :  " + printStats(list));
@@ -194,7 +189,6 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
     assertFalse(loadBalancer.isFallbackEnabled());
 
     // change FALLBACK_GROUP_ENABLE_KEY from false to true
-    Configuration conf = loadBalancer.getConf();
     conf.setBoolean(RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY, true);
     loadBalancer.onConfigurationChange(conf);
     assertTrue(loadBalancer.isFallbackEnabled());

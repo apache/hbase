@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The class that creates a load balancer from a conf.
@@ -44,12 +44,10 @@ public class LoadBalancerFactory {
    * @return A {@link LoadBalancer}
    */
   public static LoadBalancer getLoadBalancer(Configuration conf) {
-
     // Create the balancer
     Class<? extends LoadBalancer> balancerKlass =
-        conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, getDefaultLoadBalancerClass(),
-          LoadBalancer.class);
-    return ReflectionUtils.newInstance(balancerKlass, conf);
-
+      conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, getDefaultLoadBalancerClass(),
+        LoadBalancer.class);
+    return ReflectionUtils.newInstance(balancerKlass);
   }
 }

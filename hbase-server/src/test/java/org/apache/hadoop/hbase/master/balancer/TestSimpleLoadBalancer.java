@@ -65,7 +65,6 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     conf.set("hbase.regions.slop", "0");
     loadBalancer = new SimpleLoadBalancer();
-    loadBalancer.setConf(conf);
   }
 
   // int[testnum][servernumber] -> numregions
