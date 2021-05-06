@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -43,6 +44,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -119,6 +124,22 @@ public class TestCatalogJanitorInMemoryStates {
     Result r = MetaMockingUtil.getMetaTableRowResult(parent.getRegion(), null,
       daughters.get(0).getRegion(), daughters.get(1).getRegion());
     CatalogJanitor.cleanParent(master, parent.getRegion(), r);
+
+    // wait for procedures to complete
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 10 * 1000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        ProcedureExecutor<MasterProcedureEnv> pe = master.getMasterProcedureExecutor();
+        for (Procedure<MasterProcedureEnv> proc: pe.getProcedures()) {
+          if (proc.getClass().isAssignableFrom(GCRegionProcedure.class) &&
+              proc.isFinished()) {
+            return true;
+          }          
+        }
+        return false;
+      }
+    });
+
     assertFalse("Parent region should have been removed from RegionStates",
       am.getRegionStates().isRegionInRegionStates(parent.getRegion()));
     assertFalse("Parent region should have been removed from ServerManager",
