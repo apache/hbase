@@ -29,10 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -66,7 +64,6 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     servers = generateServers(3);
     groupMap = constructGroupInfo(servers, groups);
     tableDescs = constructTableDesc(false);
-    Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.regions.slop", "0");
     conf.setFloat("hbase.master.balancer.stochastic.readRequestCost", 10000f);
     conf.set("hbase.rsgroup.grouploadbalancer.class",
@@ -74,7 +71,6 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     loadBalancer = new RSGroupBasedLoadBalancer();
     loadBalancer.setRsGroupInfoManager(getMockedGroupInfoManager());
     loadBalancer.setMasterServices(getMockedMaster());
-    loadBalancer.setConf(conf);
     loadBalancer.initialize();
   }
 

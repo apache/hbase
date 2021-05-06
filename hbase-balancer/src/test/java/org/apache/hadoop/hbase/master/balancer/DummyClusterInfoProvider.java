@@ -27,83 +27,57 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * Master based cluster info provider.
- */
-@InterfaceAudience.Private
-public class MasterClusterInfoProvider implements ClusterInfoProvider {
+public class DummyClusterInfoProvider implements ClusterInfoProvider {
 
-  private final MasterServices services;
+  private final Configuration conf;
 
-  public MasterClusterInfoProvider(MasterServices services) {
-    this.services = services;
+  public DummyClusterInfoProvider(Configuration conf) {
+    this.conf = conf;
   }
 
   @Override
   public Configuration getConfiguration() {
-    return services.getConfiguration();
+    return conf;
   }
 
   @Override
   public List<RegionInfo> getAssignedRegions() {
-    AssignmentManager am = services.getAssignmentManager();
-    return am != null ? am.getAssignedRegions() : Collections.emptyList();
+    return Collections.emptyList();
   }
 
   @Override
   public TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
-    TableDescriptors tds = services.getTableDescriptors();
-    return tds != null ? tds.get(tableName) : null;
+    return null;
+  }
+
+  @Override
+  public int getNumberOfTables() throws IOException {
+    return 0;
   }
 
   @Override
   public HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
     TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
-    return HRegion.computeHDFSBlocksDistribution(conf, tableDescriptor, regionInfo);
+    return new HDFSBlocksDistribution();
   }
 
   @Override
   public boolean hasRegionReplica(Collection<RegionInfo> regions) throws IOException {
-    TableDescriptors tds = services.getTableDescriptors();
-    if (tds == null) {
-      return false;
-    }
-    for (RegionInfo region : regions) {
-      TableDescriptor td = tds.get(region.getTable());
-      if (td != null && td.getRegionReplication() > 1) {
-        return true;
-      }
-    }
     return false;
   }
 
   @Override
   public List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
     Predicate<ServerMetrics> filter) {
-    ServerManager sm = services.getServerManager();
-    return sm != null ? sm.getOnlineServersListWithPredicator(servers, filter) :
-      Collections.emptyList();
+    return Collections.emptyList();
   }
 
   @Override
   public Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(Collection<RegionInfo> regions) {
-    AssignmentManager am = services.getAssignmentManager();
-    return am != null ? am.getSnapShotOfAssignment(regions) : Collections.emptyMap();
+    return Collections.emptyMap();
   }
-
-  @Override
-  public int getNumberOfTables() throws IOException {
-    return services.getTableDescriptors().getAll().size();
-  }
-
 }

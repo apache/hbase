@@ -73,7 +73,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 public class RSGroupBasedLoadBalancer implements LoadBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupBasedLoadBalancer.class);
 
-  private Configuration config;
   private ClusterMetrics clusterStatus;
   private MasterServices masterServices;
   private FavoredNodesManager favoredNodesManager;
@@ -96,19 +95,6 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
    */
   @InterfaceAudience.Private
   public RSGroupBasedLoadBalancer() {}
-
-  @Override
-  public Configuration getConf() {
-    return config;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.config = conf;
-    if(internalBalancer != null) {
-      internalBalancer.setConf(conf);
-    }
-  }
 
   @Override
   public void setClusterMetrics(ClusterMetrics sm) {
@@ -347,10 +333,11 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     }
 
     // Create the balancer
+    Configuration conf = masterServices.getConfiguration();
     Class<? extends LoadBalancer> balancerClass;
-    String balancerClassName = config.get(HBASE_RSGROUP_LOADBALANCER_CLASS);
+    String balancerClassName = conf.get(HBASE_RSGROUP_LOADBALANCER_CLASS);
     if (balancerClassName == null) {
-      balancerClass = config.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+      balancerClass = conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
         LoadBalancerFactory.getDefaultLoadBalancerClass(), LoadBalancer.class);
     } else {
       try {
@@ -364,7 +351,6 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       balancerClass = LoadBalancerFactory.getDefaultLoadBalancerClass();
     }
     internalBalancer = ReflectionUtils.newInstance(balancerClass);
-    internalBalancer.setConf(config);
     internalBalancer.setClusterInfoProvider(new MasterClusterInfoProvider(masterServices));
     if(clusterStatus != null) {
       internalBalancer.setClusterMetrics(clusterStatus);
@@ -383,7 +369,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
     internalBalancer.initialize();
     // init fallback groups
-    this.fallbackEnabled = config.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
+    this.fallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
   }
 
   public boolean isOnline() {
@@ -408,7 +394,6 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    this.config = conf;
     boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
     if (fallbackEnabled != newFallbackEnabled) {
       LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY,
