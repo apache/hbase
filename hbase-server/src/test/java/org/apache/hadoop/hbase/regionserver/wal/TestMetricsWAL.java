@@ -22,8 +22,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -128,5 +130,25 @@ public class TestMetricsWAL {
           registry.getCounter(tableName + "." + MetricsWALSource.APPEND_SIZE, -1).value();
       assertEquals(i * numIters, tableAppendSize);
     }
+  }
+
+  @Test
+  public void testLogRolls() throws IOException {
+    MetricsWALSource source = new MetricsWALSourceImpl();
+    MetricsWAL metricsWAL = new MetricsWAL(source);
+    Path path1 = new Path("path-1");
+    int count = 1;
+    // oldPath is null but newPath is not null;
+    metricsWAL.postLogRoll(null, path1);
+    assertEquals(count, source.getSuccessfulLogRolls());
+
+    // Simulating a case where AbstractFSWAL#replaceWriter fails
+    metricsWAL.postLogRoll(path1, path1);
+    assertEquals(count, source.getSuccessfulLogRolls());
+
+    count++;
+    Path path2 = new Path("path-2");
+    metricsWAL.postLogRoll(path1, path2);
+    assertEquals(count, source.getSuccessfulLogRolls());
   }
 }
