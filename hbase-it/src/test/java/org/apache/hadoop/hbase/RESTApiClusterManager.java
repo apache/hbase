@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HBaseClusterManager.DEFAULT_RETRY_ATTEMPTS
 import static org.apache.hadoop.hbase.HBaseClusterManager.DEFAULT_RETRY_SLEEP_INTERVAL;
 import static org.apache.hadoop.hbase.HBaseClusterManager.RETRY_ATTEMPTS_KEY;
 import static org.apache.hadoop.hbase.HBaseClusterManager.RETRY_SLEEP_INTERVAL_KEY;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
@@ -32,14 +31,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriBuilder;
 import javax.xml.ws.http.HTTPException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -50,10 +41,17 @@ import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.gson.JsonElement;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 import org.apache.hbase.thirdparty.com.google.gson.JsonParser;
+import org.apache.hbase.thirdparty.javax.ws.rs.client.Client;
+import org.apache.hbase.thirdparty.javax.ws.rs.client.ClientBuilder;
+import org.apache.hbase.thirdparty.javax.ws.rs.client.Entity;
+import org.apache.hbase.thirdparty.javax.ws.rs.client.Invocation;
+import org.apache.hbase.thirdparty.javax.ws.rs.client.WebTarget;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.Response;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.UriBuilder;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
 /**

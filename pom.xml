@@ -1438,7 +1438,9 @@
                   <commentLineBufferSize>512</commentLineBufferSize>
                   <reason>Use shaded jersey in hbase-thirdparty</reason>
                   <bannedImports>
+                    <bannedImport>javax.ws.rs.**</bannedImport>
                     <bannedImport>org.glassfish.jersey.**</bannedImport>
+                    <bannedImport>com.fasterxml.jackson.jaxrs.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
@@ -1738,7 +1740,6 @@
     <jackson.databind.version>2.10.1</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
-    <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
     <glassfish.el.version>3.0.1-b08</glassfish.el.version>
     <jruby.version>9.2.13.0</jruby.version>
@@ -1798,7 +1799,7 @@
     <snappy.version>1.1.8.4</snappy.version>
     <xz.version>1.9</xz.version>
     <zstd-jni.version>1.5.0-4</zstd-jni.version>
-    <hbase-thirdparty.version>3.5.1</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.0.0-SNAPSHOT</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -2368,11 +2369,6 @@
         <version>${joni.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.fasterxml.jackson.jaxrs</groupId>
-        <artifactId>jackson-jaxrs-json-provider</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-annotations</artifactId>
         <version>${jackson.version}</version>
@@ -2397,11 +2393,6 @@
         <groupId>javax.servlet</groupId>
         <artifactId>javax.servlet-api</artifactId>
         <version>${servlet.api.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>javax.ws.rs</groupId>
-        <artifactId>javax.ws.rs-api</artifactId>
-        <version>${wx.rs.api.version}</version>
       </dependency>
       <dependency>
         <groupId>com.sun.activation</groupId>
@@ -2624,6 +2615,11 @@
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-jersey</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-jackson-jaxrs-json-provider</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>
       <dependency>
