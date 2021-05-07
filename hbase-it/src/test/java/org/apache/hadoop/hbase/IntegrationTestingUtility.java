@@ -58,8 +58,9 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
    */
   public static final String IS_DISTRIBUTED_CLUSTER = "hbase.test.cluster.distributed";
 
-  /** Config for pluggable hbase cluster manager */
-  private static final String HBASE_CLUSTER_MANAGER_CLASS = "hbase.it.clustermanager.class";
+  /** Config for pluggable hbase cluster manager. Pass fully-qualified class name as property
+   * value. Drop the '.class' suffix.*/
+  public static final String HBASE_CLUSTER_MANAGER_CLASS = "hbase.it.clustermanager.class";
   private static final Class<? extends ClusterManager> DEFAULT_HBASE_CLUSTER_MANAGER_CLASS =
     HBaseClusterManager.class;
 
@@ -153,5 +154,4 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
     setHBaseCluster(new DistributedHBaseCluster(conf, clusterManager));
     getAdmin();
   }
-
 }

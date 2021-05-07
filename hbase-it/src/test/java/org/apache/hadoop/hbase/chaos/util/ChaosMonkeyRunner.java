@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,12 +38,10 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 public class ChaosMonkeyRunner extends AbstractHBaseTool {
   private static final Logger LOG = LoggerFactory.getLogger(ChaosMonkeyRunner.class);
-
   public static final String MONKEY_LONG_OPT = "monkey";
   public static final String CHAOS_MONKEY_PROPS = "monkeyProps";
   public static final String TABLE_NAME_OPT = "tableName";
   public static final String FAMILY_NAME_OPT = "familyName";
-
   protected IntegrationTestingUtility util;
   protected ChaosMonkey monkey;
   protected String monkeyToUse;
@@ -54,6 +52,9 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
 
   @Override
   public void addOptions() {
+    // The -c option is processed down in the main, not along w/ other options. Added here so shows
+    // in the usage output.
+    addOptWithArg("c", "Name of extra configurations file to find on CLASSPATH");
     addOptWithArg("m", MONKEY_LONG_OPT, "Which chaos monkey to run");
     addOptWithArg(CHAOS_MONKEY_PROPS, "The properties file for specifying chaos "
         + "monkey properties.");
@@ -168,19 +169,33 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
   }
 
   /*
-   * If caller wants to add config parameters contained in a file, the path of conf file
-   * can be passed as the first two arguments like this:
-   *   -c <path-to-conf>
+   * If caller wants to add config parameters from a file, the path to the conf file
+   * can be passed like this: -c <path-to-conf>. The file is presumed to have the Configuration
+   * file xml format and is added as a new Resource to the current Configuration.
+   * Use this mechanism to set Configuration such as what ClusterManager to use, etc.
+   * Here is an example file you might references that sets an alternate ClusterManager:
+   * {code}
+   * <?xml version="1.0" encoding="UTF-8"?>
+   * <configuration>
+   *   <property>
+   *     <name>hbase.it.clustermanager.class</name>
+   *     <value>org.apache.hadoop.hbase.K8sClusterManager</value>
+   *   </property>
+   * </configuration>
+   * {code}
+   * NOTE: The code searches for the file name passed on the CLASSPATH! Passing the path to a file
+   * will not work! Add the file to the CLASSPATH and then pass the filename as the '-c' arg.
    */
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    String[] actualArgs = args;
+    String [] actualArgs = args;
     if (args.length > 0 && "-c".equals(args[0])) {
       int argCount = args.length - 2;
       if (argCount < 0) {
         throw new IllegalArgumentException("Missing path for -c parameter");
       }
-      // load the resource specified by the second parameter
+      // Load the resource specified by the second parameter. We load from the classpath, not
+      // from filesystem path.
       conf.addResource(args[1]);
       actualArgs = new String[argCount];
       System.arraycopy(args, 2, actualArgs, 0, argCount);
@@ -189,5 +204,4 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
     int ret = ToolRunner.run(conf, new ChaosMonkeyRunner(), actualArgs);
     System.exit(ret);
   }
-
 }

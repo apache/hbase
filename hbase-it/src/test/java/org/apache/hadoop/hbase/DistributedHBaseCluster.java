@@ -259,7 +259,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
       }
       Threads.sleep(100);
     }
-    throw new IOException("did timeout waiting for service to stop:" + serverName);
+    throw new IOException("Timed-out waiting for service to stop: " + serverName);
   }
 
   private void waitForServiceToStart(ServiceType service, ServerName serverName, long timeout)
@@ -273,7 +273,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
       }
       Threads.sleep(100);
     }
-    throw new IOException("did timeout waiting for service to start:" + serverName);
+    throw new IOException("Timed-out waiting for service to start: " + serverName);
   }
 
 
