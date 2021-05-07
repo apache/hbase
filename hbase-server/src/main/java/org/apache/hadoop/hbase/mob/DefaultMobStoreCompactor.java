@@ -208,8 +208,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       if (major) {
         try {
           delFileWriter = mobStore.createDelFileWriterInTmp(new Date(fd.latestPutTs),
-            fd.maxKeyCount, major ? majorCompactionCompression : minorCompactionCompression,
-            store.getRegionInfo().getStartKey());
+            fd.maxKeyCount, majorCompactionCompression, store.getRegionInfo().getStartKey());
         } catch (IOException e) {
           LOG.warn(
             "Failed to create del writer, "
