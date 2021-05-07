@@ -93,7 +93,8 @@ public class MetricsWAL implements WALActionsListener {
     }
   }
 
-  public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+  @Override
+  public void postLogRoll(Path oldPath, Path newPath) {
     // oldPath can be null if this is the first time we created a wal
     // Also newPath can be equal to oldPath if AbstractFSWAL#replaceWriter fails
     if (newPath != oldPath) {

@@ -22,7 +22,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.fs.Path;
@@ -138,7 +137,7 @@ public class TestMetricsWAL {
   }
 
   @Test
-  public void testLogRolls() throws IOException {
+  public void testLogRolls() {
     String testName = name.getMethodName();
     MetricsWALSource source = new MetricsWALSourceImpl(testName, testName, testName, testName);
     MetricsWAL metricsWAL = new MetricsWAL(source);
