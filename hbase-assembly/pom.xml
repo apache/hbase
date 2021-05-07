@@ -170,6 +170,7 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-thrift</artifactId>
+      <optional>true</optional>
     </dependency>
     <!-- To dump tools in hbase-procedure into cached_classpath.txt. -->
     <dependency>
