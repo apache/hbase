@@ -47,6 +47,7 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   private final MutableFastCounter slowSyncRollRequested;
   private final MutableFastCounter sizeRollRequested;
   private final MutableFastCounter writtenBytes;
+  private final MutableFastCounter successfulLogRolls;
   // Per table metrics.
   private final ConcurrentMap<TableName, MutableFastCounter> perTableAppendCount;
   private final ConcurrentMap<TableName, MutableFastCounter> perTableAppendSize;
@@ -79,6 +80,8 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
     sizeRollRequested = this.getMetricsRegistry()
         .newCounter(SIZE_ROLL_REQUESTED, SIZE_ROLL_REQUESTED_DESC, 0L);
     writtenBytes = this.getMetricsRegistry().newCounter(WRITTEN_BYTES, WRITTEN_BYTES_DESC, 0L);
+    successfulLogRolls = this.getMetricsRegistry()
+      .newCounter(SUCCESSFUL_LOG_ROLLS, SUCCESSFUL_LOG_ROLLS_DESC, 0L);
     perTableAppendCount = new ConcurrentHashMap<>();
     perTableAppendSize = new ConcurrentHashMap<>();
   }
@@ -154,5 +157,15 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   @Override
   public void incrementWrittenBytes(long val) {
     writtenBytes.incr(val);
+  }
+
+  @Override
+  public void incrementSuccessfulLogRolls() {
+    successfulLogRolls.incr();
+  }
+
+  @Override
+  public long getSuccessfulLogRolls() {
+    return successfulLogRolls.value();
   }
 }
