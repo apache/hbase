@@ -32,6 +32,7 @@ message WALHeader {
   optional bool has_tag_compression = 3;
   optional string writer_cls_name = 4;
   optional string cell_codec_cls_name = 5;
+  optional bool has_value_compression = 6;
 }
 
 /*

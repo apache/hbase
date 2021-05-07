@@ -146,7 +146,8 @@ public abstract class AbstractProtobufLogWriter {
       try {
         this.compressionContext =
           new CompressionContext(LRUDictionary.class, CommonFSUtils.isRecoveredEdits(path),
-            conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true));
+            conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true),
+            conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false));
       } catch (Exception e) {
         throw new IOException("Failed to initiate CompressionContext", e);
       }
@@ -167,8 +168,13 @@ public abstract class AbstractProtobufLogWriter {
 
     boolean doTagCompress = doCompress
         && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
-    length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC, buildWALHeader(conf,
-      WALHeader.newBuilder().setHasCompression(doCompress).setHasTagCompression(doTagCompress))));
+    boolean doValueCompress = doCompress
+        && conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
+    length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC,
+      buildWALHeader(conf, WALHeader.newBuilder()
+        .setHasCompression(doCompress)
+        .setHasTagCompression(doTagCompress)
+        .setHasValueCompression(doValueCompress))));
 
     initAfterHeader(doCompress);
 

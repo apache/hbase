@@ -69,7 +69,7 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
       try {
         if (compressionContext == null) {
           compressionContext = new CompressionContext(LRUDictionary.class,
-            CommonFSUtils.isRecoveredEdits(path), hasTagCompression());
+            CommonFSUtils.isRecoveredEdits(path), hasTagCompression(), hasValueCompression());
         } else {
           compressionContext.clear();
         }
@@ -150,6 +150,11 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
    * @return Whether tag compression is enabled for this log.
    */
   protected abstract boolean hasTagCompression();
+
+  /**
+   * @return Whether value compression is enabled for this log.
+   */
+  protected abstract boolean hasValueCompression();
 
   /**
    * Read next entry.

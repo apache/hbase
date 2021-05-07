@@ -22,6 +22,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.zip.Deflater;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -37,6 +38,9 @@ public class CompressionContext {
   static final String ENABLE_WAL_TAGS_COMPRESSION =
       "hbase.regionserver.wal.tags.enablecompression";
 
+  static final String ENABLE_WAL_VALUE_COMPRESSION =
+      "hbase.regionserver.wal.value.enablecompression";
+
   public enum DictionaryIndex {
     REGION, TABLE, FAMILY, QUALIFIER, ROW
   }
@@ -45,10 +49,12 @@ public class CompressionContext {
       new EnumMap<>(DictionaryIndex.class);
   // Context used for compressing tags
   TagCompressionContext tagCompressionContext = null;
+  Deflater valueCompressor = null;
 
   public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
-      boolean hasTagCompression) throws SecurityException, NoSuchMethodException,
-      InstantiationException, IllegalAccessException, InvocationTargetException {
+      boolean hasTagCompression, boolean hasValueCompression)
+      throws SecurityException, NoSuchMethodException, InstantiationException,
+        IllegalAccessException, InvocationTargetException {
     Constructor<? extends Dictionary> dictConstructor =
         dictType.getConstructor();
     for (DictionaryIndex dictionaryIndex : DictionaryIndex.values()) {
@@ -70,10 +76,26 @@ public class CompressionContext {
     if (hasTagCompression) {
       tagCompressionContext = new TagCompressionContext(dictType, Short.MAX_VALUE);
     }
+    if (hasValueCompression) {
+      valueCompressor = new Deflater();
+      // Optimize for encoding speed
+      valueCompressor.setLevel(Deflater.BEST_SPEED);
+    }
+  }
+
+  public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
+      boolean hasTagCompression)
+      throws SecurityException, NoSuchMethodException, InstantiationException,
+        IllegalAccessException, InvocationTargetException {
+    this(dictType, recoveredEdits, hasTagCompression, false);
   }
 
   public Dictionary getDictionary(Enum dictIndex) {
     return dictionaries.get(dictIndex);
+  }
+
+  public Deflater getValueCompressor() {
+    return valueCompressor;
   }
 
   void clear() {
@@ -83,5 +105,9 @@ public class CompressionContext {
     if (tagCompressionContext != null) {
       tagCompressionContext.clear();
     }
+    if (valueCompressor != null) {
+      valueCompressor.reset();
+    }
   }
+
 }

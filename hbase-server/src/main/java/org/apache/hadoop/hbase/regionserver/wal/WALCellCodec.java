@@ -21,6 +21,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -43,7 +46,7 @@ import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.io.IOUtils;
-
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
@@ -220,6 +223,8 @@ public class WALCellCodec implements Codec {
     }
   }
 
+  static final int VALUE_COMPRESS_THRESHOLD = 100;
+
   static class CompressedKvEncoder extends BaseEncoder {
     private final CompressionContext compression;
     public CompressedKvEncoder(OutputStream out, CompressionContext compression) {
@@ -241,10 +246,19 @@ public class WALCellCodec implements Codec {
         compression.getDictionary(CompressionContext.DictionaryIndex.FAMILY));
       PrivateCellUtil.compressQualifier(out, cell,
         compression.getDictionary(CompressionContext.DictionaryIndex.QUALIFIER));
-      // Write timestamp, type and value as uncompressed.
+      // Write timestamp, type and value.
       StreamUtils.writeLong(out, cell.getTimestamp());
-      out.write(cell.getTypeByte());
-      PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
+      byte type = cell.getTypeByte();
+      if (compression.getValueCompressor() != null &&
+          cell.getValueLength() > VALUE_COMPRESS_THRESHOLD) {
+        // Set the high bit of type to indicate the value is compressed
+        out.write((byte)(type|0x80));
+        writeCompressedValue(out, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength(), compression.getValueCompressor());
+      } else {
+        out.write(type);
+        PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
+      }
       if (tagsLength > 0) {
         if (compression.tagCompressionContext != null) {
           // Write tags using Dictionary compression
@@ -256,6 +270,28 @@ public class WALCellCodec implements Codec {
         }
       }
     }
+
+    public static void writeCompressedValue(OutputStream out, byte[] valueArray, int offset,
+        int vlength, Deflater deflater) throws IOException {
+      byte[] buffer = new byte[4096];
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      deflater.reset();
+      deflater.setInput(valueArray, offset, vlength);
+      boolean finished = false;
+      do {
+        int bytesOut = deflater.deflate(buffer);
+        if (bytesOut > 0) {
+          baos.write(buffer, 0, bytesOut);
+        } else {
+          bytesOut = deflater.deflate(buffer, 0, buffer.length, Deflater.FULL_FLUSH);
+          baos.write(buffer, 0, bytesOut);
+          finished = true;
+        }
+      } while (!finished);
+      StreamUtils.writeRawVInt32(out, baos.size());
+      out.write(baos.toByteArray());
+    }
+
   }
 
   static class CompressedKvDecoder extends BaseDecoder {
@@ -269,7 +305,6 @@ public class WALCellCodec implements Codec {
     protected Cell parseCell() throws IOException {
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
-
       int tagsLength = StreamUtils.readRawVarint32(in);
       int length = 0;
       if(tagsLength == 0) {
@@ -302,14 +337,28 @@ public class WALCellCodec implements Codec {
         compression.getDictionary(CompressionContext.DictionaryIndex.QUALIFIER));
       pos += elemLen;
 
-      // timestamp, type and value
-      int tsTypeValLen = length - pos;
+      // timestamp
+      long ts = StreamUtils.readLong(in);
+      pos = Bytes.putLong(backingArray, pos, ts);
+      // type and value
+      int typeValLen = length - pos;
       if (tagsLength > 0) {
-        tsTypeValLen = tsTypeValLen - tagsLength - KeyValue.TAGS_LENGTH_SIZE;
+        typeValLen = typeValLen - tagsLength - KeyValue.TAGS_LENGTH_SIZE;
       }
-      IOUtils.readFully(in, backingArray, pos, tsTypeValLen);
-      pos += tsTypeValLen;
-
+      // high bit of type byte is 1 if value is compressed
+      byte type = (byte)in.read();
+      if ((type & 0x80) == 0x80) {
+        type = (byte)(type & 0x7f);
+        pos = Bytes.putByte(backingArray, pos, type);
+        int valLen = typeValLen - 1;
+        readCompressedValue(in, backingArray, pos, valLen);
+        pos += valLen;
+      } else {
+        pos = Bytes.putByte(backingArray, pos, type);
+        int valLen = typeValLen - 1;
+        IOUtils.readFully(in, backingArray, pos, valLen);
+        pos += valLen;
+      }
       // tags
       if (tagsLength > 0) {
         pos = Bytes.putAsShort(backingArray, pos, tagsLength);
@@ -349,6 +398,27 @@ public class WALCellCodec implements Codec {
         throw new IOException("Invalid length for compresesed portion of keyvalue: " + len);
       }
     }
+
+    public static void readCompressedValue(InputStream in, byte[] outArray, int outOffset,
+        int expectedLength) throws IOException {
+      int compressedLength = StreamUtils.readRawVarint32(in);
+      byte[] buffer = new byte[compressedLength];
+      IOUtils.readFully(in, buffer, 0, compressedLength);
+      Inflater inflater = new Inflater();
+      inflater.setInput(buffer);
+      int remaining = expectedLength;
+      do {
+        try {
+          int inflatedBytes = inflater.inflate(outArray, outOffset, remaining);
+          Preconditions.checkState(inflatedBytes > 0, "Inflater state error");
+          outOffset += inflatedBytes;
+          remaining -= inflatedBytes;
+        } catch (DataFormatException e) {
+          throw new IOException(e);
+        }
+      } while (remaining > 0);
+    }
+
   }
 
   public static class EnsureKvEncoder extends BaseEncoder {

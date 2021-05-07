@@ -230,6 +230,11 @@ public class KeyValue implements ExtendedCell, Cloneable {
     DeleteColumn((byte)12),
     DeleteFamily((byte)14),
 
+    // Effective maximum is 127 (Byte.MAX_VALUE). We set the high order bit of the
+    // type byte in the WAL codecs to indicate, in a backwards compatible way, if the
+    // value is compressed there.
+    EffectiveMaximum((byte)Byte.MAX_VALUE),
+
     // Maximum is used when searching; you look from maximum on down.
     Maximum((byte)255);
 
