@@ -23,6 +23,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,21 +36,45 @@ import org.apache.hadoop.hbase.io.util.Dictionary;
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public class CompressionContext {
 
-  static final String ENABLE_WAL_TAGS_COMPRESSION =
+  public static final String ENABLE_WAL_TAGS_COMPRESSION =
       "hbase.regionserver.wal.tags.enablecompression";
 
-  static final String ENABLE_WAL_VALUE_COMPRESSION =
+  public static final String ENABLE_WAL_VALUE_COMPRESSION =
       "hbase.regionserver.wal.value.enablecompression";
 
   public enum DictionaryIndex {
     REGION, TABLE, FAMILY, QUALIFIER, ROW
   }
 
+  static class ValueCompressor {
+    final Deflater deflater;
+    final Inflater inflater;
+
+    public ValueCompressor() {
+      deflater = new Deflater();
+      deflater.setLevel(Deflater.BEST_SPEED);
+      inflater = new Inflater();
+    }
+
+    public Deflater getDeflater() {
+      return deflater;
+    }
+
+    public Inflater getInflater() {
+      return inflater;
+    }
+
+    public void clear() {
+      deflater.reset();
+      inflater.reset();
+    }
+  };
+
   private final Map<DictionaryIndex, Dictionary> dictionaries =
       new EnumMap<>(DictionaryIndex.class);
   // Context used for compressing tags
   TagCompressionContext tagCompressionContext = null;
-  Deflater valueCompressor = null;
+  ValueCompressor valueCompressor = null;
 
   public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
       boolean hasTagCompression, boolean hasValueCompression)
@@ -77,9 +102,7 @@ public class CompressionContext {
       tagCompressionContext = new TagCompressionContext(dictType, Short.MAX_VALUE);
     }
     if (hasValueCompression) {
-      valueCompressor = new Deflater();
-      // Optimize for encoding speed
-      valueCompressor.setLevel(Deflater.BEST_SPEED);
+      valueCompressor = new ValueCompressor();
     }
   }
 
@@ -94,7 +117,7 @@ public class CompressionContext {
     return dictionaries.get(dictIndex);
   }
 
-  public Deflater getValueCompressor() {
+  public ValueCompressor getValueCompressor() {
     return valueCompressor;
   }
 
@@ -106,7 +129,7 @@ public class CompressionContext {
       tagCompressionContext.clear();
     }
     if (valueCompressor != null) {
-      valueCompressor.reset();
+      valueCompressor.clear();
     }
   }
 

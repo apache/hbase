@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
@@ -251,10 +251,18 @@ public class WALCellCodec implements Codec {
       byte type = cell.getTypeByte();
       if (compression.getValueCompressor() != null &&
           cell.getValueLength() > VALUE_COMPRESS_THRESHOLD) {
-        // Set the high bit of type to indicate the value is compressed
-        out.write((byte)(type|0x80));
-        writeCompressedValue(out, cell.getValueArray(), cell.getValueOffset(),
-          cell.getValueLength(), compression.getValueCompressor());
+        // Try compressing the cell's value
+        byte[] compressedBytes = compressValue(cell);
+        // Only write the compressed value if we have achieved some space savings.
+        if (compressedBytes.length < cell.getValueLength()) {
+          // Set the high bit of type to indicate the value is compressed
+          out.write((byte)(type|0x80));
+          StreamUtils.writeRawVInt32(out, compressedBytes.length);
+          out.write(compressedBytes);
+        } else {
+          out.write(type);
+          PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
+        }
       } else {
         out.write(type);
         PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
@@ -271,25 +279,23 @@ public class WALCellCodec implements Codec {
       }
     }
 
-    public static void writeCompressedValue(OutputStream out, byte[] valueArray, int offset,
-        int vlength, Deflater deflater) throws IOException {
+    private byte[] compressValue(Cell cell) throws IOException {
       byte[] buffer = new byte[4096];
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      deflater.reset();
-      deflater.setInput(valueArray, offset, vlength);
+      Deflater deflater = compression.getValueCompressor().getDeflater();
+      deflater.setInput(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
       boolean finished = false;
       do {
         int bytesOut = deflater.deflate(buffer);
         if (bytesOut > 0) {
           baos.write(buffer, 0, bytesOut);
         } else {
-          bytesOut = deflater.deflate(buffer, 0, buffer.length, Deflater.FULL_FLUSH);
+          bytesOut = deflater.deflate(buffer, 0, buffer.length, Deflater.SYNC_FLUSH);
           baos.write(buffer, 0, bytesOut);
           finished = true;
         }
       } while (!finished);
-      StreamUtils.writeRawVInt32(out, baos.size());
-      out.write(baos.toByteArray());
+      return baos.toByteArray();
     }
 
   }
@@ -399,18 +405,17 @@ public class WALCellCodec implements Codec {
       }
     }
 
-    public static void readCompressedValue(InputStream in, byte[] outArray, int outOffset,
+    private void readCompressedValue(InputStream in, byte[] outArray, int outOffset,
         int expectedLength) throws IOException {
       int compressedLength = StreamUtils.readRawVarint32(in);
       byte[] buffer = new byte[compressedLength];
       IOUtils.readFully(in, buffer, 0, compressedLength);
-      Inflater inflater = new Inflater();
+      Inflater inflater = compression.getValueCompressor().getInflater();
       inflater.setInput(buffer);
       int remaining = expectedLength;
       do {
         try {
           int inflatedBytes = inflater.inflate(outArray, outOffset, remaining);
-          Preconditions.checkState(inflatedBytes > 0, "Inflater state error");
           outOffset += inflatedBytes;
           remaining -= inflatedBytes;
         } catch (DataFormatException e) {
