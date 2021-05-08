@@ -74,14 +74,13 @@ public class TestCompactionInDeadRegionServer {
     }
 
     @Override
-    protected boolean tryRegionServerReport(long reportStartTime, long reportEndTime)
+    protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
         throws IOException {
       try {
         super.tryRegionServerReport(reportStartTime, reportEndTime);
       } catch (YouAreDeadException e) {
         // ignore, do not abort
       }
-      return true;
     }
   }
 

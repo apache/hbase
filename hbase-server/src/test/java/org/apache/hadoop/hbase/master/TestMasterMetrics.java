@@ -54,6 +54,12 @@ public class TestMasterMetrics {
         KeeperException, InterruptedException {
       super(conf, cp);
     }
+
+    @Override
+    protected void tryRegionServerReport(
+        long reportStartTime, long reportEndTime) {
+      // do nothing
+    }
   }
 
   @BeforeClass
