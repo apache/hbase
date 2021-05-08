@@ -705,7 +705,7 @@ abstract class ServerRpcConnection implements Closeable {
           totalRequestSize, null, 0, this.callCleanup);
         readParamsFailedCall.setResponse(null, null, t, msg + "; " + t.getMessage());
         readParamsFailedCall.sendResponseIfReady();
-        return;
+        throw t;
       }
 
       int timeout = 0;
@@ -723,6 +723,10 @@ abstract class ServerRpcConnection implements Closeable {
             ", too many items queued ?");
         call.sendResponseIfReady();
       }
+    }catch (Throwable t){
+      TraceUtil.setError(span, t);
+    }finally {
+      span.end();
     }
   }
 
