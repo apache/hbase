@@ -61,12 +61,22 @@ public class TestMasterMetrics {
     public MyMaster(Configuration conf) throws IOException, KeeperException, InterruptedException {
       super(conf);
     }
+
+    @Override
+    protected void tryRegionServerReport(long reportStartTime, long reportEndTime) {
+      // do nothing
+    }
   }
 
   public static class MyRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
 
     public MyRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
+    }
+
+    @Override
+    protected void tryRegionServerReport(long reportStartTime, long reportEndTime) {
+      // do nothing
     }
   }
 
@@ -98,13 +108,10 @@ public class TestMasterMetrics {
     request.setServer(ProtobufUtil.toServerName(serverName));
     long expectedRequestNumber = 10000;
 
+    MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
       .setTotalNumberOfRequests(expectedRequestNumber).build();
     request.setLoad(sl);
-
-    MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
-    // Init master source again to reset cluster requests counter
-    masterSource.init();
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
     metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
