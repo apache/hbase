@@ -53,10 +53,11 @@ public class TestBalancerRejection extends BalancerTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestBalancerRejection.class);
 
-  static class MockCostFunction extends CostFunction{
+  static class MockCostFunction extends StochasticLoadBalancer.CostFunction {
     public static double mockCost;
 
     public MockCostFunction(Configuration c) {
+      super(c);
     }
 
     @Override
