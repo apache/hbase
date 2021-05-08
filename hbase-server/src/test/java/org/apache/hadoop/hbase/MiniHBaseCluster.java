@@ -449,9 +449,8 @@ public class MiniHBaseCluster extends HBaseCluster {
     ServerName rsServerName = t.getRegionServer().getServerName();
 
     long start = System.currentTimeMillis();
-    ClusterStatus clusterStatus;
+    ClusterStatus clusterStatus = getClusterStatus();
     while ((System.currentTimeMillis() - start) < timeout) {
-      clusterStatus = getClusterStatus();
       if (clusterStatus != null && clusterStatus.getServers().contains(rsServerName)) {
         return t;
       }
