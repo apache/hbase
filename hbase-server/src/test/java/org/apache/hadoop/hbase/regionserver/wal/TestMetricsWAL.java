@@ -18,14 +18,17 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -34,6 +37,9 @@ import static org.mockito.Mockito.verify;
 
 @Category(SmallTests.class)
 public class TestMetricsWAL {
+  @Rule
+  public TestName name = new TestName();
+
   @Test
   public void testLogRollRequested() throws Exception {
     MetricsWALSource source = mock(MetricsWALSourceImpl.class);
@@ -109,5 +115,26 @@ public class TestMetricsWAL {
           registry.getCounter(tableName + "." + MetricsWALSource.APPEND_SIZE, -1).value();
       assertEquals(i * numIters, tableAppendSize);
     }
+  }
+
+  @Test
+  public void testLogRolls() {
+    String testName = name.getMethodName();
+    MetricsWALSource source = new MetricsWALSourceImpl(testName, testName, testName, testName);
+    MetricsWAL metricsWAL = new MetricsWAL(source);
+    Path path1 = new Path("path-1");
+    int count = 1;
+    // oldPath is null but newPath is not null;
+    metricsWAL.postLogRoll(null, path1);
+    assertEquals(count, source.getSuccessfulLogRolls());
+
+    // Simulating a case where AbstractFSWAL#replaceWriter fails
+    metricsWAL.postLogRoll(path1, path1);
+    assertEquals(count, source.getSuccessfulLogRolls());
+
+    count++;
+    Path path2 = new Path("path-2");
+    metricsWAL.postLogRoll(path1, path2);
+    assertEquals(count, source.getSuccessfulLogRolls());
   }
 }

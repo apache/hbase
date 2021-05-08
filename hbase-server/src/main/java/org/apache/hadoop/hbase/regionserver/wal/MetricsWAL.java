@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -88,6 +89,15 @@ public class MetricsWAL extends WALActionsListener.Base {
         break;
       default:
         break;
+    }
+  }
+
+  @Override
+  public void postLogRoll(Path oldPath, Path newPath) {
+    // oldPath can be null if this is the first time we created a wal
+    // Also newPath can be equal to oldPath if AbstractFSWAL#replaceWriter fails
+    if (newPath != oldPath) {
+      source.incrementSuccessfulLogRolls();
     }
   }
 }
