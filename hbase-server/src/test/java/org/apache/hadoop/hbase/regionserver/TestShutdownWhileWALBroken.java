@@ -85,14 +85,13 @@ public class TestShutdownWhileWALBroken {
     }
 
     @Override
-    protected boolean tryRegionServerReport(long reportStartTime, long reportEndTime)
+    protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
         throws IOException {
       try {
         super.tryRegionServerReport(reportStartTime, reportEndTime);
       } catch (YouAreDeadException e) {
         LOG.info("Caught YouAreDeadException, ignore", e);
       }
-      return true;
     }
 
     @Override
