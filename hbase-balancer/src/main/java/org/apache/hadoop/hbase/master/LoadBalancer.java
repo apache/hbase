@@ -59,10 +59,11 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
    */
   @Deprecated
   String HBASE_RSGROUP_LOADBALANCER_CLASS = "hbase.rsgroup.grouploadbalancer.class";
+
   /**
    * Set the current cluster status. This allows a LoadBalancer to map host name to a server
    */
-  void setClusterMetrics(ClusterMetrics st);
+  void updateClusterMetrics(ClusterMetrics metrics);
 
 
   /**

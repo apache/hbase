@@ -144,7 +144,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
   public void testCPRequestCost() {
     // in order to pass needsBalance judgement
     conf.setFloat("hbase.master.balancer.stochastic.cpRequestCost", 10000f);
-    loadBalancer.setConf(conf);
+    loadBalancer.onConfigurationChange(conf);
     // mock cluster State
     Map<ServerName, List<RegionInfo>> clusterState = new HashMap<ServerName, List<RegionInfo>>();
     ServerName serverA = randomServer(3).getServerName();
@@ -163,7 +163,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
     serverMetricsMap.put(serverC, mockServerMetricsWithCpRequests(serverC, regionsOnServerC, 0));
     ClusterMetrics clusterStatus = mock(ClusterMetrics.class);
     when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
-    loadBalancer.setClusterMetrics(clusterStatus);
+    loadBalancer.updateClusterMetrics(clusterStatus);
 
     // CPRequestCostFunction are Rate based, So doing setClusterMetrics again
     // this time, regions on serverA with more cpRequestCount load
@@ -177,7 +177,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
     serverMetricsMap.put(serverC, mockServerMetricsWithCpRequests(serverC, regionsOnServerC, 0));
     clusterStatus = mock(ClusterMetrics.class);
     when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
-    loadBalancer.setClusterMetrics(clusterStatus);
+    loadBalancer.updateClusterMetrics(clusterStatus);
 
     List<RegionPlan> plans =
         loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, clusterState);
@@ -196,7 +196,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
     assertNull(loadBalancer.namedQueueRecorder);
     // reset config
     conf.setFloat("hbase.master.balancer.stochastic.cpRequestCost", 5f);
-    loadBalancer.setConf(conf);
+    loadBalancer.onConfigurationChange(conf);
   }
 
   @Test
@@ -223,7 +223,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
 //      when(clusterStatus.getLoad(sn)).thenReturn(sl);
 
-      loadBalancer.setClusterMetrics(clusterStatus);
+      loadBalancer.updateClusterMetrics(clusterStatus);
     }
 
     String regionNameAsString = RegionInfo.getRegionNameAsString(Bytes.toBytes(REGION_KEY));
@@ -249,7 +249,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       boolean[] perTableBalancerConfigs = {true, false};
       for (boolean isByTable : perTableBalancerConfigs) {
         conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
-        loadBalancer.setConf(conf);
+        loadBalancer.onConfigurationChange(conf);
         for (int[] mockCluster : clusterStateMocks) {
           Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
           Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
@@ -263,7 +263,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       // reset config
       conf.unset(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE);
       conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", minCost);
-      loadBalancer.setConf(conf);
+      loadBalancer.onConfigurationChange(conf);
     }
   }
 
@@ -378,7 +378,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
   @Test
   public void testCostAfterUndoAction() {
     final int runs = 10;
-    loadBalancer.setConf(conf);
+    loadBalancer.onConfigurationChange(conf);
     for (int[] mockCluster : clusterStateMocks) {
       BalancerClusterState cluster = mockCluster(mockCluster);
       loadBalancer.initCosts(cluster);
@@ -505,13 +505,13 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY,
         DummyCostFunction.class.getName());
 
-      loadBalancer.setConf(conf);
+      loadBalancer.onConfigurationChange(conf);
       assertTrue(Arrays.
         asList(loadBalancer.getCostFunctionNames()).
         contains(DummyCostFunction.class.getSimpleName()));
     } finally {
       conf.unset(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY);
-      loadBalancer.setConf(conf);
+      loadBalancer.onConfigurationChange(conf);
     }
   }
 

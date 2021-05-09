@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
@@ -70,7 +69,6 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   private static final Logger LOG = LoggerFactory.getLogger(FavoredNodeLoadBalancer.class);
 
   private MasterServices services;
-  private RackManager rackManager;
   private FavoredNodesManager fnm;
 
   public void setMasterServices(MasterServices services) {
@@ -78,10 +76,9 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   @Override
-  public synchronized void initialize() throws HBaseIOException {
+  public void initialize() {
     super.initialize();
     this.fnm = services.getFavoredNodesManager();
-    this.rackManager = new RackManager(getConf());
   }
 
   @Override
@@ -324,7 +321,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   @Override
-  public synchronized List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
+  public List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
     return this.fnm.getFavoredNodes(regionInfo);
   }
 

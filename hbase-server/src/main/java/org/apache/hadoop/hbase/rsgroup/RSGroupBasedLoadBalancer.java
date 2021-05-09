@@ -73,7 +73,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 public class RSGroupBasedLoadBalancer implements LoadBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupBasedLoadBalancer.class);
 
-  private ClusterMetrics clusterStatus;
   private MasterServices masterServices;
   private FavoredNodesManager favoredNodesManager;
   private volatile RSGroupInfoManager rsGroupInfoManager;
@@ -96,12 +95,11 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   @InterfaceAudience.Private
   public RSGroupBasedLoadBalancer() {}
 
+  // must be called after calling initialize
   @Override
-  public void setClusterMetrics(ClusterMetrics sm) {
-    this.clusterStatus = sm;
-    if (internalBalancer != null) {
-      internalBalancer.setClusterMetrics(sm);
-    }
+  public synchronized void updateClusterMetrics(ClusterMetrics sm) {
+    assert internalBalancer != null;
+    internalBalancer.updateClusterMetrics(sm);
   }
 
   public void setMasterServices(MasterServices masterServices) {
@@ -112,7 +110,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
    * Balance by RSGroup.
    */
   @Override
-  public List<RegionPlan> balanceCluster(
+  public synchronized List<RegionPlan> balanceCluster(
       Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException {
     if (!isOnline()) {
       throw new ConstraintException(
@@ -335,6 +333,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     // Create the balancer
     Configuration conf = masterServices.getConfiguration();
     Class<? extends LoadBalancer> balancerClass;
+    @SuppressWarnings("deprecation")
     String balancerClassName = conf.get(HBASE_RSGROUP_LOADBALANCER_CLASS);
     if (balancerClassName == null) {
       balancerClass = conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
@@ -352,9 +351,6 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     }
     internalBalancer = ReflectionUtils.newInstance(balancerClass);
     internalBalancer.setClusterInfoProvider(new MasterClusterInfoProvider(masterServices));
-    if(clusterStatus != null) {
-      internalBalancer.setClusterMetrics(clusterStatus);
-    }
     // special handling for favor node balancers
     if (internalBalancer instanceof FavoredNodesPromoter) {
       favoredNodesManager = new FavoredNodesManager(masterServices);
@@ -365,8 +361,6 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         ((FavoredStochasticBalancer) internalBalancer).setMasterServices(masterServices);
       }
     }
-
-
     internalBalancer.initialize();
     // init fallback groups
     this.fallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
@@ -393,7 +387,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public void onConfigurationChange(Configuration conf) {
+  public synchronized void onConfigurationChange(Configuration conf) {
     boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
     if (fallbackEnabled != newFallbackEnabled) {
       LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY,
@@ -405,15 +399,12 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   @Override
   public void stop(String why) {
+    internalBalancer.stop(why);
   }
 
   @Override
   public boolean isStopped() {
-    return false;
-  }
-
-  public void setRsGroupInfoManager(RSGroupInfoManager rsGroupInfoManager) {
-    this.rsGroupInfoManager = rsGroupInfoManager;
+    return internalBalancer.isStopped();
   }
 
   public LoadBalancer getInternalBalancer() {
@@ -425,7 +416,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public void postMasterStartupInitialize() {
+  public synchronized void postMasterStartupInitialize() {
     this.internalBalancer.postMasterStartupInitialize();
   }
 

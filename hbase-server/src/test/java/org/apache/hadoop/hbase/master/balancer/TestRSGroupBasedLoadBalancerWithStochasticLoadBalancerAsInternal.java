@@ -38,10 +38,12 @@ import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.balancer.BalancerTestBase.MockMapping;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -67,9 +69,9 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     conf.set("hbase.regions.slop", "0");
     conf.setFloat("hbase.master.balancer.stochastic.readRequestCost", 10000f);
     conf.set("hbase.rsgroup.grouploadbalancer.class",
-        StochasticLoadBalancer.class.getCanonicalName());
+      StochasticLoadBalancer.class.getCanonicalName());
+    conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     loadBalancer = new RSGroupBasedLoadBalancer();
-    loadBalancer.setRsGroupInfoManager(getMockedGroupInfoManager());
     loadBalancer.setMasterServices(getMockedMaster());
     loadBalancer.initialize();
   }
@@ -114,7 +116,7 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     serverMetricsMap.put(serverC, mockServerMetricsWithReadRequests(serverC, regionsOnServerC, 0));
     ClusterMetrics clusterStatus = mock(ClusterMetrics.class);
     when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
-    loadBalancer.setClusterMetrics(clusterStatus);
+    loadBalancer.updateClusterMetrics(clusterStatus);
 
     // ReadRequestCostFunction are Rate based, So doing setClusterMetrics again
     // this time, regions on serverA with more readRequestCount load
@@ -129,7 +131,7 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     serverMetricsMap.put(serverC, mockServerMetricsWithReadRequests(serverC, regionsOnServerC, 0));
     clusterStatus = mock(ClusterMetrics.class);
     when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
-    loadBalancer.setClusterMetrics(clusterStatus);
+    loadBalancer.updateClusterMetrics(clusterStatus);
 
     Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
         (Map) mockClusterServersWithTables(clusterState);

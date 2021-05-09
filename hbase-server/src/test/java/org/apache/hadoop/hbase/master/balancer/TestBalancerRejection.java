@@ -82,7 +82,7 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
       //enabled balancer rejection recording
       conf.setBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED, true);
       conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY, MockCostFunction.class.getName());
-      loadBalancer.setConf(conf);
+      loadBalancer.onConfigurationChange(conf);
       //Simulate 2 servers with 5 regions.
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers(new int[] { 5, 5 });
       Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable = (Map) mockClusterServersWithTables(servers);
@@ -95,7 +95,7 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
       //Reject case 2: Cost < minCostNeedBalance
       MockCostFunction.mockCost = 1;
       conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", Float.MAX_VALUE);
-      loadBalancer.setConf(conf);
+      loadBalancer.onConfigurationChange(conf);
       Assert.assertNull(loadBalancer.balanceCluster(LoadOfAllTable));
 
       //NamedQueue is an async Producer-consumer Pattern, waiting here until it completed
@@ -113,7 +113,7 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
     }finally {
       conf.unset(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY);
       conf.unset(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED);
-      loadBalancer.setConf(conf);
+      loadBalancer.onConfigurationChange(conf);
     }
   }
 

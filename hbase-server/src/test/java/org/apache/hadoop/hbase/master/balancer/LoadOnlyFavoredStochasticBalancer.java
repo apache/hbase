@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Used for FavoredNode unit tests
@@ -27,9 +26,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 public class LoadOnlyFavoredStochasticBalancer extends FavoredStochasticBalancer {
 
   @Override
-  protected void configureGenerators() {
-    List<CandidateGenerator> fnPickers = Lists.newArrayList();
+  protected List<CandidateGenerator> createCandidateGenerators() {
+    List<CandidateGenerator> fnPickers = new ArrayList<>(1);
     fnPickers.add(new FavoredNodeLoadPicker());
-    setCandidateGenerators(fnPickers);
+    return fnPickers;
   }
 }

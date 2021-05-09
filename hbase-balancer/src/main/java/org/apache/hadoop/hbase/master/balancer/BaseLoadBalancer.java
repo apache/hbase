@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -53,6 +52,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * The base class for load balancers. It provides the the functions used to by
  * {@code AssignmentManager} to assign regions in the edge cases. It doesn't provide an
  * implementation of the actual balancing algorithm.
+ * <p/>
+ * Since 3.0.0, all the balancers will be wrapped inside a {@code RSGroupBasedLoadBalancer}, it will
+ * be in charge of the synchronization of balancing and configuration changing, so we do not need to
+ * synchronized by ourselves.
  */
 @InterfaceAudience.Private
 public abstract class BaseLoadBalancer implements LoadBalancer {
@@ -76,8 +79,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   // slop for regions
   protected float slop;
-  // overallSlop to control simpleLoadBalancer's cluster level threshold
-  protected float overallSlop;
   protected RackManager rackManager;
   protected MetricsBalancer metricsBalancer = null;
   protected ClusterMetrics clusterStatus = null;
@@ -103,38 +104,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return provider.getConfiguration();
   }
 
-  protected void setConf(Configuration conf) {
-    setSlop(conf);
-    if (slop < 0) {
-      slop = 0;
-    } else if (slop > 1) {
-      slop = 1;
-    }
-
-    if (overallSlop < 0) {
-      overallSlop = 0;
-    } else if (overallSlop > 1) {
-      overallSlop = 1;
-    }
-
-    this.rackManager = new RackManager(conf);
-    useRegionFinder = conf.getBoolean("hbase.master.balancer.uselocality", true);
-    if (useRegionFinder) {
-      regionFinder = new RegionHDFSBlockLocationFinder();
-      regionFinder.setConf(conf);
-    }
-    this.isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
-    // Print out base configs. Don't print overallSlop since it for simple balancer exclusively.
-    LOG.info("slop={}", this.slop);
-  }
-
-  protected void setSlop(Configuration conf) {
-    this.slop = conf.getFloat("hbase.regions.slop", (float) 0.2);
-    this.overallSlop = conf.getFloat("hbase.regions.overallSlop", slop);
-  }
-
   @Override
-  public synchronized void setClusterMetrics(ClusterMetrics st) {
+  public void updateClusterMetrics(ClusterMetrics st) {
     this.clusterStatus = st;
     if (useRegionFinder) {
       regionFinder.setClusterMetrics(st);
@@ -145,10 +116,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   @Override
   public void setClusterInfoProvider(ClusterInfoProvider provider) {
     this.provider = provider;
-    setConf(provider.getConfiguration());
-    if (useRegionFinder) {
-      this.regionFinder.setClusterInfoProvider(provider);
-    }
   }
 
   @Override
@@ -156,57 +123,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     if (provider != null && regionFinder != null) {
       regionFinder.refreshAndWait(provider.getAssignedRegions());
     }
-  }
-
-  public void setRackManager(RackManager rackManager) {
-    this.rackManager = rackManager;
-  }
-
-  protected boolean needsBalance(TableName tableName, BalancerClusterState c) {
-    ClusterLoadState cs = new ClusterLoadState(c.clusterState);
-    if (cs.getNumServers() < MIN_SERVER_BALANCE) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Not running balancer because only " + cs.getNumServers()
-            + " active regionserver(s)");
-      }
-      return false;
-    }
-    if (areSomeRegionReplicasColocated(c)) {
-      return true;
-    }
-    if(idleRegionServerExist(c)) {
-      return true;
-    }
-
-    // Check if we even need to do any load balancing
-    // HBASE-3681 check sloppiness first
-    float average = cs.getLoadAverage(); // for logging
-    int floor = (int) Math.floor(average * (1 - slop));
-    int ceiling = (int) Math.ceil(average * (1 + slop));
-    if (!(cs.getMaxLoad() > ceiling || cs.getMinLoad() < floor)) {
-      NavigableMap<ServerAndLoad, List<RegionInfo>> serversByLoad = cs.getServersByLoad();
-      if (LOG.isTraceEnabled()) {
-        // If nothing to balance, then don't say anything unless trace-level logging.
-        LOG.trace("Skipping load balancing because balanced cluster; " +
-          "servers=" + cs.getNumServers() +
-          " regions=" + cs.getNumRegions() + " average=" + average +
-          " mostloaded=" + serversByLoad.lastKey().getLoad() +
-          " leastloaded=" + serversByLoad.firstKey().getLoad());
-      }
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Subclasses should implement this to return true if the cluster has nodes that hosts
-   * multiple replicas for the same region, or, if there are multiple racks and the same
-   * rack hosts replicas of the same region
-   * @param c Cluster information
-   * @return whether region replicas are currently co-located
-   */
-  protected boolean areSomeRegionReplicasColocated(BalancerClusterState c) {
-    return false;
   }
 
   protected final boolean idleRegionServerExist(BalancerClusterState c){
@@ -456,8 +372,37 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return Collections.unmodifiableMap(assignments);
   }
 
+  protected final float normalizeSlop(float slop) {
+    if (slop < 0) {
+      return 0;
+    }
+    if (slop > 1) {
+      return 1;
+    }
+    return slop;
+  }
+
+  protected float getDefaultSlop() {
+    return 0.2f;
+  }
+
+  protected void loadConf(Configuration conf) {
+    this.slop =normalizeSlop(conf.getFloat("hbase.regions.slop", getDefaultSlop()));
+    this.rackManager = new RackManager(conf);
+    useRegionFinder = conf.getBoolean("hbase.master.balancer.uselocality", true);
+    if (useRegionFinder) {
+      regionFinder = new RegionHDFSBlockLocationFinder();
+      regionFinder.setConf(conf);
+      regionFinder.setClusterInfoProvider(provider);
+    }
+    this.isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
+    // Print out base configs. Don't print overallSlop since it for simple balancer exclusively.
+    LOG.info("slop={}", this.slop);
+  }
+
   @Override
-  public void initialize() throws HBaseIOException{
+  public void initialize() {
+    loadConf(getConf());
   }
 
   @Override
@@ -475,7 +420,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   @Override
   public void stop(String why) {
-    LOG.info("Load Balancer stop requested: "+why);
+    LOG.info("Load Balancer stop requested: {}", why);
     stopped = true;
   }
 
@@ -642,7 +587,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * @see #balanceTable(TableName, Map)
    */
   @Override
-  public final synchronized List<RegionPlan>
+  public final List<RegionPlan>
     balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
     preBalanceCluster(loadOfAllTable);
     if (isByTable) {
@@ -663,5 +608,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   @Override
   public void onConfigurationChange(Configuration conf) {
+    loadConf(conf);
   }
 }
