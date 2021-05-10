@@ -602,6 +602,21 @@ message SwitchRpcThrottleRemoteStateData {
   required bool rpc_throttle_enabled = 2;
 }
 
+enum SwitchCompactionOffloadState {
+  UPDATE_SWITCH_COMPACTION_OFFLOAD_STORAGE = 1;
+  SWITCH_COMPACTION_OFFLOAD_ON_RS = 2;
+  POST_SWITCH_COMPACTION_OFFLOAD = 3;
+}
+
+message SwitchCompactionOffloadStateData {
+  required bool compaction_offload_enabled = 1;
+}
+
+message SwitchCompactionOffloadRemoteStateData {
+  required ServerName target_server = 1;
+  required bool compaction_offload_enabled = 2;
+}
+
 message SplitWALParameter {
   required string wal_path = 1;
 }

@@ -717,6 +717,21 @@ message BalancerDecisionsResponse {
   repeated BalancerDecision balancer_decision = 1;
 }
 
+message IsCompactionOffloadEnabledRequest {
+}
+
+message IsCompactionOffloadEnabledResponse {
+  required bool compaction_offload_enabled = 1;
+}
+
+message SwitchCompactionOffloadRequest {
+  required bool compaction_offload_enabled = 1;
+}
+
+message SwitchCompactionOffloadResponse {
+  required bool previous_compaction_offload_enabled = 1;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -1092,6 +1107,14 @@ service MasterService {
   /** Get if is rpc throttled enabled */
   rpc IsRpcThrottleEnabled (IsRpcThrottleEnabledRequest)
     returns (IsRpcThrottleEnabledResponse);
+
+  /** Turn the compaction offload on or off */
+  rpc SwitchCompactionOffload (SwitchCompactionOffloadRequest)
+    returns (SwitchCompactionOffloadResponse);
+
+  /** Get if is compaction offload enabled */
+  rpc IsCompactionOffloadEnabled (IsCompactionOffloadEnabledRequest)
+    returns (IsCompactionOffloadEnabledResponse);
 
   /** Turn the exceed throttle quota on or off */
   rpc SwitchExceedThrottleQuota (SwitchExceedThrottleQuotaRequest)

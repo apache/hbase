@@ -453,6 +453,17 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public boolean switchCompactionOffload(boolean enable) throws IOException {
+    throw new NotImplementedException("switchCompactionOffload by pattern not supported in ThriftAdmin");
+  }
+
+  @Override
+  public boolean isCompactionOffloadEnabled() throws IOException {
+    throw new NotImplementedException(
+      "isCompactionOffloadEnabled by pattern not supported in ThriftAdmin");
+  }
+
+  @Override
   public boolean exceedThrottleQuotaSwitch(boolean enable) throws IOException {
     throw new NotImplementedException(
         "exceedThrottleQuotaSwitch by pattern not supported in ThriftAdmin");

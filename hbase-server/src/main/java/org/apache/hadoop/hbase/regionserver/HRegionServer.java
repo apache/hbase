@@ -464,6 +464,7 @@ public class HRegionServer extends AbstractServer implements
 
   private RegionServerProcedureManagerHost rspmHost;
 
+  private RegionServerCompactionOffloadManager regionServerCompactionOffloadManager;
   private RegionServerRpcQuotaManager rsQuotaManager;
   private RegionServerSpaceQuotaManager rsSpaceQuotaManager;
 
@@ -1965,6 +1966,12 @@ public class HRegionServer extends AbstractServer implements
     executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
         ExecutorType.RS_SWITCH_RPC_THROTTLE).setCorePoolSize(switchRpcThrottleThreads));
 
+    final int switchCompactionOffloadThreads =
+        conf.getInt("hbase.regionserver.executor.switch.compaction.offload.threads", 1);
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+        .setExecutorType(ExecutorType.RS_SWITCH_COMPACTION_OFFLOAD)
+        .setCorePoolSize(switchCompactionOffloadThreads));
+
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
         uncaughtExceptionHandler);
     if (this.cacheFlusher != null) {
@@ -2052,6 +2059,7 @@ public class HRegionServer extends AbstractServer implements
       // Create the scheduled chore that cleans up nonces.
       nonceManagerChore = this.nonceManager.createCleanupScheduledChore(this);
     }
+    regionServerCompactionOffloadManager = new RegionServerCompactionOffloadManager(this);
 
     // Setup the Quota Manager
     rsQuotaManager = new RegionServerRpcQuotaManager(this);
@@ -2911,6 +2919,11 @@ public class HRegionServer extends AbstractServer implements
   @Override
   public RegionServerRpcQuotaManager getRegionServerRpcQuotaManager() {
     return rsQuotaManager;
+  }
+
+  @Override
+  public RegionServerCompactionOffloadManager getRegionServerCompactionOffloadManager() {
+    return regionServerCompactionOffloadManager;
   }
 
   //

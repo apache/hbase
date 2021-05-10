@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface ServerProcedureInterface {
   public enum ServerOperationType {
-    CRASH_HANDLER, SWITCH_RPC_THROTTLE,
+    CRASH_HANDLER, SWITCH_RPC_THROTTLE, SWITCH_COMPACTION_OFFLOAD,
     /**
      * help find a available region server as worker and release worker after task done
      * invoke SPLIT_WAL_REMOTE operation to send real WAL splitting request to worker

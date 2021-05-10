@@ -724,6 +724,14 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.isRpcThrottleEnabled();
   }
 
+  public boolean switchCompactionOffload(boolean enable) throws IOException {
+    return admin.switchCompactionOffload(enable);
+  }
+
+  public boolean isCompactionOffloadEnabled() throws IOException {
+    return admin.isCompactionOffloadEnabled();
+  }
+
   public boolean exceedThrottleQuotaSwitch(boolean enable) throws IOException {
     return admin.exceedThrottleQuotaSwitch(enable);
   }

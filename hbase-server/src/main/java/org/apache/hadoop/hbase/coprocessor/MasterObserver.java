@@ -1676,6 +1676,42 @@ public interface MasterObserver {
   }
 
   /**
+   * Called before switching compaction offload enabled state.
+   * @param ctx the coprocessor instance's environment
+   * @param enable the compaction offload enable value
+   */
+  default void preSwitchCompactionOffload(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final boolean enable) throws IOException {
+  }
+
+  /**
+   * Called after switching compaction offload enabled state.
+   * @param ctx the coprocessor instance's environment
+   * @param oldValue the previously compaction offload enable value
+   * @param newValue the newly compaction offload enable value
+   */
+  default void postSwitchCompactionOffload(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final boolean oldValue, final boolean newValue) throws IOException {
+  }
+
+  /**
+   * Called before getting if is compaction offload enabled.
+   * @param ctx the coprocessor instance's environment
+   */
+  default void preIsCompactionOffloadEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
+
+  /**
+   * Called after getting if is compaction offload enabled.
+   * @param ctx the coprocessor instance's environment
+   * @param compactionOffloadEnabled the compaction offload enabled value
+   */
+  default void postIsCompactionOffloadEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final boolean compactionOffloadEnabled) throws IOException {
+  }
+
+  /**
    * Called before switching exceed throttle quota state.
    * @param ctx the coprocessor instance's environment
    * @param enable the exceed throttle quota value

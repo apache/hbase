@@ -667,6 +667,19 @@ module Hbase
         command(:list_regions, @create_test_name)
       end
     end
+    #-------------------------------------------------------------------------------
+
+    define_test 'switch compaction offload' do
+      result = nil
+      output = capture_stdout { result = command(:enable_compaction_offload) }
+      assert(output.include?('Previous compaction offload state : false'))
+      assert(result == false)
+
+      result = nil
+      output = capture_stdout { result = command(:disable_compaction_offload) }
+      assert(output.include?('Previous compaction offload state : true'))
+      assert(result == true)
+    end
   end
   # rubocop:enable Metrics/ClassLength
 
