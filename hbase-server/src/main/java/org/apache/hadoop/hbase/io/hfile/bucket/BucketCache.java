@@ -49,6 +49,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -1067,11 +1068,7 @@ public class BucketCache implements BlockCache, HeapSize {
     try (FileInputStream in = deleteFileOnClose(persistenceFile)) {
       int pblen = ProtobufMagic.lengthOfPBMagic();
       byte[] pbuf = new byte[pblen];
-      int read = in.read(pbuf);
-      if (read != pblen) {
-        throw new IOException("Incorrect number of bytes read while checking for protobuf magic "
-            + "number. Requested=" + pblen + ", Received= " + read + ", File=" + persistencePath);
-      }
+      IOUtils.readFully(in, pbuf, 0, pblen);
       if (! ProtobufMagic.isPBMagicPrefix(pbuf)) {
         // In 3.0 we have enough flexibility to dump the old cache data.
         // TODO: In 2.x line, this might need to be filled in to support reading the old format
