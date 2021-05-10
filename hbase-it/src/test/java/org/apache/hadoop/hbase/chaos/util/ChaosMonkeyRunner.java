@@ -179,7 +179,7 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
    * <configuration>
    *   <property>
    *     <name>hbase.it.clustermanager.class</name>
-   *     <value>org.apache.hadoop.hbase.K8sClusterManager</value>
+   *     <value>org.apache.hadoop.hbase.MyCustomClusterManager</value>
    *   </property>
    * </configuration>
    * {code}
