@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Optional;
@@ -444,12 +445,22 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   }
 
   public int getLargeCompactionQueueSize() {
+    removeFilesFromFilesCompacting(longCompactions);
     return longCompactions.getQueue().size();
   }
 
 
   public int getSmallCompactionQueueSize() {
+    removeFilesFromFilesCompacting(shortCompactions);
     return shortCompactions.getQueue().size();
+  }
+
+  private void removeFilesFromFilesCompacting(ThreadPoolExecutor compactor) {
+    for (Runnable runnable : compactor.getQueue()) {
+      CompactionRunner runner = (CompactionRunner) runnable;
+      Collection<HStoreFile> files = runner.compaction.getRequest().getFiles();
+      runner.store.removeFromCompactingFiles(files);
+    }
   }
 
   public int getSplitQueueSize() {
