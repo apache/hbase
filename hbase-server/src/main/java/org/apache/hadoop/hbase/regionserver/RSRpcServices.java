@@ -1713,7 +1713,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       CompactionSwitchRequest request) throws ServiceException {
     final CompactSplit compactSplitThread = regionServer.getCompactSplitThread();
     try {
-      checkOpen();
+      rpcPreCheck("compactionSwitch");
       requestCount.increment();
       boolean prevState = compactSplitThread.isCompactionsEnabled();
       CompactionSwitchResponse response =
