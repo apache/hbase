@@ -39,9 +39,11 @@ Release Notes - HBase - Version 1.7.0 07/04/2021
     * [HBASE-23631] Backport HBASE-23588 Cache index & bloom blocks on write if CacheCompactedBlocksOnWrite is enabled
 
 ** Bug
+    * [HBASE-25774] ServerManager.getOnlineServer may miss some region servers when refreshing state in some procedure implementations
+    * [HBASE-25741] Deadlock during peer cleanup with NoNodeException
+    * [HBASE-25809] [branch-1] TestAtomicOperation.testMultiRowMutationMultiThreads deadlock
     * [HBASE-25726] MoveCostFunction is not included in the list of cost functions for StochasticLoadBalancer
     * [HBASE-25699] [branch-1] UnsupportedOperationException in DumpClusterStatusAction
-    * [HBASE-25032] Wait for region server to become online before adding it to online servers in Master
     * [HBASE-25648] Fix normalizer and TestSimpleRegionNormalizerOnCluster in branch-1 after HBASE-25592 HBASE-23932
     * [HBASE-25626] Possible Resource Leak in HeterogeneousRegionCountCostFunction
     * [HBASE-25596] Fix NPE in ReplicationSourceManager as well as avoid permanently unreplicated data due to EOFException from WAL
@@ -120,6 +122,11 @@ Release Notes - HBase - Version 1.7.0 07/04/2021
     * [HBASE-24260] Add a ClusterManager that issues commands via coprocessor
 
 ** Improvement
+    * [HBASE-25860] Add metric for successful wal roll requests
+    * [HBASE-25612] HMaster should abort if ReplicationLogCleaner is not able to delete oldWALs
+    * [HBASE-25846] Backport 'HBASE-25825 RSGroupBasedLoadBalancer.onConfigurationChange should chain the request to internal balancer' to branch-1
+    * [HBASE-25808] [branch-1] Backport improvements to FSHLog from branch-2
+    * [HBASE-25805] [branch-1] Upgrade com.lmax.disruptor to 3.4.2
     * [HBASE-25686] [hbtop] Add some javadoc
     * [HBASE-25593] Backport changes from HBASE-24418 to branch-1
     * [HBASE-25627] HBase replication should have a metric to represent if the source is stuck getting initialized
@@ -216,6 +223,10 @@ Release Notes - HBase - Version 1.7.0 07/04/2021
     * [HBASE-23943] Rubocop configuration needs updated
 
 ** Task
+    * [HBASE-25858] [branch-1] make hbase-thrift optional in hbase-assembly module
+    * [HBASE-25831] [branch-1] remove thrift examples out of hbase-examples module for bypassing the thrift version check
+    * [HBASE-25845] [branch-1] Precommit fails to build docker due to python-dateutil
+    * [HBASE-25804] [branch-1] Make hbase-thrift module build with jdk8
     * [HBASE-25601] Remove search hadoop references in book
     * [HBASE-24640] Purge use of VisibleForTesting
     * [HBASE-25228] Delete dev-support/jenkins_precommit_jira_yetus.sh
