@@ -75,19 +75,19 @@ public class TestWALCellCodecWithCompression {
   @Test
   public void testValueCompression() throws Exception {
     final byte[] row_1 = Bytes.toBytes("row_1");
-    final byte[] value_1 = new byte[WALCellCodec.VALUE_COMPRESS_THRESHOLD];
+    final byte[] value_1 = new byte[20];
     Bytes.zero(value_1);
     final byte[] row_2 = Bytes.toBytes("row_2");
     final byte[] value_2 = new byte[Bytes.SIZEOF_LONG];
     Bytes.random(value_2);
     final byte[] row_3 = Bytes.toBytes("row_3");
-    final byte[] value_3 = new byte[WALCellCodec.VALUE_COMPRESS_THRESHOLD];
+    final byte[] value_3 = new byte[100];
     Bytes.random(value_3);
     final byte[] row_4 = Bytes.toBytes("row_4");
-    final byte[] value_4 = new byte[WALCellCodec.VALUE_COMPRESS_THRESHOLD * 4];
+    final byte[] value_4 = new byte[128];
     fillBytes(value_4, Bytes.toBytes("DEADBEEF"));
     final byte[] row_5 = Bytes.toBytes("row_5");
-    final byte[] value_5 = new byte[WALCellCodec.VALUE_COMPRESS_THRESHOLD * 2];
+    final byte[] value_5 = new byte[64];
     fillBytes(value_5, Bytes.toBytes("CAFEBABE"));
 
     Configuration conf = new Configuration(false);

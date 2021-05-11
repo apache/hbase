@@ -76,8 +76,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class KeyValue implements ExtendedCell, Cloneable {
-  private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<>();
-
   private static final Logger LOG = LoggerFactory.getLogger(KeyValue.class);
 
   public static final int FIXED_OVERHEAD = ClassSize.OBJECT + // the KeyValue object itself
@@ -229,11 +227,6 @@ public class KeyValue implements ExtendedCell, Cloneable {
     DeleteFamilyVersion((byte)10),
     DeleteColumn((byte)12),
     DeleteFamily((byte)14),
-
-    // Effective maximum is 127 (Byte.MAX_VALUE). We set the high order bit of the
-    // type byte in the WAL codecs to indicate, in a backwards compatible way, if the
-    // value is compressed there.
-    EffectiveMaximum((byte)Byte.MAX_VALUE),
 
     // Maximum is used when searching; you look from maximum on down.
     Maximum((byte)255);

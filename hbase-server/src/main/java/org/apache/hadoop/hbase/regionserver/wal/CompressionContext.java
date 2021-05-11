@@ -37,21 +37,26 @@ import org.apache.hadoop.hbase.io.util.Dictionary;
 public class CompressionContext {
 
   public static final String ENABLE_WAL_TAGS_COMPRESSION =
-      "hbase.regionserver.wal.tags.enablecompression";
+    "hbase.regionserver.wal.tags.enablecompression";
 
   public static final String ENABLE_WAL_VALUE_COMPRESSION =
-      "hbase.regionserver.wal.value.enablecompression";
+    "hbase.regionserver.wal.value.enablecompression";
 
   public enum DictionaryIndex {
     REGION, TABLE, FAMILY, QUALIFIER, ROW
   }
 
+  /**
+   * Encapsulates the zlib deflater/inflater pair we will use for value compression in this WAL.
+   */
   static class ValueCompressor {
     final Deflater deflater;
     final Inflater inflater;
 
     public ValueCompressor() {
       deflater = new Deflater();
+      // Optimize for speed so we minimize the time spent writing the WAL. This still achieves
+      // quite good results. (This is not really user serviceable.)
       deflater.setLevel(Deflater.BEST_SPEED);
       inflater = new Inflater();
     }
@@ -113,7 +118,15 @@ public class CompressionContext {
     this(dictType, recoveredEdits, hasTagCompression, false);
   }
 
-  public Dictionary getDictionary(Enum dictIndex) {
+  public boolean hasTagCompression() {
+    return tagCompressionContext != null;
+  }
+
+  public boolean hasValueCompression() {
+    return valueCompressor != null;
+  }
+
+  public Dictionary getDictionary(Enum<DictionaryIndex> dictIndex) {
     return dictionaries.get(dictIndex);
   }
 
