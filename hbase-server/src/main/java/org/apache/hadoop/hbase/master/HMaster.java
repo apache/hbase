@@ -1686,7 +1686,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         // if hbase:meta region is in transition, result of assignment cannot be recorded
         // ignore the force flag in that case
         boolean metaInTransition = assignmentManager.isMetaRegionInTransition();
-        String prefix = force && !metaInTransition ? "R" : "Not r";
         List<RegionStateNode> toPrint = regionsInTransition;
         int max = 5;
         boolean truncated = false;
@@ -1694,9 +1693,12 @@ public class HMaster extends HRegionServer implements MasterServices {
           toPrint = regionsInTransition.subList(0, max);
           truncated = true;
         }
-        LOG.info(prefix + " not running balancer because " + regionsInTransition.size() +
-          " region(s) in transition: " + toPrint + (truncated? "(truncated list)": ""));
-        if (!force || metaInTransition) return false;
+        if (!force || metaInTransition) {
+          LOG.info("Not running balancer (force=" + force + ", metaRIT=" + metaInTransition +
+            ") because " + regionsInTransition.size() + " region(s) in transition: " + toPrint +
+            (truncated? "(truncated list)": ""));
+          return false;
+        }
       }
       if (this.serverManager.areDeadServersInProgress()) {
         LOG.info("Not running balancer because processing dead regionserver(s): " +

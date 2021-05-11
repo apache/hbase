@@ -480,7 +480,7 @@ public class HRegionServer extends Thread implements
     "hbase.regionserver.hostname.disable.master.reversedns";
 
   /**
-   * HBASE-18226: This config and hbase.unasfe.regionserver.hostname are mutually exclusive.
+   * HBASE-18226: This config and hbase.unsafe.regionserver.hostname are mutually exclusive.
    * Exception will be thrown if both are used.
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -2867,8 +2867,8 @@ public class HRegionServer extends Thread implements
       rpcServices.rpcFullScanRequestCount.reset();
       rpcServices.rpcMultiRequestCount.reset();
       rpcServices.rpcMutateRequestCount.reset();
-      LOG.info("reportForDuty to master=" + masterServerName + " with port="
-        + rpcServices.isa.getPort() + ", startcode=" + this.startcode);
+      LOG.info("reportForDuty to master=" + masterServerName + " with isa="
+        + rpcServices.isa + ", startcode=" + this.startcode);
       long now = EnvironmentEdgeManager.currentTime();
       int port = rpcServices.isa.getPort();
       RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
