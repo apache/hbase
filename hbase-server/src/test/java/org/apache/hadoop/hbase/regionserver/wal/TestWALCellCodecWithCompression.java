@@ -148,34 +148,6 @@ public class TestWALCellCodecWithCompression {
     }
   }
 
-  @Test
-  public void testValueCompressionCompatibility() throws Exception {
-    final byte[] key = Bytes.toBytes("myRow");
-    final byte[] value = Bytes.toBytes("myValue");
-    Configuration conf = new Configuration(false);
-    WALCellCodec outCodec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class,
-      false, false, false));
-    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    Encoder encoder = outCodec.getEncoder(bos);
-    for (int i = 0; i < 10; i++) {
-      encoder.write(createOffheapKV(key, value, 0));
-    }
-    encoder.flush();
-    WALCellCodec inCodec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class,
-      false, false, true));
-    try (InputStream is = new ByteArrayInputStream(bos.toByteArray())) {
-      Decoder decoder = inCodec.getDecoder(is);
-      for (int i = 0 ; i < 10; i++) {
-        decoder.advance();
-        KeyValue kv = (KeyValue) decoder.current();
-        assertTrue(Bytes.equals(key, 0, key.length,
-          kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
-        assertTrue(Bytes.equals(value, 0, value.length,
-          kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
-      }
-    }
-  }
-
   private void doTest(boolean compressTags, boolean compressValue, boolean offheapKV)
       throws Exception {
     final byte[] key = Bytes.toBytes("myRow");
