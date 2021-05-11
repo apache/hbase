@@ -1760,6 +1760,7 @@ module Hbase
     def switch_compaction_offload(enabled)
       @admin.switchCompactionOffload(java.lang.Boolean.valueOf(enabled))
     end
+
     #----------------------------------------------------------------------------------------------
     # Get list of server names
     def to_server_names(server_names)
@@ -1769,6 +1770,7 @@ module Hbase
         java.util.Arrays.asList(server_names)
       end
     end
+
   end
   # rubocop:enable Metrics/ClassLength
 end

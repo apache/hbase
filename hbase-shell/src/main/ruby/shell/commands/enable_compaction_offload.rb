@@ -19,6 +19,7 @@
 
 module Shell
   module Commands
+    # Enable compaction offload for all regionserver
     class EnableCompactionOffload < Command
       def help
         <<-EOF
@@ -30,7 +31,7 @@ Examples:
       end
 
       def command
-        prev_state = !!admin.switch_compaction_offload(true)
+        prev_state = admin.switch_compaction_offload(true)
         formatter.row(["Previous compaction offload state : #{prev_state}"])
         prev_state
       end

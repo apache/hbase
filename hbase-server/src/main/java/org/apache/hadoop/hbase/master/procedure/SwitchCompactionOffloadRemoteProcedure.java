@@ -42,6 +42,9 @@ public class SwitchCompactionOffloadRemoteProcedure extends ServerRemoteProcedur
       LoggerFactory.getLogger(SwitchCompactionOffloadRemoteProcedure.class);
   private boolean compactionOffloadEnabled;
 
+  public SwitchCompactionOffloadRemoteProcedure() {
+  }
+
   SwitchCompactionOffloadRemoteProcedure(ServerName serverName, boolean compactionOffloadEnabled) {
     this.targetServer = serverName;
     this.compactionOffloadEnabled = compactionOffloadEnabled;

@@ -50,6 +50,9 @@ public class SwitchCompactionOffloadProcedure
   private ServerName serverName;
   private RetryCounter retryCounter;
 
+  public SwitchCompactionOffloadProcedure() {
+  }
+
   public SwitchCompactionOffloadProcedure(
       CompactionOffloadSwitchStorage compactionOffloadSwitchStorage,
       boolean CompactionOffloadEnabled, ServerName serverName,

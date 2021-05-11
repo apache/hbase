@@ -57,8 +57,8 @@ public class RegionServerCompactionOffloadManager {
       LOG.info("Switch compaction offload from {} to {}", previousEnabled,
         compactionOffloadEnabled);
     } else {
-      LOG.warn(
-        "Skip switch compaction offload enable value because previous value {} is the same as current value {}",
+      LOG.warn("Skip switch compaction offload enable value because previous value {} "
+          + "is the same as current value {}",
         compactionOffloadEnabled, enable);
     }
   }

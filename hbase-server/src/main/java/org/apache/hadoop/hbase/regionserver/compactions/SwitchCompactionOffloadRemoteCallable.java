@@ -22,10 +22,8 @@ import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SwitchCompactionOffloadRemoteStateData;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SwitchCompactionOffloadRemoteStateData;
 
 /**
  * The callable executed at RS side to switch compaction offload state. <br/>

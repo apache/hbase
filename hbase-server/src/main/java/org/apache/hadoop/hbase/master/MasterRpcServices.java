@@ -75,7 +75,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.janitor.MetaFixer;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -673,7 +672,7 @@ public class MasterRpcServices extends RSRpcServices implements
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
       ServerMetrics newLoad = ServerMetricsBuilder.toServerMetrics(serverName, versionNumber,
         version, ClusterStatusProtos.ServerLoad.newBuilder().build());
-      master.getCompactionServerManager().compactionServerReport(serverName, newLoad);
+      master.getCompactionOffloadManager().compactionServerReport(serverName, newLoad);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -3454,7 +3453,7 @@ public class MasterRpcServices extends RSRpcServices implements
       IsCompactionOffloadEnabledRequest request) throws ServiceException {
     try {
       master.checkInitialized();
-      return master.getCompactionServerManager().isCompactionOffloadEnabled(request);
+      return master.getCompactionOffloadManager().isCompactionOffloadEnabled(request);
     } catch (Exception e) {
       throw new ServiceException(e);
     }
@@ -3465,7 +3464,7 @@ public class MasterRpcServices extends RSRpcServices implements
       SwitchCompactionOffloadRequest request) throws ServiceException {
     try {
       master.checkInitialized();
-      return master.getCompactionServerManager().switchCompactionOffload(request);
+      return master.getCompactionOffloadManager().switchCompactionOffload(request);
     } catch (Exception e) {
       throw new ServiceException(e);
     }

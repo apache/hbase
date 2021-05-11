@@ -35,23 +35,24 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCompactionOffloadEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCompactionOffloadEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchCompactionOffloadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchCompactionOffloadResponse;
 
-import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
-
 @InterfaceAudience.Private
-public class CompactionServerManager {
+public class CompactionOffloadManager {
   private final MasterServices masterServices;
   /** Map of registered servers to their current load */
   private final Cache<ServerName, ServerMetrics> onlineServers;
   private CompactionOffloadSwitchStorage compactionOffloadSwitchStorage;
-  private static final Logger LOG = LoggerFactory.getLogger(CompactionServerManager.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CompactionOffloadManager.class.getName());
 
-  public CompactionServerManager(final MasterServices master) {
+  public CompactionOffloadManager(final MasterServices master) {
     this.masterServices = master;
     int compactionServerMsgInterval =
         master.getConfiguration().getInt(HConstants.COMPACTION_SERVER_MSG_INTERVAL, 3 * 1000);
@@ -59,8 +60,8 @@ public class CompactionServerManager {
         master.getConfiguration().getInt("hbase.compaction.server.expired.factor", 2);
     this.onlineServers = CacheBuilder.newBuilder().expireAfterWrite(
       compactionServerMsgInterval * compactionServerExpiredFactor, TimeUnit.MILLISECONDS).build();
-    this.compactionOffloadSwitchStorage =
-      new CompactionOffloadSwitchStorage(masterServices.getZooKeeper(), masterServices.getConfiguration());
+    this.compactionOffloadSwitchStorage = new CompactionOffloadSwitchStorage(
+        masterServices.getZooKeeper(), masterServices.getConfiguration());
   }
 
   public void compactionServerReport(ServerName sn, ServerMetrics sl) {

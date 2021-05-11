@@ -1698,8 +1698,8 @@ public interface MasterObserver {
    * Called before getting if is compaction offload enabled.
    * @param ctx the coprocessor instance's environment
    */
-  default void preIsCompactionOffloadEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx)
-    throws IOException {
+  default void preIsCompactionOffloadEnabled(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
   }
 
   /**
@@ -1707,8 +1707,9 @@ public interface MasterObserver {
    * @param ctx the coprocessor instance's environment
    * @param compactionOffloadEnabled the compaction offload enabled value
    */
-  default void postIsCompactionOffloadEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-    final boolean compactionOffloadEnabled) throws IOException {
+  default void postIsCompactionOffloadEnabled(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean compactionOffloadEnabled) throws IOException {
   }
 
   /**
