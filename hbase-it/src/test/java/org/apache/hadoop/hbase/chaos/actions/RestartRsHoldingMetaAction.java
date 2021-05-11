@@ -40,7 +40,7 @@ public class RestartRsHoldingMetaAction extends RestartActionBaseAction {
 
   @Override
   public void perform() throws Exception {
-    getLogger().info("Performing action: Restart region server holding META");
+    getLogger().info("Performing action: Restart regionserver holding META");
     ServerName server = cluster.getServerHoldingMeta();
     if (server == null) {
       getLogger().warn("No server is holding hbase:meta right now.");
