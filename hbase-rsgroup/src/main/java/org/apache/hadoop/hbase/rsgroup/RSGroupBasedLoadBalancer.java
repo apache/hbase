@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -70,7 +71,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupBasedLoadBalancer.class);
 
-  private ClusterMetrics clusterStatus;
   private MasterServices masterServices;
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private LoadBalancer internalBalancer;
@@ -92,12 +92,11 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   @InterfaceAudience.Private
   public RSGroupBasedLoadBalancer() {}
 
+  // must be called after calling initialize
   @Override
-  public void setClusterMetrics(ClusterMetrics sm) {
-    this.clusterStatus = sm;
-    if (internalBalancer != null) {
-      internalBalancer.setClusterMetrics(sm);
-    }
+  public synchronized void updateClusterMetrics(ClusterMetrics sm) {
+    assert internalBalancer != null;
+    internalBalancer.updateClusterMetrics(sm);
   }
 
   @Override
@@ -105,11 +104,17 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     this.masterServices = masterServices;
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public void setRsGroupInfoManager(RSGroupInfoManager rsGroupInfoManager) {
+    this.rsGroupInfoManager = rsGroupInfoManager;
+  }
+
   /**
    * Balance by RSGroup.
    */
   @Override
-  public List<RegionPlan> balanceCluster(
+  public synchronized List<RegionPlan> balanceCluster(
       Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException {
     if (!isOnline()) {
       throw new ConstraintException(RSGroupInfoManager.RSGROUP_TABLE_NAME +
@@ -328,7 +333,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
           throw new HBaseIOException(msg);
         }
         rsGroupInfoManager = cps.get(0).getGroupInfoManager();
-        if(rsGroupInfoManager == null){
+        if (rsGroupInfoManager == null) {
           String msg = "RSGroupInfoManager hasn't been initialized";
           LOG.error(msg);
           throw new HBaseIOException(msg);
@@ -342,17 +347,14 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     Configuration conf = masterServices.getConfiguration();
     // Create the balancer
     Class<? extends LoadBalancer> balancerClass = conf.getClass(HBASE_RSGROUP_LOADBALANCER_CLASS,
-        StochasticLoadBalancer.class, LoadBalancer.class);
+      StochasticLoadBalancer.class, LoadBalancer.class);
     if (this.getClass().isAssignableFrom(balancerClass)) {
       LOG.warn("The internal balancer of RSGroupBasedLoadBalancer cannot be itself, " +
-              "falling back to the default LoadBalancer class");
+        "falling back to the default LoadBalancer class");
       balancerClass = LoadBalancerFactory.getDefaultLoadBalancerClass();
     }
     internalBalancer = ReflectionUtils.newInstance(balancerClass);
     internalBalancer.setMasterServices(masterServices);
-    if (clusterStatus != null) {
-      internalBalancer.setClusterMetrics(clusterStatus);
-    }
     internalBalancer.initialize();
     // init fallback groups
     this.fallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
@@ -379,7 +381,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   }
 
   @Override
-  public void onConfigurationChange(Configuration conf) {
+  public synchronized void onConfigurationChange(Configuration conf) {
     boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
     if (fallbackEnabled != newFallbackEnabled) {
       LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY,
@@ -391,19 +393,16 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
 
   @Override
   public void stop(String why) {
+    internalBalancer.stop(why);
   }
 
   @Override
   public boolean isStopped() {
-    return false;
-  }
-
-  public void setRsGroupInfoManager(RSGroupInfoManager rsGroupInfoManager) {
-    this.rsGroupInfoManager = rsGroupInfoManager;
+    return internalBalancer.isStopped();
   }
 
   @Override
-  public void postMasterStartupInitialize() {
+  public synchronized void postMasterStartupInitialize() {
     this.internalBalancer.postMasterStartupInitialize();
   }
 

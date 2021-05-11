@@ -79,6 +79,7 @@ public class BalancerTestBase {
     MasterServices services = mock(MasterServices.class);
     when(services.getConfiguration()).thenReturn(conf);
     loadBalancer.setMasterServices(services);
+    loadBalancer.initialize();
   }
 
   protected int[] largeCluster = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

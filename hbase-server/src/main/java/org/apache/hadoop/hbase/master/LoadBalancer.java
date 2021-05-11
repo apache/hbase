@@ -73,10 +73,9 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
   ServerName BOGUS_SERVER_NAME = ServerName.valueOf("localhost,1,1");
 
   /**
-   * Set the current cluster status.  This allows a LoadBalancer to map host name to a server
-   * @param st
+   * Set the current cluster status. This allows a LoadBalancer to map host name to a server
    */
-  void setClusterMetrics(ClusterMetrics st);
+  void updateClusterMetrics(ClusterMetrics metrics);
 
   /**
    * Set the master service.

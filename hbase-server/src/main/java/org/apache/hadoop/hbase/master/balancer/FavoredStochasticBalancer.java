@@ -79,16 +79,11 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   private FavoredNodesManager fnm;
 
   @Override
-  public void initialize() throws HBaseIOException {
-    configureGenerators();
-    super.initialize();
-  }
-
-  protected void configureGenerators() {
+  protected List<CandidateGenerator> createCandidateGenerators() {
     List<CandidateGenerator> fnPickers = new ArrayList<>(2);
     fnPickers.add(new FavoredNodeLoadPicker());
     fnPickers.add(new FavoredNodeLocalityPicker());
-    setCandidateGenerators(fnPickers);
+    return fnPickers;
   }
 
   @Override

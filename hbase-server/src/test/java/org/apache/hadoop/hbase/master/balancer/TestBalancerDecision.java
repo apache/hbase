@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master.balancer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -56,7 +55,7 @@ public class TestBalancerDecision extends BalancerTestBase {
   @Test
   public void testBalancerDecisions() {
     conf.setBoolean("hbase.master.balancer.decision.buffer.enabled", true);
-    loadBalancer.setConf(conf);
+    loadBalancer.onConfigurationChange(conf);
     float minCost = conf.getFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);
     try {
@@ -64,7 +63,7 @@ public class TestBalancerDecision extends BalancerTestBase {
       boolean[] perTableBalancerConfigs = {true, false};
       for (boolean isByTable : perTableBalancerConfigs) {
         conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
-        loadBalancer.setConf(conf);
+        loadBalancer.onConfigurationChange(conf);
         for (int[] mockCluster : clusterStateMocks) {
           Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
           Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
@@ -93,7 +92,7 @@ public class TestBalancerDecision extends BalancerTestBase {
       // reset config
       conf.unset(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE);
       conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", minCost);
-      loadBalancer.setConf(conf);
+      loadBalancer.onConfigurationChange(conf);
     }
   }
 
@@ -101,5 +100,4 @@ public class TestBalancerDecision extends BalancerTestBase {
     return (Arrays.stream(cluster).anyMatch(x -> x > 1)) && (Arrays.stream(cluster)
       .anyMatch(x -> x < 1));
   }
-
 }
