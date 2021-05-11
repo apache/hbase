@@ -15,30 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.wal;
+package org.apache.hadoop.hbase.regionserver.wal;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, LargeTests.class})
-public class TestWALSplitValueCompression extends TestWALSplit {
+@Category({ RegionServerTests.class, MediumTests.class })
+public class TestAsyncWALReplayValueCompression extends TestAsyncWALReplay {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALSplitValueCompression.class);
+      HBaseClassTestRule.forClass(TestAsyncWALReplayValueCompression.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration()
-      .setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
-    TEST_UTIL.getConfiguration()
-      .setBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, true);
-    TestWALSplit.setUpBeforeClass();
+    Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
+    conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
+    conf.setBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, true);
+    TestAsyncWALReplay.setUpBeforeClass();
   }
 }

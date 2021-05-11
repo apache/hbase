@@ -50,8 +50,12 @@ public class CompressionContext {
    * Encapsulates the zlib deflater/inflater pair we will use for value compression in this WAL.
    */
   static class ValueCompressor {
+    final int DEFAULT_DEFLATE_BUFFER_SIZE = 8*1024;
+    final int MAX_DEFLATE_BUFFER_SIZE = 256*1024;
+
     final Deflater deflater;
     final Inflater inflater;
+    byte[] deflateBuffer;
 
     public ValueCompressor() {
       deflater = new Deflater();
@@ -65,6 +69,25 @@ public class CompressionContext {
       return deflater;
     }
 
+    public byte[] getDeflateBuffer() {
+      if (deflateBuffer == null) {
+        deflateBuffer = new byte[DEFAULT_DEFLATE_BUFFER_SIZE];
+      }
+      return deflateBuffer;
+    }
+
+    public int getDeflateBufferSize() {
+      return deflateBuffer.length;
+    }
+
+    public void setDeflateBufferSize(int size) {
+      if (size > MAX_DEFLATE_BUFFER_SIZE) {
+        throw new IllegalArgumentException("Requested buffer size is too large, ask=" + size +
+          ", max=" + MAX_DEFLATE_BUFFER_SIZE);
+      }
+      deflateBuffer = new byte[size];
+    }
+
     public Inflater getInflater() {
       return inflater;
     }
@@ -72,7 +95,9 @@ public class CompressionContext {
     public void clear() {
       deflater.reset();
       inflater.reset();
+      deflateBuffer = null;
     }
+
   };
 
   private final Map<DictionaryIndex, Dictionary> dictionaries =

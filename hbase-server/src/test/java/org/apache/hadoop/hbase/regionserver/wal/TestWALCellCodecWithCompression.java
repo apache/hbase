@@ -96,9 +96,9 @@ public class TestWALCellCodecWithCompression {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     Encoder encoder = codec.getEncoder(bos);
     encoder.write(createKV(row_1, value_1, 0));
-    encoder.write(createKV(row_2, value_2, 0));
+    encoder.write(createOffheapKV(row_2, value_2, 0));
     encoder.write(createKV(row_3, value_3, 0));
-    encoder.write(createKV(row_4, value_4, 0));
+    encoder.write(createOffheapKV(row_4, value_4, 0));
     encoder.write(createKV(row_5, value_5, 0));
     encoder.flush();
 
