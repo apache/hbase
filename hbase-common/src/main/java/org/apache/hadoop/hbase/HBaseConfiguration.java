@@ -36,6 +36,10 @@ import org.slf4j.LoggerFactory;
 public class HBaseConfiguration extends Configuration {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseConfiguration.class);
 
+  static {
+    addDeprecatedKeys();
+  }
+
   private static void checkDefaultsVersion(Configuration conf) {
     if (conf.getBoolean("hbase.defaults.for.version.skip", Boolean.FALSE)) return;
     String defaultsVersion = conf.get("hbase.defaults.for.version");
@@ -45,6 +49,27 @@ public class HBaseConfiguration extends Configuration {
         "hbase-default.xml file seems to be for an older version of HBase (" +
         defaultsVersion + "), this version is " + thisVersion);
     }
+  }
+
+  private static void addDeprecatedKeys() {
+    Configuration.addDeprecations(new DeprecationDelta[]{
+      new DeprecationDelta("hbase.regionserver.hostname", "hbase.unsafe.regionserver.hostname"),
+      new DeprecationDelta("hbase.regionserver.hostname.disable.master.reversedns",
+        "hbase.unsafe.regionserver.hostname.disable.master.reversedns"),
+      new DeprecationDelta("hbase.offheapcache.minblocksize",
+        "hbase.blockcache.minblocksize"),
+      new DeprecationDelta("hbase.ipc.server.reservoir.enabled",
+        "hbase.server.allocator.pool.enabled"),
+      new DeprecationDelta("hbase.ipc.server.reservoir.initial.max",
+        "hbase.server.allocator.max.buffer.count"),
+      new DeprecationDelta("hbase.ipc.server.reservoir.initial.buffer.size",
+        "hbase.server.allocator.buffer.size"),
+      new DeprecationDelta("hlog.bulk.output", "wal.bulk.output"),
+      new DeprecationDelta("hlog.input.tables", "wal.input.tables"),
+      new DeprecationDelta("hlog.input.tablesmap", "wal.input.tablesmap"),
+      new DeprecationDelta("hbase.master.mob.ttl.cleaner.period",
+        "hbase.master.mob.cleaner.period")
+    });
   }
 
   public static Configuration addHbaseResources(Configuration conf) {

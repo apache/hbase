@@ -93,20 +93,6 @@ public class ByteBuffAllocator {
   static final String DEPRECATED_BUFFER_SIZE_KEY = "hbase.ipc.server.reservoir.initial.buffer.size";
 
   /**
-   * The hbase.ipc.server.reservoir.initial.max and hbase.ipc.server.reservoir.initial.buffer.size
-   * were introduced in HBase2.0.0, while in HBase3.0.0 the two config keys will be replaced by
-   * {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} and {@link ByteBuffAllocator#BUFFER_SIZE_KEY}.
-   * Also the hbase.ipc.server.reservoir.enabled will be replaced by
-   * hbase.server.allocator.pool.enabled. Keep the three old config keys here for HBase2.x
-   * compatibility.
-   */
-  static {
-    Configuration.addDeprecation(DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY, ALLOCATOR_POOL_ENABLED_KEY);
-    Configuration.addDeprecation(DEPRECATED_MAX_BUFFER_COUNT_KEY, MAX_BUFFER_COUNT_KEY);
-    Configuration.addDeprecation(DEPRECATED_BUFFER_SIZE_KEY, BUFFER_SIZE_KEY);
-  }
-
-  /**
    * There're some reasons why better to choose 65KB(rather than 64KB) as the default buffer size:
    * <p>
    * 1. Almost all of the data blocks have the block size: 64KB + delta, whose delta is very small,
