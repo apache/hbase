@@ -1953,6 +1953,22 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     Collections.sort(filesCompacting, storeEngine.getStoreFileManager().getStoreFileComparator());
   }
 
+  /**
+   * Remove the files from compacting files. This usually happens when we clear compaction queues.
+   */
+  public void removeFromCompactingFiles(Collection<HStoreFile> filesToRemove) {
+    synchronized (filesCompacting) {
+      filesCompacting.removeAll(filesToRemove);
+      Collections.sort(filesCompacting, storeEngine.getStoreFileManager().getStoreFileComparator());
+    }
+  }
+
+  public List<HStoreFile> getFilesCompacting() {
+    synchronized (filesCompacting) {
+      return Lists.newArrayList(filesCompacting);
+    }
+  }
+
   private void removeUnneededFiles() throws IOException {
     if (!conf.getBoolean("hbase.store.delete.expired.storefile", true)) {
       return;

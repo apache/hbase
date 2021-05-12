@@ -553,6 +553,49 @@ public class TestCompaction {
     thread.interruptIfNecessary();
   }
 
+  /**
+   *  HBASE-25880: remove files in CompactionContext from filesCompacting
+   *  when clear compaction queues
+   */
+  @Test
+  public void testRemoveCompactingFilesWhenClearCompactionQueue() throws Exception {
+    // setup a compact/split thread on a mock server
+    HRegionServer mockServer = Mockito.mock(HRegionServer.class);
+    Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
+    CompactSplit thread = new CompactSplit(mockServer);
+    Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
+
+    // create some store files and setup requests for each store on which we want to do a
+    // compaction
+    for (HStore store : r.getStores()) {
+      createStoreFile(r, store.getColumnFamilyName());
+      createStoreFile(r, store.getColumnFamilyName());
+      createStoreFile(r, store.getColumnFamilyName());
+      thread.requestCompaction(r, store, "test remove compacting files", PRIORITY_USER,
+        new LazyTracker(), null);
+    }
+
+    // I am a little confused here. Why longCompactions take one CompactionRunner?
+    assertEquals(2, thread.getLongCompactions().getActiveCount() +
+      thread.getShortCompactions().getActiveCount());
+
+    // compaction queues start from the third store.
+    List<HStoreFile> compactingFiles = r.getStores().get(2).getFilesCompacting();
+    Collection<HStoreFile> storeFiles = r.getStores().get(2).getStorefiles();
+    for (HStoreFile file : storeFiles) {
+      assertTrue(compactingFiles.contains(file));
+    }
+
+    thread.clearShortCompactionsQueue();
+
+    compactingFiles = r.getStores().get(2).getFilesCompacting();
+    for (HStoreFile file : storeFiles) {
+      assertFalse(compactingFiles.contains(file));
+    }
+
+    thread.interruptIfNecessary();
+  }
+
   class StoreMockMaker extends StatefulStoreMockMaker {
     public ArrayList<HStoreFile> compacting = new ArrayList<>();
     public ArrayList<HStoreFile> notCompacting = new ArrayList<>();
@@ -871,6 +914,21 @@ public class TestCompaction {
     @Override
     public void afterExecution(Store store) {
       done.countDown();
+    }
+  }
+
+  /**
+   * Simple {@link CompactionLifeCycleTracker} that sleep 10s before actually doCompaction to keep
+   * compaction queue nonempty
+   */
+  public static class LazyTracker implements CompactionLifeCycleTracker {
+    @Override
+    public void beforeExecution(Store store) {
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
