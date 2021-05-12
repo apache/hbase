@@ -47,7 +47,8 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
     conf.setFloat("hbase.regions.slop", 0.0f);
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
     loadBalancer = new StochasticLoadBalancer();
-    loadBalancer.setConf(conf);
+    loadBalancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
+    loadBalancer.initialize();
   }
 
   protected void testWithCluster(int numNodes, int numRegions, int numRegionsPerServer,

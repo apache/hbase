@@ -22,7 +22,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -45,7 +44,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * This class produces plans for the {@code AssignmentManager} to execute.
  */
 @InterfaceAudience.Private
-public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObserver {
+public interface LoadBalancer extends Stoppable, ConfigurationObserver {
 
   // Used to signal to the caller that the region(s) cannot be assigned
   // We deliberately use 'localhost' so the operation will fail fast
@@ -60,10 +59,11 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    */
   @Deprecated
   String HBASE_RSGROUP_LOADBALANCER_CLASS = "hbase.rsgroup.grouploadbalancer.class";
+
   /**
    * Set the current cluster status. This allows a LoadBalancer to map host name to a server
    */
-  void setClusterMetrics(ClusterMetrics st);
+  void updateClusterMetrics(ClusterMetrics metrics);
 
 
   /**
@@ -72,25 +72,13 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   void setClusterInfoProvider(ClusterInfoProvider provider);
 
   /**
-   * Perform the major balance operation for cluster, will invoke {@link #balanceTable} to do actual
-   * balance. Normally not need override this method, except {@link SimpleLoadBalancer} and
-   * {@code RSGroupBasedLoadBalancer}
+   * Perform the major balance operation for cluster.
    * @param loadOfAllTable region load of servers for all table
    * @return a list of regions to be moved, including source and destination, or null if cluster is
    *         already balanced
    */
-  List<RegionPlan> balanceCluster(Map<TableName,
-      Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException;
-
-  /**
-   * Perform the major balance operation for table, all class implement of {@link LoadBalancer}
-   * should override this method
-   * @param tableName the table to be balanced
-   * @param loadOfOneTable region load of servers for the specific one table
-   * @return List of plans
-   */
-  List<RegionPlan> balanceTable(TableName tableName,
-      Map<ServerName, List<RegionInfo>> loadOfOneTable);
+  List<RegionPlan> balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable)
+    throws IOException;
 
   /**
    * Perform a Round Robin assignment of regions.

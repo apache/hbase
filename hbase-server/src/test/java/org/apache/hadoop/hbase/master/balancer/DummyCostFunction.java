@@ -17,12 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.hadoop.conf.Configuration;
-
-public class DummyCostFunction extends StochasticLoadBalancer.CostFunction {
-  public DummyCostFunction(Configuration c) {
-    super(c);
-  }
+public class DummyCostFunction extends CostFunction {
 
   @Override
   protected double cost() {

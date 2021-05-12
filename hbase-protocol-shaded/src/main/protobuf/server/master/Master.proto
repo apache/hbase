@@ -707,6 +707,13 @@ message BalancerDecisionsRequest {
 }
 
 /**
+ * Same as BalancerDecision but used for BalancerRejection
+ */
+message BalancerRejectionsRequest {
+  optional uint32 limit = 1;
+}
+
+/**
  * BalancerDecision (LogEntry) use-case specific RPC response. This response payload will be
  * converted in bytes by servers and sent as response to generic RPC API: GetLogEntries
  * LogEntry message has two params:
@@ -715,6 +722,10 @@ message BalancerDecisionsRequest {
  */
 message BalancerDecisionsResponse {
   repeated BalancerDecision balancer_decision = 1;
+}
+
+message BalancerRejectionsResponse {
+  repeated BalancerRejection balancer_rejection = 1;
 }
 
 service MasterService {

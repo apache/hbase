@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ClientUtil;
@@ -3776,6 +3777,25 @@ public final class ProtobufUtil {
     throw new RuntimeException("Invalid response from server");
   }
 
+  public static List<LogEntry> toBalancerRejectionResponse(
+    HBaseProtos.LogEntry logEntry) {
+    try {
+      final String logClassName = logEntry.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("BalancerRejectionsResponse")) {
+        MasterProtos.BalancerRejectionsResponse response =
+          (MasterProtos.BalancerRejectionsResponse) method
+            .invoke(null, logEntry.getLogMessage());
+        return getBalancerRejectionEntries(response);
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      throw new RuntimeException("Error while retrieving response from server");
+    }
+    throw new RuntimeException("Invalid response from server");
+  }
+
   public static List<LogEntry> getBalancerDecisionEntries(
       MasterProtos.BalancerDecisionsResponse response) {
     List<RecentLogs.BalancerDecision> balancerDecisions = response.getBalancerDecisionList();
@@ -3792,12 +3812,34 @@ public final class ProtobufUtil {
       .collect(Collectors.toList());
   }
 
+  public static List<LogEntry> getBalancerRejectionEntries(
+    MasterProtos.BalancerRejectionsResponse response) {
+    List<RecentLogs.BalancerRejection> balancerRejections = response.getBalancerRejectionList();
+    if (CollectionUtils.isEmpty(balancerRejections)) {
+      return Collections.emptyList();
+    }
+    return balancerRejections.stream().map(balancerRejection -> new BalancerRejection.Builder()
+      .setReason(balancerRejection.getReason())
+      .setCostFuncInfoList(balancerRejection.getCostFuncInfoList())
+      .build())
+      .collect(Collectors.toList());
+  }
+
   public static HBaseProtos.LogRequest toBalancerDecisionRequest(int limit) {
     MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest =
       MasterProtos.BalancerDecisionsRequest.newBuilder().setLimit(limit).build();
     return HBaseProtos.LogRequest.newBuilder()
       .setLogClassName(balancerDecisionsRequest.getClass().getName())
       .setLogMessage(balancerDecisionsRequest.toByteString())
+      .build();
+  }
+
+  public static HBaseProtos.LogRequest toBalancerRejectionRequest(int limit) {
+    MasterProtos.BalancerRejectionsRequest balancerRejectionsRequest =
+      MasterProtos.BalancerRejectionsRequest.newBuilder().setLimit(limit).build();
+    return HBaseProtos.LogRequest.newBuilder()
+      .setLogClassName(balancerRejectionsRequest.getClass().getName())
+      .setLogMessage(balancerRejectionsRequest.toByteString())
       .build();
   }
 

@@ -58,12 +58,12 @@ _hbase-policy.xml_::
 _hbase-site.xml_::
   The main HBase configuration file.
   This file specifies configuration options which override HBase's default configuration.
-  You can view (but do not edit) the default configuration file at _docs/hbase-default.xml_.
+  You can view (but do not edit) the default configuration file at _hbase-common/src/main/resources/hbase-default.xml_.
   You can also view the entire effective configuration for your cluster (defaults and overrides) in
   the [label]#HBase Configuration# tab of the HBase Web UI.
 
-_log4j.properties_::
-  Configuration file for HBase logging via `log4j`.
+_log4j2.xml_::
+  Configuration file for HBase logging via `log4j2`.
 
 _regionservers_::
   A plain-text file containing a list of hosts which should run a RegionServer in your HBase cluster.

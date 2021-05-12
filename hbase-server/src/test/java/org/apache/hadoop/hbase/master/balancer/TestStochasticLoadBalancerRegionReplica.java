@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -51,8 +50,8 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
   @Test
   public void testReplicaCost() {
     Configuration conf = HBaseConfiguration.create();
-    StochasticLoadBalancer.CostFunction costFunction =
-        new StochasticLoadBalancer.RegionReplicaHostCostFunction(conf);
+    CostFunction costFunction =
+        new RegionReplicaHostCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
       BalancerClusterState cluster = mockCluster(mockCluster);
       costFunction.init(cluster);
@@ -65,8 +64,8 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
   @Test
   public void testReplicaCostForReplicas() {
     Configuration conf = HBaseConfiguration.create();
-    StochasticLoadBalancer.CostFunction costFunction =
-        new StochasticLoadBalancer.RegionReplicaHostCostFunction(conf);
+    CostFunction costFunction =
+        new RegionReplicaHostCostFunction(conf);
 
     int[] servers = new int[] { 3, 3, 3, 3, 3 };
     TreeMap<ServerName, List<RegionInfo>> clusterState = mockClusterServers(servers);
@@ -102,8 +101,8 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     // test with replication = 4 for following:
 
     RegionInfo replica3;
-    Iterator<Entry<ServerName, List<RegionInfo>>> it;
-    Entry<ServerName, List<RegionInfo>> entry;
+    Iterator<Map.Entry<ServerName, List<RegionInfo>>> it;
+    Map.Entry<ServerName, List<RegionInfo>> entry;
 
     clusterState = mockClusterServers(servers);
     it = clusterState.entrySet().iterator();

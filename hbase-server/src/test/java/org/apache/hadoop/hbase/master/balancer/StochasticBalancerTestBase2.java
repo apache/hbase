@@ -29,12 +29,12 @@ public class StochasticBalancerTestBase2 extends StochasticBalancerTestBase {
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
-    loadBalancer.setConf(conf);
+    loadBalancer.onConfigurationChange(conf);
   }
 
   @After
   public void after() {
     // reset config to make sure balancer run
-    loadBalancer.setConf(conf);
+    loadBalancer.onConfigurationChange(conf);
   }
 }
