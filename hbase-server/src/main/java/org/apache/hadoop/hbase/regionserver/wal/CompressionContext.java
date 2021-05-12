@@ -50,8 +50,8 @@ public class CompressionContext {
    * Encapsulates the zlib deflater/inflater pair we will use for value compression in this WAL.
    */
   static class ValueCompressor {
-    final int DEFAULT_DEFLATE_BUFFER_SIZE = 8*1024;
-    final int MAX_DEFLATE_BUFFER_SIZE = 256*1024;
+    final static int DEFAULT_DEFLATE_BUFFER_SIZE = 8*1024;
+    final static int MAX_DEFLATE_BUFFER_SIZE = 256*1024;
 
     final Deflater deflater;
     final Inflater inflater;

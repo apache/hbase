@@ -226,9 +226,13 @@ public class WALCellCodec implements Codec {
 
   static class CompressedKvEncoder extends BaseEncoder {
     private final CompressionContext compression;
+    private final boolean hasValueCompression;
+    private final boolean hasTagCompression;
     public CompressedKvEncoder(OutputStream out, CompressionContext compression) {
       super(out);
       this.compression = compression;
+      this.hasValueCompression = compression.hasValueCompression();
+      this.hasTagCompression = compression.hasTagCompression();
     }
 
     @Override
@@ -247,9 +251,8 @@ public class WALCellCodec implements Codec {
         compression.getDictionary(CompressionContext.DictionaryIndex.QUALIFIER));
       // Write timestamp, type and value.
       StreamUtils.writeLong(out, cell.getTimestamp());
-      byte type = cell.getTypeByte();
-      out.write(type);
-      if (compression.getValueCompressor() != null) {
+      out.write(cell.getTypeByte());
+      if (hasValueCompression) {
         byte[] compressedBytes = compressValue(cell);
         StreamUtils.writeRawVInt32(out, compressedBytes.length);
         out.write(compressedBytes);
@@ -257,7 +260,7 @@ public class WALCellCodec implements Codec {
         PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
       }
       if (tagsLength > 0) {
-        if (compression.tagCompressionContext != null) {
+        if (hasTagCompression) {
           // Write tags using Dictionary compression
           PrivateCellUtil.compressTags(out, cell, compression.tagCompressionContext);
         } else {
@@ -320,9 +323,13 @@ public class WALCellCodec implements Codec {
 
   static class CompressedKvDecoder extends BaseDecoder {
     private final CompressionContext compression;
+    private final boolean hasValueCompression;
+    private final boolean hasTagCompression;
     public CompressedKvDecoder(InputStream in, CompressionContext compression) {
       super(in);
       this.compression = compression;
+      this.hasValueCompression = compression.hasValueCompression();
+      this.hasTagCompression = compression.hasTagCompression();
     }
 
     @Override
@@ -372,7 +379,7 @@ public class WALCellCodec implements Codec {
       byte type = (byte)in.read();
       pos = Bytes.putByte(backingArray, pos, type);
       int valLen = typeValLen - 1;
-      if (compression.hasValueCompression()) {
+      if (hasValueCompression) {
         readCompressedValue(in, backingArray, pos, valLen);
         pos += valLen;
       } else {
@@ -382,7 +389,7 @@ public class WALCellCodec implements Codec {
       // tags
       if (tagsLength > 0) {
         pos = Bytes.putAsShort(backingArray, pos, tagsLength);
-        if (compression.hasTagCompression()) {
+        if (hasTagCompression) {
           compression.tagCompressionContext.uncompressTags(in, backingArray, pos, tagsLength);
         } else {
           IOUtils.readFully(in, backingArray, pos, tagsLength);
