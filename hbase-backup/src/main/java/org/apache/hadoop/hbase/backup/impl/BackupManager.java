@@ -295,6 +295,15 @@ public class BackupManager implements Closeable {
           .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
           .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
 
+      // Only direct ancestors for a backup are required and not entire history of backup for this
+      // table resulting in verifying all of the previous backups which is unnecessary and backup
+      // paths need not be valid beyond the lifetime of a backup.
+      //
+      // RootDir is way of grouping a single backup including one full and many incremental backups
+      if (!image.getRootDir().equals(backupInfo.getBackupRootDir())) {
+        continue;
+      }
+
       // add the full backup image as an ancestor until the last incremental backup
       if (backup.getType().equals(BackupType.FULL)) {
         // check the backup image coverage, if previous image could be covered by the newer ones,
