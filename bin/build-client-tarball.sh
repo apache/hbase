@@ -81,7 +81,7 @@ copy_hbase_artifacts() {
 
   local LIBS_TO_EXCLUDE=("zkcli" "junit*.jar" "spymemcached*.jar" "hbase-rsgroup*-tests.jar" "hbase-testing-util*.jar"
     "javax.inject*.jar" "hbase-annotations*.jar" "hbase-hadoop*-compat*-tests.jar" "hbase-it*.jar"
-    "phoenix-server.jar" "ranger*.jar" "ranger-hbase-plugin-impl" "atlas-plugin-classloader*.jar"
+    "phoenix-server*.jar" "ranger*.jar" "ranger-hbase-plugin-impl" "atlas-plugin-classloader*.jar"
     "atlas-hbase-plugin-impl" "hbase-bridge-shim*.jar")
 
   # Copy the "guts" of the hbase installation
