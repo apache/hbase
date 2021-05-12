@@ -964,8 +964,7 @@ public class HRegionInfo implements RegionInfo {
     }
 
     //assumption: if Writable serialization, it should be longer than pblen.
-    int read = in.read(pbuf);
-    if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
+    in.readFully(pbuf, 0, pblen);
     if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
       return convert(HBaseProtos.RegionInfo.parseDelimitedFrom(in));
     } else {
