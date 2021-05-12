@@ -149,13 +149,6 @@ public class ByteBuffAllocator {
    * @return ByteBuffAllocator to manage the byte buffers.
    */
   public static ByteBuffAllocator create(Configuration conf, boolean reservoirEnabled) {
-    if (conf.get(DEPRECATED_BUFFER_SIZE_KEY) != null
-        || conf.get(DEPRECATED_MAX_BUFFER_COUNT_KEY) != null) {
-      LOG.warn("The config keys {} and {} are deprecated now, instead please use {} and {}. In "
-            + "future release we will remove the two deprecated configs.",
-        DEPRECATED_BUFFER_SIZE_KEY, DEPRECATED_MAX_BUFFER_COUNT_KEY, BUFFER_SIZE_KEY,
-        MAX_BUFFER_COUNT_KEY);
-    }
     int poolBufSize = conf.getInt(BUFFER_SIZE_KEY, DEFAULT_BUFFER_SIZE);
     if (reservoirEnabled) {
       // The max number of buffers to be pooled in the ByteBufferPool. The default value been
