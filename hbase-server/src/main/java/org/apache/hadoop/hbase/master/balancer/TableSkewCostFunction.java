@@ -37,6 +37,9 @@ class TableSkewCostFunction extends CostFunction {
 
   @Override
   protected double cost() {
+    if (cluster.numTables <= 1) {
+      return 0;
+    }
     double max = cluster.numRegions;
     double min = ((double) cluster.numRegions) / cluster.numServers;
     double value = 0;
