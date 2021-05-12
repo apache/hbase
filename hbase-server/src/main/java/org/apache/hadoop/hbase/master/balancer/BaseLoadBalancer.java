@@ -60,6 +60,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * cases. It doesn't provide an implementation of the actual balancing algorithm.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
+  justification = "All the unsynchronized access is before initialization")
 public abstract class BaseLoadBalancer implements LoadBalancer {
 
   private static final Logger LOG = LoggerFactory.getLogger(BaseLoadBalancer.class);

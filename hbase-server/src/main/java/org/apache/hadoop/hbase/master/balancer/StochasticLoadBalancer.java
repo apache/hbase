@@ -230,8 +230,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     this.candidateGenerators = createCandidateGenerators();
 
-    regionLoadFunctions = new CostFromRegionLoadFunction[] { new ReadRequestCostFunction(conf),new WriteRequestCostFunction(conf),
-      new MemStoreSizeCostFunction(conf), new StoreFileCostFunction(conf) };
+    regionLoadFunctions = new CostFromRegionLoadFunction[] { new ReadRequestCostFunction(conf),
+      new WriteRequestCostFunction(conf), new MemStoreSizeCostFunction(conf),
+      new StoreFileCostFunction(conf) };
     regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
     regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
 
@@ -270,7 +271,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
-  public void updateClusterMetrics(ClusterMetrics st) {
+  public synchronized void updateClusterMetrics(ClusterMetrics st) {
     super.updateClusterMetrics(st);
     updateRegionLoad();
     for(CostFromRegionLoadFunction cost : regionLoadFunctions) {
