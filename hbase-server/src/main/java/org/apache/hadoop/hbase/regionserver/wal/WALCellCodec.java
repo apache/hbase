@@ -21,9 +21,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.zip.DataFormatException;
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -42,7 +39,6 @@ import org.apache.hadoop.hbase.io.ByteBufferWriterOutputStream;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.regionserver.wal.CompressionContext.ValueCompressor;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -253,9 +249,7 @@ public class WALCellCodec implements Codec {
       StreamUtils.writeLong(out, cell.getTimestamp());
       out.write(cell.getTypeByte());
       if (hasValueCompression) {
-        byte[] compressedBytes = compressValue(cell);
-        StreamUtils.writeRawVInt32(out, compressedBytes.length);
-        out.write(compressedBytes);
+        writeCompressedValue(out, cell);
       } else {
         PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
       }
@@ -271,52 +265,11 @@ public class WALCellCodec implements Codec {
       }
     }
 
-    private byte[] compressValue(Cell cell) throws IOException {
-      ValueCompressor valueCompressor = compression.getValueCompressor();
-      Deflater deflater = valueCompressor.getDeflater();
-      deflater.setInput(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      // Deflater#deflate will return 0 only if more input is required. We iterate until
-      // that condition is met, sending the content of 'buffer' to the output stream at
-      // each step, until deflate returns 0. Then the compressor must be flushed in order
-      // for all of the value's output to be written into the corresponding edit. (Otherwise
-      // the compressor would carry over some of the output for this value into the output
-      // of the next.) To flush the compressor we call deflate again using the method option
-      // that allows us to specify the SYNC_FLUSH flag. The sync output will be placed into
-      // the buffer. When flushing we iterate until there is no more output. Then the flush
-      // is complete and the compressor is ready for more input.
-      int bytesOut;
-      do {
-        bytesOut = deflater.deflate(valueCompressor.getDeflateBuffer());
-        if (bytesOut > 0) {
-          baos.write(valueCompressor.getDeflateBuffer(), 0, bytesOut);
-        }
-      } while (bytesOut > 0);
-      // Done compressing value, now flush until deflater buffers are empty.
-      // If we don't have enough space in the buffer to fully flush, the buffer must be
-      // resized.
-      boolean finished = false;
-      do {
-        bytesOut = deflater.deflate(valueCompressor.getDeflateBuffer(), 0,
-          valueCompressor.getDeflateBufferSize(), Deflater.SYNC_FLUSH);
-        if (bytesOut == 0) {
-          throw new IOException("Deflater state error: SYNC_FLUSH did not flush");
-        }
-        if (bytesOut == valueCompressor.getDeflateBufferSize()) {
-          // Resize the output buffer.
-          // If we eventually ask for a buffer size that is too large, setDeflateBufferSize
-          // will throw an IllegalArgumentException.
-          try {
-            valueCompressor.setDeflateBufferSize(valueCompressor.getDeflateBufferSize() * 2);
-          } catch (IllegalArgumentException e) {
-            throw new IOException("Deflater state error: exceeded max deflate buffer size", e);
-          }
-        } else {
-          baos.write(valueCompressor.getDeflateBuffer(), 0, bytesOut);
-          finished = true;
-        }
-      } while (!finished);
-      return baos.toByteArray();
+    private void writeCompressedValue(OutputStream out, Cell cell) throws IOException {
+      byte[] compressed = compression.getValueCompressor().compress(cell.getValueArray(),
+        cell.getValueOffset(), cell.getValueLength());
+      StreamUtils.writeRawVInt32(out, compressed.length);
+      out.write(compressed);
     }
 
   }
@@ -376,8 +329,7 @@ public class WALCellCodec implements Codec {
       if (tagsLength > 0) {
         typeValLen = typeValLen - tagsLength - KeyValue.TAGS_LENGTH_SIZE;
       }
-      byte type = (byte)in.read();
-      pos = Bytes.putByte(backingArray, pos, type);
+      pos = Bytes.putByte(backingArray, pos, (byte)in.read());
       int valLen = typeValLen - 1;
       if (hasValueCompression) {
         readCompressedValue(in, backingArray, pos, valLen);
@@ -428,37 +380,8 @@ public class WALCellCodec implements Codec {
 
     private void readCompressedValue(InputStream in, byte[] outArray, int outOffset,
         int expectedLength) throws IOException {
-      // Read the size of the compressed value. We serialized it as a vint32.
-      int compressedLength = StreamUtils.readRawVarint32(in);
-      // Read all of the compressed value into a buffer for the Inflater.
-      byte[] buffer = new byte[compressedLength];
-      IOUtils.readFully(in, buffer, 0, compressedLength);
-      // Inflate the compressed value. We know the uncompressed size. Inflator#inflate will
-      // return nonzero for as long as some compressed input remains, and 0 when done.
-      Inflater inflater = compression.getValueCompressor().getInflater();
-      inflater.setInput(buffer);
-      int remaining = expectedLength;
-      boolean finished = false;
-      do {
-        try {
-          int inflatedBytes = inflater.inflate(outArray, outOffset, remaining);
-          if (inflatedBytes == 0) {
-            finished = true;
-          }
-          outOffset += inflatedBytes;
-          remaining -= inflatedBytes;
-          if (remaining == 0) {
-            finished = true;
-          } else if (remaining < 0) {
-            throw new IOException("Inflater state error: 'remaining' went negative");
-          }
-        } catch (DataFormatException e) {
-          throw new IOException(e);
-        }
-      } while (!finished);
-      if (remaining > 0) {
-        throw new IOException("Inflater state error: inflator finished early");
-      }
+      int compressedLen = StreamUtils.readRawVarint32(in);
+      compression.getValueCompressor().decompress(in, compressedLen, outArray, outOffset, expectedLength);
     }
 
   }

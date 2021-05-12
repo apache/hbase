@@ -18,17 +18,24 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.io.DelegatingInputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.util.Dictionary;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Context that holds the various dictionaries for compression in WAL.
@@ -42,60 +49,71 @@ public class CompressionContext {
   public static final String ENABLE_WAL_VALUE_COMPRESSION =
     "hbase.regionserver.wal.value.enablecompression";
 
+  public static final String WAL_VALUE_COMPRESSION_TYPE =
+    "hbase.regionserver.wal.value.compression.type";
+
   public enum DictionaryIndex {
     REGION, TABLE, FAMILY, QUALIFIER, ROW
   }
 
   /**
-   * Encapsulates the zlib deflater/inflater pair we will use for value compression in this WAL.
+   * Encapsulates the compression algorithm and its streams that we will use for value
+   * compression in this WAL.
    */
   static class ValueCompressor {
-    final static int DEFAULT_DEFLATE_BUFFER_SIZE = 8*1024;
-    final static int MAX_DEFLATE_BUFFER_SIZE = 256*1024;
+  
+    static final int IO_BUFFER_SIZE = 4096;
 
-    final Deflater deflater;
-    final Inflater inflater;
-    byte[] deflateBuffer;
+    private final Compression.Algorithm algorithm;
+    private DelegatingInputStream lowerIn;
+    private ByteArrayOutputStream lowerOut;
+    private InputStream compressedIn;
+    private OutputStream compressedOut;
 
-    public ValueCompressor() {
-      deflater = new Deflater();
-      // Optimize for speed so we minimize the time spent writing the WAL. This still achieves
-      // quite good results. (This is not really user serviceable.)
-      deflater.setLevel(Deflater.BEST_SPEED);
-      inflater = new Inflater();
+    public ValueCompressor(Compression.Algorithm algorithm) throws IOException {
+      this.algorithm = algorithm;
     }
 
-    public Deflater getDeflater() {
-      return deflater;
+    public Compression.Algorithm getAlgorithm() {
+      return algorithm;
     }
 
-    public byte[] getDeflateBuffer() {
-      if (deflateBuffer == null) {
-        deflateBuffer = new byte[DEFAULT_DEFLATE_BUFFER_SIZE];
+    public byte[] compress(byte[] valueArray, int valueOffset, int valueLength)
+        throws IOException {
+      // We have to create the output streams here the first time around.
+      if (compressedOut == null) {
+        lowerOut = new ByteArrayOutputStream();
+        compressedOut = algorithm.createCompressionStream(lowerOut, algorithm.getCompressor(),
+          IO_BUFFER_SIZE);
+      } else {
+        lowerOut.reset();
       }
-      return deflateBuffer;
+      compressedOut.write(valueArray, valueOffset, valueLength);
+      compressedOut.flush();
+      return lowerOut.toByteArray();
     }
 
-    public int getDeflateBufferSize() {
-      return deflateBuffer.length;
-    }
-
-    public void setDeflateBufferSize(int size) {
-      if (size > MAX_DEFLATE_BUFFER_SIZE) {
-        throw new IllegalArgumentException("Requested buffer size is too large, ask=" + size +
-          ", max=" + MAX_DEFLATE_BUFFER_SIZE);
+    public void decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
+        int outLength) throws IOException {
+      // Read all of the compressed bytes into a buffer.
+      byte[] inBuffer = new byte[inLength];
+      IOUtils.readFully(in, inBuffer);
+      // We have to create the input streams here the first time around.
+      if (compressedIn == null) {
+        lowerIn = new DelegatingInputStream(new ByteArrayInputStream(inBuffer));
+        compressedIn = algorithm.createDecompressionStream(lowerIn, algorithm.getDecompressor(),
+          IO_BUFFER_SIZE);
+      } else {
+        lowerIn.setDelegate(new ByteArrayInputStream(inBuffer));
       }
-      deflateBuffer = new byte[size];
-    }
-
-    public Inflater getInflater() {
-      return inflater;
+      compressedIn.read(outArray, outOffset, outLength);
     }
 
     public void clear() {
-      deflater.reset();
-      inflater.reset();
-      deflateBuffer = null;
+      lowerIn = null;
+      compressedIn = null;
+      lowerOut = null;
+      compressedOut = null;
     }
 
   };
@@ -106,10 +124,11 @@ public class CompressionContext {
   TagCompressionContext tagCompressionContext = null;
   ValueCompressor valueCompressor = null;
 
-  public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
-      boolean hasTagCompression, boolean hasValueCompression)
+  public CompressionContext(Class<? extends Dictionary> dictType,
+      boolean recoveredEdits, boolean hasTagCompression, boolean hasValueCompression,
+      Compression.Algorithm valueCompressionType)
       throws SecurityException, NoSuchMethodException, InstantiationException,
-        IllegalAccessException, InvocationTargetException {
+        IllegalAccessException, InvocationTargetException, IOException {
     Constructor<? extends Dictionary> dictConstructor =
         dictType.getConstructor();
     for (DictionaryIndex dictionaryIndex : DictionaryIndex.values()) {
@@ -131,16 +150,16 @@ public class CompressionContext {
     if (hasTagCompression) {
       tagCompressionContext = new TagCompressionContext(dictType, Short.MAX_VALUE);
     }
-    if (hasValueCompression) {
-      valueCompressor = new ValueCompressor();
+    if (hasValueCompression && valueCompressionType != null) {
+      valueCompressor = new ValueCompressor(valueCompressionType);
     }
   }
 
   public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
       boolean hasTagCompression)
       throws SecurityException, NoSuchMethodException, InstantiationException,
-        IllegalAccessException, InvocationTargetException {
-    this(dictType, recoveredEdits, hasTagCompression, false);
+        IllegalAccessException, InvocationTargetException, IOException {
+    this(dictType, recoveredEdits, hasTagCompression, false, null);
   }
 
   public boolean hasTagCompression() {
@@ -169,6 +188,17 @@ public class CompressionContext {
     if (valueCompressor != null) {
       valueCompressor.clear();
     }
+  }
+
+  public static Compression.Algorithm getValueCompressionAlgorithm(Configuration conf) {
+    if (conf.getBoolean(ENABLE_WAL_VALUE_COMPRESSION, true)) {
+      String compressionType = conf.get(WAL_VALUE_COMPRESSION_TYPE);
+      if (compressionType != null) {
+        return Compression.getCompressionAlgorithmByName(compressionType);
+      }
+      return Compression.Algorithm.GZ;
+    }
+    return Compression.Algorithm.NONE;
   }
 
 }

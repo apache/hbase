@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -68,8 +69,15 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
       // If compression is enabled, new dictionaries are created here.
       try {
         if (compressionContext == null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Initializing compression context for {}: isRecoveredEdits={}" +
+              ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}", path,
+              CommonFSUtils.isRecoveredEdits(path), hasTagCompression(), hasValueCompression(),
+              getValueCompressionType());
+          }
           compressionContext = new CompressionContext(LRUDictionary.class,
-            CommonFSUtils.isRecoveredEdits(path), hasTagCompression(), hasValueCompression());
+            CommonFSUtils.isRecoveredEdits(path), hasTagCompression(),
+            hasValueCompression(), getValueCompressionType());
         } else {
           compressionContext.clear();
         }
@@ -155,6 +163,11 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
    * @return Whether value compression is enabled for this log.
    */
   protected abstract boolean hasValueCompression();
+
+  /**
+   * @return Value compression algorithm for this log.
+   */
+  protected abstract Compression.Algorithm getValueCompressionType();
 
   /**
    * Read next entry.

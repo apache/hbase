@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.codec.Codec.Decoder;
 import org.apache.hadoop.hbase.codec.Codec.Encoder;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -54,22 +55,22 @@ public class TestWALCellCodecWithCompression {
 
   @Test
   public void testEncodeDecodeKVsWithTags() throws Exception {
-    doTest(false, false, false);
+    doTest(false, false);
   }
 
   @Test
   public void testEncodeDecodeKVsWithTagsWithTagsCompression() throws Exception {
-    doTest(true, false, false);
+    doTest(true, false);
   }
 
   @Test
   public void testEncodeDecodeOffKVsWithTagsWithTagsCompression() throws Exception {
-    doTest(true, false, true);
+    doTest(true, false);
   }
 
   @Test
   public void testValueCompressionEnabled() throws Exception {
-    doTest(false, true, false);
+    doTest(false, true);
   }
 
   @Test
@@ -92,7 +93,7 @@ public class TestWALCellCodecWithCompression {
 
     Configuration conf = new Configuration(false);
     WALCellCodec codec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class,
-      false, true, true));
+      false, true, true, Compression.Algorithm.GZ));
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     Encoder encoder = codec.getEncoder(bos);
     encoder.write(createKV(row_1, value_1, 0));
@@ -148,15 +149,14 @@ public class TestWALCellCodecWithCompression {
     }
   }
 
-  private void doTest(boolean compressTags, boolean compressValue, boolean offheapKV)
+  private void doTest(boolean compressTags, boolean offheapKV)
       throws Exception {
     final byte[] key = Bytes.toBytes("myRow");
     final byte[] value = Bytes.toBytes("myValue");
     Configuration conf = new Configuration(false);
     conf.setBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, compressTags);
-    conf.setBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, compressValue);
     WALCellCodec codec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class,
-      false, compressTags, compressValue));
+      false, compressTags));
     ByteArrayOutputStream bos = new ByteArrayOutputStream(1024);
     Encoder encoder = codec.getEncoder(bos);
     if (offheapKV) {
