@@ -177,6 +177,7 @@ public class TableDescriptorBuilder {
       new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE_MB));
   // TODO: Keeping backward compatability with HBASE-25651 change. Can be removed in later version
   @InterfaceAudience.Private
+  @Deprecated
   public static final String NORMALIZER_TARGET_REGION_SIZE = "NORMALIZER_TARGET_REGION_SIZE";
 
   /**

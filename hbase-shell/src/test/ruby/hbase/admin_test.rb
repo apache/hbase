@@ -917,10 +917,17 @@ module Hbase
       assert_match(/12345678/, admin.describe(@test_name))
     end
 
-    define_test 'alter should be able to set the TargetRegionSize and TargetRegionCount' do
+    define_test 'alter should be able to set the TargetRegionSizeMB and TargetRegionCount' do
       command(:alter, @test_name, 'NORMALIZER_TARGET_REGION_COUNT' => 156)
       assert_match(/156/, admin.describe(@test_name))
       command(:alter, @test_name, 'NORMALIZER_TARGET_REGION_SIZE_MB' => 234)
+      assert_match(/234/, admin.describe(@test_name))
+    end
+
+    define_test 'alter should be able to set the TargetRegionSize and TargetRegionCount' do
+      command(:alter, @test_name, 'NORMALIZER_TARGET_REGION_COUNT' => 156)
+      assert_match(/156/, admin.describe(@test_name))
+      command(:alter, @test_name, 'NORMALIZER_TARGET_REGION_SIZE' => 234)
       assert_match(/234/, admin.describe(@test_name))
     end
 
