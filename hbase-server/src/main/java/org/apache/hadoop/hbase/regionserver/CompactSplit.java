@@ -796,25 +796,24 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
   public void clearLongCompactionsQueue() {
     removeFromFilesCompacting(longCompactions);
-    longCompactions.getQueue().clear();
   }
 
   public void clearShortCompactionsQueue() {
     removeFromFilesCompacting(shortCompactions);
-    shortCompactions.getQueue().clear();
   }
 
   private void removeFromFilesCompacting(ThreadPoolExecutor compactor) {
-    for (Runnable runnable : compactor.getQueue()) {
+    Iterator<Runnable> iter = compactor.getQueue().iterator();
+    while (iter.hasNext()) {
+      Runnable runnable = iter.next();
       if (!(runnable instanceof CompactionRunner)) {
         continue;
       }
       CompactionRunner runner = (CompactionRunner) runnable;
-      // for system compaction, files selection will be delayed until the compaction task
-      // actually runs, so compaction context is null for system compaction
-      if (runner.compaction != null) {
+      if (runner.compaction != null && runner.compaction.hasSelection()) {
         Collection<HStoreFile> files = runner.compaction.getRequest().getFiles();
         runner.store.removeFromCompactingFiles(files);
+        iter.remove();
       }
     }
   }
