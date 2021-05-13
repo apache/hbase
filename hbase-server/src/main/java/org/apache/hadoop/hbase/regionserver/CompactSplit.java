@@ -806,6 +806,9 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
   private void removeFromFilesCompacting(ThreadPoolExecutor compactor) {
     for (Runnable runnable : compactor.getQueue()) {
+      if (!(runnable instanceof CompactionRunner)) {
+        continue;
+      }
       CompactionRunner runner = (CompactionRunner) runnable;
       Collection<HStoreFile> files = runner.compaction.getRequest().getFiles();
       runner.store.removeFromCompactingFiles(files);
