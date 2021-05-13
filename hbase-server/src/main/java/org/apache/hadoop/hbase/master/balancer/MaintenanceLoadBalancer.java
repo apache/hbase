@@ -52,7 +52,7 @@ public class MaintenanceLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public void setClusterMetrics(ClusterMetrics st) {
+  public void updateClusterMetrics(ClusterMetrics st) {
   }
 
   @Override

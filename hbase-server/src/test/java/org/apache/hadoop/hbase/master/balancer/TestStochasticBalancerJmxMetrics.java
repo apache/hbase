@@ -133,7 +133,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     loadBalancer = new StochasticLoadBalancer();
 
     conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false);
-    loadBalancer.setConf(conf);
+    loadBalancer.initialize();
 
     TableName tableName = HConstants.ENSEMBLE_TABLE_NAME;
     Map<ServerName, List<RegionInfo>> clusterState = mockClusterServers(mockCluster_ensemble);
@@ -162,7 +162,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     loadBalancer = new StochasticLoadBalancer();
 
     conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, true);
-    loadBalancer.setConf(conf);
+    loadBalancer.initialize();
 
     // NOTE the size is normally set in setClusterMetrics, for test purpose, we set it manually
     // Tables: hbase:namespace, table1, table2

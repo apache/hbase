@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -59,7 +60,8 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   private RegionPlan.RegionPlanComparator rpComparator = new RegionPlan.RegionPlanComparator();
   private float avgLoadOverall;
   private List<ServerAndLoad> serverLoadList = new ArrayList<>();
-
+  // overallSlop to control simpleLoadBalancer's cluster level threshold
+  private float overallSlop;
   /**
    * Stores additional per-server information about the regions added/removed
    * during the run of the balancing algorithm.
@@ -105,6 +107,8 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   /**
    * Pass RegionStates and allow balancer to set the current cluster load.
    */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*(/src/test/.*|SimpleLoadBalancer).java")
   void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad) {
     serverLoadList.clear();
     Map<ServerName, Integer> server2LoadMap = new HashMap<>();
@@ -134,10 +138,16 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
+  protected void loadConf(Configuration conf) {
+    super.loadConf(conf);
+    this.overallSlop = conf.getFloat("hbase.regions.overallSlop", slop);
+  }
+
+  @Override
   public void onConfigurationChange(Configuration conf) {
     float originSlop = slop;
     float originOverallSlop = overallSlop;
-    super.setConf(conf);
+    loadConf(conf);
     LOG.info("Update configuration of SimpleLoadBalancer, previous slop is {},"
       + " current slop is {}, previous overallSlop is {}, current overallSlop is {}",
       originSlop, slop, originOverallSlop, overallSlop);
@@ -166,6 +176,38 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       if (LOG.isTraceEnabled()) {
         // If nothing to balance, then don't say anything unless trace-level logging.
         LOG.trace("Skipping load balancing because cluster is balanced at overall level");
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private boolean needsBalance(BalancerClusterState c) {
+    ClusterLoadState cs = new ClusterLoadState(c.clusterState);
+    if (cs.getNumServers() < MIN_SERVER_BALANCE) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+          "Not running balancer because only " + cs.getNumServers() + " active regionserver(s)");
+      }
+      return false;
+    }
+    if (idleRegionServerExist(c)) {
+      return true;
+    }
+
+    // Check if we even need to do any load balancing
+    // HBASE-3681 check sloppiness first
+    float average = cs.getLoadAverage(); // for logging
+    int floor = (int) Math.floor(average * (1 - slop));
+    int ceiling = (int) Math.ceil(average * (1 + slop));
+    if (!(cs.getMaxLoad() > ceiling || cs.getMinLoad() < floor)) {
+      NavigableMap<ServerAndLoad, List<RegionInfo>> serversByLoad = cs.getServersByLoad();
+      if (LOG.isTraceEnabled()) {
+        // If nothing to balance, then don't say anything unless trace-level logging.
+        LOG.trace("Skipping load balancing because balanced cluster; " + "servers=" +
+          cs.getNumServers() + " regions=" + cs.getNumRegions() + " average=" + average +
+          " mostloaded=" + serversByLoad.lastKey().getLoad() + " leastloaded=" +
+          serversByLoad.firstKey().getLoad());
       }
       return false;
     }
@@ -278,7 +320,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     // argument as defaults
     BalancerClusterState c =
       new BalancerClusterState(loadOfOneTable, null, this.regionFinder, this.rackManager);
-    if (!this.needsBalance(tableName, c) && !this.overallNeedsBalance()) {
+    if (!needsBalance(c) && !this.overallNeedsBalance()) {
       return null;
     }
     ClusterLoadState cs = new ClusterLoadState(loadOfOneTable);

@@ -30,7 +30,6 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -78,11 +77,12 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     BalancerTestBase.conf.set(
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
       RULES_FILE);
-    BalancerTestBase.loadBalancer = new StochasticLoadBalancer();
+    loadBalancer = new StochasticLoadBalancer();
     MasterServices services = mock(MasterServices.class);
     when(services.getConfiguration()).thenReturn(conf);
     BalancerTestBase.loadBalancer.setMasterServices(services);
-    BalancerTestBase.loadBalancer.getCandidateGenerators().add(new FairRandomCandidateGenerator());
+    loadBalancer.initialize();
+    loadBalancer.getCandidateGenerators().add(new FairRandomCandidateGenerator());
   }
 
   @Test
