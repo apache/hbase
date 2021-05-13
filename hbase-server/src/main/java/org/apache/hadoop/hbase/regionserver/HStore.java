@@ -54,6 +54,7 @@ import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -1956,14 +1957,16 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   /**
    * Remove the files from compacting files. This usually happens when we clear compaction queues.
    */
-  public void removeFromCompactingFiles(Collection<HStoreFile> filesToRemove) {
+  void removeFromCompactingFiles(Collection<HStoreFile> filesToRemove) {
     synchronized (filesCompacting) {
       filesCompacting.removeAll(filesToRemove);
       Collections.sort(filesCompacting, storeEngine.getStoreFileManager().getStoreFileComparator());
     }
   }
 
-  public List<HStoreFile> getFilesCompacting() {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*|.*/TestCompaction.java")
+  List<HStoreFile> getFilesCompacting() {
     synchronized (filesCompacting) {
       return Lists.newArrayList(filesCompacting);
     }
