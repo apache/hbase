@@ -810,8 +810,12 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         continue;
       }
       CompactionRunner runner = (CompactionRunner) runnable;
-      Collection<HStoreFile> files = runner.compaction.getRequest().getFiles();
-      runner.store.removeFromCompactingFiles(files);
+      // for system compaction, files selection will be delayed until the compaction task
+      // actually runs, so compaction context is null for system compaction
+      if (runner.compaction != null) {
+        Collection<HStoreFile> files = runner.compaction.getRequest().getFiles();
+        runner.store.removeFromCompactingFiles(files);
+      }
     }
   }
 
