@@ -51,6 +51,18 @@ public class HBaseConfiguration extends Configuration {
     }
   }
 
+  /**
+   * The hbase.ipc.server.reservoir.initial.max and hbase.ipc.server.reservoir.initial.buffer.size
+   * were introduced in HBase2.0.0, while in HBase3.0.0 the two config keys will be replaced by
+   * hbase.server.allocator.max.buffer.count and hbase.server.allocator.buffer.size.
+   * Also the hbase.ipc.server.reservoir.enabled will be replaced by
+   * hbase.server.allocator.pool.enabled. Keep the three old config keys here for HBase2.x
+   * compatibility.
+   * <br>
+   * HBASE-24667: This config hbase.regionserver.hostname.disable.master.reversedns will be
+   * replaced by hbase.unsafe.regionserver.hostname.disable.master.reversedns. Keep the old config
+   * keys here for backward compatibility.
+   */
   private static void addDeprecatedKeys() {
     Configuration.addDeprecations(new DeprecationDelta[]{
       new DeprecationDelta("hbase.regionserver.hostname", "hbase.unsafe.regionserver.hostname"),
