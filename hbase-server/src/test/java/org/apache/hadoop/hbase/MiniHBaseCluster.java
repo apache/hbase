@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.compactionserver.HCompactionServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
@@ -86,10 +87,10 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @param numRegionServers initial number of region servers to start.
    */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers,
-         Class<? extends HMaster> masterClass,
-         Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
       throws IOException, InterruptedException {
-    this(conf, numMasters, 0, numRegionServers, null, masterClass, regionserverClass);
+    this(conf, numMasters, 0, numRegionServers, null, 0, masterClass, regionserverClass);
   }
 
   /**
@@ -101,16 +102,17 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @throws InterruptedException
    */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numAlwaysStandByMasters,
-         int numRegionServers, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
-         Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      int numRegionServers, List<Integer> rsPorts, int numCompactionServers,
+      Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
       throws IOException, InterruptedException {
     super(conf);
 
     // Hadoop 2
     CompatibilityFactory.getInstance(MetricsAssertHelper.class).init();
 
-    init(numMasters, numAlwaysStandByMasters, numRegionServers, rsPorts, masterClass,
-        regionserverClass);
+    init(numMasters, numAlwaysStandByMasters, numRegionServers, rsPorts, numCompactionServers,
+      masterClass, regionserverClass);
     this.initialClusterStatus = getClusterMetrics();
   }
 
@@ -227,14 +229,15 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   private void init(final int nMasterNodes, final int numAlwaysStandByMasters,
-      final int nRegionNodes, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
+      final int nRegionNodes, List<Integer> rsPorts, int numCompactionServers,
+      Class<? extends HMaster> masterClass,
       Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
-  throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     try {
-      if (masterClass == null){
-        masterClass =  HMaster.class;
+      if (masterClass == null) {
+        masterClass = HMaster.class;
       }
-      if (regionserverClass == null){
+      if (regionserverClass == null) {
         regionserverClass = MiniHBaseCluster.MiniHBaseClusterRegionServer.class;
       }
 
@@ -253,6 +256,12 @@ public class MiniHBaseCluster extends HBaseCluster {
         hbaseCluster.addRegionServer(rsConf, i, user);
       }
 
+      // manually add the compaction servers as other users
+      for (int i = 0; i < numCompactionServers; i++) {
+        Configuration csConf = HBaseConfiguration.create(conf);
+        User user = HBaseTestingUtility.getDifferentUser(csConf, ".hfs." + index++);
+        hbaseCluster.addCompactionServer(csConf, i, user);
+      }
       hbaseCluster.startup();
     } catch (IOException e) {
       shutdown();
@@ -909,6 +918,42 @@ public class MiniHBaseCluster extends HBaseCluster {
     for (RegionServerThread rst : getRegionServerThreads()) {
       rst.getRegionServer().abort("killAll");
     }
+  }
+
+  /**
+   * @return Number of live compaction servers in the cluster currently.
+   */
+  public int getNumLiveCompactionServers() {
+    return this.hbaseCluster.getLiveCompactionServers().size();
+  }
+
+  /**
+   * @return List of compaction server threads.
+   */
+  public List<JVMClusterUtil.CompactionServerThread> getCompactionServerThreads() {
+    return this.hbaseCluster.getCompactionServers();
+  }
+
+  /**
+   * @return List of live compaction server threads (skips the aborted and the killed)
+   */
+  public List<JVMClusterUtil.CompactionServerThread> getLiveCompactionServerThreads() {
+    return this.hbaseCluster.getLiveCompactionServers();
+  }
+
+  /**
+   * Grab a numbered compaction server of your choice.
+   * @param serverNumber server number
+   * @return compaction server
+   */
+  public HCompactionServer getCompactionServer(int serverNumber) {
+    return hbaseCluster.getCompactionServer(serverNumber);
+  }
+
+  public HCompactionServer getCompactionServer(ServerName serverName) {
+    return hbaseCluster.getCompactionServers().stream()
+        .map(JVMClusterUtil.CompactionServerThread::getCompactionServer)
+        .filter(cs -> cs.getServerName().equals(serverName)).findFirst().orElse(null);
   }
 
   @Override

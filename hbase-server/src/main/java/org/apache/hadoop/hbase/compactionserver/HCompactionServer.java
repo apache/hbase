@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -105,8 +106,11 @@ public class HCompactionServer extends AbstractServer {
     if (!this.masterless) {
       masterAddressTracker = new MasterAddressTracker(getZooKeeper(), this);
       masterAddressTracker.start();
+      clusterStatusTracker = new ClusterStatusTracker(zooKeeper, this);
+      clusterStatusTracker.start();
     } else {
       masterAddressTracker = null;
+      clusterStatusTracker = null;
     }
 
     ZKUtil.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
@@ -174,13 +178,28 @@ public class HCompactionServer extends AbstractServer {
       abort("Fatal exception during initialization", e);
     }
     try {
+      if (!isStopped() && !isAborted()) {
+        while (keepLooping()) {
+          createCompactionServerStatusStub();
+          if (cssStub == null) {
+            this.sleeper.sleep(100);
+          } else {
+            break;
+          }
+        }
+      }
       // We registered with the Master. Go into run mode.
       long lastMsg = System.currentTimeMillis();
       // The main run loop.
       while (!isStopped()) {
         long now = System.currentTimeMillis();
         if ((now - lastMsg) >= msgInterval) {
-          tryCompactionServerReport();
+          if (tryCompactionServerReport() && !online.get()) {
+            synchronized (online) {
+              online.set(true);
+              online.notifyAll();
+            }
+          }
           lastMsg = System.currentTimeMillis();
         }
         if (!isStopped()) {

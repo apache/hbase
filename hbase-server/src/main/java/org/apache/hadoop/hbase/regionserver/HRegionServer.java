@@ -396,9 +396,6 @@ public class HRegionServer extends AbstractServer implements
   // A thread which calls reportProcedureDone
   private RemoteProcedureResultReporter procedureResultReporter;
 
-  // flag set after we're done setting up server threads
-  final AtomicBoolean online = new AtomicBoolean(false);
-
   // Log Splitting Worker
   private SplitLogWorker splitLogWorker;
 
@@ -1795,16 +1792,7 @@ public class HRegionServer extends AbstractServer implements
     }
   }
 
-  /**
-   * Report the status of the server. A server is online once all the startup is
-   * completed (setting up filesystem, starting executorService threads, etc.). This
-   * method is designed mostly to be useful in tests.
-   *
-   * @return true if online, false if not.
-   */
-  public boolean isOnline() {
-    return online.get();
-  }
+
 
   /**
    * Setup WAL log and replication if enabled. Replication setup is done in here because it wants to
@@ -2228,18 +2216,6 @@ public class HRegionServer extends AbstractServer implements
     }
   }
 
-  public void waitForServerOnline(){
-    while (!isStopped() && !isOnline()) {
-      synchronized (online) {
-        try {
-          online.wait(msgInterval);
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          break;
-        }
-      }
-    }
-  }
 
   @Override
   public void postOpenDeployTasks(final PostOpenDeployContext context) throws IOException {

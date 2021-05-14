@@ -22,6 +22,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -98,6 +99,8 @@ public abstract class AbstractServer extends Thread implements Server {
   // of AbstractServer in isolation.
   protected volatile boolean stopped = false;
 
+  // flag set after we're done setting up server threads
+  protected final AtomicBoolean online = new AtomicBoolean(false);
   // master address tracker
   protected MasterAddressTracker masterAddressTracker;
   // Cluster Status Tracker
@@ -113,6 +116,10 @@ public abstract class AbstractServer extends Thread implements Server {
       asyncClusterConnection =
           ClusterConnectionFactory.createAsyncClusterConnection(conf, localAddress, user);
     }
+  }
+
+  public AtomicBoolean getOnline() {
+    return online;
   }
 
   @Override
@@ -367,6 +374,30 @@ public abstract class AbstractServer extends Thread implements Server {
   @Override
   public boolean isStopped() {
     return this.stopped;
+  }
+
+  /**
+   * Report the status of the server. A server is online once all the startup is
+   * completed (setting up filesystem, starting executorService threads, etc.). This
+   * method is designed mostly to be useful in tests.
+   *
+   * @return true if online, false if not.
+   */
+  public boolean isOnline() {
+    return online.get();
+  }
+
+  public void waitForServerOnline(){
+    while (!isStopped() && !isOnline()) {
+      synchronized (online) {
+        try {
+          online.wait(msgInterval);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    }
   }
 
   protected abstract AbstractRpcServices getRpcService();
