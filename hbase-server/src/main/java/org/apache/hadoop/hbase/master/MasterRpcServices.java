@@ -3080,8 +3080,9 @@ public class MasterRpcServices extends RSRpcServices implements
     namedQueueGetRequest.setBalancerDecisionsRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
       namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    List<RecentLogs.BalancerDecision> balancerDecisions =
-      namedQueueGetResponse.getBalancerDecisions();
+    List<RecentLogs.BalancerDecision> balancerDecisions = namedQueueGetResponse != null ?
+      namedQueueGetResponse.getBalancerDecisions() :
+      Collections.emptyList();
     return MasterProtos.BalancerDecisionsResponse.newBuilder()
       .addAllBalancerDecision(balancerDecisions).build();
   }
@@ -3098,8 +3099,9 @@ public class MasterRpcServices extends RSRpcServices implements
     namedQueueGetRequest.setBalancerRejectionsRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
       namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    List<RecentLogs.BalancerRejection> balancerRejections =
-      namedQueueGetResponse.getBalancerRejections();
+    List<RecentLogs.BalancerRejection> balancerRejections = namedQueueGetResponse != null ?
+      namedQueueGetResponse.getBalancerRejections() :
+      Collections.emptyList();
     return MasterProtos.BalancerRejectionsResponse.newBuilder()
       .addAllBalancerRejection(balancerRejections).build();
   }
