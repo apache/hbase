@@ -1960,7 +1960,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   void removeFromCompactingFiles(Collection<HStoreFile> filesToRemove) {
     synchronized (filesCompacting) {
       filesCompacting.removeAll(filesToRemove);
-      Collections.sort(filesCompacting, storeEngine.getStoreFileManager().getStoreFileComparator());
     }
   }
 
