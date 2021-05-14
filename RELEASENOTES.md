@@ -81,15 +81,6 @@ Moved the following methods from HStore to HRegionFileSystem
 
 ---
 
-* [HBASE-25032](https://issues.apache.org/jira/browse/HBASE-25032) | *Major* | **Wait for region server to become online before adding it to online servers in Master**
-
-<!-- markdown -->
-
-After this change a region server is marked online and ready to accept regions (as seen by master) after it's first report to master is sent successfully. Prior to this change there could be cases where the region server is marked online but is actually stuck during initialization due to issues like misconfiguration and master tries to assign regions and they are stuck because the region server is in a weird state and not ready to serve them.
-
-
----
-
 * [HBASE-25685](https://issues.apache.org/jira/browse/HBASE-25685) | *Major* | **asyncprofiler2.0 no longer supports svg; wants html**
 
 If asyncprofiler 1.x, all is good. If asyncprofiler 2.x and it is hbase-2.3.x or hbase-2.4.x, add '?output=html' to get flamegraphs from the profiler.
@@ -148,7 +139,6 @@ The following methods were removed or made private from ServerName (due to HBASE
 - getHostAndPort(): Use #getAddress() instead.
 - getServerStartcodeFromServerName(String): Use instance of ServerName to pull out start code)
 - getServerNameLessStartCode(String): Use #getAddress() instead.
-
 
 
 # HBASE  2.4.2 Release Notes

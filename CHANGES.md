@@ -20,7 +20,7 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.4.3 - Unreleased (as of 2021-04-27)
+## Release 2.4.3 - Unreleased (as of 2021-05-14)
 
 
 
@@ -36,6 +36,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25860](https://issues.apache.org/jira/browse/HBASE-25860) | Add metric for successful wal roll requests. |  Major | metrics, wal |
 | [HBASE-25754](https://issues.apache.org/jira/browse/HBASE-25754) | StripeCompactionPolicy should support compacting cold regions |  Minor | Compaction |
 | [HBASE-25766](https://issues.apache.org/jira/browse/HBASE-25766) | Introduce RegionSplitRestriction that restricts the pattern of the split point |  Major | . |
 | [HBASE-25798](https://issues.apache.org/jira/browse/HBASE-25798) | typo in MetricsAssertHelper |  Minor | . |
@@ -66,6 +67,10 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25867](https://issues.apache.org/jira/browse/HBASE-25867) | Extra doc around ITBLL |  Minor | documentation |
+| [HBASE-25859](https://issues.apache.org/jira/browse/HBASE-25859) | Reference class incorrectly parses the protobuf magic marker |  Minor | regionserver |
+| [HBASE-25774](https://issues.apache.org/jira/browse/HBASE-25774) | ServerManager.getOnlineServer may miss some region servers when refreshing state in some procedure implementations |  Critical | Replication |
+| [HBASE-25825](https://issues.apache.org/jira/browse/HBASE-25825) | RSGroupBasedLoadBalancer.onConfigurationChange should chain the request to internal balancer |  Major | Balancer |
 | [HBASE-25792](https://issues.apache.org/jira/browse/HBASE-25792) | Filter out o.a.hadoop.thirdparty building shaded jars |  Major | shading |
 | [HBASE-25806](https://issues.apache.org/jira/browse/HBASE-25806) | Backport the region location finder initialization fix in HBASE-25802 |  Major | Balancer |
 | [HBASE-25735](https://issues.apache.org/jira/browse/HBASE-25735) | Add target Region to connection exceptions |  Major | rpc |
@@ -73,7 +78,6 @@
 | [HBASE-25743](https://issues.apache.org/jira/browse/HBASE-25743) | Retry REQUESTTIMEOUT KeeperExceptions from ZK |  Major | Zookeeper |
 | [HBASE-25726](https://issues.apache.org/jira/browse/HBASE-25726) | MoveCostFunction is not included in the list of cost functions for StochasticLoadBalancer |  Major | Balancer |
 | [HBASE-25692](https://issues.apache.org/jira/browse/HBASE-25692) | Failure to instantiate WALCellCodec leaks socket in replication |  Major | Replication |
-| [HBASE-25032](https://issues.apache.org/jira/browse/HBASE-25032) | Wait for region server to become online before adding it to online servers in Master |  Major | . |
 | [HBASE-25568](https://issues.apache.org/jira/browse/HBASE-25568) | Upgrade Thrift jar to fix CVE-2020-13949 |  Critical | Thrift |
 | [HBASE-25562](https://issues.apache.org/jira/browse/HBASE-25562) | ReplicationSourceWALReader log and handle exception immediately without retrying |  Major | Replication |
 | [HBASE-25693](https://issues.apache.org/jira/browse/HBASE-25693) | NPE getting metrics from standby masters (MetricsMasterWrapperImpl.getMergePlanCount) |  Major | master |
@@ -97,6 +101,14 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25876](https://issues.apache.org/jira/browse/HBASE-25876) | Add retry if we fail to read all bytes of the protobuf magic marker |  Trivial | io |
+| [HBASE-25790](https://issues.apache.org/jira/browse/HBASE-25790) | NamedQueue 'BalancerRejection' for recent history of balancer skipping |  Major | Balancer, master |
+| [HBASE-25854](https://issues.apache.org/jira/browse/HBASE-25854) | Remove redundant AM in-memory state changes in CatalogJanitor |  Major | . |
+| [HBASE-25847](https://issues.apache.org/jira/browse/HBASE-25847) | More DEBUG and TRACE level logging in CatalogJanitor and HbckChore |  Minor | . |
+| [HBASE-25838](https://issues.apache.org/jira/browse/HBASE-25838) | Use double instead of Double in StochasticLoadBalancer |  Major | Balancer, Performance |
+| [HBASE-25835](https://issues.apache.org/jira/browse/HBASE-25835) | Ignore duplicate split requests from regionserver reports |  Major | . |
+| [HBASE-25836](https://issues.apache.org/jira/browse/HBASE-25836) | RegionStates#getAssignmentsForBalancer should only care about OPEN or OPENING regions |  Major | . |
+| [HBASE-25840](https://issues.apache.org/jira/browse/HBASE-25840) | CatalogJanitor warns about skipping gc of regions during RIT, but does not actually skip |  Minor | . |
 | [HBASE-25775](https://issues.apache.org/jira/browse/HBASE-25775) | Use a special balancer to deal with maintenance mode |  Major | Balancer |
 | [HBASE-25199](https://issues.apache.org/jira/browse/HBASE-25199) | Remove HStore#getStoreHomedir |  Minor | . |
 | [HBASE-25696](https://issues.apache.org/jira/browse/HBASE-25696) | Need to initialize SLF4JBridgeHandler in jul-to-slf4j for redirecting jul to slf4j |  Major | logging |
@@ -111,6 +123,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25884](https://issues.apache.org/jira/browse/HBASE-25884) | NPE while getting Balancer decisions |  Major | . |
 | [HBASE-25755](https://issues.apache.org/jira/browse/HBASE-25755) | Exclude tomcat-embed-core from libthrift |  Critical | dependencies, Thrift |
 | [HBASE-25750](https://issues.apache.org/jira/browse/HBASE-25750) | Upgrade RpcControllerFactory and HBaseRpcController from Private to LimitedPrivate(COPROC,PHOENIX) |  Major | Coprocessors, phoenix, rpc |
 | [HBASE-25734](https://issues.apache.org/jira/browse/HBASE-25734) | Backport HBASE-24305 to branch-2.4 |  Minor | . |
