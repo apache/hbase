@@ -93,7 +93,7 @@ public class CompressionContext {
       return lowerOut.toByteArray();
     }
 
-    public void decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
+    public int decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
         int outLength) throws IOException {
       // Read all of the compressed bytes into a buffer.
       byte[] inBuffer = new byte[inLength];
@@ -106,7 +106,7 @@ public class CompressionContext {
       } else {
         lowerIn.setDelegate(new ByteArrayInputStream(inBuffer));
       }
-      compressedIn.read(outArray, outOffset, outLength);
+      return compressedIn.read(outArray, outOffset, outLength);
     }
 
     public void clear() {
