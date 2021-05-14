@@ -442,7 +442,7 @@ function shadedjars_rebuild
 
   start_clock
 
-  local -a maven_args=('clean' 'verify' '-fae' '--batch-mode'
+  local -a maven_args=('clean' 'verify' '-fae' '-U' '--batch-mode'
     '-pl' 'hbase-shaded/hbase-shaded-check-invariants' '-am'
     '-Dtest=NoUnitTests' '-DHBasePatchProcess' '-Prelease'
     '-Dmaven.javadoc.skip=true' '-Dcheckstyle.skip=true' '-Dspotbugs.skip=true')
@@ -453,7 +453,7 @@ function shadedjars_rebuild
   # disabled because "maven_executor" needs to return both command and args
   # shellcheck disable=2046
   echo_and_redirect "${logfile}" \
-    $(maven_executor) clean verify -fae --batch-mode \
+    $(maven_executor) clean verify -fae -U --batch-mode \
       -pl hbase-shaded/hbase-shaded-check-invariants -am \
       -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
       -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
@@ -617,7 +617,7 @@ function hadoopcheck_rebuild
     # disabled because "maven_executor" needs to return both command and args
     # shellcheck disable=2046
     echo_and_redirect "${logfile}" \
-      $(maven_executor) clean install \
+      $(maven_executor) -U clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-two.version="${hadoopver}"
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
