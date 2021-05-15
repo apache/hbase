@@ -80,13 +80,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   private static final Predicate<ServerMetrics> IDLE_SERVER_PREDICATOR
     = load -> load.getRegionMetrics().isEmpty();
 
-  protected RegionLocationFinder regionFinder;
+  protected volatile RegionLocationFinder regionFinder;
   protected boolean useRegionFinder;
   protected boolean isByTable = false;
 
   // slop for regions
   protected float slop;
-  protected RackManager rackManager;
+  protected volatile RackManager rackManager;
   protected MetricsBalancer metricsBalancer = null;
   protected ClusterMetrics clusterStatus = null;
   protected ServerName masterServerName;
@@ -546,6 +546,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return 0.2f;
   }
 
+  private RegionLocationFinder createRegionLocationFinder(Configuration conf) {
+    RegionLocationFinder finder = new RegionLocationFinder();
+    finder.setConf(conf);
+    finder.setServices(services);
+    return finder;
+  }
+
   protected void loadConf(Configuration conf) {
     this.slop =normalizeSlop(conf.getFloat("hbase.regions.slop", getDefaultSlop()));
 
@@ -554,9 +561,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     this.rackManager = new RackManager(getConf());
     useRegionFinder = conf.getBoolean("hbase.master.balancer.uselocality", true);
     if (useRegionFinder) {
-      regionFinder = new RegionLocationFinder();
-      regionFinder.setConf(conf);
+      regionFinder = createRegionLocationFinder(conf);
+    } else {
+      regionFinder = null;
     }
+
     this.isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
     LOG.info("slop={}, systemTablesOnMaster={}", this.slop, this.onlySystemTablesOnMaster);
   }
