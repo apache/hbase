@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -69,6 +70,10 @@ public final class MiniClusterRule extends ExternalResource {
     public Builder setConfiguration(final Configuration conf) {
       this.conf = conf;
       return this;
+    }
+
+    public Builder setConfiguration(Supplier<Configuration> supplier) {
+      return setConfiguration(supplier.get());
     }
 
     public MiniClusterRule build() {

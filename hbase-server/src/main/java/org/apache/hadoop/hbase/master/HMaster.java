@@ -130,6 +130,7 @@ import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
 import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
 import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
 import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
+import org.apache.hadoop.hbase.master.http.api_v1.ResourceConfigFactory;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
@@ -241,7 +242,8 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
-
+import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
@@ -265,7 +267,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private static final Logger LOG = LoggerFactory.getLogger(HMaster.class);
 
   // MASTER is name of the webapp and the attribute name used stuffing this
-  //instance into web context.
+  // instance into a web context !! AND OTHER PLACES !!
   public static final String MASTER = "master";
 
   // Manager and zk listener for master election
@@ -669,10 +671,17 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   protected void configureInfoServer() {
     infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
+    infoServer.addUnprivilegedServlet("api_v1", "/api/v1/*", buildApiV1Servlet());
+
     infoServer.setAttribute(MASTER, this);
     if (LoadBalancer.isTablesOnMaster(conf)) {
       super.configureInfoServer();
     }
+  }
+
+  private ServletHolder buildApiV1Servlet() {
+    final ResourceConfig config = ResourceConfigFactory.createResourceConfig(conf, this);
+    return new ServletHolder(new ServletContainer(config));
   }
 
   @Override
