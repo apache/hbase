@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,18 +19,16 @@ package org.apache.hadoop.hbase.http;
 
 import java.io.IOException;
 import java.net.URI;
-
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -128,6 +126,7 @@ public class InfoServer {
   }
 
   /**
+   * Adds a servlet in the server that any user can access.
    * @see HttpServer#addUnprivilegedServlet(String, String, Class)
    */
   public void addUnprivilegedServlet(String name, String pathSpec,
@@ -136,6 +135,18 @@ public class InfoServer {
   }
 
   /**
+   * Adds a servlet in the server that any user can access.
+   * @see HttpServer#addUnprivilegedServlet(String, ServletHolder)
+   */
+  public void addUnprivilegedServlet(String name, String pathSpec, ServletHolder holder) {
+    if (name != null) {
+      holder.setName(name);
+    }
+    this.httpServer.addUnprivilegedServlet(pathSpec, holder);
+  }
+
+  /**
+   * Adds a servlet in the server that any user can access.
    * @see HttpServer#addPrivilegedServlet(String, String, Class)
    */
   public void addPrivilegedServlet(String name, String pathSpec,

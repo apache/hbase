@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
+import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -839,6 +840,17 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
+   * Adds a servlet in the server that any user can access. This method differs from
+   * {@link #addPrivilegedServlet(String, ServletHolder)} in that any authenticated user
+   * can interact with the servlet added by this method.
+   * @param pathSpec The path spec for the servlet
+   * @param holder The servlet holder
+   */
+  public void addUnprivilegedServlet(String pathSpec, ServletHolder holder) {
+    addServletWithAuth(pathSpec, holder, false);
+  }
+
+  /**
    * Adds a servlet in the server that only administrators can access. This method differs from
    * {@link #addUnprivilegedServlet(String, String, Class)} in that only those authenticated user
    * who are identified as administrators can interact with the servlet added by this method.
@@ -846,6 +858,16 @@ public class HttpServer implements FilterContainer {
   public void addPrivilegedServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
     addServletWithAuth(name, pathSpec, clazz, true);
+  }
+
+  /**
+   * Adds a servlet in the server that only administrators can access. This method differs from
+   * {@link #addUnprivilegedServlet(String, ServletHolder)} in that only those
+   * authenticated user who are identified as administrators can interact with the servlet added by
+   * this method.
+   */
+  public void addPrivilegedServlet(String pathSpec, ServletHolder holder) {
+    addServletWithAuth(pathSpec, holder, true);
   }
 
   /**
@@ -860,6 +882,16 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
+   * Internal method to add a servlet to the HTTP server. Developers should not call this method
+   * directly, but invoke it via {@link #addUnprivilegedServlet(String, ServletHolder)} or
+   * {@link #addPrivilegedServlet(String, ServletHolder)}.
+   */
+  void addServletWithAuth(String pathSpec, ServletHolder holder, boolean requireAuthz) {
+    addInternalServlet(pathSpec, holder, requireAuthz);
+    addFilterPathMapping(pathSpec, webAppContext);
+  }
+
+  /**
    * Add an internal servlet in the server, specifying whether or not to
    * protect with Kerberos authentication.
    * Note: This method is to be used for adding servlets that facilitate
@@ -867,17 +899,33 @@ public class HttpServer implements FilterContainer {
    * servlets added using this method, filters (except internal Kerberos
    * filters) are not enabled.
    *
-   * @param name The name of the servlet (can be passed as null)
-   * @param pathSpec The path spec for the servlet
-   * @param clazz The servlet class
-   * @param requireAuth Require Kerberos authenticate to access servlet
+   * @param name The name of the {@link Servlet} (can be passed as null)
+   * @param pathSpec The path spec for the {@link Servlet}
+   * @param clazz The {@link Servlet} class
+   * @param requireAuthz Require Kerberos authenticate to access servlet
    */
   void addInternalServlet(String name, String pathSpec,
-      Class<? extends HttpServlet> clazz, boolean requireAuthz) {
+    Class<? extends HttpServlet> clazz, boolean requireAuthz) {
     ServletHolder holder = new ServletHolder(clazz);
     if (name != null) {
       holder.setName(name);
     }
+    addInternalServlet(pathSpec, holder, requireAuthz);
+  }
+
+  /**
+   * Add an internal servlet in the server, specifying whether or not to
+   * protect with Kerberos authentication.
+   * Note: This method is to be used for adding servlets that facilitate
+   * internal communication and not for user facing functionality. For
+   * servlets added using this method, filters (except internal Kerberos
+   * filters) are not enabled.
+   *
+   * @param pathSpec The path spec for the {@link Servlet}
+   * @param holder The object providing the {@link Servlet} instance
+   * @param requireAuthz Require Kerberos authenticate to access servlet
+   */
+  void addInternalServlet(String pathSpec, ServletHolder holder, boolean requireAuthz) {
     if (authenticationEnabled && requireAuthz) {
       FilterHolder filter = new FilterHolder(AdminAuthorizedFilter.class);
       filter.setName(AdminAuthorizedFilter.class.getSimpleName());
