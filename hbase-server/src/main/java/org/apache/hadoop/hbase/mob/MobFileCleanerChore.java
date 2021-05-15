@@ -65,11 +65,6 @@ public class MobFileCleanerChore extends ScheduledChore {
   private final HMaster master;
   private ExpiredMobFileCleaner cleaner;
 
-  static {
-    Configuration.addDeprecation(MobConstants.DEPRECATED_MOB_CLEANER_PERIOD,
-      MobConstants.MOB_CLEANER_PERIOD);
-  }
-
   public MobFileCleanerChore(HMaster master) {
     super(master.getServerName() + "-MobFileCleanerChore", master,
         master.getConfiguration().getInt(MobConstants.MOB_CLEANER_PERIOD,

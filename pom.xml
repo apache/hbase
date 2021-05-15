@@ -320,6 +320,12 @@
         <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>haxiaolin</id>
+      <name>Xiaolin Ha</name>
+      <email>haxiaolin@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>huaxiangsun</id>
       <name>Huaxiang Sun</name>
       <email>huaxiangsun@apache.org</email>
