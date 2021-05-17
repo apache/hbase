@@ -247,4 +247,23 @@
     <Bug pattern="SC_START_IN_CTOR"/>
   </Match>
 
+  <Match>
+    <!--
+      False positives, NettyRpcServer#start & SimpleRpcServer#start are already synchronized and
+      there is check to ensure single initialization of authTokenSecretMgr field.
+      Ignore the warning, see HBASE-25875.
+    !-->
+    <Or>
+      <And>
+        <Class name="org.apache.hadoop.hbase.ipc.NettyRpcServer"/>
+        <Method name="start"/>
+      </And>
+      <And>
+        <Class name="org.apache.hadoop.hbase.ipc.SimpleRpcServer"/>
+        <Method name="start"/>
+      </And>
+    </Or>
+    <Bug pattern="ML_SYNC_ON_UPDATED_FIELD"/>
+  </Match>
+
 </FindBugsFilter>
