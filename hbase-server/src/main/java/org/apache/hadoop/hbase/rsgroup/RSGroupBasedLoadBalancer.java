@@ -31,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -92,6 +93,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   private final IdReadWriteLock<String> groupLocks = new IdReadWriteLockWithObjectPool<>();
   private ExecutorService balancerPool;
   private boolean stopped = false;
+  private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   /**
    * Set this key to {@code true} to allow region fallback.
@@ -113,9 +115,14 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   // must be called after calling initialize
   @Override
-  public synchronized void updateClusterMetrics(ClusterMetrics sm) {
+  public void updateClusterMetrics(ClusterMetrics sm) {
     assert internalBalancer != null;
-    internalBalancer.updateClusterMetrics(sm);
+    lock.writeLock().lock();
+    try {
+      internalBalancer.updateClusterMetrics(sm);
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   public void setMasterServices(MasterServices masterServices) {
@@ -126,7 +133,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
    * Balance by RSGroup.
    */
   @Override
-  public synchronized List<RegionPlan> balanceCluster(
+  public List<RegionPlan> balanceCluster(
       Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException {
     if (!isOnline()) {
       throw new ConstraintException(
@@ -135,7 +142,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
     // Calculate correct assignments and a list of RegionPlan for mis-placed regions
     Pair<Map<TableName, Map<ServerName, List<RegionInfo>>>, List<RegionPlan>>
-      correctedStateAndRegionPlans = correctAssignments(loadOfAllTable);
+        correctedStateAndRegionPlans = correctAssignments(loadOfAllTable);
     Map<TableName, Map<ServerName, List<RegionInfo>>> correctedLoadOfAllTable =
         correctedStateAndRegionPlans.getFirst();
     List<RegionPlan> regionPlans = correctedStateAndRegionPlans.getSecond();
@@ -150,8 +157,8 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         for (Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> entry : correctedLoadOfAllTable
             .entrySet()) {
           TableName tableName = entry.getKey();
-          RSGroupInfo targetRSGInfo = RSGroupUtil
-              .getRSGroupInfo(masterServices, rsGroupInfoManager, tableName).orElse(defaultInfo);
+          RSGroupInfo targetRSGInfo = RSGroupUtil.getRSGroupInfo(masterServices,
+              rsGroupInfoManager, tableName).orElse(defaultInfo);
           if (targetRSGInfo.getName().equals(rsgroup.getName())) {
             loadOfTablesInGroup.put(tableName, entry.getValue());
           }
@@ -407,14 +414,19 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public synchronized void onConfigurationChange(Configuration conf) {
-    boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
-    if (fallbackEnabled != newFallbackEnabled) {
-      LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY,
-        fallbackEnabled, newFallbackEnabled);
-      fallbackEnabled = newFallbackEnabled;
+  public void onConfigurationChange(Configuration conf) {
+    lock.writeLock().lock();
+    try {
+      boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
+      if (fallbackEnabled != newFallbackEnabled) {
+        LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY,
+          fallbackEnabled, newFallbackEnabled);
+        fallbackEnabled = newFallbackEnabled;
+      }
+      internalBalancer.onConfigurationChange(conf);
+    } finally {
+      lock.writeLock().unlock();
     }
-    internalBalancer.onConfigurationChange(conf);
   }
 
   @Override
@@ -467,51 +479,56 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   }
 
   public List<RegionPlan> balanceRSGroup(String groupName, boolean force) throws IOException {
-    List<RegionPlan> balancedPlans = new ArrayList<>();
-    if (masterServices == null || masterServices.skipRegionManagementAction("balancer")) {
-      LOG.warn("Master service is null or master has not initialized, skip balance RSGroup {}",
-        groupName);
-      return balancedPlans;
-    }
-    // If balance not true, don't run balancer.
-    if (!masterServices.isBalancerOn()) {
-      return balancedPlans;
-    }
-    RSGroupInfo groupInfo = rsGroupInfoManager.getRSGroup(groupName);
-    if (groupInfo == null) {
-      throw new ConstraintException("RSGroup " + groupName + " does not exist");
-    }
-    ReadWriteLock groupBalanceLock = groupLocks.getLock(groupInfo.getName());
-    if (groupBalanceLock.writeLock().tryLock()) {
-      try {
-        if (masterServices.getServerManager().areDeadServersInProgress()) {
-          LOG.debug("Not running balancer for RSGroup {}, "
-              + "because processing dead regionserver(s): {}", groupName,
-            masterServices.getServerManager().getDeadServers());
-          return balancedPlans;
-        }
-        Map<String, RegionState> groupRIT = rsGroupGetRegionsInTransition(groupName);
-        if (groupRIT.size() > 0 && !force) {
-          LOG.debug("Not running balancer for RSGroup {}, because {} region(s) in transition: {}",
-            groupName, groupRIT.size(), StringUtils.abbreviate(
-              masterServices.getAssignmentManager().getRegionStates().getRegionsInTransition()
-                .toString(), 256));
-          return balancedPlans;
-        }
-        // We balance per group instead of per table
-        Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
-          getRSGroupAssignmentsByTable(groupName);
-        List<RegionPlan> plans = balanceCluster(assignmentsByTable);
-        if (!plans.isEmpty()) {
-          LOG.info("Balance RSGroup {}, starting {} balance plans", groupName, plans.size());
-          balancedPlans = masterServices.executeRegionPlansWithThrottling(plans);
-          LOG.info("Balance RSGroup {} completed", groupName);
-        }
-      } finally {
-        groupBalanceLock.writeLock().unlock();
+    lock.readLock().lock();
+    try {
+      List<RegionPlan> balancedPlans = new ArrayList<>();
+      if (masterServices == null || masterServices.skipRegionManagementAction("balancer")) {
+        LOG.warn("Master service is null or master has not initialized, skip balance RSGroup {}",
+            groupName);
+        return balancedPlans;
       }
+      // If balance not true, don't run balancer.
+      if (!masterServices.isBalancerOn()) {
+        return balancedPlans;
+      }
+      RSGroupInfo groupInfo = rsGroupInfoManager.getRSGroup(groupName);
+      if (groupInfo == null) {
+        throw new ConstraintException("RSGroup " + groupName + " does not exist");
+      }
+      ReadWriteLock groupBalanceLock = groupLocks.getLock(groupInfo.getName());
+      if (groupBalanceLock.writeLock().tryLock()) {
+        try {
+          if (masterServices.getServerManager().areDeadServersInProgress()) {
+            LOG.debug("Not running balancer for RSGroup {}, " +
+                "because processing dead regionserver(s): {}", groupName,
+                masterServices.getServerManager().getDeadServers());
+            return balancedPlans;
+          }
+          Map<String, RegionState> groupRIT = rsGroupGetRegionsInTransition(groupName);
+          if (groupRIT.size() > 0 && !force) {
+            LOG.debug("Not running balancer for RSGroup {}, because {} region(s) in transition: {}",
+                groupName, groupRIT.size(), StringUtils.abbreviate(
+                    masterServices.getAssignmentManager().getRegionStates()
+                        .getRegionsInTransition().toString(), 256));
+            return balancedPlans;
+          }
+          // We balance per group instead of per table
+          Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
+              getRSGroupAssignmentsByTable(groupName);
+          List<RegionPlan> plans = balanceCluster(assignmentsByTable);
+          if (!plans.isEmpty()) {
+            LOG.info("Balance RSGroup {}, starting {} balance plans", groupName, plans.size());
+            balancedPlans = masterServices.executeRegionPlansWithThrottling(plans);
+            LOG.info("Balance RSGroup {} completed", groupName);
+          }
+        } finally {
+          groupBalanceLock.writeLock().unlock();
+        }
+      }
+      return balancedPlans;
+    } finally {
+      lock.readLock().unlock();
     }
-    return balancedPlans;
   }
 
   private Map<String, RegionState> rsGroupGetRegionsInTransition(String groupName)
