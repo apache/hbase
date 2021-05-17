@@ -108,6 +108,9 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
 import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
+import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
+import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
+import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
@@ -681,7 +684,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         LoadBalancer.class);
     }
     this.balancer = new RSGroupBasedLoadBalancer();
-    this.balancer.setConf(conf);
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
 
@@ -926,8 +928,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // initialize load balancer
     this.balancer.setMasterServices(this);
-    this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
     this.balancer.initialize();
+    this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // start up all service threads.
     status.setStatus("Initializing master service threads");
@@ -1009,7 +1011,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     // set cluster status again after user regions are assigned
-    this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
+    this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // Start balancer and meta catalog janitor after meta and regions have been assigned.
     status.setStatus("Starting balancer and catalog janitor");
@@ -1260,7 +1262,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return notifier;
   }
 
-  boolean isCatalogJanitorEnabled() {
+  public boolean isCatalogJanitorEnabled() {
     return catalogJanitorChore != null ? catalogJanitorChore.getEnabled() : false;
   }
 
@@ -1695,7 +1697,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       List<RegionPlan> sucPlans = Collections.emptyList();
       try {
         //Give the balancer the current cluster state.
-        this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
+        this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
         sucPlans = balancer.balance(force).get();
       } catch (InterruptedException | ExecutionException e) {
         LOG.error("Balance groups error", e);

@@ -64,7 +64,8 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     conf.set("hbase.regions.slop", "0");
     loadBalancer = new SimpleLoadBalancer();
-    loadBalancer.setConf(conf);
+    loadBalancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
+    loadBalancer.initialize();
   }
 
   int[] mockUniformCluster = new int[] { 5, 5, 5, 5, 5, 0 };

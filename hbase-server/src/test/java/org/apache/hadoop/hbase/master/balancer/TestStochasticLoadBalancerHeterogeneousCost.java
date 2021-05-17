@@ -75,7 +75,8 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
       RULES_FILE);
     loadBalancer = new StochasticLoadBalancer();
-    loadBalancer.setConf(BalancerTestBase.conf);
+    loadBalancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
+    loadBalancer.initialize();
     loadBalancer.getCandidateGenerators().add(new FairRandomCandidateGenerator());
   }
 

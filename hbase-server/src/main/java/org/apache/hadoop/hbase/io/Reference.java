@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -174,10 +175,7 @@ public class Reference {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       in.mark(pblen);
       byte [] pbuf = new byte[pblen];
-      int read = in.read(pbuf);
-      if (read != pblen) {
-        throw new IOException("read=" + read + ", wanted=" + pblen);
-      }
+      IOUtils.readFully(in, pbuf,0, pblen);
       // WATCHOUT! Return in middle of function!!!
       if (ProtobufUtil.isPBMagicPrefix(pbuf)) return convert(FSProtos.Reference.parseFrom(in));
       // Else presume Writables.  Need to reset the stream since it didn't start w/ pb.

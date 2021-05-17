@@ -320,6 +320,12 @@
         <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>haxiaolin</id>
+      <name>Xiaolin Ha</name>
+      <email>haxiaolin@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>huaxiangsun</id>
       <name>Huaxiang Sun</name>
       <email>huaxiangsun@apache.org</email>
@@ -956,6 +962,8 @@
               <exclude>**/shaded/com/google/protobuf/**</exclude>
               <exclude>**/src/main/patches/**</exclude>
               <exclude>**/vote.tmpl</exclude>
+              <!-- gzipped list of S3N URIs for hbase-it -->
+              <exclude>**/CC-MAIN-2021-10-warc.paths.gz</exclude>
             </excludes>
           </configuration>
         </plugin>

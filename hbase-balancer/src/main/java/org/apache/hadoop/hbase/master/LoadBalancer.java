@@ -22,7 +22,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -44,9 +43,26 @@ import org.apache.yetus.audience.InterfaceAudience;
  * cluster.
  * <p/>
  * This class produces plans for the {@code AssignmentManager} to execute.
+ * <p/>
+ * About locking:
+ * <ul>
+ * <li>We will first call {@link #setClusterInfoProvider(ClusterInfoProvider)} and then
+ * {@link #initialize()} to initialize the balancer, and before calling {@link #initialize()}, we
+ * will never call any methods of this balancer. So these two methods do not need to be
+ * synchronized.</li>
+ * <li>The {@link #balanceCluster(Map)} method will use the {@link ClusterMetrics} which is set by
+ * {@link #updateClusterMetrics(ClusterMetrics)}, and also lots of configurations, which could be
+ * changed by {@link #onConfigurationChange(Configuration)}, so the easier way is to make these
+ * three methods synchronized. And since there will be only one balancing thread, this will not
+ * impact performance too much.</li>
+ * <li>The {@link #roundRobinAssignment(List, List)}, {@link #retainAssignment(Map, List)} and
+ * {@link #randomAssignment(RegionInfo, List)} could be called from multiple threads concurrently,
+ * so these three methods should not be synchronized, the implementation classes need to make sure
+ * that they are thread safe.</li>
+ * </ul>
  */
 @InterfaceAudience.Private
-public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObserver {
+public interface LoadBalancer extends Stoppable, ConfigurationObserver {
 
   // Used to signal to the caller that the region(s) cannot be assigned
   // We deliberately use 'localhost' so the operation will fail fast
@@ -61,10 +77,11 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    */
   @Deprecated
   String HBASE_RSGROUP_LOADBALANCER_CLASS = "hbase.rsgroup.grouploadbalancer.class";
+
   /**
    * Set the current cluster status. This allows a LoadBalancer to map host name to a server
    */
-  void setClusterMetrics(ClusterMetrics st);
+  void updateClusterMetrics(ClusterMetrics metrics);
 
 
   /**
@@ -73,25 +90,13 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   void setClusterInfoProvider(ClusterInfoProvider provider);
 
   /**
-   * Perform the major balance operation for cluster, will invoke {@link #balanceTable} to do actual
-   * balance. Normally not need override this method, except {@link SimpleLoadBalancer} and
-   * {@code RSGroupBasedLoadBalancer}
+   * Perform the major balance operation for cluster.
    * @param loadOfAllTable region load of servers for all table
    * @return a list of regions to be moved, including source and destination, or null if cluster is
    *         already balanced
    */
-  List<RegionPlan> balanceCluster(Map<TableName,
-      Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException;
-
-  /**
-   * Perform the major balance operation for table, all class implement of {@link LoadBalancer}
-   * should override this method
-   * @param tableName the table to be balanced
-   * @param loadOfOneTable region load of servers for the specific one table
-   * @return List of plans
-   */
-  List<RegionPlan> balanceTable(TableName tableName,
-      Map<ServerName, List<RegionInfo>> loadOfOneTable);
+  List<RegionPlan> balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable)
+    throws IOException;
 
   /**
    * Perform a Round Robin assignment of regions.

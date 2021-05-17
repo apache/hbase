@@ -83,7 +83,7 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
   private List<ServerName> servers;
   private List<RegionInfo> regions;
   private Map<RegionInfo, ServerName> regionServerMap;
-  private Map<ServerName, List<RegionInfo>> serverRegionMap;
+  private Map<TableName, Map<ServerName, List<RegionInfo>>> tableServerRegionMap;
 
   // Non-default configurations.
   private void setupConf() {
@@ -92,6 +92,7 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
   }
 
   private void generateRegionsAndServers() {
+    TableName tableName = TableName.valueOf("LoadBalancerPerfTable");
     // regions
     regions = new ArrayList<>(numRegions);
     regionServerMap = new HashMap<>(numRegions);
@@ -101,7 +102,6 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
 
       Bytes.putInt(start, 0, i);
       Bytes.putInt(end, 0, i + 1);
-      TableName tableName = TableName.valueOf("LoadBalancerPerfTable");
       RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
         .setStartKey(start)
         .setEndKey(end)
@@ -114,12 +114,13 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
 
     // servers
     servers = new ArrayList<>(numServers);
-    serverRegionMap = new HashMap<>(numServers);
+    Map<ServerName, List<RegionInfo>> serverRegionMap = new HashMap<>(numServers);
     for (int i = 0; i < numServers; ++i) {
       ServerName sn = ServerName.valueOf("srv" + i, HConstants.DEFAULT_REGIONSERVER_PORT, i);
       servers.add(sn);
       serverRegionMap.put(sn, i == 0 ? regions : Collections.emptyList());
     }
+    tableServerRegionMap = Collections.singletonMap(tableName, serverRegionMap);
   }
 
   @Override
@@ -174,7 +175,7 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
     LOG.info("Calling " + methodName);
     watch.reset().start();
 
-    loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverRegionMap);
+    loadBalancer.balanceCluster(tableServerRegionMap);
     System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     return EXIT_SUCCESS;

@@ -50,6 +50,11 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
   }
 
   @Override
+  public Configuration getConfiguration() {
+    return services.getConfiguration();
+  }
+
+  @Override
   public List<RegionInfo> getAssignedRegions() {
     AssignmentManager am = services.getAssignmentManager();
     return am != null ? am.getAssignedRegions() : Collections.emptyList();
@@ -100,4 +105,5 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
   public int getNumberOfTables() throws IOException {
     return services.getTableDescriptors().getAll().size();
   }
+
 }

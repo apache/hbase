@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.master.balancer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,11 +32,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -91,9 +91,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     loadBalancer = new MockBalancer();
-    loadBalancer.setConf(conf);
-    ClusterInfoProvider provider = mock(ClusterInfoProvider.class);
-    loadBalancer.setClusterInfoProvider(provider);
+    loadBalancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
 
     // Set up the rack topologies (5 machines per rack)
     rackManager = mock(RackManager.class);
@@ -113,13 +111,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
   public static class MockBalancer extends BaseLoadBalancer {
     @Override
-    public List<RegionPlan> balanceCluster(Map<TableName, Map<ServerName,
-      List<RegionInfo>>> loadOfAllTable) {
-      return null;
-    }
-
-    @Override
-    public List<RegionPlan> balanceTable(TableName tableName,
+    protected List<RegionPlan> balanceTable(TableName tableName,
         Map<ServerName, List<RegionInfo>> loadOfOneTable) {
       return null;
     }
@@ -223,12 +215,14 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     LoadBalancer balancer = new MockBalancer();
     Configuration conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
-    balancer.setConf(conf);
-    ClusterInfoProvider provider = mock(ClusterInfoProvider.class);
-    when(
-      provider.getOnlineServersListWithPredicator(anyList(), any()))
-      .thenReturn(idleServers);
-    balancer.setClusterInfoProvider(provider);
+    balancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf) {
+
+      @Override
+      public List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
+        Predicate<ServerMetrics> filter) {
+        return idleServers;
+      }
+    });
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
         .setStartKey(Bytes.toBytes("key1"))
         .setEndKey(Bytes.toBytes("key2"))

@@ -17,18 +17,23 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.master.balancer.BalancerClusterState.LocalityType;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-class RandomCandidateGenerator extends CandidateGenerator {
+class RackLocalityCostFunction extends LocalityBasedCostFunction {
+
+  private static final String RACK_LOCALITY_COST_KEY =
+    "hbase.master.balancer.stochastic.rackLocalityCost";
+  private static final float DEFAULT_RACK_LOCALITY_COST = 15;
+
+  public RackLocalityCostFunction(Configuration conf) {
+    super(conf, LocalityType.RACK, RACK_LOCALITY_COST_KEY, DEFAULT_RACK_LOCALITY_COST);
+  }
 
   @Override
-  BalanceAction generate(BalancerClusterState cluster) {
-    int thisServer = pickRandomServer(cluster);
-
-    // Pick the other server
-    int otherServer = pickOtherRandomServer(cluster, thisServer);
-
-    return pickRandomRegions(cluster, thisServer, otherServer);
+  int regionIndexToEntityIndex(int region) {
+    return cluster.getRackForRegion(region);
   }
 }
