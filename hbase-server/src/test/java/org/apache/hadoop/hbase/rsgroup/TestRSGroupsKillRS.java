@@ -74,7 +74,8 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     // avoid all the handlers blocked when meta is offline, and regionServerReport can not be
     // processed which causes dead lock.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
-    TEST_UTIL.getConfiguration().setFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5f);
+    TEST_UTIL.getConfiguration()
+      .setFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5f);
     setUpTestBeforeClass();
   }
 
