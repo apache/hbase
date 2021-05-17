@@ -1,0 +1,119 @@
+<%doc>
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+</%doc>
+
+    <script type="text/javascript" src="/static/js/vega@5.19.1.min.js"></script>
+    <script type="text/javascript" src="/static/js/vega-lite@5.0.0.min.js"></script>
+    <script type="text/javascript" src="/static/js/vega-embed@6.15.1.min.js"></script>
+
+    <div id="vis" style="width:80%;"></div>
+    <script type="text/javascript">
+      vega.expressionFunction('values', function(obj) { return Object.values(obj); });
+      var vlSpec = {
+          $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
+          description: 'Total `storefileSize` per Region Server',
+          data: {
+            name: 'region_info',
+            url: 'http://localhost:16010/api/v1/admin/cluster_metrics/live_servers',
+            format: { type: 'json', property: 'data' }
+          },
+          transform: [
+            { calculate: "split(datum.server_name.servername, ',', 1)[0]", as: 'server_name' },
+            { calculate: 'values(datum.region_status)', as: 'region_status' },
+            { flatten: ['region_status'] },
+            { calculate: "split(datum.region_status.name, ',', 1)[0]", as: 'table_name' },
+            { calculate: "split(datum.region_status.name, ',', 3)[2]", as: 'region_id' },
+          ],
+          vconcat: [{
+              title: {
+                text: 'Total `storefileSize` per Region Server',
+                align: 'center'
+              },
+              height: 250,
+              width: 'container',
+              mark: { type: 'bar', tooltip: true },
+              params: [{
+                name: 'legend_selection',
+                select: { type: 'point', fields: ['table_name'] },
+                bind: 'legend'
+              }],
+              encoding: {
+                x: {
+                  title:'Region Server',
+                  field: 'server_name',
+                  type: 'nominal',
+                  axis: {
+                    labelAngle: 90,
+                    labelOverlap: 'greedy'
+                  },
+                  scale: { domain: { param: 'brush' } },
+                  sort: '-y'
+                },
+                y: {
+                  title: 'Total StoreFileSize',
+                  field: 'region_status.store_file_size',
+                  type: 'quantitative',
+                  aggregate: 'sum',
+                  format: '.4s',
+                  axis: { format: '.2s' },
+                  scale: { domainMin: 0 }
+                },
+                color: {
+                  field: 'table_name',
+                  type: 'nominal',
+                  title: 'Table'
+                },
+                opacity: {
+                  condition: { param: 'legend_selection', value: 0.9 },
+                  value: 0.2
+                }
+              }
+            }, {
+              mark: 'bar',
+              height: 50,
+              width: 'container',
+              params: [{
+                name: 'brush',
+                select: { type: 'interval', encodings: ['x'] }
+              }],
+              encoding: {
+                x: {
+                  field: 'server_name',
+                  type: 'nominal',
+                  axis: null,
+                  sort: '-y'
+                },
+                y: {
+                  field: 'region_status.store_file_size',
+                  aggregate: 'sum',
+                  axis: null
+                },
+                color: {
+                  field: 'table_name',
+                  title: 'Table'
+                }
+              }
+            }]
+      };
+      vegaEmbed('#vis', vlSpec)
+        .then(function(result) {
+          //result.view.logger(vega.Debug);
+          //console.log(result.view.data('region_info'));
+        })
+        .catch(console.Error);
+    </script>
