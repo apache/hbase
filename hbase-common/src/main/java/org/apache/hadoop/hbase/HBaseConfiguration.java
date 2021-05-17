@@ -108,9 +108,7 @@ public class HBaseConfiguration extends Configuration {
         "hbase.server.allocator.buffer.size"),
       new DeprecationDelta("hlog.bulk.output", "wal.bulk.output"),
       new DeprecationDelta("hlog.input.tables", "wal.input.tables"),
-      new DeprecationDelta("hlog.input.tablesmap", "wal.input.tablesmap"),
-      new DeprecationDelta("hbase.master.mob.ttl.cleaner.period",
-        "hbase.master.mob.cleaner.period")
+      new DeprecationDelta("hlog.input.tablesmap", "wal.input.tablesmap")
     });
   }
 
