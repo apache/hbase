@@ -47,8 +47,8 @@ abstract class LocalityBasedCostFunction extends CostFunction {
   abstract int regionIndexToEntityIndex(int region);
 
   @Override
-  void init(BalancerClusterState cluster) {
-    super.init(cluster);
+  void prepare(BalancerClusterState cluster) {
+    super.prepare(cluster);
     locality = 0.0;
     bestLocality = 0.0;
 

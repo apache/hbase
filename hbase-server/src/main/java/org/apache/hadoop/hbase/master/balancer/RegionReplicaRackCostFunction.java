@@ -25,21 +25,19 @@ import org.apache.yetus.audience.InterfaceAudience;
  * hosting replicas of the same region in the same rack. We do not prevent the case though.
  */
 @InterfaceAudience.Private
-class RegionReplicaRackCostFunction extends RegionReplicaHostCostFunction {
+class RegionReplicaRackCostFunction extends RegionReplicaGroupingCostFunction {
 
   private static final String REGION_REPLICA_RACK_COST_KEY =
     "hbase.master.balancer.stochastic.regionReplicaRackCostKey";
   private static final float DEFAULT_REGION_REPLICA_RACK_COST_KEY = 10000;
 
   public RegionReplicaRackCostFunction(Configuration conf) {
-    super(conf);
     this.setMultiplier(
       conf.getFloat(REGION_REPLICA_RACK_COST_KEY, DEFAULT_REGION_REPLICA_RACK_COST_KEY));
   }
 
   @Override
-  void init(BalancerClusterState cluster) {
-    this.cluster = cluster;
+  protected void loadCosts() {
     if (cluster.numRacks <= 1) {
       maxCost = 0;
       return; // disabled for 1 rack

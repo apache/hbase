@@ -198,7 +198,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
         assertNotNull(cf);
         BalancerClusterState cluster =
             new BalancerClusterState(serverMap, null, null, null);
-        cf.init(cluster);
+        cf.prepare(cluster);
 
         // checking that we all hosts have a number of regions below their limit
         for (final ServerAndLoad serverAndLoad : balancedCluster) {
