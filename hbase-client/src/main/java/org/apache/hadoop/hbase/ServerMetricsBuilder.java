@@ -320,7 +320,7 @@ public final class ServerMetricsBuilder {
       Map<String,List<ReplicationLoadSource>> sourcesMap = new HashMap<>();
       for(ReplicationLoadSource loadSource : sources){
         sourcesMap.computeIfAbsent(loadSource.getPeerID(),
-          peerId -> new ArrayList()).add(loadSource);
+          peerId -> new ArrayList<>()).add(loadSource);
       }
       return sourcesMap;
     }
