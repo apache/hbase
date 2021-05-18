@@ -1369,13 +1369,17 @@ public class WALSplitter {
      */
     @Override
     public List<Path> finishWritingAndClose() throws IOException {
-      boolean isSuccessful = false;
-      List<Path> result = null;
+      boolean isSuccessful;
+      List<Path> result;
+      List<IOException> thrown;
       try {
         isSuccessful = finishWriting(false);
       } finally {
-        result = close();
-        List<IOException> thrown = closeLogWriters(null);
+        try {
+          thrown = closeLogWriters(null);
+        } finally {
+          result = close();
+        }
         if (thrown != null && !thrown.isEmpty()) {
           throw MultipleIOException.createIOException(thrown);
         }
@@ -1565,49 +1569,23 @@ public class WALSplitter {
 
 
     private List<IOException> closeLogWriters(List<IOException> thrown) throws IOException {
-      if (writersClosed) {
-        return thrown;
-      }
-
       if (thrown == null) {
         thrown = Lists.newArrayList();
       }
-      try {
-        for (WriterThread t : writerThreads) {
-          while (t.isAlive()) {
-            t.shouldStop = true;
-            t.interrupt();
-            try {
-              t.join(10);
-            } catch (InterruptedException e) {
-              IOException iie = new InterruptedIOException();
-              iie.initCause(e);
-              throw iie;
-            }
-          }
-        }
-      } finally {
-        WriterAndPath wap = null;
-        for (SinkWriter tmpWAP : writers.values()) {
-          try {
-            wap = (WriterAndPath) tmpWAP;
-            wap.w.close();
-          } catch (IOException ioe) {
-            final String errorMsg = "Couldn't close log at " + wap.p;
-            LOG.error(errorMsg, ioe);
-            updateStatusWithMsg(errorMsg);
-            thrown.add(ioe);
-            continue;
-          }
-          final String msg =
-            "Closed log " + wap.p + " (wrote " + wap.editsWritten + " edits in " + (wap.nanosSpent
-              / 1000 / 1000) + "ms)";
-          LOG.info(msg);
-          updateStatusWithMsg(msg);
-        }
-        writersClosed = true;
-      }
 
+      for (WriterThread t : writerThreads) {
+        while (t.isAlive()) {
+          t.shouldStop = true;
+          t.interrupt();
+          try {
+            t.join(10);
+          } catch (InterruptedException e) {
+            IOException iie = new InterruptedIOException();
+            iie.initCause(e);
+            throw iie;
+          }
+        }
+      }
       return thrown;
     }
 
