@@ -493,15 +493,6 @@ public class HRegionServer extends Thread implements
     "hbase.unsafe.regionserver.hostname.disable.master.reversedns";
 
   /**
-   * HBASE-24667: This config hbase.regionserver.hostname.disable.master.reversedns will be replaced by
-   * hbase.unsafe.regionserver.hostname.disable.master.reversedns. Keep the old config keys here for backward
-   * compatibility.
-   */
-  static {
-    Configuration.addDeprecation(RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY);
-  }
-
-  /**
    * This servers startcode.
    */
   protected final long startcode;

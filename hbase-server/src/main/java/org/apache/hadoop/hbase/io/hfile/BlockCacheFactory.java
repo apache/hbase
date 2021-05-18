@@ -92,24 +92,10 @@ public final class BlockCacheFactory {
   @Deprecated
   static final String DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
 
-  /**
-   * The config point hbase.offheapcache.minblocksize is completely wrong, which is replaced by
-   * {@link BlockCacheFactory#BLOCKCACHE_BLOCKSIZE_KEY}. Keep the old config key here for backward
-   * compatibility.
-   */
-  static {
-    Configuration.addDeprecation(DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY, BLOCKCACHE_BLOCKSIZE_KEY);
-  }
-
   private BlockCacheFactory() {
   }
 
   public static BlockCache createBlockCache(Configuration conf) {
-    if (conf.get(DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY) != null) {
-      LOG.warn("The config key {} is deprecated now, instead please use {}. In future release "
-          + "we will remove the deprecated config.", DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY,
-        BLOCKCACHE_BLOCKSIZE_KEY);
-    }
     FirstLevelBlockCache l1Cache = createFirstLevelCache(conf);
     if (l1Cache == null) {
       return null;

@@ -36,6 +36,10 @@ import org.slf4j.LoggerFactory;
 public class HBaseConfiguration extends Configuration {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseConfiguration.class);
 
+  static {
+    addDeprecatedKeys();
+  }
+
   /**
    * Instantiating HBaseConfiguration() is deprecated. Please use
    * HBaseConfiguration#create() to construct a plain Configuration
@@ -75,6 +79,37 @@ public class HBaseConfiguration extends Configuration {
         "hbase-default.xml file seems to be for an older version of HBase (" +
         defaultsVersion + "), this version is " + thisVersion);
     }
+  }
+
+  /**
+   * The hbase.ipc.server.reservoir.initial.max and hbase.ipc.server.reservoir.initial.buffer.size
+   * were introduced in HBase2.0.0, while in HBase3.0.0 the two config keys will be replaced by
+   * hbase.server.allocator.max.buffer.count and hbase.server.allocator.buffer.size.
+   * Also the hbase.ipc.server.reservoir.enabled will be replaced by
+   * hbase.server.allocator.pool.enabled. Keep the three old config keys here for HBase2.x
+   * compatibility.
+   * <br>
+   * HBASE-24667: This config hbase.regionserver.hostname.disable.master.reversedns will be
+   * replaced by hbase.unsafe.regionserver.hostname.disable.master.reversedns. Keep the old config
+   * keys here for backward compatibility.
+   */
+  private static void addDeprecatedKeys() {
+    Configuration.addDeprecations(new DeprecationDelta[]{
+      new DeprecationDelta("hbase.regionserver.hostname", "hbase.unsafe.regionserver.hostname"),
+      new DeprecationDelta("hbase.regionserver.hostname.disable.master.reversedns",
+        "hbase.unsafe.regionserver.hostname.disable.master.reversedns"),
+      new DeprecationDelta("hbase.offheapcache.minblocksize",
+        "hbase.blockcache.minblocksize"),
+      new DeprecationDelta("hbase.ipc.server.reservoir.enabled",
+        "hbase.server.allocator.pool.enabled"),
+      new DeprecationDelta("hbase.ipc.server.reservoir.initial.max",
+        "hbase.server.allocator.max.buffer.count"),
+      new DeprecationDelta("hbase.ipc.server.reservoir.initial.buffer.size",
+        "hbase.server.allocator.buffer.size"),
+      new DeprecationDelta("hlog.bulk.output", "wal.bulk.output"),
+      new DeprecationDelta("hlog.input.tables", "wal.input.tables"),
+      new DeprecationDelta("hlog.input.tablesmap", "wal.input.tablesmap")
+    });
   }
 
   public static Configuration addHbaseResources(Configuration conf) {
