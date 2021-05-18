@@ -89,10 +89,9 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   private MasterServices masterServices;
   private FavoredNodesManager favoredNodesManager;
   private volatile RSGroupInfoManager rsGroupInfoManager;
-  private LoadBalancer internalBalancer;
+  private volatile LoadBalancer internalBalancer;
   private final IdReadWriteLock<String> groupLocks = new IdReadWriteLockWithObjectPool<>();
   private ExecutorService balancerPool;
-  private boolean stopped = false;
   private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   /**
@@ -105,7 +104,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   public static final String FALLBACK_GROUP_ENABLE_KEY = "hbase.rsgroup.fallback.enable";
   public static final String CONF_RSGROUP_BALANCE_THREADS = "hbase.rsgroup.balance.threads";
 
-  private boolean fallbackEnabled = false;
+  private volatile boolean fallbackEnabled = false;
 
   /**
    * Used by reflection in {@link org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory}.
