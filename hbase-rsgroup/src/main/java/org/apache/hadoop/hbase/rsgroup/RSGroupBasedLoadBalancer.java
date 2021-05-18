@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -76,7 +75,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   private ClusterMetrics clusterStatus;
   private MasterServices masterServices;
   private volatile RSGroupInfoManager rsGroupInfoManager;
-  private LoadBalancer internalBalancer;
+  private volatile LoadBalancer internalBalancer;
 
   /**
    * Used by reflection in {@link org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory}.
