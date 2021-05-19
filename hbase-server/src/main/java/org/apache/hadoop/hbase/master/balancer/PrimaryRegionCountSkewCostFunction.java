@@ -31,14 +31,22 @@ class PrimaryRegionCountSkewCostFunction extends CostFunction {
     "hbase.master.balancer.stochastic.primaryRegionCountCost";
   private static final float DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST = 500;
 
-  private final float primaryRegionCountCost;
-  private double[] stats;
+  private final DoubleArrayCost cost = new DoubleArrayCost();
 
   PrimaryRegionCountSkewCostFunction(Configuration conf) {
     // Load multiplier should be the greatest as primary regions serve majority of reads/writes.
-    primaryRegionCountCost =
-      conf.getFloat(PRIMARY_REGION_COUNT_SKEW_COST_KEY, DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST);
-    this.setMultiplier(primaryRegionCountCost);
+    this.setMultiplier(
+      conf.getFloat(PRIMARY_REGION_COUNT_SKEW_COST_KEY, DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST));
+  }
+
+  private double computeCostForRegionServer(int regionServerIndex) {
+    int cost = 0;
+    for (int regionIdx : cluster.regionsPerServer[regionServerIndex]) {
+      if (regionIdx == cluster.regionIndexToPrimaryIndex[regionIdx]) {
+        cost++;
+      }
+    }
+    return cost;
   }
 
   @Override
@@ -47,9 +55,20 @@ class PrimaryRegionCountSkewCostFunction extends CostFunction {
     if (!isNeeded()) {
       return;
     }
-    if (stats == null || stats.length != cluster.numServers) {
-      stats = new double[cluster.numServers];
-    }
+    cost.prepare(cluster.numServers);
+    cost.setCosts(costs -> {
+      for (int i = 0; i < costs.length; i++) {
+        costs[i] = computeCostForRegionServer(i);
+      }
+    });
+  }
+
+  @Override
+  protected void regionMoved(int region, int oldServer, int newServer) {
+    cost.setCosts(costs -> {
+      costs[oldServer] = computeCostForRegionServer(oldServer);
+      costs[newServer] = computeCostForRegionServer(newServer);
+    });
   }
 
   @Override
@@ -59,15 +78,6 @@ class PrimaryRegionCountSkewCostFunction extends CostFunction {
 
   @Override
   protected double cost() {
-    for (int i = 0; i < cluster.numServers; i++) {
-      stats[i] = 0;
-      for (int regionIdx : cluster.regionsPerServer[i]) {
-        if (regionIdx == cluster.regionIndexToPrimaryIndex[regionIdx]) {
-          stats[i]++;
-        }
-      }
-    }
-
-    return costFromArray(stats);
+    return cost.cost();
   }
 }
