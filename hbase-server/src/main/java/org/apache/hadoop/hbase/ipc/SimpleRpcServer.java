@@ -423,12 +423,8 @@ public class SimpleRpcServer extends RpcServer {
     }
     authTokenSecretMgr = createSecretManager();
     if (authTokenSecretMgr != null) {
-      // Start AuthenticationTokenSecretManager in synchronized way to avoid race conditions in
-      // LeaderElector start. See HBASE-25875
-      synchronized (authTokenSecretMgr) {
-        setSecretManager(authTokenSecretMgr);
-        authTokenSecretMgr.start();
-      }
+      setSecretManager(authTokenSecretMgr);
+      authTokenSecretMgr.start();
     }
     this.authManager = new ServiceAuthorizationManager();
     HBasePolicyProvider.init(conf, authManager);
