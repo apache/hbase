@@ -268,7 +268,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     assertTrue(majorVersion >= 1);
     String lowerVersion = String.valueOf(majorVersion - 1) + originVersion.split("\\.")[1];
     setFinalStatic(Version.class.getField("version"), lowerVersion);
-    TEST_UTIL.getMiniHBaseCluster().startRegionServer(address.getHostName(), address.getPort());
+    TEST_UTIL.getMiniHBaseCluster().startRegionServer(address.getHostname(), address.getPort());
     assertEquals(NUM_SLAVES_BASE,
         TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
     assertTrue(VersionInfo.compareVersion(originVersion,
