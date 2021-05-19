@@ -27,7 +27,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.EnumMap;
 import java.util.Map;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -36,12 +35,19 @@ import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Context that holds the various dictionaries for compression in WAL.
+ * <p>
+ * CompressionContexts are not expected to be shared among threads. Multithreaded use may
+ * produce unexpected results.
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public class CompressionContext {
+
+  private static final Logger LOG = LoggerFactory.getLogger(CompressionContext.class);
 
   public static final String ENABLE_WAL_TAGS_COMPRESSION =
     "hbase.regionserver.wal.tags.enablecompression";
@@ -70,7 +76,7 @@ public class CompressionContext {
     private InputStream compressedIn;
     private OutputStream compressedOut;
 
-    public ValueCompressor(Compression.Algorithm algorithm) throws IOException {
+    public ValueCompressor(Compression.Algorithm algorithm) {
       this.algorithm = algorithm;
     }
 
@@ -80,8 +86,8 @@ public class CompressionContext {
 
     public byte[] compress(byte[] valueArray, int valueOffset, int valueLength)
         throws IOException {
-      // We have to create the output streams here the first time around.
       if (compressedOut == null) {
+        // Create the output streams here the first time around.
         lowerOut = new ByteArrayOutputStream();
         compressedOut = algorithm.createCompressionStream(lowerOut, algorithm.getCompressor(),
           IO_BUFFER_SIZE);
@@ -95,10 +101,22 @@ public class CompressionContext {
 
     public int decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
         int outLength) throws IOException {
-      // Read all of the compressed bytes into a buffer.
+
+      // We handle input as a sequence of byte[] arrays (call them segments), with
+      // DelegatingInputStream providing a way to switch in a new segment, wrapped in a
+      // ByteArrayInputStream, when the old segment has been fully consumed.
+
+      // Originally I looked at using BoundedInputStream but you can't reuse/reset the
+      // BIS instance, and we can't just create new streams each time around because
+      // that would reset compression codec state, which must accumulate over all values
+      // in the file in order to build the dictionary in the same way as the compressor
+      // did.
+
+      // Read in all of the next segment of compressed bytes to process.
       byte[] inBuffer = new byte[inLength];
       IOUtils.readFully(in, inBuffer);
-      // We have to create the input streams here the first time around.
+
+      // Create the input streams here the first time around.
       if (compressedIn == null) {
         lowerIn = new DelegatingInputStream(new ByteArrayInputStream(inBuffer));
         compressedIn = algorithm.createDecompressionStream(lowerIn, algorithm.getDecompressor(),
@@ -106,17 +124,48 @@ public class CompressionContext {
       } else {
         lowerIn.setDelegate(new ByteArrayInputStream(inBuffer));
       }
+
+      // Caller must handle short reads. With current Hadoop compression codecs all 'outLength'
+      // bytes are read in here, so not an issue now.
       return compressedIn.read(outArray, outOffset, outLength);
     }
 
     public void clear() {
-      lowerIn = null;
-      compressedIn = null;
-      lowerOut = null;
+      if (compressedOut != null) {
+        try {
+          compressedOut.close();
+        } catch (IOException e) {
+          LOG.warn("Exception closing compressed output stream", e);
+        }
+      }
       compressedOut = null;
+      if (lowerOut != null) {
+        try {
+          lowerOut.close();
+        } catch (IOException e) {
+          LOG.warn("Exception closing lower output stream", e);
+        }
+      }
+      lowerOut = null;
+      if (compressedIn != null) {
+        try {
+          compressedIn.close();
+        } catch (IOException e) {
+          LOG.warn("Exception closing compressed input stream", e);
+        }
+      }
+      compressedIn = null;
+      if (lowerIn != null) {
+        try {
+          lowerIn.close();
+        } catch (IOException e) {
+          LOG.warn("Exception closing lower input stream", e);
+        }
+      }
+      lowerIn = null;
     }
 
-  };
+  }
 
   private final Map<DictionaryIndex, Dictionary> dictionaries =
       new EnumMap<>(DictionaryIndex.class);
@@ -170,7 +219,7 @@ public class CompressionContext {
     return valueCompressor != null;
   }
 
-  public Dictionary getDictionary(Enum<DictionaryIndex> dictIndex) {
+  public Dictionary getDictionary(Enum dictIndex) {
     return dictionaries.get(dictIndex);
   }
 

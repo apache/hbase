@@ -150,9 +150,10 @@ public abstract class AbstractProtobufLogWriter {
         final boolean useValueCompression =
           conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
         final Compression.Algorithm valueCompressionType =
-          CompressionContext.getValueCompressionAlgorithm(conf);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Initializing compression context for {}: isRecoveredEdits={}" +
+          useValueCompression ? CompressionContext.getValueCompressionAlgorithm(conf) :
+            Compression.Algorithm.NONE;
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Initializing compression context for {}: isRecoveredEdits={}" +
             ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}", path,
             CommonFSUtils.isRecoveredEdits(path), useTagCompression, useValueCompression,
             valueCompressionType);
@@ -187,7 +188,7 @@ public abstract class AbstractProtobufLogWriter {
       .setHasTagCompression(doTagCompress)
       .setHasValueCompression(doValueCompress);
     if (doValueCompress) {
-      headerBuilder.setValueCompressionCodec(
+      headerBuilder.setValueCompressionAlgorithm(
         CompressionContext.getValueCompressionAlgorithm(conf).ordinal());
     }
     length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC,
@@ -197,8 +198,10 @@ public abstract class AbstractProtobufLogWriter {
 
     // instantiate trailer to default value.
     trailer = WALTrailer.newBuilder().build();
+
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Initialized protobuf WAL=" + path + ", compression=" + doCompress);
+      LOG.trace("Initialized protobuf WAL={}, compression={}, tagCompression={}" +
+        ", valueCompression={}", path, doCompress, doTagCompress, doValueCompress);
     }
   }
 

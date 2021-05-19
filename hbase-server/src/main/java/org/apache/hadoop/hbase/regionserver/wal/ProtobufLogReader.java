@@ -230,11 +230,12 @@ public class ProtobufLogReader extends ReaderBase {
       WALProtos.WALHeader header = builder.build();
       this.hasCompression = header.hasHasCompression() && header.getHasCompression();
       this.hasTagCompression = header.hasHasTagCompression() && header.getHasTagCompression();
-      this.hasValueCompression = header.hasHasValueCompression() && header.getHasValueCompression();
-      if (header.hasValueCompressionCodec()) {
+      this.hasValueCompression = header.hasHasValueCompression() &&
+        header.getHasValueCompression();
+      if (header.hasValueCompressionAlgorithm()) {
         try {
           this.valueCompressionType =
-            Compression.Algorithm.values()[header.getValueCompressionCodec()];
+            Compression.Algorithm.values()[header.getValueCompressionAlgorithm()];
         } catch (ArrayIndexOutOfBoundsException e) {
           throw new IOException("Invalid compression type", e);
         }
@@ -247,7 +248,9 @@ public class ProtobufLogReader extends ReaderBase {
     this.seekOnFs(currentPosition);
     if (LOG.isTraceEnabled()) {
       LOG.trace("After reading the trailer: walEditsStopOffset: " + this.walEditsStopOffset
-          + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " + (trailerPresent ? "true, size: " + trailer.getSerializedSize() : "false") + ", currentPosition: " + currentPosition);
+          + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " +
+          (trailerPresent ? "true, size: " + trailer.getSerializedSize() : "false") +
+          ", currentPosition: " + currentPosition);
     }
     
     codecClsName = hdrCtxt.getCellCodecClsName();
@@ -345,7 +348,7 @@ public class ProtobufLogReader extends ReaderBase {
   }
 
   @Override
-  protected Compression.Algorithm getValueCompressionType() {
+  protected Compression.Algorithm getValueCompressionAlgorithm() {
     return this.valueCompressionType;
   }
 

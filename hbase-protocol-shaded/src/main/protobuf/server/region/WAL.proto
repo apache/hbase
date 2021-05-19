@@ -33,7 +33,7 @@ message WALHeader {
   optional string writer_cls_name = 4;
   optional string cell_codec_cls_name = 5;
   optional bool has_value_compression = 6;
-  optional uint32 value_compression_codec = 7;
+  optional uint32 value_compression_algorithm = 7;
 }
 
 /*

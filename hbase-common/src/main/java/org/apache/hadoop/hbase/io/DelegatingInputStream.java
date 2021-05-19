@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * An input stream that delegates all operations to another input stream.
@@ -32,68 +32,71 @@ import org.apache.yetus.audience.InterfaceStability;
  * ByteArrayInputStream, which is implicitly bounded by the size of the underlying
  * byte array can be converted into an unbounded stream fed by multiple instances
  * of ByteArrayInputStream, switched out one for the other in sequence.
+ * <p>
+ * Although multithreaded access is allowed, users of this class will want to take
+ * care to order operations on this stream and the swap out of one delegate for
+ * another in a way that provides a valid view of stream contents.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public class DelegatingInputStream extends InputStream {
 
-  InputStream lowerStream;
+  final AtomicReference<InputStream> lowerStream = new AtomicReference<>();
 
   public DelegatingInputStream(InputStream lowerStream) {
-    this.lowerStream = lowerStream;
+    this.lowerStream.set(lowerStream);
   }
 
   public InputStream getDelegate() {
-    return lowerStream;
+    return lowerStream.get();
   }
 
   public void setDelegate(InputStream lowerStream) {
-    this.lowerStream = lowerStream;
+    this.lowerStream.set(lowerStream);
   }
 
   @Override
   public int read() throws IOException {
-    return lowerStream.read();
+    return lowerStream.get().read();
   }
 
   @Override
   public int read(byte[] b) throws IOException {
-    return lowerStream.read(b);
+    return lowerStream.get().read(b);
   }
 
   @Override
   public int read(byte[] b, int off, int len) throws IOException {
-    return lowerStream.read(b, off, len);
+    return lowerStream.get().read(b, off, len);
   }
 
   @Override
   public long skip(long n) throws IOException {
-    return lowerStream.skip(n);
+    return lowerStream.get().skip(n);
   }
 
   @Override
   public int available() throws IOException {
-    return lowerStream.available();
+    return lowerStream.get().available();
   }
 
   @Override
   public void close() throws IOException {
-    lowerStream.close();
+    lowerStream.get().close();
   }
 
   @Override
   public synchronized void mark(int readlimit) {
-    lowerStream.mark(readlimit);
+    lowerStream.get().mark(readlimit);
   }
 
   @Override
   public synchronized void reset() throws IOException {
-    lowerStream.reset();
+    lowerStream.get().reset();
   }
 
   @Override
   public boolean markSupported() {
-    return lowerStream.markSupported();
+    return lowerStream.get().markSupported();
   }
 
 }

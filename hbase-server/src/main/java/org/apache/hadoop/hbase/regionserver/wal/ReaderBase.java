@@ -73,11 +73,11 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
             LOG.debug("Initializing compression context for {}: isRecoveredEdits={}" +
               ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}", path,
               CommonFSUtils.isRecoveredEdits(path), hasTagCompression(), hasValueCompression(),
-              getValueCompressionType());
+              getValueCompressionAlgorithm());
           }
           compressionContext = new CompressionContext(LRUDictionary.class,
             CommonFSUtils.isRecoveredEdits(path), hasTagCompression(),
-            hasValueCompression(), getValueCompressionType());
+            hasValueCompression(), getValueCompressionAlgorithm());
         } else {
           compressionContext.clear();
         }
@@ -167,7 +167,7 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
   /**
    * @return Value compression algorithm for this log.
    */
-  protected abstract Compression.Algorithm getValueCompressionType();
+  protected abstract Compression.Algorithm getValueCompressionAlgorithm();
 
   /**
    * Read next entry.
