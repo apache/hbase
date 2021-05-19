@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,10 +26,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.EnumMap;
 import java.util.Map;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.io.DelegatingInputStream;
+import org.apache.hadoop.hbase.io.BoundedDelegatingInputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.util.Dictionary;
@@ -71,7 +69,7 @@ public class CompressionContext {
     static final int IO_BUFFER_SIZE = 4096;
 
     private final Compression.Algorithm algorithm;
-    private DelegatingInputStream lowerIn;
+    private BoundedDelegatingInputStream lowerIn;
     private ByteArrayOutputStream lowerOut;
     private InputStream compressedIn;
     private OutputStream compressedOut;
@@ -102,31 +100,22 @@ public class CompressionContext {
     public int decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
         int outLength) throws IOException {
 
-      // We handle input as a sequence of byte[] arrays (call them segments), with
-      // DelegatingInputStream providing a way to switch in a new segment, wrapped in a
-      // ByteArrayInputStream, when the old segment has been fully consumed.
-
-      // Originally I looked at using BoundedInputStream but you can't reuse/reset the
-      // BIS instance, and we can't just create new streams each time around because
-      // that would reset compression codec state, which must accumulate over all values
-      // in the file in order to build the dictionary in the same way as the compressor
-      // did.
-
-      // Read in all of the next segment of compressed bytes to process.
-      byte[] inBuffer = new byte[inLength];
-      IOUtils.readFully(in, inBuffer);
+      // Our input is a sequence of bounded byte ranges (call them segments), with
+      // BoundedDelegatingInputStream providing a way to switch in a new segment when the 
+      // previous segment has been fully consumed.
 
       // Create the input streams here the first time around.
       if (compressedIn == null) {
-        lowerIn = new DelegatingInputStream(new ByteArrayInputStream(inBuffer));
+        lowerIn = new BoundedDelegatingInputStream(in, inLength);
         compressedIn = algorithm.createDecompressionStream(lowerIn, algorithm.getDecompressor(),
           IO_BUFFER_SIZE);
       } else {
-        lowerIn.setDelegate(new ByteArrayInputStream(inBuffer));
+        lowerIn.setDelegate(in, inLength);
       }
 
-      // Caller must handle short reads. With current Hadoop compression codecs all 'outLength'
-      // bytes are read in here, so not an issue now.
+      // Caller must handle short reads.
+      // With current Hadoop compression codecs all 'outLength' bytes are read in here, so not
+      // an issue for now.
       return compressedIn.read(outArray, outOffset, outLength);
     }
 
