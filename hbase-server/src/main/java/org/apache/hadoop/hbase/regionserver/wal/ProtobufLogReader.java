@@ -408,14 +408,14 @@ public class ProtobufLogReader extends ReaderBase {
     } catch (EOFException eof) {
       // If originalPosition is < 0, it is rubbish and we cannot use it (probably local fs)
       if (originalPosition < 0) {
-        LOG.warn("Encountered a malformed edit, but can't seek back to last good position "
+        LOG.debug("Encountered a malformed edit, but can't seek back to last good position "
           + "because originalPosition is negative. last offset={}", this.inputStream.getPos(), eof);
         throw eof;
       }
       // If stuck at the same place and we got an exception, lets go back at the beginning.
       if (inputStream.getPos() == originalPosition) {
         if (resetPosition) {
-          LOG.warn("Encountered a malformed edit, seeking to the beginning of the WAL since "
+          LOG.debug("Encountered a malformed edit, seeking to the beginning of the WAL since "
             + "current position and original position match at {}", originalPosition);
           seekOnFs(0);
         } else {
@@ -424,7 +424,7 @@ public class ProtobufLogReader extends ReaderBase {
       } else {
         // Else restore our position to original location in hope that next time through we will
         // read successfully.
-        LOG.warn("Encountered a malformed edit, seeking back to last good position in file, "
+        LOG.debug("Encountered a malformed edit, seeking back to last good position in file, "
           + "from {} to {}", inputStream.getPos(), originalPosition, eof);
         seekOnFs(originalPosition);
       }

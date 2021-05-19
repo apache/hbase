@@ -112,7 +112,6 @@
       <archive>https://lists.apache.org/list.html?user@hbase.apache.org</archive>
       <otherArchives>
         <otherArchive>https://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
-        <otherArchive>https://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -123,7 +122,6 @@
       <archive>https://lists.apache.org/list.html?dev@hbase.apache.org</archive>
       <otherArchives>
         <otherArchive>https://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
-        <otherArchive>https://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -310,10 +308,22 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>gjacoby</id>
+      <name>Geoffrey Jacoby</name>
+      <email>gjacoby@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
         <id>gxcheng</id>
         <name>Guangxu Cheng</name>
         <email>gxcheng@apache.org</email>
         <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>haxiaolin</id>
+      <name>Xiaolin Ha</name>
+      <email>haxiaolin@apache.org</email>
+      <timezone>+8</timezone>
     </developer>
     <developer>
       <id>huaxiangsun</id>
@@ -777,6 +787,7 @@
             <systemPropertyVariables>
               <test.build.classes>${test.build.classes}</test.build.classes>
               <java.io.tmpdir>${test.tmp.dir}</java.io.tmpdir>
+              <java.util.logging.config.class>org.apache.hadoop.hbase.logging.JulToSlf4jInitializer</java.util.logging.config.class>
             </systemPropertyVariables>
             <excludes>
               <!-- users can add -D option to skip particular test classes
@@ -829,6 +840,14 @@
             <xmlOutput>true</xmlOutput>
             <effort>Max</effort>
           </configuration>
+          <dependencies>
+          <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
+            <dependency>
+              <groupId>com.github.spotbugs</groupId>
+              <artifactId>spotbugs</artifactId>
+              <version>${spotbugs.version}</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -859,7 +878,7 @@
               </goals>
               <configuration>
                 <excludes>
-                  <exclude>log4j.properties</exclude>
+                  <exclude>log4j2.xml</exclude>
                 </excludes>
               </configuration>
             </execution>
@@ -920,6 +939,7 @@
               <!-- MIT https://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
               <exclude>**/jquery.tablesorter.min.js</exclude>
+              <exclude>**/parser-date-iso8601.min.js</exclude>
               <!-- MIT: bootstrap -->
               <exclude>**/src/main/resources/hbase-webapps/static/*/bootstrap*</exclude>
               <!-- vector graphics -->
@@ -942,6 +962,8 @@
               <exclude>**/shaded/com/google/protobuf/**</exclude>
               <exclude>**/src/main/patches/**</exclude>
               <exclude>**/vote.tmpl</exclude>
+              <!-- gzipped list of S3N URIs for hbase-it -->
+              <exclude>**/CC-MAIN-2021-10-warc.paths.gz</exclude>
             </excludes>
           </configuration>
         </plugin>
@@ -1173,6 +1195,42 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-log4j</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>log4j:log4j</exclude>
+                  </excludes>
+                  <message>
+                    We do not allow log4j dependencies as now we use log4j2
+                  </message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-slf4j-log4j12</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.slf4j:slf4j-log4j12</exclude>
+                  </excludes>
+                  <message>
+                    We do not allow slf4j-log4j12 dependency as now we use log4j-slf4j-impl
+                  </message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>banned-jetty</id>
             <goals>
               <goal>enforce</goal>
@@ -1205,6 +1263,25 @@
                   </excludes>
                   <message>
                     Use shaded jersey instead
+                  </message>
+                  <searchTransitive>false</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-htrace</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.apache.htrace:**</exclude>
+                  </excludes>
+                  <message>
+                    Use OpenTelemetry instead
                   </message>
                   <searchTransitive>false</searchTransitive>
                 </bannedDependencies>
@@ -1260,16 +1337,18 @@
                   <reason>Use SLF4j for logging</reason>
                   <bannedImports>
                     <bannedImport>org.apache.commons.logging.**</bannedImport>
+                    <bannedImport>org.apache.log4j.**</bannedImport>
+                    <bannedImport>org.apache.logging.log4j.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
                   <includeTestCode>false</includeTestCode>
                   <commentLineBufferSize>512</commentLineBufferSize>
                   <reason>
-                    Do not use log4j directly in code, see Log4jUtils in hbase-logging for more details.
+                    Do not use log4j2 directly in code, see Log4jUtils in hbase-logging for more details.
                   </reason>
                   <bannedImports>
-                    <bannedImport>org.apache.log4j.**</bannedImport>
+                    <bannedImport>org.apache.logging.log4j.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
@@ -1320,9 +1399,10 @@
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
                   <includeTestCode>true</includeTestCode>
                   <commentLineBufferSize>512</commentLineBufferSize>
-                  <reason>Do not use htrace v3</reason>
+                  <reason>Do not use htrace</reason>
                   <bannedImports>
                     <bannedImport>org.htrace.**</bannedImport>
+                    <bannedImport>org.apache.htrace.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
@@ -1645,12 +1725,13 @@
     <jruby.version>9.2.13.0</jruby.version>
     <junit.version>4.13</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
-    <htrace.version>4.2.0-incubating</htrace.version>
-    <log4j.version>1.2.17</log4j.version>
+    <opentelemetry.version>1.0.1</opentelemetry.version>
+    <opentelemetry-javaagent.version>1.0.1</opentelemetry-javaagent.version>
+    <log4j2.version>2.14.1</log4j2.version>
     <mockito-core.version>2.28.2</mockito-core.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
-    <thrift.version>0.13.0</thrift.version>
+    <thrift.version>0.14.1</thrift.version>
     <zookeeper.version>3.5.7</zookeeper.version>
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.30</slf4j.version>
@@ -1687,8 +1768,8 @@
     <maven.project.info.report.version>2.9</maven.project.info.report.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
-    <spotbugs.version>3.1.12</spotbugs.version>
-    <spotbugs.maven.version>3.1.12.2</spotbugs.maven.version>
+    <spotbugs.version>4.2.2</spotbugs.version>
+    <spotbugs.maven.version>4.2.0</spotbugs.maven.version>
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
@@ -1853,6 +1934,13 @@
         <artifactId>hbase-balancer</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-balancer</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <artifactId>hbase-http</artifactId>
@@ -2043,8 +2131,8 @@
       </dependency>
       <!--
         Logging dependencies. In general, we use slf4j as the log facade in HBase, so all sub
-        modules should depend on slf4j-api at compile scope, and then depend on slf4j-log4j12
-        and log4j at test scope(and in hbase-assembly when shipping the binary) to redirect the
+        modules should depend on slf4j-api at compile scope, and then depend on log4j-slf4j-impl
+        and log4j2 at test scope(and in hbase-assembly when shipping the binary) to redirect the
         log message to log4j. Do not introduce logging dependencies other than slf4j-api at compile
         scope as it will mess up the logging framework for downstream users.
         Here we also depend on jcl-over-slf4j and jul-to-slf4j, as some of the libraries we depend
@@ -2056,14 +2144,10 @@
         <artifactId>jettison</artifactId>
         <version>${jettison.version}</version>
       </dependency>
+      <!-- Logging -->
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>${slf4j.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-log4j12</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
@@ -2077,9 +2161,24 @@
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <version>${log4j.version}</version>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-api</artifactId>
+        <version>${log4j2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+        <version>${log4j2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-slf4j-impl</artifactId>
+        <version>${log4j2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-1.2-api</artifactId>
+        <version>${log4j2.version}</version>
       </dependency>
       <!-- Avro dependencies we mostly get transitively, manual version coallescing -->
       <dependency>
@@ -2087,8 +2186,6 @@
         <artifactId>avro</artifactId>
         <version>${avro.version}</version>
       </dependency>
-      <!--This is not used by hbase directly.  Used by thrift,
-          dropwizard and zk.-->
       <dependency>
         <groupId>com.github.ben-manes.caffeine</groupId>
         <artifactId>caffeine</artifactId>
@@ -2196,8 +2293,8 @@
         <version>${thrift.version}</version>
         <exclusions>
           <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -2312,9 +2409,22 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.htrace</groupId>
-        <artifactId>htrace-core4</artifactId>
-        <version>${htrace.version}</version>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-bom</artifactId>
+        <version>${opentelemetry.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-semconv</artifactId>
+        <version>${opentelemetry.version}-alpha</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opentelemetry.javaagent</groupId>
+        <artifactId>opentelemetry-javaagent</artifactId>
+        <version>${opentelemetry-javaagent.version}</version>
+        <classifier>all</classifier>
       </dependency>
       <dependency>
         <groupId>com.lmax</groupId>
@@ -2766,6 +2876,46 @@
          </dependency>
          <dependency>
            <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-mapreduce-client-app</artifactId>
+           <version>${hadoop-three.version}</version>
+           <type>test-jar</type>
+           <exclusions>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-jaxrs</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-xc</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>javax.xml.bind</groupId>
+               <artifactId>jaxb-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>javax.ws.rs</groupId>
+               <artifactId>jsr311-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+              <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+              </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
            <version>${hadoop-three.version}</version>
            <exclusions>
@@ -2784,10 +2934,6 @@
              <exclusion>
                <groupId>org.slf4j</groupId>
                <artifactId>slf4j-log4j12</artifactId>
-             </exclusion>
-             <exclusion>
-               <groupId>log4j</groupId>
-               <artifactId>log4j</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -2813,10 +2959,6 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>log4j</groupId>
-                <artifactId>log4j</artifactId>
               </exclusion>
            </exclusions>
          </dependency>
@@ -3044,6 +3186,14 @@
                <groupId>com.google.code.findbugs</groupId>
                <artifactId>jsr305</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -3118,10 +3268,6 @@
              <exclusion>
                <groupId>org.slf4j</groupId>
                <artifactId>slf4j-log4j12</artifactId>
-             </exclusion>
-             <exclusion>
-               <groupId>log4j</groupId>
-               <artifactId>log4j</artifactId>
              </exclusion>
            </exclusions>
          </dependency>

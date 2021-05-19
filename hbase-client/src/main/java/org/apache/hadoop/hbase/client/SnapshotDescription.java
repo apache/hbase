@@ -38,6 +38,8 @@ public class SnapshotDescription {
   private final long ttl;
   private final int version;
 
+  private final long maxFileSize;
+
   public SnapshotDescription(String name) {
     this(name, null);
   }
@@ -90,13 +92,16 @@ public class SnapshotDescription {
     this.snapShotType = type;
     this.owner = owner;
     this.creationTime = creationTime;
-    this.ttl = getTtlFromSnapshotProps(snapshotProps);
+    this.ttl = getLongFromSnapshotProps(snapshotProps, "TTL");
     this.version = version;
+    this.maxFileSize = getLongFromSnapshotProps(snapshotProps, TableDescriptorBuilder.MAX_FILESIZE);
   }
 
-  private long getTtlFromSnapshotProps(Map<String, Object> snapshotProps) {
-    return MapUtils.getLongValue(snapshotProps, "TTL", -1);
+  private long getLongFromSnapshotProps(Map<String, Object> snapshotProps, String property) {
+    return MapUtils.getLongValue(snapshotProps, property, -1);
   }
+
+
 
   /**
    * SnapshotDescription Parameterized Constructor
@@ -144,6 +149,8 @@ public class SnapshotDescription {
     return this.version;
   }
 
+  public long getMaxFileSize() { return maxFileSize; }
+
   @Override
   public String toString() {
     return new ToStringBuilder(this)
@@ -154,6 +161,7 @@ public class SnapshotDescription {
       .append("creationTime", creationTime)
       .append("ttl", ttl)
       .append("version", version)
+      .append("maxFileSize", maxFileSize)
       .toString();
   }
 }

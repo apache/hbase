@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.ipc.MetaRWQueueRpcExecutor;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -69,6 +71,11 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
   @BeforeClass
   public static void setUp() throws Exception {
+    // avoid all the handlers blocked when meta is offline, and regionServerReport can not be
+    // processed which causes dead lock.
+    TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
+    TEST_UTIL.getConfiguration()
+      .setFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5f);
     setUpTestBeforeClass();
   }
 
@@ -262,7 +269,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     assertTrue(majorVersion >= 1);
     String lowerVersion = String.valueOf(majorVersion - 1) + originVersion.split("\\.")[1];
     setFinalStatic(Version.class.getField("version"), lowerVersion);
-    TEST_UTIL.getMiniHBaseCluster().startRegionServer(address.getHostname(), address.getPort());
+    TEST_UTIL.getMiniHBaseCluster().startRegionServer(address.getHostName(), address.getPort());
     assertEquals(NUM_SLAVES_BASE,
       TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
     assertTrue(VersionInfo.compareVersion(originVersion,

@@ -18,17 +18,17 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
@@ -163,7 +163,8 @@ public class RecoverableZooKeeper {
    * exist.
    */
   public void delete(String path, int version) throws InterruptedException, KeeperException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.delete")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.delete").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       boolean isRetry = false; // False for first attempt, true for all retries.
       while (true) {
@@ -182,9 +183,8 @@ public class RecoverableZooKeeper {
               throw e;
 
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "delete");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "delete");
               break;
 
@@ -195,6 +195,8 @@ public class RecoverableZooKeeper {
         retryCounter.sleepUntilNextRetry();
         isRetry = true;
       }
+    } finally {
+      span.end();
     }
   }
 
@@ -207,8 +209,9 @@ public class RecoverableZooKeeper {
   }
 
   private Stat exists(String path, Watcher watcher, Boolean watch)
-          throws InterruptedException, KeeperException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.exists")) {
+    throws InterruptedException, KeeperException {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.exists").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -222,9 +225,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "exists");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "exists");
               break;
 
@@ -234,6 +236,8 @@ public class RecoverableZooKeeper {
         }
         retryCounter.sleepUntilNextRetry();
       }
+    } finally {
+      span.end();
     }
   }
 
@@ -264,8 +268,10 @@ public class RecoverableZooKeeper {
   }
 
   private List<String> getChildren(String path, Watcher watcher, Boolean watch)
-          throws InterruptedException, KeeperException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getChildren")) {
+    throws InterruptedException, KeeperException {
+    Span span =
+      TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getChildren").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -279,9 +285,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "getChildren");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "getChildren");
               break;
 
@@ -291,6 +296,8 @@ public class RecoverableZooKeeper {
         }
         retryCounter.sleepUntilNextRetry();
       }
+    } finally {
+      span.end();
     }
   }
 
@@ -313,8 +320,9 @@ public class RecoverableZooKeeper {
   }
 
   private byte[] getData(String path, Watcher watcher, Boolean watch, Stat stat)
-          throws InterruptedException, KeeperException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getData")) {
+    throws InterruptedException, KeeperException {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getData").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -328,9 +336,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "getData");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "getData");
               break;
 
@@ -340,6 +347,8 @@ public class RecoverableZooKeeper {
         }
         retryCounter.sleepUntilNextRetry();
       }
+    } finally {
+      span.end();
     }
   }
 
@@ -360,7 +369,8 @@ public class RecoverableZooKeeper {
    */
   public Stat setData(String path, byte[] data, int version)
     throws KeeperException, InterruptedException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.setData")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.setData").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       byte[] newData = ZKMetadata.appendMetaData(id, data);
       boolean isRetry = false;
@@ -370,9 +380,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "setData");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "setData");
               break;
             case BADVERSION:
@@ -398,6 +407,8 @@ public class RecoverableZooKeeper {
         retryCounter.sleepUntilNextRetry();
         isRetry = true;
       }
+    } finally {
+      span.end();
     }
   }
 
@@ -405,9 +416,9 @@ public class RecoverableZooKeeper {
    * getAcl is an idempotent operation. Retry before throwing exception
    * @return list of ACLs
    */
-  public List<ACL> getAcl(String path, Stat stat)
-    throws KeeperException, InterruptedException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getAcl")) {
+  public List<ACL> getAcl(String path, Stat stat) throws KeeperException, InterruptedException {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getAcl").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -415,9 +426,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "getAcl");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "getAcl");
               break;
 
@@ -427,6 +437,8 @@ public class RecoverableZooKeeper {
         }
         retryCounter.sleepUntilNextRetry();
       }
+    } finally {
+      span.end();
     }
   }
 
@@ -436,7 +448,8 @@ public class RecoverableZooKeeper {
    */
   public Stat setAcl(String path, List<ACL> acls, int version)
     throws KeeperException, InterruptedException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.setAcl")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.setAcl").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -444,8 +457,6 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "setAcl");
-              break;
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "setAcl");
               break;
@@ -456,6 +467,8 @@ public class RecoverableZooKeeper {
         }
         retryCounter.sleepUntilNextRetry();
       }
+    } finally {
+      span.end();
     }
   }
 
@@ -474,10 +487,10 @@ public class RecoverableZooKeeper {
    *
    * @return Path
    */
-  public String create(String path, byte[] data, List<ACL> acl,
-      CreateMode createMode)
+  public String create(String path, byte[] data, List<ACL> acl, CreateMode createMode)
     throws KeeperException, InterruptedException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.create")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.create").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       byte[] newData = ZKMetadata.appendMetaData(id, data);
       switch (createMode) {
         case EPHEMERAL:
@@ -492,6 +505,8 @@ public class RecoverableZooKeeper {
           throw new IllegalArgumentException("Unrecognized CreateMode: " +
               createMode);
       }
+    } finally {
+      span.end();
     }
   }
 
@@ -524,9 +539,8 @@ public class RecoverableZooKeeper {
             throw e;
 
           case CONNECTIONLOSS:
-            retryOrThrow(retryCounter, e, "create");
-            break;
           case OPERATIONTIMEOUT:
+          case REQUESTTIMEOUT:
             retryOrThrow(retryCounter, e, "create");
             break;
 
@@ -559,9 +573,8 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
-            retryOrThrow(retryCounter, e, "create");
-            break;
           case OPERATIONTIMEOUT:
+          case REQUESTTIMEOUT:
             retryOrThrow(retryCounter, e, "create");
             break;
 
@@ -604,9 +617,9 @@ public class RecoverableZooKeeper {
   /**
    * Run multiple operations in a transactional manner. Retry before throwing exception
    */
-  public List<OpResult> multi(Iterable<Op> ops)
-    throws KeeperException, InterruptedException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.multi")) {
+  public List<OpResult> multi(Iterable<Op> ops) throws KeeperException, InterruptedException {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.multi").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       Iterable<Op> multiOps = prepareZKMulti(ops);
       while (true) {
@@ -615,9 +628,8 @@ public class RecoverableZooKeeper {
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
-              retryOrThrow(retryCounter, e, "multi");
-              break;
             case OPERATIONTIMEOUT:
+            case REQUESTTIMEOUT:
               retryOrThrow(retryCounter, e, "multi");
               break;
 
@@ -627,6 +639,8 @@ public class RecoverableZooKeeper {
         }
         retryCounter.sleepUntilNextRetry();
       }
+    } finally {
+      span.end();
     }
   }
 

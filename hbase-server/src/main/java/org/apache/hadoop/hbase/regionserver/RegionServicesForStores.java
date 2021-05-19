@@ -22,6 +22,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -97,9 +98,10 @@ public class RegionServicesForStores {
 
   ThreadPoolExecutor getInMemoryCompactionPool() {
     if (rsServices != null) {
-      ExecutorConfig config = new ExecutorConfig().setCorePoolSize(inMemoryPoolSize);
-      return rsServices.getExecutorService().getExecutorLazily(ExecutorType.RS_IN_MEMORY_COMPACTION,
-        config);
+      ExecutorService executorService = rsServices.getExecutorService();
+      ExecutorConfig config = executorService.new ExecutorConfig().setExecutorType(
+          ExecutorType.RS_IN_MEMORY_COMPACTION).setCorePoolSize(inMemoryPoolSize);
+      return executorService.getExecutorLazily(config);
     } else {
       // this could only happen in tests
       return getInMemoryCompactionPoolForTest();

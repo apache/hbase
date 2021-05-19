@@ -1078,6 +1078,10 @@ public class TableDescriptorBuilder {
       if (family.getName() == null || family.getName().length <= 0) {
         throw new IllegalArgumentException("Family name cannot be null or empty");
       }
+      int flength = family.getName() == null ? 0 : family.getName().length;
+      if (flength > Byte.MAX_VALUE) {
+        throw new IllegalArgumentException("The length of family name is bigger than " + Byte.MAX_VALUE);
+      }
       if (hasColumnFamily(family.getName())) {
         throw new IllegalArgumentException("Family '"
                 + family.getNameAsString() + "' already exists so cannot be added");

@@ -32,7 +32,7 @@
 
 Always start with the master log (TODO: Which lines?). Normally it's just printing the same lines over and over again.
 If not, then there's an issue.
-Google or link:http://search-hadoop.com[search-hadoop.com] should return some hits for those exceptions you're seeing.
+Google should return some hits for those exceptions you're seeing.
 
 An error rarely comes alone in Apache HBase, usually when something gets screwed up what will follow may be hundreds of exceptions and stack traces coming from all over the place.
 The best way to approach this type of problem is to walk the log up to where it all began, for example one trick with RegionServers is that they will print some metrics when aborting so grepping for _Dump_ should get you around the start of the problem.
@@ -221,12 +221,6 @@ For more information on GC pauses, see the link:https://blog.cloudera.com/blog/2
 [[trouble.resources]]
 == Resources
 
-[[trouble.resources.searchhadoop]]
-=== search-hadoop.com
-
-link:http://search-hadoop.com[search-hadoop.com] indexes all the mailing lists and is great for historical searches.
-Search here first when you have an issue as its more than likely someone has already had your problem.
-
 [[trouble.resources.lists]]
 === Mailing Lists
 
@@ -235,7 +229,6 @@ The 'dev' mailing list is aimed at the community of developers actually building
 Before going to the mailing list, make sure your question has not already been answered by searching the mailing list
 archives first. For those who prefer to communicate in Chinese, they can use the 'user-zh' mailing list instead of the
 'user' list.
-Use <<trouble.resources.searchhadoop>>.
 Take some time crafting your question.
 See link:http://www.mikeash.com/getting_answers.html[Getting Answers] for ideas on crafting good questions.
 A quality question that includes all context and exhibits evidence the author has tried to find answers in the manual and out on lists is more likely to get a prompt response.
@@ -639,8 +632,6 @@ The upside is that more data is packed into the same region, but performance is 
 And smaller StoreFiles become targets for compaction.
 Without compression the files are much bigger and don't need as much compaction, however this is at the expense of I/O.
 
-For additional information, see this thread on link:http://search-hadoop.com/m/WUnLM6ojHm1/Long+client+pauses+with+compression&subj=Long+client+pauses+with+compression[Long client pauses with compression].
-
 [[trouble.client.security.rpc.krb]]
 === Secure Client Connect ([Caused by GSSException: No valid credentials provided...])
 
@@ -693,7 +684,7 @@ The utility <<trouble.tools.builtin.zkcli>> may help investigate ZooKeeper issue
 [[trouble.client.oome.directmemory.leak]]
 === Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)
 
-You are likely running into the issue that is described and worked through in the mail thread link:http://search-hadoop.com/m/ubhrX8KvcH/Suspected+memory+leak&subj=Re+Suspected+memory+leak[HBase, mail # user - Suspected memory leak] and continued over in link:http://search-hadoop.com/m/p2Agc1Zy7Va/MaxDirectMemorySize+Was%253A+Suspected+memory+leak&subj=Re+FeedbackRe+Suspected+memory+leak[HBase, mail # dev - FeedbackRe: Suspected memory leak].
+You are likely running into the issue that is described and worked through in the mail thread link:https://lists.apache.org/thread.html/d12bbe56be95cf68478d1528263042730670ff39159a01eaf06d8bc8%401322622090%40%3Cuser.hbase.apache.org%3E[HBase, mail # user - Suspected memory leak] and continued over in link:https://lists.apache.org/thread.html/621dde35479215f0b07b23af93b8fac52ff4729949b5c9af18e3a85b%401322971078%40%3Cuser.hbase.apache.org%3E[HBase, mail # dev - FeedbackRe: Suspected memory leak].
 A workaround is passing your client-side JVM a reasonable value for `-XX:MaxDirectMemorySize`.
 By default, the `MaxDirectMemorySize` is equal to your `-Xmx` max heapsize setting (if `-Xmx` is set). Try setting it to something smaller (for example, one user had success setting it to `1g` when they had a client-side heap of `12g`). If you set it too small, it will bring on `FullGCs` so keep it a bit hefty.
 You want to make this setting client-side only especially if you are running the new experimental server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep separate client-side and server-side config dirs).
@@ -1333,12 +1324,11 @@ Use the internal EC2 host names when configuring the ZooKeeper quorum peer list.
 === Instability on Amazon EC2
 
 Questions on HBase and Amazon EC2 come up frequently on the HBase dist-list.
-Search for old threads using link:http://search-hadoop.com/[Search Hadoop]
 
 [[trouble.ec2.connection]]
 === Remote Java Connection into EC2 Cluster Not Working
 
-See Andrew's answer here, up on the user list: link:http://search-hadoop.com/m/sPdqNFAwyg2[Remote Java client connection into EC2 instance].
+See Andrew's answer here, up on the user list: link:https://lists.apache.org/thread.html/666bfa863bc2eb2ec7bbe5ecfbee345e0cbf1d58aaa6c1636dfcb527%401269010842%40%3Cuser.hbase.apache.org%3E[Remote Java client connection into EC2 instance].
 
 [[trouble.versions]]
 == HBase and Hadoop version issues

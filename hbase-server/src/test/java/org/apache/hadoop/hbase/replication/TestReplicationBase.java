@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,8 +44,10 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -53,9 +55,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
@@ -87,6 +89,8 @@ public class TestReplicationBase {
       NB_ROWS_IN_BATCH * 10;
   protected static final long SLEEP_TIME = 500;
   protected static final int NB_RETRIES = 50;
+  protected static AtomicInteger replicateCount = new AtomicInteger();
+  protected static volatile List<WAL.Entry> replicatedEntries = Lists.newArrayList();
 
   protected static final TableName tableName = TableName.valueOf("test");
   protected static final byte[] famName = Bytes.toBytes("f");
@@ -281,7 +285,8 @@ public class TestReplicationBase {
   public void setUpBase() throws Exception {
     if (!peerExist(PEER_ID2)) {
       ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer());
+        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer()).setReplicationEndpointImpl(
+          ReplicationEndpointTest.class.getName());
       if (isSyncPeer()) {
         FileSystem fs2 = UTIL2.getTestFileSystem();
         // The remote wal dir is not important as we do not use it in DA state, here we only need to
@@ -377,5 +382,21 @@ public class TestReplicationBase {
     }
     UTIL2.shutdownMiniCluster();
     UTIL1.shutdownMiniCluster();
+  }
+
+  /**
+   * Custom replication endpoint to keep track of replication status for tests.
+   */
+  public static class ReplicationEndpointTest extends HBaseInterClusterReplicationEndpoint {
+    public ReplicationEndpointTest() {
+      replicateCount.set(0);
+    }
+
+    @Override public boolean replicate(ReplicateContext replicateContext) {
+      replicateCount.incrementAndGet();
+      replicatedEntries.addAll(replicateContext.getEntries());
+
+      return super.replicate(replicateContext);
+    }
   }
 }

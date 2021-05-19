@@ -21,6 +21,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class SteppingSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
+  @Override
+  public String toString() {
+    return "SteppingSplitPolicysuper{" + super.toString() + "}";
+  }
+
   /**
    * @return flushSize * 2 if there's exactly one region of the table in question
    * found on this regionserver. Otherwise max file size.
@@ -31,6 +36,4 @@ public class SteppingSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy
   protected long getSizeToCheck(final int tableRegionsCount) {
     return tableRegionsCount == 1  ? this.initialSize : getDesiredMaxFileSize();
   }
-
-
 }

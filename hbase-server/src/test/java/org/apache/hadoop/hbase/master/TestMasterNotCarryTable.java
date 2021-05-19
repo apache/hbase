@@ -68,13 +68,6 @@ public class TestMasterNotCarryTable {
   }
 
   @Test
-  public void testMasterNotCarryTable() {
-    // The default config is false
-    assertFalse(LoadBalancer.isTablesOnMaster(UTIL.getConfiguration()));
-    assertFalse(LoadBalancer.isSystemTablesOnlyOnMaster(UTIL.getConfiguration()));
-  }
-
-  @Test
   public void testMasterBlockCache() {
     // no need to instantiate block cache.
     assertFalse(master.getBlockCache().isPresent());

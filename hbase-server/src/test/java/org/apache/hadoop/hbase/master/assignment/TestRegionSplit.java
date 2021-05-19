@@ -17,22 +17,24 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -60,7 +62,7 @@ public class TestRegionSplit {
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static String ColumnFamilyName = "cf";
+  private static String columnFamilyName = "cf";
 
   private static final int startRowNum = 11;
   private static final int rowCount = 60;
@@ -94,7 +96,8 @@ public class TestRegionSplit {
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
     // Disable compaction.
     for (int i = 0; i < UTIL.getHBaseCluster().getLiveRegionServerThreads().size(); i++) {
-      UTIL.getHBaseCluster().getRegionServer(i).getCompactSplitThread().switchCompaction(false);
+      UTIL.getHBaseCluster().getRegionServer(i).getCompactSplitThread().switchCompaction(
+        false);
     }
   }
 
@@ -111,8 +114,8 @@ public class TestRegionSplit {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     RegionInfo[] regions =
-        MasterProcedureTestingUtility.createTable(procExec, tableName, null, ColumnFamilyName);
-    insertData(tableName);
+      MasterProcedureTestingUtility.createTable(procExec, tableName, null, columnFamilyName);
+    insertData(UTIL, tableName, rowCount, startRowNum, columnFamilyName);
     int splitRowNum = startRowNum + rowCount / 2;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
@@ -121,7 +124,7 @@ public class TestRegionSplit {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-        new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -146,22 +149,12 @@ public class TestRegionSplit {
     UTIL.getAdmin().enableTable(tableName);
     Thread.sleep(500);
 
-    assertEquals("Table region not correct.", 2,
-        UTIL.getHBaseCluster().getRegions(tableName).size());
-  }
-
-  private void insertData(final TableName tableName) throws IOException {
-    Table t = UTIL.getConnection().getTable(tableName);
-    Put p;
-    for (int i = 0; i < rowCount / 2; i++) {
-      p = new Put(Bytes.toBytes("" + (startRowNum + i)));
-      p.addColumn(Bytes.toBytes(ColumnFamilyName), Bytes.toBytes("q1"), Bytes.toBytes(i));
-      t.put(p);
-      p = new Put(Bytes.toBytes("" + (startRowNum + rowCount - i - 1)));
-      p.addColumn(Bytes.toBytes(ColumnFamilyName), Bytes.toBytes("q1"), Bytes.toBytes(i));
-      t.put(p);
-    }
-    UTIL.getAdmin().flush(tableName);
+    List<HRegion> tableRegions = UTIL.getHBaseCluster().getRegions(tableName);
+    assertEquals("Table region not correct.", 2, tableRegions.size());
+    Map<RegionInfo, ServerName> regionInfoMap = UTIL.getHBaseCluster().getMaster()
+      .getAssignmentManager().getRegionStates().getRegionAssignments();
+    assertEquals(regionInfoMap.get(tableRegions.get(0).getRegionInfo()),
+      regionInfoMap.get(tableRegions.get(1).getRegionInfo()));
   }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {

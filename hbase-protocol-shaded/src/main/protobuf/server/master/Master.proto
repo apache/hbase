@@ -707,6 +707,13 @@ message BalancerDecisionsRequest {
 }
 
 /**
+ * Same as BalancerDecision but used for BalancerRejection
+ */
+message BalancerRejectionsRequest {
+  optional uint32 limit = 1;
+}
+
+/**
  * BalancerDecision (LogEntry) use-case specific RPC response. This response payload will be
  * converted in bytes by servers and sent as response to generic RPC API: GetLogEntries
  * LogEntry message has two params:
@@ -715,6 +722,10 @@ message BalancerDecisionsRequest {
  */
 message BalancerDecisionsResponse {
   repeated BalancerDecision balancer_decision = 1;
+}
+
+message BalancerRejectionsResponse {
+  repeated BalancerRejection balancer_rejection = 1;
 }
 
 service MasterService {
@@ -1225,6 +1236,12 @@ message ScheduleServerCrashProcedureResponse {
   repeated uint64 pid = 1;
 }
 
+message ScheduleSCPsForUnknownServersRequest {}
+
+message ScheduleSCPsForUnknownServersResponse {
+  repeated uint64 pid = 1;
+}
+
 message FixMetaRequest {}
 
 message FixMetaResponse {}
@@ -1263,6 +1280,10 @@ service HbckService {
   /** Schedule a ServerCrashProcedure to help recover a crash server */
   rpc ScheduleServerCrashProcedure(ScheduleServerCrashProcedureRequest)
     returns(ScheduleServerCrashProcedureResponse);
+
+  /** Schedule a ServerCrashProcedure for unknown servers */
+  rpc ScheduleSCPsForUnknownServers(ScheduleSCPsForUnknownServersRequest)
+    returns(ScheduleSCPsForUnknownServersResponse);
 
   /**
    * Request HBCK chore to run at master side.

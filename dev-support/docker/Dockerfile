@@ -73,9 +73,9 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 #
 
 FROM BASE_IMAGE AS SPOTBUGS_DOWNLOAD_IMAGE
-ENV SPOTBUGS_VERSION '3.1.12'
+ENV SPOTBUGS_VERSION '4.2.2'
 ENV SPOTBUGS_URL "https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"
-ENV SPOTBUGS_SHA256 '9c475d6c7096ed7af783e04dc2db40462145291de75a80029391600b6eb2d401'
+ENV SPOTBUGS_SHA256 '4967c72396e34b86b9458d0c34c5ed185770a009d357df8e63951ee2844f769f'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/spotbugs.tgz "${SPOTBUGS_URL}" && \
   echo "${SPOTBUGS_SHA256} */tmp/spotbugs.tgz" | sha256sum -c -
@@ -104,15 +104,15 @@ RUN curl --location --fail --silent --show-error --output /tmp/zuluopenjdk7.tar.
   echo "${OPENJDK7_SHA256} */tmp/zuluopenjdk7.tar.gz" | sha256sum -c -
 
 FROM BASE_IMAGE AS OPENJDK8_DOWNLOAD_IMAGE
-ENV OPENJDK8_URL 'https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u232-b09/OpenJDK8U-jdk_x64_linux_hotspot_8u232b09.tar.gz'
-ENV OPENJDK8_SHA256 '7b7884f2eb2ba2d47f4c0bf3bb1a2a95b73a3a7734bd47ebf9798483a7bcc423'
+ENV OPENJDK8_URL 'https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u282-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u282b08.tar.gz'
+ENV OPENJDK8_SHA256 'e6e6e0356649b9696fa5082cfcb0663d4bef159fc22d406e3a012e71fce83a5c'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar.gz "${OPENJDK8_URL}" && \
   echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -
 
 FROM BASE_IMAGE AS OPENJDK11_DOWNLOAD_IMAGE
-ENV OPENJDK11_URL 'https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.6%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.6_10.tar.gz'
-ENV OPENJDK11_SHA256 '330d19a2eaa07ed02757d7a785a77bab49f5ee710ea03b4ee2fa220ddd0feffc'
+ENV OPENJDK11_URL 'https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.10%2B9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.10_9.tar.gz'
+ENV OPENJDK11_SHA256 'ae78aa45f84642545c01e8ef786dfd700d2226f8b12881c844d6a1f71789cb99'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk11.tar.gz "${OPENJDK11_URL}" && \
   echo "${OPENJDK11_SHA256} */tmp/adoptopenjdk11.tar.gz" | sha256sum -c -
@@ -128,6 +128,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY --from=SPOTBUGS_DOWNLOAD_IMAGE /tmp/spotbugs.tgz /tmp/spotbugs.tgz
 RUN tar xzf /tmp/spotbugs.tgz -C /opt && \
   ln -s "/opt/$(tar -tf /tmp/spotbugs.tgz | head -n1 | cut -d/ -f1)" /opt/spotbugs && \
+  chmod -R a+x /opt/spotbugs/bin/* && \
   rm /tmp/spotbugs.tgz
 
 COPY --from=HADOLINT_DOWNLOAD_IMAGE /tmp/hadolint /tmp/hadolint

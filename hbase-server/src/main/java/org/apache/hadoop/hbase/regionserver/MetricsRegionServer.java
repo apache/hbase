@@ -28,12 +28,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * <p>
- * This class is for maintaining the various regionserver statistics
- * and publishing them through the metrics interfaces.
- * </p>
+ * Maintains regionserver statistics and publishes them through the metrics interfaces.
  * This class has a number of metrics variables that are publicly accessible;
- * these variables (objects) have methods to update their values.
+ * these variables (objects) have methods to update their values. Batch your updates rather than
+ * call on each instance else all threads will do nothing but contend trying to maintain metric
+ * counters!
  */
 @InterfaceStability.Evolving
 @InterfaceAudience.Private
@@ -41,6 +40,12 @@ public class MetricsRegionServer {
   public static final String RS_ENABLE_TABLE_METRICS_KEY =
       "hbase.regionserver.enable.table.latencies";
   public static final boolean RS_ENABLE_TABLE_METRICS_DEFAULT = true;
+  public static final String RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY =
+      "hbase.regionserver.enable.server.query.meter";
+  public static final boolean RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY_DEFAULT = false;
+  public static final String RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY =
+      "hbase.regionserver.enable.table.query.meter";
+  public static final boolean RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT = false;
 
   public static final String SLOW_METRIC_TIME = "hbase.ipc.slow.metric.time";
   private final MetricsRegionServerSource serverSource;
@@ -52,7 +57,9 @@ public class MetricsRegionServer {
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
+  // Incremented once for each call to Scan#nextRaw
   private Meter serverReadQueryMeter;
+  // Incremented per write.
   private Meter serverWriteQueryMeter;
   protected long slowMetricTime;
   protected static final int DEFAULT_SLOW_METRIC_TIME = 1000; // milliseconds
@@ -73,8 +80,11 @@ public class MetricsRegionServer {
 
     slowMetricTime = conf.getLong(SLOW_METRIC_TIME, DEFAULT_SLOW_METRIC_TIME);
     quotaSource = CompatibilitySingletonFactory.getInstance(MetricsRegionServerQuotaSource.class);
-    serverReadQueryMeter = metricRegistry.meter("ServerReadQueryPerSecond");
-    serverWriteQueryMeter = metricRegistry.meter("ServerWriteQueryPerSecond");
+    if (conf.getBoolean(RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY,
+        RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY_DEFAULT)) {
+      serverReadQueryMeter = metricRegistry.meter("ServerReadQueryPerSecond");
+      serverWriteQueryMeter = metricRegistry.meter("ServerWriteQueryPerSecond");
+    }
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
@@ -92,7 +102,9 @@ public class MetricsRegionServer {
    */
   static RegionServerTableMetrics createTableMetrics(Configuration conf) {
     if (conf.getBoolean(RS_ENABLE_TABLE_METRICS_KEY, RS_ENABLE_TABLE_METRICS_DEFAULT)) {
-      return new RegionServerTableMetrics();
+      return new RegionServerTableMetrics(
+        conf.getBoolean(RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY,
+          RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT));
     }
     return null;
   }
@@ -283,27 +295,26 @@ public class MetricsRegionServer {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updateTableReadQueryMeter(tn, count);
     }
-    this.serverReadQueryMeter.mark(count);
-  }
-
-  public void updateReadQueryMeter(TableName tn) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateTableReadQueryMeter(tn);
+    if (serverReadQueryMeter != null) {
+      serverReadQueryMeter.mark(count);
     }
-    this.serverReadQueryMeter.mark();
   }
 
   public void updateWriteQueryMeter(TableName tn, long count) {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updateTableWriteQueryMeter(tn, count);
     }
-    this.serverWriteQueryMeter.mark(count);
+    if (serverWriteQueryMeter != null) {
+      serverWriteQueryMeter.mark(count);
+    }
   }
 
   public void updateWriteQueryMeter(TableName tn) {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updateTableWriteQueryMeter(tn);
     }
-    this.serverWriteQueryMeter.mark();
+    if (serverWriteQueryMeter != null) {
+      serverWriteQueryMeter.mark();
+    }
   }
 }

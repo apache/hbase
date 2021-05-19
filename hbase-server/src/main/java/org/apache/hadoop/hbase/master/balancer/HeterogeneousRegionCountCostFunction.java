@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * The rule file can be located on local FS or HDFS, depending on the prefix (file//: or hdfs://).
  */
 @InterfaceAudience.Private
-public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer.CostFunction {
+public class HeterogeneousRegionCountCostFunction extends CostFunction {
 
   /**
    * configuration used for the path where the rule file is stored.
@@ -94,7 +94,6 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
   double overallUsage;
 
   HeterogeneousRegionCountCostFunction(final Configuration conf) {
-    super(conf);
     this.conf = conf;
     this.limitPerRS = new HashMap<>();
     this.limitPerRule = new HashMap<>();
@@ -108,8 +107,8 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
           + "'. Setting default to 200");
       this.defaultNumberOfRegions = 200;
     }
-    if (conf.getFloat(StochasticLoadBalancer.RegionCountSkewCostFunction.REGION_COUNT_SKEW_COST_KEY,
-      StochasticLoadBalancer.RegionCountSkewCostFunction.DEFAULT_REGION_COUNT_SKEW_COST) > 0) {
+    if (conf.getFloat(RegionCountSkewCostFunction.REGION_COUNT_SKEW_COST_KEY,
+      RegionCountSkewCostFunction.DEFAULT_REGION_COUNT_SKEW_COST) > 0) {
       LOG.warn("regionCountCost is not set to 0, "
           + " this will interfere with the HeterogeneousRegionCountCostFunction!");
     }
@@ -120,7 +119,7 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
    * any costly calculation.
    */
   @Override
-  void init(final BaseLoadBalancer.Cluster cluster) {
+  void init(final BalancerClusterState cluster) {
     this.cluster = cluster;
     this.loadRules();
   }
@@ -221,11 +220,14 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
 
   private List<String> readLines(BufferedReader reader) throws IOException {
     final List<String> records = new ArrayList<>();
-    String line;
-    while ((line = reader.readLine()) != null) {
-      records.add(line);
+    try {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        records.add(line);
+      }
+    } finally {
+      reader.close();
     }
-    reader.close();
     return records;
   }
 

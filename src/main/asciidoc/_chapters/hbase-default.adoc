@@ -756,6 +756,18 @@ Maximum retries. This is a maximum number of iterations
 `10`
 
 
+[[hbase.compaction.after.bulkload.enable]]
+*`hbase.compaction.after.bulkload.enable`*::
++
+.Description
+Request Compaction after bulkload immediately.
+If bulkload is continuous, the triggered compactions may increase load,
+bring about performance side effect.
+(For HBase-2.x, the default value for "hbase.compaction.after.bulkload.enable" is true)
++
+.Default
+`false`
+
 [[hbase.balancer.period
     ]]
 *`hbase.balancer.period
@@ -2321,6 +2333,20 @@ The percent of region server RPC threads failed to abort RS.
       balancer decisions in FIFO manner with limited entries. The size of
       the ring buffer is indicated by config:
       hbase.master.balancer.decision.queue.size
+
++
+.Default
+`false`
+
+[[hbase.master.balancer.rejection.buffer.enabled]]
+*`hbase.master.balancer.rejection.buffer.enabled`*::
++
+.Description
+
+      Indicates whether active HMaster has ring buffer running for storing
+      balancer rejection in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config:
+      hbase.master.balancer.rejection.queue.size
 
 +
 .Default

@@ -76,6 +76,8 @@ public interface MetricsWALSource extends BaseSource {
       "How many times a roll was requested due to file size roll threshold.";
   String WRITTEN_BYTES = "writtenBytes";
   String WRITTEN_BYTES_DESC = "Size (in bytes) of the data written to the WAL.";
+  String SUCCESSFUL_LOG_ROLLS = "successfulLogRolls";
+  String SUCCESSFUL_LOG_ROLLS_DESC = "Number of successful log rolls requests";
 
   /**
    * Add the append size.
@@ -115,4 +117,11 @@ public interface MetricsWALSource extends BaseSource {
   void incrementSizeLogRoll();
 
   void incrementWrittenBytes(long val);
+
+  /**
+   * Increment the number of successful log roll requests.
+   */
+  void incrementSuccessfulLogRolls();
+
+  long getSuccessfulLogRolls();
 }

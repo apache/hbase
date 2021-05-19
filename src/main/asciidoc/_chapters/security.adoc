@@ -397,7 +397,7 @@ To enable it, do the following.
 </property>
 <property>
   <name>hbase.thrift.support.proxyuser</name>
-  <value>true/value>
+  <value>true</value>
 </property>
 ----
 

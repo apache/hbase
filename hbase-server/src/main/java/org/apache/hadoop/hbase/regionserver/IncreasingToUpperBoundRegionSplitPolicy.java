@@ -50,6 +50,12 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
   protected long initialSize;
 
   @Override
+  public String toString() {
+    return "IncreasingToUpperBoundRegionSplitPolicy{" + "initialSize=" + initialSize +
+      ", " + super.toString() + '}';
+  }
+
+  @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     Configuration conf = getConf();

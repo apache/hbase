@@ -17,112 +17,213 @@
  */
 package org.apache.hadoop.hbase.trace;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.htrace.core.HTraceConfiguration;
-import org.apache.htrace.core.Sampler;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.SpanReceiver;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * This wrapper class provides functions for accessing htrace 4+ functionality in a simplified way.
- */
 @InterfaceAudience.Private
 public final class TraceUtil {
-  private static HTraceConfiguration conf;
-  private static Tracer tracer;
+
+  private static final String INSTRUMENTATION_NAME = "io.opentelemetry.contrib.hbase";
+
+  public static final AttributeKey<String> NAMESPACE_KEY = SemanticAttributes.DB_HBASE_NAMESPACE;
+
+  public static final AttributeKey<String> TABLE_KEY = AttributeKey.stringKey("db.hbase.table");
+
+  public static final AttributeKey<List<String>> REGION_NAMES_KEY =
+    AttributeKey.stringArrayKey("db.hbase.regions");
+
+  public static final AttributeKey<String> RPC_SERVICE_KEY =
+    AttributeKey.stringKey("db.hbase.rpc.service");
+
+  public static final AttributeKey<String> RPC_METHOD_KEY =
+    AttributeKey.stringKey("db.hbase.rpc.method");
+
+  public static final AttributeKey<String> SERVER_NAME_KEY =
+    AttributeKey.stringKey("db.hbase.server.name");
+
+  public static final AttributeKey<String> REMOTE_HOST_KEY = SemanticAttributes.NET_PEER_NAME;
+
+  public static final AttributeKey<Long> REMOTE_PORT_KEY = SemanticAttributes.NET_PEER_PORT;
+
+  public static final AttributeKey<Boolean> ROW_LOCK_READ_LOCK_KEY =
+    AttributeKey.booleanKey("db.hbase.rowlock.readlock");
+
+  public static final AttributeKey<String> WAL_IMPL = AttributeKey.stringKey("db.hbase.wal.impl");
 
   private TraceUtil() {
   }
 
-  public static void initTracer(Configuration c) {
-    if (c != null) {
-      conf = new HBaseHTraceConfiguration(c);
-    }
-
-    if (tracer == null && conf != null) {
-      tracer = new Tracer.Builder("Tracer").conf(conf).build();
-    }
+  public static Tracer getGlobalTracer() {
+    return GlobalOpenTelemetry.getTracer(INSTRUMENTATION_NAME);
   }
 
   /**
-   * Wrapper method to create new TraceScope with the given description
-   * @return TraceScope or null when not tracing
+   * Create a {@link SpanKind#INTERNAL} span.
    */
-  public static TraceScope createTrace(String description) {
-    return (tracer == null) ? null : tracer.newScope(description);
+  public static Span createSpan(String name) {
+    return createSpan(name, SpanKind.INTERNAL);
   }
 
   /**
-   * Wrapper method to create new child TraceScope with the given description
-   * and parent scope's spanId
-   * @param span parent span
-   * @return TraceScope or null when not tracing
+   * Create a {@link SpanKind#INTERNAL} span and set table related attributes.
    */
-  public static TraceScope createTrace(String description, Span span) {
-    if (span == null) {
-      return createTrace(description);
-    }
-
-    return (tracer == null) ? null : tracer.newScope(description, span.getSpanId());
+  public static Span createTableSpan(String spanName, TableName tableName) {
+    return createSpan(spanName).setAttribute(NAMESPACE_KEY, tableName.getNamespaceAsString())
+      .setAttribute(TABLE_KEY, tableName.getNameAsString());
   }
 
   /**
-   * Wrapper method to add new sampler to the default tracer
-   * @return true if added, false if it was already added
+   * Create a span with the given {@code kind}. Notice that, OpenTelemetry only expects one
+   * {@link SpanKind#CLIENT} span and one {@link SpanKind#SERVER} span for a traced request, so use
+   * this with caution when you want to create spans with kind other than {@link SpanKind#INTERNAL}.
    */
-  public static boolean addSampler(Sampler sampler) {
-    if (sampler == null) {
-      return false;
-    }
-
-    return (tracer == null) ? false : tracer.addSampler(sampler);
+  private static Span createSpan(String name, SpanKind kind) {
+    return getGlobalTracer().spanBuilder(name).setSpanKind(kind).startSpan();
   }
 
   /**
-   * Wrapper method to add key-value pair to TraceInfo of actual span
+   * Create a span which parent is from remote, i.e, passed through rpc.
+   * </p>
+   * We will set the kind of the returned span to {@link SpanKind#SERVER}, as this should be the top
+   * most span at server side.
    */
-  public static void addKVAnnotation(String key, String value){
-    Span span = Tracer.getCurrentSpan();
-    if (span != null) {
-      span.addKVAnnotation(key, value);
-    }
+  public static Span createRemoteSpan(String name, Context ctx) {
+    return getGlobalTracer().spanBuilder(name).setParent(ctx).setSpanKind(SpanKind.SERVER)
+      .startSpan();
   }
 
   /**
-   * Wrapper method to add receiver to actual tracerpool
-   * @return true if successfull, false if it was already added
+   * Create a span with {@link SpanKind#CLIENT}.
    */
-  public static boolean addReceiver(SpanReceiver rcvr) {
-    return (tracer == null) ? false : tracer.getTracerPool().addReceiver(rcvr);
+  public static Span createClientSpan(String name) {
+    return createSpan(name, SpanKind.CLIENT);
   }
 
   /**
-   * Wrapper method to remove receiver from actual tracerpool
-   * @return true if removed, false if doesn't exist
+   * Trace an asynchronous operation for a table.
    */
-  public static boolean removeReceiver(SpanReceiver rcvr) {
-    return (tracer == null) ? false : tracer.getTracerPool().removeReceiver(rcvr);
-  }
-
-  /**
-   * Wrapper method to add timeline annotiation to current span with given message
-   */
-  public static void addTimelineAnnotation(String msg) {
-    Span span = Tracer.getCurrentSpan();
-    if (span != null) {
-      span.addTimelineAnnotation(msg);
+  public static <T> CompletableFuture<T> tracedFuture(Supplier<CompletableFuture<T>> action,
+    String spanName, TableName tableName) {
+    Span span = createTableSpan(spanName, tableName);
+    try (Scope scope = span.makeCurrent()) {
+      CompletableFuture<T> future = action.get();
+      endSpan(future, span);
+      return future;
     }
   }
 
   /**
-   * Wrap runnable with current tracer and description
-   * @param runnable to wrap
-   * @return wrapped runnable or original runnable when not tracing
+   * Trace an asynchronous operation.
    */
-  public static Runnable wrap(Runnable runnable, String description) {
-    return (tracer == null) ? runnable : tracer.wrap(runnable, description);
+  public static <T> CompletableFuture<T> tracedFuture(Supplier<CompletableFuture<T>> action,
+    String spanName) {
+    Span span = createSpan(spanName);
+    try (Scope scope = span.makeCurrent()) {
+      CompletableFuture<T> future = action.get();
+      endSpan(future, span);
+      return future;
+    }
+  }
+
+  /**
+   * Trace an asynchronous operation, and finish the create {@link Span} when all the given
+   * {@code futures} are completed.
+   */
+  public static <T> List<CompletableFuture<T>> tracedFutures(
+    Supplier<List<CompletableFuture<T>>> action, String spanName, TableName tableName) {
+    Span span = createTableSpan(spanName, tableName);
+    try (Scope scope = span.makeCurrent()) {
+      List<CompletableFuture<T>> futures = action.get();
+      endSpan(CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])), span);
+      return futures;
+    }
+  }
+
+  public static void setError(Span span, Throwable error) {
+    span.recordException(error);
+    span.setStatus(StatusCode.ERROR);
+  }
+
+  /**
+   * Finish the {@code span} when the given {@code future} is completed.
+   */
+  private static void endSpan(CompletableFuture<?> future, Span span) {
+    FutureUtils.addListener(future, (resp, error) -> {
+      if (error != null) {
+        setError(span, error);
+      } else {
+        span.setStatus(StatusCode.OK);
+      }
+      span.end();
+    });
+  }
+
+  public static void trace(Runnable action, String spanName) {
+    trace(action, () -> createSpan(spanName));
+  }
+
+  public static void trace(Runnable action, Supplier<Span> creator) {
+    Span span = creator.get();
+    try (Scope scope = span.makeCurrent()) {
+      action.run();
+      span.setStatus(StatusCode.OK);
+    } catch (Throwable e) {
+      setError(span, e);
+      throw e;
+    } finally {
+      span.end();
+    }
+  }
+
+  public static <T> T trace(Supplier<T> action, String spanName) {
+    Span span = createSpan(spanName);
+    try (Scope scope = span.makeCurrent()) {
+      T ret = action.get();
+      span.setStatus(StatusCode.OK);
+      return ret;
+    } catch (Throwable e) {
+      setError(span, e);
+      throw e;
+    } finally {
+      span.end();
+    }
+  }
+
+  @FunctionalInterface
+  public interface IOExceptionCallable<V> {
+    V call() throws IOException;
+  }
+
+  public static <T> T trace(IOExceptionCallable<T> callable, String spanName) throws IOException {
+    return trace(callable, () -> createSpan(spanName));
+  }
+
+  public static <T> T trace(IOExceptionCallable<T> callable, Supplier<Span> creator)
+    throws IOException {
+    Span span = creator.get();
+    try (Scope scope = span.makeCurrent()) {
+      T ret = callable.call();
+      span.setStatus(StatusCode.OK);
+      return ret;
+    } catch (Throwable e) {
+      setError(span, e);
+      throw e;
+    } finally {
+      span.end();
+    }
   }
 }

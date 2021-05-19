@@ -812,6 +812,31 @@ public final class PrivateCellUtil {
     return a.getTypeByte() == b.getTypeByte();
   }
 
+  public static boolean matchingTags(final Cell left, final Cell right, int llength,
+                                     int rlength) {
+    if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell leftBBCell = (ByteBufferExtendedCell) left;
+      ByteBufferExtendedCell rightBBCell = (ByteBufferExtendedCell) right;
+      return ByteBufferUtils.equals(
+        leftBBCell.getTagsByteBuffer(), leftBBCell.getTagsPosition(), llength,
+        rightBBCell.getTagsByteBuffer(),rightBBCell.getTagsPosition(), rlength);
+    }
+    if (left instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell leftBBCell = (ByteBufferExtendedCell) left;
+      return ByteBufferUtils.equals(
+        leftBBCell.getTagsByteBuffer(), leftBBCell.getTagsPosition(), llength,
+        right.getTagsArray(), right.getTagsOffset(), rlength);
+    }
+    if (right instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell rightBBCell = (ByteBufferExtendedCell) right;
+      return ByteBufferUtils.equals(
+        rightBBCell.getTagsByteBuffer(), rightBBCell.getTagsPosition(), rlength,
+        left.getTagsArray(), left.getTagsOffset(), llength);
+    }
+    return Bytes.equals(left.getTagsArray(), left.getTagsOffset(), llength,
+      right.getTagsArray(), right.getTagsOffset(), rlength);
+  }
+
   /**
    * @return True if a delete type, a {@link KeyValue.Type#Delete} or a {KeyValue.Type#DeleteFamily}
    *         or a {@link KeyValue.Type#DeleteColumn} KeyValue type.
@@ -1740,7 +1765,7 @@ public final class PrivateCellUtil {
 
     @Override
     public long getTimestamp() {
-      return HConstants.OLDEST_TIMESTAMP;
+      return PrivateConstants.OLDEST_TIMESTAMP;
     }
 
     @Override
@@ -1975,7 +2000,7 @@ public final class PrivateCellUtil {
 
     @Override
     public long getTimestamp() {
-      return HConstants.OLDEST_TIMESTAMP;
+      return PrivateConstants.OLDEST_TIMESTAMP;
     }
 
     @Override
@@ -2735,7 +2760,7 @@ public final class PrivateCellUtil {
     byte type = cell.getTypeByte();
     if (type != KeyValue.Type.Minimum.getCode()) {
       type = KeyValue.Type.values()[KeyValue.Type.codeToType(type).ordinal() - 1].getCode();
-    } else if (ts != HConstants.OLDEST_TIMESTAMP) {
+    } else if (ts != PrivateConstants.OLDEST_TIMESTAMP) {
       ts = ts - 1;
       type = KeyValue.Type.Maximum.getCode();
     } else {

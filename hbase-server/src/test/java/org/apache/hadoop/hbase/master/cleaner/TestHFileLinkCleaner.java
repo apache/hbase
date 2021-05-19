@@ -22,19 +22,15 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -42,6 +38,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -153,7 +150,7 @@ public class TestHFileLinkCleaner {
     return new Path(new Path(CommonFSUtils.getTableDir(rootDir, table), region), family);
   }
 
-  static class DummyServer implements Server {
+  static class DummyServer extends MockServer {
 
     @Override
     public Configuration getConfiguration() {
@@ -167,61 +164,6 @@ public class TestHFileLinkCleaner {
       } catch (IOException e) {
         e.printStackTrace();
       }
-      return null;
-    }
-
-    @Override
-    public CoordinatedStateManager getCoordinatedStateManager() {
-      return null;
-    }
-
-    @Override
-    public Connection getConnection() {
-      return null;
-    }
-
-    @Override
-    public ServerName getServerName() {
-      return ServerName.valueOf("regionserver,60020,000000");
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {}
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-
-    @Override
-    public void stop(String why) {}
-
-    @Override
-    public boolean isStopped() {
-      return false;
-    }
-
-    @Override
-    public ChoreService getChoreService() {
-      return null;
-    }
-    @Override
-    public FileSystem getFileSystem() {
-      return null;
-    }
-
-    @Override
-    public boolean isStopping() {
-      return false;
-    }
-
-    @Override
-    public Connection createConnection(Configuration conf) throws IOException {
-      return null;
-    }
-
-    @Override
-    public AsyncClusterConnection getAsyncClusterConnection() {
       return null;
     }
   }

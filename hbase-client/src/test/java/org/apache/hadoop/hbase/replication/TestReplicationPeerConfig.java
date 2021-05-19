@@ -17,20 +17,25 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import java.util.HashMap;
-import java.util.HashSet;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
-import org.junit.Assert;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({ClientTests.class, SmallTests.class})
 public class TestReplicationPeerConfig {
@@ -39,8 +44,12 @@ public class TestReplicationPeerConfig {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestReplicationPeerConfig.class);
 
-  private static TableName TABLE_A = TableName.valueOf("replication", "testA");
-  private static TableName TABLE_B = TableName.valueOf("replication", "testB");
+  private static final String NAMESPACE_REPLICATE = "replicate";
+  private static final String NAMESPACE_OTHER = "other";
+  private static final TableName TABLE_A = TableName.valueOf(NAMESPACE_REPLICATE, "testA");
+  private static final TableName TABLE_B = TableName.valueOf(NAMESPACE_REPLICATE, "testB");
+  private static final byte[] FAMILY1 = Bytes.toBytes("cf1");
+  private static final byte[] FAMILY2 = Bytes.toBytes("cf2");
 
   @Test
   public void testClassMethodsAreBuilderStyle() {
@@ -61,193 +70,230 @@ public class TestReplicationPeerConfig {
 
   @Test
   public void testNeedToReplicateWithReplicatingAll() {
-    ReplicationPeerConfig peerConfig;
-    ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl builder =
-      new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl();
-    Map<TableName, List<String>> tableCfs = new HashMap<>();
-    Set<String> namespaces = new HashSet<>();
-
     // 1. replication_all flag is true, no namespaces and table-cfs config
-    builder.setReplicateAllUserTables(true);
-    peerConfig = builder.build();
-    Assert.assertTrue(peerConfig.needToReplicate(TABLE_A));
+    ReplicationPeerConfig peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
 
     // 2. replicate_all flag is true, and config in excludedTableCfs
-    builder.setExcludeNamespaces(null);
-    // empty map
-    tableCfs = new HashMap<>();
-    builder.setReplicateAllUserTables(true);
-    builder.setExcludeTableCFsMap(tableCfs);
-    peerConfig = builder.build();
-    Assert.assertTrue(peerConfig.needToReplicate(TABLE_A));
+    // Exclude empty table-cfs map
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeTableCFsMap(Maps.newHashMap())
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
 
-    // table testB
-    tableCfs = new HashMap<>();
+    // Exclude table B
+    Map<TableName, List<String>> tableCfs = Maps.newHashMap();
     tableCfs.put(TABLE_B, null);
-    builder.setReplicateAllUserTables(true);
-    builder.setExcludeTableCFsMap(tableCfs);
-    peerConfig = builder.build();
-    Assert.assertTrue(peerConfig.needToReplicate(TABLE_A));
-
-    // table testA
-    tableCfs = new HashMap<>();
-    tableCfs.put(TABLE_A, null);
-    builder.setReplicateAllUserTables(true);
-    builder.setExcludeTableCFsMap(tableCfs);
-    peerConfig = builder.build();
-    Assert.assertFalse(peerConfig.needToReplicate(TABLE_A));
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeTableCFsMap(tableCfs)
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
+    assertFalse(peerConfig.needToReplicate(TABLE_B));
 
     // 3. replicate_all flag is true, and config in excludeNamespaces
-    builder.setExcludeTableCFsMap(null);
-    // empty set
-    namespaces = new HashSet<>();
-    builder.setReplicateAllUserTables(true);
-    builder.setExcludeNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertTrue(peerConfig.needToReplicate(TABLE_A));
+    // Exclude empty namespace set
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeNamespaces(Sets.newHashSet())
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
 
-    // namespace default
-    namespaces = new HashSet<>();
-    namespaces.add("default");
-    builder.setReplicateAllUserTables(true);
-    builder.setExcludeNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertTrue(peerConfig.needToReplicate(TABLE_A));
+    // Exclude namespace other
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeNamespaces(Sets.newHashSet(NAMESPACE_OTHER))
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
 
-    // namespace replication
-    namespaces = new HashSet<>();
-    namespaces.add("replication");
-    builder.setReplicateAllUserTables(true);
-    builder.setExcludeNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertFalse(peerConfig.needToReplicate(TABLE_A));
+    // Exclude namespace replication
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeNamespaces(Sets.newHashSet(NAMESPACE_REPLICATE))
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
 
     // 4. replicate_all flag is true, and config excludeNamespaces and excludedTableCfs both
     // Namespaces config doesn't conflict with table-cfs config
-    namespaces = new HashSet<>();
-    tableCfs = new HashMap<>();
-    namespaces.add("replication");
+    tableCfs = Maps.newHashMap();
     tableCfs.put(TABLE_A, null);
-    builder.setReplicateAllUserTables(true);
-    builder.setExcludeTableCFsMap(tableCfs);
-    builder.setExcludeNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertFalse(peerConfig.needToReplicate(TABLE_A));
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeNamespaces(Sets.newHashSet(NAMESPACE_REPLICATE))
+      .setExcludeTableCFsMap(tableCfs)
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
 
     // Namespaces config conflicts with table-cfs config
-    namespaces = new HashSet<>();
-    tableCfs = new HashMap<>();
-    namespaces.add("default");
+    tableCfs = Maps.newHashMap();
     tableCfs.put(TABLE_A, null);
-    builder.setReplicateAllUserTables(true);
-    builder.setExcludeTableCFsMap(tableCfs);
-    builder.setExcludeNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertFalse(peerConfig.needToReplicate(TABLE_A));
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeTableCFsMap(tableCfs)
+      .setExcludeNamespaces(Sets.newHashSet(NAMESPACE_OTHER))
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
+    assertTrue(peerConfig.needToReplicate(TABLE_B));
 
-    namespaces = new HashSet<>();
-    tableCfs = new HashMap<>();
-    namespaces.add("replication");
+    tableCfs = Maps.newHashMap();
     tableCfs.put(TABLE_B, null);
-    builder.setReplicateAllUserTables(true);
-    builder.setExcludeTableCFsMap(tableCfs);
-    builder.setExcludeNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertFalse(peerConfig.needToReplicate(TABLE_A));
-
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeTableCFsMap(tableCfs)
+      .setExcludeNamespaces(Sets.newHashSet(NAMESPACE_REPLICATE))
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
+    assertFalse(peerConfig.needToReplicate(TABLE_B));
   }
 
   @Test
   public void testNeedToReplicateWithoutReplicatingAll() {
     ReplicationPeerConfig peerConfig;
-    ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl builder =
-      new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl();
-    Map<TableName, List<String>> tableCfs = new HashMap<>();
-    Set<String> namespaces = new HashSet<>();
+    Map<TableName, List<String>> tableCfs;
 
     // 1. replication_all flag is false, no namespaces and table-cfs config
-    builder.setReplicateAllUserTables(false);
-    peerConfig = builder.build();
-    Assert.assertFalse(peerConfig.needToReplicate(TABLE_A));
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
 
     // 2. replicate_all flag is false, and only config table-cfs in peer
-    // empty map
-    builder.setReplicateAllUserTables(false);
-    builder.setTableCFsMap(tableCfs);
-    peerConfig = builder.build();
-    Assert.assertFalse(peerConfig.needToReplicate(TABLE_A));
+    // Set empty table-cfs map
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setTableCFsMap(Maps.newHashMap())
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
 
-    // table testB
-    tableCfs = new HashMap<>();
+    // Set table B
+    tableCfs = Maps.newHashMap();
     tableCfs.put(TABLE_B, null);
-    builder.setReplicateAllUserTables(false);
-    builder.setTableCFsMap(tableCfs);
-    peerConfig = builder.build();
-    Assert.assertFalse(peerConfig.needToReplicate(TABLE_A));
-
-    // table testA
-    tableCfs = new HashMap<>();
-    tableCfs.put(TABLE_A, null);
-    builder.setReplicateAllUserTables(false);
-    builder.setTableCFsMap(tableCfs);
-    peerConfig = builder.build();
-    Assert.assertTrue(peerConfig.needToReplicate(TABLE_A));
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setTableCFsMap(tableCfs)
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
+    assertTrue(peerConfig.needToReplicate(TABLE_B));
 
     // 3. replication_all flag is false, and only config namespace in peer
-    builder.setTableCFsMap(null);
-    // empty set
-    builder.setReplicateAllUserTables(false);
-    builder.setNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertFalse(peerConfig.needToReplicate(TABLE_A));
+    // Set empty namespace set
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setNamespaces(Sets.newHashSet())
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
 
-    // namespace default
-    namespaces = new HashSet<>();
-    namespaces.add("default");
-    builder.setReplicateAllUserTables(false);
-    builder.setNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertFalse(peerConfig.needToReplicate(TABLE_A));
+    // Set namespace other
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setNamespaces(Sets.newHashSet(NAMESPACE_OTHER))
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
 
-    // namespace replication
-    namespaces = new HashSet<>();
-    namespaces.add("replication");
-    builder.setReplicateAllUserTables(false);
-    builder.setNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertTrue(peerConfig.needToReplicate(TABLE_A));
+    // Set namespace replication
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setNamespaces(Sets.newHashSet(NAMESPACE_REPLICATE))
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
 
     // 4. replicate_all flag is false, and config namespaces and table-cfs both
     // Namespaces config doesn't conflict with table-cfs config
-    namespaces = new HashSet<>();
-    tableCfs = new HashMap<>();
-    namespaces.add("replication");
+    tableCfs = Maps.newHashMap();
     tableCfs.put(TABLE_A, null);
-    builder.setReplicateAllUserTables(false);
-    builder.setTableCFsMap(tableCfs);
-    builder.setNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertTrue(peerConfig.needToReplicate(TABLE_A));
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setTableCFsMap(tableCfs)
+      .setNamespaces(Sets.newHashSet(NAMESPACE_REPLICATE))
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
 
     // Namespaces config conflicts with table-cfs config
-    namespaces = new HashSet<>();
-    tableCfs = new HashMap<>();
-    namespaces.add("default");
+    tableCfs = Maps.newHashMap();
     tableCfs.put(TABLE_A, null);
-    builder.setReplicateAllUserTables(false);
-    builder.setTableCFsMap(tableCfs);
-    builder.setNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertTrue(peerConfig.needToReplicate(TABLE_A));
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setTableCFsMap(tableCfs)
+      .setNamespaces(Sets.newHashSet(NAMESPACE_OTHER))
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
 
-    namespaces = new HashSet<>();
-    tableCfs = new HashMap<>();
-    namespaces.add("replication");
+    tableCfs = Maps.newHashMap();
     tableCfs.put(TABLE_B, null);
-    builder.setReplicateAllUserTables(false);
-    builder.setTableCFsMap(tableCfs);
-    builder.setNamespaces(namespaces);
-    peerConfig = builder.build();
-    Assert.assertTrue(peerConfig.needToReplicate(TABLE_A));
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setNamespaces(Sets.newHashSet(NAMESPACE_REPLICATE))
+      .setTableCFsMap(tableCfs)
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
+  }
+
+  @Test
+  public void testNeedToReplicateCFWithReplicatingAll() {
+    Map<TableName, List<String>> excludeTableCfs = Maps.newHashMap();
+    excludeTableCfs.put(TABLE_A, null);
+    ReplicationPeerConfig peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeTableCFsMap(excludeTableCfs)
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
+    assertFalse(peerConfig.needToReplicate(TABLE_A, FAMILY1));
+    assertFalse(peerConfig.needToReplicate(TABLE_A, FAMILY2));
+
+    excludeTableCfs = Maps.newHashMap();
+    excludeTableCfs.put(TABLE_A, Lists.newArrayList());
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeTableCFsMap(excludeTableCfs)
+      .build();
+    assertFalse(peerConfig.needToReplicate(TABLE_A));
+    assertFalse(peerConfig.needToReplicate(TABLE_A, FAMILY1));
+    assertFalse(peerConfig.needToReplicate(TABLE_A, FAMILY2));
+
+    excludeTableCfs = Maps.newHashMap();
+    excludeTableCfs.put(TABLE_A, Lists.newArrayList(Bytes.toString(FAMILY1)));
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(true)
+      .setExcludeTableCFsMap(excludeTableCfs)
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
+    assertFalse(peerConfig.needToReplicate(TABLE_A, FAMILY1));
+    assertTrue(peerConfig.needToReplicate(TABLE_A, FAMILY2));
+  }
+
+  @Test
+  public void testNeedToReplicateCFWithoutReplicatingAll() {
+    Map<TableName, List<String>> tableCfs = Maps.newHashMap();
+    tableCfs.put(TABLE_A, null);
+    ReplicationPeerConfig peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setTableCFsMap(tableCfs)
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
+    assertTrue(peerConfig.needToReplicate(TABLE_A, FAMILY1));
+    assertTrue(peerConfig.needToReplicate(TABLE_A, FAMILY2));
+
+    tableCfs = Maps.newHashMap();
+    tableCfs.put(TABLE_A, Lists.newArrayList());
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setTableCFsMap(tableCfs)
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
+    assertTrue(peerConfig.needToReplicate(TABLE_A, FAMILY1));
+    assertTrue(peerConfig.needToReplicate(TABLE_A, FAMILY2));
+
+    tableCfs = Maps.newHashMap();
+    tableCfs.put(TABLE_A, Lists.newArrayList(Bytes.toString(FAMILY1)));
+    peerConfig = new ReplicationPeerConfig.ReplicationPeerConfigBuilderImpl()
+      .setReplicateAllUserTables(false)
+      .setTableCFsMap(tableCfs)
+      .build();
+    assertTrue(peerConfig.needToReplicate(TABLE_A));
+    assertTrue(peerConfig.needToReplicate(TABLE_A, FAMILY1));
+    assertFalse(peerConfig.needToReplicate(TABLE_A, FAMILY2));
   }
 }

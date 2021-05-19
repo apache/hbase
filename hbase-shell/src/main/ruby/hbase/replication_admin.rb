@@ -178,8 +178,9 @@ module Hbase
         end
         rpc = get_peer_config(id)
         unless rpc.nil?
-          rpc.setTableCFsMap(map)
-          @admin.updateReplicationPeerConfig(id, rpc)
+          builder = ReplicationPeerConfig.newBuilder(rpc)
+          builder.setTableCFsMap(map)
+          @admin.updateReplicationPeerConfig(id, builder.build)
         end
       end
     end
@@ -251,8 +252,9 @@ module Hbase
         end
         rpc = get_peer_config(id)
         unless rpc.nil?
-          rpc.setNamespaces(ns_set)
-          @admin.updateReplicationPeerConfig(id, rpc)
+          builder = ReplicationPeerConfig.newBuilder(rpc)
+          builder.setNamespaces(ns_set)
+          @admin.updateReplicationPeerConfig(id, builder.build)
         end
       end
     end
@@ -311,10 +313,9 @@ module Hbase
     # Set new bandwidth config for the specified peer
     def set_peer_bandwidth(id, bandwidth)
       rpc = get_peer_config(id)
-      unless rpc.nil?
-        rpc.setBandwidth(bandwidth)
-        @admin.updateReplicationPeerConfig(id, rpc)
-      end
+      return if rpc.nil?
+      rpc = ReplicationPeerConfig.newBuilder(rpc).setBandwidth(bandwidth).build
+      @admin.updateReplicationPeerConfig(id, rpc)
     end
 
     # Append exclude namespaces config for the specified peer
@@ -359,7 +360,7 @@ module Hbase
     def set_peer_replicate_all(id, replicate_all)
       rpc = get_peer_config(id)
       return if rpc.nil?
-      rpc.setReplicateAllUserTables(replicate_all)
+      rpc = ReplicationPeerConfig.newBuilder(rpc).setReplicateAllUserTables(replicate_all).build
       @admin.updateReplicationPeerConfig(id, rpc)
     end
 
@@ -381,7 +382,7 @@ module Hbase
       end
       rpc = get_peer_config(id)
       return if rpc.nil?
-      rpc.setExcludeNamespaces(exclude_ns_set)
+      rpc = ReplicationPeerConfig.newBuilder(rpc).setExcludeNamespaces(exclude_ns_set).build
       @admin.updateReplicationPeerConfig(id, rpc)
     end
 
@@ -404,7 +405,7 @@ module Hbase
       end
       rpc = get_peer_config(id)
       return if rpc.nil?
-      rpc.setExcludeTableCFsMap(map)
+      rpc = ReplicationPeerConfig.newBuilder(rpc).setExcludeTableCFsMap(map).build
       @admin.updateReplicationPeerConfig(id, rpc)
     end
 

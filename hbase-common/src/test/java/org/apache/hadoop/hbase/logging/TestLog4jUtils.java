@@ -24,9 +24,6 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -44,23 +41,29 @@ public class TestLog4jUtils {
 
   @Test
   public void test() {
-    Logger zk = LogManager.getLogger("org.apache.zookeeper");
-    Level zkLevel = zk.getEffectiveLevel();
-    Logger hbaseZk = LogManager.getLogger("org.apache.hadoop.hbase.zookeeper");
-    Level hbaseZkLevel = hbaseZk.getEffectiveLevel();
-    Logger client = LogManager.getLogger("org.apache.hadoop.hbase.client");
-    Level clientLevel = client.getEffectiveLevel();
+    org.apache.logging.log4j.Logger zk =
+      org.apache.logging.log4j.LogManager.getLogger("org.apache.zookeeper");
+    org.apache.logging.log4j.Level zkLevel = zk.getLevel();
+    org.apache.logging.log4j.Logger hbaseZk =
+      org.apache.logging.log4j.LogManager.getLogger("org.apache.hadoop.hbase.zookeeper");
+    org.apache.logging.log4j.Level hbaseZkLevel = hbaseZk.getLevel();
+    org.apache.logging.log4j.Logger client =
+      org.apache.logging.log4j.LogManager.getLogger("org.apache.hadoop.hbase.client");
+    org.apache.logging.log4j.Level clientLevel = client.getLevel();
     Log4jUtils.disableZkAndClientLoggers();
-    assertEquals(Level.OFF, zk.getLevel());
-    assertEquals(Level.OFF.toString(), Log4jUtils.getEffectiveLevel(zk.getName()));
-    assertEquals(Level.OFF, hbaseZk.getLevel());
-    assertEquals(Level.OFF.toString(), Log4jUtils.getEffectiveLevel(hbaseZk.getName()));
-    assertEquals(Level.OFF, client.getLevel());
-    assertEquals(Level.OFF.toString(), Log4jUtils.getEffectiveLevel(client.getName()));
+    assertEquals(org.apache.logging.log4j.Level.OFF, zk.getLevel());
+    assertEquals(org.apache.logging.log4j.Level.OFF.toString(),
+      Log4jUtils.getEffectiveLevel(zk.getName()));
+    assertEquals(org.apache.logging.log4j.Level.OFF, hbaseZk.getLevel());
+    assertEquals(org.apache.logging.log4j.Level.OFF.toString(),
+      Log4jUtils.getEffectiveLevel(hbaseZk.getName()));
+    assertEquals(org.apache.logging.log4j.Level.OFF, client.getLevel());
+    assertEquals(org.apache.logging.log4j.Level.OFF.toString(),
+      Log4jUtils.getEffectiveLevel(client.getName()));
     // restore the level
-    zk.setLevel(zkLevel);
-    hbaseZk.setLevel(hbaseZkLevel);
-    client.setLevel(clientLevel);
+    org.apache.logging.log4j.core.config.Configurator.setLevel(zk.getName(), zkLevel);
+    org.apache.logging.log4j.core.config.Configurator.setLevel(hbaseZk.getName(), hbaseZkLevel);
+    org.apache.logging.log4j.core.config.Configurator.setLevel(client.getName(), clientLevel);
   }
 
   @Test

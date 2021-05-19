@@ -78,6 +78,7 @@ public class TestRegionCoprocessorHost {
   public static final int MAX_VERSIONS = 3;
   public static final int MIN_VERSIONS = 2;
   public static final int TTL = 1000;
+  public static final int TIME_TO_PURGE_DELETES = 2000;
 
   @Before
   public void setup() throws IOException {
@@ -203,6 +204,7 @@ public class TestRegionCoprocessorHost {
     assertEquals(MAX_VERSIONS, newScanInfo.getMaxVersions());
     assertEquals(MIN_VERSIONS, newScanInfo.getMinVersions());
     assertEquals(TTL, newScanInfo.getTtl());
+    assertEquals(TIME_TO_PURGE_DELETES, newScanInfo.getTimeToPurgeDeletes());
   }
 
   private ScanInfo getScanInfo() {

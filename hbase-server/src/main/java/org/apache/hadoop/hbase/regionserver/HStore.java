@@ -296,7 +296,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     List<HStoreFile> hStoreFiles = loadStoreFiles(warmup);
     // Move the storeSize calculation out of loadStoreFiles() method, because the secondary read
     // replica's refreshStoreFiles() will also use loadStoreFiles() to refresh its store files and
-    // update the storeSize in the completeCompaction(..) finally (just like compaction) , so
+    // update the storeSize in the refreshStoreSizeAndTotalBytes() finally (just like compaction) , so
     // no need calculate the storeSize twice.
     this.storeSize.addAndGet(getStorefilesSize(hStoreFiles, sf -> true));
     this.totalUncompressedBytes.addAndGet(getTotalUncompressedBytes(hStoreFiles));
@@ -502,32 +502,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   /**
-   * @param tabledir {@link Path} to where the table is being stored
-   * @param hri {@link RegionInfo} for the region.
-   * @param family {@link ColumnFamilyDescriptor} describing the column family
-   * @return Path to family/Store home directory.
-   * @deprecated Since 05/05/2013, HBase-7808, hbase-1.0.0
-   */
-  @Deprecated
-  public static Path getStoreHomedir(final Path tabledir,
-      final RegionInfo hri, final byte[] family) {
-    return getStoreHomedir(tabledir, hri.getEncodedName(), family);
-  }
-
-  /**
-   * @param tabledir {@link Path} to where the table is being stored
-   * @param encodedName Encoded region name.
-   * @param family {@link ColumnFamilyDescriptor} describing the column family
-   * @return Path to family/Store home directory.
-   * @deprecated Since 05/05/2013, HBase-7808, hbase-1.0.0
-   */
-  @Deprecated
-  public static Path getStoreHomedir(final Path tabledir,
-      final String encodedName, final byte[] family) {
-    return new Path(tabledir, new Path(encodedName, Bytes.toString(family)));
-  }
-
-  /**
    * @return the data block encoder
    */
   public HFileDataBlockEncoder getDataBlockEncoder() {
@@ -713,7 +687,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       region.getMVCC().advanceTo(this.getMaxSequenceId().getAsLong());
     }
 
-    completeCompaction(toBeRemovedStoreFiles);
+    refreshStoreSizeAndTotalBytes();
   }
 
   protected HStoreFile createStoreFileAndReader(final Path p) throws IOException {
@@ -1543,7 +1517,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     long outputBytes = getTotalSize(sfs);
 
     // At this point the store will use new files for all new scanners.
-    completeCompaction(filesToCompact); // update store size.
+    refreshStoreSizeAndTotalBytes(); // update store size.
 
     long now = EnvironmentEdgeManager.currentTime();
     if (region.getRegionServerServices() != null
@@ -1769,7 +1743,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       LOG.info("Replaying compaction marker, replacing input files: " +
           inputStoreFiles + " with output files : " + outputStoreFiles);
       this.replaceStoreFiles(inputStoreFiles, outputStoreFiles);
-      this.completeCompaction(inputStoreFiles);
+      this.refreshStoreSizeAndTotalBytes();
     }
   }
 
@@ -1822,7 +1796,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
           this.getCoprocessorHost().postCompact(this, sf, null, null, null);
         }
         replaceStoreFiles(filesToCompact, Collections.singletonList(sf));
-        completeCompaction(filesToCompact);
+        refreshStoreSizeAndTotalBytes();
       }
     } finally {
       synchronized (filesCompacting) {
@@ -2010,7 +1984,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     Collection<HStoreFile> newFiles = Collections.emptyList(); // No new files.
     writeCompactionWalRecord(delSfs, newFiles);
     replaceStoreFiles(delSfs, newFiles);
-    completeCompaction(delSfs);
+    refreshStoreSizeAndTotalBytes();
     LOG.info("Completed removal of " + delSfs.size() + " unnecessary (expired) file(s) in "
         + this + "; total size is "
         + TraditionalBinaryPrefix.long2String(storeSize.get(), "", 1));
@@ -2052,10 +2026,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   /**
    * Update counts.
-   * @param compactedFiles list of files that were compacted
    */
-  protected void completeCompaction(Collection<HStoreFile> compactedFiles)
-  // Rename this method! TODO.
+  protected void refreshStoreSizeAndTotalBytes()
     throws IOException {
     this.storeSize.set(0L);
     this.totalUncompressedBytes.set(0L);

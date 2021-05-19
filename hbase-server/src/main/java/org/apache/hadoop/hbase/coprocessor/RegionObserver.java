@@ -1551,7 +1551,7 @@ public interface RegionObserver {
     List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
     for (Pair<Cell, Cell> pair : cellPairs) {
       resultPairs.add(new Pair<>(pair.getFirst(),
-          postMutationBeforeWAL(ctx, MutationType.INCREMENT, mutation, pair.getFirst(),
+          postMutationBeforeWAL(ctx, MutationType.APPEND, mutation, pair.getFirst(),
               pair.getSecond())));
     }
     return resultPairs;

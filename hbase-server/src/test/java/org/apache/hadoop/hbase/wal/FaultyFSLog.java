@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,16 +49,11 @@ public class FaultyFSLog extends FSHLog {
   }
 
   @Override
-  public void sync(long txid) throws IOException {
-    sync(txid, false);
-  }
-
-  @Override
-  public void sync(long txid, boolean forceSync) throws IOException {
+  protected void doSync(long txid, boolean forceSync) throws IOException {
     if (this.ft == FailureType.SYNC) {
       throw new IOException("sync");
     }
-    super.sync(txid, forceSync);
+    super.doSync(txid, forceSync);
   }
 
   @Override

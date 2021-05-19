@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.Random;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,11 +40,15 @@ import org.slf4j.LoggerFactory;
 public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   private static final Logger LOG =
     LoggerFactory.getLogger(ConstantSizeRegionSplitPolicy.class);
-  private static final Random RANDOM = new Random();
-
   private long desiredMaxFileSize;
   private double jitterRate;
   protected boolean overallHRegionFiles;
+
+  @Override
+  public String toString() {
+    return "ConstantSizeRegionSplitPolicy{" + "desiredMaxFileSize=" + desiredMaxFileSize
+      + ", jitterRate=" + jitterRate + '}';
+  }
 
   @Override
   protected void configureForRegion(HRegion region) {
@@ -62,9 +65,9 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
     this.overallHRegionFiles = conf.getBoolean(HConstants.OVERALL_HREGION_FILES,
       HConstants.DEFAULT_OVERALL_HREGION_FILES);
     double jitter = conf.getDouble("hbase.hregion.max.filesize.jitter", 0.25D);
-    this.jitterRate = (RANDOM.nextFloat() - 0.5D) * jitter;
+    this.jitterRate = (ThreadLocalRandom.current().nextFloat() - 0.5D) * jitter;
     long jitterValue = (long) (this.desiredMaxFileSize * this.jitterRate);
-    // make sure the long value won't overflow with jitter
+    // Default jitter is ~12% +/-. Make sure the long value won't overflow with jitter
     if (this.jitterRate > 0 && jitterValue > (Long.MAX_VALUE - this.desiredMaxFileSize)) {
       this.desiredMaxFileSize = Long.MAX_VALUE;
     } else {
@@ -100,7 +103,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
       }
       if (sumSize > sizeToCheck) {
         LOG.debug("ShouldSplit because region size is big enough "
-            + "size={}, sizeToCheck={}{}", StringUtils.humanSize(sumSize),
+            + "sumSize={}, sizeToCheck={}", StringUtils.humanSize(sumSize),
           StringUtils.humanSize(sizeToCheck));
         return true;
       }

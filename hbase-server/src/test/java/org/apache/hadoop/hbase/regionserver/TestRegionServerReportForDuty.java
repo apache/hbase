@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -42,11 +41,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.log4j.Appender;
-import org.apache.log4j.Layout;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.WriterAppender;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -55,6 +49,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @Category(LargeTests.class)
 public class TestRegionServerReportForDuty {
@@ -91,26 +87,15 @@ public class TestRegionServerReportForDuty {
     testUtil.shutdownMiniDFSCluster();
   }
 
-  /**
-   * LogCapturer is similar to {@link org.apache.hadoop.test.GenericTestUtils.LogCapturer}
-   * except that this implementation has a default appender to the root logger.
-   * Hadoop 2.8+ supports the default appender in the LogCapture it ships and this can be replaced.
-   * TODO: This class can be removed after we upgrade Hadoop dependency.
-   */
-  static class LogCapturer {
+  private static class LogCapturer {
     private StringWriter sw = new StringWriter();
-    private WriterAppender appender;
-    private org.apache.log4j.Logger logger;
+    private org.apache.logging.log4j.core.appender.WriterAppender appender;
+    private org.apache.logging.log4j.core.Logger logger;
 
-    LogCapturer(org.apache.log4j.Logger logger) {
+    LogCapturer(org.apache.logging.log4j.core.Logger logger) {
       this.logger = logger;
-      Appender defaultAppender = org.apache.log4j.Logger.getRootLogger().getAppender("stdout");
-      if (defaultAppender == null) {
-        defaultAppender = org.apache.log4j.Logger.getRootLogger().getAppender("console");
-      }
-      final Layout layout = (defaultAppender == null) ? new PatternLayout() :
-          defaultAppender.getLayout();
-      this.appender = new WriterAppender(layout, sw);
+      this.appender = org.apache.logging.log4j.core.appender.WriterAppender.newBuilder()
+        .setName("test").setTarget(sw).build();
       this.logger.addAppender(this.appender);
     }
 
@@ -146,7 +131,9 @@ public class TestRegionServerReportForDuty {
     master = cluster.addMaster();
     master.start();
 
-    LogCapturer capturer = new LogCapturer(org.apache.log4j.Logger.getLogger(HRegionServer.class));
+    LogCapturer capturer =
+      new LogCapturer((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+        .getLogger(HRegionServer.class));
     // Set sleep interval relatively low so that exponential backoff is more demanding.
     int msginterval = 100;
     cluster.getConfiguration().setInt("hbase.regionserver.msginterval", msginterval);
@@ -180,10 +167,8 @@ public class TestRegionServerReportForDuty {
     // Start a master and wait for it to become the active/primary master.
     // Use a random unique port
     cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
-    // master has a rs. defaultMinToStart = 2
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(testUtil.getConfiguration());
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, tablesOnMaster? 2: 1);
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, tablesOnMaster? 2: 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
     master = cluster.addMaster();
     rs = cluster.addRegionServer();
     LOG.debug("Starting master: " + master.getMaster().getServerName());
@@ -210,10 +195,8 @@ public class TestRegionServerReportForDuty {
     // Also let it wait for exactly 2 region severs to report in.
     // TODO: Add handling bindexception. Random port is not enough!!! Flakie test!
     cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-      tablesOnMaster? 3: 2);
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART,
-      tablesOnMaster? 3: 2);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 2);
     backupMaster = cluster.addMaster();
     LOG.debug("Starting new master: " + backupMaster.getMaster().getServerName());
     backupMaster.start();
@@ -223,8 +206,7 @@ public class TestRegionServerReportForDuty {
     // Do some checking/asserts here.
     assertTrue(backupMaster.getMaster().isActiveMaster());
     assertTrue(backupMaster.getMaster().isInitialized());
-    assertEquals(backupMaster.getMaster().getServerManager().getOnlineServersList().size(),
-      tablesOnMaster? 3: 2);
+    assertEquals(backupMaster.getMaster().getServerManager().getOnlineServersList().size(), 2);
 
   }
   
@@ -242,12 +224,8 @@ public class TestRegionServerReportForDuty {
     cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
     // Override the default RS RPC retry interval of 100ms to 300ms
     cluster.getConfiguration().setLong("hbase.regionserver.rpc.retry.interval", 300);
-    // master has a rs. defaultMinToStart = 2
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(testUtil.getConfiguration());
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-      tablesOnMaster ? 2 : 1);
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART,
-      tablesOnMaster ? 2 : 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
     master = cluster.addMaster();
     rs = cluster.addRegionServer();
     LOG.debug("Starting master: " + master.getMaster().getServerName());
@@ -275,12 +253,8 @@ public class TestRegionServerReportForDuty {
     cluster.getConfiguration().setInt("hbase.procedure.remote.dispatcher.delay.msec", 0);
     cluster.getConfiguration().setLong("hbase.regionserver.rpc.retry.interval", 0);
 
-    // master has a rs. defaultMinToStart = 2
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(testUtil.getConfiguration());
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-      tablesOnMaster ? 2 : 1);
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART,
-      tablesOnMaster ? 2 : 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
 
     // Inject manual environment edge for clock skew computation between RS and master
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();

@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -740,13 +741,6 @@ public class ServerManager {
     }
 
     int minimumRequired = 1;
-    if (LoadBalancer.isTablesOnMaster(master.getConfiguration()) &&
-        LoadBalancer.isSystemTablesOnlyOnMaster(master.getConfiguration())) {
-      // If Master is carrying regions it will show up as a 'server', but is not handling user-
-      // space regions, so we need a second server.
-      minimumRequired = 2;
-    }
-
     int minToStart = this.master.getConfiguration().getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
     // Ensure we are never less than minimumRequired else stuff won't work.
     return Math.max(minToStart, minimumRequired);
@@ -901,6 +895,17 @@ public class ServerManager {
     return serverName == null || deadservers.isDeadServer(serverName);
   }
 
+  /**
+   * Check if a server is unknown.  A server can be online,
+   * or known to be dead, or unknown to this manager (i.e, not online,
+   * not known to be dead either; it is simply not tracked by the
+   * master any more, for example, a very old previous instance).
+   */
+  public boolean isServerUnknown(ServerName serverName) {
+    return serverName == null
+      || (!onlineServers.containsKey(serverName) && !deadservers.isDeadServer(serverName));
+  }
+
   public void shutdownCluster() {
     String statusStr = "Cluster shutdown requested of master=" + this.master.getServerName();
     LOG.info(statusStr);
@@ -955,11 +960,19 @@ public class ServerManager {
 
   /**
    * Creates a list of possible destinations for a region. It contains the online servers, but not
-   *  the draining or dying servers.
-   *  @param serversToExclude can be null if there is no server to exclude
+   * the draining or dying servers.
+   * @param serversToExclude can be null if there is no server to exclude
    */
-  public List<ServerName> createDestinationServersList(final List<ServerName> serversToExclude){
-    final List<ServerName> destServers = getOnlineServersList();
+  public List<ServerName> createDestinationServersList(final List<ServerName> serversToExclude) {
+    Set<ServerName> destServers = new HashSet<>();
+    onlineServers.forEach((sn, sm) -> {
+      if (sm.getLastReportTimestamp() > 0) {
+        // This means we have already called regionServerReport at leaset once, then let's include
+        // this server for region assignment. This is an optimization to avoid assigning regions to
+        // an uninitialized server. See HBASE-25032 for more details.
+        destServers.add(sn);
+      }
+    });
 
     if (serversToExclude != null) {
       destServers.removeAll(serversToExclude);
@@ -969,7 +982,7 @@ public class ServerManager {
     final List<ServerName> drainingServersCopy = getDrainingServersList();
     destServers.removeAll(drainingServersCopy);
 
-    return destServers;
+    return new ArrayList<>(destServers);
   }
 
   /**

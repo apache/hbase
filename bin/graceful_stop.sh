@@ -33,7 +33,7 @@ moving regions"
   echo " maxthreads xx  Limit the number of threads used by the region mover. Default value is 1."
   echo " movetimeout xx Timeout for moving regions. If regions are not moved by the timeout value,\
 exit with error. Default value is INT_MAX."
-  echo " hostname       Hostname of server we are to stop"
+  echo " hostname       Hostname to stop; match what HBase uses; pass 'localhost' if local to avoid ssh"
   echo " e|failfast     Set -e so exit immediately if any command exits with non-zero status"
   echo " nob|nobalancer Do not manage balancer states. This is only used as optimization in \
 rolling_restart.sh to avoid multiple calls to hbase shell"
@@ -103,10 +103,11 @@ hostname=$1
 filename="/tmp/$hostname"
 
 local=
-localhostname=`/bin/hostname`
+localhostname=`/bin/hostname -f`
 
-if [ "$localhostname" == "$hostname" ]; then
+if [ "$localhostname" == "$hostname" ] || [ "$hostname" == "localhost" ]; then
   local=true
+  hostname=$localhostname
 fi
 
 if [ "$nob" == "true"  ]; then
@@ -201,4 +202,4 @@ else
 fi
 
 # Cleanup tmp files.
-trap "rm -f  "/tmp/$(basename $0).*.tmp" &> /dev/null" EXIT
+trap "rm -f  /tmp/$(basename $0).*.tmp &> /dev/null" EXIT

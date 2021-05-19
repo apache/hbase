@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import java.lang.reflect.Constructor;
@@ -102,7 +103,6 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
@@ -119,7 +119,6 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterRpcServicesVersionWrapper;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
@@ -143,6 +142,8 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
+import org.apache.hadoop.hbase.regionserver.http.RSDumpServlet;
+import org.apache.hadoop.hbase.regionserver.http.RSStatusServlet;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -154,8 +155,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
-import org.apache.hadoop.hbase.trace.SpanReceiverHost;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -304,7 +303,7 @@ public class HRegionServer extends Thread implements
   private boolean sameReplicationSourceAndSink;
 
   // Compactions
-  public CompactSplit compactSplitThread;
+  private CompactSplit compactSplitThread;
 
   /**
    * Map of regions currently being served by this region server. Key is the
@@ -392,7 +391,6 @@ public class HRegionServer extends Thread implements
 
   private MetricsRegionServer metricsRegionServer;
   MetricsRegionServerWrapperImpl metricsRegionServerImpl;
-  private SpanReceiverHost spanReceiverHost;
 
   /**
    * ChoreService used to schedule tasks that we want to run periodically
@@ -482,21 +480,12 @@ public class HRegionServer extends Thread implements
     "hbase.regionserver.hostname.disable.master.reversedns";
 
   /**
-   * HBASE-18226: This config and hbase.unasfe.regionserver.hostname are mutually exclusive.
+   * HBASE-18226: This config and hbase.unsafe.regionserver.hostname are mutually exclusive.
    * Exception will be thrown if both are used.
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   final static String UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY =
     "hbase.unsafe.regionserver.hostname.disable.master.reversedns";
-
-  /**
-   * HBASE-24667: This config hbase.regionserver.hostname.disable.master.reversedns will be replaced by
-   * hbase.unsafe.regionserver.hostname.disable.master.reversedns. Keep the old config keys here for backward
-   * compatibility.
-   */
-  static {
-    Configuration.addDeprecation(RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY);
-  }
 
   /**
    * This servers startcode.
@@ -590,7 +579,6 @@ public class HRegionServer extends Thread implements
    */
   public HRegionServer(final Configuration conf) throws IOException {
     super("RegionServer");  // thread name
-    TraceUtil.initTracer(conf);
     try {
       this.startcode = System.currentTimeMillis();
       this.conf = conf;
@@ -644,7 +632,7 @@ public class HRegionServer extends Thread implements
       regionServerAccounting = new RegionServerAccounting(conf);
 
       boolean isMasterNotCarryTable =
-          this instanceof HMaster && !LoadBalancer.isTablesOnMaster(conf);
+        this instanceof HMaster && !((HMaster) this).isInMaintenanceMode();
 
       // no need to instantiate block cache and mob file cache when master not carry table
       if (!isMasterNotCarryTable) {
@@ -656,7 +644,6 @@ public class HRegionServer extends Thread implements
         (t, e) -> abort("Uncaught exception in executorService thread " + t.getName(), e);
 
       initializeFileSystem();
-      spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());
 
       this.configurationManager = new ConfigurationManager();
       setupWindows(getConfiguration(), getConfigurationManager());
@@ -710,7 +697,10 @@ public class HRegionServer extends Thread implements
       final boolean isBalancerDecisionRecording = conf
         .getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
           BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
-      if (isBalancerDecisionRecording) {
+      final boolean isBalancerRejectionRecording = conf
+        .getBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED,
+          BaseLoadBalancer.DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED);
+      if (isBalancerDecisionRecording || isBalancerRejectionRecording) {
         this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
       }
     }
@@ -820,6 +810,24 @@ public class HRegionServer extends Thread implements
 
   protected Class<? extends HttpServlet> getDumpServlet() {
     return RSDumpServlet.class;
+  }
+
+  /**
+   * Used by {@link RSDumpServlet} to generate debugging information.
+   */
+  public void dumpRowLocks(final PrintWriter out) {
+    StringBuilder sb = new StringBuilder();
+    for (HRegion region : getRegions()) {
+      if (region.getLockedRows().size() > 0) {
+        for (HRegion.RowLockContext rowLockContext : region.getLockedRows().values()) {
+          sb.setLength(0);
+          sb.append(region.getTableDescriptor().getTableName()).append(",")
+            .append(region.getRegionInfo().getEncodedName()).append(",");
+          sb.append(rowLockContext.toString());
+          out.println(sb);
+        }
+      }
+    }
   }
 
   @Override
@@ -1941,11 +1949,10 @@ public class HRegionServer extends Thread implements
    * be hooked up to WAL.
    */
   private void setupWALAndReplication() throws IOException {
-    boolean isMasterNoTableOrSystemTableOnly = this instanceof HMaster &&
-        !LoadBalancer.isMasterCanHostUserRegions(conf);
+    boolean isMaster = this instanceof HMaster;
     WALFactory factory =
-        new WALFactory(conf, serverName.toString(), this, !isMasterNoTableOrSystemTableOnly);
-    if (!isMasterNoTableOrSystemTableOnly) {
+        new WALFactory(conf, serverName.toString(), this, !isMaster);
+    if (!isMaster) {
       // TODO Replication make assumptions here based on the default filesystem impl
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
       String logName = AbstractFSWALProvider.getWALDirectoryName(this.serverName.toString());
@@ -2042,57 +2049,59 @@ public class HRegionServer extends Thread implements
 
     // Start executor services
     final int openRegionThreads = conf.getInt("hbase.regionserver.executor.openregion.threads", 3);
-    this.executorService.startExecutorService(ExecutorType.RS_OPEN_REGION,
-        new ExecutorConfig().setCorePoolSize(openRegionThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_OPEN_REGION).setCorePoolSize(openRegionThreads));
     final int openMetaThreads = conf.getInt("hbase.regionserver.executor.openmeta.threads", 1);
-    this.executorService.startExecutorService(ExecutorType.RS_OPEN_META,
-        new ExecutorConfig().setCorePoolSize(openMetaThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_OPEN_META).setCorePoolSize(openMetaThreads));
     final int openPriorityRegionThreads =
         conf.getInt("hbase.regionserver.executor.openpriorityregion.threads", 3);
-    this.executorService.startExecutorService(ExecutorType.RS_OPEN_PRIORITY_REGION,
-       new ExecutorConfig().setCorePoolSize(openPriorityRegionThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_OPEN_PRIORITY_REGION).setCorePoolSize(openPriorityRegionThreads));
     final int closeRegionThreads =
         conf.getInt("hbase.regionserver.executor.closeregion.threads", 3);
-    this.executorService.startExecutorService(ExecutorType.RS_CLOSE_REGION,
-        new ExecutorConfig().setCorePoolSize(closeRegionThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_CLOSE_REGION).setCorePoolSize(closeRegionThreads));
     final int closeMetaThreads = conf.getInt("hbase.regionserver.executor.closemeta.threads", 1);
-    this.executorService.startExecutorService(ExecutorType.RS_CLOSE_META,
-        new ExecutorConfig().setCorePoolSize(closeMetaThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_CLOSE_META).setCorePoolSize(closeMetaThreads));
     if (conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false)) {
       final int storeScannerParallelSeekThreads =
           conf.getInt("hbase.storescanner.parallel.seek.threads", 10);
-      this.executorService.startExecutorService(ExecutorType.RS_PARALLEL_SEEK,
-          new ExecutorConfig().setCorePoolSize(storeScannerParallelSeekThreads)
-              .setAllowCoreThreadTimeout(true));
+      executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+          ExecutorType.RS_PARALLEL_SEEK).setCorePoolSize(storeScannerParallelSeekThreads)
+          .setAllowCoreThreadTimeout(true));
     }
     final int logReplayOpsThreads = conf.getInt(
         HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER);
-    this.executorService.startExecutorService(ExecutorType.RS_LOG_REPLAY_OPS,
-        new ExecutorConfig().setCorePoolSize(logReplayOpsThreads).setAllowCoreThreadTimeout(true));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_LOG_REPLAY_OPS).setCorePoolSize(logReplayOpsThreads)
+        .setAllowCoreThreadTimeout(true));
     // Start the threads for compacted files discharger
     final int compactionDischargerThreads =
         conf.getInt(CompactionConfiguration.HBASE_HFILE_COMPACTION_DISCHARGER_THREAD_COUNT, 10);
-    this.executorService.startExecutorService(ExecutorType.RS_COMPACTED_FILES_DISCHARGER,
-        new ExecutorConfig().setCorePoolSize(compactionDischargerThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_COMPACTED_FILES_DISCHARGER).setCorePoolSize(compactionDischargerThreads));
     if (ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(conf)) {
       final int regionReplicaFlushThreads = conf.getInt(
           "hbase.regionserver.region.replica.flusher.threads", conf.getInt(
               "hbase.regionserver.executor.openregion.threads", 3));
-      this.executorService.startExecutorService(ExecutorType.RS_REGION_REPLICA_FLUSH_OPS,
-          new ExecutorConfig().setCorePoolSize(regionReplicaFlushThreads));
+      executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+          ExecutorType.RS_REGION_REPLICA_FLUSH_OPS).setCorePoolSize(regionReplicaFlushThreads));
     }
     final int refreshPeerThreads =
         conf.getInt("hbase.regionserver.executor.refresh.peer.threads", 2);
-    this.executorService.startExecutorService(ExecutorType.RS_REFRESH_PEER,
-        new ExecutorConfig().setCorePoolSize(refreshPeerThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_REFRESH_PEER).setCorePoolSize(refreshPeerThreads));
     final int replaySyncReplicationWALThreads =
         conf.getInt("hbase.regionserver.executor.replay.sync.replication.wal.threads", 1);
-    this.executorService.startExecutorService(ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL,
-        new ExecutorConfig().setCorePoolSize(replaySyncReplicationWALThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL).setCorePoolSize(
+            replaySyncReplicationWALThreads));
     final int switchRpcThrottleThreads =
         conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1);
-    this.executorService.startExecutorService(ExecutorType.RS_SWITCH_RPC_THROTTLE,
-        new ExecutorConfig().setCorePoolSize(switchRpcThrottleThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_SWITCH_RPC_THROTTLE).setCorePoolSize(switchRpcThrottleThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
         uncaughtExceptionHandler);
@@ -2693,10 +2702,6 @@ public class HRegionServer extends Thread implements
     if (this.cacheFlusher != null) {
       this.cacheFlusher.join();
     }
-
-    if (this.spanReceiverHost != null) {
-      this.spanReceiverHost.closeReceivers();
-    }
     if (this.walRoller != null) {
       this.walRoller.close();
     }
@@ -2853,8 +2858,8 @@ public class HRegionServer extends Thread implements
       rpcServices.rpcFullScanRequestCount.reset();
       rpcServices.rpcMultiRequestCount.reset();
       rpcServices.rpcMutateRequestCount.reset();
-      LOG.info("reportForDuty to master=" + masterServerName + " with port="
-        + rpcServices.isa.getPort() + ", startcode=" + this.startcode);
+      LOG.info("reportForDuty to master=" + masterServerName + " with isa="
+        + rpcServices.isa + ", startcode=" + this.startcode);
       long now = EnvironmentEdgeManager.currentTime();
       int port = rpcServices.isa.getPort();
       RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
@@ -3751,7 +3756,7 @@ public class HRegionServer extends Thread implements
     return hMemManager;
   }
 
-  MemStoreFlusher getMemStoreFlusher() {
+  public MemStoreFlusher getMemStoreFlusher() {
     return cacheFlusher;
   }
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.HRegion.COMPACTION_AFTER_BULKLOAD_ENABLE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -84,27 +85,32 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
     for (int i = 0; i < 5; i++) {
       familyPaths.addAll(withFamilyPathsFor(family1, family2, family3));
     }
-    when(regionServerServices.getConfiguration()).thenReturn(conf);
-    when(regionServerServices.getCompactionRequestor()).thenReturn(compactionRequester);
-    when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
-        .thenAnswer(new Answer() {
-          @Override
-          public Object answer(InvocationOnMock invocation) {
-            WALKeyImpl walKey = invocation.getArgument(1);
-            MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
-            if (mvcc != null) {
-              MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
-              walKey.setWriteEntry(we);
+    try {
+      conf.setBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, true);
+      when(regionServerServices.getConfiguration()).thenReturn(conf);
+      when(regionServerServices.getCompactionRequestor()).thenReturn(compactionRequester);
+      when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
+          .thenAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocation) {
+              WALKeyImpl walKey = invocation.getArgument(1);
+              MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+              if (mvcc != null) {
+                MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+                walKey.setWriteEntry(we);
+              }
+              return 01L;
             }
-            return 01L;
-          }
-        });
+          });
 
-    Mockito.doNothing().when(compactionRequester).requestCompaction(any(), any(), any(), anyInt(),
-      any(), any());
-    testRegionWithFamilies(family1, family2, family3).bulkLoadHFiles(familyPaths, false, null);
-    // invoke three times for 3 families
-    verify(compactionRequester, times(3)).requestCompaction(isA(HRegion.class), isA(HStore.class),
-      isA(String.class), anyInt(), eq(CompactionLifeCycleTracker.DUMMY), eq(null));
+      Mockito.doNothing().when(compactionRequester).requestCompaction(any(), any(), any(), anyInt(),
+        any(), any());
+      testRegionWithFamilies(family1, family2, family3).bulkLoadHFiles(familyPaths, false, null);
+      // invoke three times for 3 families
+      verify(compactionRequester, times(3)).requestCompaction(isA(HRegion.class), isA(HStore.class),
+        isA(String.class), anyInt(), eq(CompactionLifeCycleTracker.DUMMY), eq(null));
+    } finally {
+      conf.setBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, false);
+    }
   }
 }

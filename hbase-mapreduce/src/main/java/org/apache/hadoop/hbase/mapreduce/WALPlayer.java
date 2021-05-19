@@ -82,14 +82,6 @@ public class WALPlayer extends Configured implements Tool {
 
   protected static final String tableSeparator = ";";
 
-  // This relies on Hadoop Configuration to handle warning about deprecated configs and
-  // to set the correct non-deprecated configs when an old one shows up.
-  static {
-    Configuration.addDeprecation("hlog.bulk.output", BULK_OUTPUT_CONF_KEY);
-    Configuration.addDeprecation("hlog.input.tables", TABLES_KEY);
-    Configuration.addDeprecation("hlog.input.tablesmap", TABLE_MAP_KEY);
-  }
-
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   public WALPlayer() {

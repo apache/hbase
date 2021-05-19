@@ -144,6 +144,7 @@ public class HbckChore extends ScheduledChore {
       LOG.warn("Unexpected", t);
     }
     running = false;
+    updateAssignmentManagerMetrics();
   }
 
   // This function does the sanity checks of making sure the chore is not run when it is
@@ -222,7 +223,7 @@ public class HbckChore extends ScheduledChore {
           .isTableState(regionInfo.getTable(), TableState.State.DISABLED)) {
         disabledTableRegions.add(regionInfo.getRegionNameAsString());
       }
-      if (regionInfo.isSplitParent()) {
+      if (regionState.isSplit()) {
         splitParentRegions.add(regionInfo.getRegionNameAsString());
       }
       HbckRegionInfo.MetaEntry metaEntry =
@@ -230,7 +231,30 @@ public class HbckChore extends ScheduledChore {
               regionState.getStamp());
       regionInfoMap.put(regionInfo.getEncodedName(), new HbckRegionInfo(metaEntry));
     }
-    LOG.info("Loaded {} regions from in-memory state of AssignmentManager", regionStates.size());
+    LOG.info("Loaded {} regions ({} disabled, {} split parents) from in-memory state",
+      regionStates.size(), disabledTableRegions.size(), splitParentRegions.size());
+    if (LOG.isDebugEnabled()) {
+      Map<RegionState.State,Integer> stateCountMap = new HashMap<>();
+      for (RegionState regionState : regionStates) {
+        stateCountMap.compute(regionState.getState(), (k, v) -> (v == null) ? 1 : v + 1);
+      }
+      StringBuffer sb = new StringBuffer();
+      sb.append("Regions by state: ");
+      stateCountMap.entrySet().forEach(e -> {
+          sb.append(e.getKey());
+          sb.append('=');
+          sb.append(e.getValue());
+          sb.append(' ');
+        }
+      );
+      LOG.debug(sb.toString());
+    }
+    if (LOG.isTraceEnabled()) {
+      for (RegionState regionState : regionStates) {
+        LOG.trace("{}: {}, serverName=", regionState.getRegion(), regionState.getState(),
+          regionState.getServerName());
+      }
+    }
   }
 
   private void loadRegionsFromRSReport() {
@@ -306,8 +330,17 @@ public class HbckChore extends ScheduledChore {
       }
       numRegions += regionDirs.size();
     }
-    LOG.info("Loaded {} tables {} regions from filesyetem and found {} orphan regions",
+    LOG.info("Loaded {} tables {} regions from filesystem and found {} orphan regions",
         tableDirs.size(), numRegions, orphanRegionsOnFS.size());
+  }
+
+  private void updateAssignmentManagerMetrics() {
+    master.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateOrphanRegionsOnRs(getOrphanRegionsOnRS().size());
+    master.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateOrphanRegionsOnFs(getOrphanRegionsOnFS().size());
+    master.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateInconsistentRegions(getInconsistentRegions().size());
   }
 
   /**

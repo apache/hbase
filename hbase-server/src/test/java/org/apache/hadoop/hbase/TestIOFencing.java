@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -211,14 +209,14 @@ public class TestIOFencing {
     }
 
     @Override
-    protected void completeCompaction(Collection<HStoreFile> compactedFiles) throws IOException {
+    protected void refreshStoreSizeAndTotalBytes() throws IOException {
       try {
         r.compactionsWaiting.countDown();
         r.compactionsBlocked.await();
       } catch (InterruptedException ex) {
         throw new IOException(ex);
       }
-      super.completeCompaction(compactedFiles);
+      super.refreshStoreSizeAndTotalBytes();
     }
   }
 

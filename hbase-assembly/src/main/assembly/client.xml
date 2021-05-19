@@ -61,10 +61,9 @@
               <exclude>org.apache.htrace:htrace-core4</exclude>
               <exclude>org.apache.htrace:htrace-core</exclude>
               <exclude>org.apache.yetus:audience-annotations</exclude>
-              <exclude>org.slf4j:slf4j-api</exclude>
-              <exclude>org.slf4j:jcl-over-slf4j</exclude>
-              <exclude>org.slf4j:jul-to-slf4j</exclude>
-              <exclude>org.slf4j:slf4j-log4j12</exclude>
+              <exclude>org.slf4j:*</exclude>
+              <exclude>org.apache.logging.log4j:*</exclude>
+              <exclude>io.opentelemetry.javaagent:*</exclude>
             </excludes>
           </dependencySet>
         </dependencySets>
@@ -149,10 +148,15 @@
         <include>org.apache.htrace:htrace-core4</include>
         <include>org.apache.htrace:htrace-core</include>
         <include>org.apache.yetus:audience-annotations</include>
-        <include>org.slf4j:slf4j-api</include>
-        <include>org.slf4j:jcl-over-slf4j</include>
-        <include>org.slf4j:jul-to-slf4j</include>
-        <include>org.slf4j:slf4j-log4j12</include>
+        <include>org.slf4j:*</include>
+        <include>org.apache.logging.log4j:*</include>
+        <include>io.opentelemetry:*</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/trace</outputDirectory>
+      <includes>
+        <include>io.opentelemetry.javaagent:*</include>
       </includes>
     </dependencySet>
   </dependencySets>

@@ -570,6 +570,10 @@ public final class CellUtil {
         buf.length);
   }
 
+  public static boolean matchingTags(final Cell left, final Cell right) {
+    return PrivateCellUtil.matchingTags(left, right, left.getTagsLength(), right.getTagsLength());
+  }
+
   /**
    * @return True if a delete type, a {@link KeyValue.Type#Delete} or a
    *         {KeyValue.Type#DeleteFamily} or a

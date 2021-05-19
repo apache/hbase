@@ -26,11 +26,16 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.BindException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -51,10 +56,13 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALCoprocessor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -763,5 +771,126 @@ public class TestWALFactory {
     assertEquals(Providers.filesystem.clazz, walProvider);
     WALProvider metaWALProvider = walFactory.getMetaProvider();
     assertEquals(IOTestProvider.class, metaWALProvider.getClass());
+  }
+
+  @Test
+  public void testReaderClosedOnBadCodec() throws IOException {
+    // Create our own Configuration and WALFactory to avoid breaking other test methods
+    Configuration confWithCodec = new Configuration(conf);
+    confWithCodec.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, BrokenWALCellCodec.class, Codec.class);
+    WALFactory customFactory = new WALFactory(confWithCodec, this.currentServername.toString());
+
+    // Hack a Proxy over the FileSystem so that we can track the InputStreams opened by
+    // the FileSystem and know if close() was called on those InputStreams.
+    List<InputStreamProxy> openedReaders = new ArrayList<>();
+    FileSystemProxy proxyFs = new FileSystemProxy(fs) {
+      @Override
+      public FSDataInputStream open(Path p) throws IOException {
+        InputStreamProxy is = new InputStreamProxy(super.open(p));
+        openedReaders.add(is);
+        return is;
+      }
+
+      @Override
+      public FSDataInputStream open(Path p, int blockSize) throws IOException {
+        InputStreamProxy is = new InputStreamProxy(super.open(p, blockSize));
+        openedReaders.add(is);
+        return is;
+      }
+    };
+
+    final TableDescriptor htd =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName()))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("column")).build();
+    final RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
+
+    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    for (byte[] fam : htd.getColumnFamilyNames()) {
+      scopes.put(fam, 0);
+    }
+    byte[] row = Bytes.toBytes("row");
+    WAL.Reader reader = null;
+    final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
+    try {
+      // Write one column in one edit.
+      WALEdit cols = new WALEdit();
+      cols.add(new KeyValue(row, Bytes.toBytes("column"),
+        Bytes.toBytes("0"), System.currentTimeMillis(), new byte[] { 0 }));
+      final WAL log = customFactory.getWAL(hri);
+      final long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
+        htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
+      // Sync the edit to the WAL
+      log.sync(txid);
+      log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
+      log.completeCacheFlush(hri.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
+      log.shutdown();
+
+      // Inject our failure, object is constructed via reflection.
+      BrokenWALCellCodec.THROW_FAILURE_ON_INIT.set(true);
+
+      // Now open a reader on the log which will throw an exception when
+      // we try to instantiate the custom Codec.
+      Path filename = AbstractFSWALProvider.getCurrentFileName(log);
+      try {
+        reader = customFactory.createReader(proxyFs, filename);
+        fail("Expected to see an exception when creating WAL reader");
+      } catch (Exception e) {
+        // Expected that we get an exception
+      }
+      // We should have exactly one reader
+      assertEquals(1, openedReaders.size());
+      // And that reader should be closed.
+      long unclosedReaders = openedReaders.stream()
+          .filter((r) -> !r.isClosed.get())
+          .collect(Collectors.counting());
+      assertEquals("Should not find any open readers", 0, (int) unclosedReaders);
+    } finally {
+      if (reader != null) {
+        reader.close();
+      }
+    }
+  }
+
+  /**
+   * A proxy around FSDataInputStream which can report if close() was called.
+   */
+  private static class InputStreamProxy extends FSDataInputStream {
+    private final InputStream real;
+    private final AtomicBoolean isClosed = new AtomicBoolean(false);
+
+    public InputStreamProxy(InputStream real) {
+      super(real);
+      this.real = real;
+    }
+
+    @Override
+    public void close() throws IOException {
+      isClosed.set(true);
+      real.close();
+    }
+  }
+
+  /**
+   * A custom WALCellCodec in which we can inject failure.
+   */
+  @SuppressWarnings("unused")
+  private static class BrokenWALCellCodec extends WALCellCodec {
+    static final AtomicBoolean THROW_FAILURE_ON_INIT = new AtomicBoolean(false);
+
+    static void maybeInjectFailure() {
+      if (THROW_FAILURE_ON_INIT.get()) {
+        throw new RuntimeException("Injected instantiation exception");
+      }
+    }
+
+    public BrokenWALCellCodec() {
+      super();
+      maybeInjectFailure();
+    }
+
+    public BrokenWALCellCodec(Configuration conf, CompressionContext compression) {
+      super(conf, compression);
+      maybeInjectFailure();
+    }
   }
 }

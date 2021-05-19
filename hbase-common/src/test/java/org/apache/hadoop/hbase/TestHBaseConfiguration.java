@@ -133,6 +133,23 @@ public class TestHBaseConfiguration {
     assertEquals("/var/lib/hadoop-hdfs/dn_socket", conf.get("dfs.domain.socket.path"));
   }
 
+  @Test
+  public void testDeprecatedConfigurations() {
+    // Configuration.addDeprecations before create Configuration object
+    Configuration.addDeprecations(new Configuration.DeprecationDelta[]{
+      new Configuration.DeprecationDelta("hbase.deprecated.conf", "hbase.new.conf")
+    });
+    Configuration conf = HBaseConfiguration.create();
+    conf.addResource("hbase-deprecated-conf.xml");
+    assertEquals("1000", conf.get("hbase.new.conf"));
+
+    // Configuration.addDeprecations after create Configuration object
+    Configuration.addDeprecations(new Configuration.DeprecationDelta[]{
+      new Configuration.DeprecationDelta("hbase.deprecated.conf2", "hbase.new.conf2")
+    });
+    assertNull(conf.get("hbase.new.conf2"));
+  }
+
   private static class ReflectiveCredentialProviderClient {
     public static final String HADOOP_CRED_PROVIDER_FACTORY_CLASS_NAME =
         "org.apache.hadoop.security.alias.JavaKeyStoreProvider$Factory";
