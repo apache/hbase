@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -25,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * There is special handling in replication wal reader to catch this exception and
  * retry.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class WALEntryFilterRetryableException extends RuntimeException {
   private static final long serialVersionUID = 1L;
 
