@@ -29,7 +29,6 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
@@ -346,7 +345,7 @@ public class TestByteBuffAllocator {
 
   @Test
   public void testDeprecatedConfigs() {
-    Configuration conf = HBaseConfiguration.create();
+    Configuration conf = new Configuration();
     conf.setInt(ByteBuffAllocator.DEPRECATED_MAX_BUFFER_COUNT_KEY, 10);
     conf.setInt(ByteBuffAllocator.DEPRECATED_BUFFER_SIZE_KEY, 1024);
     ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);

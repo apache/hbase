@@ -165,6 +165,12 @@ because of link:https://issues.apache.org/jira/browse/HBASE-22532[HBASE-22532].
 The three config keys -- `hbase.ipc.server.reservoir.enabled`, `hbase.ipc.server.reservoir.initial.buffer.size` and `hbase.ipc.server.reservoir.initial.max` -- introduced in hbase-2.x
 have been renamed and deprecated in hbase-3.x/hbase-2.3.x. Please use the new config keys instead:
 `hbase.server.allocator.pool.enabled`, `hbase.server.allocator.buffer.size` and `hbase.server.allocator.max.buffer.count`.
+If you still use the deprecated three config keys in hbase-3.x, you will get a WARN log message like:
+
+[source]
+----
+The config keys hbase.ipc.server.reservoir.initial.buffer.size and hbase.ipc.server.reservoir.initial.max are deprecated now, instead please use hbase.server.allocator.buffer.size and hbase.server.allocator.max.buffer.count. In future release we will remove the two deprecated configs.
+----
 
 Next, we have some suggestions regards performance.
 

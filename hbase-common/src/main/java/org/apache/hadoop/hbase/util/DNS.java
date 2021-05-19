@@ -59,6 +59,7 @@ public final class DNS {
     } catch (Exception e) {
       HAS_NEW_DNS_GET_DEFAULT_HOST_API = false; // FindBugs: Causes REC_CATCH_EXCEPTION. Suppressed
     }
+    Configuration.addDeprecation(RS_HOSTNAME_KEY, UNSAFE_RS_HOSTNAME_KEY);
   }
 
   public enum ServerType {
