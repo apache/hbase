@@ -41,7 +41,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
@@ -160,6 +159,12 @@ class ReplicationSourceWALReader extends Thread {
       } catch (InterruptedException e) {
         LOG.trace("Interrupted while sleeping between WAL reads");
         Thread.currentThread().interrupt();
+      } catch (WALEntryFilterRetryableException e) {
+        LOG.warn("WAL Entry filter threw retryable exception, it should recover", e);
+        if (sleepMultiplier < maxRetriesMultiplier) {
+          sleepMultiplier ++;
+        }
+        Threads.sleep(sleepForRetries * sleepMultiplier);
       }
     }
   }

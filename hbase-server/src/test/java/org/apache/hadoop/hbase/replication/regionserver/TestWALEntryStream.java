@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -121,6 +120,7 @@ public class TestWALEntryStream {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     CONF = TEST_UTIL.getConfiguration();
+    CONF.setLong("replication.source.sleepforretries", 10);
     TEST_UTIL.startMiniDFSCluster(3);
 
     cluster = TEST_UTIL.getDFSCluster();
@@ -410,6 +410,17 @@ public class TestWALEntryStream {
     return reader;
   }
 
+  private ReplicationSourceWALReader createReaderWithBadReplicationFilter(int numFailures,
+      Configuration conf) {
+    ReplicationSource source = mockReplicationSource(false, conf);
+    when(source.isPeerEnabled()).thenReturn(true);
+    ReplicationSourceWALReader reader =
+      new ReplicationSourceWALReader(fs, conf, logQueue, 0,
+        getIntermittentFailingFilter(numFailures), source, fakeWalGroupId);
+    reader.start();
+    return reader;
+  }
+
   @Test
   public void testReplicationSourceWALReader() throws Exception {
     appendEntriesToLogAndSync(3);
@@ -440,6 +451,36 @@ public class TestWALEntryStream {
     entryBatch = reader.take();
     assertEquals(1, entryBatch.getNbEntries());
     assertEquals("foo", getRow(entryBatch.getWalEntries().get(0)));
+  }
+
+  @Test
+  public void testReplicationSourceWALReader2() throws Exception {
+    appendEntriesToLogAndSync(3);
+    // get ending position
+    long position;
+    try (WALEntryStream entryStream =
+      new WALEntryStream(logQueue, CONF, 0, log, null,
+        new MetricsSource("1"), fakeWalGroupId)) {
+      entryStream.next();
+      entryStream.next();
+      entryStream.next();
+      position = entryStream.getPosition();
+    }
+
+    // start up a reader
+    Path walPath = getQueue().peek();
+    int numFailuresInFilter = 5;
+    ReplicationSourceWALReader reader = createReaderWithBadReplicationFilter(
+      numFailuresInFilter, CONF);
+    WALEntryBatch entryBatch = reader.take();
+    assertEquals(numFailuresInFilter, FailingWALEntryFilter.numFailures());
+
+    // should've batched up our entries
+    assertNotNull(entryBatch);
+    assertEquals(3, entryBatch.getWalEntries().size());
+    assertEquals(position, entryBatch.getLastWalPosition());
+    assertEquals(walPath, entryBatch.getLastWalPath());
+    assertEquals(3, entryBatch.getNbRowKeys());
   }
 
   @Test
@@ -631,6 +672,32 @@ public class TestWALEntryStream {
         return entry;
       }
     };
+  }
+
+  private WALEntryFilter getIntermittentFailingFilter(int numFailuresInFilter) {
+    return new FailingWALEntryFilter(numFailuresInFilter);
+  }
+
+  public static class FailingWALEntryFilter implements WALEntryFilter {
+    private int numFailures = 0;
+    private static int countFailures = 0;
+
+    public FailingWALEntryFilter(int numFailuresInFilter) {
+      numFailures = numFailuresInFilter;
+    }
+
+    @Override
+    public Entry filter(Entry entry) {
+      if (countFailures == numFailures) {
+        return entry;
+      }
+      countFailures = countFailures + 1;
+      throw new WALEntryFilterRetryableException("failing filter");
+    }
+
+    public static int numFailures(){
+      return countFailures;
+    }
   }
 
   class PathWatcher implements WALActionsListener {
