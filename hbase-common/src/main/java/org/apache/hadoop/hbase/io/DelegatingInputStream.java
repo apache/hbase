@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.hbase.io;
 
-import java.io.IOException;
+import java.io.FilterInputStream;
 import java.io.InputStream;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -38,65 +37,18 @@ import org.apache.yetus.audience.InterfaceAudience;
  * another in a way that provides a valid view of stream contents.
  */
 @InterfaceAudience.Private
-public class DelegatingInputStream extends InputStream {
+public class DelegatingInputStream extends FilterInputStream {
 
-  final AtomicReference<InputStream> lowerStream = new AtomicReference<>();
-
-  public DelegatingInputStream(InputStream lowerStream) {
-    this.lowerStream.set(lowerStream);
+  public DelegatingInputStream(InputStream in) {
+    super(in);
   }
 
   public InputStream getDelegate() {
-    return lowerStream.get();
+    return this.in;
   }
 
-  public void setDelegate(InputStream lowerStream) {
-    this.lowerStream.set(lowerStream);
-  }
-
-  @Override
-  public int read() throws IOException {
-    return lowerStream.get().read();
-  }
-
-  @Override
-  public int read(byte[] b) throws IOException {
-    return lowerStream.get().read(b);
-  }
-
-  @Override
-  public int read(byte[] b, int off, int len) throws IOException {
-    return lowerStream.get().read(b, off, len);
-  }
-
-  @Override
-  public long skip(long n) throws IOException {
-    return lowerStream.get().skip(n);
-  }
-
-  @Override
-  public int available() throws IOException {
-    return lowerStream.get().available();
-  }
-
-  @Override
-  public void close() throws IOException {
-    lowerStream.get().close();
-  }
-
-  @Override
-  public synchronized void mark(int readlimit) {
-    lowerStream.get().mark(readlimit);
-  }
-
-  @Override
-  public synchronized void reset() throws IOException {
-    lowerStream.get().reset();
-  }
-
-  @Override
-  public boolean markSupported() {
-    return lowerStream.get().markSupported();
+  public void setDelegate(InputStream in) {
+    this.in = in;
   }
 
 }
