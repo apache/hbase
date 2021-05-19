@@ -18,11 +18,14 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.yetus.audience.InterfaceAudience;
+
 /**
- * This exception should be thrown any wal filter when the filter is expected
+ * This exception should be thrown from any wal filter when the filter is expected
  * to recover from the failures and it wants the replication to backup till it fails.
+ * There is special handling in replication wal reader to catch this exception and
+ * retry.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class WALEntryFilterRetryableException extends RuntimeException {
   private static final long serialVersionUID = 1L;
 

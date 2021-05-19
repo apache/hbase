@@ -458,7 +458,7 @@ public class TestWALEntryStream {
   }
 
   @Test
-  public void testReplicationSourceWALReader2() throws Exception {
+  public void testReplicationSourceWALReaderWithFailingFilter() throws Exception {
     appendEntriesToLogAndSync(3);
     // get ending position
     long position;
