@@ -27,6 +27,7 @@ import java.util.Optional;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
@@ -41,7 +42,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -113,15 +114,18 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
   }
 
   /**
+   * Setup Cluster with appropriate configurations before running tests.
+   *
    * @throws Exception if starting the mini cluster or setting up the tables fails
    */
-  @Override
-  @Before
-  public void setUp() throws Exception {
+  @BeforeClass
+  public static void setUp() throws Exception {
+    TEST_UTIL = new HBaseTestingUtility();
+    conf1 = TEST_UTIL.getConfiguration();
     conf1.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       MasterSnapshotObserver.class.getName());
     conf1.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
-    super.setUp();
+    setUpHelper();
   }
 
   private MasterSnapshotObserver getMasterSnapshotObserver() {
