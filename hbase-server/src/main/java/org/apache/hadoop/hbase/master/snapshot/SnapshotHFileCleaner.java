@@ -63,7 +63,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   private MasterServices master;
 
   @Override
-  public synchronized Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
+  public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
     try {
       return cache.getUnreferencedFiles(files, master.getSnapshotManager());
     } catch (CorruptedSnapshotException cse) {
