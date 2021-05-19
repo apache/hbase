@@ -25,7 +25,6 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -63,6 +62,7 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -951,19 +951,11 @@ public class ServerManager {
 
   /**
    * Creates a list of possible destinations for a region. It contains the online servers, but not
-   * the draining or dying servers.
-   * @param serversToExclude can be null if there is no server to exclude
+   *  the draining or dying servers.
+   *  @param serversToExclude can be null if there is no server to exclude
    */
-  public List<ServerName> createDestinationServersList(final List<ServerName> serversToExclude) {
-    Set<ServerName> destServers = new HashSet<>();
-    onlineServers.forEach((sn, sm) -> {
-      if (sm.getLastReportTimestamp() > 0) {
-        // This means we have already called regionServerReport at leaset once, then let's include
-        // this server for region assignment. This is an optimization to avoid assigning regions to
-        // an uninitialized server. See HBASE-25032 for more details.
-        destServers.add(sn);
-      }
-    });
+  public List<ServerName> createDestinationServersList(final List<ServerName> serversToExclude){
+    final List<ServerName> destServers = getOnlineServersList();
 
     if (serversToExclude != null) {
       destServers.removeAll(serversToExclude);
@@ -973,7 +965,7 @@ public class ServerManager {
     final List<ServerName> drainingServersCopy = getDrainingServersList();
     destServers.removeAll(drainingServersCopy);
 
-    return new ArrayList<>(destServers);
+    return destServers;
   }
 
   /**

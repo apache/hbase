@@ -74,7 +74,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   private ClusterMetrics clusterStatus;
   private MasterServices masterServices;
   private volatile RSGroupInfoManager rsGroupInfoManager;
-  private volatile LoadBalancer internalBalancer;
+  private LoadBalancer internalBalancer;
 
   /**
    * Set this key to {@code true} to allow region fallback.
@@ -85,7 +85,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
    */
   public static final String FALLBACK_GROUP_ENABLE_KEY = "hbase.rsgroup.fallback.enable";
 
-  private volatile boolean fallbackEnabled = false;
+  private boolean fallbackEnabled = false;
 
   /**
    * Used by reflection in {@link org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory}.

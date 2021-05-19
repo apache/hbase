@@ -156,8 +156,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     this.assignmentManager.start();
     for (int i = 0; i < numServes; ++i) {
       ServerName sn = ServerName.valueOf("localhost", 100 + i, 1);
-      serverManager.regionServerReport(sn, ServerMetricsBuilder.newBuilder(sn)
-        .setLastReportTimestamp(System.currentTimeMillis()).build());
+      serverManager.regionServerReport(sn, ServerMetricsBuilder.of(sn));
     }
     this.procedureExecutor.getEnvironment().setEventReady(initialized, true);
   }
@@ -183,8 +182,7 @@ public class MockMasterServices extends MockNoopMasterServices {
       return;
     }
     ServerName sn = ServerName.valueOf(serverName.getAddress().toString(), startCode);
-    serverManager.regionServerReport(sn, ServerMetricsBuilder.newBuilder(sn)
-      .setLastReportTimestamp(System.currentTimeMillis()).build());
+    serverManager.regionServerReport(sn, ServerMetricsBuilder.of(sn));
   }
 
   @Override
