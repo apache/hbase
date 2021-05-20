@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerMetrics;
+import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -203,8 +205,7 @@ public class ServerManager {
   }
 
   /**
-   * Let the server manager know a regionserver is requesting configurations.
-   * Regionserver will not be added here, but in its first report.
+   * Let the server manager know a new regionserver has come online
    * @param request the startup request
    * @param versionNumber the version number of the new regionserver
    * @param version the version of the new regionserver, could contain strings like "SNAPSHOT"
@@ -227,6 +228,10 @@ public class ServerManager {
     ServerName sn = ServerName.valueOf(hostname, request.getPort(), request.getServerStartCode());
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");
+    if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn, versionNumber, version))) {
+      LOG.warn(
+        "THIS SHOULD NOT HAPPEN, RegionServerStartup" + " could not record the server: " + sn);
+    }
     return sn;
   }
 
@@ -277,6 +282,7 @@ public class ServerManager {
     if (null == this.onlineServers.replace(sn, sl)) {
       // Already have this host+port combo and its just different start code?
       // Just let the server in. Presume master joining a running cluster.
+      // recordNewServer is what happens at the end of reportServerStartup.
       // The only thing we are skipping is passing back to the regionserver
       // the ServerName to use. Here we presume a master has already done
       // that so we'll press on with whatever it gave us for ServerName.
@@ -954,11 +960,19 @@ public class ServerManager {
 
   /**
    * Creates a list of possible destinations for a region. It contains the online servers, but not
-   *  the draining or dying servers.
-   *  @param serversToExclude can be null if there is no server to exclude
+   * the draining or dying servers.
+   * @param serversToExclude can be null if there is no server to exclude
    */
-  public List<ServerName> createDestinationServersList(final List<ServerName> serversToExclude){
-    final List<ServerName> destServers = getOnlineServersList();
+  public List<ServerName> createDestinationServersList(final List<ServerName> serversToExclude) {
+    Set<ServerName> destServers = new HashSet<>();
+    onlineServers.forEach((sn, sm) -> {
+      if (sm.getLastReportTimestamp() > 0) {
+        // This means we have already called regionServerReport at leaset once, then let's include
+        // this server for region assignment. This is an optimization to avoid assigning regions to
+        // an uninitialized server. See HBASE-25032 for more details.
+        destServers.add(sn);
+      }
+    });
 
     if (serversToExclude != null) {
       destServers.removeAll(serversToExclude);
@@ -968,7 +982,7 @@ public class ServerManager {
     final List<ServerName> drainingServersCopy = getDrainingServersList();
     destServers.removeAll(drainingServersCopy);
 
-    return destServers;
+    return new ArrayList<>(destServers);
   }
 
   /**

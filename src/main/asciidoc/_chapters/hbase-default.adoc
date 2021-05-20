@@ -2338,3 +2338,17 @@ The percent of region server RPC threads failed to abort RS.
 .Default
 `false`
 
+[[hbase.master.balancer.rejection.buffer.enabled]]
+*`hbase.master.balancer.rejection.buffer.enabled`*::
++
+.Description
+
+      Indicates whether active HMaster has ring buffer running for storing
+      balancer rejection in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config:
+      hbase.master.balancer.rejection.queue.size
+
++
+.Default
+`false`
+

@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -85,16 +86,11 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   }
 
   @Override
-  public void initialize() throws HBaseIOException {
-    configureGenerators();
-    super.initialize();
-  }
-
-  protected void configureGenerators() {
+  protected List<CandidateGenerator> createCandidateGenerators() {
     List<CandidateGenerator> fnPickers = new ArrayList<>(2);
     fnPickers.add(new FavoredNodeLoadPicker());
     fnPickers.add(new FavoredNodeLocalityPicker());
-    setCandidateGenerators(fnPickers);
+    return fnPickers;
   }
 
   /**
@@ -303,10 +299,11 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
 
     metricsBalancer.incrMiscInvocations();
 
+    Configuration conf = getConf();
     List<ServerName> favoredNodes = fnm.getFavoredNodes(regionInfo);
     if (favoredNodes == null || favoredNodes.isEmpty()) {
       // Generate new favored nodes and return primary
-      FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, getConf());
+      FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, conf);
       helper.initialize();
       try {
         favoredNodes = helper.generateFavoredNodes(regionInfo);
@@ -323,7 +320,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
       destination = onlineServers.get(ThreadLocalRandom.current().nextInt(onlineServers.size()));
     }
 
-    boolean alwaysAssign = getConf().getBoolean(FAVORED_ALWAYS_ASSIGN_REGIONS, true);
+    boolean alwaysAssign = conf.getBoolean(FAVORED_ALWAYS_ASSIGN_REGIONS, true);
     if (destination == null && alwaysAssign) {
       LOG.warn("Can't generate FN for region: " + regionInfo + " falling back");
       destination = super.randomAssignment(regionInfo, servers);
@@ -665,7 +662,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * implementation. For the misplaced regions, we assign a bogus server to it and AM takes care.
    */
   @Override
-  public List<RegionPlan> balanceTable(TableName tableName,
+  protected List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     if (this.services != null) {
       List<RegionPlan> regionPlans = Lists.newArrayList();

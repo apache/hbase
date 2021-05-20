@@ -940,10 +940,11 @@ public final class FSUtils {
   public static List<Path> getTableDirs(final FileSystem fs, final Path rootdir)
       throws IOException {
     List<Path> tableDirs = new ArrayList<>();
-
-    for (FileStatus status : fs
-        .globStatus(new Path(rootdir, new Path(HConstants.BASE_NAMESPACE_DIR, "*")))) {
-      tableDirs.addAll(FSUtils.getLocalTableDirs(fs, status.getPath()));
+    Path baseNamespaceDir = new Path(rootdir, HConstants.BASE_NAMESPACE_DIR);
+    if (fs.exists(baseNamespaceDir)) {
+      for (FileStatus status : fs.globStatus(new Path(baseNamespaceDir, "*"))) {
+        tableDirs.addAll(FSUtils.getLocalTableDirs(fs, status.getPath()));
+      }
     }
     return tableDirs;
   }

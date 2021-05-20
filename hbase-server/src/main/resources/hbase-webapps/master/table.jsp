@@ -59,8 +59,8 @@
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.RegionState"
   import="org.apache.hadoop.hbase.master.assignment.RegionStates"
-  import="org.apache.hadoop.hbase.master.webapp.MetaBrowser"
-  import="org.apache.hadoop.hbase.master.webapp.RegionReplicaInfo"
+  import="org.apache.hadoop.hbase.master.http.MetaBrowser"
+  import="org.apache.hadoop.hbase.master.http.RegionReplicaInfo"
   import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
   import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"%>
 <%@ page import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot" %>

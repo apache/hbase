@@ -42,7 +42,7 @@ public class TestStochasticLoadBalancerRegionReplicaSameHosts extends Stochastic
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
-    loadBalancer.setConf(conf);
+    loadBalancer.onConfigurationChange(conf);
     int numHosts = 30;
     int numRegions = 30 * 30;
     int replication = 3; // 3 replicas per region

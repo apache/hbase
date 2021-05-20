@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
@@ -71,30 +69,20 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   private static final Logger LOG = LoggerFactory.getLogger(FavoredNodeLoadBalancer.class);
 
   private MasterServices services;
-  private RackManager rackManager;
-  private Configuration conf;
   private FavoredNodesManager fnm;
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
-  }
 
   public void setMasterServices(MasterServices services) {
     this.services = services;
   }
 
   @Override
-  public synchronized void initialize() throws HBaseIOException {
+  public void initialize() {
     super.initialize();
-    super.setConf(conf);
     this.fnm = services.getFavoredNodesManager();
-    this.rackManager = new RackManager(conf);
-    super.setConf(conf);
   }
 
   @Override
-  public List<RegionPlan> balanceTable(TableName tableName,
+  protected List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     // TODO. Look at is whether Stochastic loadbalancer can be integrated with this
     List<RegionPlan> plans = new ArrayList<>();
@@ -333,7 +321,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   @Override
-  public synchronized List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
+  public List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
     return this.fnm.getFavoredNodes(regionInfo);
   }
 

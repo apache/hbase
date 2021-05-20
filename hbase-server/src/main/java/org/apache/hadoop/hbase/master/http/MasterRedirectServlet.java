@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.http;
 
 import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
 
@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-class MasterRedirectServlet extends HttpServlet {
+public class MasterRedirectServlet extends HttpServlet {
 
   private static final long serialVersionUID = 2894774810058302473L;
 

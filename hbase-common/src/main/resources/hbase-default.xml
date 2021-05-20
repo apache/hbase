@@ -2007,7 +2007,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.namedqueue.provider.classes</name>
-    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerDecisionQueueService</value>
+    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerDecisionQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerRejectionQueueService</value>
     <description>
       Default values for NamedQueueService implementors. This comma separated full class names
       represent all implementors of NamedQueueService that we would like to be invoked by
@@ -2024,6 +2024,15 @@ possible configurations would overwhelm and obscure the important.
       Indicates whether active HMaster has ring buffer running for storing
       balancer decisions in FIFO manner with limited entries. The size of
       the ring buffer is indicated by config: hbase.master.balancer.decision.queue.size
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.balancer.rejection.buffer.enabled</name>
+    <value>false</value>
+    <description>
+      Indicates whether active HMaster has ring buffer running for storing
+      balancer rejection in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config: hbase.master.balancer.rejection.queue.size
     </description>
   </property>
 </configuration>

@@ -109,6 +109,9 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
 import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
+import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
+import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
+import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
@@ -681,7 +684,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         LoadBalancer.class);
     }
     this.balancer = new RSGroupBasedLoadBalancer();
-    this.balancer.setConf(conf);
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
 
@@ -926,8 +928,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // initialize load balancer
     this.balancer.setMasterServices(this);
-    this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
     this.balancer.initialize();
+    this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // start up all service threads.
     status.setStatus("Initializing master service threads");
@@ -1009,7 +1011,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     // set cluster status again after user regions are assigned
-    this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
+    this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // Start balancer and meta catalog janitor after meta and regions have been assigned.
     status.setStatus("Starting balancer and catalog janitor");
@@ -1260,7 +1262,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return notifier;
   }
 
-  boolean isCatalogJanitorEnabled() {
+  public boolean isCatalogJanitorEnabled() {
     return catalogJanitorChore != null ? catalogJanitorChore.getEnabled() : false;
   }
 
@@ -1496,7 +1498,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  private void startProcedureExecutor() throws IOException {
+  // will be override in UT
+  protected void startProcedureExecutor() throws IOException {
     procedureExecutor.startWorkers();
   }
 
@@ -1684,7 +1687,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         // if hbase:meta region is in transition, result of assignment cannot be recorded
         // ignore the force flag in that case
         boolean metaInTransition = assignmentManager.isMetaRegionInTransition();
-        String prefix = force && !metaInTransition ? "R" : "Not r";
         List<RegionStateNode> toPrint = regionsInTransition;
         int max = 5;
         boolean truncated = false;
@@ -1692,9 +1694,12 @@ public class HMaster extends HRegionServer implements MasterServices {
           toPrint = regionsInTransition.subList(0, max);
           truncated = true;
         }
-        LOG.info(prefix + " not running balancer because " + regionsInTransition.size() +
-          " region(s) in transition: " + toPrint + (truncated? "(truncated list)": ""));
-        if (!force || metaInTransition) return false;
+        if (!force || metaInTransition) {
+          LOG.info("Not running balancer (force=" + force + ", metaRIT=" + metaInTransition +
+            ") because " + regionsInTransition.size() + " region(s) in transition: " + toPrint +
+            (truncated? "(truncated list)": ""));
+          return false;
+        }
       }
       if (this.serverManager.areDeadServersInProgress()) {
         LOG.info("Not running balancer because processing dead regionserver(s): " +
@@ -1722,7 +1727,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
 
       //Give the balancer the current cluster state.
-      this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
+      this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
 
