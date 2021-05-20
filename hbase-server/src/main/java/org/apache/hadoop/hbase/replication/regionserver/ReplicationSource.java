@@ -86,7 +86,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSource.class);
   // Queues of logs to process, entry in format of walGroupId->queue,
   // each presents a queue for one wal group
-  private Map<String, PriorityBlockingQueue<Path>> queues = new HashMap<>();
+  private Map<String, PriorityBlockingQueue<Path>> queues = new ConcurrentHashMap<>();
   // per group queue size, keep no more than this number of logs in each wal group
   protected int queueSizePerGroup;
   protected ReplicationQueueStorage queueStorage;
@@ -198,8 +198,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log.getName());
     PriorityBlockingQueue<Path> queue = queues.get(logPrefix);
     if (queue == null) {
-      queue = new PriorityBlockingQueue<>(queueSizePerGroup, new LogsComparator());
-      queues.put(logPrefix, queue);
+      queue = queues.computeIfAbsent(logPrefix,
+        key -> new PriorityBlockingQueue<>(queueSizePerGroup, new LogsComparator()));
       if (this.isSourceActive() && this.walEntryFilter != null) {
         // new wal group observed after source startup, start a new worker thread to track it
         // notice: it's possible that log enqueued when this.running is set but worker thread
