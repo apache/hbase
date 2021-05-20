@@ -152,11 +152,12 @@ class ReplicationSourceWALReader extends Thread {
               addBatchToShippingQueue(batch);
             }
           }
-        } catch (IOException e) { // stream related
-          if (handleEofException(e, batch)) {
+        } catch (WALEntryFilterRetryableException | IOException e) { // stream related
+          if (e instanceof IOException && handleEofException((IOException) e, batch)) {
             sleepMultiplier = 1;
           } else {
-            LOG.warn("Failed to read stream of replication entries", e);
+            LOG.warn("Failed to read stream of replication entries "
+              + "or replication filter is recovering", e);
             if (sleepMultiplier < maxRetriesMultiplier) {
               sleepMultiplier++;
             }
@@ -165,12 +166,6 @@ class ReplicationSourceWALReader extends Thread {
         } catch (InterruptedException e) {
           LOG.trace("Interrupted while sleeping between WAL reads");
           Thread.currentThread().interrupt();
-        } catch (WALEntryFilterRetryableException e) {
-          LOG.warn("WAL Entry filter threw retryable exception, it should recover", e);
-          if (sleepMultiplier < maxRetriesMultiplier) {
-            sleepMultiplier ++;
-          }
-          Threads.sleep(sleepForRetries * sleepMultiplier);
         } finally {
           entryStream.close();
         }
