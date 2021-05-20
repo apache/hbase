@@ -96,8 +96,8 @@ public class BoundedDelegatingInputStream extends DelegatingInputStream {
 
   /**
    * Call the delegate's {@code available()} method.
-   * @return the delegate's available bytes if the current position is less than the limit,
-   * or 0 otherwise
+   * @return the delegate's available bytes if the current position is less than the
+   *   limit, or 0 otherwise.
    */
   @Override
   public int available() throws IOException {

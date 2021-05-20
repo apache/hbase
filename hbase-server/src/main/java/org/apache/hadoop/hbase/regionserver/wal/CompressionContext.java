@@ -65,7 +65,7 @@ public class CompressionContext {
    * compression in this WAL.
    */
   static class ValueCompressor {
-  
+
     static final int IO_BUFFER_SIZE = 4096;
 
     private final Compression.Algorithm algorithm;
@@ -101,7 +101,7 @@ public class CompressionContext {
         int outLength) throws IOException {
 
       // Our input is a sequence of bounded byte ranges (call them segments), with
-      // BoundedDelegatingInputStream providing a way to switch in a new segment when the 
+      // BoundedDelegatingInputStream providing a way to switch in a new segment when the
       // previous segment has been fully consumed.
 
       // Create the input streams here the first time around.
