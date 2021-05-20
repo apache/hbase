@@ -153,7 +153,7 @@ class ReplicationSourceWALReader extends Thread {
             }
           }
         } catch (WALEntryFilterRetryableException | IOException e) { // stream related
-          if (e instanceof IOException && handleEofException((IOException) e, batch)) {
+          if (handleEofException(e, batch)) {
             sleepMultiplier = 1;
           } else {
             LOG.warn("Failed to read stream of replication entries "
@@ -282,7 +282,7 @@ class ReplicationSourceWALReader extends Thread {
    * logs from replication queue
    * @return true only the IOE can be handled
    */
-  private boolean handleEofException(IOException e, WALEntryBatch batch)
+  private boolean handleEofException(Exception e, WALEntryBatch batch)
       throws InterruptedException {
     PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
     // Dump the log even if logQueue size is 1 if the source is from recovered Source
