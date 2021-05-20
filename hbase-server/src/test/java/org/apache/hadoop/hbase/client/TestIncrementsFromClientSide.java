@@ -560,9 +560,9 @@ public class TestIncrementsFromClientSide {
   @Test
   public void testIncrementWithTtlTags() throws Exception {
     LOG.info("Starting " + this.name.getMethodName());
-    final TableName TABLENAME =
+    final TableName tableName =
             TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
-    Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
 
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
@@ -570,7 +570,7 @@ public class TestIncrementsFromClientSide {
     conf.set(RPC_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf.set(DEFAULT_CODEC_CLASS, "");
     try (Connection connection = ConnectionFactory.createConnection(conf);
-         Table table = connection.getTable(TABLENAME)) {
+         Table table = connection.getTable(tableName)) {
       for (int i = 0; i < 10; i++) {
         Increment inc = new Increment(ROW);
         inc.addColumn(FAMILY, COLUMN, 1);
