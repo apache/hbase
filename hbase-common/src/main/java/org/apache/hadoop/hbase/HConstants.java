@@ -1601,6 +1601,16 @@ public final class HConstants {
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
+  /**
+   * List of column families that cannot be deleted from the hbase:meta table.
+   * They are critical to cluster operation. This is a bit of an odd place to
+   * keep this list but then this is the tooling that does add/remove. Keeping
+   * it local!
+   */
+  public static final List<byte[]> UNDELETABLE_META_COLUMNFAMILIES = Collections.unmodifiableList(
+    Arrays.asList(HConstants.CATALOG_FAMILY, HConstants.TABLE_FAMILY,
+      HConstants.REPLICATION_BARRIER_FAMILY));
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

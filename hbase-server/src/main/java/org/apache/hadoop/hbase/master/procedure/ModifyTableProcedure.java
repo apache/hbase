@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -59,15 +57,6 @@ public class ModifyTableProcedure
   private TableDescriptor modifiedTableDescriptor;
   private boolean deleteColumnFamilyInModify;
   private boolean shouldCheckDescriptor;
-  /**
-   * List of column families that cannot be deleted from the hbase:meta table.
-   * They are critical to cluster operation. This is a bit of an odd place to
-   * keep this list but then this is the tooling that does add/remove. Keeping
-   * it local!
-   */
-  private static final List<byte []> UNDELETABLE_META_COLUMNFAMILIES =
-    Collections.unmodifiableList(Arrays.asList(
-      HConstants.CATALOG_FAMILY, HConstants.TABLE_FAMILY, HConstants.REPLICATION_BARRIER_FAMILY));
 
   public ModifyTableProcedure() {
     super();
@@ -102,7 +91,7 @@ public class ModifyTableProcedure
       // If we are modifying the hbase:meta table, make sure we are not deleting critical
       // column families else we'll damage the cluster.
       Set<byte []> cfs = this.modifiedTableDescriptor.getColumnFamilyNames();
-      for (byte[] family : UNDELETABLE_META_COLUMNFAMILIES) {
+      for (byte[] family : HConstants.UNDELETABLE_META_COLUMNFAMILIES) {
         if (!cfs.contains(family)) {
           throw new HBaseIOException("Delete of hbase:meta column family " +
             Bytes.toString(family));

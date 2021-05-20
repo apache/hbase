@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +95,10 @@ public class FSTableDescriptors implements TableDescriptors {
   // TODO.
   private final Map<TableName, TableDescriptor> cache = new ConcurrentHashMap<>();
 
+  // Default meta table descriptor, will be used by RegionServer during rolling upgrade until
+  // HMaster write latest 2.x meta table descriptor
+  private TableDescriptor defaultMetaTableDesc = null;
+
   /**
    * Construct a FSTableDescriptors instance using the hbase root dir of the given conf and the
    * filesystem where that root dir lives. This instance can do write operations (is not read only).
@@ -112,6 +117,14 @@ public class FSTableDescriptors implements TableDescriptors {
     this.rootdir = rootdir;
     this.fsreadonly = fsreadonly;
     this.usecache = usecache;
+    // Create default in-memory meta table descriptor for RegionServer
+    if (this.fsreadonly) {
+      try {
+        defaultMetaTableDesc = createMetaTableDescriptorBuilder(fs.getConf()).build();
+      } catch (IOException ioe) {
+        LOG.warn("Exception occurred while creating meta table descriptor", ioe);
+      }
+    }
   }
 
   public static void tryUpdateMetaTableDescriptor(Configuration conf) throws IOException {
@@ -123,8 +136,10 @@ public class FSTableDescriptors implements TableDescriptors {
     FileSystem fs, Path rootdir) throws IOException {
     // see if we already have meta descriptor on fs. Write one if not.
     try {
-      return getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
-    } catch (TableInfoMissingException e) {
+      TableDescriptor td = getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
+      validateMetaTableDescriptor(td);
+      return td;
+    } catch (TableInfoMissingException  | NoSuchColumnFamilyException e) {
       TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
       TableDescriptor td = builder.build();
       LOG.info("Creating new hbase:meta table descriptor {}", td);
@@ -136,6 +151,21 @@ public class FSTableDescriptors implements TableDescriptors {
       }
       LOG.info("Updated hbase:meta table descriptor to {}", p);
       return td;
+    }
+  }
+
+  /**
+   * Validate meta table descriptor whether default column families exist or not
+   */
+  private static void validateMetaTableDescriptor(TableDescriptor td)
+    throws NoSuchColumnFamilyException, TableInfoMissingException {
+    if (td == null) {
+      throw new TableInfoMissingException("Meta .tableinfo not found");
+    }
+    for (byte[] cf : HConstants.UNDELETABLE_META_COLUMNFAMILIES) {
+      if (!td.hasColumnFamily(cf)) {
+        throw new NoSuchColumnFamilyException("Column family " + Bytes.toString(cf) + " not found");
+      }
     }
   }
 
@@ -223,6 +253,21 @@ public class FSTableDescriptors implements TableDescriptors {
     } catch (NullPointerException | IOException ioe) {
       LOG.debug("Exception during readTableDecriptor. Current table name = " + tableName, ioe);
     }
+
+    // Validate whether meta table descriptor is in HBase 2.x format
+    if (TableName.isMetaTableName(tableName) && defaultMetaTableDesc != null) {
+      try {
+        validateMetaTableDescriptor(tdmt);
+        // FS have proper meta table descriptor, we don't need to validate it again.
+        // Reset defaultMetaTableDesc
+        defaultMetaTableDesc = null;
+      } catch (TableInfoMissingException | NoSuchColumnFamilyException e) {
+        // Meta is still in old format, return the default meta table descriptor util we have meta
+        // descriptor in HBase 2.x format
+        return defaultMetaTableDesc;
+      }
+    }
+
     // last HTD written wins
     if (usecache && tdmt != null) {
       this.cache.put(tableName, tdmt);
