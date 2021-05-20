@@ -1490,7 +1490,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  private void startProcedureExecutor() throws IOException {
+  // will be override in UT
+  protected void startProcedureExecutor() throws IOException {
     procedureExecutor.startWorkers();
   }
 
