@@ -146,11 +146,12 @@ class ReplicationSourceWALReader extends Thread {
             entryStream.reset(); // reuse stream
           }
         }
-      } catch (IOException e) { // stream related
+      } catch (WALEntryFilterRetryableException | IOException e) { // stream related
         if (handleEofException(e)) {
           sleepMultiplier = 1;
         } else {
-          LOG.warn("Failed to read stream of replication entries", e);
+          LOG.warn("Failed to read stream of replication entries "
+            + "or replication filter is recovering", e);
           if (sleepMultiplier < maxRetriesMultiplier) {
             sleepMultiplier ++;
           }
@@ -248,7 +249,7 @@ class ReplicationSourceWALReader extends Thread {
    * enabled, then dump the log
    * @return true only the IOE can be handled
    */
-  private boolean handleEofException(IOException e) {
+  private boolean handleEofException(Exception e) {
     // Dump the log even if logQueue size is 1 if the source is from recovered Source
     // since we don't add current log to recovered source queue so it is safe to remove.
     if ((e instanceof EOFException || e.getCause() instanceof EOFException) &&
