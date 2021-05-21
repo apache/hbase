@@ -1098,6 +1098,7 @@ public class FSHLog implements WAL {
   @Override
   public void shutdown() throws IOException {
     if (shutdown.compareAndSet(false, true)) {
+      this.closed = true;
       try {
         // Prevent all further flushing and rolling.
         closeBarrier.stopAndDrainOps();
@@ -1129,7 +1130,7 @@ public class FSHLog implements WAL {
           i.logCloseRequested();
         }
       }
-      this.closed = true;
+
       if (LOG.isDebugEnabled()) {
         LOG.debug("Closing WAL writer in " + FSUtils.getPath(fullPathLogDir));
       }
