@@ -1098,6 +1098,8 @@ public class FSHLog implements WAL {
   @Override
   public void shutdown() throws IOException {
     if (shutdown.compareAndSet(false, true)) {
+      // Close FSHlog instance before shutting down disruptor. This will make sure we will not
+      // add more entries to ring buffer (via append) while we disruptor#shutdown is in progress.
       this.closed = true;
       try {
         // Prevent all further flushing and rolling.
