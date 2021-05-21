@@ -404,6 +404,41 @@ public class TestWALEntryStream {
   }
 
   @Test
+  public void testReplicationSourceWALReaderWithFailingFilter() throws Exception {
+    appendEntriesToLog(3);
+    // get ending position
+    long position;
+    try (WALEntryStream entryStream =
+      new WALEntryStream(logQueue, fs, conf, new MetricsSource("1"), fakeWalGroupId)) {
+      entryStream.next();
+      entryStream.next();
+      entryStream.next();
+      position = entryStream.getPosition();
+    }
+
+    int numFailuresInFilter = 5;
+    ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    when(source.isPeerEnabled()).thenReturn(true);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
+    ReplicationSourceWALReaderThread batcher =
+      new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(),logQueue, 0,
+        fs, conf, getIntermittentFailingFilter(numFailuresInFilter), new MetricsSource("1"),
+        source, fakeWalGroupId);
+    Path walPath = getQueue().peek();
+    batcher.start();
+    WALEntryBatch entryBatch = batcher.take();
+    assertEquals(numFailuresInFilter, FailingWALEntryFilter.numFailures());
+
+    // should've batched up our entries
+    assertNotNull(entryBatch);
+    assertEquals(3, entryBatch.getWalEntries().size());
+    assertEquals(position, entryBatch.getLastWalPosition());
+    assertEquals(walPath, entryBatch.getLastWalPath());
+    assertEquals(3, entryBatch.getNbRowKeys());
+  }
+
+  @Test
   public void testReplicationSourceWALReaderThreadRecoveredQueue() throws Exception {
     appendEntriesToLog(3);
     log.rollWriter();
@@ -617,6 +652,32 @@ public class TestWALEntryStream {
     edit.add(
       new KeyValue(Bytes.toBytes(row), family, qualifier, System.currentTimeMillis(), qualifier));
     return edit;
+  }
+
+  private WALEntryFilter getIntermittentFailingFilter(int numFailuresInFilter) {
+    return new FailingWALEntryFilter(numFailuresInFilter);
+  }
+
+  public static class FailingWALEntryFilter implements WALEntryFilter {
+    private int numFailures = 0;
+    private static int countFailures = 0;
+
+    public FailingWALEntryFilter(int numFailuresInFilter) {
+      numFailures = numFailuresInFilter;
+    }
+
+    @Override
+    public Entry filter(Entry entry) {
+      if (countFailures == numFailures) {
+        return entry;
+      }
+      countFailures = countFailures + 1;
+      throw new WALEntryFilterRetryableException("failing filter");
+    }
+
+    public static int numFailures(){
+      return countFailures;
+    }
   }
 
   private WALEntryFilter getDummyFilter() {

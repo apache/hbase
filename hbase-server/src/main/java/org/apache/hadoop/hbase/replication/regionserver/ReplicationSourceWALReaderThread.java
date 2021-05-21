@@ -181,15 +181,18 @@ public class ReplicationSourceWALReaderThread extends Thread {
               sleepMultiplier = 1;
             }
           }
-        } catch (IOException | WALEntryStreamRuntimeException e) { // stream related
+        } catch (IOException | WALEntryFilterRetryableException
+          | WALEntryStreamRuntimeException e) { // stream related
           if (handleEofException(e, entryStream, batch)) {
             sleepMultiplier = 1;
           } else {
             if (sleepMultiplier < maxRetriesMultiplier) {
-              LOG.debug("Failed to read stream of replication entries: " + e);
+              LOG.debug("Failed to read stream of replication entries "
+                + "or replication filter is recovering " + e);
               sleepMultiplier++;
             } else {
-              LOG.error("Failed to read stream of replication entries", e);
+              LOG.error("Failed to read stream of replication entries "
+                + "or replication filter is recovering " + e);
             }
             Threads.sleep(sleepForRetries * sleepMultiplier);
           }
