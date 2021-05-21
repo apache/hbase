@@ -631,6 +631,11 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
   }
 
+  /**
+   * Because the {@link RSGroupAdminClient#updateConfiguration(String)} calls
+   * {@link org.apache.hadoop.hbase.client.Admin#updateConfiguration(ServerName)} method, the
+   * implementation of this method on the Server side is empty.
+   */
   @Override
   public void updateConfiguration(String groupName) throws IOException {
   }
