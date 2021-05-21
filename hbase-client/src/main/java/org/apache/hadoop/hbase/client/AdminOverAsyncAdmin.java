@@ -782,6 +782,11 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void updateConfiguration(String groupName) throws IOException {
+    get(admin.updateConfiguration(groupName));
+  }
+
+  @Override
   public List<SecurityCapability> getSecurityCapabilities() throws IOException {
     return get(admin.getSecurityCapabilities());
   }

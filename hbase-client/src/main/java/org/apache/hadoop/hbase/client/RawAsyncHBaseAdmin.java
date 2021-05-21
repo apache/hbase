@@ -2906,6 +2906,42 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> updateConfiguration(String groupName) {
+    CompletableFuture<Void> future = new CompletableFuture<Void>();
+    addListener(
+      getRSGroup(groupName),
+      (rsGroupInfo, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else if (rsGroupInfo == null) {
+          future.completeExceptionally(
+            new IllegalArgumentException("Group does not exist: " + groupName));
+        } else {
+          addListener(getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)), (status, err2) -> {
+            if (err2 != null) {
+              future.completeExceptionally(err2);
+            } else {
+              List<CompletableFuture<Void>> futures = new ArrayList<>();
+              List<ServerName> groupServers = status.getServersName().stream().filter(
+                s -> rsGroupInfo.containsServer(s.getAddress())).collect(Collectors.toList());
+              groupServers.forEach(server -> futures.add(updateConfiguration(server)));
+              addListener(
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()])),
+                (result, err3) -> {
+                  if (err3 != null) {
+                    future.completeExceptionally(err3);
+                  } else {
+                    future.complete(result);
+                  }
+                });
+            }
+          });
+        }
+      });
+    return future;
+  }
+
+  @Override
   public CompletableFuture<Void> rollWALWriter(ServerName serverName) {
     return this
         .<Void> newAdminCaller()
