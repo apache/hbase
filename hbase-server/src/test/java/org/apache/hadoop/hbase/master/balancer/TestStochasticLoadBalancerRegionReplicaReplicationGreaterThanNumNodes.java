@@ -26,7 +26,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, LargeTests.class })
 public class TestStochasticLoadBalancerRegionReplicaReplicationGreaterThanNumNodes
-    extends BalancerTestBase2 {
+    extends StochasticBalancerTestBase2 {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
@@ -35,7 +35,7 @@ public class TestStochasticLoadBalancerRegionReplicaReplicationGreaterThanNumNod
   @Test
   public void testRegionReplicationOnMidClusterReplicationGreaterThanNumNodes() {
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
-    loadBalancer.setConf(conf);
+    loadBalancer.onConfigurationChange(conf);
     int numNodes = 40;
     int numRegions = 6 * 50;
     int replication = 50; // 50 replicas per region, more than numNodes

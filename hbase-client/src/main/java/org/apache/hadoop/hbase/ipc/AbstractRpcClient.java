@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.ipc;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.Collection;
@@ -38,6 +41,7 @@ import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.Threads;
@@ -365,7 +369,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   protected abstract T createConnection(ConnectionId remoteId) throws IOException;
 
   private void onCallFinished(Call call, HBaseRpcController hrc, Address addr,
-      RpcCallback<Message> callback) {
+    RpcCallback<Message> callback) {
     call.callStats.setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.getStartTime());
     if (metrics != null) {
       metrics.updateRpc(call.md, call.param, call.callStats);
@@ -379,7 +383,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
         call.error.fillInStackTrace();
         hrc.setFailed(call.error);
       } else {
-        hrc.setFailed(wrapException(addr, call.error));
+        hrc.setFailed(wrapException(addr, hrc.getRegionInfo(), call.error));
       }
       callback.run(null);
     } else {
@@ -388,44 +392,61 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     }
   }
 
-  Call callMethod(final Descriptors.MethodDescriptor md, final HBaseRpcController hrc,
-      final Message param, Message returnType, final User ticket,
-      final Address addr, final RpcCallback<Message> callback) {
-    final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
-    cs.setStartTime(EnvironmentEdgeManager.currentTime());
+  private Call callMethod(final Descriptors.MethodDescriptor md, final HBaseRpcController hrc,
+    final Message param, Message returnType, final User ticket, final Address addr,
+    final RpcCallback<Message> callback) {
+    Span span = TraceUtil.createClientSpan("RpcClient.callMethod")
+      .setAttribute(TraceUtil.RPC_SERVICE_KEY, md.getService().getName())
+      .setAttribute(TraceUtil.RPC_METHOD_KEY, md.getName())
+      .setAttribute(TraceUtil.REMOTE_HOST_KEY, addr.getHostName())
+      .setAttribute(TraceUtil.REMOTE_PORT_KEY, addr.getPort());
+    try (Scope scope = span.makeCurrent()) {
+      final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
+      cs.setStartTime(EnvironmentEdgeManager.currentTime());
 
-    if (param instanceof ClientProtos.MultiRequest) {
-      ClientProtos.MultiRequest req = (ClientProtos.MultiRequest) param;
-      int numActions = 0;
-      for (ClientProtos.RegionAction regionAction : req.getRegionActionList()) {
-        numActions += regionAction.getActionCount();
+      if (param instanceof ClientProtos.MultiRequest) {
+        ClientProtos.MultiRequest req = (ClientProtos.MultiRequest) param;
+        int numActions = 0;
+        for (ClientProtos.RegionAction regionAction : req.getRegionActionList()) {
+          numActions += regionAction.getActionCount();
+        }
+
+        cs.setNumActionsPerServer(numActions);
       }
 
-      cs.setNumActionsPerServer(numActions);
-    }
-
-    final AtomicInteger counter = concurrentCounterCache.getUnchecked(addr);
-    Call call = new Call(nextCallId(), md, param, hrc.cellScanner(), returnType,
+      final AtomicInteger counter = concurrentCounterCache.getUnchecked(addr);
+      Call call = new Call(nextCallId(), md, param, hrc.cellScanner(), returnType,
         hrc.getCallTimeout(), hrc.getPriority(), new RpcCallback<Call>() {
           @Override
           public void run(Call call) {
-            counter.decrementAndGet();
-            onCallFinished(call, hrc, addr, callback);
+            try (Scope scope = call.span.makeCurrent()) {
+              counter.decrementAndGet();
+              onCallFinished(call, hrc, addr, callback);
+            } finally {
+              if (hrc.failed()) {
+                TraceUtil.setError(span, hrc.getFailed());
+              } else {
+                span.setStatus(StatusCode.OK);
+              }
+              span.end();
+            }
           }
         }, cs);
-    ConnectionId remoteId = new ConnectionId(ticket, md.getService().getName(), addr);
-    int count = counter.incrementAndGet();
-    try {
-      if (count > maxConcurrentCallsPerServer) {
-        throw new ServerTooBusyException(addr, count);
+      ConnectionId remoteId = new ConnectionId(ticket, md.getService().getName(), addr);
+      int count = counter.incrementAndGet();
+      try {
+        if (count > maxConcurrentCallsPerServer) {
+          throw new ServerTooBusyException(addr, count);
+        }
+        cs.setConcurrentCallsPerServer(count);
+        T connection = getConnection(remoteId);
+        connection.sendRequest(call, hrc);
+      } catch (Exception e) {
+        call.setException(toIOE(e));
+        span.end();
       }
-      cs.setConcurrentCallsPerServer(count);
-      T connection = getConnection(remoteId);
-      connection.sendRequest(call, hrc);
-    } catch (Exception e) {
-      call.setException(toIOE(e));
+      return call;
     }
-    return call;
   }
 
   private static Address createAddr(ServerName sn) {

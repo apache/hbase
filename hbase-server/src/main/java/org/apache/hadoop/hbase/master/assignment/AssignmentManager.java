@@ -1126,7 +1126,23 @@ public class AssignmentManager {
       LOG.debug("Split request from " + serverName +
           ", parent=" + parent + " splitKey=" + Bytes.toStringBinary(splitKey));
     }
-    master.getMasterProcedureExecutor().submitProcedure(createSplitProcedure(parent, splitKey));
+    // Processing this report happens asynchronously from other activities which can mutate
+    // the region state. For example, a split procedure may already be running for this parent.
+    // A split procedure cannot succeed if the parent region is no longer open, so we can
+    // ignore it in that case.
+    // Note that submitting more than one split procedure for a given region is
+    // harmless -- the split is fenced in the procedure handling -- but it would be noisy in
+    // the logs. Only one procedure can succeed. The other procedure(s) would abort during
+    // initialization and report failure with WARN level logging.
+    RegionState parentState = regionStates.getRegionState(parent);
+    if (parentState != null && parentState.isOpened()) {
+      master.getMasterProcedureExecutor().submitProcedure(createSplitProcedure(parent,
+        splitKey));
+    } else {
+      LOG.info("Ignoring split request from " + serverName +
+        ", parent=" + parent + " because parent is unknown or not open");
+      return;
+    }
 
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the split
     if (master.getServerManager().getVersionNumber(serverName) < 0x0200000) {

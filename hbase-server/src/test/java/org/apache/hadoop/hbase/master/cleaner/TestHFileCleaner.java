@@ -24,21 +24,17 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.mob.ManualMobMaintHFileCleaner;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -47,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -84,7 +81,7 @@ public class TestHFileCleaner {
   }
 
   @Test
-  public void testTTLCleaner() throws IOException, InterruptedException {
+  public void testTTLCleaner() throws IOException {
     FileSystem fs = UTIL.getDFSCluster().getFileSystem();
     Path root = UTIL.getDataTestDirOnTestFS();
     Path file = new Path(root, "file");
@@ -254,7 +251,7 @@ public class TestHFileCleaner {
     assertTrue("archive directory", fs.exists(archivedHfileDir));
   }
 
-  static class DummyServer implements Server {
+  static class DummyServer extends MockServer {
     @Override
     public Configuration getConfiguration() {
       return UTIL.getConfiguration();
@@ -267,64 +264,6 @@ public class TestHFileCleaner {
       } catch (IOException e) {
         e.printStackTrace();
       }
-      return null;
-    }
-
-    @Override
-    public CoordinatedStateManager getCoordinatedStateManager() {
-      return null;
-    }
-
-    @Override
-    public Connection getConnection() {
-      return null;
-    }
-
-    @Override
-    public ServerName getServerName() {
-      return ServerName.valueOf("regionserver,60020,000000");
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-    }
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-
-    @Override
-    public void stop(String why) {
-    }
-
-    @Override
-    public boolean isStopped() {
-      return false;
-    }
-
-    @Override
-    public ChoreService getChoreService() {
-      return null;
-    }
-
-    @Override
-    public FileSystem getFileSystem() {
-      return null;
-    }
-
-    @Override
-    public boolean isStopping() {
-      return false;
-    }
-
-    @Override
-    public Connection createConnection(Configuration conf) throws IOException {
-      return null;
-    }
-
-    @Override
-    public AsyncClusterConnection getAsyncClusterConnection() {
       return null;
     }
   }

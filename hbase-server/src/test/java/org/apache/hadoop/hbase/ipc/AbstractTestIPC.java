@@ -20,21 +20,29 @@ package org.apache.hadoop.hbase.ipc;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newStub;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -43,10 +51,13 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +97,10 @@ public abstract class AbstractTestIPC {
       RpcScheduler scheduler) throws IOException;
 
   protected abstract AbstractRpcClient<?> createRpcClientNoCodec(Configuration conf);
+
+
+  @Rule
+  public OpenTelemetryRule traceRule = OpenTelemetryRule.create();
 
   /**
    * Ensure we do not HAVE TO HAVE a codec.
@@ -183,7 +198,7 @@ public abstract class AbstractTestIPC {
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(
             SERVICE, null)), new InetSocketAddress("localhost", 0), CONF, scheduler);
-    verify(scheduler).init((RpcScheduler.Context) anyObject());
+    verify(scheduler).init(any(RpcScheduler.Context.class));
     try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
       rpcServer.start();
       verify(scheduler).start();
@@ -192,7 +207,7 @@ public abstract class AbstractTestIPC {
       for (int i = 0; i < 10; i++) {
         stub.echo(null, param);
       }
-      verify(scheduler, times(10)).dispatch((CallRunner) anyObject());
+      verify(scheduler, times(10)).dispatch(any(CallRunner.class));
     } finally {
       rpcServer.stop();
       verify(scheduler).stop();
@@ -427,4 +442,70 @@ public abstract class AbstractTestIPC {
     }
   }
 
+  private void assertSameTraceId() {
+    String traceId = traceRule.getSpans().get(0).getTraceId();
+    for (SpanData data : traceRule.getSpans()) {
+      // assert we are the same trace
+      assertEquals(traceId, data.getTraceId());
+    }
+  }
+
+  private SpanData waitSpan(String name) {
+    Waiter.waitFor(CONF, 1000,
+      () -> traceRule.getSpans().stream().map(SpanData::getName).anyMatch(s -> s.equals(name)));
+    return traceRule.getSpans().stream().filter(s -> s.getName().equals(name)).findFirst().get();
+  }
+
+  private void assertRpcAttribute(SpanData data, String methodName, InetSocketAddress addr,
+    SpanKind kind) {
+    assertEquals(SERVICE.getDescriptorForType().getName(),
+      data.getAttributes().get(TraceUtil.RPC_SERVICE_KEY));
+    assertEquals(methodName, data.getAttributes().get(TraceUtil.RPC_METHOD_KEY));
+    if (addr != null) {
+      assertEquals(addr.getHostName(), data.getAttributes().get(TraceUtil.REMOTE_HOST_KEY));
+      assertEquals(addr.getPort(), data.getAttributes().get(TraceUtil.REMOTE_PORT_KEY).intValue());
+    }
+    assertEquals(kind, data.getKind());
+  }
+
+  private void assertRemoteSpan() {
+    SpanData data = waitSpan("RpcServer.process");
+    assertTrue(data.getParentSpanContext().isRemote());
+    assertEquals(SpanKind.SERVER, data.getKind());
+  }
+
+  @Test
+  public void testTracing() throws IOException, ServiceException {
+    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+      Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
+      new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
+    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+      rpcServer.start();
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      stub.pause(null, PauseRequestProto.newBuilder().setMs(100).build());
+      assertRpcAttribute(waitSpan("RpcClient.callMethod"), "pause", rpcServer.getListenerAddress(),
+        SpanKind.CLIENT);
+      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "pause", null, SpanKind.INTERNAL);
+      assertRemoteSpan();
+      assertSameTraceId();
+      for (SpanData data : traceRule.getSpans()) {
+        assertThat(
+          TimeUnit.NANOSECONDS.toMillis(data.getEndEpochNanos() - data.getStartEpochNanos()),
+          greaterThanOrEqualTo(100L));
+        assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
+      }
+
+      traceRule.clearSpans();
+      assertThrows(ServiceException.class,
+        () -> stub.error(null, EmptyRequestProto.getDefaultInstance()));
+      assertRpcAttribute(waitSpan("RpcClient.callMethod"), "error", rpcServer.getListenerAddress(),
+        SpanKind.CLIENT);
+      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "error", null, SpanKind.INTERNAL);
+      assertRemoteSpan();
+      assertSameTraceId();
+      for (SpanData data : traceRule.getSpans()) {
+        assertEquals(StatusCode.ERROR, data.getStatus().getStatusCode());
+      }
+    }
+  }
 }

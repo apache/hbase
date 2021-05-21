@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -114,9 +115,12 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-      throws Exception {
+    throws Exception {
     if (msg instanceof Call) {
-      writeRequest(ctx, (Call) msg, promise);
+      Call call = (Call) msg;
+      try (Scope scope = call.span.makeCurrent()) {
+        writeRequest(ctx, call, promise);
+      }
     } else {
       ctx.write(msg, promise);
     }
@@ -150,9 +154,9 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
       // to return a response. There is nothing we can do w/ the response at this stage. Clean
       // out the wire of the response so its out of the way and we can get other responses on
       // this connection.
-      int readSoFar = IPCUtil.getTotalSizeWhenWrittenDelimited(responseHeader);
-      int whatIsLeftToRead = totalSize - readSoFar;
       if (LOG.isDebugEnabled()) {
+        int readSoFar = IPCUtil.getTotalSizeWhenWrittenDelimited(responseHeader);
+        int whatIsLeftToRead = totalSize - readSoFar;
         LOG.debug("Unknown callId: " + id + ", skipping over this response of " + whatIsLeftToRead
             + " bytes");
       }

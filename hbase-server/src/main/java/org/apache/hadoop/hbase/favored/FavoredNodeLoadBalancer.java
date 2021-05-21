@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -38,7 +36,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
-import org.apache.hadoop.hbase.master.RackManager;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
@@ -70,32 +68,27 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements FavoredNodesPromoter {
   private static final Logger LOG = LoggerFactory.getLogger(FavoredNodeLoadBalancer.class);
 
-  private RackManager rackManager;
-  private Configuration conf;
+  private MasterServices services;
   private FavoredNodesManager fnm;
 
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
+  public void setMasterServices(MasterServices services) {
+    this.services = services;
   }
 
   @Override
-  public synchronized void initialize() throws HBaseIOException {
+  public void initialize() {
     super.initialize();
-    super.setConf(conf);
     this.fnm = services.getFavoredNodesManager();
-    this.rackManager = new RackManager(conf);
-    super.setConf(conf);
   }
 
   @Override
-  public List<RegionPlan> balanceTable(TableName tableName,
+  protected List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     // TODO. Look at is whether Stochastic loadbalancer can be integrated with this
     List<RegionPlan> plans = new ArrayList<>();
     // perform a scan of the meta to get the latest updates (if any)
     SnapshotOfRegionAssignmentFromMeta snaphotOfRegionAssignment =
-        new SnapshotOfRegionAssignmentFromMeta(super.services.getConnection());
+        new SnapshotOfRegionAssignmentFromMeta(services.getConnection());
     try {
       snaphotOfRegionAssignment.initialize();
     } catch (IOException ie) {
@@ -105,7 +98,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
     // This is not used? Findbugs says so: Map<ServerName, ServerName>
     // serverNameToServerNameWithoutCode = new HashMap<>();
     Map<ServerName, ServerName> serverNameWithoutCodeToServerName = new HashMap<>();
-    ServerManager serverMgr = super.services.getServerManager();
+    ServerManager serverMgr = services.getServerManager();
     for (ServerName sn : serverMgr.getOnlineServersList()) {
       ServerName s = ServerName.valueOf(sn.getHostname(), sn.getPort(), ServerName.NON_STARTCODE);
       // FindBugs complains about useless store! serverNameToServerNameWithoutCode.put(sn, s);
@@ -136,9 +129,9 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
           }
           // the region is currently on none of the favored nodes
           // get it on one of them if possible
-          ServerMetrics l1 = super.services.getServerManager()
+          ServerMetrics l1 = services.getServerManager()
               .getLoad(serverNameWithoutCodeToServerName.get(favoredNodes.get(1)));
-          ServerMetrics l2 = super.services.getServerManager()
+          ServerMetrics l2 = services.getServerManager()
               .getLoad(serverNameWithoutCodeToServerName.get(favoredNodes.get(2)));
           if (l1 != null && l2 != null) {
             if (l1.getRegionMetrics().size() > l2.getRegionMetrics().size()) {
@@ -245,10 +238,11 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   private Pair<Map<ServerName, List<RegionInfo>>, List<RegionInfo>>
-  segregateRegionsAndAssignRegionsWithFavoredNodes(List<RegionInfo> regions,
+    segregateRegionsAndAssignRegionsWithFavoredNodes(List<RegionInfo> regions,
       List<ServerName> availableServers) {
-    Map<ServerName, List<RegionInfo>> assignmentMapForFavoredNodes = new HashMap<>(regions.size() / 2);
-    List<RegionInfo> regionsWithNoFavoredNodes = new ArrayList<>(regions.size()/2);
+    Map<ServerName, List<RegionInfo>> assignmentMapForFavoredNodes =
+      new HashMap<>(regions.size() / 2);
+    List<RegionInfo> regionsWithNoFavoredNodes = new ArrayList<>(regions.size() / 2);
     for (RegionInfo region : regions) {
       List<ServerName> favoredNodes = fnm.getFavoredNodes(region);
       ServerName primaryHost = null;
@@ -301,8 +295,8 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
       // assign the region to the one with a lower load
       // (both have the desired hdfs blocks)
       ServerName s;
-      ServerMetrics tertiaryLoad = super.services.getServerManager().getLoad(tertiaryHost);
-      ServerMetrics secondaryLoad = super.services.getServerManager().getLoad(secondaryHost);
+      ServerMetrics tertiaryLoad = services.getServerManager().getLoad(tertiaryHost);
+      ServerMetrics secondaryLoad = services.getServerManager().getLoad(secondaryHost);
       if (secondaryLoad.getRegionMetrics().size() < tertiaryLoad.getRegionMetrics().size()) {
         s = secondaryHost;
       } else {
@@ -317,9 +311,9 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   private void addRegionToMap(Map<ServerName, List<RegionInfo>> assignmentMapForFavoredNodes,
-      RegionInfo region, ServerName host) {
-    List<RegionInfo> regionsOnServer = null;
-    if ((regionsOnServer = assignmentMapForFavoredNodes.get(host)) == null) {
+    RegionInfo region, ServerName host) {
+    List<RegionInfo> regionsOnServer = assignmentMapForFavoredNodes.get(host);
+    if (regionsOnServer == null) {
       regionsOnServer = new ArrayList<>();
       assignmentMapForFavoredNodes.put(host, regionsOnServer);
     }
@@ -327,7 +321,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   @Override
-  public synchronized List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
+  public List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
     return this.fnm.getFavoredNodes(regionInfo);
   }
 

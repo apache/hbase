@@ -20,14 +20,16 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -36,10 +38,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.log4j.Appender;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -47,8 +45,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -80,7 +79,7 @@ public class TestMultiLogThreshold {
   private HRegionServer rs;
   private RSRpcServices services;
 
-  private Appender appender;
+  private org.apache.logging.log4j.core.Appender appender;
 
   @Parameterized.Parameter
   public static boolean rejectLargeBatchOp;
@@ -89,6 +88,21 @@ public class TestMultiLogThreshold {
   public static List<Object[]> params() {
     return Arrays.asList(new Object[] { false }, new Object[] { true });
   }
+
+  private final class LevelAndMessage {
+    final org.apache.logging.log4j.Level level;
+
+    final String msg;
+
+    public LevelAndMessage(org.apache.logging.log4j.Level level, String msg) {
+      this.level = level;
+      this.msg = msg;
+    }
+
+  }
+
+  // log4j2 will reuse the LogEvent so we need to copy the level and message out.
+  private BlockingDeque<LevelAndMessage> logs = new LinkedBlockingDeque<>();
 
   @Before
   public void setupTest() throws Exception {
@@ -100,13 +114,28 @@ public class TestMultiLogThreshold {
     util.startMiniCluster();
     util.createTable(NAME, TEST_FAM);
     rs = util.getRSForFirstRegionInTable(NAME);
-    appender = mock(Appender.class);
-    LogManager.getLogger(RSRpcServices.class).addAppender(appender);
+    appender = mock(org.apache.logging.log4j.core.Appender.class);
+    when(appender.getName()).thenReturn("mockAppender");
+    when(appender.isStarted()).thenReturn(true);
+    doAnswer(new Answer<Void>() {
+
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        org.apache.logging.log4j.core.LogEvent logEvent =
+          invocation.getArgument(0, org.apache.logging.log4j.core.LogEvent.class);
+        logs.add(
+          new LevelAndMessage(logEvent.getLevel(), logEvent.getMessage().getFormattedMessage()));
+        return null;
+      }
+    }).when(appender).append(any(org.apache.logging.log4j.core.LogEvent.class));
+    ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+      .getLogger(RSRpcServices.class)).addAppender(appender);
   }
 
   @After
   public void tearDown() throws Exception {
-    LogManager.getLogger(RSRpcServices.class).removeAppender(appender);
+    ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+      .getLogger(RSRpcServices.class)).removeAppender(appender);
     util.shutdownMiniCluster();
   }
 
@@ -149,17 +178,16 @@ public class TestMultiLogThreshold {
   }
 
   private void assertLogBatchWarnings(boolean expected) {
-    ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
-    verify(appender, atLeastOnce()).doAppend(captor.capture());
+    assertFalse(logs.isEmpty());
     boolean actual = false;
-    for (LoggingEvent event : captor.getAllValues()) {
-      if (event.getLevel() == Level.WARN &&
-        event.getRenderedMessage().contains("Large batch operation detected")) {
+    for (LevelAndMessage event : logs) {
+      if (event.level == org.apache.logging.log4j.Level.WARN &&
+        event.msg.contains("Large batch operation detected")) {
         actual = true;
         break;
       }
     }
-    reset(appender);
+    logs.clear();
     assertEquals(expected, actual);
   }
 

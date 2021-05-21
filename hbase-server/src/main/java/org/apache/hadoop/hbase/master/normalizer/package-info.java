@@ -65,7 +65,7 @@
  *     </ul>
  *     <p>
  *       To see detailed logging of the application of these configuration values, set the log
- *       level for this package to `TRACE`.
+ *       level for this package to {@code TRACE}.
  *     </p>
  *   </li>
  * </ul>

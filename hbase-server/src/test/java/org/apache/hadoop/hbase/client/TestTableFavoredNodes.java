@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadOnlyFavoredStochasticBalancer;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -96,8 +95,6 @@ public class TestTableFavoredNodes {
         LoadOnlyFavoredStochasticBalancer.class, LoadBalancer.class);
     conf.set(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, "" + SLAVES);
 
-    // This helps test if RS get the appropriate FN updates.
-    conf.set(BaseLoadBalancer.TABLES_ON_MASTER, "none");
     TEST_UTIL.startMiniCluster(SLAVES);
     TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(WAIT_TIMEOUT);
   }

@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -247,5 +250,26 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("pauseTimeWithGc_num_ops", 1, serverSource);
   }
 
+  @Test
+  public void testTableQueryMeterSwitch() {
+    TableName tn1 = TableName.valueOf("table1");
+    Configuration conf = new Configuration(false);
+    // disable
+    rsm.updateReadQueryMeter(tn1, 500L);
+    assertFalse(HELPER.checkGaugeExists("ServerReadQueryPerSecond_count", serverSource));
+    rsm.updateWriteQueryMeter(tn1, 500L);
+    assertFalse(HELPER.checkGaugeExists("ServerWriteQueryPerSecond_count", serverSource));
+
+    // enable
+    conf.setBoolean(MetricsRegionServer.RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY, true);
+    rsm = new MetricsRegionServer(wrapper, conf, null);
+    serverSource = rsm.getMetricsSource();
+    rsm.updateReadQueryMeter(tn1, 500L);
+    assertTrue(HELPER.checkGaugeExists("ServerWriteQueryPerSecond_count", serverSource));
+    HELPER.assertGauge("ServerReadQueryPerSecond_count", 500L, serverSource);
+    assertTrue(HELPER.checkGaugeExists("ServerWriteQueryPerSecond_count", serverSource));
+    rsm.updateWriteQueryMeter(tn1, 500L);
+    HELPER.assertGauge("ServerWriteQueryPerSecond_count", 500L, serverSource);
+  }
 }
 

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.MASTER_ADDRS_KEY;
+import static org.apache.hadoop.hbase.trace.TraceUtil.trace;
+import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFuture;
 import static org.apache.hadoop.hbase.util.DNS.getHostname;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
@@ -266,18 +268,23 @@ public class MasterRegistry implements ConnectionRegistry {
 
   @Override
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
-    return this.<GetMetaRegionLocationsResponse> call((c, s, d) -> s.getMetaRegionLocations(c,
-      GetMetaRegionLocationsRequest.getDefaultInstance(), d), r -> r.getMetaLocationsCount() != 0,
-      "getMetaLocationsCount").thenApply(MasterRegistry::transformMetaRegionLocations);
+    return tracedFuture(
+      () -> this
+        .<GetMetaRegionLocationsResponse> call(
+          (c, s, d) -> s.getMetaRegionLocations(c,
+            GetMetaRegionLocationsRequest.getDefaultInstance(), d),
+          r -> r.getMetaLocationsCount() != 0, "getMetaLocationsCount")
+        .thenApply(MasterRegistry::transformMetaRegionLocations),
+      "MasterRegistry.getMetaRegionLocations");
   }
 
   @Override
   public CompletableFuture<String> getClusterId() {
-    return this
+    return tracedFuture(() -> this
       .<GetClusterIdResponse> call(
         (c, s, d) -> s.getClusterId(c, GetClusterIdRequest.getDefaultInstance(), d),
         GetClusterIdResponse::hasClusterId, "getClusterId()")
-      .thenApply(GetClusterIdResponse::getClusterId);
+      .thenApply(GetClusterIdResponse::getClusterId), "MasterRegistry.getClusterId");
   }
 
   private static boolean hasActiveMaster(GetMastersResponse resp) {
@@ -300,21 +307,23 @@ public class MasterRegistry implements ConnectionRegistry {
 
   @Override
   public CompletableFuture<ServerName> getActiveMaster() {
-    CompletableFuture<ServerName> future = new CompletableFuture<>();
-    addListener(call((c, s, d) -> s.getMasters(c, GetMastersRequest.getDefaultInstance(), d),
-      MasterRegistry::hasActiveMaster, "getMasters()"), (resp, ex) -> {
-        if (ex != null) {
-          future.completeExceptionally(ex);
-        }
-        ServerName result = null;
-        try {
-          result = filterActiveMaster((GetMastersResponse)resp);
-        } catch (IOException e) {
-          future.completeExceptionally(e);
-        }
-        future.complete(result);
-      });
-    return future;
+    return tracedFuture(() -> {
+      CompletableFuture<ServerName> future = new CompletableFuture<>();
+      addListener(call((c, s, d) -> s.getMasters(c, GetMastersRequest.getDefaultInstance(), d),
+        MasterRegistry::hasActiveMaster, "getMasters()"), (resp, ex) -> {
+          if (ex != null) {
+            future.completeExceptionally(ex);
+          }
+          ServerName result = null;
+          try {
+            result = filterActiveMaster((GetMastersResponse) resp);
+          } catch (IOException e) {
+            future.completeExceptionally(e);
+          }
+          future.complete(result);
+        });
+      return future;
+    }, "MasterRegistry.getActiveMaster");
   }
 
   private static List<ServerName> transformServerNames(GetMastersResponse resp) {
@@ -335,11 +344,13 @@ public class MasterRegistry implements ConnectionRegistry {
 
   @Override
   public void close() {
-    if (masterAddressRefresher != null) {
-      masterAddressRefresher.close();
-    }
-    if (rpcClient != null) {
-      rpcClient.close();
-    }
+    trace(() -> {
+      if (masterAddressRefresher != null) {
+        masterAddressRefresher.close();
+      }
+      if (rpcClient != null) {
+        rpcClient.close();
+      }
+    }, "MasterRegistry.close");
   }
 }

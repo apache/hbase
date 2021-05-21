@@ -39,10 +39,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import static junit.framework.TestCase.assertTrue;
-
 @Category({ MasterTests.class, MediumTests.class })
-public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTestBase {
+public class TestStochasticLoadBalancerHeterogeneousCostRules extends StochasticBalancerTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCostRules.class);

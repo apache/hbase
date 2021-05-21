@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, LargeTests.class })
-public class TestStochasticLoadBalancerBalanceCluster extends BalancerTestBase {
+public class TestStochasticLoadBalancerBalanceCluster extends StochasticBalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -54,7 +54,7 @@ public class TestStochasticLoadBalancerBalanceCluster extends BalancerTestBase {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
-    loadBalancer.setConf(conf);
+    loadBalancer.onConfigurationChange(conf);
     for (int[] mockCluster : clusterStateMocks) {
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
       List<ServerAndLoad> list = convertToList(servers);

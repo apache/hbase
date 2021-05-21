@@ -33,9 +33,6 @@ public class MetricsTableQueryMeterImpl implements MetricsTableQueryMeter {
   private final Map<TableName, TableMeters> metersByTable = new ConcurrentHashMap<>();
   private final MetricRegistry metricRegistry;
 
-  private final static String TABLE_READ_QUERY_PER_SECOND = "tableReadQueryPerSecond";
-  private final static String TABLE_WRITE_QUERY_PER_SECOND = "tableWriteQueryPerSecond";
-
   public MetricsTableQueryMeterImpl(MetricRegistry metricRegistry) {
     this.metricRegistry = metricRegistry;
   }

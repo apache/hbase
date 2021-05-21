@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
@@ -82,8 +83,8 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
         HConstants.DEFAULT_BLOCKSIZE, -1L, rowComparator, false);
 
     CompactionScanQueryMatcher qm = CompactionScanQueryMatcher.create(scanInfo,
-      ScanType.COMPACT_RETAIN_DELETES, Long.MAX_VALUE, HConstants.OLDEST_TIMESTAMP,
-      HConstants.OLDEST_TIMESTAMP, now, from, to, null);
+      ScanType.COMPACT_RETAIN_DELETES, Long.MAX_VALUE, PrivateConstants.OLDEST_TIMESTAMP,
+      PrivateConstants.OLDEST_TIMESTAMP, now, from, to, null);
     List<ScanQueryMatcher.MatchCode> actual = new ArrayList<>(rows.length);
     byte[] prevRow = null;
     for (byte[] row : rows) {

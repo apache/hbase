@@ -4202,6 +4202,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .call();
   }
 
+  private CompletableFuture<List<LogEntry>> getBalancerRejections(final int limit) {
+    return this.<List<LogEntry>>newMasterCaller()
+      .action((controller, stub) ->
+        this.call(controller, stub,
+          ProtobufUtil.toBalancerRejectionRequest(limit),
+          MasterService.Interface::getLogEntries, ProtobufUtil::toBalancerRejectionResponse))
+      .call();
+  }
+
   @Override
   public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
       String logType, ServerType serverType, int limit,
@@ -4209,19 +4218,28 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (logType == null || serverType == null) {
       throw new IllegalArgumentException("logType and/or serverType cannot be empty");
     }
-    if (logType.equals("SLOW_LOG") || logType.equals("LARGE_LOG")) {
-      if (ServerType.MASTER.equals(serverType)) {
-        throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
-      }
-      return getSlowLogResponses(filterParams, serverNames, limit, logType);
-    } else if (logType.equals("BALANCER_DECISION")) {
-      if (ServerType.REGION_SERVER.equals(serverType)) {
-        throw new IllegalArgumentException(
-          "Balancer Decision logs are not maintained by HRegionServer");
-      }
-      return getBalancerDecisions(limit);
+    switch (logType){
+      case "SLOW_LOG":
+      case "LARGE_LOG":
+        if (ServerType.MASTER.equals(serverType)) {
+          throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
+        }
+        return getSlowLogResponses(filterParams, serverNames, limit, logType);
+      case "BALANCER_DECISION":
+        if (ServerType.REGION_SERVER.equals(serverType)) {
+          throw new IllegalArgumentException(
+            "Balancer Decision logs are not maintained by HRegionServer");
+        }
+        return getBalancerDecisions(limit);
+      case "BALANCER_REJECTION":
+        if (ServerType.REGION_SERVER.equals(serverType)) {
+          throw new IllegalArgumentException(
+            "Balancer Rejection logs are not maintained by HRegionServer");
+        }
+        return getBalancerRejections(limit);
+      default:
+        return CompletableFuture.completedFuture(Collections.emptyList());
     }
-    return CompletableFuture.completedFuture(Collections.emptyList());
   }
 
 }

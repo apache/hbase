@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,13 +60,17 @@ public class TestAsyncTableNoncedRetry {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static TableName TABLE_NAME = TableName.valueOf("async");
+  private static final TableName TABLE_NAME = TableName.valueOf("async");
 
-  private static byte[] FAMILY = Bytes.toBytes("cf");
+  private static final byte[] FAMILY = Bytes.toBytes("cf");
 
-  private static byte[] QUALIFIER = Bytes.toBytes("cq");
+  private static final byte[] QUALIFIER = Bytes.toBytes("cq");
 
-  private static byte[] VALUE = Bytes.toBytes("value");
+  private static final byte[] QUALIFIER2 = Bytes.toBytes("cq2");
+
+  private static final byte[] QUALIFIER3 = Bytes.toBytes("cq3");
+
+  private static final byte[] VALUE = Bytes.toBytes("value");
 
   private static AsyncConnection ASYNC_CONN;
 
@@ -72,9 +79,14 @@ public class TestAsyncTableNoncedRetry {
 
   private byte[] row;
 
-  private static AtomicInteger CALLED = new AtomicInteger();
+  private static final AtomicInteger CALLED = new AtomicInteger();
 
-  private static long SLEEP_TIME = 2000;
+  private static final long SLEEP_TIME = 2000;
+
+  private static final long RPC_TIMEOUT = SLEEP_TIME / 4 * 3; // three fourths of the sleep time
+
+  // The number of miniBatchOperations that are executed in a RegionServer
+  private static int miniBatchOperationCount;
 
   public static final class SleepOnceCP implements RegionObserver, RegionCoprocessor {
 
@@ -84,21 +96,12 @@ public class TestAsyncTableNoncedRetry {
     }
 
     @Override
-    public Result postAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
-        Result result) throws IOException {
-      if (CALLED.getAndIncrement() == 0) {
+    public void postBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+      MiniBatchOperationInProgress<Mutation> miniBatchOp) {
+      // We sleep when the last of the miniBatchOperation is executed
+      if (CALLED.getAndIncrement() == miniBatchOperationCount - 1) {
         Threads.sleepWithoutInterrupt(SLEEP_TIME);
       }
-      return RegionObserver.super.postAppend(c, append, result);
-    }
-
-    @Override
-    public Result postIncrement(ObserverContext<RegionCoprocessorEnvironment> c,
-        Increment increment, Result result) throws IOException {
-      if (CALLED.getAndIncrement() == 0) {
-        Threads.sleepWithoutInterrupt(SLEEP_TIME);
-      }
-      return RegionObserver.super.postIncrement(c, increment, result);
     }
   }
 
@@ -129,8 +132,11 @@ public class TestAsyncTableNoncedRetry {
   public void testAppend() throws InterruptedException, ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(SLEEP_TIME / 2, TimeUnit.MILLISECONDS).build();
+      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
     Result result = table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)).get();
+
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
     assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
@@ -141,9 +147,12 @@ public class TestAsyncTableNoncedRetry {
     ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(SLEEP_TIME / 2, TimeUnit.MILLISECONDS).build();
+      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
     Result result = table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)
       .setReturnResults(false)).get();
+
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
     assertTrue(result.isEmpty());
@@ -153,10 +162,14 @@ public class TestAsyncTableNoncedRetry {
   public void testIncrement() throws InterruptedException, ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(SLEEP_TIME / 2, TimeUnit.MILLISECONDS).build();
-    assertEquals(1L, table.incrementColumnValue(row, FAMILY, QUALIFIER, 1L).get().longValue());
+      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
+    long result = table.incrementColumnValue(row, FAMILY, QUALIFIER, 1L).get();
+
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
+    assertEquals(1L, result);
   }
 
   @Test
@@ -164,11 +177,218 @@ public class TestAsyncTableNoncedRetry {
     ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
-      .setRpcTimeout(SLEEP_TIME / 2, TimeUnit.MILLISECONDS).build();
+      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
     Result result = table.increment(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L)
       .setReturnResults(false)).get();
+
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
     assertTrue(result.isEmpty());
+  }
+
+  @Test
+  public void testIncrementInRowMutations()
+    throws InterruptedException, ExecutionException, IOException {
+    assertEquals(0, CALLED.get());
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setWriteRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
+    Result result = table.mutateRow(new RowMutations(row)
+      .add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+      .add(new Delete(row).addColumn(FAMILY, QUALIFIER2))).get();
+
+    // make sure we called twice and the result is still correct
+    assertEquals(2, CALLED.get());
+    assertEquals(1L, Bytes.toLong(result.getValue(FAMILY, QUALIFIER)));
+  }
+
+  @Test
+  public void testAppendInRowMutations()
+    throws InterruptedException, ExecutionException, IOException {
+    assertEquals(0, CALLED.get());
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setWriteRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
+    Result result = table.mutateRow(new RowMutations(row)
+      .add(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))
+      .add(new Delete(row).addColumn(FAMILY, QUALIFIER2))).get();
+
+    // make sure we called twice and the result is still correct
+    assertEquals(2, CALLED.get());
+    assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
+  }
+
+  @Test
+  public void testIncrementAndAppendInRowMutations()
+    throws InterruptedException, ExecutionException, IOException {
+    assertEquals(0, CALLED.get());
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setWriteRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
+    Result result = table.mutateRow(new RowMutations(row)
+      .add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+      .add(new Append(row).addColumn(FAMILY, QUALIFIER2, VALUE))).get();
+
+    // make sure we called twice and the result is still correct
+    assertEquals(2, CALLED.get());
+    assertEquals(1L, Bytes.toLong(result.getValue(FAMILY, QUALIFIER)));
+    assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER2));
+  }
+
+  @Test
+  public void testIncrementInCheckAndMutate() throws InterruptedException, ExecutionException {
+    assertEquals(0, CALLED.get());
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
+    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
+      .ifNotExists(FAMILY, QUALIFIER2)
+      .build(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))).get();
+
+    // make sure we called twice and the result is still correct
+    assertEquals(2, CALLED.get());
+    assertTrue(result.isSuccess());
+    assertEquals(1L, Bytes.toLong(result.getResult().getValue(FAMILY, QUALIFIER)));
+  }
+
+  @Test
+  public void testAppendInCheckAndMutate() throws InterruptedException, ExecutionException {
+    assertEquals(0, CALLED.get());
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
+    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
+      .ifNotExists(FAMILY, QUALIFIER2)
+      .build(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))).get();
+
+    // make sure we called twice and the result is still correct
+    assertEquals(2, CALLED.get());
+    assertTrue(result.isSuccess());
+    assertArrayEquals(VALUE, result.getResult().getValue(FAMILY, QUALIFIER));
+  }
+
+  @Test
+  public void testIncrementInRowMutationsInCheckAndMutate() throws InterruptedException,
+    ExecutionException, IOException {
+    assertEquals(0, CALLED.get());
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
+    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
+      .ifNotExists(FAMILY, QUALIFIER3)
+      .build(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+        .add(new Delete(row).addColumn(FAMILY, QUALIFIER2)))).get();
+
+    // make sure we called twice and the result is still correct
+    assertEquals(2, CALLED.get());
+    assertTrue(result.isSuccess());
+    assertEquals(1L, Bytes.toLong(result.getResult().getValue(FAMILY, QUALIFIER)));
+  }
+
+  @Test
+  public void testAppendInRowMutationsInCheckAndMutate() throws InterruptedException,
+    ExecutionException, IOException {
+    assertEquals(0, CALLED.get());
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
+    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
+      .ifNotExists(FAMILY, QUALIFIER3)
+      .build(new RowMutations(row).add(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))
+        .add(new Delete(row).addColumn(FAMILY, QUALIFIER2)))).get();
+
+    // make sure we called twice and the result is still correct
+    assertEquals(2, CALLED.get());
+    assertTrue(result.isSuccess());
+    assertArrayEquals(VALUE, result.getResult().getValue(FAMILY, QUALIFIER));
+  }
+
+  @Test
+  public void testIncrementAndAppendInRowMutationsInCheckAndMutate() throws InterruptedException,
+    ExecutionException, IOException {
+    assertEquals(0, CALLED.get());
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 1;
+    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
+      .ifNotExists(FAMILY, QUALIFIER3)
+      .build(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+        .add(new Append(row).addColumn(FAMILY, QUALIFIER2, VALUE)))).get();
+
+    // make sure we called twice and the result is still correct
+    assertEquals(2, CALLED.get());
+    assertTrue(result.isSuccess());
+    assertEquals(1L, Bytes.toLong(result.getResult().getValue(FAMILY, QUALIFIER)));
+    assertArrayEquals(VALUE, result.getResult().getValue(FAMILY, QUALIFIER2));
+  }
+
+  @Test
+  public void testBatch() throws InterruptedException,
+    ExecutionException, IOException {
+    byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
+    byte[] row3 = Bytes.toBytes(Bytes.toString(row) + "3");
+    byte[] row4 = Bytes.toBytes(Bytes.toString(row) + "4");
+    byte[] row5 = Bytes.toBytes(Bytes.toString(row) + "5");
+    byte[] row6 = Bytes.toBytes(Bytes.toString(row) + "6");
+
+    assertEquals(0, CALLED.get());
+
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setRpcTimeout(RPC_TIMEOUT, TimeUnit.MILLISECONDS).build();
+
+    miniBatchOperationCount = 6;
+    List<Object> results = table.batchAll(Arrays.asList(
+      new Append(row).addColumn(FAMILY, QUALIFIER, VALUE),
+      new Increment(row2).addColumn(FAMILY, QUALIFIER, 1L),
+      new RowMutations(row3)
+        .add(new Increment(row3).addColumn(FAMILY, QUALIFIER, 1L))
+        .add(new Append(row3).addColumn(FAMILY, QUALIFIER2, VALUE)),
+      CheckAndMutate.newBuilder(row4)
+        .ifNotExists(FAMILY, QUALIFIER2)
+        .build(new Increment(row4).addColumn(FAMILY, QUALIFIER, 1L)),
+      CheckAndMutate.newBuilder(row5)
+        .ifNotExists(FAMILY, QUALIFIER2)
+        .build(new Append(row5).addColumn(FAMILY, QUALIFIER, VALUE)),
+      CheckAndMutate.newBuilder(row6)
+        .ifNotExists(FAMILY, QUALIFIER3)
+        .build(new RowMutations(row6).add(new Increment(row6).addColumn(FAMILY, QUALIFIER, 1L))
+          .add(new Append(row6).addColumn(FAMILY, QUALIFIER2, VALUE))))).get();
+
+    // make sure we called twice and the result is still correct
+
+    // should be called 12 times as 6 miniBatchOperations are called twice
+    assertEquals(12, CALLED.get());
+
+    assertArrayEquals(VALUE, ((Result) results.get(0)).getValue(FAMILY, QUALIFIER));
+
+    assertEquals(1L, Bytes.toLong(((Result) results.get(1)).getValue(FAMILY, QUALIFIER)));
+
+    assertEquals(1L, Bytes.toLong(((Result) results.get(2)).getValue(FAMILY, QUALIFIER)));
+    assertArrayEquals(VALUE, ((Result) results.get(2)).getValue(FAMILY, QUALIFIER2));
+
+    CheckAndMutateResult result;
+
+    result = (CheckAndMutateResult) results.get(3);
+    assertTrue(result.isSuccess());
+    assertEquals(1L, Bytes.toLong(result.getResult().getValue(FAMILY, QUALIFIER)));
+
+    result = (CheckAndMutateResult) results.get(4);
+    assertTrue(result.isSuccess());
+    assertArrayEquals(VALUE, result.getResult().getValue(FAMILY, QUALIFIER));
+
+    result = (CheckAndMutateResult) results.get(5);
+    assertTrue(result.isSuccess());
+    assertEquals(1L, Bytes.toLong(result.getResult().getValue(FAMILY, QUALIFIER)));
+    assertArrayEquals(VALUE, result.getResult().getValue(FAMILY, QUALIFIER2));
   }
 }
