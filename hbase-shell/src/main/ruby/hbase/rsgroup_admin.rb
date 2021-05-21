@@ -220,5 +220,11 @@ module Hbase
       end
       @admin.updateRSGroupConfig(rsgroup_name, configuration)
     end
+
+    #----------------------------------------------------------------------------------------------
+    # Updates the configuration of all the regionservers in the rsgroup.
+    def update_rsgroup_config(groupName)
+      @admin.updateConfiguration(groupName)
+    end
   end
 end
