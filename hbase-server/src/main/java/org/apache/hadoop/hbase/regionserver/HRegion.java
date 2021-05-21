@@ -4106,9 +4106,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Function<Cell, byte[]> supplier) throws IOException {
       // Forward any tags found on the delta.
       List<Tag> tags = TagUtil.carryForwardTags(delta);
-      tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
       if (currentCell != null) {
         tags = TagUtil.carryForwardTags(tags, currentCell);
+        tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
         byte[] newValue = supplier.apply(currentCell);
         return ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
           .setRow(mutation.getRow(), 0, mutation.getRow().length)
@@ -4121,6 +4121,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           .setTags(TagUtil.fromList(tags))
           .build();
       } else {
+        tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
         PrivateCellUtil.updateLatestStamp(delta, now);
         return CollectionUtils.isEmpty(tags) ? delta : PrivateCellUtil.createCell(delta, tags);
       }
