@@ -198,8 +198,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log.getName());
     PriorityBlockingQueue<Path> queue = queues.get(logPrefix);
     if (queue == null) {
-      queue = queues.computeIfAbsent(logPrefix,
-        key -> new PriorityBlockingQueue<>(queueSizePerGroup, new LogsComparator()));
+      queue = new PriorityBlockingQueue<>(queueSizePerGroup, new LogsComparator());
+      queues.put(logPrefix, queue);
       if (this.isSourceActive() && this.walEntryFilter != null) {
         // new wal group observed after source startup, start a new worker thread to track it
         // notice: it's possible that log enqueued when this.running is set but worker thread
