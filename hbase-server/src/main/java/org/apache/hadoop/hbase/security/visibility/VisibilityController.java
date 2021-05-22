@@ -992,7 +992,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
               + "' is not authorized to perform this action.");
         }
         labels = this.visibilityLabelService.listLabels(regex);
-        logResult(false, "listLabels", "Listing labels allowed", null, null, regex);
+        logResult(true, "listLabels", "Listing labels allowed", null, null, regex);
       } catch (AccessDeniedException e) {
         logResult(false, "listLabels", e.getMessage(), null, null, regex);
         CoprocessorRpcUtils.setControllerException(controller, e);
