@@ -60,30 +60,6 @@
     </license>
   </licenses>
 
-  <modules>
-    <module>hbase-resource-bundle</module>
-    <module>hbase-server</module>
-    <module>hbase-rest</module>
-    <module>hbase-shell</module>
-    <module>hbase-protocol</module>
-    <module>hbase-client</module>
-    <module>hbase-hadoop-compat</module>
-    <module>hbase-common</module>
-    <module>hbase-procedure</module>
-    <module>hbase-it</module>
-    <module>hbase-examples</module>
-    <module>hbase-prefix-tree</module>
-    <module>hbase-assembly</module>
-    <module>hbase-testing-util</module>
-    <module>hbase-annotations</module>
-    <module>hbase-checkstyle</module>
-    <module>hbase-external-blockcache</module>
-    <module>hbase-shaded</module>
-    <module>hbase-archetypes</module>
-    <module>hbase-metrics-api</module>
-    <module>hbase-metrics</module>
-    <module>hbase-hbtop</module>
-  </modules>
   <!--Add apache snapshots in case we want to use unreleased versions of plugins:
       e.g. surefire 2.18-SNAPSHOT-->
   <pluginRepositories>
@@ -2033,7 +2009,29 @@
         <jdk>1.8</jdk>
       </activation>
       <modules>
+        <module>hbase-resource-bundle</module>
+        <module>hbase-server</module>
+        <module>hbase-rest</module>
         <module>hbase-thrift</module>
+        <module>hbase-shell</module>
+        <module>hbase-protocol</module>
+        <module>hbase-client</module>
+        <module>hbase-hadoop-compat</module>
+        <module>hbase-common</module>
+        <module>hbase-procedure</module>
+        <module>hbase-it</module>
+        <module>hbase-examples</module>
+        <module>hbase-prefix-tree</module>
+        <module>hbase-assembly</module>
+        <module>hbase-testing-util</module>
+        <module>hbase-annotations</module>
+        <module>hbase-checkstyle</module>
+        <module>hbase-external-blockcache</module>
+        <module>hbase-shaded</module>
+        <module>hbase-archetypes</module>
+        <module>hbase-metrics-api</module>
+        <module>hbase-metrics</module>
+        <module>hbase-hbtop</module>
       </modules>
       <build>
         <pluginManagement>
@@ -2060,6 +2058,38 @@
           </plugins>
         </pluginManagement>
       </build>
+    </profile>
+
+    <profile>
+      <id>build-with-jdk7</id>
+      <activation>
+        <jdk>1.7</jdk>
+      </activation>
+      <modules>
+        <!-- without hbase-thrift module -->
+        <module>hbase-resource-bundle</module>
+        <module>hbase-server</module>
+        <module>hbase-rest</module>
+        <module>hbase-shell</module>
+        <module>hbase-protocol</module>
+        <module>hbase-client</module>
+        <module>hbase-hadoop-compat</module>
+        <module>hbase-common</module>
+        <module>hbase-procedure</module>
+        <module>hbase-it</module>
+        <module>hbase-examples</module>
+        <module>hbase-prefix-tree</module>
+        <module>hbase-assembly</module>
+        <module>hbase-testing-util</module>
+        <module>hbase-annotations</module>
+        <module>hbase-checkstyle</module>
+        <module>hbase-external-blockcache</module>
+        <module>hbase-shaded</module>
+        <module>hbase-archetypes</module>
+        <module>hbase-metrics-api</module>
+        <module>hbase-metrics</module>
+        <module>hbase-hbtop</module>
+      </modules>
     </profile>
 
     <!--In JDK 1.8 and newer the PermGem has been removed. -->
