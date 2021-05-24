@@ -89,7 +89,7 @@ public final class ReadOnlyZKClient implements Closeable {
     public void connectFailed(IOException e) {
     }
 
-    public void closed(IOException e) {
+    public void closed(Exception e) {
     }
 
     @Override
@@ -198,7 +198,7 @@ public final class ReadOnlyZKClient implements Closeable {
         }
 
         @Override
-        public void closed(IOException e) {
+        public void closed(Exception e) {
           // It may happen that a request is succeeded and the onComplete has been called and pushed
           // us into the task queue, but before we get called a close is called and here we will
           // fail the request, although it is succeeded actually.
@@ -246,7 +246,7 @@ public final class ReadOnlyZKClient implements Closeable {
     }
 
     @Override
-    public void closed(IOException e) {
+    public void closed(Exception e) {
       future.completeExceptionally(e);
     }
   }
@@ -343,6 +343,10 @@ public final class ReadOnlyZKClient implements Closeable {
           zk = getZk();
         } catch (IOException e) {
           task.connectFailed(e);
+          continue;
+        } catch (Exception e) {
+          // won't be doing any retries for non IOE.
+          task.closed(e);
           continue;
         }
         task.exec(zk);
