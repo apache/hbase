@@ -1192,7 +1192,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return builder.build();
   }
 
-  private HFileContext createFileContext(Compression.Algorithm compression,
+  HFileContext createFileContext(Compression.Algorithm compression,
     boolean includeMVCCReadpoint, boolean includesTag, Encryption.Context encryptionContext) {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -47,6 +48,19 @@ public class DefaultStoreFlusher extends StoreFlusher {
   public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
       MonitoredTask status, ThroughputController throughputController,
       FlushLifeCycleTracker tracker) throws IOException {
+    return flushSnapshot(snapshot, cacheFlushId, status, throughputController, tracker,
+      s -> s.createWriterInTmp(snapshot.getCellsCount(),
+        s.getColumnFamilyDescriptor().getCompressionType(),
+            false,
+            true,
+            snapshot.isTagsPresent(),
+            false));
+  }
+
+
+  protected List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
+    MonitoredTask status, ThroughputController throughputController,
+    FlushLifeCycleTracker tracker, IOCheckedFunction<HStore,StoreFileWriter> createWriter) throws IOException {
     ArrayList<Path> result = new ArrayList<>();
     int cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
@@ -60,9 +74,7 @@ public class DefaultStoreFlusher extends StoreFlusher {
       synchronized (flushLock) {
         status.setStatus("Flushing " + store + ": creating writer");
         // Write the map out to the disk
-        writer = store.createWriterInTmp(cellsCount,
-            store.getColumnFamilyDescriptor().getCompressionType(), false, true,
-            snapshot.isTagsPresent(), false);
+        writer = createWriter.apply(store);
         IOException e = null;
         try {
           performFlush(scanner, writer, throughputController);
@@ -82,9 +94,14 @@ public class DefaultStoreFlusher extends StoreFlusher {
       scanner.close();
     }
     LOG.info("Flushed memstore data size={} at sequenceid={} (bloomFilter={}), to={}",
-        StringUtils.byteDesc(snapshot.getDataSize()), cacheFlushId, writer.hasGeneralBloom(),
-        writer.getPath());
+      StringUtils.byteDesc(snapshot.getDataSize()), cacheFlushId, writer.hasGeneralBloom(),
+      writer.getPath());
     result.add(writer.getPath());
     return result;
+  }
+
+  @FunctionalInterface
+  public interface IOCheckedFunction<T,R> {
+    R apply(T t) throws IOException;
   }
 }
