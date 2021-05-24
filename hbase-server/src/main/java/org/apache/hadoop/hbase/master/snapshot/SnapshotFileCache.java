@@ -19,11 +19,7 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.locks.Lock;
@@ -36,6 +32,8 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -91,12 +89,12 @@ public class SnapshotFileCache implements Stoppable {
   private final FileSystem fs, workingFs;
   private final SnapshotFileInspector fileInspector;
   private final Path snapshotDir, workingSnapshotDir;
-  private final Set<String> cache = new HashSet<>();
+  private volatile ImmutableSet<String> cache = ImmutableSet.of();
   /**
    * This is a helper map of information about the snapshot directories so we don't need to rescan
    * them if they haven't changed since the last time we looked.
    */
-  private final Map<String, SnapshotDirectoryInfo> snapshots = new HashMap<>();
+  private ImmutableMap<String, SnapshotDirectoryInfo> snapshots = ImmutableMap.of();
   private final Timer refreshTimer;
 
   /**
@@ -185,8 +183,8 @@ public class SnapshotFileCache implements Stoppable {
   // XXX this is inefficient to synchronize on the method, when what we really need to guard against
   // is an illegal access to the cache. Really we could do a mutex-guarded pointer swap on the
   // cache, but that seems overkill at the moment and isn't necessarily a bottleneck.
-  public synchronized Iterable<FileStatus> getUnreferencedFiles(Iterable<FileStatus> files,
-    final SnapshotManager snapshotManager) throws IOException {
+  public Iterable<FileStatus> getUnreferencedFiles(Iterable<FileStatus> files,
+      final SnapshotManager snapshotManager) throws IOException {
     List<FileStatus> unReferencedFiles = Lists.newArrayList();
     List<String> snapshotsInProgress = null;
     boolean refreshed = false;
@@ -201,13 +199,17 @@ public class SnapshotFileCache implements Stoppable {
             + "skip to clean the HFiles this time");
           return unReferencedFiles;
         }
+        ImmutableSet<String> currentCache = cache;
         for (FileStatus file : files) {
           String fileName = file.getPath().getName();
-          if (!refreshed && !cache.contains(fileName)) {
-            refreshCache();
-            refreshed = true;
+          if (!refreshed && !currentCache.contains(fileName)) {
+            synchronized (this) {
+              refreshCache();
+              currentCache = cache;
+              refreshed = true;
+            }
           }
-          if (cache.contains(fileName)) {
+          if (currentCache.contains(fileName)) {
             continue;
           }
           if (snapshotsInProgress == null) {
@@ -236,22 +238,23 @@ public class SnapshotFileCache implements Stoppable {
 
     // clear the cache, as in the below code, either we will also clear the snapshots, or we will
     // refill the file name cache again.
-    this.cache.clear();
     if (ArrayUtils.isEmpty(snapshotDirs)) {
       // remove all the remembered snapshots because we don't have any left
       if (LOG.isDebugEnabled() && this.snapshots.size() > 0) {
         LOG.debug("No snapshots on-disk, clear cache");
       }
-      this.snapshots.clear();
+      this.snapshots = ImmutableMap.of();
+      this.cache = ImmutableSet.of();
       return;
     }
 
+    ImmutableSet.Builder<String> cacheBuilder = ImmutableSet.builder();
+    ImmutableMap.Builder<String, SnapshotDirectoryInfo> snapshotsBuilder = ImmutableMap.builder();
     // iterate over all the cached snapshots and see if we need to update some, it is not an
     // expensive operation if we do not reload the manifest of snapshots.
-    Map<String, SnapshotDirectoryInfo> newSnapshots = new HashMap<>();
     for (FileStatus snapshotDir : snapshotDirs) {
       String name = snapshotDir.getPath().getName();
-      SnapshotDirectoryInfo files = this.snapshots.remove(name);
+      SnapshotDirectoryInfo files = snapshots.get(name);
       // if we don't know about the snapshot or its been modified, we need to update the
       // files the latter could occur where I create a snapshot, then delete it, and then make a
       // new snapshot with the same name. We will need to update the cache the information from
@@ -263,20 +266,20 @@ public class SnapshotFileCache implements Stoppable {
         files = new SnapshotDirectoryInfo(snapshotDir.getModificationTime(), storedFiles);
       }
       // add all the files to cache
-      this.cache.addAll(files.getFiles());
-      newSnapshots.put(name, files);
+      cacheBuilder.addAll(files.getFiles());
+      snapshotsBuilder.put(name, files);
     }
     // set the snapshots we are tracking
-    this.snapshots.clear();
-    this.snapshots.putAll(newSnapshots);
+    this.snapshots = snapshotsBuilder.build();
+    this.cache = cacheBuilder.build();
   }
 
   List<String> getSnapshotsInProgress() throws IOException {
     List<String> snapshotInProgress = Lists.newArrayList();
     // only add those files to the cache, but not to the known snapshots
 
-    FileStatus[] snapshotsInProgress =
-      CommonFSUtils.listStatus(this.workingFs, this.workingSnapshotDir);
+    FileStatus[] snapshotsInProgress = CommonFSUtils.listStatus(this.workingFs,
+      this.workingSnapshotDir);
 
     if (!ArrayUtils.isEmpty(snapshotsInProgress)) {
       for (FileStatus snapshot : snapshotsInProgress) {
@@ -303,11 +306,10 @@ public class SnapshotFileCache implements Stoppable {
         } catch (IOException e) {
           LOG.warn("Failed to refresh snapshot hfile cache!", e);
           // clear all the cached entries if we meet an error
-          cache.clear();
-          snapshots.clear();
+          cache = ImmutableSet.of();
+          snapshots = ImmutableMap.of();
         }
       }
-
     }
   }
 
@@ -317,7 +319,6 @@ public class SnapshotFileCache implements Stoppable {
       this.stop = true;
       this.refreshTimer.cancel();
     }
-
   }
 
   @Override
