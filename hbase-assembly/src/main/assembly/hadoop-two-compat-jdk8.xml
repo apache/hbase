@@ -26,7 +26,7 @@
     <format>tar.gz</format>
   </formats>
   <componentDescriptors>
-      <componentDescriptor>src/main/assembly/components.xml</componentDescriptor>
+      <componentDescriptor>src/main/assembly/components-jdk8.xml</componentDescriptor>
   </componentDescriptors>
   <moduleSets>
     <moduleSet>
@@ -45,6 +45,7 @@
         <include>org.apache.hbase:hbase-rest</include>
         <include>org.apache.hbase:hbase-server</include>
         <include>org.apache.hbase:hbase-shell</include>
+        <include>org.apache.hbase:hbase-thrift</include>
         <include>org.apache.hbase:hbase-external-blockcache</include>
       </includes>
       <!-- Binaries for the dependencies also go in the hbase-jars directory -->

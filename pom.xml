@@ -2008,6 +2008,9 @@
       <activation>
         <jdk>1.8</jdk>
       </activation>
+      <properties>
+        <assembly.file>src/main/assembly/hadoop-two-compat-jdk8.xml</assembly.file>
+      </properties>
       <modules>
         <module>hbase-resource-bundle</module>
         <module>hbase-server</module>

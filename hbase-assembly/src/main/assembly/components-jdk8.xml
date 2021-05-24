@@ -78,6 +78,12 @@
       <directoryMode>0755</directoryMode>
     </fileSet>
     <fileSet>
+      <directory>${project.basedir}/../hbase-thrift/target/hbase-webapps</directory>
+      <outputDirectory>hbase-webapps/</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+    <fileSet>
       <directory>${project.basedir}/../hbase-rest/target/hbase-webapps</directory>
       <outputDirectory>hbase-webapps/</outputDirectory>
       <fileMode>0644</fileMode>
