@@ -54,7 +54,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
         new RegionReplicaHostCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
       BalancerClusterState cluster = mockCluster(mockCluster);
-      costFunction.init(cluster);
+      costFunction.prepare(cluster);
       double cost = costFunction.cost();
       assertTrue(cost >= 0);
       assertTrue(cost <= 1.01);
@@ -73,7 +73,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     BalancerClusterState cluster;
 
     cluster = new BalancerClusterState(clusterState, null, null, null);
-    costFunction.init(cluster);
+    costFunction.prepare(cluster);
     double costWithoutReplicas = costFunction.cost();
     assertEquals(0, costWithoutReplicas, 0);
 
@@ -83,7 +83,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     clusterState.lastEntry().getValue().add(replica1);
 
     cluster = new BalancerClusterState(clusterState, null, null, null);
-    costFunction.init(cluster);
+    costFunction.prepare(cluster);
     double costWith1ReplicaDifferentServer = costFunction.cost();
 
     assertEquals(0, costWith1ReplicaDifferentServer, 0);
@@ -93,7 +93,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     clusterState.lastEntry().getValue().add(replica2);
 
     cluster = new BalancerClusterState(clusterState, null, null, null);
-    costFunction.init(cluster);
+    costFunction.prepare(cluster);
     double costWith1ReplicaSameServer = costFunction.cost();
 
     assertTrue(costWith1ReplicaDifferentServer < costWith1ReplicaSameServer);
@@ -116,7 +116,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     it.next().getValue().add(replica3); // 2nd server
 
     cluster = new BalancerClusterState(clusterState, null, null, null);
-    costFunction.init(cluster);
+    costFunction.prepare(cluster);
     double costWith3ReplicasSameServer = costFunction.cost();
 
     clusterState = mockClusterServers(servers);
@@ -130,7 +130,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     clusterState.lastEntry().getValue().add(replica3);
 
     cluster = new BalancerClusterState(clusterState, null, null, null);
-    costFunction.init(cluster);
+    costFunction.prepare(cluster);
     double costWith2ReplicasOnTwoServers = costFunction.cost();
 
     assertTrue(costWith2ReplicasOnTwoServers < costWith3ReplicasSameServer);

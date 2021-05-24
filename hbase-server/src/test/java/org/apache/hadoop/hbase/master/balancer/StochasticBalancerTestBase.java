@@ -46,6 +46,7 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
+    conf.setLong(StochasticLoadBalancer.MAX_RUNNING_TIME_KEY, 3 * 60 * 1000L);
     loadBalancer = new StochasticLoadBalancer();
     loadBalancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
     loadBalancer.initialize();

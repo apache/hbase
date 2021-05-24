@@ -45,7 +45,7 @@ abstract class CostFunction {
    * Called once per LB invocation to give the cost function to initialize it's state, and perform
    * any costly calculation.
    */
-  void init(BalancerClusterState cluster) {
+  void prepare(BalancerClusterState cluster) {
     this.cluster = cluster;
   }
 

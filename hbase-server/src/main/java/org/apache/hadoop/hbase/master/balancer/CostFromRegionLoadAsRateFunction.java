@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Collection;
+import java.util.Iterator;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,18 +31,20 @@ abstract class CostFromRegionLoadAsRateFunction extends CostFromRegionLoadFuncti
 
   @Override
   protected double getRegionLoadCost(Collection<BalancerRegionLoad> regionLoadList) {
-    double cost = 0;
-    double previous = 0;
-    boolean isFirst = true;
-    for (BalancerRegionLoad rl : regionLoadList) {
-      double current = getCostFromRl(rl);
-      if (isFirst) {
-        isFirst = false;
-      } else {
-        cost += current - previous;
-      }
-      previous = current;
+    Iterator<BalancerRegionLoad> iter = regionLoadList.iterator();
+    if (!iter.hasNext()) {
+      return 0;
     }
+    double previous = getCostFromRl(iter.next());
+    if (!iter.hasNext()) {
+      return 0;
+    }
+    double cost = 0;
+    do {
+      double current = getCostFromRl(iter.next());
+      cost += current - previous;
+      previous = current;
+    } while (iter.hasNext());
     return Math.max(0, cost / (regionLoadList.size() - 1));
   }
 }

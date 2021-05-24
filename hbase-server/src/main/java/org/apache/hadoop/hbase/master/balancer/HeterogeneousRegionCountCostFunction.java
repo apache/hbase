@@ -14,6 +14,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -119,7 +120,7 @@ public class HeterogeneousRegionCountCostFunction extends CostFunction {
    * any costly calculation.
    */
   @Override
-  void init(final BalancerClusterState cluster) {
+  void prepare(final BalancerClusterState cluster) {
     this.cluster = cluster;
     this.loadRules();
   }
@@ -148,6 +149,8 @@ public class HeterogeneousRegionCountCostFunction extends CostFunction {
   /**
    * used to load the rule files.
    */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*(/src/test/.*|HeterogeneousRegionCountCostFunction).java")
   void loadRules() {
     final List<String> lines = readFile(this.rulesPath);
     if (null == lines) {
