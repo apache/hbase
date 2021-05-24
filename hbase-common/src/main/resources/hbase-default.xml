@@ -639,7 +639,7 @@ possible configurations would overwhelm and obscure the important.
     <description>Whether to merge a region as part of normalization.</description>
   </property>
   <property>
-    <name>hbase.normalizer.min.region.count</name>
+    <name>hbase.normalizer.merge.min.region.count</name>
     <value>3</value>
     <description>The minimum number of regions in a table to consider it for merge
       normalization.</description>
