@@ -38,13 +38,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -144,6 +147,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   public static final String RING_BUFFER_SLOT_COUNT =
     "hbase.regionserver.wal.disruptor.event.count";
+
+  public static final String WAL_SHUTDOWN_WAIT_TIMEOUT_MS =
+    "hbase.wal.shutdown.wait.timeout.ms";
+  public static final int DEFAULT_WAL_SHUTDOWN_WAIT_TIMEOUT_MS = 15 * 1000;
 
   /**
    * file system instance
@@ -272,6 +279,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected volatile boolean closed = false;
 
   protected final AtomicBoolean shutdown = new AtomicBoolean(false);
+
+  protected final long walShutdownTimeout;
 
   private long nextLogTooOldNs = System.nanoTime();
 
@@ -501,7 +510,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
             SURVIVED_TOO_LONG_SEC_KEY, SURVIVED_TOO_LONG_SEC_DEFAULT));
     this.useHsync = conf.getBoolean(HRegion.WAL_HSYNC_CONF_KEY, HRegion.DEFAULT_WAL_HSYNC);
     archiveRetries = this.conf.getInt("hbase.regionserver.walroll.archive.retries", 0);
-
+    this.walShutdownTimeout = conf.getLong(WAL_SHUTDOWN_WAIT_TIMEOUT_MS,
+      DEFAULT_WAL_SHUTDOWN_WAIT_TIMEOUT_MS);
   }
 
   /**
@@ -986,14 +996,43 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         i.logCloseRequested();
       }
     }
-    rollWriterLock.lock();
-    try {
-      doShutdown();
-      if (logArchiveExecutor != null) {
-        logArchiveExecutor.shutdownNow();
+
+    ExecutorService shutdownExecutor = Executors.newFixedThreadPool(1,
+      new com.google.common.util.concurrent.ThreadFactoryBuilder().setDaemon(true)
+        .setNameFormat("AbstractFSWAL-shutdown-").build());
+    Future<Void> future = shutdownExecutor.submit(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        if (rollWriterLock.tryLock(walShutdownTimeout, TimeUnit.SECONDS)) {
+          try {
+            doShutdown();
+            logArchiveExecutor.shutdownNow();
+          } finally {
+            rollWriterLock.unlock();
+          }
+        } else {
+          throw new IOException("Waiting for rollWriterLock timeout");
+        }
+        return null;
       }
-    } finally {
-      rollWriterLock.unlock();
+    });
+    shutdownExecutor.shutdown();
+
+    try {
+      future.get(walShutdownTimeout, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupted when waiting for shutdown WAL");
+    } catch (TimeoutException e) {
+      throw new TimeoutIOException("We have waited " + walShutdownTimeout + "ms, but"
+        + " the shutdown of WAL doesn't complete! Please check the status of underlying "
+        + "filesystem or increase the wait time by the config \""
+        + WAL_SHUTDOWN_WAIT_TIMEOUT_MS + "\"", e);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof IOException) {
+        throw (IOException) e.getCause();
+      } else {
+        throw new IOException(e.getCause());
+      }
     }
   }
 
