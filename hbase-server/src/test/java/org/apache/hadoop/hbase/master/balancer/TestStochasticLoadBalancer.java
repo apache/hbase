@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -190,14 +189,13 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   @Test
   public void testLocalityCost() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    MockNoopMasterServices master = new MockNoopMasterServices();
     CostFunction
         costFunction = new ServerLocalityCostFunction(conf);
 
     for (int test = 0; test < clusterRegionLocationMocks.length; test++) {
       int[][] clusterRegionLocations = clusterRegionLocationMocks[test];
       MockCluster cluster = new MockCluster(clusterRegionLocations);
-      costFunction.init(cluster);
+      costFunction.prepare(cluster);
       double cost = costFunction.cost();
       double expected = 1 - expectedLocalities[test];
       assertEquals(expected, cost, 0.001);
@@ -211,7 +209,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     CostFunction
       costFunction = new MoveCostFunction(conf);
     BalancerClusterState cluster = mockCluster(clusterStateMocks[0]);
-    costFunction.init(cluster);
+    costFunction.prepare(cluster);
     costFunction.cost();
     assertEquals(MoveCostFunction.DEFAULT_MOVE_COST,
       costFunction.getMultiplier(), 0.01);
@@ -225,7 +223,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     long timeFor15 = 1597907081000L - deltaFor15;
     EnvironmentEdgeManager.injectEdge(() -> timeFor15);
     costFunction = new MoveCostFunction(conf);
-    costFunction.init(cluster);
+    costFunction.prepare(cluster);
     costFunction.cost();
     assertEquals(MoveCostFunction.DEFAULT_MOVE_COST_OFFPEAK
       , costFunction.getMultiplier(), 0.01);
@@ -238,7 +236,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
         costFunction = new MoveCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
       BalancerClusterState cluster = mockCluster(mockCluster);
-      costFunction.init(cluster);
+      costFunction.prepare(cluster);
       double cost = costFunction.cost();
       assertEquals(0.0f, cost, 0.001);
 
@@ -275,23 +273,23 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     CostFunction
         costFunction = new RegionCountSkewCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
-      costFunction.init(mockCluster(mockCluster));
+      costFunction.prepare(mockCluster(mockCluster));
       double cost = costFunction.cost();
       assertTrue(cost >= 0);
       assertTrue(cost <= 1.01);
     }
 
-    costFunction.init(mockCluster(new int[]{0, 0, 0, 0, 1}));
+    costFunction.prepare(mockCluster(new int[]{0, 0, 0, 0, 1}));
     assertEquals(0,costFunction.cost(), 0.01);
-    costFunction.init(mockCluster(new int[]{0, 0, 0, 1, 1}));
+    costFunction.prepare(mockCluster(new int[]{0, 0, 0, 1, 1}));
     assertEquals(0, costFunction.cost(), 0.01);
-    costFunction.init(mockCluster(new int[]{0, 0, 1, 1, 1}));
+    costFunction.prepare(mockCluster(new int[]{0, 0, 1, 1, 1}));
     assertEquals(0, costFunction.cost(), 0.01);
-    costFunction.init(mockCluster(new int[]{0, 1, 1, 1, 1}));
+    costFunction.prepare(mockCluster(new int[]{0, 1, 1, 1, 1}));
     assertEquals(0, costFunction.cost(), 0.01);
-    costFunction.init(mockCluster(new int[]{1, 1, 1, 1, 1}));
+    costFunction.prepare(mockCluster(new int[]{1, 1, 1, 1, 1}));
     assertEquals(0, costFunction.cost(), 0.01);
-    costFunction.init(mockCluster(new int[]{10000, 0, 0, 0, 0}));
+    costFunction.prepare(mockCluster(new int[]{10000, 0, 0, 0, 0}));
     assertEquals(1, costFunction.cost(), 0.01);
   }
 
@@ -323,7 +321,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
         costFunction = new TableSkewCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
       BalancerClusterState cluster = mockCluster(mockCluster);
-      costFunction.init(cluster);
+      costFunction.prepare(cluster);
       double cost = costFunction.cost();
       assertTrue(cost >= 0);
       assertTrue(cost <= 1.01);
@@ -358,7 +356,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   public void testCostFromArray() {
     Configuration conf = HBaseConfiguration.create();
     CostFromRegionLoadFunction costFunction = new MemStoreSizeCostFunction(conf);
-    costFunction.init(mockCluster(new int[] { 0, 0, 0, 0, 1 }));
+    costFunction.prepare(mockCluster(new int[] { 0, 0, 0, 0, 1 }));
 
     double[] statOne = new double[100];
     for (int i = 0; i < 100; i++) {

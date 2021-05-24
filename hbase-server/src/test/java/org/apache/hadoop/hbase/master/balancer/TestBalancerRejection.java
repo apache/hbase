@@ -20,15 +20,12 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.RegionInfo;
-
 import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
@@ -62,11 +59,6 @@ public class TestBalancerRejection extends BalancerTestBase {
     @Override
     protected double cost() {
       return mockCost;
-    }
-
-    @Override
-    boolean isNeeded() {
-      return super.isNeeded();
     }
 
     @Override

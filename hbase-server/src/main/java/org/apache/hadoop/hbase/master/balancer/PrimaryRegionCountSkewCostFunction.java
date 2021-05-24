@@ -31,12 +31,25 @@ class PrimaryRegionCountSkewCostFunction extends CostFunction {
     "hbase.master.balancer.stochastic.primaryRegionCountCost";
   private static final float DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST = 500;
 
+  private final float primaryRegionCountCost;
   private double[] stats;
 
   PrimaryRegionCountSkewCostFunction(Configuration conf) {
     // Load multiplier should be the greatest as primary regions serve majority of reads/writes.
-    this.setMultiplier(
-      conf.getFloat(PRIMARY_REGION_COUNT_SKEW_COST_KEY, DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST));
+    primaryRegionCountCost =
+      conf.getFloat(PRIMARY_REGION_COUNT_SKEW_COST_KEY, DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST);
+    this.setMultiplier(primaryRegionCountCost);
+  }
+
+  @Override
+  void prepare(BalancerClusterState cluster) {
+    super.prepare(cluster);
+    if (!isNeeded()) {
+      return;
+    }
+    if (stats == null || stats.length != cluster.numServers) {
+      stats = new double[cluster.numServers];
+    }
   }
 
   @Override
@@ -46,13 +59,6 @@ class PrimaryRegionCountSkewCostFunction extends CostFunction {
 
   @Override
   protected double cost() {
-    if (!cluster.hasRegionReplicas) {
-      return 0;
-    }
-    if (stats == null || stats.length != cluster.numServers) {
-      stats = new double[cluster.numServers];
-    }
-
     for (int i = 0; i < cluster.numServers; i++) {
       stats[i] = 0;
       for (int regionIdx : cluster.regionsPerServer[i]) {

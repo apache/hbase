@@ -18,9 +18,6 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Collection;
-import java.util.Deque;
-import java.util.Map;
-import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,31 +27,21 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 abstract class CostFromRegionLoadFunction extends CostFunction {
 
-  private ClusterMetrics clusterStatus;
-  private Map<String, Deque<BalancerRegionLoad>> loads;
   private double[] stats;
 
-  void setClusterMetrics(ClusterMetrics status) {
-    this.clusterStatus = status;
-  }
-
-  void setLoads(Map<String, Deque<BalancerRegionLoad>> l) {
-    this.loads = l;
+  @Override
+  void prepare(BalancerClusterState cluster) {
+    super.prepare(cluster);
+    if (stats == null || stats.length != cluster.numServers) {
+      stats = new double[cluster.numServers];
+    }
   }
 
   @Override
   protected final double cost() {
-    if (clusterStatus == null || loads == null) {
-      return 0;
-    }
-
-    if (stats == null || stats.length != cluster.numServers) {
-      stats = new double[cluster.numServers];
-    }
-
     for (int i = 0; i < stats.length; i++) {
       // Cost this server has from RegionLoad
-      long cost = 0;
+      double cost = 0;
 
       // for every region on this server get the rl
       for (int regionIndex : cluster.regionsPerServer[i]) {
@@ -62,7 +49,7 @@ abstract class CostFromRegionLoadFunction extends CostFunction {
 
         // Now if we found a region load get the type of cost that was requested.
         if (regionLoadList != null) {
-          cost = (long) (cost + getRegionLoadCost(regionLoadList));
+          cost += getRegionLoadCost(regionLoadList);
         }
       }
 

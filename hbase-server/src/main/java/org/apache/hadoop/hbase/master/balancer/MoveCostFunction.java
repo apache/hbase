@@ -38,27 +38,35 @@ class MoveCostFunction extends CostFunction {
   private static final float DEFAULT_MAX_MOVE_PERCENT = 0.25f;
 
   private final float maxMovesPercent;
-  private final Configuration conf;
+  private final OffPeakHours offPeakHours;
+  private final float moveCost;
+  private final float moveCostOffPeak;
 
   MoveCostFunction(Configuration conf) {
-    this.conf = conf;
     // What percent of the number of regions a single run of the balancer can move.
     maxMovesPercent = conf.getFloat(MAX_MOVES_PERCENT_KEY, DEFAULT_MAX_MOVE_PERCENT);
-
+    offPeakHours = OffPeakHours.getInstance(conf);
+    moveCost = conf.getFloat(MOVE_COST_KEY, DEFAULT_MOVE_COST);
+    moveCostOffPeak = conf.getFloat(MOVE_COST_OFFPEAK_KEY, DEFAULT_MOVE_COST_OFFPEAK);
     // Initialize the multiplier so that addCostFunction will add this cost function.
     // It may change during later evaluations, due to OffPeakHours.
-    this.setMultiplier(conf.getFloat(MOVE_COST_KEY, DEFAULT_MOVE_COST));
+    this.setMultiplier(moveCost);
+  }
+
+  @Override
+  void prepare(BalancerClusterState cluster) {
+    super.prepare(cluster);
+    // Move cost multiplier should be the same cost or higher than the rest of the costs to ensure
+    // that large benefits are need to overcome the cost of a move.
+    if (offPeakHours.isOffPeakHour()) {
+      this.setMultiplier(moveCostOffPeak);
+    } else {
+      this.setMultiplier(moveCost);
+    }
   }
 
   @Override
   protected double cost() {
-    // Move cost multiplier should be the same cost or higher than the rest of the costs to ensure
-    // that large benefits are need to overcome the cost of a move.
-    if (OffPeakHours.getInstance(conf).isOffPeakHour()) {
-      this.setMultiplier(conf.getFloat(MOVE_COST_OFFPEAK_KEY, DEFAULT_MOVE_COST_OFFPEAK));
-    } else {
-      this.setMultiplier(conf.getFloat(MOVE_COST_KEY, DEFAULT_MOVE_COST));
-    }
     // Try and size the max number of Moves, but always be prepared to move some.
     int maxMoves = Math.max((int) (cluster.numRegions * maxMovesPercent), DEFAULT_MAX_MOVES);
 

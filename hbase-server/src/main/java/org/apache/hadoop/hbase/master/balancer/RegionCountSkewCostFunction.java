@@ -34,7 +34,7 @@ class RegionCountSkewCostFunction extends CostFunction {
     "hbase.master.balancer.stochastic.regionCountCost";
   static final float DEFAULT_REGION_COUNT_SKEW_COST = 500;
 
-  private double[] stats = null;
+  private double[] stats;
 
   RegionCountSkewCostFunction(Configuration conf) {
     // Load multiplier should be the greatest as it is the most general way to balance data.
@@ -42,8 +42,11 @@ class RegionCountSkewCostFunction extends CostFunction {
   }
 
   @Override
-  void init(BalancerClusterState cluster) {
-    super.init(cluster);
+  void prepare(BalancerClusterState cluster) {
+    super.prepare(cluster);
+    if (stats == null || stats.length != cluster.numServers) {
+      stats = new double[cluster.numServers];
+    }
     LOG.debug("{} sees a total of {} servers and {} regions.", getClass().getSimpleName(),
       cluster.numServers, cluster.numRegions);
     if (LOG.isTraceEnabled()) {
@@ -56,9 +59,6 @@ class RegionCountSkewCostFunction extends CostFunction {
 
   @Override
   protected double cost() {
-    if (stats == null || stats.length != cluster.numServers) {
-      stats = new double[cluster.numServers];
-    }
     for (int i = 0; i < cluster.numServers; i++) {
       stats[i] = cluster.regionsPerServer[i].length;
     }

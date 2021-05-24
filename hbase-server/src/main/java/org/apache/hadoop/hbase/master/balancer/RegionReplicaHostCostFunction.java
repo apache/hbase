@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -27,15 +26,13 @@ import org.apache.yetus.audience.InterfaceAudience;
  * numRegionServers, we still want to keep the replica open.
  */
 @InterfaceAudience.Private
-class RegionReplicaHostCostFunction extends CostFunction {
+class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
 
   private static final String REGION_REPLICA_HOST_COST_KEY =
     "hbase.master.balancer.stochastic.regionReplicaHostCostKey";
   private static final float DEFAULT_REGION_REPLICA_HOST_COST_KEY = 100000;
 
-  long maxCost = 0;
-  long[] costsPerGroup; // group is either server, host or rack
-  int[][] primariesOfRegionsPerGroup;
+  private int[][] primariesOfRegionsPerGroup;
 
   public RegionReplicaHostCostFunction(Configuration conf) {
     this.setMultiplier(
@@ -43,8 +40,7 @@ class RegionReplicaHostCostFunction extends CostFunction {
   }
 
   @Override
-  void init(BalancerClusterState cluster) {
-    super.init(cluster);
+  protected void loadCosts() {
     // max cost is the case where every region replica is hosted together regardless of host
     maxCost = cluster.numHosts > 1 ? getMaxCost(cluster) : 0;
     costsPerGroup = new long[cluster.numHosts];
@@ -53,69 +49,6 @@ class RegionReplicaHostCostFunction extends CostFunction {
     for (int i = 0; i < primariesOfRegionsPerGroup.length; i++) {
       costsPerGroup[i] = costPerGroup(primariesOfRegionsPerGroup[i]);
     }
-  }
-
-  protected final long getMaxCost(BalancerClusterState cluster) {
-    if (!cluster.hasRegionReplicas) {
-      return 0; // short circuit
-    }
-    // max cost is the case where every region replica is hosted together regardless of host
-    int[] primariesOfRegions = new int[cluster.numRegions];
-    System.arraycopy(cluster.regionIndexToPrimaryIndex, 0, primariesOfRegions, 0,
-      cluster.regions.length);
-
-    Arrays.sort(primariesOfRegions);
-
-    // compute numReplicas from the sorted array
-    return costPerGroup(primariesOfRegions);
-  }
-
-  @Override
-  boolean isNeeded() {
-    return cluster.hasRegionReplicas;
-  }
-
-  @Override
-  protected double cost() {
-    if (maxCost <= 0) {
-      return 0;
-    }
-
-    long totalCost = 0;
-    for (int i = 0; i < costsPerGroup.length; i++) {
-      totalCost += costsPerGroup[i];
-    }
-    return scale(0, maxCost, totalCost);
-  }
-
-  /**
-   * For each primary region, it computes the total number of replicas in the array (numReplicas)
-   * and returns a sum of numReplicas-1 squared. For example, if the server hosts regions a, b, c,
-   * d, e, f where a and b are same replicas, and c,d,e are same replicas, it returns (2-1) * (2-1)
-   * + (3-1) * (3-1) + (1-1) * (1-1).
-   * @param primariesOfRegions a sorted array of primary regions ids for the regions hosted
-   * @return a sum of numReplicas-1 squared for each primary region in the group.
-   */
-  protected final long costPerGroup(int[] primariesOfRegions) {
-    long cost = 0;
-    int currentPrimary = -1;
-    int currentPrimaryIndex = -1;
-    // primariesOfRegions is a sorted array of primary ids of regions. Replicas of regions
-    // sharing the same primary will have consecutive numbers in the array.
-    for (int j = 0; j <= primariesOfRegions.length; j++) {
-      int primary = j < primariesOfRegions.length ? primariesOfRegions[j] : -1;
-      if (primary != currentPrimary) { // we see a new primary
-        int numReplicas = j - currentPrimaryIndex;
-        // square the cost
-        if (numReplicas > 1) { // means consecutive primaries, indicating co-location
-          cost += (numReplicas - 1) * (numReplicas - 1);
-        }
-        currentPrimary = primary;
-        currentPrimaryIndex = j;
-      }
-    }
-
-    return cost;
   }
 
   @Override
