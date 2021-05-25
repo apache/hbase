@@ -23,11 +23,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalancerDecision;
+import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 
@@ -79,5 +82,22 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
   @Override
   public Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(Collection<RegionInfo> regions) {
     return Collections.emptyMap();
+  }
+
+  @Override
+  public boolean isOffPeakHour() {
+    return false;
+  }
+
+  @Override
+  public void recordBalancerDecision(Supplier<BalancerDecision> decision) {
+  }
+
+  @Override
+  public void recordBalancerRejection(Supplier<BalancerRejection> rejection) {
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
   }
 }

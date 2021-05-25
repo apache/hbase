@@ -74,6 +74,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupBasedLoadBalancer.class);
 
   private MasterServices masterServices;
+  private ClusterInfoProvider provider;
   private FavoredNodesManager favoredNodesManager;
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private volatile LoadBalancer internalBalancer;
@@ -345,12 +346,13 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         throw new IOException(e);
       }
     }
+    this.provider = new MasterClusterInfoProvider(masterServices);
     // avoid infinite nesting
     if (getClass().isAssignableFrom(balancerClass)) {
       balancerClass = LoadBalancerFactory.getDefaultLoadBalancerClass();
     }
     internalBalancer = ReflectionUtils.newInstance(balancerClass);
-    internalBalancer.setClusterInfoProvider(new MasterClusterInfoProvider(masterServices));
+    internalBalancer.setClusterInfoProvider(provider);
     // special handling for favor node balancers
     if (internalBalancer instanceof FavoredNodesPromoter) {
       favoredNodesManager = new FavoredNodesManager(masterServices);
@@ -394,6 +396,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         fallbackEnabled, newFallbackEnabled);
       fallbackEnabled = newFallbackEnabled;
     }
+    provider.onConfigurationChange(conf);
     internalBalancer.onConfigurationChange(conf);
   }
 
