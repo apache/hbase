@@ -2268,6 +2268,7 @@ public class HRegionServer extends Thread implements
         // auto bind enabled, try to use another port
         LOG.info("Failed binding http info server to port: " + port);
         port++;
+        LOG.info("Retry starting http info server with port: " + port);
       }
     }
     port = this.infoServer.getPort();

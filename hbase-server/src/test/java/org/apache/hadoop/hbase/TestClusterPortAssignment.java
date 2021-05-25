@@ -19,7 +19,10 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import java.lang.Throwable;
 import java.net.BindException;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -27,7 +30,6 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@org.junit.Ignore // See HBASE-24342. This test can't pass 100% of time as written so disabling
 @Category(MediumTests.class)
 public class TestClusterPortAssignment {
   @ClassRule
@@ -44,16 +46,19 @@ public class TestClusterPortAssignment {
   @Test
   public void testClusterPortAssignment() throws Exception {
     boolean retry = false;
+    int retryCount = 0;
     do {
       int masterPort =  HBaseTestingUtility.randomFreePort();
       int masterInfoPort =  HBaseTestingUtility.randomFreePort();
       int rsPort =  HBaseTestingUtility.randomFreePort();
       int rsInfoPort =  HBaseTestingUtility.randomFreePort();
       TEST_UTIL.getConfiguration().setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, false);
+      TEST_UTIL.getConfiguration().setBoolean(HConstants.REGIONSERVER_INFO_PORT_AUTO, false);
       TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_PORT, masterPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, masterInfoPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, rsPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_INFO_PORT, rsInfoPort);
+      LOG.info("Ports: " + masterPort + ", " + masterInfoPort + ", " + rsPort + ", " + rsInfoPort);
       try {
         MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster();
         assertTrue("Cluster failed to come up", cluster.waitForActiveAndReadyMaster(30000));
@@ -67,17 +72,22 @@ public class TestClusterPortAssignment {
         assertEquals("RS info port is incorrect", rsInfoPort,
           cluster.getRegionServer(0).getInfoServer().getPort());
       } catch (Exception e) {
-        if (e instanceof  BindException || e.getCause() != null &&
-            (e.getCause() instanceof BindException || e.getCause().getCause() != null &&
-              e.getCause().getCause() instanceof BindException)) {
+        Throwable rootCause = ExceptionUtils.getRootCause(e);
+        if (rootCause instanceof BindException) {
           LOG.info("Failed bind, need to retry", e);
           retry = true;
+          retryCount++;
         } else {
-          throw e;
+          retry = false;
+          fail("Failed to start mini cluster" + e);
         }
       } finally {
         TEST_UTIL.shutdownMiniCluster();
       }
-    } while (retry);
+    } while (retry && retryCount < 10);
+
+    if (retry) {
+      fail("Retry exhausted.");
+    }
   }
 }
