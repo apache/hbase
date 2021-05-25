@@ -228,6 +228,12 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private long blockingFileCount;
   private int compactionCheckMultiplier;
 
+  public Encryption.Context getCryptoContext() {
+    return cryptoContext;
+  }
+
+  protected Encryption.Context cryptoContext = Encryption.Context.NONE;
+
   AtomicLong flushedCellsCount = new AtomicLong();
   private AtomicLong compactedCellsCount = new AtomicLong();
   private AtomicLong majorCompactedCellsCount = new AtomicLong();
@@ -694,7 +700,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     refreshStoreSizeAndTotalBytes();
   }
 
-  protected HStoreFile createStoreFileAndReader(final Path p) throws IOException {
+  public HStoreFile createStoreFileAndReader(final Path p) throws IOException {
     StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(),
         p, isPrimaryReplicaStore());
     return createStoreFileAndReader(info);
@@ -1192,7 +1198,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return builder.build();
   }
 
-  HFileContext createFileContext(Compression.Algorithm compression,
+  public HFileContext createFileContext(Compression.Algorithm compression,
     boolean includeMVCCReadpoint, boolean includesTag, Encryption.Context encryptionContext) {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
@@ -1508,7 +1514,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       List<Path> newFiles) throws IOException {
     // Do the steps necessary to complete the compaction.
     setStoragePolicyFromFileName(newFiles);
-    List<HStoreFile> sfs = moveCompactedFilesIntoPlace(cr, newFiles, user);
+    List<HStoreFile> sfs = this.storeEngine.compactor.commitCompaction(cr, newFiles, user);
     writeCompactionWalRecord(filesToCompact, sfs);
     replaceStoreFiles(filesToCompact, sfs);
     if (cr.isMajor()) {
@@ -1547,21 +1553,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
             newFile.getParent().getName().substring(prefix.length()));
       }
     }
-  }
-
-  private List<HStoreFile> moveCompactedFilesIntoPlace(CompactionRequestImpl cr,
-      List<Path> newFiles, User user) throws IOException {
-    List<HStoreFile> sfs = new ArrayList<>(newFiles.size());
-    for (Path newFile : newFiles) {
-      assert newFile != null;
-      HStoreFile sf = moveFileIntoPlace(newFile);
-      if (this.getCoprocessorHost() != null) {
-        getCoprocessorHost().postCompact(this, sf, cr.getTracker(), cr, user);
-      }
-      assert sf != null;
-      sfs.add(sf);
-    }
-    return sfs;
   }
 
   // Package-visible for tests
@@ -2014,7 +2005,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    * operation.
    * @param path the path to the store file
    */
-  private void validateStoreFile(Path path) throws IOException {
+  public void validateStoreFile(Path path) throws IOException {
     HStoreFile storeFile = null;
     try {
       storeFile = createStoreFileAndReader(path);

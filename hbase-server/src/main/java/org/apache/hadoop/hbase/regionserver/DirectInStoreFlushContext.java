@@ -33,11 +33,11 @@ import org.slf4j.LoggerFactory;
  * To be used only when PersistedStoreEngine is configured as the StoreEngine implementation.
  */
 @InterfaceAudience.Private
-public class PersistedStoreFlushContext extends DefaultStoreFlushContext {
+public class DirectInStoreFlushContext extends DefaultStoreFlushContext {
 
-  private static final Logger LOG = LoggerFactory.getLogger(PersistedStoreFlushContext.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DirectInStoreFlushContext.class);
 
-  public PersistedStoreFlushContext(HStore store, Long cacheFlushSeqNum,
+  public DirectInStoreFlushContext(HStore store, Long cacheFlushSeqNum,
     FlushLifeCycleTracker tracker) {
     super.init(store, cacheFlushSeqNum, tracker);
   }

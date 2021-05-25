@@ -53,7 +53,7 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
         public StoreFileWriter createWriter(InternalScanner scanner,
             org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
             boolean shouldDropBehind, boolean major) throws IOException {
-          return createTmpWriter(fd, shouldDropBehind, major);
+          return initWriter(fd, shouldDropBehind, major);
         }
       };
 

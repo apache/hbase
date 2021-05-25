@@ -36,9 +36,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * instead of a temp dir..
  */
 @InterfaceAudience.Private
-public class PersistedEngineStoreFlusher extends DefaultStoreFlusher {
+public class DirectInStoreFlusher extends DefaultStoreFlusher {
 
-  public PersistedEngineStoreFlusher(Configuration conf, HStore store) {
+  public DirectInStoreFlusher(Configuration conf, HStore store) {
     super(conf, store);
   }
 
