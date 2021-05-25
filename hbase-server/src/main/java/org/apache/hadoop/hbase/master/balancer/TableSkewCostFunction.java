@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import static org.apache.hadoop.hbase.master.balancer.RegionCountSkewCostFunction.DEFAULT_REGION_COUNT_SKEW_COST;
+import static org.apache.hadoop.hbase.master.balancer.RegionCountSkewCostFunction.REGION_COUNT_SKEW_COST_KEY;
 
 /**
  * Compute the cost of a potential cluster configuration based upon how evenly distributed tables
@@ -30,13 +32,24 @@ class TableSkewCostFunction extends CostFunction {
   private static final String TABLE_SKEW_COST_KEY =
     "hbase.master.balancer.stochastic.tableSkewCost";
   private static final float DEFAULT_TABLE_SKEW_COST = 35;
+  private final boolean canSkip;
 
   TableSkewCostFunction(Configuration conf) {
-    this.setMultiplier(conf.getFloat(TABLE_SKEW_COST_KEY, DEFAULT_TABLE_SKEW_COST));
+    float multiplier = conf.getFloat(TABLE_SKEW_COST_KEY, DEFAULT_TABLE_SKEW_COST);
+    this.canSkip = conf.getFloat(REGION_COUNT_SKEW_COST_KEY, DEFAULT_REGION_COUNT_SKEW_COST) >=
+      multiplier;
+    this.setMultiplier(multiplier);
   }
 
   @Override
   protected double cost() {
+    // RegionCountSkewCostFunction can replace TableSkewCostFunction when it has a larger
+    // multiplier and there is no more than one table
+    // It mainly happens when set "hbase.master.loadbalance.bytable" be true
+    if (cluster.numTables <= 1 && canSkip) {
+      return 0;
+    }
+
     double max = cluster.numRegions;
     double min = ((double) cluster.numRegions) / cluster.numServers;
     double value = 0;
