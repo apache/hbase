@@ -25,6 +25,7 @@ import org.apache.yetus.audience.InterfaceStability;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * State of a Region while undergoing transitions.
@@ -188,11 +189,11 @@ public class RegionState {
   private long ritDuration;
 
   public static RegionState createForTesting(RegionInfo region, State state) {
-    return new RegionState(region, state, System.currentTimeMillis(), null);
+    return new RegionState(region, state, EnvironmentEdgeManager.currentTime(), null);
   }
 
   public RegionState(RegionInfo region, State state, ServerName serverName) {
-    this(region, state, System.currentTimeMillis(), serverName);
+    this(region, state, EnvironmentEdgeManager.currentTime(), serverName);
   }
 
   public RegionState(RegionInfo region,
@@ -390,7 +391,7 @@ public class RegionState {
    * A slower (but more easy-to-read) stringification
    */
   public String toDescriptiveString() {
-    long relTime = System.currentTimeMillis() - stamp;
+    long relTime = EnvironmentEdgeManager.currentTime() - stamp;
     return hri.getRegionNameAsString()
       + " state=" + state
       + ", ts=" + new Date(stamp) + " (" + (relTime/1000) + "s ago)"

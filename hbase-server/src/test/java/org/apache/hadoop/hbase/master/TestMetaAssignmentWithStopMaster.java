@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -71,20 +72,20 @@ public class TestMetaAssignmentWithStopMaster {
       ServerName oldMaster = UTIL.getMiniHBaseCluster().getMaster().getServerName();
 
       UTIL.getMiniHBaseCluster().getMaster().stop("Stop master for test");
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       while (UTIL.getMiniHBaseCluster().getMaster() == null ||
         UTIL.getMiniHBaseCluster().getMaster().getServerName().equals(oldMaster)) {
         LOG.info("Wait the standby master become active");
         Thread.sleep(3000);
-        if (System.currentTimeMillis() - startTime > WAIT_TIMEOUT) {
+        if (EnvironmentEdgeManager.currentTime() - startTime > WAIT_TIMEOUT) {
           fail("Wait too long for standby master become active");
         }
       }
-      startTime = System.currentTimeMillis();
+      startTime = EnvironmentEdgeManager.currentTime();
       while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
         LOG.info("Wait the new active master to be initialized");
         Thread.sleep(3000);
-        if (System.currentTimeMillis() - startTime > WAIT_TIMEOUT) {
+        if (EnvironmentEdgeManager.currentTime() - startTime > WAIT_TIMEOUT) {
           fail("Wait too long for the new active master to be initialized");
         }
       }

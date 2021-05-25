@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedReader;
 import org.apache.hadoop.hbase.util.Threads;
@@ -143,7 +144,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     LOG.info("Cluster size:"+
       util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size());
 
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     String runtimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());
     long runtime = util.getConfiguration().getLong(runtimeKey, defaultRunTime);
     long startKey = 0;
@@ -197,7 +198,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
 
     // set the intended run time for the reader. The reader will do read requests
     // to random keys for this amount of time.
-    long remainingTime = runtime - (System.currentTimeMillis() - start);
+    long remainingTime = runtime - (EnvironmentEdgeManager.currentTime() - start);
     if (remainingTime <= 0) {
       LOG.error("The amount of time left for the test to perform random reads is "
           + "non-positive. Increase the test execution time via "

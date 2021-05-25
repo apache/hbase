@@ -50,7 +50,7 @@ public class ConstantDelayQueue<E> implements BlockingQueue<E> {
 
     @Override
     public long getDelay(TimeUnit unit) {
-      return unit.convert(end - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+      return unit.convert(end - EnvironmentEdgeManager.currentTime(), TimeUnit.MILLISECONDS);
     }
   }
 

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -46,7 +47,7 @@ public class TestPutDeleteEtcCellIteration {
       HBaseClassTestRule.forClass(TestPutDeleteEtcCellIteration.class);
 
   private static final byte [] ROW = new byte [] {'r'};
-  private static final long TIMESTAMP = System.currentTimeMillis();
+  private static final long TIMESTAMP = EnvironmentEdgeManager.currentTime();
   private static final int COUNT = 10;
 
   @Test

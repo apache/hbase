@@ -84,8 +84,8 @@ public class TestIdReadWriteLockWithObjectPool {
     public Boolean call() throws Exception {
       Thread.currentThread().setName(clientId);
       Random rand = new Random();
-      long endTime = System.currentTimeMillis() + NUM_SECONDS * 1000;
-      while (System.currentTimeMillis() < endTime) {
+      long endTime = EnvironmentEdgeManager.currentTime() + NUM_SECONDS * 1000;
+      while (EnvironmentEdgeManager.currentTime() < endTime) {
         long id = rand.nextInt(NUM_IDS);
         boolean readLock = rand.nextBoolean();
 

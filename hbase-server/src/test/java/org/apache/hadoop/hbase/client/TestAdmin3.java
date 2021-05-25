@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -359,7 +360,7 @@ public class TestAdmin3 extends TestAdminBase {
     // Now make it so at least the table exists and then do tests against a
     // nonexistent column family -- see if we get right exceptions.
     final TableName tableName =
-      TableName.valueOf(name.getMethodName() + System.currentTimeMillis());
+      TableName.valueOf(name.getMethodName() + EnvironmentEdgeManager.currentTime());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
     ADMIN.createTable(htd);

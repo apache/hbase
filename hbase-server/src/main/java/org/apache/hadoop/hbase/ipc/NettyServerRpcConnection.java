@@ -34,6 +34,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * RpcConnection implementation for netty rpc server.
@@ -116,7 +117,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
       long size, final InetAddress remoteAddress, int timeout,
       CallCleanup reqCleanup) {
     return new NettyServerCall(id, service, md, header, param, cellScanner, this, size,
-        remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.bbAllocator,
+        remoteAddress, EnvironmentEdgeManager.currentTime(), timeout, this.rpcServer.bbAllocator,
         this.rpcServer.cellBlockBuilder, reqCleanup);
   }
 

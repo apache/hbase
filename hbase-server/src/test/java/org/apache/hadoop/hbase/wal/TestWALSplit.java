@@ -188,7 +188,7 @@ public class TestWALSplit {
     wals = new WALFactory(conf, name.getMethodName());
     WALDIR = new Path(HBASELOGDIR,
         AbstractFSWALProvider.getWALDirectoryName(ServerName.valueOf(name.getMethodName(),
-            16010, System.currentTimeMillis()).toString()));
+            16010, EnvironmentEdgeManager.currentTime()).toString()));
     //fs.mkdirs(WALDIR);
   }
 
@@ -395,7 +395,7 @@ public class TestWALSplit {
 
   private Path createRecoveredEditsPathForRegion() throws IOException {
     byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     Entry entry = new Entry(
         new WALKeyImpl(encoded, TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
         new WALEdit());

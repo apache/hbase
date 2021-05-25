@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -61,7 +62,7 @@ public class TestSimpleTimeRangeTracker {
   @Test
   public void testTimeRangeInitialized() {
     TimeRangeTracker src = getTimeRangeTracker();
-    TimeRange tr = TimeRange.from(System.currentTimeMillis());
+    TimeRange tr = TimeRange.from(EnvironmentEdgeManager.currentTime());
     assertFalse(src.includesTimeRange(tr));
   }
 

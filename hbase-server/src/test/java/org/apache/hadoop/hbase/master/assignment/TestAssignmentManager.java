@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -144,14 +145,14 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
 
     TransitRegionStateProcedure[] assignments = new TransitRegionStateProcedure[nRegions];
 
-    long st = System.currentTimeMillis();
+    long st = EnvironmentEdgeManager.currentTime();
     bulkSubmit(assignments);
 
     for (int i = 0; i < assignments.length; ++i) {
       ProcedureTestingUtility.waitProcedure(master.getMasterProcedureExecutor(), assignments[i]);
       assertTrue(assignments[i].toString(), assignments[i].isSuccess());
     }
-    long et = System.currentTimeMillis();
+    long et = EnvironmentEdgeManager.currentTime();
     float sec = ((et - st) / 1000.0f);
     LOG.info(String.format("[T] Assigning %dprocs in %s (%.2fproc/sec)", assignments.length,
       StringUtils.humanTimeDiff(et - st), assignments.length / sec));

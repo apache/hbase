@@ -483,7 +483,7 @@ public class TestSimpleRpcScheduler {
           return timeQ.poll().longValue() + offset;
         }
       }
-      return System.currentTimeMillis();
+      return EnvironmentEdgeManager.currentTime();
     }
   }
 
@@ -511,17 +511,17 @@ public class TestSimpleRpcScheduler {
     try {
       // Loading mocked call runner can take a good amount of time the first time through
       // (haven't looked why). Load it for first time here outside of the timed loop.
-      getMockedCallRunner(System.currentTimeMillis(), 2);
+      getMockedCallRunner(EnvironmentEdgeManager.currentTime(), 2);
       scheduler.start();
       EnvironmentEdgeManager.injectEdge(envEdge);
       envEdge.offset = 5;
       // Calls faster than min delay
       // LOG.info("Start");
       for (int i = 0; i < 100; i++) {
-        long time = System.currentTimeMillis();
+        long time = EnvironmentEdgeManager.currentTime();
         envEdge.timeQ.put(time);
         CallRunner cr = getMockedCallRunner(time, 2);
-        // LOG.info("" + i + " " + (System.currentTimeMillis() - now) + " cr=" + cr);
+        // LOG.info("" + i + " " + (EnvironmentEdgeManager.currentTime() - now) + " cr=" + cr);
         scheduler.dispatch(cr);
       }
       // LOG.info("Loop done");
@@ -534,7 +534,7 @@ public class TestSimpleRpcScheduler {
       envEdge.offset = 151;
       // calls slower than min delay, but not individually slow enough to be dropped
       for (int i = 0; i < 20; i++) {
-        long time = System.currentTimeMillis();
+        long time = EnvironmentEdgeManager.currentTime();
         envEdge.timeQ.put(time);
         CallRunner cr = getMockedCallRunner(time, 2);
         scheduler.dispatch(cr);
@@ -549,7 +549,7 @@ public class TestSimpleRpcScheduler {
       envEdge.offset = 2000;
       // now slow calls and the ones to be dropped
       for (int i = 0; i < 60; i++) {
-        long time = System.currentTimeMillis();
+        long time = EnvironmentEdgeManager.currentTime();
         envEdge.timeQ.put(time);
         CallRunner cr = getMockedCallRunner(time, 100);
         scheduler.dispatch(cr);

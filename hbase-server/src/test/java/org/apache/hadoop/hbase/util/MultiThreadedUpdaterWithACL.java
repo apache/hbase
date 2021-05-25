@@ -162,7 +162,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
     @Override
     public void mutate(final Table table, Mutation m, final long keyBase, final byte[] row,
         final byte[] cf, final byte[] q, final byte[] v) {
-      final long start = System.currentTimeMillis();
+      final long start = EnvironmentEdgeManager.currentTime();
       try {
         m = dataGenerator.beforeMutate(keyBase, m);
         mutateAction.setMutation(m);
@@ -240,7 +240,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
             throw new IllegalArgumentException("unsupported mutation "
                 + m.getClass().getSimpleName());
           }
-          totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+          totalOpTimeMs.addAndGet(EnvironmentEdgeManager.currentTime() - start);
         } catch (IOException e) {
           recordFailure(m, keyBase, start, e);
         }
@@ -262,9 +262,9 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
         pw.flush();
         exceptionInfo = StringUtils.stringifyException(e);
       }
-      LOG.error("Failed to mutate: " + keyBase + " after " + (System.currentTimeMillis() - start)
-          + "ms; region information: " + getRegionDebugInfoSafe(table, m.getRow()) + "; errors: "
-          + exceptionInfo);
+      LOG.error("Failed to mutate: " + keyBase + " after " +
+        (EnvironmentEdgeManager.currentTime() - start) + "ms; region information: " +
+          getRegionDebugInfoSafe(table, m.getRow()) + "; errors: " + exceptionInfo);
     }
   }
 }

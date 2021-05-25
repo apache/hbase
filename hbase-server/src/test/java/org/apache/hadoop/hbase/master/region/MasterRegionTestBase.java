@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 
@@ -83,7 +84,7 @@ public class MasterRegionTestBase {
     Server server = mock(Server.class);
     when(server.getConfiguration()).thenReturn(htu.getConfiguration());
     when(server.getServerName())
-      .thenReturn(ServerName.valueOf("localhost", 12345, System.currentTimeMillis()));
+      .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
     when(server.getChoreService()).thenReturn(choreService);
     Path testDir = htu.getDataTestDir();
     CommonFSUtils.setRootDir(htu.getConfiguration(), testDir);

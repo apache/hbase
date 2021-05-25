@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1032,10 +1033,10 @@ public class HFileBlock implements Cacheable {
     protected void finishBlockAndWriteHeaderAndData(DataOutputStream out)
       throws IOException {
       ensureBlockReady();
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       out.write(onDiskBlockBytesWithHeader.getBuffer(), 0, onDiskBlockBytesWithHeader.size());
       out.write(onDiskChecksum);
-      HFile.updateWriteLatency(System.currentTimeMillis() - startTime);
+      HFile.updateWriteLatency(EnvironmentEdgeManager.currentTime() - startTime);
     }
 
     /**
@@ -1706,7 +1707,7 @@ public class HFileBlock implements Cacheable {
       // checksums. Can change with circumstances. The below flag is whether the
       // file has support for checksums (version 2+).
       boolean checksumSupport = this.fileContext.isUseHBaseChecksum();
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       if (onDiskSizeWithHeader <= 0) {
         // We were not passed the block size. Need to get it from the header. If header was
         // not cached (see getCachedHeader above), need to seek to pull it in. This is costly
@@ -1753,7 +1754,7 @@ public class HFileBlock implements Cacheable {
         if (verifyChecksum && !validateChecksum(offset, curBlock, hdrSize)) {
           return null;
         }
-        long duration = System.currentTimeMillis() - startTime;
+        long duration = EnvironmentEdgeManager.currentTime() - startTime;
         if (updateMetrics) {
           HFile.updateReadLatency(duration, pread);
         }

@@ -130,7 +130,7 @@ public class TestRateLimiter {
 
     // fix the current time in order to get the precise value of interval
     EnvironmentEdge edge = new EnvironmentEdge() {
-      private final long ts = System.currentTimeMillis();
+      private final long ts = EnvironmentEdgeManager.currentTime();
 
       @Override
       public long currentTime() {

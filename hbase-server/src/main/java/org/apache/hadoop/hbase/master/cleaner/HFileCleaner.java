@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -237,7 +238,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
         }
       };
       large.setDaemon(true);
-      large.setName(n + "-HFileCleaner.large." + i + "-" + System.currentTimeMillis());
+      large.setName(n + "-HFileCleaner.large." + i + "-" + EnvironmentEdgeManager.currentTime());
       large.start();
       LOG.debug("Starting for large file={}", large);
       threads.add(large);
@@ -252,7 +253,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
         }
       };
       small.setDaemon(true);
-      small.setName(n + "-HFileCleaner.small." + i + "-" + System.currentTimeMillis());
+      small.setName(n + "-HFileCleaner.small." + i + "-" + EnvironmentEdgeManager.currentTime());
       small.start();
       LOG.debug("Starting for small files={}", small);
       threads.add(small);

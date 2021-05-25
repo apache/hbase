@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -136,7 +137,7 @@ public final class ServerMetricsBuilder {
   private final Map<byte[], RegionMetrics> regionStatus = new TreeMap<>(Bytes.BYTES_COMPARATOR);
   private final Map<byte[], UserMetrics> userMetrics = new TreeMap<>(Bytes.BYTES_COMPARATOR);
   private final Set<String> coprocessorNames = new TreeSet<>();
-  private long reportTimestamp = System.currentTimeMillis();
+  private long reportTimestamp = EnvironmentEdgeManager.currentTime();
   private long lastReportTimestamp = 0;
   private ServerMetricsBuilder(ServerName serverName) {
     this.serverName = serverName;

@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 
 public class RestoreSnapshotFromClientSimpleTestBase extends RestoreSnapshotFromClientTestBase {
@@ -64,7 +65,7 @@ public class RestoreSnapshotFromClientSimpleTestBase extends RestoreSnapshotFrom
   public void testCorruptedSnapshot() throws IOException, InterruptedException {
     SnapshotTestingUtils.corruptSnapshot(TEST_UTIL, snapshotName0);
     TableName cloneName =
-      TableName.valueOf(getValidMethodName() + "-" + System.currentTimeMillis());
+      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     try {
       admin.cloneSnapshot(snapshotName0, cloneName);
       fail("Expected CorruptedSnapshotException, got succeeded cloneSnapshot()");

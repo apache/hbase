@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -366,12 +367,13 @@ public final class MetaTableLocator {
       throw new IllegalArgumentException();
     }
 
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     ServerName sn = null;
     while (true) {
       sn = getMetaRegionLocation(zkw, replicaId);
       if (sn != null ||
-        (System.currentTimeMillis() - startTime) > timeout - HConstants.SOCKET_RETRY_WAIT_MS) {
+        (EnvironmentEdgeManager.currentTime() - startTime) >
+          timeout - HConstants.SOCKET_RETRY_WAIT_MS) {
         break;
       }
       Thread.sleep(HConstants.SOCKET_RETRY_WAIT_MS);

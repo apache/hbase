@@ -86,7 +86,7 @@ public class TestHFileCleaner {
     Path root = UTIL.getDataTestDirOnTestFS();
     Path file = new Path(root, "file");
     fs.createNewFile(file);
-    long createTime = System.currentTimeMillis();
+    long createTime = EnvironmentEdgeManager.currentTime();
     assertTrue("Test file not created!", fs.exists(file));
     TimeToLiveHFileCleaner cleaner = new TimeToLiveHFileCleaner();
     // update the time info for the file, so the cleaner removes it
@@ -164,7 +164,7 @@ public class TestHFileCleaner {
     HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir, POOL);
 
     // Create 2 invalid files, 1 "recent" file, 1 very new file and 30 old files
-    final long createTime = System.currentTimeMillis();
+    final long createTime = EnvironmentEdgeManager.currentTime();
     fs.delete(archivedHfileDir, true);
     fs.mkdirs(archivedHfileDir);
     // Case 1: 1 invalid file, which should be deleted directly

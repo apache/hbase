@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -68,14 +69,14 @@ public class TestReplicationWALEntryFilters {
     // meta
     WALKeyImpl key1 =
       new WALKeyImpl(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-        TableName.META_TABLE_NAME, System.currentTimeMillis());
+        TableName.META_TABLE_NAME, EnvironmentEdgeManager.currentTime());
     Entry metaEntry = new Entry(key1, null);
 
     assertNull(filter.filter(metaEntry));
 
     // user table
     WALKeyImpl key3 = new WALKeyImpl(new byte[0], TableName.valueOf("foo"),
-        System.currentTimeMillis());
+      EnvironmentEdgeManager.currentTime());
     Entry userEntry = new Entry(key3, null);
 
     assertEquals(userEntry, filter.filter(userEntry));
@@ -479,7 +480,7 @@ public class TestReplicationWALEntryFilters {
 
   private Entry createEntry(TreeMap<byte[], Integer> scopes, byte[]... kvs) {
     WALKeyImpl key1 = new WALKeyImpl(new byte[0], TableName.valueOf("foo"),
-      System.currentTimeMillis(), scopes);
+      EnvironmentEdgeManager.currentTime(), scopes);
     WALEdit edit1 = new WALEdit();
 
     for (byte[] kv : kvs) {

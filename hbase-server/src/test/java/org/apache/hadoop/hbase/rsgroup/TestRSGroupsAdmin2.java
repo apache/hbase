@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -508,12 +509,12 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     RegionStateNode rsn, AtomicBoolean changed) {
     return new Thread(() -> {
       LOG.info("thread1 start running, will recover region state");
-      long current = System.currentTimeMillis();
+      long current = EnvironmentEdgeManager.currentTime();
       // wait until there is only left the region we changed state and recover its state.
       // wait time is set according to the number of max retries, all except failed regions will be
       // moved in one retry, and will sleep 1s until next retry.
-      while (System.currentTimeMillis() -
-        current <= RSGroupInfoManagerImpl.DEFAULT_MAX_RETRY_VALUE * 1000) {
+      while (EnvironmentEdgeManager.currentTime() -
+          current <= RSGroupInfoManagerImpl.DEFAULT_MAX_RETRY_VALUE * 1000) {
         List<RegionInfo> regions = getRegions.apply(owner);
         LOG.debug("server table region size is:{}", regions.size());
         assert regions.size() >= 1;
@@ -709,9 +710,9 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     String rsGroup2 = "rsGroup2";
     ADMIN.addRSGroup(rsGroup2);
 
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     ADMIN.moveServersToRSGroup(Sets.newHashSet(newGroup.getServers().first()), rsGroup2);
-    long timeTaken = System.currentTimeMillis() - startTime;
+    long timeTaken = EnvironmentEdgeManager.currentTime() - startTime;
     String msg =
       "Should not take mote than 15000 ms to move a table with 100 regions. Time taken  ="
         + timeTaken + " ms";

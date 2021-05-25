@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -441,11 +442,11 @@ public class TestFlushSnapshotFromClient {
   private void waitRegionsAfterMerge(final long numRegionsAfterMerge)
       throws IOException, InterruptedException {
     // Verify that there's one region less
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     while (admin.getRegions(TABLE_NAME).size() != numRegionsAfterMerge) {
       // This may be flaky... if after 15sec the merge is not complete give up
       // it will fail in the assertEquals(numRegionsAfterMerge).
-      if ((System.currentTimeMillis() - startTime) > 15000)
+      if ((EnvironmentEdgeManager.currentTime() - startTime) > 15000)
         break;
       Thread.sleep(100);
     }

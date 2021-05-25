@@ -211,7 +211,7 @@ public class TestDefaultMemStore {
     }
     memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
     // Assert that new values are seen in kvset as we scan.
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     count = 0;
     int snapshotIndex = 5;
     try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
@@ -577,15 +577,15 @@ public class TestDefaultMemStore {
     addRows(this.memstore);
     Cell closestToEmpty = ((DefaultMemStore) this.memstore).getNextRow(KeyValue.LOWESTKEY);
     assertTrue(CellComparatorImpl.COMPARATOR.compareRows(closestToEmpty,
-        new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
+        new KeyValue(Bytes.toBytes(0), EnvironmentEdgeManager.currentTime())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((DefaultMemStore) this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
-          System.currentTimeMillis()));
+        EnvironmentEdgeManager.currentTime()));
       if (i + 1 == ROW_COUNT) {
         assertNull(nr);
       } else {
         assertTrue(CellComparatorImpl.COMPARATOR.compareRows(nr,
-            new KeyValue(Bytes.toBytes(i + 1), System.currentTimeMillis())) == 0);
+            new KeyValue(Bytes.toBytes(i + 1), EnvironmentEdgeManager.currentTime())) == 0);
       }
     }
     //starting from each row, validate results should contain the starting row
@@ -1022,7 +1022,7 @@ public class TestDefaultMemStore {
   protected int addRows(final MemStore hmc, final long ts) {
     for (int i = 0; i < ROW_COUNT; i++) {
       long timestamp = ts == HConstants.LATEST_TIMESTAMP ?
-        System.currentTimeMillis() : ts;
+        EnvironmentEdgeManager.currentTime() : ts;
       for (int ii = 0; ii < QUALIFIER_COUNT; ii++) {
         byte [] row = Bytes.toBytes(i);
         byte [] qf = makeQualifier(i, ii);

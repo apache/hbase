@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -118,7 +119,7 @@ public class TestWALReaderOnSecureWAL {
           kvs.add(kv);
         }
         wal.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), mvcc, scopes), kvs);
+          EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
       }
       wal.sync();
       final Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
@@ -188,7 +189,8 @@ public class TestWALReaderOnSecureWAL {
     conf.setBoolean(WAL_ENCRYPTION, false);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     final WALFactory wals = new WALFactory(conf, ServerName
-        .valueOf(currentTest.getMethodName(), 16010, System.currentTimeMillis()).toString());
+      .valueOf(currentTest.getMethodName(), 16010, EnvironmentEdgeManager.currentTime())
+        .toString());
     Path walPath = writeWAL(wals, currentTest.getMethodName(), false);
 
     // Ensure edits are plaintext

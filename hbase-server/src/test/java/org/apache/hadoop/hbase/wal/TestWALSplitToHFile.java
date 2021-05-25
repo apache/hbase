@@ -132,8 +132,9 @@ public class TestWALSplitToHFile {
     this.rootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
-        ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010, System.currentTimeMillis())
-            .toString();
+      ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010,
+        EnvironmentEdgeManager.currentTime())
+          .toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(this.rootDir, logName);
     if (UTIL.getDFSCluster().getFileSystem().exists(this.rootDir)) {
@@ -209,8 +210,9 @@ public class TestWALSplitToHFile {
     FileSystem walFs = CommonFSUtils.getWALFileSystem(this.conf);
     this.oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
-        ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010, System.currentTimeMillis())
-            .toString();
+      ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010,
+        EnvironmentEdgeManager.currentTime())
+          .toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(walRootDir, logName);
     this.wals = new WALFactory(conf, TEST_NAME.getMethodName());

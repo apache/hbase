@@ -244,7 +244,7 @@ public class TestConnection {
     table.put(put);
 
     ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
-    mee.setValue(System.currentTimeMillis());
+    mee.setValue(EnvironmentEdgeManager.currentTime());
     EnvironmentEdgeManager.injectEdge(mee);
     LOG.info("first get");
     table.get(new Get(ROW));

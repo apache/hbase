@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -127,7 +128,7 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
     Configuration conf = getConf();
     TableName tableName = TableName.valueOf(conf.get(TABLE_NAME_KEY, DEFAULT_TABLE_NAME));
     String snapshotName = conf.get(SNAPSHOT_NAME_KEY, tableName.getQualifierAsString()
-      + "_snapshot_" + System.currentTimeMillis());
+      + "_snapshot_" + EnvironmentEdgeManager.currentTime());
     int numRegions = conf.getInt(NUM_REGIONS_KEY, DEFAULT_NUM_REGIONS);
     String tableDirStr = conf.get(TABLE_DIR_KEY);
     Path tableDir;

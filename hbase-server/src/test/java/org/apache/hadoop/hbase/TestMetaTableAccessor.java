@@ -156,7 +156,7 @@ public class TestMetaTableAccessor {
     // it as a fail. We can't put that in the @Test tag as we want to close
     // the threads nicely
     final long timeOut = 180000;
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
 
     try {
       // Make sure reader and writer are working.
@@ -171,7 +171,7 @@ public class TestMetaTableAccessor {
         int index = -1;
         do {
           index = UTIL.getMiniHBaseCluster().getServerWithMeta();
-        } while (index == -1 && startTime + timeOut < System.currentTimeMillis());
+        } while (index == -1 && startTime + timeOut < EnvironmentEdgeManager.currentTime());
 
         if (index != -1) {
           UTIL.getMiniHBaseCluster().abortRegionServer(index);
@@ -190,7 +190,7 @@ public class TestMetaTableAccessor {
       writer.join();
       t.close();
     }
-    long exeTime = System.currentTimeMillis() - startTime;
+    long exeTime = EnvironmentEdgeManager.currentTime() - startTime;
     assertTrue("Timeout: test took " + exeTime / 1000 + " sec", exeTime < timeOut);
   }
 
@@ -304,7 +304,7 @@ public class TestMetaTableAccessor {
     ServerName serverName1 = ServerName.valueOf("bar", 60010, random.nextLong());
     ServerName serverName100 = ServerName.valueOf("baz", 60010, random.nextLong());
 
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
       .setRegionId(regionId).setReplicaId(0).build();
@@ -379,7 +379,7 @@ public class TestMetaTableAccessor {
 
   @Test
   public void testMetaLocationForRegionReplicasIsAddedAtTableCreation() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
       .setRegionId(regionId).setReplicaId(0).build();
@@ -444,7 +444,7 @@ public class TestMetaTableAccessor {
    */
   @Test
   public void testMastersSystemTimeIsUsedInUpdateLocations() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
       .setRegionId(regionId).setReplicaId(0).build();

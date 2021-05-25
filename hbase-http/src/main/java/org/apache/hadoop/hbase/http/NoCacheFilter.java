@@ -28,7 +28,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -43,7 +43,7 @@ public class NoCacheFilter implements Filter {
     throws IOException, ServletException {
     HttpServletResponse httpRes = (HttpServletResponse) res;
     httpRes.setHeader("Cache-Control", "no-cache");
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     httpRes.addDateHeader("Expires", now);
     httpRes.addDateHeader("Date", now);
     httpRes.addHeader("Pragma", "no-cache");

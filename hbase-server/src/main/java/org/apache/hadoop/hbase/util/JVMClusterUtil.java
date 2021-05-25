@@ -282,14 +282,14 @@ public class JVMClusterUtil {
       }
     }
     boolean wasInterrupted = false;
-    final long maxTime = System.currentTimeMillis() + 30 * 1000;
+    final long maxTime = EnvironmentEdgeManager.currentTime() + 30 * 1000;
     if (regionservers != null) {
       // first try nicely.
       for (RegionServerThread t : regionservers) {
         t.getRegionServer().stop("Shutdown requested");
       }
       for (RegionServerThread t : regionservers) {
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (t.isAlive() && !wasInterrupted && now < maxTime) {
           try {
             t.join(maxTime - now);

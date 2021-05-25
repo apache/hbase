@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -189,7 +190,7 @@ public class TestLogRollAbort {
   public void testLogRollAfterSplitStart() throws IOException {
     LOG.info("Verify wal roll after split starts will fail.");
     String logName = ServerName.valueOf("testLogRollAfterSplitStart",
-        16010, System.currentTimeMillis()).toString();
+        16010, EnvironmentEdgeManager.currentTime()).toString();
     Path thisTestsDir = new Path(HBASELOGDIR, AbstractFSWALProvider.getWALDirectoryName(logName));
     final WALFactory wals = new WALFactory(conf, logName);
 
@@ -208,7 +209,7 @@ public class TestLogRollAbort {
         NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         scopes.put(Bytes.toBytes("column"), 0);
         log.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), mvcc, scopes), kvs);
+          EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
       }
       // Send the data to HDFS datanodes and close the HDFS writer
       log.sync();

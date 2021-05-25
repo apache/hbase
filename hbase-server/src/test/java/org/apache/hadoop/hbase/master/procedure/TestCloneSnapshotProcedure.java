@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -70,7 +71,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
   private SnapshotProtos.SnapshotDescription getSnapshot() throws Exception {
     if (snapshot == null) {
       final TableName snapshotTableName = TableName.valueOf("testCloneSnapshot");
-      long tid = System.currentTimeMillis();
+      long tid = EnvironmentEdgeManager.currentTime();
       final String snapshotName = "snapshot-" + tid;
 
       Admin admin = UTIL.getAdmin();

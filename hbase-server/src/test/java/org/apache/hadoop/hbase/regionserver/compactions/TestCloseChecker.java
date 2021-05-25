@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -48,7 +49,7 @@ public class TestCloseChecker {
 
     Configuration conf = new Configuration();
 
-    long currentTime = System.currentTimeMillis();
+    long currentTime = EnvironmentEdgeManager.currentTime();
 
     conf.setInt(SIZE_LIMIT_KEY, 10);
     conf.setLong(TIME_LIMIT_KEY, 10);

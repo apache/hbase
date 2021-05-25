@@ -278,7 +278,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
 
     public void mutate(Table table, Mutation m,
         long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       try {
         m = dataGenerator.beforeMutate(keyBase, m);
         if (m instanceof Increment) {
@@ -293,11 +293,11 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
           throw new IllegalArgumentException(
             "unsupported mutation " + m.getClass().getSimpleName());
         }
-        totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+        totalOpTimeMs.addAndGet(EnvironmentEdgeManager.currentTime() - start);
       } catch (IOException e) {
         if (ignoreNonceConflicts) {
           LOG.info("Detected nonce conflict, ignoring: " + e.getMessage());
-          totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+          totalOpTimeMs.addAndGet(EnvironmentEdgeManager.currentTime() - start);
           return;
         }
         failedKeySet.add(keyBase);
@@ -309,7 +309,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
           exceptionInfo = StringUtils.stringifyException(e);
         }
         LOG.error("Failed to mutate: " + keyBase + " after " +
-            (System.currentTimeMillis() - start) +
+            (EnvironmentEdgeManager.currentTime() - start) +
           "ms; region information: " + getRegionDebugInfoSafe(table, m.getRow()) + "; errors: "
             + exceptionInfo);
       }
@@ -331,7 +331,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
 
   public void mutate(Table table, Mutation m,
       long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     try {
       m = dataGenerator.beforeMutate(keyBase, m);
       if (m instanceof Increment) {
@@ -346,7 +346,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         throw new IllegalArgumentException(
           "unsupported mutation " + m.getClass().getSimpleName());
       }
-      totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+      totalOpTimeMs.addAndGet(EnvironmentEdgeManager.currentTime() - start);
     } catch (IOException e) {
       failedKeySet.add(keyBase);
       String exceptionInfo;
@@ -360,9 +360,9 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         pw.flush();
         exceptionInfo = StringUtils.stringifyException(e);
       }
-      LOG.error("Failed to mutate: " + keyBase + " after " + (System.currentTimeMillis() - start) +
-        "ms; region information: " + getRegionDebugInfoSafe(table, m.getRow()) + "; errors: "
-          + exceptionInfo);
+      LOG.error("Failed to mutate: " + keyBase + " after " +
+        (EnvironmentEdgeManager.currentTime() - start) + "ms; region information: " +
+          getRegionDebugInfoSafe(table, m.getRow()) + "; errors: " + exceptionInfo);
     }
   }
 

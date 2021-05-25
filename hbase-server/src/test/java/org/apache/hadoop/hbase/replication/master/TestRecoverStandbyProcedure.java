@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -80,7 +81,7 @@ public class TestRecoverStandbyProcedure {
 
   private static final byte[] qualifier = Bytes.toBytes("q");
 
-  private static final long timestamp = System.currentTimeMillis();
+  private static final long timestamp = EnvironmentEdgeManager.currentTime();
 
   private static final int ROW_COUNT = 1000;
 

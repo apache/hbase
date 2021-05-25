@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * In-memory Queue service provider for Slow/LargeLog events
@@ -128,7 +129,7 @@ public class SlowLogQueueService implements NamedQueueService {
     Message param = rpcLogDetails.getParam();
     long receiveTime = rpcCall.getReceiveTime();
     long startTime = rpcCall.getStartTime();
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTime();
     int processingTime = (int) (endTime - startTime);
     int qTime = (int) (startTime - receiveTime);
     final SlowLogParams slowLogParams = ProtobufUtil.getSlowLogParams(param);

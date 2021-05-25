@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
@@ -453,9 +454,10 @@ public abstract class AbstractTestDLS {
         row = Arrays.copyOfRange(row, 3, 8); // use last 5 bytes because
         // HBaseTestingUtility.createMultiRegions use 5 bytes key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
-        e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, System.currentTimeMillis(), value));
+        e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(),
+          value));
         log.appendData(curRegionInfo, new WALKeyImpl(curRegionInfo.getEncodedNameAsBytes(),
-          tableName, System.currentTimeMillis(), mvcc), e);
+          tableName, EnvironmentEdgeManager.currentTime(), mvcc), e);
         if (0 == i % syncEvery) {
           log.sync();
         }
@@ -510,12 +512,12 @@ public abstract class AbstractTestDLS {
 
   private void waitForCounter(LongAdder ctr, long oldval, long newval, long timems)
       throws InterruptedException {
-    long curt = System.currentTimeMillis();
+    long curt = EnvironmentEdgeManager.currentTime();
     long endt = curt + timems;
     while (curt < endt) {
       if (ctr.sum() == oldval) {
         Thread.sleep(100);
-        curt = System.currentTimeMillis();
+        curt = EnvironmentEdgeManager.currentTime();
       } else {
         assertEquals(newval, ctr.sum());
         return;

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -264,7 +265,7 @@ public class TestSnapshotCloneIndependence {
         countOriginalTable, clonedTableRowCount);
 
       // Attempt to add data to the test
-      Put p = new Put(Bytes.toBytes("new-row-" + System.currentTimeMillis()));
+      Put p = new Put(Bytes.toBytes("new-row-" + EnvironmentEdgeManager.currentTime()));
       p.addColumn(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
       originalTable.put(p);
 
@@ -275,7 +276,7 @@ public class TestSnapshotCloneIndependence {
         "The row count of the cloned table changed as a result of addition to the original",
         clonedTableRowCount, countRows(clonedTable));
 
-      Put p2 = new Put(Bytes.toBytes("new-row-" + System.currentTimeMillis()));
+      Put p2 = new Put(Bytes.toBytes("new-row-" + EnvironmentEdgeManager.currentTime()));
       p2.addColumn(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
       clonedTable.put(p2);
 

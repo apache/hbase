@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -432,7 +433,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   @Override
   public long disconnectSince() {
     if (!this.connection.isConnectionOpen()) {
-      return System.currentTimeMillis() - receiveTime;
+      return EnvironmentEdgeManager.currentTime() - receiveTime;
     } else {
       return -1L;
     }

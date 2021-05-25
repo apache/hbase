@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -48,7 +49,7 @@ public class RegionInfoBuilder {
   private final TableName tableName;
   private byte[] startKey = HConstants.EMPTY_START_ROW;
   private byte[] endKey = HConstants.EMPTY_END_ROW;
-  private long regionId = System.currentTimeMillis();
+  private long regionId = EnvironmentEdgeManager.currentTime();
   private int replicaId = RegionInfo.DEFAULT_REPLICA_ID;
   private boolean offLine = false;
   private boolean split = false;
