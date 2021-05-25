@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -38,14 +37,14 @@ class MoveCostFunction extends CostFunction {
   private static final float DEFAULT_MAX_MOVE_PERCENT = 0.25f;
 
   private final float maxMovesPercent;
-  private final OffPeakHours offPeakHours;
+  private final ClusterInfoProvider provider;
   private final float moveCost;
   private final float moveCostOffPeak;
 
-  MoveCostFunction(Configuration conf) {
+  MoveCostFunction(Configuration conf, ClusterInfoProvider provider) {
+    this.provider = provider;
     // What percent of the number of regions a single run of the balancer can move.
     maxMovesPercent = conf.getFloat(MAX_MOVES_PERCENT_KEY, DEFAULT_MAX_MOVE_PERCENT);
-    offPeakHours = OffPeakHours.getInstance(conf);
     moveCost = conf.getFloat(MOVE_COST_KEY, DEFAULT_MOVE_COST);
     moveCostOffPeak = conf.getFloat(MOVE_COST_OFFPEAK_KEY, DEFAULT_MOVE_COST_OFFPEAK);
     // Initialize the multiplier so that addCostFunction will add this cost function.
@@ -58,7 +57,7 @@ class MoveCostFunction extends CostFunction {
     super.prepare(cluster);
     // Move cost multiplier should be the same cost or higher than the rest of the costs to ensure
     // that large benefits are need to overcome the cost of a move.
-    if (offPeakHours.isOffPeakHour()) {
+    if (provider.isOffPeakHour()) {
       this.setMultiplier(moveCostOffPeak);
     } else {
       this.setMultiplier(moveCost);

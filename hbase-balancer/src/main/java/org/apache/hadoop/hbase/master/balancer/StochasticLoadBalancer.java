@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -39,9 +40,6 @@ import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
-import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
-import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -128,8 +126,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private long maxRunningTime = 30 * 1000 * 1; // 30 seconds.
   private int numRegionLoadsToRemember = 15;
   private float minCostNeedBalance = 0.05f;
-  private boolean isBalancerDecisionRecording = false;
-  private boolean isBalancerRejectionRecording = false;
 
   private List<CandidateGenerator> candidateGenerators;
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
@@ -146,11 +142,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private RackLocalityCostFunction rackLocalityCost;
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
-
-  /**
-   * Use to add balancer decision history to ring-buffer
-   */
-  NamedQueueRecorder namedQueueRecorder;
 
   /**
    * The constructor that pass a MetricsStochasticBalancer to BaseLoadBalancer to replace its
@@ -233,7 +224,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     costFunctions = new ArrayList<>();
     addCostFunction(new RegionCountSkewCostFunction(conf));
     addCostFunction(new PrimaryRegionCountSkewCostFunction(conf));
-    addCostFunction(new MoveCostFunction(conf));
+    addCostFunction(new MoveCostFunction(conf, provider));
     addCostFunction(localityCost);
     addCostFunction(rackLocalityCost);
     addCostFunction(new TableSkewCostFunction(conf));
@@ -248,17 +239,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     curFunctionCosts = new double[costFunctions.size()];
     tempFunctionCosts = new double[costFunctions.size()];
-
-    isBalancerDecisionRecording = conf.getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
-      BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
-    isBalancerRejectionRecording =
-      conf.getBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED,
-        BaseLoadBalancer.DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED);
-
-    if (this.namedQueueRecorder == null &&
-      (isBalancerDecisionRecording || isBalancerRejectionRecording)) {
-      this.namedQueueRecorder = NamedQueueRecorder.getInstance(conf);
-    }
 
     LOG.info("Loaded config; maxSteps=" + maxSteps + ", stepsPerRegion=" + stepsPerRegion +
       ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable + ", CostFunctions=" +
@@ -305,6 +285,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return false;
   }
 
+  private String getBalanceReason(double total, double sumMultiplier) {
+    if (total <= 0) {
+      return "(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern) = " + total + " <= 0";
+    } else if (sumMultiplier <= 0) {
+      return "sumMultiplier = " + sumMultiplier + " <= 0";
+    } else if ((total / sumMultiplier) < minCostNeedBalance) {
+      return "[(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern)]/sumMultiplier = " +
+        (total / sumMultiplier) + " <= minCostNeedBalance(" + minCostNeedBalance + ")";
+    } else {
+      return "";
+    }
+  }
+
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   boolean needsBalance(TableName tableName, BalancerClusterState cluster) {
@@ -314,10 +307,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         LOG.debug("Not running balancer because only " + cs.getNumServers()
             + " active regionserver(s)");
       }
-      if (this.isBalancerRejectionRecording) {
-        sendRejectionReasonToRingBuffer("The number of RegionServers " +
-          cs.getNumServers() + " < MIN_SERVER_BALANCE(" + MIN_SERVER_BALANCE + ")", null);
-      }
+      sendRejectionReasonToRingBuffer(() -> "The number of RegionServers " + cs.getNumServers() +
+        " < MIN_SERVER_BALANCE(" + MIN_SERVER_BALANCE + ")", null);
       return false;
     }
     if (areSomeRegionReplicasColocated(cluster)) {
@@ -346,18 +337,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     boolean balanced = total <= 0 || sumMultiplier <= 0 ||
         (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance);
-    if(balanced && isBalancerRejectionRecording){
-      String reason = "";
-      if (total <= 0) {
-        reason = "(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern) = " + total + " <= 0";
-      } else if (sumMultiplier <= 0) {
-        reason = "sumMultiplier = " + sumMultiplier + " <= 0";
-      } else if ((total / sumMultiplier) < minCostNeedBalance) {
-        reason =
-          "[(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern)]/sumMultiplier = " + (total
-            / sumMultiplier) + " <= minCostNeedBalance(" + minCostNeedBalance + ")";
-      }
-      sendRejectionReasonToRingBuffer(reason, costFunctions);
+    if (balanced) {
+      final double calculatedTotal = total;
+      final double calculatedMultiplier = sumMultiplier;
+      sendRejectionReasonToRingBuffer(() -> getBalanceReason(calculatedTotal, calculatedMultiplier),
+        costFunctions);
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("{} {}; total cost={}, sum multiplier={}; cost/multiplier to need a balance is {}",
@@ -500,11 +484,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return null;
   }
 
-  private void sendRejectionReasonToRingBuffer(String reason, List<CostFunction> costFunctions){
-    if (this.isBalancerRejectionRecording){
-      BalancerRejection.Builder builder =
-        new BalancerRejection.Builder()
-        .setReason(reason);
+  private void sendRejectionReasonToRingBuffer(Supplier<String> reason,
+    List<CostFunction> costFunctions) {
+    provider.recordBalancerRejection(() -> {
+      BalancerRejection.Builder builder = new BalancerRejection.Builder().setReason(reason.get());
       if (costFunctions != null) {
         for (CostFunction c : costFunctions) {
           float multiplier = c.getMultiplier();
@@ -514,29 +497,24 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           builder.addCostFuncInfo(c.getClass().getName(), c.cost(), c.getMultiplier());
         }
       }
-      namedQueueRecorder.addRecord(new BalancerRejectionDetails(builder.build()));
-    }
+      return builder.build();
+    });
   }
 
   private void sendRegionPlansToRingBuffer(List<RegionPlan> plans, double currentCost,
-      double initCost, String initFunctionTotalCosts, long step) {
-    if (this.isBalancerDecisionRecording) {
+    double initCost, String initFunctionTotalCosts, long step) {
+    provider.recordBalancerDecision(() -> {
       List<String> regionPlans = new ArrayList<>();
       for (RegionPlan plan : plans) {
-        regionPlans.add(
-          "table: " + plan.getRegionInfo().getTable() + " , region: " + plan.getRegionName()
-            + " , source: " + plan.getSource() + " , destination: " + plan.getDestination());
+        regionPlans
+          .add("table: " + plan.getRegionInfo().getTable() + " , region: " + plan.getRegionName() +
+            " , source: " + plan.getSource() + " , destination: " + plan.getDestination());
       }
-      BalancerDecision balancerDecision =
-        new BalancerDecision.Builder()
-          .setInitTotalCost(initCost)
-          .setInitialFunctionCosts(initFunctionTotalCosts)
-          .setComputedTotalCost(currentCost)
-          .setFinalFunctionCosts(totalCostsPerFunc())
-          .setComputedSteps(step)
-          .setRegionPlans(regionPlans).build();
-      namedQueueRecorder.addRecord(new BalancerDecisionDetails(balancerDecision));
-    }
+      return new BalancerDecision.Builder().setInitTotalCost(initCost)
+        .setInitialFunctionCosts(initFunctionTotalCosts).setComputedTotalCost(currentCost)
+        .setFinalFunctionCosts(totalCostsPerFunc()).setComputedSteps(step)
+        .setRegionPlans(regionPlans).build();
+    });
   }
 
   /**

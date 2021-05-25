@@ -22,13 +22,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalancerDecision;
+import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -36,7 +40,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * want.
  */
 @InterfaceAudience.Private
-public interface ClusterInfoProvider {
+public interface ClusterInfoProvider extends ConfigurationObserver {
 
   /**
    * Get the configuration.
@@ -83,4 +87,21 @@ public interface ClusterInfoProvider {
    * Get a snapshot of the current assignment status.
    */
   Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(Collection<RegionInfo> regions);
+
+  /**
+   * Test whether we are in off peak hour.
+   * <p/>
+   * For peak and off peak hours we may have different cost for the same balancing operation.
+   */
+  boolean isOffPeakHour();
+
+  /**
+   * Record the given balancer decision.
+   */
+  void recordBalancerDecision(Supplier<BalancerDecision> decision);
+
+  /**
+   * Record the given balancer rejection.
+   */
+  void recordBalancerRejection(Supplier<BalancerRejection> rejection);
 }
