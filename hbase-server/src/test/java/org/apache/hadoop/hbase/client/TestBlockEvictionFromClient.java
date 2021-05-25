@@ -1484,8 +1484,8 @@ public class TestBlockEvictionFromClient {
         store.getStorefilesCount() != count) {
       Thread.sleep(100);
     }
-    System.out.println("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() + ", cur=" +
-        store.getStorefilesCount());
+    System.out.println("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() +
+      ", cur=" + store.getStorefilesCount());
     assertEquals(count, store.getStorefilesCount());
   }
 

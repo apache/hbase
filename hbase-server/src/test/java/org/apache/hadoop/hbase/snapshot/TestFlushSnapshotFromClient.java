@@ -446,8 +446,9 @@ public class TestFlushSnapshotFromClient {
     while (admin.getRegions(TABLE_NAME).size() != numRegionsAfterMerge) {
       // This may be flaky... if after 15sec the merge is not complete give up
       // it will fail in the assertEquals(numRegionsAfterMerge).
-      if ((EnvironmentEdgeManager.currentTime() - startTime) > 15000)
+      if ((EnvironmentEdgeManager.currentTime() - startTime) > 15000) {
         break;
+      }
       Thread.sleep(100);
     }
     SnapshotTestingUtils.waitForTableToBeOnline(UTIL, TABLE_NAME);

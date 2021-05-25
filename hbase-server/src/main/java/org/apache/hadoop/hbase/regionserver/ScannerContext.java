@@ -21,10 +21,10 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * ScannerContext instances encapsulate limit tracking AND progress towards those limits during
@@ -311,7 +311,7 @@ public class ScannerContext {
 
   /**
    * @param checkerScope The scope that the limit is being checked from. The time limit is always
-   *          checked against {@link EnvironmentEdgeManager.currentTime()}
+   *          checked against {@link EnvironmentEdgeManager.currentTime}
    * @return true when the limit is enforceable from the checker's scope and it has been reached
    */
   boolean checkTimeLimit(LimitScope checkerScope) {

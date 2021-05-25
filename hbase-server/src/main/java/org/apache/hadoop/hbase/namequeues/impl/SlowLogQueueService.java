@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.namequeues.SlowLogPersistentService;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * In-memory Queue service provider for Slow/LargeLog events

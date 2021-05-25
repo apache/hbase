@@ -75,8 +75,9 @@ public class ReplicationSyncUp extends Configured implements Tool {
       }
     };
     Configuration conf = getConf();
-    try (ZKWatcher zkw =
-      new ZKWatcher(conf, "syncupReplication" + EnvironmentEdgeManager.currentTime(), abortable, true)) {
+    try (ZKWatcher zkw = new ZKWatcher(conf,
+        "syncupReplication" + EnvironmentEdgeManager.currentTime(),
+        abortable, true)) {
       Path walRootDir = CommonFSUtils.getWALRootDir(conf);
       FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);

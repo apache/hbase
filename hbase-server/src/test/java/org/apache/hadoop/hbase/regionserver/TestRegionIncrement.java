@@ -203,7 +203,8 @@ public class TestRegionIncrement {
       assertEquals(INCREMENT_COUNT * THREAD_COUNT, total);
     } finally {
       closeRegion(region);
-      LOG.info(this.name.getMethodName() + " " + (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
+      LOG.info(this.name.getMethodName() + " " +
+        (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
     }
   }
 

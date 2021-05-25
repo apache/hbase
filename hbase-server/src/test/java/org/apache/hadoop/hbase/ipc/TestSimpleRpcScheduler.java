@@ -480,10 +480,15 @@ public class TestSimpleRpcScheduler {
       for (String threadNamePrefix : threadNamePrefixs) {
         String threadName = Thread.currentThread().getName();
         if (threadName.startsWith(threadNamePrefix)) {
-          return timeQ.poll().longValue() + offset;
+          if (timeQ != null) {
+            Long qTime = timeQ.poll();
+            if (qTime != null) {
+              return qTime.longValue() + offset;
+            }
+          }
         }
       }
-      return EnvironmentEdgeManager.currentTime();
+      return System.currentTimeMillis();
     }
   }
 
@@ -521,7 +526,6 @@ public class TestSimpleRpcScheduler {
         long time = EnvironmentEdgeManager.currentTime();
         envEdge.timeQ.put(time);
         CallRunner cr = getMockedCallRunner(time, 2);
-        // LOG.info("" + i + " " + (EnvironmentEdgeManager.currentTime() - now) + " cr=" + cr);
         scheduler.dispatch(cr);
       }
       // LOG.info("Loop done");

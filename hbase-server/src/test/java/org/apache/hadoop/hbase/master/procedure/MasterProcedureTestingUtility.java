@@ -350,7 +350,8 @@ public class MasterProcedureTestingUtility {
 
     // Add other extra rows. more rows, more files
     while (rows-- > 0) {
-      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), Bytes.toBytes(rows));
+      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()),
+        Bytes.toBytes(rows));
       byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
       mutator.mutate(createPut(families, key, value));
     }

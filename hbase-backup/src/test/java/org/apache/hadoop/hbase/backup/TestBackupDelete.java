@@ -116,7 +116,7 @@ public class TestBackupDelete extends TestBackupBase {
       // time - 2 days
       @Override
       public long currentTime() {
-        return EnvironmentEdgeManager.currentTime() - 2 * 24 * 3600 * 1000 ;
+        return System.currentTimeMillis() - 2 * 24 * 3600 * 1000 ;
       }
     });
     String backupId = fullTableBackup(tableList);

@@ -185,7 +185,8 @@ public class TestScannerWithBulkload {
       writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(new Long(9999999)));
     }
     else {
-    writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
+      writer.appendFileInfo(BULKLOAD_TIME_KEY,
+        Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
     }
     writer.close();
     return hfilePath;
