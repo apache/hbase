@@ -178,8 +178,9 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
       return Collections.emptyList();
     }
 
+    final TableDescriptor tblDesc;
     try {
-      final TableDescriptor tblDesc = masterServices.getTableDescriptors().get(tableName);
+      tblDesc = masterServices.getTableDescriptors().get(tableName);
       if (tblDesc != null && !tblDesc.isNormalizationEnabled()) {
         LOG.debug("Skipping table {} because normalization is disabled in its table properties.",
           tableName);
@@ -190,7 +191,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
       return Collections.emptyList();
     }
 
-    final List<NormalizationPlan> plans = regionNormalizer.computePlansForTable(tableName);
+    final List<NormalizationPlan> plans = regionNormalizer.computePlansForTable(tblDesc);
     if (CollectionUtils.isEmpty(plans)) {
       LOG.debug("No normalization required for table {}.", tableName);
       return Collections.emptyList();
