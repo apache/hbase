@@ -31,16 +31,18 @@
   import="org.apache.hadoop.hbase.client.ServerType"
   import="org.apache.hadoop.hbase.client.LogEntry"
   import="org.apache.hadoop.hbase.client.BalancerRejection"
+  import="org.apache.hadoop.hbase.client.BalancerDecision"
 %>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
 
   List<BalancerRejection> logList = null;
-
+  List<BalancerDecision> decisionList = null;
   if(master.isInitialized()) {
     try (Admin admin = master.getConnection().getAdmin()) {
       logList = (List<BalancerRejection>)(List<?>)admin.getLogEntries(null, "BALANCER_REJECTION", ServerType.MASTER, 250, null);
+      decisionList = (List<BalancerDecision>)(List<?>)admin.getLogEntries(null, "BALANCER_DECISION", ServerType.MASTER, 250, null);
     }
   }
 %>
@@ -60,6 +62,9 @@
   <ul class="nav nav-pills">
     <li class="active">
       <a href="#tab_named_queue1" data-toggle="tab"> Balancer Rejection </a>
+    </li>
+    <li class="">
+          <a href="#tab_named_queue2" data-toggle="tab"> Balancer Decision </a>
     </li>
   </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
@@ -89,6 +94,42 @@
           <% } %>
           </table>
       </div>
+      <div class="tab-pane" id="tab_named_queue2">
+          <table class="table table-striped">
+            <tr>
+              <th>Initial Function Costs</th>
+              <th>Final Function Costs</th>
+              <th>Init Total Cost</th>
+              <th>Computed Total Cost</th>
+              <th>Computed Steps</th>
+              <th>Region Plans</th>
+            </tr>
+            <% if (decisionList == null) { %>
+            <% } else { %>
+              <% for (BalancerDecision decision: decisionList) {  %>
+                <tr>
+                  <td><%=decision.getInitialFunctionCosts()%></td>
+                  <td><%=decision.getFinalFunctionCosts()%></td>
+                  <td><%=StringUtils.format("%.2f", decision.getInitTotalCost())%></td>
+                  <td><%=StringUtils.format("%.2f", decision.getComputedTotalCost())%></td>
+                  <td><%=decision.getComputedSteps()%></td>
+                  <%
+                  List<String> regionPlans = decision.getRegionPlans();
+                  if ( regionPlans == null) {%>
+                    <td></td>
+                  <% }  else { %>
+                    <td>
+                    <table>
+                    <% for (String plan : regionPlans) { %>
+                      <tr><td><%=plan%></td></tr>
+                    <% } %>
+                    </table>
+                    </td>
+                  <% } %>
+                </tr>
+              <% } %>
+            <% } %>
+        </div>
       </div>
   </div>
 </div>
