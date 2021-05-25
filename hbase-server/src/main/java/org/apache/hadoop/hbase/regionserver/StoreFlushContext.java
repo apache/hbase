@@ -35,12 +35,17 @@ public abstract class StoreFlushContext {
   protected long cacheFlushSeqNum;
   protected FlushLifeCycleTracker tracker;
 
-  public StoreFlushContext(HStore store, Long cacheFlushSeqNum, FlushLifeCycleTracker tracker){
+  /**
+   * Initializes StoreFlushContext fields. Needs to be called after construction.
+   * @param store
+   * @param cacheFlushSeqNum
+   * @param tracker
+   */
+  public void init(HStore store, long cacheFlushSeqNum, FlushLifeCycleTracker tracker) {
     this.store = store;
     this.cacheFlushSeqNum = cacheFlushSeqNum;
     this.tracker = tracker;
   }
-
   /**
    * Prepare for a store flush (create snapshot)
    * Requires pausing writes.

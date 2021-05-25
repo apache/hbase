@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,8 +48,8 @@ public class DefaultStoreFlushContext extends StoreFlushContext {
   private long cacheFlushSize;
   private long outputFileSize;
 
-  public DefaultStoreFlushContext(HStore store, Long cacheFlushSeqNum, FlushLifeCycleTracker tracker) {
-    super(store, cacheFlushSeqNum, tracker);
+  public void init(HStore store, Long cacheFlushSeqNum, FlushLifeCycleTracker tracker) {
+    super.init(store, cacheFlushSeqNum, tracker);
   }
 
   /**

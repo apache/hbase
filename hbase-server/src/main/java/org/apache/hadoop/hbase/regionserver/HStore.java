@@ -2369,8 +2369,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     Class<StoreFlushContext> flushContextClass = (Class<StoreFlushContext>)
       conf.getClass(STORE_FLUSH_CONTEXT_CLASS_NAME, DefaultStoreFlushContext.class);
     try {
-      return flushContextClass.getConstructor(HStore.class, Long.class, FlushLifeCycleTracker.class)
-        .newInstance(this, cacheFlushId, tracker);
+      StoreFlushContext flushContext = flushContextClass.newInstance();
+      flushContext.init(this, cacheFlushId, tracker);
+      return flushContext;
     } catch (Exception e) {
       throw new IOException(e);
     }
