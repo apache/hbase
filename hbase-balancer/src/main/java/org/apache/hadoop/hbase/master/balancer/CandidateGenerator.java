@@ -35,6 +35,7 @@ abstract class CandidateGenerator {
    * From a list of regions pick a random one. Null can be returned which
    * {@link StochasticLoadBalancer#balanceCluster(Map)} recognize as signal to try a region move
    * rather than swap.
+   *
    * @param cluster The state of the cluster
    * @param server index of the server
    * @param chanceOfNoSwap Chance that this will decide to try a move rather than a swap.

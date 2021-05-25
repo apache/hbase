@@ -22,10 +22,18 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -40,11 +48,15 @@ import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.balancer.ClusterInfoProvider;
 import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.balancer.MasterClusterInfoProvider;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.util.IdReadWriteLock;
+import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -55,6 +67,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * GroupBasedLoadBalancer, used when Region Server Grouping is configured (HBase-6721) It does
@@ -77,6 +90,9 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   private FavoredNodesManager favoredNodesManager;
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private volatile LoadBalancer internalBalancer;
+  private final IdReadWriteLock<String> groupLocks = new IdReadWriteLockWithObjectPool<>();
+  private ExecutorService balancerPool;
+  private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   /**
    * Set this key to {@code true} to allow region fallback.
@@ -86,6 +102,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
    * regions
    */
   public static final String FALLBACK_GROUP_ENABLE_KEY = "hbase.rsgroup.fallback.enable";
+  public static final String CONF_RSGROUP_BALANCE_THREADS = "hbase.rsgroup.balance.threads";
 
   private volatile boolean fallbackEnabled = false;
 
@@ -97,9 +114,14 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   // must be called after calling initialize
   @Override
-  public synchronized void updateClusterMetrics(ClusterMetrics sm) {
+  public void updateClusterMetrics(ClusterMetrics sm) {
     assert internalBalancer != null;
-    internalBalancer.updateClusterMetrics(sm);
+    lock.writeLock().lock();
+    try {
+      internalBalancer.updateClusterMetrics(sm);
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   public void setMasterServices(MasterServices masterServices) {
@@ -110,7 +132,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
    * Balance by RSGroup.
    */
   @Override
-  public synchronized List<RegionPlan> balanceCluster(
+  public List<RegionPlan> balanceCluster(
       Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException {
     if (!isOnline()) {
       throw new ConstraintException(
@@ -119,7 +141,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
     // Calculate correct assignments and a list of RegionPlan for mis-placed regions
     Pair<Map<TableName, Map<ServerName, List<RegionInfo>>>, List<RegionPlan>>
-      correctedStateAndRegionPlans = correctAssignments(loadOfAllTable);
+        correctedStateAndRegionPlans = correctAssignments(loadOfAllTable);
     Map<TableName, Map<ServerName, List<RegionInfo>>> correctedLoadOfAllTable =
         correctedStateAndRegionPlans.getFirst();
     List<RegionPlan> regionPlans = correctedStateAndRegionPlans.getSecond();
@@ -134,8 +156,8 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         for (Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> entry : correctedLoadOfAllTable
             .entrySet()) {
           TableName tableName = entry.getKey();
-          RSGroupInfo targetRSGInfo = RSGroupUtil
-              .getRSGroupInfo(masterServices, rsGroupInfoManager, tableName).orElse(defaultInfo);
+          RSGroupInfo targetRSGInfo = RSGroupUtil.getRSGroupInfo(masterServices,
+              rsGroupInfoManager, tableName).orElse(defaultInfo);
           if (targetRSGInfo.getName().equals(rsgroup.getName())) {
             loadOfTablesInGroup.put(tableName, entry.getValue());
           }
@@ -364,6 +386,10 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     internalBalancer.initialize();
     // init fallback groups
     this.fallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
+
+    this.balancerPool = Executors.newFixedThreadPool(
+      conf.getInt(CONF_RSGROUP_BALANCE_THREADS, 10),
+      new ThreadFactoryBuilder().setNameFormat("RSGroup-balancer-%d").setDaemon(true).build());
   }
 
   public boolean isOnline() {
@@ -387,19 +413,27 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public synchronized void onConfigurationChange(Configuration conf) {
-    boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
-    if (fallbackEnabled != newFallbackEnabled) {
-      LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY,
-        fallbackEnabled, newFallbackEnabled);
-      fallbackEnabled = newFallbackEnabled;
+  public void onConfigurationChange(Configuration conf) {
+    lock.writeLock().lock();
+    try {
+      boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
+      if (fallbackEnabled != newFallbackEnabled) {
+        LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY,
+          fallbackEnabled, newFallbackEnabled);
+        fallbackEnabled = newFallbackEnabled;
+      }
+      internalBalancer.onConfigurationChange(conf);
+    } finally {
+      lock.writeLock().unlock();
     }
-    internalBalancer.onConfigurationChange(conf);
   }
 
   @Override
   public void stop(String why) {
     internalBalancer.stop(why);
+    if (this.balancerPool != null) {
+      this.balancerPool.shutdownNow();
+    }
   }
 
   @Override
@@ -422,6 +456,121 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   public void updateBalancerStatus(boolean status) {
     internalBalancer.updateBalancerStatus(status);
+  }
+
+  public CompletableFuture<List<RegionPlan>> balance(boolean force) throws IOException{
+    List<RSGroupInfo> groups = rsGroupInfoManager.listRSGroups();
+    return balanceRSGroupsParallel(groups, force);
+  }
+
+  private CompletableFuture<List<RegionPlan>> balanceRSGroupsParallel(List<RSGroupInfo> groups,
+    boolean force) {
+    return CompletableFuture
+      .supplyAsync(() -> groups.stream().map(groupInfo -> CompletableFuture.supplyAsync(() -> {
+        try {
+          return balanceRSGroup(groupInfo.getName(), force);
+        } catch (IOException e) {
+          LOG.error("Balance RSGroup {} error", groupInfo.getName(), e);
+        }
+        return new ArrayList<RegionPlan>();
+      }, balancerPool)).map(CompletableFuture::join).flatMap(List::stream)
+        .collect(Collectors.toList()), balancerPool);
+  }
+
+  public List<RegionPlan> balanceRSGroup(String groupName, boolean force) throws IOException {
+    lock.readLock().lock();
+    try {
+      List<RegionPlan> balancedPlans = new ArrayList<>();
+      if (masterServices == null || masterServices.skipRegionManagementAction("balancer")) {
+        LOG.warn("Master service is null or master has not initialized, skip balance RSGroup {}",
+            groupName);
+        return balancedPlans;
+      }
+      // If balance not true, don't run balancer.
+      if (!masterServices.isBalancerOn()) {
+        return balancedPlans;
+      }
+      RSGroupInfo groupInfo = rsGroupInfoManager.getRSGroup(groupName);
+      if (groupInfo == null) {
+        throw new ConstraintException("RSGroup " + groupName + " does not exist");
+      }
+      ReadWriteLock groupBalanceLock = groupLocks.getLock(groupInfo.getName());
+      if (groupBalanceLock.writeLock().tryLock()) {
+        try {
+          if (masterServices.getServerManager().areDeadServersInProgress()) {
+            LOG.debug("Not running balancer for RSGroup {}, " +
+                "because processing dead regionserver(s): {}", groupName,
+                masterServices.getServerManager().getDeadServers());
+            return balancedPlans;
+          }
+          Map<String, RegionState> groupRIT = rsGroupGetRegionsInTransition(groupName);
+          if (groupRIT.size() > 0 && !force) {
+            LOG.debug("Not running balancer for RSGroup {}, because {} region(s) in transition: {}",
+                groupName, groupRIT.size(), StringUtils.abbreviate(
+                    masterServices.getAssignmentManager().getRegionStates()
+                        .getRegionsInTransition().toString(), 256));
+            return balancedPlans;
+          }
+          // We balance per group instead of per table
+          Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
+              getRSGroupAssignmentsByTable(groupName);
+          List<RegionPlan> plans = balanceCluster(assignmentsByTable);
+          if (!plans.isEmpty()) {
+            LOG.info("Balance RSGroup {}, starting {} balance plans", groupName, plans.size());
+            balancedPlans = masterServices.executeRegionPlansWithThrottling(plans);
+            LOG.info("Balance RSGroup {} completed", groupName);
+          }
+        } finally {
+          groupBalanceLock.writeLock().unlock();
+        }
+      }
+      return balancedPlans;
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  private Map<String, RegionState> rsGroupGetRegionsInTransition(String groupName)
+    throws IOException {
+    Map<String, RegionState> rit = Maps.newTreeMap();
+    Set<TableName> tablesInGroup = new HashSet<>();
+    for (RegionStateNode regionNode : masterServices.getAssignmentManager()
+      .getRegionsInTransition()) {
+      TableName tn = regionNode.getTable();
+      if (tablesInGroup.contains(tn) || RSGroupUtil
+        .getRSGroupInfo(masterServices, rsGroupInfoManager, tn).map(RSGroupInfo::getName)
+        .orElse(RSGroupInfo.DEFAULT_GROUP).equals(groupName)) {
+        tablesInGroup.add(tn);
+        rit.put(regionNode.getRegionInfo().getEncodedName(), regionNode.toRegionState());
+      }
+    }
+    return rit;
+  }
+
+  /**
+   * This is an EXPENSIVE clone. Cloning though is the safest thing to do. Can't let out original
+   * since it can change and at least the load balancer wants to iterate this exported list. Load
+   * balancer should iterate over this list because cloned list will ignore disabled table and split
+   * parent region cases. This method is invoked by {@link #balanceRSGroup}
+   * @return A clone of current assignments for this group.
+   */
+  Map<TableName, Map<ServerName, List<RegionInfo>>> getRSGroupAssignmentsByTable(String groupName)
+    throws IOException {
+    Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
+      masterServices.getAssignmentManager().getRegionStates()
+        .getAssignmentsForBalancer(masterServices.getTableStateManager(),
+          masterServices.getServerManager().getOnlineServersList());
+    for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
+      serverMap.keySet().removeAll(masterServices.getServerManager().getDrainingServersList());
+    }
+    Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();
+    for (Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> entry : assignments.entrySet()) {
+      if (RSGroupUtil.getRSGroupInfo(masterServices, rsGroupInfoManager, entry.getKey())
+        .map(RSGroupInfo::getName).orElse(RSGroupInfo.DEFAULT_GROUP).equals(groupName)) {
+        result.putIfAbsent(entry.getKey(), entry.getValue());
+      }
+    }
+    return result;
   }
 
   private List<ServerName> getFallBackCandidates(List<ServerName> servers) {

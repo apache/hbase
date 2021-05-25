@@ -57,16 +57,12 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerListener;
-import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
@@ -1078,111 +1074,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
   }
 
-  private boolean isTableInGroup(TableName tableName, String groupName,
-      Set<TableName> tablesInGroupCache) throws IOException {
-    if (tablesInGroupCache.contains(tableName)) {
-      return true;
-    }
-    if (RSGroupUtil.getRSGroupInfo(masterServices, this, tableName)
-        .map(RSGroupInfo::getName)
-        .orElse(RSGroupInfo.DEFAULT_GROUP).equals(groupName)) {
-      tablesInGroupCache.add(tableName);
-      return true;
-    }
-    return false;
-  }
-
-  private Map<String, RegionState> rsGroupGetRegionsInTransition(String groupName)
-      throws IOException {
-    Map<String, RegionState> rit = Maps.newTreeMap();
-    Set<TableName> tablesInGroupCache = new HashSet<>();
-    for (RegionStateNode regionNode :
-        masterServices.getAssignmentManager().getRegionsInTransition()) {
-      TableName tn = regionNode.getTable();
-      if (isTableInGroup(tn, groupName, tablesInGroupCache)) {
-        rit.put(regionNode.getRegionInfo().getEncodedName(), regionNode.toRegionState());
-      }
-    }
-    return rit;
-  }
-
-  /**
-   * This is an EXPENSIVE clone. Cloning though is the safest thing to do. Can't let out original
-   * since it can change and at least the load balancer wants to iterate this exported list. Load
-   * balancer should iterate over this list because cloned list will ignore disabled table and split
-   * parent region cases. This method is invoked by {@link #balanceRSGroup}
-   * @return A clone of current assignments for this group.
-   */
-  Map<TableName, Map<ServerName, List<RegionInfo>>> getRSGroupAssignmentsByTable(
-    TableStateManager tableStateManager, String groupName) throws IOException {
-    Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();
-    Set<TableName> tablesInGroupCache = new HashSet<>();
-    for (Map.Entry<RegionInfo, ServerName> entry : masterServices.getAssignmentManager()
-      .getRegionStates().getRegionAssignments().entrySet()) {
-      RegionInfo region = entry.getKey();
-      TableName tn = region.getTable();
-      ServerName server = entry.getValue();
-      if (isTableInGroup(tn, groupName, tablesInGroupCache)) {
-        if (tableStateManager
-          .isTableState(tn, TableState.State.DISABLED, TableState.State.DISABLING)) {
-          continue;
-        }
-        if (region.isSplitParent()) {
-          continue;
-        }
-        result.computeIfAbsent(tn, k -> new HashMap<>())
-          .computeIfAbsent(server, k -> new ArrayList<>()).add(region);
-      }
-    }
-    RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
-    for (ServerName serverName : masterServices.getServerManager().getOnlineServers().keySet()) {
-      if (rsGroupInfo.containsServer(serverName.getAddress())) {
-        for (Map<ServerName, List<RegionInfo>> map : result.values()) {
-          map.computeIfAbsent(serverName, k -> Collections.emptyList());
-        }
-      }
-    }
-    return result;
-  }
-
   @Override
   public boolean balanceRSGroup(String groupName) throws IOException {
-    ServerManager serverManager = masterServices.getServerManager();
-    LoadBalancer balancer = masterServices.getLoadBalancer();
-    getRSGroupInfo(groupName);
-
-    synchronized (balancer) {
-      // If balance not true, don't run balancer.
-      if (!masterServices.isBalancerOn()) {
-        return false;
-      }
-      // Only allow one balance run at at time.
-      Map<String, RegionState> groupRIT = rsGroupGetRegionsInTransition(groupName);
-      if (groupRIT.size() > 0) {
-        LOG.debug("Not running balancer because {} region(s) in transition: {}", groupRIT.size(),
-            StringUtils.abbreviate(masterServices.getAssignmentManager().getRegionStates()
-                    .getRegionsInTransition().toString(),
-                256));
-        return false;
-      }
-      if (serverManager.areDeadServersInProgress()) {
-        LOG.debug("Not running balancer because processing dead regionserver(s): {}",
-            serverManager.getDeadServers());
-        return false;
-      }
-
-      // We balance per group instead of per table
-      Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
-          getRSGroupAssignmentsByTable(masterServices.getTableStateManager(), groupName);
-      List<RegionPlan> plans = balancer.balanceCluster(assignmentsByTable);
-      boolean balancerRan = !plans.isEmpty();
-      if (balancerRan) {
-        LOG.info("RSGroup balance {} starting with plan count: {}", groupName, plans.size());
-        masterServices.executeRegionPlansWithThrottling(plans);
-        LOG.info("RSGroup balance " + groupName + " completed");
-      }
-      return balancerRan;
-    }
+    RSGroupBasedLoadBalancer balancer = (RSGroupBasedLoadBalancer) masterServices.getLoadBalancer();
+    List<RegionPlan> sucPlans =
+      balancer.balanceRSGroup(groupName, true);
+    return sucPlans != null && !sucPlans.isEmpty();
   }
 
   private void moveTablesAndWait(Set<TableName> tables, String targetGroup) throws IOException {

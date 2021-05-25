@@ -135,7 +135,8 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
     for (Address server : ADMIN.getRSGroup(groupName).getServers()) {
       AssignmentTestingUtil.crashRs(TEST_UTIL, getServerName(server), true);
     }
-    Threads.sleep(1000);
+    TEST_UTIL.waitFor(30000, () -> !TEST_UTIL.getHBaseCluster().getMaster()
+      .getServerManager().areDeadServersInProgress());
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
   }
 }

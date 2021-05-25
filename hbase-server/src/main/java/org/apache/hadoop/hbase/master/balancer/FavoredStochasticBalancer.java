@@ -697,7 +697,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         }
       }
       LOG.debug("Found misplaced regions: " + misplacedRegions + ", not on favored nodes.");
-      List<RegionPlan> regionPlansFromBalance = super.balanceTable(tableName, correctAssignments);
+      List<RegionPlan> regionPlansFromBalance = super.balanceTable(tableName,
+        correctAssignments);
       if (regionPlansFromBalance != null) {
         regionPlans.addAll(regionPlansFromBalance);
       }

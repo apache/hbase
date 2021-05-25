@@ -452,7 +452,8 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
     List<ServerAndLoad> list = convertToList(serverMap);
 
 
-    List<RegionPlan> plans = loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+    List<RegionPlan> plans = loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME,
+      serverMap);
     assertNotNull(plans);
 
     // Apply the plan to the mock cluster.

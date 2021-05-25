@@ -110,7 +110,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   public static class MockBalancer extends BaseLoadBalancer {
-
     @Override
     protected List<RegionPlan> balanceTable(TableName tableName,
         Map<ServerName, List<RegionInfo>> loadOfOneTable) {

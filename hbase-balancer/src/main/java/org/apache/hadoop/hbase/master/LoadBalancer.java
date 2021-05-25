@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.balancer.ClusterInfoProvider;
+import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
