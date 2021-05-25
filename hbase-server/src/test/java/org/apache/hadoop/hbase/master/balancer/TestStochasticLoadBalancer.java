@@ -353,33 +353,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   }
 
   @Test
-  public void testCostFromArray() {
-    Configuration conf = HBaseConfiguration.create();
-    CostFromRegionLoadFunction costFunction = new MemStoreSizeCostFunction(conf);
-    costFunction.prepare(mockCluster(new int[] { 0, 0, 0, 0, 1 }));
-
-    double[] statOne = new double[100];
-    for (int i = 0; i < 100; i++) {
-      statOne[i] = 10;
-    }
-    assertEquals(0, costFunction.costFromArray(statOne), 0.01);
-
-    double[] statTwo = new double[101];
-    for (int i = 0; i < 100; i++) {
-      statTwo[i] = 0;
-    }
-    statTwo[100] = 100;
-    assertEquals(1, costFunction.costFromArray(statTwo), 0.01);
-
-    double[] statThree = new double[200];
-    for (int i = 0; i < 100; i++) {
-      statThree[i] = 0;
-      statThree[i + 100] = 100;
-    }
-    assertEquals(0.5, costFunction.costFromArray(statThree), 0.01);
-  }
-
-  @Test
   public void testLosingRs() throws Exception {
     int numNodes = 3;
     int numRegions = 20;
