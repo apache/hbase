@@ -147,6 +147,3 @@
 # zipkin. See https://github.com/open-telemetry/opentelemetry-java-instrumentation on how to
 # configure exporters and other components through system properties.
 # export HBASE_TRACE_OPTS="-Dotel.resource.attributes=service.name=HBase -Dotel.traces.exporter=logging otel.metrics.exporter=none"
-
-# Additional argments passed to jshell invocation
-# export HBASE_JSHELL_ARGS="--startup DEFAULT --startup PRINTING --startup hbase_startup.jsh"

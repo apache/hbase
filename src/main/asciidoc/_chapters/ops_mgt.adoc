@@ -64,7 +64,6 @@ Some commands take arguments. Pass no args or -h for usage.
   thrift          Run the HBase Thrift server
   thrift2         Run the HBase Thrift2 server
   clean           Run the HBase clean up script
-  jshell          Run a jshell with HBase on the classpath
   classpath       Dump hbase CLASSPATH
   mapredcp        Dump CLASSPATH entries required by mapreduce
   pe              Run PerformanceEvaluation

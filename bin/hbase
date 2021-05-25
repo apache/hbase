@@ -54,9 +54,6 @@
 #   HBASE_SHELL_OPTS Extra options passed to the hbase shell.
 #                    Empty by default.
 #
-#   HBASE_JSHELL_ARGS Additional arguments passed to the jshell.
-#                     Defaults to `--startup DEFAULT --startup PRINTING --startup hbase_startup.jsh`
-#
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 
@@ -90,7 +87,6 @@ show_usage() {
     echo "  thrift2          Run the HBase Thrift2 server"
     echo "  clean            Run the HBase clean up script"
   fi
-  echo "  jshell           Run a jshell with HBase on the classpath"
   echo "  classpath        Dump hbase CLASSPATH"
   echo "  mapredcp         Dump CLASSPATH entries required by mapreduce"
   echo "  pe               Run PerformanceEvaluation"
@@ -520,9 +516,6 @@ if [[ $jruby_needed ]]; then
   fi
 fi
 
-# set default values for HBASE_JSHELL_ARGS
-read -r -a JSHELL_ARGS <<< "${HBASE_JSHELL_ARGS:-"--startup DEFAULT --startup PRINTING --startup ${HBASE_HOME}/bin/hbase_startup.jsh"}"
-
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
 	#find the hbase ruby sources
@@ -542,14 +535,6 @@ if [ "$COMMAND" = "shell" ] ; then
     CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/hbase-shell/src/main/ruby/jar-bootstrap.rb"
   fi
   HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
-elif [ "$COMMAND" = 'jshell' ] ; then
-  java_version="$(read_java_version)"
-  major_version_number="$(parse_java_major_version "${java_version}")"
-  if [ "${major_version_number}" -lt 9 ] ; then
-    echo "JShell is available only with JDK9 and lated. Detected JDK version is ${java_version}".
-    exit 1
-  fi
-  CLASS='jdk.internal.jshell.tool.JShellToolProvider'
 elif [ "$COMMAND" = "hbck" ] ; then
   # Look for the -j /path/to/HBCK2.jar parameter. Else pass through to hbck.
   case "${1}" in
@@ -840,15 +825,9 @@ if [ "${DEBUG}" = "true" ]; then
   HBASE_OPTS="${HBASE_OPTS} -Xdiag"
 fi
 
-# resolve the command arguments
-read -r -a CMD_ARGS <<< "$@"
-if [ "${#JSHELL_ARGS[@]}" -gt 0 ] ; then
-  CMD_ARGS=("${JSHELL_ARGS[@]}" "${CMD_ARGS[@]}")
-fi
-
 if [ "${HBASE_NOEXEC}" != "" ]; then
-  "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "${CMD_ARGS[@]}"
+  "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
 else
   export JVM_PID="$$"
-  exec "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "${CMD_ARGS[@]}"
+  exec "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
 fi
