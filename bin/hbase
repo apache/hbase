@@ -520,9 +520,6 @@ if [[ $jruby_needed ]]; then
   fi
 fi
 
-# set default values for HBASE_JSHELL_ARGS
-read -r -a JSHELL_ARGS <<< "${HBASE_JSHELL_ARGS:-"--startup DEFAULT --startup PRINTING --startup ${HBASE_HOME}/bin/hbase_startup.jsh"}"
-
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
 	#find the hbase ruby sources
@@ -550,6 +547,8 @@ elif [ "$COMMAND" = 'jshell' ] ; then
     exit 1
   fi
   CLASS='jdk.internal.jshell.tool.JShellToolProvider'
+  # set default values for HBASE_JSHELL_ARGS
+  read -r -a JSHELL_ARGS <<< "${HBASE_JSHELL_ARGS:-"--startup DEFAULT --startup PRINTING --startup ${HBASE_HOME}/bin/hbase_startup.jsh"}"
 elif [ "$COMMAND" = "hbck" ] ; then
   # Look for the -j /path/to/HBCK2.jar parameter. Else pass through to hbck.
   case "${1}" in
