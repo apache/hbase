@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -521,8 +520,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       String regionName = HFileLink.getReferencedRegionName(path.getName());
       TableName tableName = HFileLink.getReferencedTableName(path.getName());
       if(MobUtils.getMobRegionInfo(tableName).getEncodedName().equals(regionName)) {
-        return HFileLink.buildFromHFileLinkPattern(MobUtils.getQualifiedMobRootDir(conf),
-                HFileArchiveUtil.getArchivePath(conf), path);
+        return HFileLink.buildFromHFileLinkPattern(conf, path);
       }
       return HFileLink.buildFromHFileLinkPattern(inputRoot, inputArchive, path);
     }
