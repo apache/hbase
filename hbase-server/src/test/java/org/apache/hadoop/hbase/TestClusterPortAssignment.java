@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import java.lang.Throwable;
 import java.net.BindException;
+import java.net.ServerSocket;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -54,11 +55,20 @@ public class TestClusterPortAssignment {
       int rsInfoPort =  HBaseTestingUtility.randomFreePort();
       TEST_UTIL.getConfiguration().setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, false);
       TEST_UTIL.getConfiguration().setBoolean(HConstants.REGIONSERVER_INFO_PORT_AUTO, false);
+      TEST_UTIL.getConfiguration().setBoolean("fs.hdfs.impl.disable.cache", true);
       TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_PORT, masterPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, masterInfoPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, rsPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_INFO_PORT, rsInfoPort);
       LOG.info("Ports: " + masterPort + ", " + masterInfoPort + ", " + rsPort + ", " + rsInfoPort);
+      ServerSocket sock = null;
+	  if (retryCount < 2) {
+        try {
+          LOG.info("Hijack port: " + rsInfoPort);
+          sock = new ServerSocket(rsInfoPort);
+        } catch (Exception e) {
+        }
+      }
       try {
         MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster();
         assertTrue("Cluster failed to come up", cluster.waitForActiveAndReadyMaster(30000));
@@ -83,6 +93,12 @@ public class TestClusterPortAssignment {
         }
       } finally {
         TEST_UTIL.shutdownMiniCluster();
+      }
+      if (sock != null) {
+        try {
+          sock.close();
+        } catch (Exception e) {
+        }
       }
     } while (retry && retryCount < 10);
 
