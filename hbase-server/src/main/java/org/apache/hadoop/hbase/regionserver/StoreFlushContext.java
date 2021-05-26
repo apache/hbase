@@ -37,9 +37,9 @@ public abstract class StoreFlushContext {
 
   /**
    * Initializes StoreFlushContext fields. Needs to be called after construction.
-   * @param store
-   * @param cacheFlushSeqNum
-   * @param tracker
+   * @param store The HStore instance managing files
+   * @param cacheFlushSeqNum the seqnum for the memstore cache flush
+   * @param tracker the tracker for the flush cycle
    */
   public void init(HStore store, long cacheFlushSeqNum, FlushLifeCycleTracker tracker) {
     this.store = store;
@@ -73,7 +73,7 @@ public abstract class StoreFlushContext {
    * A very short operation
    *
    * @return whether compaction is required
-   * @throws IOException
+   * @throws IOException if the commit fails
    */
   abstract boolean commit(MonitoredTask status) throws IOException;
 
@@ -83,13 +83,14 @@ public abstract class StoreFlushContext {
    * snapshot depending on dropMemstoreSnapshot argument.
    * @param fileNames names of the flushed files
    * @param dropMemstoreSnapshot whether to drop the prepared memstore snapshot
-   * @throws IOException
+   * @throws IOException if the replay flush fails
    */
-  abstract void replayFlush(List<String> fileNames, boolean dropMemstoreSnapshot) throws IOException;
+  abstract void replayFlush(List<String> fileNames, boolean dropMemstoreSnapshot)
+    throws IOException;
 
   /**
    * Abort the snapshot preparation. Drops the snapshot if any.
-   * @throws IOException
+   * @throws IOException if the abort operation fails
    */
   abstract void abort() throws IOException;
 

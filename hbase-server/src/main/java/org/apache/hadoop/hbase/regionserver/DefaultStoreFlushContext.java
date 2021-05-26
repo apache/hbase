@@ -17,20 +17,22 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.log.HBaseMarkers;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
  * Default implementation of StoreFlushContext, that assumes hfiles are flushed to temp files
@@ -134,7 +136,7 @@ public class DefaultStoreFlushContext extends StoreFlushContext {
    * snapshot depending on dropMemstoreSnapshot argument.
    * @param fileNames names of the flushed files
    * @param dropMemstoreSnapshot whether to drop the prepared memstore snapshot
-   * @throws IOException
+   * @throws IOException If the flush replay fails
    */
   @Override
   public void replayFlush(List<String> fileNames, boolean dropMemstoreSnapshot)
@@ -142,7 +144,8 @@ public class DefaultStoreFlushContext extends StoreFlushContext {
     List<HStoreFile> storeFiles = new ArrayList<>(fileNames.size());
     for (String file : fileNames) {
       // open the file as a store file (hfile link, etc)
-      StoreFileInfo storeFileInfo = store.getRegionFileSystem().getStoreFileInfo(store.getColumnFamilyName(), file);
+      StoreFileInfo storeFileInfo = store.getRegionFileSystem().
+        getStoreFileInfo(store.getColumnFamilyName(), file);
       HStoreFile storeFile = store.createStoreFileAndReader(storeFileInfo);
       storeFiles.add(storeFile);
       store.storeSize.addAndGet(storeFile.getReader().length());
@@ -167,7 +170,7 @@ public class DefaultStoreFlushContext extends StoreFlushContext {
 
   /**
    * Abort the snapshot preparation. Drops the snapshot if any.
-   * @throws IOException
+   * @throws IOException if the abort fails.
    */
   @Override
   public void abort() throws IOException {
