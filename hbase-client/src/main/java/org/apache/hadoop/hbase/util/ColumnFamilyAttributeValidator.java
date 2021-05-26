@@ -89,12 +89,12 @@ public class ColumnFamilyAttributeValidator {
    * @param value
    */
   public static void validateAttributeValue(Bytes key, Bytes value) {
-    if(ATTRIBUTE_VALIDATOR.containsKey(key)) {
+    Function<Bytes, Object> validator = ATTRIBUTE_VALIDATOR.get(key);
+    if(validator != null) {
       try {
-        ATTRIBUTE_VALIDATOR.get(key).apply(value);
+        validator.apply(value);
       } catch (Exception e) {
-        LOG.error(key.toString() + " attribute value "+ (value != null ? value.toString() : "")
-          + " is not valid.", e);
+        LOG.error("{} attribute value {} is not valid.",key, value, e);
         throw e;
       }
     }
