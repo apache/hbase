@@ -39,6 +39,8 @@ Release Notes - HBase - Version 1.7.0 07/04/2021
     * [HBASE-23631] Backport HBASE-23588 Cache index & bloom blocks on write if CacheCompactedBlocksOnWrite is enabled
 
 ** Bug
+    * [HBASE-25898] RS getting aborted due to NPE in Replication WALEntryStream
+    * [HBASE-25848] Add flexibility to backup replication in case replication filter throws an exception
     * [HBASE-25774] ServerManager.getOnlineServer may miss some region servers when refreshing state in some procedure implementations
     * [HBASE-25741] Deadlock during peer cleanup with NoNodeException
     * [HBASE-25809] [branch-1] TestAtomicOperation.testMultiRowMutationMultiThreads deadlock
@@ -122,6 +124,7 @@ Release Notes - HBase - Version 1.7.0 07/04/2021
     * [HBASE-24260] Add a ClusterManager that issues commands via coprocessor
 
 ** Improvement
+    * [HBASE-25887] Corrupt wal while region server is aborting.
     * [HBASE-25860] Add metric for successful wal roll requests
     * [HBASE-25612] HMaster should abort if ReplicationLogCleaner is not able to delete oldWALs
     * [HBASE-25846] Backport 'HBASE-25825 RSGroupBasedLoadBalancer.onConfigurationChange should chain the request to internal balancer' to branch-1
@@ -223,6 +226,7 @@ Release Notes - HBase - Version 1.7.0 07/04/2021
     * [HBASE-23943] Rubocop configuration needs updated
 
 ** Task
+    * [HBASE-25890] [branch-1] add -U for maven build to force a check for updated releases and snapshots on remote repositories
     * [HBASE-25858] [branch-1] make hbase-thrift optional in hbase-assembly module
     * [HBASE-25831] [branch-1] remove thrift examples out of hbase-examples module for bypassing the thrift version check
     * [HBASE-25845] [branch-1] Precommit fails to build docker due to python-dateutil
