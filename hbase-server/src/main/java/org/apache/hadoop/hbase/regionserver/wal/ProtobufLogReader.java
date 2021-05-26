@@ -208,6 +208,10 @@ public class ProtobufLogReader extends ReaderBase {
   private String initInternal(FSDataInputStream stream, boolean isFirst)
       throws IOException {
     close();
+    if (!isFirst) {
+      // Re-compute the file length.
+      this.fileLength = fs.getFileStatus(path).getLen();
+    }
     long expectedPos = PB_WAL_MAGIC.length;
     if (stream == null) {
       stream = fs.open(path);
