@@ -255,6 +255,12 @@
       <artifactId>kerb-simplekdc</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.lz4</groupId>
+      <artifactId>lz4-java</artifactId>
+      <scope>compile</scope>
+      <version>1.7.1</version>
+    </dependency>
   </dependencies>
 
   <profiles>

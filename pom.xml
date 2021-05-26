@@ -60,6 +60,19 @@
     </license>
   </licenses>
 
+  <repositories>
+    <repository>
+      <id>${distMgmtSnapshotsId}</id>
+      <name>${distMgmtSnapshotsName}</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </repository>
+    <repository>
+      <id>hadoop331rc1</id>
+      <name>Hadoop 3.3.1 RC1 repository</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehadoop-1314<url>
+    </repository>
+  </repositories>
+
   <modules>
     <module>hbase-build-configuration</module>
     <module>hbase-replication</module>
@@ -1742,7 +1755,7 @@
     <joni.version>2.1.31</joni.version>
     <jcodings.version>1.0.55</jcodings.version>
     <spy.version>2.12.2</spy.version>
-    <bouncycastle.version>1.60</bouncycastle.version>
+    <bouncycastle.version>1.68</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.2.0</curator.version>
