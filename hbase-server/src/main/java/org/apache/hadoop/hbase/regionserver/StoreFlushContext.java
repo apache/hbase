@@ -29,15 +29,30 @@ import org.apache.yetus.audience.InterfaceAudience;
  * A store flush context carries the state required to prepare/flush/commit the store's cache.
  */
 @InterfaceAudience.Private
-interface StoreFlushContext {
+public abstract class StoreFlushContext {
 
+  protected HStore store;
+  protected long cacheFlushSeqNum;
+  protected FlushLifeCycleTracker tracker;
+
+  /**
+   * Initializes StoreFlushContext fields. Needs to be called after construction.
+   * @param store The HStore instance managing files
+   * @param cacheFlushSeqNum the seqnum for the memstore cache flush
+   * @param tracker the tracker for the flush cycle
+   */
+  public void init(HStore store, long cacheFlushSeqNum, FlushLifeCycleTracker tracker) {
+    this.store = store;
+    this.cacheFlushSeqNum = cacheFlushSeqNum;
+    this.tracker = tracker;
+  }
   /**
    * Prepare for a store flush (create snapshot)
    * Requires pausing writes.
    * A very short operation.
    * @return The size of snapshot to flush
    */
-  MemStoreSize prepare();
+  abstract MemStoreSize prepare();
 
   /**
    * Flush the cache (create the new store file)
@@ -47,7 +62,7 @@ interface StoreFlushContext {
    *
    * @throws IOException in case the flush fails
    */
-  void flushCache(MonitoredTask status) throws IOException;
+  abstract void flushCache(MonitoredTask status) throws IOException;
 
   /**
    * Commit the flush - add the store file to the store and clear the
@@ -58,9 +73,9 @@ interface StoreFlushContext {
    * A very short operation
    *
    * @return whether compaction is required
-   * @throws IOException
+   * @throws IOException if the commit fails
    */
-  boolean commit(MonitoredTask status) throws IOException;
+  abstract boolean commit(MonitoredTask status) throws IOException;
 
   /**
    * Similar to commit, but called in secondary region replicas for replaying the
@@ -68,24 +83,25 @@ interface StoreFlushContext {
    * snapshot depending on dropMemstoreSnapshot argument.
    * @param fileNames names of the flushed files
    * @param dropMemstoreSnapshot whether to drop the prepared memstore snapshot
-   * @throws IOException
+   * @throws IOException if the replay flush fails
    */
-  void replayFlush(List<String> fileNames, boolean dropMemstoreSnapshot) throws IOException;
+  abstract void replayFlush(List<String> fileNames, boolean dropMemstoreSnapshot)
+    throws IOException;
 
   /**
    * Abort the snapshot preparation. Drops the snapshot if any.
-   * @throws IOException
+   * @throws IOException if the abort operation fails
    */
-  void abort() throws IOException;
+  abstract void abort() throws IOException;
 
   /**
    * Returns the newly committed files from the flush. Called only if commit returns true
    * @return a list of Paths for new files
    */
-  List<Path> getCommittedFiles();
+  abstract List<Path> getCommittedFiles();
 
   /**
    * @return the total file size for flush output files, in bytes
    */
-  long getOutputFileSize();
+  abstract long getOutputFileSize();
 }
