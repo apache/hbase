@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import java.lang.Throwable;
 import java.net.BindException;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
