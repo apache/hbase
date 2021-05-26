@@ -306,6 +306,15 @@ public class MetricsSource implements BaseSource {
     return lastTimestamp;
   }
 
+
+  /**
+   * Get the value of uncleanlyClosedWAL counter
+   * @return uncleanlyClosedWAL
+   */
+  public long getUncleanlyClosedWALs() {
+    return singleSourceSource.getUncleanlyClosedWALs();
+  }
+
   /**
    * Get the source initializing counts
    * @return number of replication sources getting initialized
