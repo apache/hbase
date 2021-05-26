@@ -288,8 +288,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       convertWALsToHFiles();
       incrementalCopyHFiles(new String[] {getBulkOutputDir().toString()},
               backupInfo.getBackupRootDir());
-      // Save list of WAL files copied
-      backupManager.recordWALFiles(backupInfo.getIncrBackupFileList());
     } catch (Exception e) {
       String msg = "Unexpected exception in incremental-backup: incremental copy " + backupId;
       // fail the overall backup and return

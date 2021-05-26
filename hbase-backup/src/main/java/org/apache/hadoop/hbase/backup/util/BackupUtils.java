@@ -97,12 +97,8 @@ public final class BackupUtils {
       for (Entry<String, Long> rsEntry : rsLogTimestamp.entrySet()) {
         String rs = rsEntry.getKey();
         Long ts = rsEntry.getValue();
-        if (!rsLogTimestampMapByRS.containsKey(rs)) {
-          rsLogTimestampMapByRS.put(rs, new HashMap<>());
-          rsLogTimestampMapByRS.get(rs).put(table, ts);
-        } else {
-          rsLogTimestampMapByRS.get(rs).put(table, ts);
-        }
+        rsLogTimestampMapByRS.putIfAbsent(rs, new HashMap<>());
+        rsLogTimestampMapByRS.get(rs).put(table, ts);
       }
     }
 

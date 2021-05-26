@@ -21,12 +21,15 @@ package org.apache.hadoop.hbase.backup;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -57,6 +60,9 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner;
+import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
+import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -64,6 +70,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -83,16 +90,23 @@ public class TestBackupBase {
   protected static Configuration conf1;
   protected static Configuration conf2;
 
+  protected static final int RSGROUP_RS_NUM = 5;
+  protected static final int NUM_REGIONSERVERS = 3;
+  protected static final String RSGROUP_NAME = "rsgroup1";
+  protected static final String RSGROUP_NAMESPACE = "rsgroup_ns";
+  protected static final TableName RSGROUP_TABLE =
+    TableName.valueOf(RSGROUP_NAMESPACE + ":rsgroup_table");
+
   protected static TableName table1 = TableName.valueOf("table1");
   protected static TableDescriptor table1Desc;
   protected static TableName table2 = TableName.valueOf("table2");
   protected static TableName table3 = TableName.valueOf("table3");
   protected static TableName table4 = TableName.valueOf("table4");
+  protected static TableName rsTable = TableName.valueOf("rsTable");
 
   protected static TableName table1_restore = TableName.valueOf("default:table1");
   protected static TableName table2_restore = TableName.valueOf("ns2:table2");
   protected static TableName table3_restore = TableName.valueOf("ns3:table3_restore");
-  protected static TableName table4_restore = TableName.valueOf("ns4:table4_restore");
 
   protected static final int NB_ROWS_IN_BATCH = 99;
   protected static final byte[] qualName = Bytes.toBytes("q1");
@@ -105,6 +119,7 @@ public class TestBackupBase {
 
   protected static boolean autoRestoreOnFailure;
   protected static boolean useSecondCluster;
+  protected static boolean enableRSgroup;
 
   static class IncrementalTableBackupClientForTest extends IncrementalTableBackupClient {
     public IncrementalTableBackupClientForTest() {
@@ -135,8 +150,6 @@ public class TestBackupBase {
         incrementalCopyHFiles(new String[] {getBulkOutputDir().toString()},
           backupInfo.getBackupRootDir());
         failStageIf(Stage.stage_2);
-        // Save list of WAL files copied
-        backupManager.recordWALFiles(backupInfo.getIncrBackupFileList());
 
         // case INCR_BACKUP_COMPLETE:
         // set overall backup status: complete. Here we make sure to complete the backup.
@@ -212,14 +225,6 @@ public class TestBackupBase {
           LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
         failStageIf(Stage.stage_2);
         newTimestamps = backupManager.readRegionServerLastLogRollResult();
-        if (firstBackup) {
-          // Updates registered log files
-          // We record ALL old WAL files as registered, because
-          // this is a first full backup in the system and these
-          // files are not needed for next incremental backup
-          List<String> logFiles = BackupUtils.getWALFilesOlderThan(conf, newTimestamps);
-          backupManager.recordWALFiles(logFiles);
-        }
 
         // SNAPSHOT_TABLES:
         backupInfo.setPhase(BackupPhase.SNAPSHOT);
@@ -269,6 +274,22 @@ public class TestBackupBase {
     }
   }
 
+  private static RSGroupInfo addGroup(String groupName, int serverCount) throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    RSGroupInfo defaultInfo = admin.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
+    admin.addRSGroup(groupName);
+    Set<Address> set = new HashSet<>();
+    for (Address server : defaultInfo.getServers()) {
+      if (set.size() == serverCount) {
+        break;
+      }
+      set.add(server);
+    }
+    admin.moveServersToRSGroup(set, groupName);
+    RSGroupInfo result = admin.getRSGroup(groupName);
+    return result;
+  }
+
   public static void setUpHelper() throws Exception {
     BACKUP_ROOT_DIR = Path.SEPARATOR +"backupUT";
     BACKUP_REMOTE_ROOT_DIR = Path.SEPARATOR + "backupUT";
@@ -291,7 +312,13 @@ public class TestBackupBase {
 
     // Set MultiWAL (with 2 default WAL files per RS)
     conf1.set(WALFactory.WAL_PROVIDER, provider);
-    TEST_UTIL.startMiniCluster();
+    if (enableRSgroup) {
+      conf1.setBoolean(RSGroupUtil.RS_GROUP_ENABLED, true);
+      TEST_UTIL.startMiniCluster(RSGROUP_RS_NUM + NUM_REGIONSERVERS);
+      addGroup(RSGROUP_NAME, RSGROUP_RS_NUM);
+    } else {
+      TEST_UTIL.startMiniCluster();
+    }
 
     if (useSecondCluster) {
       conf2 = HBaseConfiguration.create(conf1);
@@ -331,6 +358,7 @@ public class TestBackupBase {
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     conf1 = TEST_UTIL.getConfiguration();
+    enableRSgroup = false;
     autoRestoreOnFailure = true;
     useSecondCluster = false;
     setUpHelper();
@@ -362,6 +390,7 @@ public class TestBackupBase {
     TEST_UTIL.shutdownMiniMapReduceCluster();
     autoRestoreOnFailure = true;
     useSecondCluster = false;
+    enableRSgroup = false;
   }
 
   Table insertIntoTable(Connection conn, TableName table, byte[] family, int id, int numRows)
@@ -430,15 +459,10 @@ public class TestBackupBase {
     Admin ha = TEST_UTIL.getAdmin();
 
     // Create namespaces
-    NamespaceDescriptor desc1 = NamespaceDescriptor.create("ns1").build();
-    NamespaceDescriptor desc2 = NamespaceDescriptor.create("ns2").build();
-    NamespaceDescriptor desc3 = NamespaceDescriptor.create("ns3").build();
-    NamespaceDescriptor desc4 = NamespaceDescriptor.create("ns4").build();
-
-    ha.createNamespace(desc1);
-    ha.createNamespace(desc2);
-    ha.createNamespace(desc3);
-    ha.createNamespace(desc4);
+    ha.createNamespace(NamespaceDescriptor.create("ns1").build());
+    ha.createNamespace(NamespaceDescriptor.create("ns2").build());
+    ha.createNamespace(NamespaceDescriptor.create("ns3").build());
+    ha.createNamespace(NamespaceDescriptor.create("ns4").build());
 
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(table1)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build();
@@ -463,6 +487,17 @@ public class TestBackupBase {
     table.close();
     ha.close();
     conn.close();
+
+    if (enableRSgroup) {
+      ha.createNamespace(NamespaceDescriptor.create(RSGROUP_NAMESPACE)
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, RSGROUP_NAME).build());
+
+      ha.createTable(TableDescriptorBuilder.newBuilder(RSGROUP_TABLE)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build());
+      table = ConnectionFactory.createConnection(conf1).getTable(table1);
+      loadTable(table);
+      table.close();
+    }
   }
 
   protected boolean checkSucceeded(String backupId) throws IOException {
@@ -505,6 +540,21 @@ public class TestBackupBase {
       ret.add(TableName.valueOf(args[i]));
     }
     return ret;
+  }
+
+  protected List<FileStatus> getListOfWALFiles(Configuration c) throws IOException {
+    Path logRoot = new Path(CommonFSUtils.getWALRootDir(c), HConstants.HREGION_LOGDIR_NAME);
+    FileSystem fs = logRoot.getFileSystem(c);
+    RemoteIterator<LocatedFileStatus> it = fs.listFiles(logRoot, true);
+    List<FileStatus> logFiles = new ArrayList<FileStatus>();
+    while (it.hasNext()) {
+      LocatedFileStatus lfs = it.next();
+      if (lfs.isFile() && !AbstractFSWALProvider.isMetaFile(lfs.getPath())) {
+        logFiles.add(lfs);
+        LOG.info(Objects.toString(lfs));
+      }
+    }
+    return logFiles;
   }
 
   protected void dumpBackupDir() throws IOException {

@@ -21,26 +21,35 @@ package org.apache.hadoop.hbase.backup.master;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
-import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
+import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
+import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 /**
@@ -53,6 +62,9 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
 
   private boolean stopped = false;
   private Connection conn;
+  private MasterServices master;
+  private RSGroupInfoManager rsGroupInfoManager;
+  private ServerManager serverManager;
 
   public BackupLogCleaner() {
   }
@@ -66,6 +78,9 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       if (getConf() == null) {
         super.setConf(conn.getConfiguration());
       }
+      this.master = master;
+      rsGroupInfoManager = this.master.getRSGroupInfoManager();
+      serverManager = this.master.getServerManager();
     }
     if (conn == null) {
       try {
@@ -76,46 +91,91 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
+  private Map<TableName, Long> getTableToLatestBackupMapping(List<BackupInfo> backups) {
+    Map<TableName, Long> tableToLastBackupMap = new HashMap<>();
+    for (BackupInfo backup : backups) {
+      for (TableName table : backup.getTables()) {
+        tableToLastBackupMap.putIfAbsent(table, backup.getStartTs());
+        if (tableToLastBackupMap.get(table) < backup.getStartTs()) {
+          tableToLastBackupMap.put(table, backup.getStartTs());
+        }
+      }
+    }
+    return tableToLastBackupMap;
+  }
+
+  private Map<Address, Long> getServersToOldestBackupMapping(
+    Map<TableName, Long> tableToLastBackupMap) throws IOException {
+    Map<Address, Long> addressToLastBackupMap = new HashMap<>();
+    for (Map.Entry<TableName, Long> entry : tableToLastBackupMap.entrySet()) {
+      TableName tableName = entry.getKey();
+      Long lastTableBackupTimestamp = entry.getValue();
+      Optional<RSGroupInfo> rsGroupInfoOptional =
+        RSGroupUtil.getRSGroupInfo(master, rsGroupInfoManager, tableName);
+      Set<Address> servers;
+      if (rsGroupInfoOptional.isPresent()) {
+        servers = rsGroupInfoOptional.get().getServers();
+        LOG.debug("RSgroup servers picked for table {} are {}", servers.size(), tableName);
+      } else {
+        servers =
+          serverManager.getOnlineServersList().stream().map(serverName -> serverName.getAddress())
+            .collect(Collectors.toSet());
+        LOG.debug("All servers picked for table {} are {}", servers.size(), tableName);
+      }
+      for (Address address : servers) {
+        addressToLastBackupMap.putIfAbsent(address, lastTableBackupTimestamp);
+        if (addressToLastBackupMap.get(address) > lastTableBackupTimestamp) {
+          addressToLastBackupMap.put(address, lastTableBackupTimestamp);
+          LOG.debug("Server {} backup for table {} with ts {}", address, tableName,
+            lastTableBackupTimestamp);
+        }
+      }
+    }
+
+    return addressToLastBackupMap;
+  }
+
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
+    List<FileStatus> filteredFiles = new ArrayList<>();
+
     // all members of this class are null if backup is disabled,
     // so we cannot filter the files
     if (this.getConf() == null || !BackupManager.isBackupEnabled(getConf())) {
       LOG.debug("Backup is not enabled. Check your {} setting",
-          BackupRestoreConstants.BACKUP_ENABLE_KEY);
+        BackupRestoreConstants.BACKUP_ENABLE_KEY);
       return files;
     }
 
-    try (final BackupSystemTable table = new BackupSystemTable(conn)) {
-      // If we do not have recorded backup sessions
-      try {
-        if (!table.hasBackupSessions()) {
-          LOG.trace("BackupLogCleaner has no backup sessions");
-          return files;
-        }
-      } catch (TableNotFoundException tnfe) {
-        LOG.warn("Backup system table is not available: {}", tnfe.getMessage());
-        return files;
+    Map<Address, Long> addressToLastBackupMap;
+    Map<TableName, Long> tableToLastBackupMap;
+    try {
+      try (BackupManager backupManager = new BackupManager(conn, getConf())) {
+        tableToLastBackupMap = getTableToLatestBackupMapping(backupManager.getBackupHistory(true));
+        addressToLastBackupMap = getServersToOldestBackupMapping(tableToLastBackupMap);
       }
-      List<FileStatus> list = new ArrayList<>();
-      Map<FileStatus, Boolean> walFilesDeletableMap = table.areWALFilesDeletable(files);
-      for (Map.Entry<FileStatus, Boolean> entry: walFilesDeletableMap.entrySet()) {
-        FileStatus file = entry.getKey();
-        String wal = file.getPath().toString();
-        boolean deletable = entry.getValue();
-        if (deletable) {
-          LOG.debug("Found log file in backup system table, deleting: {}", wal);
-          list.add(file);
-        } else {
-          LOG.debug("Did not find this log in backup system table, keeping: {}", wal);
-        }
-      }
-      return list;
-    } catch (IOException e) {
-      LOG.error("Failed to get backup system table table, therefore will keep all files", e);
-      // nothing to delete
+    } catch (IOException ex) {
+      LOG.error("Failed to analyse backup history with exception: {}. Retaining all logs",
+        ex.getMessage(), ex);
       return Collections.emptyList();
     }
+    for (FileStatus file : files) {
+      String fn = file.getPath().getName();
+      if (fn.startsWith(WALProcedureStore.LOG_PREFIX)) {
+        filteredFiles.add(file);
+        continue;
+      }
+
+      ServerName walServer =
+        AbstractFSWALProvider.getServerNameFromWALDirectoryName(file.getPath());
+      long walTimestamp = AbstractFSWALProvider.getTimestamp(file.getPath().toString());
+
+      if (!addressToLastBackupMap.containsKey(walServer.getAddress())
+        || addressToLastBackupMap.get(walServer.getAddress()) > walTimestamp) {
+        filteredFiles.add(file);
+      }
+    }
+    return filteredFiles;
   }
 
   @Override

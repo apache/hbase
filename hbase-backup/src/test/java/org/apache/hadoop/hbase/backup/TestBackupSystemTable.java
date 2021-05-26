@@ -18,11 +18,9 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,12 +29,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -323,43 +318,6 @@ public class TestBackupSystemTable {
 
     cleanBackupTable();
 
-  }
-
-  @Test
-  public void testAddWALFiles() throws IOException {
-    List<String> files =
-        Arrays.asList("hdfs://server/WALs/srv1,101,15555/srv1,101,15555.default.1",
-          "hdfs://server/WALs/srv2,102,16666/srv2,102,16666.default.2",
-          "hdfs://server/WALs/srv3,103,17777/srv3,103,17777.default.3");
-    String newFile = "hdfs://server/WALs/srv1,101,15555/srv1,101,15555.default.5";
-
-    table.addWALFiles(files, "backup", "root");
-
-    assertTrue(table.isWALFileDeletable(files.get(0)));
-    assertTrue(table.isWALFileDeletable(files.get(1)));
-    assertTrue(table.isWALFileDeletable(files.get(2)));
-    assertFalse(table.isWALFileDeletable(newFile));
-
-    // test for isWALFilesDeletable
-    List<FileStatus> fileStatues = new ArrayList<>();
-    for (String file : files) {
-      FileStatus fileStatus = new FileStatus();
-      fileStatus.setPath(new Path(file));
-      fileStatues.add(fileStatus);
-    }
-
-    FileStatus newFileStatus = new FileStatus();
-    newFileStatus.setPath(new Path(newFile));
-    fileStatues.add(newFileStatus);
-
-    Map<FileStatus, Boolean> walFilesDeletableMap = table.areWALFilesDeletable(fileStatues);
-
-    assertTrue(walFilesDeletableMap.get(fileStatues.get(0)));
-    assertTrue(walFilesDeletableMap.get(fileStatues.get(1)));
-    assertTrue(walFilesDeletableMap.get(fileStatues.get(2)));
-    assertFalse(walFilesDeletableMap.get(newFileStatus));
-
-    cleanBackupTable();
   }
 
   /**
