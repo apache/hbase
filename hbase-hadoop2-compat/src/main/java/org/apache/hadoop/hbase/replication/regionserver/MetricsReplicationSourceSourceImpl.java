@@ -246,6 +246,11 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   }
 
   @Override
+  public long getUncleanlyClosedWALs() {
+    return uncleanlyClosedWAL.value();
+  }
+
+  @Override
   public void incrBytesSkippedInUncleanlyClosedWALs(final long bytes) {
     uncleanlyClosedSkippedBytes.incr(bytes);
   }
