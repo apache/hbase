@@ -21,11 +21,8 @@ package org.apache.hadoop.hbase.backup.impl;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.backup.impl.BackupSystemTable.WALItem;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
@@ -64,16 +60,16 @@ public class IncrementalBackupManager extends BackupManager {
    * @return The new HashMap of RS log time stamps after the log roll for this incremental backup.
    * @throws IOException exception
    */
-  public HashMap<String, Long> getIncrBackupLogFileMap() throws IOException {
+  public Map<String, Long> getIncrBackupLogFileMap() throws IOException {
     List<String> logList;
-    HashMap<String, Long> newTimestamps;
-    HashMap<String, Long> previousTimestampMins;
+    Map<String, Long> newTimestamps;
+    Map<String, Long> previousTimestampMins;
 
     String savedStartCode = readBackupStartCode();
 
     // key: tableName
     // value: <RegionServer,PreviousTimeStamp>
-    HashMap<TableName, HashMap<String, Long>> previousTimestampMap = readLogTimestampMap();
+    Map<TableName, Map<String, Long>> previousTimestampMap = readLogTimestampMap();
 
     previousTimestampMins = BackupUtils.getRSLogTimestampMins(previousTimestampMap);
 
@@ -99,133 +95,25 @@ public class IncrementalBackupManager extends BackupManager {
     newTimestamps = readRegionServerLastLogRollResult();
 
     logList = getLogFilesForNewBackup(previousTimestampMins, newTimestamps, conf, savedStartCode);
-    List<WALItem> logFromSystemTable =
-        getLogFilesFromBackupSystem(previousTimestampMins, newTimestamps, getBackupInfo()
-            .getBackupRootDir());
-    logList = excludeAlreadyBackedUpAndProcV2WALs(logList, logFromSystemTable);
+    logList = excludeProcV2WALs(logList);
     backupInfo.setIncrBackupFileList(logList);
 
     return newTimestamps;
   }
 
-  /**
-   * Get list of WAL files eligible for incremental backup.
-   *
-   * @return list of WAL files
-   * @throws IOException if getting the list of WAL files fails
-   */
-  public List<String> getIncrBackupLogFileList() throws IOException {
-    List<String> logList;
-    HashMap<String, Long> newTimestamps;
-    HashMap<String, Long> previousTimestampMins;
-
-    String savedStartCode = readBackupStartCode();
-
-    // key: tableName
-    // value: <RegionServer,PreviousTimeStamp>
-    HashMap<TableName, HashMap<String, Long>> previousTimestampMap = readLogTimestampMap();
-
-    previousTimestampMins = BackupUtils.getRSLogTimestampMins(previousTimestampMap);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("StartCode " + savedStartCode + "for backupID " + backupInfo.getBackupId());
-    }
-    // get all new log files from .logs and .oldlogs after last TS and before new timestamp
-    if (savedStartCode == null || previousTimestampMins == null
-        || previousTimestampMins.isEmpty()) {
-      throw new IOException(
-          "Cannot read any previous back up timestamps from backup system table. "
-              + "In order to create an incremental backup, at least one full backup is needed.");
-    }
-
-    newTimestamps = readRegionServerLastLogRollResult();
-
-    logList = getLogFilesForNewBackup(previousTimestampMins, newTimestamps, conf, savedStartCode);
-    List<WALItem> logFromSystemTable =
-        getLogFilesFromBackupSystem(previousTimestampMins, newTimestamps, getBackupInfo()
-            .getBackupRootDir());
-
-    logList = excludeAlreadyBackedUpAndProcV2WALs(logList, logFromSystemTable);
-    backupInfo.setIncrBackupFileList(logList);
-
-    return logList;
-  }
-
-  private List<String> excludeAlreadyBackedUpAndProcV2WALs(List<String> logList,
-      List<WALItem> logFromSystemTable) {
-    Set<String> walFileNameSet = convertToSet(logFromSystemTable);
-
+  private List<String> excludeProcV2WALs(List<String> logList) {
     List<String> list = new ArrayList<>();
     for (int i=0; i < logList.size(); i++) {
       Path p = new Path(logList.get(i));
       String name  = p.getName();
 
-      if (walFileNameSet.contains(name) || name.startsWith(WALProcedureStore.LOG_PREFIX)) {
+      if (name.startsWith(WALProcedureStore.LOG_PREFIX)) {
         continue;
       }
 
       list.add(logList.get(i));
     }
     return list;
-  }
-
-  /**
-   * Create Set of WAL file names (not full path names)
-   * @param logFromSystemTable the logs from the system table to convert
-   * @return set of WAL file names
-   */
-  private Set<String> convertToSet(List<WALItem> logFromSystemTable) {
-    Set<String> set = new HashSet<>();
-    for (int i=0; i < logFromSystemTable.size(); i++) {
-      WALItem item = logFromSystemTable.get(i);
-      set.add((new Path(item.walFile)).getName());
-    }
-    return set;
-  }
-
-  /**
-   * For each region server: get all log files newer than the last timestamps, but not newer than
-   * the newest timestamps.
-   * @param olderTimestamps timestamp map for each region server of the last backup.
-   * @param newestTimestamps timestamp map for each region server that the backup should lead to.
-   * @return list of log files which needs to be added to this backup
-   * @throws IOException if getting the WAL files from the backup system fails
-   */
-  private List<WALItem> getLogFilesFromBackupSystem(HashMap<String, Long> olderTimestamps,
-      HashMap<String, Long> newestTimestamps, String backupRoot) throws IOException {
-    List<WALItem> logFiles = new ArrayList<>();
-    Iterator<WALItem> it = getWALFilesFromBackupSystem();
-    while (it.hasNext()) {
-      WALItem item = it.next();
-      String rootDir = item.getBackupRoot();
-      if (!rootDir.equals(backupRoot)) {
-        continue;
-      }
-      String walFileName = item.getWalFile();
-      String server = BackupUtils.parseHostNameFromLogFile(new Path(walFileName));
-      if (server == null) {
-        continue;
-      }
-      Long tss = getTimestamp(walFileName);
-      Long oldTss = olderTimestamps.get(server);
-      Long newTss = newestTimestamps.get(server);
-      if (oldTss == null) {
-        logFiles.add(item);
-        continue;
-      }
-      if (newTss == null) {
-        newTss = Long.MAX_VALUE;
-      }
-      if (tss > oldTss && tss < newTss) {
-        logFiles.add(item);
-      }
-    }
-    return logFiles;
-  }
-
-  private Long getTimestamp(String walFileName) {
-    int index = walFileName.lastIndexOf(BackupUtils.LOGNAME_SEPARATOR);
-    return Long.parseLong(walFileName.substring(index + 1));
   }
 
   /**
@@ -238,8 +126,8 @@ public class IncrementalBackupManager extends BackupManager {
    * @return a list of log files to be backed up
    * @throws IOException exception
    */
-  private List<String> getLogFilesForNewBackup(HashMap<String, Long> olderTimestamps,
-      HashMap<String, Long> newestTimestamps, Configuration conf, String savedStartCode)
+  private List<String> getLogFilesForNewBackup(Map<String, Long> olderTimestamps,
+      Map<String, Long> newestTimestamps, Configuration conf, String savedStartCode)
       throws IOException {
     LOG.debug("In getLogFilesForNewBackup()\n" + "olderTimestamps: " + olderTimestamps
         + "\n newestTimestamps: " + newestTimestamps);
