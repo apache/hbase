@@ -2847,12 +2847,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         "flushsize=" + totalSizeOfFlushableStores;
     status.setStatus(s);
 
-    try {
-      doSyncOfUnflushedWALChanges(wal, getRegionInfo());
-    } catch (Throwable t) {
-      status.abort("Sync unflushed WAL changes failed: " + StringUtils.stringifyException(t));
-      fatalForFlushCache(t);
-    }
+    doSyncOfUnflushedWALChanges(status, wal, getRegionInfo());
     return new PrepareFlushResult(storeFlushCtxs, committedFiles, storeFlushableSize, startTime,
         flushOpSeqId, flushedSeqId, totalSizeOfFlushableStores);
   }
@@ -2909,17 +2904,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Sync unflushed WAL changes. See HBASE-8208 for details
    */
-  private static void doSyncOfUnflushedWALChanges(final WAL wal, final RegionInfo hri)
-  throws IOException {
+  private void doSyncOfUnflushedWALChanges(MonitoredTask status, final WAL wal,
+    final RegionInfo hri) throws IOException {
     if (wal == null) {
       return;
     }
-    try {
-      wal.sync(); // ensure that flush marker is sync'ed
-    } catch (IOException ioe) {
-      wal.abortCacheFlush(hri.getEncodedNameAsBytes());
-      throw ioe;
-    }
+    int retry = 0;
+    int maxRetry = 3;
+    IOException lastIOE = null;
+    do {
+      try {
+        wal.sync(); // ensure that flush marker is sync'ed
+        return;
+      } catch (IOException ioe) {
+        retry++;
+        LOG.warn("Sync region " + hri + " unflushed WAL changes failed, retry time " + retry, ioe);
+        lastIOE = ioe;
+      }
+    } while (retry < maxRetry);
+    status.abort("Sync region " + hri + " unflushed WAL changes failed: " + StringUtils
+      .stringifyException(lastIOE));
+    fatalForFlushCache(lastIOE);
   }
 
   /**
