@@ -70,6 +70,7 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   void decrSizeOfHFileRefsQueue(long size);
   void incrUnknownFileLengthForClosedWAL();
   void incrUncleanlyClosedWALs();
+  long getUncleanlyClosedWALs();
   void incrBytesSkippedInUncleanlyClosedWALs(final long bytes);
   void incrRestartedWALReading();
   void incrRepeatedFileBytes(final long bytes);
