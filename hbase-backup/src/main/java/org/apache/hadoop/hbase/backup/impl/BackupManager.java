@@ -22,7 +22,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -481,7 +480,7 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   public void writeRegionServerLogTimestamp(Set<TableName> tables,
-      HashMap<String, Long> newTimestamps) throws IOException {
+      Map<String, Long> newTimestamps) throws IOException {
     systemTable.writeRegionServerLogTimestamp(tables, newTimestamps, backupInfo.getBackupRootDir());
   }
 
@@ -492,7 +491,7 @@ public class BackupManager implements Closeable {
    *         RegionServer,PreviousTimeStamp
    * @throws IOException exception
    */
-  public HashMap<TableName, HashMap<String, Long>> readLogTimestampMap() throws IOException {
+  public Map<TableName, Map<String, Long>> readLogTimestampMap() throws IOException {
     return systemTable.readLogTimestampMap(backupInfo.getBackupRootDir());
   }
 
@@ -512,24 +511,6 @@ public class BackupManager implements Closeable {
    */
   public void addIncrementalBackupTableSet(Set<TableName> tables) throws IOException {
     systemTable.addIncrementalBackupTableSet(tables, backupInfo.getBackupRootDir());
-  }
-
-  /**
-   * Saves list of WAL files after incremental backup operation. These files will be stored until
-   * TTL expiration and are used by Backup Log Cleaner plug-in to determine which WAL files can be
-   * safely purged.
-   */
-  public void recordWALFiles(List<String> files) throws IOException {
-    systemTable.addWALFiles(files, backupInfo.getBackupId(), backupInfo.getBackupRootDir());
-  }
-
-  /**
-   * Get WAL files iterator.
-   * @return WAL files iterator from backup system table
-   * @throws IOException if getting the WAL files iterator fails
-   */
-  public Iterator<BackupSystemTable.WALItem> getWALFilesFromBackupSystem() throws IOException {
-    return systemTable.getWALFilesIterator(backupInfo.getBackupRootDir());
   }
 
   public Connection getConnection() {
