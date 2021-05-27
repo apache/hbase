@@ -31,12 +31,13 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.BalancerRejection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 
 public class DummyClusterInfoProvider implements ClusterInfoProvider {
 
-  private final Configuration conf;
+  private volatile Configuration conf;
 
   public DummyClusterInfoProvider(Configuration conf) {
     this.conf = conf;
@@ -45,6 +46,11 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
   @Override
   public Configuration getConfiguration() {
     return conf;
+  }
+
+  @Override
+  public Connection getConnection() {
+    return null;
   }
 
   @Override
@@ -99,5 +105,6 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
 
   @Override
   public void onConfigurationChange(Configuration conf) {
+    this.conf = conf;
   }
 }

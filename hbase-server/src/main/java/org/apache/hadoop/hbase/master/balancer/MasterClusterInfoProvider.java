@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.BalancerRejection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -86,6 +87,11 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
   @Override
   public Configuration getConfiguration() {
     return services.getConfiguration();
+  }
+
+  @Override
+  public Connection getConnection() {
+    return services.getConnection();
   }
 
   @Override
@@ -169,5 +175,4 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
   NamedQueueRecorder getNamedQueueRecorder() {
     return namedQueueRecorder;
   }
-
 }

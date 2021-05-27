@@ -118,8 +118,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     Set<RegionInfo> regionSet = new HashSet<>(regions);
     Map<ServerName, List<RegionInfo>> assignmentMap = new HashMap<>();
     try {
-      FavoredNodeAssignmentHelper helper =
-          new FavoredNodeAssignmentHelper(servers, fnm.getRackManager());
+      FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, rackManager);
       helper.initialize();
 
       Set<RegionInfo> systemRegions = FavoredNodesManager.filterNonFNApplicableRegions(regionSet);
