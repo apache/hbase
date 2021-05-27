@@ -76,7 +76,7 @@ public class TestClusterPortAssignment {
           LOG.info("Failed bind, need to retry", e);
           retry = true;
         } else {
-          LOG.info("Failed to start mini cluster" + e);
+          LOG.info("Failed to start mini cluster", e);
           retry = false;
           fail("Failed to start mini cluster with assigned ports.");
         }
