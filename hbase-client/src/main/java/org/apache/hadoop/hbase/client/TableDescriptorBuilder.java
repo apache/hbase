@@ -893,8 +893,8 @@ public class TableDescriptorBuilder {
     public long getNormalizerTargetRegionSize() {
       long target_region_size =
         getOrDefault(NORMALIZER_TARGET_REGION_SIZE_MB_KEY, Long::valueOf, Long.valueOf(-1));
-      return target_region_size == Long.valueOf(-1) ?
-        getOrDefault(NORMALIZER_TARGET_REGION_SIZE_KEY, Long::valueOf, Long.valueOf(-1)) : target_region_size;
+      return target_region_size == Long.valueOf(-1) ? getOrDefault(NORMALIZER_TARGET_REGION_SIZE_KEY,
+        Long::valueOf, Long.valueOf(-1)) : target_region_size;
     }
 
     /**
