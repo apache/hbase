@@ -74,7 +74,7 @@ class NettyRpcServerRequestDecoder extends ChannelInboundHandlerAdapter {
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable e) {
     allChannels.remove(ctx.channel());
     NettyRpcServer.LOG.trace("Connection {}; caught unexpected downstream exception.",
-        ctx.channel().remoteAddress(), e.getCause());
+        ctx.channel().remoteAddress(), e);
     ctx.channel().close();
   }
 }
