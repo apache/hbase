@@ -22,6 +22,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +33,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -39,8 +40,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.RackManager;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.junit.BeforeClass;
@@ -54,7 +55,7 @@ import org.mockito.Mockito;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestFavoredNodeAssignmentHelper {
 
   @ClassRule
@@ -71,35 +72,36 @@ public class TestFavoredNodeAssignmentHelper {
   @Rule
   public TestName name = new TestName();
 
+  private static String getRack(int index) {
+    if (index < 10) {
+      return "rack1";
+    } else if (index < 20) {
+      return "rack2";
+    } else if (index < 30) {
+      return "rack3";
+    } else {
+      return RackManager.UNKNOWN_RACK;
+    }
+  }
+
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     // Set up some server -> rack mappings
     // Have three racks in the cluster with 10 hosts each.
+    when(rackManager.getRack(any(ServerName.class))).then(invocation -> {
+      ServerName sn = invocation.getArgument(0, ServerName.class);
+      try {
+        int i = Integer.parseInt(sn.getHostname().substring("foo".length()));
+        return getRack(i);
+      } catch (NumberFormatException e) {
+        return RackManager.UNKNOWN_RACK;
+      }
+    });
     for (int i = 0; i < 40; i++) {
-      ServerName server = ServerName.valueOf("foo" + i + ":1234", -1);
-      if (i < 10) {
-        Mockito.when(rackManager.getRack(server)).thenReturn("rack1");
-        if (rackToServers.get("rack1") == null) {
-          List<ServerName> servers = new ArrayList<>();
-          rackToServers.put("rack1", servers);
-        }
-        rackToServers.get("rack1").add(server);
-      }
-      if (i >= 10 && i < 20) {
-        Mockito.when(rackManager.getRack(server)).thenReturn("rack2");
-        if (rackToServers.get("rack2") == null) {
-          List<ServerName> servers = new ArrayList<>();
-          rackToServers.put("rack2", servers);
-        }
-        rackToServers.get("rack2").add(server);
-      }
-      if (i >= 20 && i < 30) {
-        Mockito.when(rackManager.getRack(server)).thenReturn("rack3");
-        if (rackToServers.get("rack3") == null) {
-          List<ServerName> servers = new ArrayList<>();
-          rackToServers.put("rack3", servers);
-        }
-        rackToServers.get("rack3").add(server);
+      ServerName server = ServerName.valueOf("foo" + i, 1234, System.currentTimeMillis());
+      String rack = getRack(i);
+      if (!rack.equals(RackManager.UNKNOWN_RACK)) {
+        rackToServers.computeIfAbsent(rack, k -> new ArrayList<>()).add(server);
       }
       servers.add(server);
     }
@@ -107,7 +109,7 @@ public class TestFavoredNodeAssignmentHelper {
 
   // The tests decide which racks to work with, and how many machines to
   // work with from any given rack
-  // Return a rondom 'count' number of servers from 'rack'
+  // Return a random 'count' number of servers from 'rack'
   private static List<ServerName> getServersFromRack(Map<String, Integer> rackToServerCount) {
     List<ServerName> chosenServers = new ArrayList<>();
     for (Map.Entry<String, Integer> entry : rackToServerCount.entrySet()) {
@@ -123,11 +125,10 @@ public class TestFavoredNodeAssignmentHelper {
   public void testSmallCluster() {
     // Test the case where we cannot assign favored nodes (because the number
     // of nodes in the cluster is too less)
-    Map<String,Integer> rackToServerCount = new HashMap<>();
+    Map<String, Integer> rackToServerCount = new HashMap<>();
     rackToServerCount.put("rack1", 2);
     List<ServerName> servers = getServersFromRack(rackToServerCount);
-    FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers,
-        new Configuration());
+    FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, rackManager);
     helper.initialize();
     assertFalse(helper.canPlaceFavoredNodes());
   }
