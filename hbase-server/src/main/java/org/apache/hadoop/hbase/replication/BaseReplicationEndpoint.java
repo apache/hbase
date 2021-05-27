@@ -45,7 +45,6 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   @Override
   public void init(Context context) throws IOException {
     this.ctx = context;
-
     if (this.ctx != null){
       ReplicationPeer peer = this.ctx.getReplicationPeer();
       if (peer != null){
@@ -69,13 +68,14 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   @Override
   public WALEntryFilter getWALEntryfilter() {
     ArrayList<WALEntryFilter> filters = Lists.newArrayList();
-    WALEntryFilter scopeFilter = getScopeWALEntryFilter();
-    if (scopeFilter != null) {
-      filters.add(scopeFilter);
-    }
     WALEntryFilter tableCfFilter = getNamespaceTableCfWALEntryFilter();
     if (tableCfFilter != null) {
       filters.add(tableCfFilter);
+    } else {
+      WALEntryFilter scopeFilter = getScopeWALEntryFilter();
+      if (scopeFilter != null) {
+        filters.add(scopeFilter);
+      }
     }
     if (ctx != null && ctx.getPeerConfig() != null) {
       String filterNameCSV = ctx.getPeerConfig().getConfiguration().get(REPLICATION_WALENTRYFILTER_CONFIG_KEY);
@@ -103,6 +103,10 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   /** Returns a WALEntryFilter for checking replication per table and CF. Subclasses can
    * return null if they don't want this filter */
   protected WALEntryFilter getNamespaceTableCfWALEntryFilter() {
+    //If neither namespaces nor Table CFs map are set, there's no reason to create this filter
+    if(ctx.getPeerConfig().getNamespaces()==null && ctx.getPeerConfig().getTableCFsMap()==null){
+      return null;
+    }
     return new NamespaceTableCfWALEntryFilter(ctx.getReplicationPeer());
   }
 

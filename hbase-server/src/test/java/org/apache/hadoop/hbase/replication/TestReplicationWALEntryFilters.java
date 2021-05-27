@@ -34,8 +34,11 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,6 +51,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.mockito.Mockito;
 
 @Category({ ReplicationTests.class, SmallTests.class })
 public class TestReplicationWALEntryFilters {
@@ -475,6 +479,19 @@ public class TestReplicationWALEntryFilters {
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
+
+    // Adds namespace default and table default:bar, then test for a Meta Entry
+    namespaces = new HashSet<String>();
+    tableCfs = new HashMap<TableName, List<String>>();
+    namespaces.add("default");
+    tableCfs.put(TableName.valueOf("default:bar"), new ArrayList<String>());
+    peerConfigBuilder.setReplicateAllUserTables(false).setNamespaces(namespaces);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
+    Entry metaEntry = createMetaEntry(TableName.valueOf("bar"));
+
+    filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
+    Assert.assertEquals(0, filter.filter(metaEntry).getEdit().getCells().size());
+
   }
 
   private Entry createEntry(TreeMap<byte[], Integer> scopes, byte[]... kvs) {
@@ -485,6 +502,17 @@ public class TestReplicationWALEntryFilters {
     for (byte[] kv : kvs) {
       edit1.add(new KeyValue(kv, kv, kv));
     }
+    return new Entry(key1, edit1);
+  }
+
+
+  private Entry createMetaEntry(TableName tableName) {
+    WALKeyImpl key1 = new WALKeyImpl(Bytes.toBytes("test-region"), tableName, System.currentTimeMillis());
+    WALProtos.RegionEventDescriptor event = ProtobufUtil.toRegionEventDescriptor(
+      WALProtos.RegionEventDescriptor.EventType.REGION_OPEN,
+      RegionInfoBuilder.FIRST_META_REGIONINFO, 0,
+      ServerName.valueOf("test-server,16002,1"), new HashMap<>());
+    WALEdit edit1 = WALEdit.createRegionEventWALEdit(Bytes.toBytes("test-region"), event);
     return new Entry(key1, edit1);
   }
 
