@@ -78,6 +78,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -97,6 +98,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -844,15 +846,27 @@ public class ThriftServer  extends Configured implements Tool {
   public int run(String[] strings) throws Exception {
     processOptions(strings);
     setupParamters();
-    startInfoServer();
-    if (httpEnabled) {
-      setupHTTPServer();
-      httpServer.start();
-      httpServer.join();
-    } else {
-      setupServer();
-      tserver.serve();
-    }
+    serviceUGI.doAs(new PrivilegedAction<Object>() {
+      @Override
+      public Object run() {
+        try {
+          startInfoServer();
+          if (httpEnabled) {
+            setupHTTPServer();
+            httpServer.start();
+            httpServer.join();
+          } else {
+            setupServer();
+            tserver.serve();
+          }
+        } catch (Exception e) {
+          LOG.error(HBaseMarkers.FATAL, "Cannot run ThriftServer", e);
+          // Crash the process if the ThriftServer is not running
+          System.exit(-1);
+        }
+        return null;
+      }
+    });
     return 0;
   }
 
