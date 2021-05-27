@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import java.net.BindException;
+import java.net.ServerSocket;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -45,7 +46,6 @@ public class TestClusterPortAssignment {
   @Test
   public void testClusterPortAssignment() throws Exception {
     boolean retry = false;
-    int retryCount = 0;
     do {
       int masterPort =  HBaseTestingUtility.randomFreePort();
       int masterInfoPort =  HBaseTestingUtility.randomFreePort();
@@ -58,7 +58,15 @@ public class TestClusterPortAssignment {
       TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, masterInfoPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, rsPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_INFO_PORT, rsInfoPort);
-      LOG.info("Ports: " + masterPort + ", " + masterInfoPort + ", " + rsPort + ", " + rsInfoPort);
+      LOG.info("Ports: {}, {}, {}, {}", masterPort, masterInfoPort, rsPort, rsInfoPort);
+      ServerSocket sock = null;
+	  if (!retry) {
+        try {
+          LOG.info("Hijack port: " + rsInfoPort);
+          sock = new ServerSocket(rsInfoPort);
+        } catch (Exception e) {
+        }
+      }
       try {
         MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster();
         assertTrue("Cluster failed to come up", cluster.waitForActiveAndReadyMaster(30000));
@@ -76,18 +84,20 @@ public class TestClusterPortAssignment {
         if (rootCause instanceof BindException) {
           LOG.info("Failed bind, need to retry", e);
           retry = true;
-          retryCount++;
         } else {
+          LOG.info("Failed to start mini cluster" + e);
           retry = false;
-          fail("Failed to start mini cluster" + e);
+          fail("Failed to start mini cluster with assigned ports.");
         }
       } finally {
         TEST_UTIL.shutdownMiniCluster();
       }
-    } while (retry && retryCount < 10);
-
-    if (retry) {
-      fail("Retry exhausted.");
-    }
+      if (sock != null) {
+        try {
+          sock.close();
+        } catch (Exception e) {
+        }
+      }
+    } while (retry);
   }
 }
