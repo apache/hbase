@@ -107,7 +107,7 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
 import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
-import org.apache.hadoop.hbase.master.compaction.CompactionServerManager;
+import org.apache.hadoop.hbase.master.compaction.CompactionOffloadManager;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
@@ -299,7 +299,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   // server manager to deal with region server info
   private volatile ServerManager serverManager;
 
-  private volatile CompactionServerManager compactionServerManager;
+  private volatile CompactionOffloadManager compactionOffloadManager;
 
   // manager of assignment nodes in zookeeper
   private AssignmentManager assignmentManager;
@@ -842,7 +842,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // The below two managers must be created before loading procedures, as they will be used during
     // loading.
     this.serverManager = createServerManager(this);
-    this.compactionServerManager = createCompactionServerManager(this);
+    this.compactionOffloadManager = createCompactionServerManager(this);
     this.syncReplicationReplayWALManager = new SyncReplicationReplayWALManager(this);
     if (!conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
       DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
@@ -1230,8 +1230,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     return new ServerManager(master);
   }
 
-  private CompactionServerManager createCompactionServerManager(final MasterServices master) {
-    return new CompactionServerManager(master);
+  private CompactionOffloadManager createCompactionServerManager(final MasterServices master) {
+    return new CompactionOffloadManager(master);
   }
 
   private void waitForRegionServers(final MonitoredTask status)
@@ -1289,8 +1289,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public CompactionServerManager getCompactionServerManager() {
-    return this.compactionServerManager;
+  public CompactionOffloadManager getCompactionOffloadManager() {
+    return this.compactionOffloadManager;
   }
 
   @Override
@@ -2628,7 +2628,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   public int getCompactionServerInfoPort(final ServerName sn) {
-    int port = this.compactionServerManager.getInfoPort(sn);
+    int port = this.compactionOffloadManager.getInfoPort(sn);
     return port == 0 ? conf.getInt(HConstants.COMPACTION_SERVER_PORT,
       HConstants.DEFAULT_COMPACTION_SERVER_PORT) : port;
   }
@@ -2642,7 +2642,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public String getCompactionServerVersion(ServerName sn) {
-    return this.compactionServerManager.getVersion(sn);
+    return this.compactionOffloadManager.getVersion(sn);
   }
 
   @Override

@@ -84,6 +84,11 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
   RegionServerAccounting getRegionServerAccounting();
 
   /**
+   * @return RegionServer's instance of {@link RegionServerCompactionOffloadManager}
+   */
+  RegionServerCompactionOffloadManager getRegionServerCompactionOffloadManager();
+
+  /**
    * @return RegionServer's instance of {@link RegionServerRpcQuotaManager}
    */
   RegionServerRpcQuotaManager getRegionServerRpcQuotaManager();

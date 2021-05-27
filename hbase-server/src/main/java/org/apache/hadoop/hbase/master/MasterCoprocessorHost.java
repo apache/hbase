@@ -1942,6 +1942,43 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preSwitchCompactionOffload(boolean enable) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null :new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preSwitchCompactionOffload(this, enable);
+      }
+    });
+  }
+
+  public void postSwitchCompactionOffload(final boolean oldValue, final boolean newValue)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postSwitchCompactionOffload(this, oldValue, newValue);
+      }
+    });
+  }
+
+  public void preIsCompactionOffloadEnabled() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preIsCompactionOffloadEnabled(this);
+      }
+    });
+  }
+
+  public void postIsCompactionOffloadEnabled(boolean enabled) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postIsCompactionOffloadEnabled(this, enabled);
+      }
+    });
+  }
+
   public void preSwitchExceedThrottleQuota(boolean enable) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override

@@ -793,6 +793,16 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Boolean> switchCompactionOffload(boolean enable) {
+    return wrap(rawAdmin.switchCompactionOffload(enable));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isCompactionOffloadEnabled() {
+    return wrap(rawAdmin.isCompactionOffloadEnabled());
+  }
+
+  @Override
   public CompletableFuture<Boolean> exceedThrottleQuotaSwitch(boolean enable) {
     return wrap(rawAdmin.exceedThrottleQuotaSwitch(enable));
   }

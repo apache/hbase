@@ -2242,6 +2242,21 @@ public interface Admin extends Abortable, Closeable {
   boolean isRpcThrottleEnabled() throws IOException;
 
   /**
+   * Switch the compaction offload enable state.
+   * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @return Previous compaction offload enabled value
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean switchCompactionOffload(boolean enable) throws IOException;
+
+  /**
+   * Get if the compaction offload is enabled.
+   * @return True if compaction offload is enabled
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean isCompactionOffloadEnabled() throws IOException;
+
+  /**
    * Switch the exceed throttle quota. If enabled, user/table/namespace throttle quota
    * can be exceeded if region server has availble quota.
    * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.

@@ -148,6 +148,12 @@ public enum EventType {
   M_RS_SWITCH_RPC_THROTTLE(27, ExecutorType.RS_SWITCH_RPC_THROTTLE),
 
   /**
+   * Messages originating from Master to RS.<br>
+   * M_RS_SWITCH_COMPACTION_OFFLOAD<br>
+   * Master asking RS to switch compaction offload state.
+   */
+  M_RS_SWITCH_COMPACTION_OFFLOAD(28, ExecutorType.RS_SWITCH_COMPACTION_OFFLOAD),
+  /**
    * Messages originating from Client to Master.<br>
    * C_M_MERGE_REGION<br>
    * Client asking Master to merge regions.

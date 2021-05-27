@@ -1453,6 +1453,19 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> isRpcThrottleEnabled();
 
   /**
+   * Switch the compaction offload enabled state.
+   * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @return Previous compaction offload enabled value
+   */
+  CompletableFuture<Boolean> switchCompactionOffload(boolean enable);
+
+  /**
+   * Get if the compaction offload is enabled.
+   * @return True if compaction offload is enabled
+   */
+  CompletableFuture<Boolean> isCompactionOffloadEnabled();
+
+  /**
    * Switch the exceed throttle quota. If enabled, user/table/namespace throttle quota
    * can be exceeded if region server has availble quota.
    * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.

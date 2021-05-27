@@ -2391,6 +2391,18 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public void preSwitchCompactionOffload(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      boolean enable) throws IOException {
+    requirePermission(ctx, "switchCompactionOffload", Action.ADMIN);
+  }
+
+  @Override
+  public void preIsCompactionOffloadEnabled(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    requirePermission(ctx, "isCompactionOffloadEnabled", Action.ADMIN);
+  }
+
+  @Override
   public void preSwitchExceedThrottleQuota(ObserverContext<MasterCoprocessorEnvironment> ctx,
       boolean enable) throws IOException {
     requirePermission(ctx, "switchExceedThrottleQuota", Action.ADMIN);

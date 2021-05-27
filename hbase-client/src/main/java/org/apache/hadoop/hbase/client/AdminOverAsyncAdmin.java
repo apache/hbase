@@ -914,6 +914,16 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public boolean switchCompactionOffload(boolean enable) throws IOException {
+    return get(admin.switchCompactionOffload(enable));
+  }
+
+  @Override
+  public boolean isCompactionOffloadEnabled() throws IOException {
+    return get(admin.isCompactionOffloadEnabled());
+  }
+
+  @Override
   public boolean exceedThrottleQuotaSwitch(boolean enable) throws IOException {
     return get(admin.exceedThrottleQuotaSwitch(enable));
   }

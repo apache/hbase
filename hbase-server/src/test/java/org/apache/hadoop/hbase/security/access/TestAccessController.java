@@ -3534,6 +3534,34 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
+  public void testSwitchCompactionOffload() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSwitchCompactionOffload(ObserverContextImpl.createAndPrepare(CP_ENV),
+          true);
+        return null;
+      }
+    };
+    verifyAllowed(action, SUPERUSER, USER_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testIsCompactionOffloadEnabled() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER
+            .preIsCompactionOffloadEnabled(ObserverContextImpl.createAndPrepare(CP_ENV));
+        return null;
+      }
+    };
+    verifyAllowed(action, SUPERUSER, USER_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
   public void testSwitchExceedThrottleQuota() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override

@@ -242,10 +242,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 <& deadRegionServers &>
             </%if>
         </section>
-        <%if master.getCompactionServerManager() != null %>
+        <%if master.getCompactionOffloadManager() != null %>
             <section>
                 <h2><a name="compactionservers">Compaction Servers</a></h2>
-                <& CompactionServerListTmpl; master= master;servers = master.getCompactionServerManager().getOnlineServersList() &>
+                <& CompactionServerListTmpl; master= master;servers = master.getCompactionOffloadManager().getOnlineServersList() &>
             </section>
         </%if>
         <section>

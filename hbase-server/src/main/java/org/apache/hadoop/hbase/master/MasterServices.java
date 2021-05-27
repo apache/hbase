@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.compaction.CompactionServerManager;
+import org.apache.hadoop.hbase.master.compaction.CompactionOffloadManager;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
@@ -103,7 +103,7 @@ public interface MasterServices extends Server {
    */
   ServerManager getServerManager();
 
-  default CompactionServerManager getCompactionServerManager() {
+  default CompactionOffloadManager getCompactionOffloadManager() {
     return null;
   }
 
