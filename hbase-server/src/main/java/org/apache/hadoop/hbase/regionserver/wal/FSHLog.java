@@ -66,7 +66,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * The default implementation of FSWAL.
+ * The original implementation of FSWAL.
  */
 @InterfaceAudience.Private
 public class FSHLog extends AbstractFSWAL<Writer> {
@@ -380,6 +380,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         // In case of having unflushed entries or we already reached the
         // closeErrorsTolerated count, call the closeWriter inline rather than in async
         // way so that in case of an IOE we will throw it back and abort RS.
+        inflightWALClosures.put(oldPath.getName(), writer);
         if (isUnflushedEntries() || closeErrorCount.get() >= this.closeErrorsTolerated) {
           closeWriter(this.writer, oldPath, true);
         } else {
@@ -448,6 +449,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       }
       LOG.warn("Riding over failed WAL close of " + path
           + "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK", ioe);
+    } finally {
+      inflightWALClosures.remove(path.getName());
     }
   }
 
