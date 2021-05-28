@@ -42,6 +42,7 @@ public class UnknownRegionException extends DoNotRetryRegionException {
    * Constructs a new UnknownRegionException with the specified detail message and cause.
    *
    * @param message the detail message
+   * @param cause the cause of the exception
    */
   public UnknownRegionException(String message, Throwable cause) {
     super(message, cause);
