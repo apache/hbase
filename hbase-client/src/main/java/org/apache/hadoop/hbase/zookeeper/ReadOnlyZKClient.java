@@ -86,10 +86,10 @@ public final class ReadOnlyZKClient implements Closeable {
     public void exec(ZooKeeper zk) {
     }
 
-    public void connectFailed(IOException e) {
+    public void connectFailed(Exception e) {
     }
 
-    public void closed(Exception e) {
+    public void closed(IOException e) {
     }
 
     @Override
@@ -198,7 +198,7 @@ public final class ReadOnlyZKClient implements Closeable {
         }
 
         @Override
-        public void closed(Exception e) {
+        public void closed(IOException e) {
           // It may happen that a request is succeeded and the onComplete has been called and pushed
           // us into the task queue, but before we get called a close is called and here we will
           // fail the request, although it is succeeded actually.
@@ -233,7 +233,7 @@ public final class ReadOnlyZKClient implements Closeable {
     }
 
     @Override
-    public void connectFailed(IOException e) {
+    public void connectFailed(Exception e) {
       if (delay(retryIntervalMs, maxRetries)) {
         LOG.warn("{} to {} failed to connect to zk fo {} of {}, retries = {}", getId(),
           connectString, operationType, path, retries, e);
@@ -246,7 +246,7 @@ public final class ReadOnlyZKClient implements Closeable {
     }
 
     @Override
-    public void closed(Exception e) {
+    public void closed(IOException e) {
       future.completeExceptionally(e);
     }
   }
@@ -341,12 +341,8 @@ public final class ReadOnlyZKClient implements Closeable {
         ZooKeeper zk;
         try {
           zk = getZk();
-        } catch (IOException e) {
-          task.connectFailed(e);
-          continue;
         } catch (Exception e) {
-          // won't be doing any retries for non IOE.
-          task.closed(e);
+          task.connectFailed(e);
           continue;
         }
         task.exec(zk);
