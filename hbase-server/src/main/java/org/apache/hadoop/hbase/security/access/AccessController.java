@@ -530,9 +530,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     if (!diffCellTsFromOpTs && request == OpType.PUT) {
       get.readVersions(1);
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Scanning for cells with " + get);
-    }
+    LOG.trace("Scanning for cells with {}", get);
     // This Map is identical to familyMap. The key is a BR rather than byte[].
     // It will be easy to do gets over this new Map as we can create get keys over the Cell cf by
     // new SimpleByteRange(cell.familyArray, cell.familyOffset, cell.familyLen)
@@ -558,9 +556,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         // scan with limit as 1 to hold down memory use on wide rows
         more = scanner.next(cells, scannerContext);
         for (Cell cell: cells) {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Found cell " + cell);
-          }
+          LOG.trace("Found cell {}", cell);
           boolean colChange = prevCell == null || !CellUtil.matchingColumn(prevCell, cell);
           if (colChange) foundColumn = false;
           prevCell = cell;
@@ -1795,9 +1791,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         // TODO: If we collected ACLs from more than one tag we may have a
         // List<Permission> of size > 1, this can be collapsed into a single
         // Permission
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Carrying forward ACLs from " + oldCell + ": " + perms);
-        }
+        LOG.trace("Carrying forward ACLs from {}: {}", oldCell, perms);
         tags.addAll(aclTags);
       }
     }
@@ -1954,7 +1948,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         User caller = RpcServer.getRequestUser().orElse(null);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Received request from {} to grant access permission {}",
-            caller.getName(), perm.toString());
+            caller.getName(), perm);
         }
         preGrantOrRevoke(caller, "grant", perm);
 
@@ -1962,10 +1956,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         regionEnv.getConnection().getAdmin().grant(
           new UserPermission(perm.getUser(), perm.getPermission()),
           request.getMergeExistingPermissions());
-        if (AUDITLOG.isTraceEnabled()) {
-          // audit log should store permission changes in addition to auth results
-          AUDITLOG.trace("Granted permission " + perm.toString());
-        }
+        // audit log should store permission changes in addition to auth results
+        AUDITLOG.trace("Granted permission {}", perm);
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
             + "can only execute at " + PermissionStorage.ACL_TABLE_NAME + " table.");
@@ -1999,16 +1991,14 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         User caller = RpcServer.getRequestUser().orElse(null);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Received request from {} to revoke access permission {}",
-            caller.getShortName(), perm.toString());
+            caller.getShortName(), perm);
         }
         preGrantOrRevoke(caller, "revoke", perm);
         // regionEnv is set at #start. Hopefully not null here.
         regionEnv.getConnection().getAdmin()
             .revoke(new UserPermission(perm.getUser(), perm.getPermission()));
-        if (AUDITLOG.isTraceEnabled()) {
-          // audit log should record all permission changes
-          AUDITLOG.trace("Revoked permission " + perm.toString());
-        }
+        // audit log should record all permission changes
+        AUDITLOG.trace("Revoked permission {}", perm);
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
             + "can only execute at " + PermissionStorage.ACL_TABLE_NAME + " table.");

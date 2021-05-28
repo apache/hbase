@@ -202,33 +202,25 @@ public class RESTServer implements Constants {
     if (commandLine != null && commandLine.hasOption("port")) {
       String val = commandLine.getOptionValue("port");
       conf.setInt("hbase.rest.port", Integer.parseInt(val));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("port set to " + val);
-      }
+      LOG.debug("port set to {}", val);
     }
 
     // check if server should only process GET requests, if so override the conf
     if (commandLine != null && commandLine.hasOption("readonly")) {
       conf.setBoolean("hbase.rest.readonly", true);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("readonly set to true");
-      }
+      LOG.debug("readonly set to true");
     }
 
     // check for user-defined info server port setting, if so override the conf
     if (commandLine != null && commandLine.hasOption("infoport")) {
       String val = commandLine.getOptionValue("infoport");
       conf.setInt("hbase.rest.info.port", Integer.parseInt(val));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("WEB UI port set to " + val);
-      }
+      LOG.debug("WEB UI port set to {}", val);
     }
 
     if (commandLine != null && commandLine.hasOption("skipLogin")) {
       conf.setBoolean(SKIP_LOGIN_KEY, true);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Skipping Kerberos login for REST server");
-      }
+      LOG.debug("Skipping Kerberos login for REST server");
     }
 
     List<String> remainingArgs = commandLine != null ? commandLine.getArgList() : new ArrayList<>();

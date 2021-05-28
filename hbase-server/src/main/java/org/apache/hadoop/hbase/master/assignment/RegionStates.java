@@ -160,7 +160,7 @@ public class RegionStates {
     }
     // Remove from the offline regions map too if there.
     if (this.regionOffline.containsKey(regionInfo)) {
-      if (LOG.isTraceEnabled()) LOG.trace("Removing from regionOffline Map: " + regionInfo);
+      LOG.trace("Removing from regionOffline Map: {}", regionInfo);
       this.regionOffline.remove(regionInfo);
     }
   }
@@ -581,9 +581,7 @@ public class RegionStates {
       // the regions in a loop. The balancer should ignore all regions for tables in DISABLED
       // state because even if still currently open we expect them to be offlined very soon.
       if (isTableDisabled(tableStateManager, node.getTable())) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Ignoring {} because table is disabled", node);
-        }
+        LOG.trace("Ignoring {} because table is disabled", node);
         continue;
       }
       // When balancing, we are only interested in OPEN or OPENING regions. These can be
@@ -591,9 +589,7 @@ public class RegionStates {
       // decides to move it. Regions in other states are not eligible for balancing, because
       // they are closing, splitting, merging, or otherwise already in transition.
       if (!node.isInState(State.OPEN, State.OPENING)) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Ignoring {} because region is not OPEN or OPENING", node);
-        }
+        LOG.trace("Ignoring {} because region is not OPEN or OPENING", node);
         continue;
       }
       Map<ServerName, List<RegionInfo>> tableResult =

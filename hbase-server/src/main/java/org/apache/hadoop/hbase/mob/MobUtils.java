@@ -305,13 +305,9 @@ public final class MobUtils {
 
         Date fileDate = parseDate(MobFileName.getDateFromName(fileName));
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Checking file {}", fileName);
-        }
+        LOG.debug("Checking file {}", fileName);
         if (fileDate.getTime() < expireDate.getTime()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("{} is an expired file", fileName);
-          }
+          LOG.debug("{} is an expired file", fileName);
           filesToClean
               .add(new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true));
         }

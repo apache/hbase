@@ -75,9 +75,7 @@ public class TruncateTableProcedure
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, TruncateTableState state)
       throws InterruptedException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.trace("{} execute state=", this, state);
     try {
       switch (state) {
         case TRUNCATE_TABLE_PRE_OPERATION:

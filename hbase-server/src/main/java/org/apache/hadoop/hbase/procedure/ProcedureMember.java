@@ -182,9 +182,7 @@ public class ProcedureMember implements Closeable {
        LOG.warn("Unexpected reached globa barrier message for Sub-Procedure '" + procName + "'");
        return;
      }
-     if (LOG.isTraceEnabled()) {
-      LOG.trace("reached global barrier message for Sub-Procedure '" + procName + "'");
-     }
+     LOG.trace("reached global barrier message for Sub-Procedure '{}'", procName);
      subproc.receiveReachedGlobalBarrier();
    }
 

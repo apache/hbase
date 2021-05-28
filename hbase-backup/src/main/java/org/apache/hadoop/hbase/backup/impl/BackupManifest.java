@@ -417,9 +417,8 @@ public class BackupManifest {
    * @throws BackupException exception
    */
   public BackupManifest(FileSystem fs, Path backupPath) throws BackupException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Loading manifest from: " + backupPath.toString());
-    }
+    LOG.debug("Loading manifest from: {}", backupPath);
+
     // The input backupDir may not exactly be the backup table dir.
     // It could be the backup log dir where there is also a manifest file stored.
     // This variable's purpose is to keep the correct and original location so

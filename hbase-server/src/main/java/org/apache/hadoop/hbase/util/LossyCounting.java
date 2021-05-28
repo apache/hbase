@@ -156,9 +156,7 @@ public class LossyCounting<T> {
 
   class SweepRunnable implements Runnable {
     @Override public void run() {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Starting sweep of lossyCounting-" + name);
-      }
+      LOG.trace("Starting sweep of lossyCounting-{}", name);
       try {
         sweep();
       } catch (Exception exception) {

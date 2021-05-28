@@ -287,7 +287,7 @@ public class IncrementalBackupManager extends BackupManager {
         logs = fs.listStatus(p, pathFilter);
       }
       for (FileStatus log : logs) {
-        LOG.debug("currentLogFile: " + log.getPath().toString());
+        LOG.debug("currentLogFile: {}", log.getPath());
         if (AbstractFSWALProvider.isMetaFile(log.getPath())) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Skip hbase:meta log file: " + log.getPath().getName());
@@ -322,9 +322,7 @@ public class IncrementalBackupManager extends BackupManager {
       p = oldlog.getPath();
       currentLogFile = p.toString();
       if (AbstractFSWALProvider.isMetaFile(p)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skip .meta log file: " + currentLogFile);
-        }
+        LOG.debug("Skip .meta log file: {}", currentLogFile);
         continue;
       }
       host = BackupUtils.parseHostFromOldLog(p);

@@ -186,7 +186,7 @@ public final class SnapshotManifestV1 {
       for (String familyName: familyNames) {
         Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(familyName, false);
         if (storeFiles == null) {
-          LOG.debug("No files under family: " + familyName);
+          LOG.debug("No files under family: {}", familyName);
           continue;
         }
 
@@ -195,9 +195,7 @@ public final class SnapshotManifestV1 {
               SnapshotRegionManifest.FamilyFiles.newBuilder();
         family.setFamilyName(UnsafeByteOperations.unsafeWrap(Bytes.toBytes(familyName)));
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
-        }
+        LOG.debug("Adding snapshot references for {} hfiles", storeFiles);
 
         // 2.2. iterate through all the store's files and create "references".
         int i = 0;

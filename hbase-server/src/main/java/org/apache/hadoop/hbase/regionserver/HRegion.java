@@ -862,10 +862,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.metricsRegionWrapper = null;
       this.metricsRegion = null;
     }
-    if (LOG.isDebugEnabled()) {
-      // Write out region name, its encoded name and storeHotnessProtector as string.
-      LOG.debug("Instantiated " + this +"; "+ storeHotnessProtector.toString());
-    }
+    // Write out region name, its encoded name and storeHotnessProtector as string.
+    LOG.debug("Instantiated {}; {}", this, storeHotnessProtector);
 
     configurationManager = null;
 
@@ -2958,7 +2956,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     String s = "Flushing stores of " + this;
     status.setStatus(s);
-    if (LOG.isTraceEnabled()) LOG.trace(s);
+    LOG.trace(s);
 
     // Any failure from here on out will be catastrophic requiring server
     // restart so wal content can be replayed and put back into the memstore.
@@ -7439,9 +7437,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static HRegion openReadOnlyFileSystemHRegion(final Configuration conf, final FileSystem fs,
       final Path tableDir, RegionInfo info, final TableDescriptor htd) throws IOException {
     Objects.requireNonNull(info, "RegionInfo cannot be null");
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Opening region (readOnly filesystem): " + info);
-    }
+    LOG.debug("Opening region (readOnly filesystem): {}", info);
     if (info.getReplicaId() <= 0) {
       info = RegionReplicaUtil.getRegionInfoForReplica(info, 1);
     }
@@ -8106,9 +8102,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         throw rtbe;
       }
     } catch (InterruptedException ie) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Interrupted while waiting for a lock in region {}", this);
-      }
+      LOG.debug("Interrupted while waiting for a lock in region {}", this);
       throw throwOnInterrupt(ie);
     }
   }

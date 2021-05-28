@@ -976,7 +976,7 @@ public class TableMapReduceUtil {
       return null;
     }
 
-    LOG.debug(String.format("For class %s, using jar %s", my_class.getName(), jar));
+    LOG.debug("For class {}, using jar {}", my_class.getName(), jar);
     return new Path(jar).makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 

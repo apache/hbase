@@ -1302,9 +1302,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, isCompaction,
             updateCacheMetrics, expectedBlockType, expectedDataBlockEncoding);
           if (cachedBlock != null) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("From Cache " + cachedBlock);
-            }
+            LOG.trace("From Cache {}", cachedBlock);
             span.addEvent("blockCacheHit");
             assert cachedBlock.isUnpacked() : "Packed block leak.";
             if (cachedBlock.getBlockType().isData()) {

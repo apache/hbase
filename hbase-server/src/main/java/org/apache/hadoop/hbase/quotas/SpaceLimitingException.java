@@ -78,9 +78,7 @@ public class SpaceLimitingException extends QuotaExceededException {
         int index = originalMessage.indexOf(' ', MESSAGE_PREFIX.length());
         return originalMessage.substring(index + 1);
       } catch (Exception e) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Failed to trim exception message", e);
-        }
+        LOG.trace("Failed to trim exception message", e);
       }
     }
     return originalMessage;

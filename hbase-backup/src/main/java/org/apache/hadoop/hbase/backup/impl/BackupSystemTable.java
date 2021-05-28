@@ -29,7 +29,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -357,9 +356,7 @@ public final class BackupSystemTable implements Closeable {
    * @throws IOException exception
    */
   public void deleteBackupInfo(String backupId) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("delete backup status in backup system table for " + backupId);
-    }
+    LOG.trace("delete backup status in backup system table for {}", backupId);
     try (Table table = connection.getTable(tableName)) {
       Delete del = createDeleteForBackupInfo(backupId);
       table.delete(del);
@@ -529,9 +526,7 @@ public final class BackupSystemTable implements Closeable {
    * @return Current status of backup session or null
    */
   public BackupInfo readBackupInfo(String backupId) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("read backup status from backup system table for: " + backupId);
-    }
+    LOG.trace("read backup status from backup system table for: {}", backupId);
 
     try (Table table = connection.getTable(tableName)) {
       Get get = createGetForBackupInfo(backupId);
@@ -576,9 +571,8 @@ public final class BackupSystemTable implements Closeable {
    * @throws IOException exception
    */
   public void writeBackupStartCode(Long startCode, String backupRoot) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("write backup start code to backup system table " + startCode);
-    }
+    LOG.trace("write backup start code to backup system table {}", startCode);
+
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForStartCode(startCode.toString(), backupRoot);
       table.put(put);
@@ -859,10 +853,7 @@ public final class BackupSystemTable implements Closeable {
    */
   public void writeRegionServerLogTimestamp(Set<TableName> tables,
       HashMap<String, Long> newTimestamps, String backupRoot) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("write RS log time stamps to backup system table for tables ["
-          + StringUtils.join(tables, ",") + "]");
-    }
+    LOG.trace("write RS log time stamps to backup system table for tables: {}", tables);
     List<Put> puts = new ArrayList<>();
     for (TableName table : tables) {
       byte[] smapData = toTableServerTimestampProto(table, newTimestamps).toByteArray();
@@ -885,9 +876,7 @@ public final class BackupSystemTable implements Closeable {
    */
   public HashMap<TableName, HashMap<String, Long>> readLogTimestampMap(String backupRoot)
       throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("read RS log ts from backup system table for root=" + backupRoot);
-    }
+    LOG.trace("read RS log ts from backup system table for root={}", backupRoot);
 
     HashMap<TableName, HashMap<String, Long>> tableTimestampMap = new HashMap<>();
 
@@ -984,13 +973,9 @@ public final class BackupSystemTable implements Closeable {
    */
   public void addIncrementalBackupTableSet(Set<TableName> tables, String backupRoot)
       throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Add incremental backup table set to backup system table. ROOT=" + backupRoot
-        + " tables [" + StringUtils.join(tables, " ") + "]");
-    }
-    if (LOG.isDebugEnabled()) {
-      tables.forEach(table -> LOG.debug(Objects.toString(table)));
-    }
+    LOG.trace("Add incremental backup table set to backup system table. ROOT={} tables={}", backupRoot,
+        tables);
+    LOG.debug("Tables: {}", tables);
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForIncrBackupTableSet(tables, backupRoot);
       table.put(put);
@@ -1002,9 +987,8 @@ public final class BackupSystemTable implements Closeable {
    * @param backupRoot backup root
    */
   public void deleteIncrementalBackupTableSet(String backupRoot) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Delete incremental backup table set to backup system table. ROOT=" + backupRoot);
-    }
+    LOG.trace("Delete incremental backup table set to backup system table. ROOT={}", backupRoot);
+
     try (Table table = connection.getTable(tableName)) {
       Delete delete = createDeleteForIncrBackupTableSet(backupRoot);
       table.delete(delete);
@@ -1024,9 +1008,7 @@ public final class BackupSystemTable implements Closeable {
       LOG.trace("add WAL files to backup system table: " + backupId + " " + backupRoot + " files ["
           + StringUtils.join(files, ",") + "]");
     }
-    if (LOG.isDebugEnabled()) {
-      files.forEach(file -> LOG.debug("add :" + file));
-    }
+    LOG.debug("Adding files: {}", files);
     try (Table table = connection.getTable(tableName)) {
       List<Put> puts = createPutsForAddWALFiles(files, backupId, backupRoot);
       table.put(puts);
@@ -1097,9 +1079,8 @@ public final class BackupSystemTable implements Closeable {
    */
   // TODO: multiple backup destination support
   public boolean isWALFileDeletable(String file) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Check if WAL file has been already backed up in backup system table " + file);
-    }
+    LOG.trace("Check if WAL file has been already backed up in backup system table {}", file);
+
     try (Table table = connection.getTable(tableName)) {
       Get get = createGetForCheckWALFile(file);
       Result res = table.get(get);
@@ -1231,9 +1212,8 @@ public final class BackupSystemTable implements Closeable {
    * @throws IOException if a table operation fails
    */
   public void addToBackupSet(String name, String[] newTables) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Backup set add: " + name + " tables [" + StringUtils.join(newTables, " ") + "]");
-    }
+    LOG.trace("Backup set add: {} tables {}", name, newTables);
+
     String[] union = null;
     try (Table table = connection.getTable(tableName)) {
       Get get = createGetForBackupSet(name);
@@ -1306,9 +1286,8 @@ public final class BackupSystemTable implements Closeable {
    * @throws IOException if getting or deleting the table fails
    */
   public void deleteBackupSet(String name) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(" Backup set delete: " + name);
-    }
+    LOG.trace("Backup set delete: {}", name);
+
     try (Table table = connection.getTable(tableName)) {
       Delete del = createDeleteForBackupSet(name);
       table.delete(del);
@@ -1815,9 +1794,8 @@ public final class BackupSystemTable implements Closeable {
   }
 
   public void updateProcessedTablesForMerge(List<TableName> tables) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Update tables for merge : " + StringUtils.join(tables, ","));
-    }
+    LOG.trace("Update tables for merge : {}", tables);
+
     Put put = createPutForUpdateTablesForMerge(tables);
     try (Table table = connection.getTable(tableName)) {
       table.put(put);

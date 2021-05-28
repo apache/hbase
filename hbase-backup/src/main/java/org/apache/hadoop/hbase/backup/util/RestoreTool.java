@@ -324,10 +324,8 @@ public class RestoreTool {
     if (tableArchivePath == null) {
       if (tableDescriptor != null) {
         // find table descriptor but no archive dir means the table is empty, create table and exit
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("find table descriptor but no archive dir for table " + tableName
-              + ", will only create table");
-        }
+        LOG.debug("find table descriptor but no archive dir for table {}, will only create table",
+          tableName);
         tableDescriptor = TableDescriptorBuilder.copy(newTableName, tableDescriptor);
         checkAndCreateTable(conn, tableBackupPath, tableName, newTableName, null, tableDescriptor,
           truncateIfExists);
@@ -391,7 +389,7 @@ public class RestoreTool {
     // Build a set of keys to store the boundaries
     // calculate region boundaries and add all the column families to the table descriptor
     for (Path regionDir : regionDirList) {
-      LOG.debug("Parsing region dir: " + regionDir);
+      LOG.debug("Parsing region dir: {}", regionDir);
       Path hfofDir = regionDir;
 
       if (!fs.exists(hfofDir)) {
@@ -421,7 +419,7 @@ public class RestoreTool {
           continue;
         }
         Path familyDir = stat.getPath();
-        LOG.debug("Parsing family dir [" + familyDir.toString() + " in region [" + regionDir + "]");
+        LOG.debug("Parsing family dir [{}] in region [{}]", familyDir, regionDir);
         // Skip _logs, etc
         if (familyDir.getName().startsWith("_") || familyDir.getName().startsWith(".")) {
           continue;

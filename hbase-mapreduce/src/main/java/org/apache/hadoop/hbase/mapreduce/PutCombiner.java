@@ -79,7 +79,7 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
         if (cnt % 10 == 0) context.setStatus("Combine " + cnt);
         if (curSize > threshold) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("Combined %d Put(s) into %d.", cnt, 1));
+            LOG.debug("Combined {} Put(s) into {}.", cnt, 1);
           }
           context.write(row, put);
           put = null;
@@ -90,7 +90,7 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
     }
     if (put != null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug(String.format("Combined %d Put(s) into %d.", cnt, 1));
+        LOG.debug("Combined {} Put(s) into {}.", cnt, 1);
       }
       context.write(row, put);
     }

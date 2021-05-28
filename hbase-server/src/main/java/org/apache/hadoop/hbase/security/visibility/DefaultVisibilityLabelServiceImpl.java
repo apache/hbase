@@ -250,9 +250,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
               .setValue(label)
               .setTags(TagUtil.fromList(Arrays.asList(LABELS_TABLE_TAGS)))
               .build());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Adding the label " + labelStr);
-        }
+        LOG.debug("Adding the label: {}", labelStr);
         puts.add(p);
         ordinalCounter.incrementAndGet();
       }

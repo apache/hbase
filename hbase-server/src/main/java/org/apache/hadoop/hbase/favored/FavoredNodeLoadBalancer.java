@@ -382,8 +382,8 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
 
     List<ServerName> parentFavoredNodes = getFavoredNodes(parent);
     if (parentFavoredNodes == null) {
-      LOG.debug("Unable to find favored nodes for parent, " + parent
-          + " generating new favored nodes for daughter");
+      LOG.debug("Unable to find favored nodes for parent, {} "
+          + " generating new favored nodes for daughter", parent);
       result.put(regionA, helper.generateFavoredNodes(regionA));
       result.put(regionB, helper.generateFavoredNodes(regionB));
 

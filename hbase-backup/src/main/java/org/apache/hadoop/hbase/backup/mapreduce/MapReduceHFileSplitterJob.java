@@ -108,7 +108,7 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);
     String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
     if (hfileOutPath != null) {
-      LOG.debug("add incremental job :" + hfileOutPath + " from " + inputDirs);
+      LOG.debug("add incremental job : {} from {}", hfileOutPath, inputDirs);
       TableName tableName = TableName.valueOf(tabName);
       job.setMapperClass(HFileCellMapper.class);
       job.setReducerClass(CellSortReducer.class);

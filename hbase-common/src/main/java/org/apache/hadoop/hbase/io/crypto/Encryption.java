@@ -625,9 +625,7 @@ public final class Encryption {
         getClassLoaderForClass(KeyProvider.class).loadClass(providerClassName),
         conf);
       provider.init(providerParameters);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Installed " + providerClassName + " into key provider cache");
-      }
+      LOG.debug("Installed {} into key provider cache", providerClassName);
       keyProviderCache.put(providerCacheKey, provider);
       return provider;
     } catch (Exception e) {

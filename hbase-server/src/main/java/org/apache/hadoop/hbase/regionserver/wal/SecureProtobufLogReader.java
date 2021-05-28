@@ -82,9 +82,7 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
         try {
           key = EncryptionUtil.unwrapWALKey(conf, walKeyName, keyBytes);
         } catch (KeyException e) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Unable to unwrap key with WAL key '" + walKeyName + "'");
-          }
+          LOG.debug("Unable to unwrap key with WAL key '{}'", walKeyName);
           key = null;
         }
       }
@@ -97,9 +95,7 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
         } catch (KeyException e) {
           // If the current master key fails to unwrap, try the alternate, if
           // one is configured
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Unable to unwrap key with current master key '" + masterKeyName + "'");
-          }
+          LOG.debug("Unable to unwrap key with current master key '{}'", masterKeyName);
           String alternateKeyName =
             conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
           if (alternateKeyName != null) {

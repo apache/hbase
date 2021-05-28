@@ -1168,9 +1168,7 @@ public class AssignmentManager {
     }
 
     // Submit the Merge procedure
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Handling merge request from RS=" + merged + ", merged=" + merged);
-    }
+    LOG.debug("Handling merge request from RS={}, merged={}", merged, merged);
     master.getMasterProcedureExecutor().submitProcedure(createMergeProcedure(hriA, hriB));
 
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the merge
@@ -2192,17 +2190,14 @@ public class AssignmentManager {
   private void processAssignmentPlans(final HashMap<RegionInfo, RegionStateNode> regions,
       final HashMap<RegionInfo, ServerName> retainMap, final List<RegionInfo> hris,
       final List<ServerName> servers) {
-    boolean isTraceEnabled = LOG.isTraceEnabled();
-    if (isTraceEnabled) {
-      LOG.trace("Available servers count=" + servers.size() + ": " + servers);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Available servers count={}: {}", servers.size(), servers);
     }
 
     final LoadBalancer balancer = getBalancer();
     // ask the balancer where to place regions
     if (retainMap != null && !retainMap.isEmpty()) {
-      if (isTraceEnabled) {
-        LOG.trace("retain assign regions=" + retainMap);
-      }
+      LOG.trace("retain assign regions={}", retainMap);
       try {
         acceptPlan(regions, balancer.retainAssignment(retainMap, servers));
       } catch (IOException e) {
@@ -2215,9 +2210,7 @@ public class AssignmentManager {
     // the retain seems to fallback to round-robin/random if the region is not in the map.
     if (!hris.isEmpty()) {
       Collections.sort(hris, RegionInfo.COMPARATOR);
-      if (isTraceEnabled) {
-        LOG.trace("round robin regions=" + hris);
-      }
+      LOG.trace("round robin regions={}", hris);
       try {
         acceptPlan(regions, balancer.roundRobinAssignment(hris, servers));
       } catch (IOException e) {

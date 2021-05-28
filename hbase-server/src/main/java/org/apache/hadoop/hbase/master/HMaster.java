@@ -1398,14 +1398,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (isSnapshotChoreEnabled) {
       getChoreService().scheduleChore(this.snapshotCleanerChore);
     } else {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Snapshot Cleaner Chore is disabled. Not starting up the chore..");
-      }
+      LOG.trace("Snapshot Cleaner Chore is disabled. Not starting up the chore..");
     }
     serviceStarted = true;
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Started service threads");
-    }
+    LOG.trace("Started service threads");
   }
 
   @Override
@@ -2312,7 +2308,7 @@ public class HMaster extends HRegionServer implements MasterServices {
                     + "' is disallowed due to a violated space quota.");
               }
             }
-          } else if (LOG.isTraceEnabled()) {
+          } else {
             LOG.trace("Unable to check for space quotas as the MasterQuotaManager is not enabled");
           }
         }
@@ -2871,9 +2867,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     coprocessorServiceHandlers.put(serviceName, instance);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Registered master coprocessor service: service="+serviceName);
-    }
+    LOG.debug("Registered master coprocessor service: service={}", serviceName);
     return true;
   }
 

@@ -116,10 +116,10 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
     if (results.isEmpty()) {
       return 0;
     }
-
-    LOG.debug("Old WALs for delete: {}",
-      results.stream().map(cc -> cc.target.getPath().getName()).
-        collect(Collectors.joining(", ")));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Old WALs for delete: {}", results.stream().map(cc -> cc.target.getPath().getName())
+          .collect(Collectors.joining(", ")));
+    }
     pendingDelete.addAll(results);
 
     int deletedFiles = 0;

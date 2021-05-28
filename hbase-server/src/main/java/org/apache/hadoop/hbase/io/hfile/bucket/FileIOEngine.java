@@ -64,9 +64,7 @@ public class FileIOEngine extends PersistentIOEngine {
       for (String filePath : filePaths) {
         File file = new File(filePath);
         if (file.exists()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("File " + filePath + " already exists. Deleting!!");
-          }
+          LOG.debug("File {} already exists. Deleting.", filePath);
           file.delete();
           // If deletion fails still we can manage with the writes
         }

@@ -80,9 +80,7 @@ public class AuthFilter extends AuthenticationFilter {
             throw new ServletException("Failed to retrieve server principal", ie);
           }
         }
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Setting property " + name + "=" + value);
-        }
+        LOG.trace("Setting property {}={}", name, value);
         name = name.substring(REST_PREFIX_LEN);
         props.setProperty(name, value);
       }

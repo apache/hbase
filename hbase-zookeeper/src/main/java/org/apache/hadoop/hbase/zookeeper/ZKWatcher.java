@@ -265,9 +265,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * @throws IOException if getting the current user fails
    */
   private boolean isBaseZnodeAclSetup(List<ACL> acls) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Checking znode ACLs");
-    }
+    LOG.debug("Checking znode ACLs");
     String[] superUsers = conf.getStrings(Superusers.SUPERUSER_CONF_KEY);
     // Check whether ACL set for all superusers
     if (superUsers != null && !checkACLForSuperUsers(superUsers, acls)) {
@@ -279,9 +277,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     String hbaseUser = UserGroupInformation.getCurrentUser().getShortUserName();
 
     if (acls.isEmpty()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("ACL is empty");
-      }
+      LOG.debug("ACL is empty");
       return false;
     }
 
@@ -322,15 +318,11 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
             return false;
           }
         } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Unexpected shortname in SASL ACL: {}", id);
-          }
+          LOG.debug("Unexpected shortname in SASL ACL: {}", id);
           return false;
         }
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("unexpected ACL id '{}'", id);
-        }
+        LOG.debug("unexpected ACL id '{}'", id);
         return false;
       }
     }

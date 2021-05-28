@@ -101,9 +101,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
   @Override
   public void nodeChildrenChanged(String path) {
     if (path.equals(watcher.getZNodePaths().splitLogZNode)) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("tasks arrived or departed on " + path);
-      }
+      LOG.trace("tasks arrived or departed on {}", path);
       synchronized (taskReadySeq) {
         this.taskReadySeq.incrementAndGet();
         taskReadySeq.notify();

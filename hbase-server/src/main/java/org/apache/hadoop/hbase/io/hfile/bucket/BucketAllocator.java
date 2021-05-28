@@ -323,12 +323,10 @@ public final class BucketAllocator {
           .instantiateBucket(buckets[i]);
     }
     this.totalSize = ((long) buckets.length) * bucketCapacity;
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Cache totalSize=" + this.totalSize + ", buckets=" + this.buckets.length +
-        ", bucket capacity=" + this.bucketCapacity +
-        "=(" + FEWEST_ITEMS_IN_BUCKET + "*" + this.bigItemSize + ")=" +
-        "(FEWEST_ITEMS_IN_BUCKET*(largest configured bucketcache size))");
-    }
+    LOG.info("Cache totalSize=" + this.totalSize + ", buckets=" + this.buckets.length
+        + ", bucket capacity=" + this.bucketCapacity + "=(" + FEWEST_ITEMS_IN_BUCKET + "*"
+        + this.bigItemSize + ")="
+        + "(FEWEST_ITEMS_IN_BUCKET*(largest configured bucketcache size))");
   }
 
   /**

@@ -382,9 +382,7 @@ public class QuotaTableUtil {
       parseRegionServerResult(result, visitor);
     } else if (isExceedThrottleQuotaRowKey(row)) {
       // skip exceed throttle quota row key
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Skip exceedThrottleQuota row-key when parse quota result");
-      }
+      LOG.debug("Skip exceedThrottleQuota row-key when parse quota result");
     } else {
       LOG.warn("unexpected row-key: " + Bytes.toString(row));
     }

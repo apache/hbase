@@ -221,9 +221,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     }
     try {
       this.splits.execute(new SplitRequest(r, midKey, this.server, user));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Splitting " + r + ", " + this);
-      }
+      LOG.debug("Splitting {}, {}", r, this);
     } catch (RejectedExecutionException ree) {
       LOG.info("Could not execute split for " + r, ree);
     }

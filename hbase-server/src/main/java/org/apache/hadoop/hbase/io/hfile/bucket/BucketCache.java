@@ -843,14 +843,12 @@ public class BucketCache implements BlockCache, HeapSize {
         long single = bucketSingle.totalSize();
         long multi = bucketMulti.totalSize();
         long memory = bucketMemory.totalSize();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Bucket cache free space completed; " + "freed="
-            + StringUtils.byteDesc(bytesFreed) + ", " + "total="
-            + StringUtils.byteDesc(totalSize) + ", " + "single="
-            + StringUtils.byteDesc(single) + ", " + "multi="
-            + StringUtils.byteDesc(multi) + ", " + "memory="
-            + StringUtils.byteDesc(memory));
-        }
+        LOG.debug("Bucket cache free space completed; " + "freed="
+          + StringUtils.byteDesc(bytesFreed) + ", " + "total="
+          + StringUtils.byteDesc(totalSize) + ", " + "single="
+          + StringUtils.byteDesc(single) + ", " + "multi="
+          + StringUtils.byteDesc(multi) + ", " + "memory="
+          + StringUtils.byteDesc(memory));
       }
 
     } catch (Throwable t) {

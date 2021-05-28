@@ -338,9 +338,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       strArr[strArr.length - 1] = backupDest;
 
       String jobname = "Incremental_Backup-HFileCopy-" + backupInfo.getBackupId();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting incremental copy HFiles job name to : " + jobname);
-      }
+      LOG.debug("Setting incremental copy HFiles job name to : {}", jobname);
       conf.set(JOB_NAME_CONF_KEY, jobname);
 
       BackupCopyJob copyService = BackupRestoreFactory.getBackupCopyJob(conf);

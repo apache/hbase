@@ -613,15 +613,14 @@ public class ImportTsv extends Configured implements Tool {
       try {
         admin.disableTable(tableName);
       } catch (TableNotEnabledException e) {
-        LOG.debug("Dry mode: Table: " + tableName + " already disabled, so just deleting it.");
+        LOG.debug("Dry mode: Table: {} already disabled, so just deleting it.", tableName);
       }
       admin.deleteTable(tableName);
     } catch (IOException e) {
-      LOG.error(format("***Dry run: Failed to delete table '%s'.***%n%s", tableName,
-          e.toString()));
+      LOG.error("***Dry run: Failed to delete table '{}'.***\n{}", tableName, e);
       return;
     }
-    LOG.info(format("Dry run: Deleted table '%s'.", tableName));
+    LOG.info("Dry run: Deleted table '{}'.", tableName);
   }
 
   private static Set<String> getColumnFamilies(String[] columns) {

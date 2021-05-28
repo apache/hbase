@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -211,7 +210,7 @@ public class TableRecordReaderImpl {
         }
         // try to handle all other IOExceptions by restarting
         // the scanner, if the second call fails, it will be rethrown
-        LOG.debug("recovered from " + StringUtils.stringifyException(e));
+        LOG.debug("recovered from error" , e);
         if (lastSuccessfulRow == null) {
           LOG.warn("We are restarting the first next() invocation," +
               " if your mapper has restarted a few other times like this" +

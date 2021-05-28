@@ -96,9 +96,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
       int count = 0;
       while (procedureIterator.hasNext()) {
         Procedure procedure = procedureIterator.next();
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Wake " + procedure);
-        }
+        LOG.trace("Wake {}", procedure);
         push(procedure, /* addFront= */ true, /* notify= */false);
         count++;
       }

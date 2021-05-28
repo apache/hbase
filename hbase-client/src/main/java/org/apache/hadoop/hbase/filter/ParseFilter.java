@@ -869,8 +869,7 @@ public class ParseFilter {
    * @param filterClass fully qualified class name
    */
   public static void registerFilter(String name, String filterClass) {
-    if(LOG.isInfoEnabled())
-      LOG.info("Registering new filter " + name);
+    LOG.info("Registering new filter " + name);
 
     filterHashMap.put(name, filterClass);
   }

@@ -240,9 +240,7 @@ public final class PermissionStorage {
         }
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removed permission "+ userPerm.toString());
-    }
+    LOG.debug("Removed permission: {}", userPerm);
   }
 
   private static void removePermissionRecord(Configuration conf, UserPermission userPerm, Table t)
@@ -264,9 +262,7 @@ public final class PermissionStorage {
     Delete d = new Delete(tableName.getName());
     d.addFamily(ACL_LIST_FAMILY);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing permissions of removed table "+ tableName);
-    }
+    LOG.debug("Removing permissions of removed table {}", tableName);
     try {
       t.delete(d);
     } finally {
@@ -281,9 +277,7 @@ public final class PermissionStorage {
       throws IOException{
     Delete d = new Delete(Bytes.toBytes(toNamespaceEntry(namespace)));
     d.addFamily(ACL_LIST_FAMILY);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing permissions of removed namespace "+ namespace);
-    }
+    LOG.debug("Removing permissions of removed namespace {}", namespace);
 
     try {
       t.delete(d);

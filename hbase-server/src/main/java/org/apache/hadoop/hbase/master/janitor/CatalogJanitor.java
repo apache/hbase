@@ -161,9 +161,7 @@ public class CatalogJanitor extends ScheduledChore {
     int gcs = 0;
     try {
       if (!alreadyRunning.compareAndSet(false, true)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("CatalogJanitor already running");
-        }
+        LOG.debug("CatalogJanitor already running");
         // -1 indicates previous scan is in progress
         return -1;
       }
@@ -171,9 +169,7 @@ public class CatalogJanitor extends ScheduledChore {
       if (!this.lastReport.isEmpty()) {
         LOG.warn(this.lastReport.toString());
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(this.lastReport.toString());
-        }
+        LOG.debug("{}", this.lastReport);
       }
 
       updateAssignmentManagerMetrics();
@@ -182,9 +178,7 @@ public class CatalogJanitor extends ScheduledChore {
       for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("In maintenence mode, not cleaning");
-          }
+          LOG.debug("In maintenence mode, not cleaning");
           break;
         }
 
@@ -201,9 +195,7 @@ public class CatalogJanitor extends ScheduledChore {
       for (Map.Entry<RegionInfo, Result> e : splitParents.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("In maintenence mode, not cleaning");
-          }
+          LOG.debug("In maintenence mode, not cleaning");
           break;
         }
 
@@ -276,10 +268,7 @@ public class CatalogJanitor extends ScheduledChore {
       GCMultipleMergedRegionsProcedure mergeRegionProcedure =
           new GCMultipleMergedRegionsProcedure(pe.getEnvironment(), mergedRegion, parents);
       pe.submitProcedure(mergeRegionProcedure);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Submitted procedure {} for merged region {}", mergeRegionProcedure,
-          mergedRegion);
-      }
+      LOG.debug("Submitted procedure {} for merged region {}", mergeRegionProcedure, mergedRegion);
       return true;
     }
     return false;
@@ -320,15 +309,11 @@ public class CatalogJanitor extends ScheduledChore {
 
   static boolean cleanParent(MasterServices services, RegionInfo parent, Result rowContent)
     throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Cleaning parent region {}", parent);
-    }
+    LOG.debug("Cleaning parent region {}", parent);
     // Check whether it is a merged region and if it is clean of references.
     if (CatalogFamilyFormat.hasMergeRegions(rowContent.rawCells())) {
       // Wait until clean of merge parent regions first
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Region {} has merge parents, cleaning them first", parent);
-      }
+      LOG.debug("Region {} has merge parents, cleaning them first", parent);
       return false;
     }
     // Run checks on each daughter split.
@@ -347,9 +332,7 @@ public class CatalogJanitor extends ScheduledChore {
       ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
       GCRegionProcedure gcRegionProcedure = new GCRegionProcedure(pe.getEnvironment(), parent);
       pe.submitProcedure(gcRegionProcedure);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Submitted procedure {} for split parent {}", gcRegionProcedure, parent);
-      }
+      LOG.debug("Submitted procedure {} for split parent {}", gcRegionProcedure, parent);
       return true;
     } else {
       if (LOG.isDebugEnabled()) {

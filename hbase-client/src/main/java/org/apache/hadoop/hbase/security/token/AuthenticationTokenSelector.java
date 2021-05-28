@@ -43,9 +43,7 @@ public class AuthenticationTokenSelector
       for (Token ident : tokens) {
         if (serviceName.equals(ident.getService()) &&
             AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE.equals(ident.getKind())) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Returning token "+ident);
-          }
+          LOG.debug("Returning token {}", ident);
           return (Token<AuthenticationTokenIdentifier>)ident;
         }
       }

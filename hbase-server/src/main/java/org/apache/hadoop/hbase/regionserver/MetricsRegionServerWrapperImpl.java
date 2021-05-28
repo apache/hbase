@@ -150,9 +150,7 @@ class MetricsRegionServerWrapperImpl
     } catch (IOException e) {
       LOG.warn("Failed to get hedged metrics", e);
     }
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Computing regionserver metrics every " + this.period + " milliseconds");
-    }
+    LOG.info("Computing regionserver metrics every " + this.period + " milliseconds");
   }
 
   private void initBlockCache() {

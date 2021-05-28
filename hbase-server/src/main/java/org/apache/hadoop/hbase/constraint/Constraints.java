@@ -473,9 +473,7 @@ public final class Constraints {
       String[] className = CONSTRAINT_HTD_ATTR_KEY_PATTERN.split(key);
       if (className.length == 2) {
         key = className[1];
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Loading constraint:" + key);
-        }
+        LOG.debug("Loading constraint: {}", key);
 
         // read in the rest of the constraint
         Configuration conf;

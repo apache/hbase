@@ -100,9 +100,7 @@ public class MultiRowResource extends ResourceBase implements Constants {
           }
           model.addRow(rowModel);
         } else {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("The row : " + rk + " not found in the table.");
-          }
+          LOG.trace("The row : {} not found in the table.", rk);
         }
       }
 

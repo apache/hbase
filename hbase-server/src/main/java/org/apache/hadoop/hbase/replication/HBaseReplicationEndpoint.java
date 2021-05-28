@@ -234,9 +234,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
         children = ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.getZNodePaths().rsZNode);
       }
     } catch (KeeperException ke) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Fetch slaves addresses failed", ke);
-      }
+      LOG.debug("Fetch slaves addresses failed", ke);
       reconnect(ke);
     }
     if (children == null) {

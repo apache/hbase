@@ -401,9 +401,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
     @Override
     public void abort(String why, Throwable e) {
       LOG.warn("DumpReplicationQueue received abort, ignoring.  Reason: " + why);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(e.toString(), e);
-      }
+      LOG.debug("Abort"), e);
     }
 
     @Override

@@ -55,9 +55,7 @@ public class ProcedureEvent<T> {
   /** Mark the event as not ready. */
   public synchronized void suspend() {
     ready = false;
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Suspend " + toString());
-    }
+    LOG.trace("Suspend {}", this);
   }
 
   /**
@@ -111,9 +109,8 @@ public class ProcedureEvent<T> {
       LOG.warn("Found procedures suspended in a ready event! Size=" + suspendedProcedures.size());
     }
     ready = true;
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Unsuspend " + toString());
-    }
+    LOG.trace("Unsuspend {}", this);
+
     // wakeProcedure adds to the front of queue, so we start from last in the
     // waitQueue' queue, so that the procedure which was added first goes in the front for
     // the scheduler queue.

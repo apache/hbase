@@ -71,7 +71,7 @@ public final class TableHFileArchiveTracker extends ZKListener {
       return;
     }
 
-    LOG.debug("Archive node: " + path + " created");
+    LOG.debug("Archive node: {} created", path);
     // since we are already enabled, just update a single table
     String table = path.substring(archiveHFileZNode.length());
 
@@ -95,7 +95,7 @@ public final class TableHFileArchiveTracker extends ZKListener {
       return;
     }
 
-    LOG.debug("Archive node: " + path + " children changed.");
+    LOG.debug("Archive node: {} children changed.", path);
     // a table was added to the archive
     try {
       updateWatchedTables();
@@ -141,7 +141,7 @@ public final class TableHFileArchiveTracker extends ZKListener {
       return;
     }
 
-    LOG.debug("Archive node: " + path + " deleted");
+    LOG.debug("Archive node: {} deleted", path);
     String table = path.substring(archiveHFileZNode.length());
     // if we stop archiving all tables
     if (table.length() == 0) {
@@ -170,7 +170,7 @@ public final class TableHFileArchiveTracker extends ZKListener {
   private void checkEnabledAndUpdate() {
     try {
       if (ZKUtil.watchAndCheckExists(watcher, archiveHFileZNode)) {
-        LOG.debug(archiveHFileZNode + " znode does exist, checking for tables to archive");
+        LOG.debug("{} znode does exist, checking for tables to archive", archiveHFileZNode);
 
         // update the tables we should backup, to get the most recent state.
         // This is safer than also watching for children and then hoping we get
@@ -194,7 +194,7 @@ public final class TableHFileArchiveTracker extends ZKListener {
     LOG.debug("Updating watches on tables to archive.");
     // get the children and add watches for each of the children
     List<String> tables = ZKUtil.listChildrenAndWatchThem(watcher, archiveHFileZNode);
-    LOG.debug("Starting archive for tables:" + tables);
+    LOG.debug("Starting archive for tables: {}", tables);
     // if archiving is still enabled
     if (tables != null && tables.size() > 0) {
       getMonitor().setArchiveTables(tables);

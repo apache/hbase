@@ -260,9 +260,7 @@ public final class SnapshotManifest {
       monitor.rethrowException();
 
       List<HStoreFile> storeFiles = new ArrayList<>(store.getStorefiles());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
-      }
+      LOG.debug("Adding snapshot references for {} hfiles", storeFiles);
 
       // 2.2. iterate through all the store's files and create "references".
       for (int i = 0, sz = storeFiles.size(); i < sz; i++) {
@@ -325,9 +323,7 @@ public final class SnapshotManifest {
 
           Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(familyName);
           if (storeFiles == null) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("No files under family: " + familyName);
-            }
+            LOG.debug("No files under family: {}", familyName);
             continue;
           }
 
@@ -362,9 +358,7 @@ public final class SnapshotManifest {
       Collection<StoreFileInfo> storeFiles, boolean isMob) throws IOException {
     final String fileType = isMob ? "mob file" : "hfile";
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(String.format("Adding snapshot references for %s %ss", storeFiles, fileType));
-    }
+    LOG.debug("Adding snapshot references for {} {}", storeFiles, fileType);
 
     int i = 0;
     int sz = storeFiles.size();

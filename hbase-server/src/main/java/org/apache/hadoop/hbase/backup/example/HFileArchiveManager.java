@@ -110,7 +110,7 @@ class HFileArchiveManager {
 
     // then add the table to the list of znodes to archive
     String tableNode = this.getTableNode(table);
-    LOG.debug("Creating: " + tableNode + ", data: []");
+    LOG.debug("Creating: {}, data: []", tableNode);
     ZKUtil.createSetData(zooKeeper, tableNode, new byte[0]);
   }
 
@@ -135,7 +135,7 @@ class HFileArchiveManager {
     // make sure the table is the latest version so the delete takes
     zooKeeper.syncOrTimeout(tableNode);
 
-    LOG.debug("Attempting to delete table node:" + tableNode);
+    LOG.debug("Attempting to delete table node: {}", tableNode);
     ZKUtil.deleteNodeRecursively(zooKeeper, tableNode);
   }
 

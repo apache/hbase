@@ -111,9 +111,7 @@ public final class PrefetchExecutor {
 
   public static void complete(Path path) {
     prefetchFutures.remove(path);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Prefetch completed for " + path);
-    }
+    LOG.debug("Prefetch completed for {}", path);
   }
 
   public static void cancel(Path path) {
@@ -122,9 +120,7 @@ public final class PrefetchExecutor {
       // ok to race with other cancellation attempts
       future.cancel(true);
       prefetchFutures.remove(path);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Prefetch cancelled for " + path);
-      }
+      LOG.debug("Prefetch cancelled for {}", path);
     }
   }
 

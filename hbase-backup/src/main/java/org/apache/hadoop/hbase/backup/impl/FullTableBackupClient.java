@@ -105,9 +105,7 @@ public class FullTableBackupClient extends TableBackupClient {
       String[] args = argsList.toArray(new String[0]);
 
       String jobname = "Full-Backup_" + backupInfo.getBackupId() + "_" + table.getNameAsString();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting snapshot copy job name to : " + jobname);
-      }
+      LOG.debug("Setting snapshot copy job name to : {}", jobname);
       conf.set(JOB_NAME_CONF_KEY, jobname);
 
       LOG.debug("Copy snapshot " + args[1] + " to " + args[3]);

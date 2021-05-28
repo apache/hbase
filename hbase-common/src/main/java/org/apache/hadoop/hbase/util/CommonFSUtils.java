@@ -196,9 +196,7 @@ public final class CommonFSUtils {
    */
   public static FSDataOutputStream create(FileSystem fs, Path path,
       FsPermission perm, boolean overwrite) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Creating file={} with permission={}, overwrite={}", path, perm, overwrite);
-    }
+    LOG.trace("Creating file={} with permission={}, overwrite={}", path, perm, overwrite);
     return fs.create(path, perm, overwrite, getDefaultBufferSize(fs),
         getDefaultReplication(fs, path), getDefaultBlockSize(fs, path), null);
   }
@@ -510,9 +508,7 @@ public final class CommonFSUtils {
   static void setStoragePolicy(final FileSystem fs, final Path path, final String storagePolicy,
       boolean throwException) throws IOException {
     if (storagePolicy == null) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("We were passed a null storagePolicy, exiting early.");
-      }
+      LOG.trace("We were passed a null storagePolicy, exiting early.");
       return;
     }
     String trimmedStoragePolicy = storagePolicy.trim();
@@ -561,16 +557,14 @@ public final class CommonFSUtils {
       // Hadoop 2.8+, 3.0-a1+ added FileSystem.setStoragePolicy with a default implementation
       // that throws UnsupportedOperationException
       if (e instanceof UnsupportedOperationException) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("The underlying FileSystem implementation doesn't support " +
-              "setStoragePolicy. This is probably intentional on their part, since HDFS-9345 " +
-              "appears to be present in your version of Hadoop. For more information check " +
-              "the Hadoop documentation on 'ArchivalStorage', the Hadoop FileSystem " +
-              "specification docs from HADOOP-11981, and/or related documentation from the " +
-              "provider of the underlying FileSystem (its name should appear in the " +
-              "stacktrace that accompanies this message). Note in particular that Hadoop's " +
-              "local filesystem implementation doesn't support storage policies.", e);
-        }
+        LOG.debug("The underlying FileSystem implementation doesn't support "
+            + "setStoragePolicy. This is probably intentional on their part, since HDFS-9345 "
+            + "appears to be present in your version of Hadoop. For more information check "
+            + "the Hadoop documentation on 'ArchivalStorage', the Hadoop FileSystem "
+            + "specification docs from HADOOP-11981, and/or related documentation from the "
+            + "provider of the underlying FileSystem (its name should appear in the "
+            + "stacktrace that accompanies this message). Note in particular that Hadoop's "
+            + "local filesystem implementation doesn't support storage policies.", e);
       }
     }
 
@@ -629,9 +623,7 @@ public final class CommonFSUtils {
       status = filter == null ? fs.listStatus(dir) : fs.listStatus(dir, filter);
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("{} doesn't exist", dir);
-      }
+      LOG.trace("{} doesn't exist", dir);
     }
     if (status == null || status.length < 1) {
       return null;
@@ -672,9 +664,7 @@ public final class CommonFSUtils {
       }
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("{} doesn't exist", dir);
-      }
+      LOG.trace("{} doesn't exist", dir);
     }
     return status;
   }

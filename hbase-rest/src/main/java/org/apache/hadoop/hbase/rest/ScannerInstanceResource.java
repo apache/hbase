@@ -118,9 +118,7 @@ public class ScannerInstanceResource extends ResourceBase {
         throw e;
       }
       if (value == null) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("generator exhausted");
-        }
+        LOG.trace("generator exhausted");
         // respond with 204 (No Content) if an empty cell set would be
         // returned
         if (count == limit) {
@@ -167,9 +165,7 @@ public class ScannerInstanceResource extends ResourceBase {
     try {
       Cell value = generator.next();
       if (value == null) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("generator exhausted");
-        }
+        LOG.trace("generator exhausted");
         return Response.noContent().build();
       }
       ResponseBuilder response = Response.ok(CellUtil.cloneValue(value));

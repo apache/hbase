@@ -391,9 +391,7 @@ public class HeapMemoryManager {
         }
       } else {
         metricsHeapMemoryManager.increaseTunerDoNothingCounter();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("No changes made by HeapMemoryTuner.");
-        }
+        LOG.debug("No changes made by HeapMemoryTuner.");
       }
     }
 

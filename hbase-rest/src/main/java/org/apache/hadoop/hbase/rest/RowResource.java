@@ -754,9 +754,7 @@ public class RowResource extends ResourceBase {
         append.addColumn(parts[0], parts[1], cell.getValue());
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("APPEND " + append.toString());
-      }
+      LOG.debug("APPEND {}", append);
       Result result = table.append(append);
       if (returnResult) {
         if (result.isEmpty()) {
@@ -848,9 +846,7 @@ public class RowResource extends ResourceBase {
         increment.addColumn(parts[0], parts[1], Long.parseLong(Bytes.toStringBinary(cell.getValue())));
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("INCREMENT " + increment.toString());
-      }
+      LOG.debug("INCREMENT {}" + increment);
       Result result = table.increment(increment);
 
       if (returnResult) {

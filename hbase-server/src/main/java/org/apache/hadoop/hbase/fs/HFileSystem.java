@@ -175,9 +175,7 @@ public class HFileSystem extends FilterFileSystem {
       return (String) ReflectionUtils.invokeMethod(blockStoragePolicySpi, "getName");
     } catch (Exception e) {
       // Maybe fail because of using old HDFS version, try the old way
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Failed to get policy directly", e);
-      }
+      LOG.trace("Failed to get policy directly", e);
       return getStoragePolicyForOldHDFSVersion(path);
     }
   }
@@ -435,10 +433,8 @@ public class HFileSystem extends FilterFileSystem {
 
       // Ok, so it's an WAL
       String hostName = sn.getHostname();
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(src +
-            " is an WAL file, so reordering blocks, last hostname will be:" + hostName);
-      }
+      LOG.trace("{} is an WAL file, so reordering blocks, last hostname will be: {}", src,
+        hostName);
 
       // Just check for all blocks
       for (LocatedBlock lb : lbs.getLocatedBlocks()) {

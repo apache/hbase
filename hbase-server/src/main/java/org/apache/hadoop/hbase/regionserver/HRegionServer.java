@@ -842,10 +842,8 @@ public class HRegionServer extends Thread implements
     }
 
     coprocessorServiceHandlers.put(serviceName, instance);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-        "Registered regionserver coprocessor executorService: executorService=" + serviceName);
-    }
+    LOG.debug("Registered regionserver coprocessor executorService: executorService={}",
+      serviceName);
     return true;
   }
 
@@ -1613,9 +1611,7 @@ public class HRegionServer extends Thread implements
           }
         }
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Config from master: " + key + "=" + value);
-        }
+        LOG.debug("Config from master: {}={}", key, value);
         this.conf.set(key, value);
       }
       // Set our ephemeral znode up in zookeeper now we have a name.
@@ -3844,10 +3840,8 @@ public class HRegionServer extends Thread implements
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof PleaseHoldException) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Failed to report file archival(s) to Master because it is initializing."
-              + " This will be retried.", ioe);
-        }
+        LOG.trace("Failed to report file archival(s) to Master because it is initializing."
+            + " This will be retried.", ioe);
         // The Master is coming up. Will retry the report later. Avoid re-creating the stub.
         return false;
       }
