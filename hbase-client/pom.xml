@@ -31,8 +31,6 @@
   <artifactId>hbase-client</artifactId>
   <name>Apache HBase - Client</name>
   <description>Client of HBase</description>
-<!--REMOVE-->
-
   <build>
     <plugins>
       <plugin>
