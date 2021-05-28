@@ -355,7 +355,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     internalBalancer.setClusterInfoProvider(provider);
     // special handling for favor node balancers
     if (internalBalancer instanceof FavoredNodesPromoter) {
-      favoredNodesManager = new FavoredNodesManager(masterServices);
+      favoredNodesManager = new FavoredNodesManager(provider);
       if (internalBalancer instanceof FavoredNodeLoadBalancer) {
         ((FavoredNodeLoadBalancer) internalBalancer).setMasterServices(masterServices);
       }

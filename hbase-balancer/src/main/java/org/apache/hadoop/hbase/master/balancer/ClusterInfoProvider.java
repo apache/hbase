@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.BalancerRejection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -46,6 +47,11 @@ public interface ClusterInfoProvider extends ConfigurationObserver {
    * Get the configuration.
    */
   Configuration getConfiguration();
+
+  /**
+   * Returns a reference to the cluster's connection.
+   */
+  Connection getConnection();
 
   /**
    * Get all the regions of this cluster.
