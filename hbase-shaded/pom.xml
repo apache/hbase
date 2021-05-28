@@ -146,6 +146,7 @@
                          need not be included -->
                     <exclude>javax.annotation:javax.annotation-api</exclude>
                     <exclude>javax.activation:javax.activation-api</exclude>
+                    <exclude>jakarta.activation:jakarta.activation-api</exclude> <!-- Hadoop 3.3.1 -->
                     <exclude>jakarta.ws.rs:jakarta.ws.rs-api</exclude>
                     <exclude>jakarta.annotation:jakarta.annotation-api</exclude>
                     <exclude>jakarta.validation:jakarta.validation-api</exclude>
