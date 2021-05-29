@@ -284,7 +284,7 @@ public class KeyValueUtil {
       final byte[] family, final int foffset, final int flength, final byte[] qualifier,
       final int qoffset, final int qlength) {
     return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
-        qlength, HConstants.OLDEST_TIMESTAMP, Type.Minimum, null, 0, 0);
+        qlength, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum, null, 0, 0);
   }
 
   /**

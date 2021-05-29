@@ -28,6 +28,7 @@ import java.util.NoSuchElementException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -113,7 +114,7 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
         scanInfo = store.getScanInfo();
       }
       scanner = new StoreScanner(store, scanInfo, scanners, ScanType.COMPACT_RETAIN_DELETES,
-          store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
+          store.getSmallestReadPoint(), PrivateConstants.OLDEST_TIMESTAMP);
       if (cpHost != null) {
         InternalScanner scannerFromCp = cpHost.preMemStoreCompactionCompact(store, scanner);
         if (scannerFromCp == null) {

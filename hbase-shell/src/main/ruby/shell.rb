@@ -455,6 +455,7 @@ Shell.load_command_group(
     compaction_switch
     flush
     get_balancer_decisions
+    get_balancer_rejections
     get_slowlog_responses
     get_largelog_responses
     major_compact
@@ -552,6 +553,7 @@ Shell.load_command_group(
   commands: %w[
     update_config
     update_all_config
+    update_rsgroup_config
   ]
 )
 

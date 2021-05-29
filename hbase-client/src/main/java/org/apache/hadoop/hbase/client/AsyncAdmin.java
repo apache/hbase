@@ -1130,6 +1130,13 @@ public interface AsyncAdmin {
   CompletableFuture<Void> updateConfiguration();
 
   /**
+   * Update the configuration and trigger an online config change on all the regionservers in
+   * the RSGroup.
+   * @param groupName the group name
+   */
+  CompletableFuture<Void> updateConfiguration(String groupName);
+
+  /**
    * Roll the log writer. I.e. for filesystem based write ahead logs, start writing to a new file.
    * <p>
    * When the returned CompletableFuture is done, it only means the rollWALWriter request was sent

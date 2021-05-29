@@ -97,7 +97,7 @@ public class AsyncRegionServerAdmin {
 
   private <RESP> CompletableFuture<RESP> call(RpcCall<RESP> rpcCall, CellScanner cellScanner) {
     CompletableFuture<RESP> future = new CompletableFuture<>();
-    HBaseRpcController controller = conn.rpcControllerFactory.newController(cellScanner);
+    HBaseRpcController controller = conn.rpcControllerFactory.newController(null, cellScanner);
     try {
       rpcCall.call(conn.getAdminStub(server), controller, new RpcCallback<RESP>() {
 

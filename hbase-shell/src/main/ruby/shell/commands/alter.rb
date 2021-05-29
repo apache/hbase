@@ -48,7 +48,7 @@ To delete the 'f1' column family in table 'ns1:t1', use one of:
 
 You can also change table-scope attributes like MAX_FILESIZE, READONLY,
 MEMSTORE_FLUSHSIZE, NORMALIZATION_ENABLED, NORMALIZER_TARGET_REGION_COUNT,
-NORMALIZER_TARGET_REGION_SIZE(MB), DURABILITY, etc. These can be put at the end;
+NORMALIZER_TARGET_REGION_SIZE_MB, DURABILITY, etc. These can be put at the end;
 for example, to change the max size of a region to 128MB, do:
 
   hbase> alter 't1', MAX_FILESIZE => '134217728'

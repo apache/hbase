@@ -631,6 +631,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> updateConfiguration(String groupName) {
+    return wrap(rawAdmin.updateConfiguration(groupName));
+  }
+
+  @Override
   public CompletableFuture<Void> rollWALWriter(ServerName serverName) {
     return wrap(rawAdmin.rollWALWriter(serverName));
   }

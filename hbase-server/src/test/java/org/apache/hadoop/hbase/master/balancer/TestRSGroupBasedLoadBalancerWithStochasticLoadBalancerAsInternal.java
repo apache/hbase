@@ -29,10 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -44,6 +42,7 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -66,15 +65,13 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     servers = generateServers(3);
     groupMap = constructGroupInfo(servers, groups);
     tableDescs = constructTableDesc(false);
-    Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.regions.slop", "0");
     conf.setFloat("hbase.master.balancer.stochastic.readRequestCost", 10000f);
     conf.set("hbase.rsgroup.grouploadbalancer.class",
-        StochasticLoadBalancer.class.getCanonicalName());
+      StochasticLoadBalancer.class.getCanonicalName());
+    conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     loadBalancer = new RSGroupBasedLoadBalancer();
-    loadBalancer.setRsGroupInfoManager(getMockedGroupInfoManager());
     loadBalancer.setMasterServices(getMockedMaster());
-    loadBalancer.setConf(conf);
     loadBalancer.initialize();
   }
 
@@ -118,7 +115,7 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     serverMetricsMap.put(serverC, mockServerMetricsWithReadRequests(serverC, regionsOnServerC, 0));
     ClusterMetrics clusterStatus = mock(ClusterMetrics.class);
     when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
-    loadBalancer.setClusterMetrics(clusterStatus);
+    loadBalancer.updateClusterMetrics(clusterStatus);
 
     // ReadRequestCostFunction are Rate based, So doing setClusterMetrics again
     // this time, regions on serverA with more readRequestCount load
@@ -133,7 +130,7 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     serverMetricsMap.put(serverC, mockServerMetricsWithReadRequests(serverC, regionsOnServerC, 0));
     clusterStatus = mock(ClusterMetrics.class);
     when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
-    loadBalancer.setClusterMetrics(clusterStatus);
+    loadBalancer.updateClusterMetrics(clusterStatus);
 
     Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
         (Map) mockClusterServersWithTables(clusterState);

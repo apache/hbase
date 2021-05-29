@@ -374,8 +374,8 @@ class WALEntryStream implements Closeable {
       handleFileNotFound(path, (FileNotFoundException)ioe);
     } catch (LeaseNotRecoveredException lnre) {
       // HBASE-15019 the WAL was not closed due to some hiccup.
-      LOG.warn("Try to recover the WAL lease " + currentPath, lnre);
-      recoverLease(conf, currentPath);
+      LOG.warn("Try to recover the WAL lease " + path, lnre);
+      recoverLease(conf, path);
       reader = null;
     } catch (NullPointerException npe) {
       // Workaround for race condition in HDFS-4380

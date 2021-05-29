@@ -326,6 +326,9 @@ set HBASE_OPTS=%HBASE_OPTS% -Dhbase.home.dir="%HBASE_HOME%"
 set HBASE_OPTS=%HBASE_OPTS% -Dhbase.id.str="%HBASE_IDENT_STRING%"
 set HBASE_OPTS=%HBASE_OPTS% -XX:OnOutOfMemoryError="taskkill /F /PID %p"
 
+@rem redirect java.util.logging to slf4j
+set HBASE_OPTS=%HBASE_OPTS% -Djava.util.logging.config.class="org.apache.hadoop.hbase.logging.JulToSlf4jInitializer"
+
 if not defined HBASE_ROOT_LOGGER (
   set HBASE_ROOT_LOGGER=INFO,console
 )

@@ -41,5 +41,6 @@
     <!-- For testing where we want to capture the log message of these special loggers -->
     <Logger name="org.apache.hadoop.hbase.ipc.FailedServers" level="debug" />
     <Logger name="org.apache.hadoop.hbase.regionserver.RSRpcServices" level="debug" />
+    <Logger name="org.apache.hadoop.hbase.logging.TestJul2Slf4j" level="debug" />
   </Loggers>
 </Configuration>

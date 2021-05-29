@@ -65,14 +65,19 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   static final boolean DEFAULT_SPLIT_ENABLED = true;
   static final String MERGE_ENABLED_KEY = "hbase.normalizer.merge.enabled";
   static final boolean DEFAULT_MERGE_ENABLED = true;
-  // TODO: after HBASE-24416, `min.region.count` only applies to merge plans; should
-  //  deprecate/rename the configuration key.
+  /**
+   * @deprecated since 2.5.0 and will be removed in 4.0.0.
+   *   Use {@link SimpleRegionNormalizer#MERGE_MIN_REGION_COUNT_KEY} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-25745">HBASE-25745</a>
+   */
+  @Deprecated
   static final String MIN_REGION_COUNT_KEY = "hbase.normalizer.min.region.count";
-  static final int DEFAULT_MIN_REGION_COUNT = 3;
+  static final String MERGE_MIN_REGION_COUNT_KEY = "hbase.normalizer.merge.min.region.count";
+  static final int DEFAULT_MERGE_MIN_REGION_COUNT = 3;
   static final String MERGE_MIN_REGION_AGE_DAYS_KEY = "hbase.normalizer.merge.min_region_age.days";
   static final int DEFAULT_MERGE_MIN_REGION_AGE_DAYS = 3;
   static final String MERGE_MIN_REGION_SIZE_MB_KEY = "hbase.normalizer.merge.min_region_size.mb";
-  static final int DEFAULT_MERGE_MIN_REGION_SIZE_MB = 1;
+  static final int DEFAULT_MERGE_MIN_REGION_SIZE_MB = 0;
 
   private MasterServices masterServices;
   private NormalizerConfiguration normalizerConfiguration;
@@ -101,11 +106,12 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     setConf(conf);
   }
 
-  private static int parseMinRegionCount(final Configuration conf) {
-    final int parsedValue = conf.getInt(MIN_REGION_COUNT_KEY, DEFAULT_MIN_REGION_COUNT);
+  private static int parseMergeMinRegionCount(final Configuration conf) {
+    final int parsedValue = conf.getInt(MERGE_MIN_REGION_COUNT_KEY,
+      DEFAULT_MERGE_MIN_REGION_COUNT);
     final int settledValue = Math.max(1, parsedValue);
     if (parsedValue != settledValue) {
-      warnInvalidValue(MIN_REGION_COUNT_KEY, parsedValue, settledValue);
+      warnInvalidValue(MERGE_MIN_REGION_COUNT_KEY, parsedValue, settledValue);
     }
     return settledValue;
   }
@@ -158,10 +164,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   }
 
   /**
-   * Return this instance's configured value for {@value #MIN_REGION_COUNT_KEY}.
+   * Return this instance's configured value for {@value #MERGE_MIN_REGION_COUNT_KEY}.
    */
-  public int getMinRegionCount() {
-    return normalizerConfiguration.getMinRegionCount();
+  public int getMergeMinRegionCount() {
+    return normalizerConfiguration.getMergeMinRegionCount();
   }
 
   /**
@@ -340,10 +346,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
    */
   private List<NormalizationPlan> computeMergeNormalizationPlans(final NormalizeContext ctx) {
     final NormalizerConfiguration configuration = normalizerConfiguration;
-    if (ctx.getTableRegions().size() < configuration.getMinRegionCount(ctx)) {
+    if (ctx.getTableRegions().size() < configuration.getMergeMinRegionCount(ctx)) {
       LOG.debug("Table {} has {} regions, required min number of regions for normalizer to run"
           + " is {}, not computing merge plans.", ctx.getTableName(),
-        ctx.getTableRegions().size(), configuration.getMinRegionCount());
+        ctx.getTableRegions().size(), configuration.getMergeMinRegionCount());
       return Collections.emptyList();
     }
 
@@ -493,7 +499,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     private final Configuration conf;
     private final boolean splitEnabled;
     private final boolean mergeEnabled;
-    private final int minRegionCount;
+    private final int mergeMinRegionCount;
     private final Period mergeMinRegionAge;
     private final long mergeMinRegionSizeMb;
 
@@ -501,7 +507,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       conf = null;
       splitEnabled = DEFAULT_SPLIT_ENABLED;
       mergeEnabled = DEFAULT_MERGE_ENABLED;
-      minRegionCount = DEFAULT_MIN_REGION_COUNT;
+      mergeMinRegionCount = DEFAULT_MERGE_MIN_REGION_COUNT;
       mergeMinRegionAge = Period.ofDays(DEFAULT_MERGE_MIN_REGION_AGE_DAYS);
       mergeMinRegionSizeMb = DEFAULT_MERGE_MIN_REGION_SIZE_MB;
     }
@@ -513,15 +519,15 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       this.conf = conf;
       splitEnabled = conf.getBoolean(SPLIT_ENABLED_KEY, DEFAULT_SPLIT_ENABLED);
       mergeEnabled = conf.getBoolean(MERGE_ENABLED_KEY, DEFAULT_MERGE_ENABLED);
-      minRegionCount = parseMinRegionCount(conf);
+      mergeMinRegionCount = parseMergeMinRegionCount(conf);
       mergeMinRegionAge = parseMergeMinRegionAge(conf);
       mergeMinRegionSizeMb = parseMergeMinRegionSizeMb(conf);
       logConfigurationUpdated(SPLIT_ENABLED_KEY, currentConfiguration.isSplitEnabled(),
         splitEnabled);
       logConfigurationUpdated(MERGE_ENABLED_KEY, currentConfiguration.isMergeEnabled(),
         mergeEnabled);
-      logConfigurationUpdated(MIN_REGION_COUNT_KEY, currentConfiguration.getMinRegionCount(),
-        minRegionCount);
+      logConfigurationUpdated(MERGE_MIN_REGION_COUNT_KEY,
+        currentConfiguration.getMergeMinRegionCount(), mergeMinRegionCount);
       logConfigurationUpdated(MERGE_MIN_REGION_AGE_DAYS_KEY,
         currentConfiguration.getMergeMinRegionAge(), mergeMinRegionAge);
       logConfigurationUpdated(MERGE_MIN_REGION_SIZE_MB_KEY,
@@ -540,16 +546,26 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       return mergeEnabled;
     }
 
-    public int getMinRegionCount() {
-      return minRegionCount;
+    public int getMergeMinRegionCount() {
+      return mergeMinRegionCount;
     }
 
-    public int getMinRegionCount(NormalizeContext context) {
-      int minRegionCount = context.getOrDefault(MIN_REGION_COUNT_KEY, Integer::parseInt, 0);
-      if (minRegionCount <= 0) {
-        minRegionCount = getMinRegionCount();
+    public int getMergeMinRegionCount(NormalizeContext context) {
+      String stringValue = context.getOrDefault(MERGE_MIN_REGION_COUNT_KEY,
+        Function.identity(), null);
+      if (stringValue == null) {
+        stringValue = context.getOrDefault(MIN_REGION_COUNT_KEY, Function.identity(),  null);
+        if (stringValue != null) {
+          LOG.debug("The config key {} in table descriptor is deprecated. Instead please use {}. "
+              + "In future release we will remove the deprecated config.", MIN_REGION_COUNT_KEY,
+            MERGE_MIN_REGION_COUNT_KEY);
+        }
       }
-      return minRegionCount;
+      final int mergeMinRegionCount = stringValue == null ? 0 : Integer.parseInt(stringValue);
+      if (mergeMinRegionCount <= 0) {
+        return getMergeMinRegionCount();
+      }
+      return mergeMinRegionCount;
     }
 
     public Period getMergeMinRegionAge() {
@@ -557,7 +573,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     }
 
     public Period getMergeMinRegionAge(NormalizeContext context) {
-      int mergeMinRegionAge = context.getOrDefault(MERGE_MIN_REGION_AGE_DAYS_KEY,
+      final int mergeMinRegionAge = context.getOrDefault(MERGE_MIN_REGION_AGE_DAYS_KEY,
         Integer::parseInt, -1);
       if (mergeMinRegionAge < 0) {
         return getMergeMinRegionAge();
@@ -570,10 +586,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     }
 
     public long getMergeMinRegionSizeMb(NormalizeContext context) {
-      long mergeMinRegionSizeMb = context.getOrDefault(MERGE_MIN_REGION_SIZE_MB_KEY,
+      final long mergeMinRegionSizeMb = context.getOrDefault(MERGE_MIN_REGION_SIZE_MB_KEY,
         Long::parseLong, (long)-1);
       if (mergeMinRegionSizeMb < 0) {
-        mergeMinRegionSizeMb = getMergeMinRegionSizeMb();
+        return getMergeMinRegionSizeMb();
       }
       return mergeMinRegionSizeMb;
     }

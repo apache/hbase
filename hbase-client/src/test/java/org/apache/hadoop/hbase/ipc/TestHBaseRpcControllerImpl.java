@@ -48,7 +48,7 @@ public class TestHBaseRpcControllerImpl {
     for (int i = 0; i < count; i++) {
       cells.add(createCell(i));
     }
-    HBaseRpcController controller = new HBaseRpcControllerImpl(cells);
+    HBaseRpcController controller = new HBaseRpcControllerImpl(null, cells);
     CellScanner cellScanner = controller.cellScanner();
     int index = 0;
     for (; cellScanner.advance(); index++) {

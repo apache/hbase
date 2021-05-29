@@ -47,17 +47,17 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
   }
 
   protected void initMultiWriter(AbstractMultiFileWriter writer, InternalScanner scanner,
-      final FileDetails fd, final boolean shouldDropBehind) {
+      final FileDetails fd, final boolean shouldDropBehind, boolean major) {
     WriterFactory writerFactory = new WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
-        return createTmpWriter(fd, shouldDropBehind);
+        return createTmpWriter(fd, shouldDropBehind, major);
       }
 
       @Override
       public StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
           throws IOException {
-        return createTmpWriter(fd, shouldDropBehind, fileStoragePolicy);
+        return createTmpWriter(fd, shouldDropBehind, fileStoragePolicy, major);
       }
     };
     // Prepare multi-writer, and perform the compaction using scanner and writer.

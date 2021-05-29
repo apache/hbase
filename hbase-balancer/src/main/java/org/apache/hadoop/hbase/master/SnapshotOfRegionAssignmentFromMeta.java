@@ -32,16 +32,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -98,78 +98,97 @@ public class SnapshotOfRegionAssignmentFromMeta {
     this.excludeOfflinedSplitParents = excludeOfflinedSplitParents;
   }
 
+  private void processMetaRecord(Result result) throws IOException {
+    if (result == null || result.isEmpty()) {
+      return;
+    }
+    RegionLocations rl = CatalogFamilyFormat.getRegionLocations(result);
+    if (rl == null) {
+      return;
+    }
+    RegionInfo hri = rl.getRegionLocation(0).getRegion();
+    if (hri == null) {
+      return;
+    }
+    if (hri.getTable() == null) {
+      return;
+    }
+    if (disabledTables.contains(hri.getTable())) {
+      return;
+    }
+    // Are we to include split parents in the list?
+    if (excludeOfflinedSplitParents && hri.isSplit()) {
+      return;
+    }
+    HRegionLocation[] hrls = rl.getRegionLocations();
+
+    // Add the current assignment to the snapshot for all replicas
+    for (int i = 0; i < hrls.length; i++) {
+      if (hrls[i] == null) {
+        continue;
+      }
+      hri = hrls[i].getRegion();
+      if (hri == null) {
+        continue;
+      }
+      addAssignment(hri, hrls[i].getServerName());
+      addRegion(hri);
+    }
+
+    hri = rl.getRegionLocation(0).getRegion();
+    // the code below is to handle favored nodes
+    byte[] favoredNodes = result.getValue(HConstants.CATALOG_FAMILY,
+      FavoredNodeAssignmentHelper.FAVOREDNODES_QUALIFIER);
+    if (favoredNodes == null) {
+      return;
+    }
+    // Add the favored nodes into assignment plan
+    ServerName[] favoredServerList = FavoredNodeAssignmentHelper.getFavoredNodesList(favoredNodes);
+    // Add the favored nodes into assignment plan
+    existingAssignmentPlan.updateFavoredNodesMap(hri, Arrays.asList(favoredServerList));
+
+    /*
+     * Typically there should be FAVORED_NODES_NUM favored nodes for a region in meta. If there is
+     * less than FAVORED_NODES_NUM, lets use as much as we can but log a warning.
+     */
+    if (favoredServerList.length != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
+      LOG.warn("Insufficient favored nodes for region " + hri + " fn: " +
+        Arrays.toString(favoredServerList));
+    }
+    for (int i = 0; i < favoredServerList.length; i++) {
+      if (i == PRIMARY.ordinal()) {
+        addPrimaryAssignment(hri, favoredServerList[i]);
+      }
+      if (i == SECONDARY.ordinal()) {
+        addSecondaryAssignment(hri, favoredServerList[i]);
+      }
+      if (i == TERTIARY.ordinal()) {
+        addTeritiaryAssignment(hri, favoredServerList[i]);
+      }
+    }
+  }
   /**
    * Initialize the region assignment snapshot by scanning the hbase:meta table
-   * @throws IOException
    */
   public void initialize() throws IOException {
-    LOG.info("Start to scan the hbase:meta for the current region assignment " +
-      "snappshot");
-    // TODO: at some point this code could live in the MetaTableAccessor
-    ClientMetaTableAccessor.Visitor v = new ClientMetaTableAccessor.Visitor() {
-      @Override
-      public boolean visit(Result result) throws IOException {
+    LOG.info("Start to scan the hbase:meta for the current region assignment " + "snappshot");
+    // Scan hbase:meta to pick up user regions
+    try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME);
+      ResultScanner scanner = metaTable.getScanner(HConstants.CATALOG_FAMILY)) {
+      for (;;) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
+        }
         try {
-          if (result ==  null || result.isEmpty()) return true;
-          RegionLocations rl = CatalogFamilyFormat.getRegionLocations(result);
-          if (rl == null) return true;
-          RegionInfo hri = rl.getRegionLocation(0).getRegion();
-          if (hri == null) return true;
-          if (hri.getTable() == null) return true;
-          if (disabledTables.contains(hri.getTable())) {
-            return true;
-          }
-          // Are we to include split parents in the list?
-          if (excludeOfflinedSplitParents && hri.isSplit()) return true;
-          HRegionLocation[] hrls = rl.getRegionLocations();
-
-          // Add the current assignment to the snapshot for all replicas
-          for (int i = 0; i < hrls.length; i++) {
-            if (hrls[i] == null) continue;
-            hri = hrls[i].getRegion();
-            if (hri == null) continue;
-            addAssignment(hri, hrls[i].getServerName());
-            addRegion(hri);
-          }
-
-          hri = rl.getRegionLocation(0).getRegion();
-          // the code below is to handle favored nodes
-          byte[] favoredNodes = result.getValue(HConstants.CATALOG_FAMILY,
-              FavoredNodeAssignmentHelper.FAVOREDNODES_QUALIFIER);
-          if (favoredNodes == null) return true;
-          // Add the favored nodes into assignment plan
-          ServerName[] favoredServerList =
-              FavoredNodeAssignmentHelper.getFavoredNodesList(favoredNodes);
-          // Add the favored nodes into assignment plan
-          existingAssignmentPlan.updateFavoredNodesMap(hri,
-              Arrays.asList(favoredServerList));
-
-          /*
-           * Typically there should be FAVORED_NODES_NUM favored nodes for a region in meta. If
-           * there is less than FAVORED_NODES_NUM, lets use as much as we can but log a warning.
-           */
-          if (favoredServerList.length != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
-            LOG.warn("Insufficient favored nodes for region " + hri + " fn: " + Arrays
-                .toString(favoredServerList));
-          }
-          for (int i = 0; i < favoredServerList.length; i++) {
-            if (i == PRIMARY.ordinal()) addPrimaryAssignment(hri, favoredServerList[i]);
-            if (i == SECONDARY.ordinal()) addSecondaryAssignment(hri, favoredServerList[i]);
-            if (i == TERTIARY.ordinal()) addTeritiaryAssignment(hri, favoredServerList[i]);
-          }
-          return true;
+          processMetaRecord(result);
         } catch (RuntimeException e) {
-          LOG.error("Catche remote exception " + e.getMessage() +
-              " when processing" + result);
+          LOG.error("Catch remote exception " + e.getMessage() + " when processing" + result);
           throw e;
         }
       }
-    };
-    // Scan hbase:meta to pick up user regions
-    MetaTableAccessor.fullScanRegions(connection, v);
-    //regionToRegionServerMap = regions;
-    LOG.info("Finished to scan the hbase:meta for the current region assignment" +
-      "snapshot");
+    }
+    LOG.info("Finished to scan the hbase:meta for the current region assignment" + "snapshot");
   }
 
   private void addRegion(RegionInfo regionInfo) {

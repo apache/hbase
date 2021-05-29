@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ClientUtil;
@@ -100,6 +101,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -965,6 +967,9 @@ public final class ProtobufUtil {
    */
   public static Mutation toMutation(final MutationProto proto) throws IOException {
     MutationType type = proto.getMutateType();
+    if (type == MutationType.INCREMENT) {
+      return toIncrement(proto, null);
+    }
     if (type == MutationType.APPEND) {
       return toAppend(proto, null);
     }
@@ -3722,6 +3727,37 @@ public final class ProtobufUtil {
     }
   }
 
+  public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
+    final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
+    final TimeRange timeRange) throws IOException {
+
+    ClientProtos.Condition.Builder builder = ClientProtos.Condition.newBuilder()
+      .setRow(UnsafeByteOperations.unsafeWrap(row));
+
+    if (filter != null) {
+      builder.setFilter(ProtobufUtil.toFilter(filter));
+    } else {
+      builder.setFamily(UnsafeByteOperations.unsafeWrap(family))
+        .setQualifier(UnsafeByteOperations.unsafeWrap(
+          qualifier == null ? HConstants.EMPTY_BYTE_ARRAY : qualifier))
+        .setComparator(ProtobufUtil.toComparator(new BinaryComparator(value)))
+        .setCompareType(HBaseProtos.CompareType.valueOf(op.name()));
+    }
+
+    return builder.setTimeRange(ProtobufUtil.toTimeRange(timeRange)).build();
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final Filter filter,
+    final TimeRange timeRange) throws IOException {
+    return toCondition(row, null, null, null, null, filter, timeRange);
+  }
+
+  public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
+    final byte[] qualifier, final CompareOperator op, final byte[] value,
+    final TimeRange timeRange) throws IOException {
+    return toCondition(row, family, qualifier, op, value, null, timeRange);
+  }
+
   public static List<LogEntry> toBalancerDecisionResponse(
       HBaseProtos.LogEntry logEntry) {
     try {
@@ -3733,6 +3769,25 @@ public final class ProtobufUtil {
           (MasterProtos.BalancerDecisionsResponse) method
             .invoke(null, logEntry.getLogMessage());
         return getBalancerDecisionEntries(response);
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      throw new RuntimeException("Error while retrieving response from server");
+    }
+    throw new RuntimeException("Invalid response from server");
+  }
+
+  public static List<LogEntry> toBalancerRejectionResponse(
+    HBaseProtos.LogEntry logEntry) {
+    try {
+      final String logClassName = logEntry.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("BalancerRejectionsResponse")) {
+        MasterProtos.BalancerRejectionsResponse response =
+          (MasterProtos.BalancerRejectionsResponse) method
+            .invoke(null, logEntry.getLogMessage());
+        return getBalancerRejectionEntries(response);
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
       | InvocationTargetException e) {
@@ -3757,12 +3812,34 @@ public final class ProtobufUtil {
       .collect(Collectors.toList());
   }
 
+  public static List<LogEntry> getBalancerRejectionEntries(
+    MasterProtos.BalancerRejectionsResponse response) {
+    List<RecentLogs.BalancerRejection> balancerRejections = response.getBalancerRejectionList();
+    if (CollectionUtils.isEmpty(balancerRejections)) {
+      return Collections.emptyList();
+    }
+    return balancerRejections.stream().map(balancerRejection -> new BalancerRejection.Builder()
+      .setReason(balancerRejection.getReason())
+      .setCostFuncInfoList(balancerRejection.getCostFuncInfoList())
+      .build())
+      .collect(Collectors.toList());
+  }
+
   public static HBaseProtos.LogRequest toBalancerDecisionRequest(int limit) {
     MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest =
       MasterProtos.BalancerDecisionsRequest.newBuilder().setLimit(limit).build();
     return HBaseProtos.LogRequest.newBuilder()
       .setLogClassName(balancerDecisionsRequest.getClass().getName())
       .setLogMessage(balancerDecisionsRequest.toByteString())
+      .build();
+  }
+
+  public static HBaseProtos.LogRequest toBalancerRejectionRequest(int limit) {
+    MasterProtos.BalancerRejectionsRequest balancerRejectionsRequest =
+      MasterProtos.BalancerRejectionsRequest.newBuilder().setLimit(limit).build();
+    return HBaseProtos.LogRequest.newBuilder()
+      .setLogClassName(balancerRejectionsRequest.getClass().getName())
+      .setLogMessage(balancerRejectionsRequest.toByteString())
       .build();
   }
 

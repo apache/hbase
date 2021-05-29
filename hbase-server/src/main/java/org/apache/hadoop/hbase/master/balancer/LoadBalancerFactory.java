@@ -46,8 +46,6 @@ public class LoadBalancerFactory {
     Class<? extends LoadBalancer> balancerKlass =
       conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, getDefaultLoadBalancerClass(),
         LoadBalancer.class);
-    LoadBalancer balancer = ReflectionUtils.newInstance(balancerKlass);
-    balancer.setConf(conf);
-    return balancer;
+    return ReflectionUtils.newInstance(balancerKlass);
   }
 }

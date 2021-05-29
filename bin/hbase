@@ -54,6 +54,9 @@
 #   HBASE_SHELL_OPTS Extra options passed to the hbase shell.
 #                    Empty by default.
 #
+#   HBASE_JSHELL_ARGS Additional arguments passed to the jshell.
+#                     Defaults to `--startup DEFAULT --startup PRINTING --startup hbase_startup.jsh`
+#
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 
@@ -87,6 +90,7 @@ show_usage() {
     echo "  thrift2          Run the HBase Thrift2 server"
     echo "  clean            Run the HBase clean up script"
   fi
+  echo "  jshell           Run a jshell with HBase on the classpath"
   echo "  classpath        Dump hbase CLASSPATH"
   echo "  mapredcp         Dump CLASSPATH entries required by mapreduce"
   echo "  pe               Run PerformanceEvaluation"
@@ -311,6 +315,8 @@ for f in "${HBASE_HOME}"/lib/client-facing-thirdparty/*.jar; do
     CLASSPATH="${CLASSPATH}:${f}"
   fi
 done
+# redirect java.util.logging to slf4j
+HBASE_OPTS="$HBASE_OPTS -Djava.util.logging.config.class=org.apache.hadoop.hbase.logging.JulToSlf4jInitializer"
 
 # default log directory & file
 if [ "$HBASE_LOG_DIR" = "" ]; then
@@ -478,6 +484,11 @@ add_jdk11_deps_to_classpath() {
   done
 }
 
+enable_trace() {
+  agent_jar=$(find lib/trace -type f -name "opentelemetry-javaagent-*")
+  HBASE_OPTS="$HBASE_OPTS -javaagent:$agent_jar $HBASE_TRACE_OPTS"
+}
+
 #Add the development env class path stuff
 if $in_dev_env; then
   add_maven_deps_to_classpath "cached_classpath.txt"
@@ -528,6 +539,16 @@ if [ "$COMMAND" = "shell" ] ; then
     CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/hbase-shell/src/main/ruby/jar-bootstrap.rb"
   fi
   HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
+elif [ "$COMMAND" = 'jshell' ] ; then
+  java_version="$(read_java_version)"
+  major_version_number="$(parse_java_major_version "${java_version}")"
+  if [ "${major_version_number}" -lt 9 ] ; then
+    echo "JShell is available only with JDK9 and lated. Detected JDK version is ${java_version}".
+    exit 1
+  fi
+  CLASS='jdk.internal.jshell.tool.JShellToolProvider'
+  # set default values for HBASE_JSHELL_ARGS
+  read -r -a JSHELL_ARGS <<< "${HBASE_JSHELL_ARGS:-"--startup DEFAULT --startup PRINTING --startup ${HBASE_HOME}/bin/hbase_startup.jsh"}"
 elif [ "$COMMAND" = "hbck" ] ; then
   # Look for the -j /path/to/HBCK2.jar parameter. Else pass through to hbck.
   case "${1}" in
@@ -770,6 +791,11 @@ elif [ "${DEBUG}" = "true" ]; then
   echo "JDK11 jars skipped from classpath."
 fi
 
+if [[ -n "${HBASE_TRACE_OPTS}" ]]; then
+  echo "Attach opentelemetry agent to enable trace"
+  enable_trace
+fi
+
 # Have JVM dump heap if we run out of memory.  Files will be 'launch directory'
 # and are named like the following: java_pid21612.hprof. Apparently it doesn't
 # 'cost' to have this flag enabled. Its a 1.6 flag only. See:
@@ -813,9 +839,15 @@ if [ "${DEBUG}" = "true" ]; then
   HBASE_OPTS="${HBASE_OPTS} -Xdiag"
 fi
 
+# resolve the command arguments
+read -r -a CMD_ARGS <<< "$@"
+if [ "${#JSHELL_ARGS[@]}" -gt 0 ] ; then
+  CMD_ARGS=("${JSHELL_ARGS[@]}" "${CMD_ARGS[@]}")
+fi
+
 if [ "${HBASE_NOEXEC}" != "" ]; then
-  "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
+  "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "${CMD_ARGS[@]}"
 else
   export JVM_PID="$$"
-  exec "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
+  exec "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "${CMD_ARGS[@]}"
 fi

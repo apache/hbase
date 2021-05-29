@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase;
 
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
@@ -87,8 +89,6 @@ import org.apache.hadoop.hbase.io.hfile.RandomDistribution;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
-import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
-import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -106,9 +106,6 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.core.ProbabilitySampler;
-import org.apache.htrace.core.Sampler;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -706,6 +703,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int totalRows = DEFAULT_ROWS_PER_GB;
     int measureAfter = 0;
     float sampleRate = 1.0f;
+    /**
+     * @deprecated Useless after switching to OpenTelemetry
+     */
+    @Deprecated
     double traceRate = 0.0;
     String tableName = TABLE_NAME;
     boolean flushCommits = true;
@@ -1156,8 +1157,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected final TestOptions opts;
 
     private final Status status;
-    private final Sampler traceSampler;
-    private final SpanReceiverHost receiverHost;
 
     private String testName;
     private Histogram latencyHistogram;
@@ -1179,18 +1178,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
      */
     TestBase(final Configuration conf, final TestOptions options, final Status status) {
       this.conf = conf;
-      this.receiverHost = this.conf == null? null: SpanReceiverHost.getInstance(conf);
       this.opts = options;
       this.status = status;
       this.testName = this.getClass().getSimpleName();
-      if (options.traceRate >= 1.0) {
-        this.traceSampler = Sampler.ALWAYS;
-      } else if (options.traceRate > 0.0) {
-        conf.setDouble("hbase.sampler.fraction", options.traceRate);
-        this.traceSampler = new ProbabilitySampler(new HBaseHTraceConfiguration(conf));
-      } else {
-        this.traceSampler = Sampler.NEVER;
-      }
       everyN = (int) (opts.totalRows / (opts.totalRows * opts.sampleRate));
       if (options.isValueZipf()) {
         this.zipf = new RandomDistribution.Zipf(this.rand, 1, options.getValueSize(), 1.2);
@@ -1360,7 +1350,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
               YammerHistogramUtils.getHistogramReport(bytesInRemoteResultsHistogram));
         }
       }
-      receiverHost.closeReceivers();
     }
 
     abstract void onTakedown() throws IOException;
@@ -1397,7 +1386,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testTimed() throws IOException, InterruptedException {
       int startRow = getStartRow();
       int lastRow = getLastRow();
-      TraceUtil.addSampler(traceSampler);
       // Report on completion of 1/10th of total.
       for (int ii = 0; ii < opts.cycles; ii++) {
         if (opts.cycles > 1) LOG.info("Cycle=" + ii + " of " + opts.cycles);
@@ -1405,8 +1393,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
           if (i % everyN != 0) continue;
           long startTime = System.nanoTime();
           boolean requestSent = false;
-          try (TraceScope scope = TraceUtil.createTrace("test row");){
+          Span span = TraceUtil.getGlobalTracer().spanBuilder("test row").startSpan();
+          try (Scope scope = span.makeCurrent()){
             requestSent = testRow(i, startTime);
+          } finally {
+            span.end();
           }
           if ( (i - startRow) > opts.measureAfter) {
             // If multiget or multiput is enabled, say set to 10, testRow() returns immediately
