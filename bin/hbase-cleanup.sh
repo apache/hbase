@@ -98,13 +98,13 @@ execute_clean_acls() {
 clean_up() {
   case $1 in
   --cleanZk) 
-    execute_zk_command "rmr ${zparent}";
+    execute_zk_command "deleteall ${zparent}";
     ;;
   --cleanHdfs)
     execute_hdfs_command "-rm -R ${hrootdir}"
     ;;
   --cleanAll)
-    execute_zk_command "rmr ${zparent}";
+    execute_zk_command "deleteall ${zparent}";
     execute_hdfs_command "-rm -R ${hrootdir}"
     ;;
   --cleanAcls)
