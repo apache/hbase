@@ -59,7 +59,7 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
         source.locateRecoveredPaths(walGroupId);
         break;
       } catch (IOException e) {
-        LOG.error("Error while locating recovered queue paths, attempt #" + numRetries);
+        LOG.error("Error while locating recovered queue paths, attempt #" + numRetries, e);
         numRetries++;
       }
     }
