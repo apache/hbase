@@ -87,7 +87,8 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
 
   // Non-default configurations.
   private void setupConf() {
-    conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, loadBalancerClazz, LoadBalancer.class);
+    conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, loadBalancerClazz,
+      LoadBalancer.class);
     loadBalancer = LoadBalancerFactory.getLoadBalancer(conf);
   }
 

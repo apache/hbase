@@ -24,9 +24,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -169,6 +169,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
     this.testWithCluster(serverMap, null, true, false);
   }
 
+  @Override
   protected void testWithCluster(final Map<ServerName, List<RegionInfo>> serverMap,
     final RackManager rackManager, final boolean assertFullyBalanced,
     final boolean assertFullyBalancedForReplicas) {
@@ -268,7 +269,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
     return servers;
   }
 
-  private Queue<ServerName> serverQueue = new LinkedList<>();
+  private Queue<ServerName> serverQueue = new ArrayDeque<>();
 
   private ServerAndLoad createServer(final String host) {
     if (!this.serverQueue.isEmpty()) {
