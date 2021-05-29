@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -92,17 +91,6 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     // TODO. Look at is whether Stochastic loadbalancer can be integrated with this
     List<RegionPlan> plans = new ArrayList<>();
-    // perform a scan of the meta to get the latest updates (if any)
-    SnapshotOfRegionAssignmentFromMeta snaphotOfRegionAssignment =
-        new SnapshotOfRegionAssignmentFromMeta(super.services.getConnection());
-    try {
-      snaphotOfRegionAssignment.initialize();
-    } catch (IOException ie) {
-      LOG.warn("Not running balancer since exception was thrown " + ie);
-      return plans;
-    }
-    // This is not used? Findbugs says so: Map<ServerName, ServerName>
-    // serverNameToServerNameWithoutCode = new HashMap<>();
     Map<ServerName, ServerName> serverNameWithoutCodeToServerName = new HashMap<>();
     ServerManager serverMgr = super.services.getServerManager();
     for (ServerName sn : serverMgr.getOnlineServersList()) {
