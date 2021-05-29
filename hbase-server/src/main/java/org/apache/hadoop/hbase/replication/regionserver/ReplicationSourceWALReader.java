@@ -172,7 +172,7 @@ class ReplicationSourceWALReader extends Thread {
       }
     } catch (IOException e) {
       if (sleepMultiplier < maxRetriesMultiplier) {
-        LOG.debug("Failed to read stream of replication entries: " + e);
+        LOG.debug("Failed to read stream of replication entries: ", e);
         sleepMultiplier++;
       } else {
         LOG.error("Failed to read stream of replication entries", e);
@@ -306,7 +306,7 @@ class ReplicationSourceWALReader extends Thread {
           return true;
         }
       } catch (IOException ioe) {
-        LOG.warn("Couldn't get file length information about log {}", queue.peek());
+        LOG.warn("Couldn't get file length information about log " + queue.peek(), ioe);
       }
     }
     return false;
@@ -420,7 +420,7 @@ class ReplicationSourceWALReader extends Thread {
           }
         } catch (IOException e) {
           LOG.error("Failed to deserialize bulk load entry from wal edit. "
-              + "Then its hfiles count will not be added into metric.");
+              + "Then its hfiles count will not be added into metric.", e);
         }
       }
 
@@ -457,8 +457,7 @@ class ReplicationSourceWALReader extends Thread {
         } catch (IOException e) {
           LOG.error("Failed to deserialize bulk load entry from wal edit. "
               + "Size of HFiles part of cell will not be considered in replication "
-              + "request size calculation.",
-            e);
+              + "request size calculation.", e);
         }
       }
     }

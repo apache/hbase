@@ -658,8 +658,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (cause == null) {
       LOG.info("{} Closing source {} because: {}", logPeerId(), this.queueId, reason);
     } else {
-      LOG.error("{} Closing source {} because an error occurred: {}",
-        logPeerId(), this.queueId, reason, cause);
+      LOG.error(String.format("%s Closing source %s because an error occurred: %s",
+        logPeerId(), this.queueId, reason), cause);
     }
     this.sourceRunning = false;
     if (initThread != null && Thread.currentThread() != initThread) {
