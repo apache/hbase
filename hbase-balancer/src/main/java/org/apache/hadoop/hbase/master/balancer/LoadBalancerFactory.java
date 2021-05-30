@@ -27,7 +27,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  * The class that creates a load balancer from a conf.
  */
 @InterfaceAudience.Private
-public class LoadBalancerFactory {
+public final class LoadBalancerFactory {
+
+  private LoadBalancerFactory() {
+  }
 
   /**
    * The default {@link LoadBalancer} class.
