@@ -170,7 +170,6 @@ public class JVMClusterUtil {
    * @param c Configuration to use.
    * @param hmc Class to create.
    * @param index Used distinguishing the object returned.
-   * @throws IOException throw IOException
    * @return Master added.
    */
   public static JVMClusterUtil.MasterThread createMasterThread(final Configuration c,

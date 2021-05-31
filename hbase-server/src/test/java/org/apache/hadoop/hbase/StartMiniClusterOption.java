@@ -183,9 +183,10 @@ public final class StartMiniClusterOption {
   public String toString() {
     return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass
         + ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts)
-        + ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes
-        + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers
-        + ", createRootDir=" + createRootDir + ", createWALDir=" + createWALDir + '}';
+        + ", rsClass=" + rsClass + ", numCompactionServers=" + numCompactionServers
+        + ", numDataNodes=" + numDataNodes + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts)
+        + ", numZkServers=" + numZkServers + ", createRootDir=" + createRootDir + ", createWALDir="
+        + createWALDir + '}';
   }
 
   /**

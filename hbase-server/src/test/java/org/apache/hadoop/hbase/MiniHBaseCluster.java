@@ -95,9 +95,20 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * @param rsPorts Ports that RegionServer should use; pass ports if you want to test cluster
-   *   restart where for sure the regionservers come up on same address+port (but
-   *   just with different startcode); by default mini hbase clusters choose new
-   *   arbitrary ports on each cluster start.
+   *          restart where for sure the regionservers come up on same address+port (but just with
+   *          different startcode); by default mini hbase clusters choose new arbitrary ports on
+   *          each cluster start.
+   */
+  public MiniHBaseCluster(Configuration conf, int numMasters, int numAlwaysStandByMasters,
+      int numRegionServers, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      throws IOException, InterruptedException {
+    this(conf, numMasters, numAlwaysStandByMasters, numRegionServers, rsPorts, 0, masterClass,
+        regionserverClass);
+  }
+
+  /**
+   * @param numCompactionServers initial number of compaction servers to start.
    * @throws IOException
    * @throws InterruptedException
    */
