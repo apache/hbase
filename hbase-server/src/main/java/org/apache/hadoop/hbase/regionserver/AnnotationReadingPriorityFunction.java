@@ -228,7 +228,7 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
     } catch (Exception ex) {
       // Not good throwing an exception out of here, a runtime anyways.  Let the query go into the
       // server and have it throw the exception if still an issue.  Just mark it normal priority.
-      if (LOG.isTraceEnabled()) LOG.trace("Marking normal priority after getting exception=" + ex);
+      LOG.trace("Marking normal priority after getting exception", ex);
       return HConstants.NORMAL_QOS;
     }
 

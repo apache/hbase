@@ -638,9 +638,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   @Override
   public void deleteTable(ByteBuffer in_tableName) throws IOError {
     TableName tableName = getTableName(in_tableName);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("deleteTable: table={}", tableName);
-    }
+    LOG.debug("deleteTable: table={}", tableName);
     try {
       if (!getAdmin().tableExists(tableName)) {
         throw new IOException("table does not exist");

@@ -744,9 +744,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
           logsToArchive = new ArrayList<>();
         }
         logsToArchive.add(Pair.newPair(log, e.getValue().logSize));
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("WAL file ready for archiving " + log);
-        }
+        LOG.trace("WAL file ready for archiving {}", log);
       } else if (regionsBlockingThisWal != null) {
         StringBuilder sb = new StringBuilder(log.toString()).append(" has not been archived for ")
           .append(TimeUnit.NANOSECONDS.toSeconds(ageNs)).append(" seconds; blocked by: ");

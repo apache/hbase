@@ -159,9 +159,8 @@ public final class BlockCacheFactory {
   }
 
   private static BlockCache createExternalBlockcache(Configuration c) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Trying to use External l2 cache");
-    }
+    LOG.debug("Trying to use External l2 cache");
+
     Class klass = null;
 
     // Get the class, from the config. s

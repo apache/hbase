@@ -450,7 +450,7 @@ public class Import extends Configured implements Tool {
       LOG.debug("No configured filter class, accepting all keyvalues.");
       return null;
     }
-    LOG.debug("Attempting to create filter:" + filterClass);
+    LOG.debug("Attempting to create filter: {}", filterClass);
     String[] filterArgs = conf.getStrings(FILTER_ARGS_CONF_KEY);
     ArrayList<byte[]> quotedArgs = toQuotedByteArrays(filterArgs);
     try {
@@ -494,9 +494,8 @@ public class Import extends Configured implements Tool {
     // apply the filter and skip this kv if the filter doesn't apply
     if (filter != null) {
       Filter.ReturnCode code = filter.filterCell(c);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Filter returned:" + code + " for the cell:" + c);
-      }
+      LOG.trace("Filter returned: {} for the cell: {}", code, c);
+
       // if its not an accept type, then skip this kv
       if (!(code.equals(Filter.ReturnCode.INCLUDE) || code
           .equals(Filter.ReturnCode.INCLUDE_AND_NEXT_COL))) {

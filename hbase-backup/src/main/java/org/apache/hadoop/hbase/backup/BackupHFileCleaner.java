@@ -156,7 +156,7 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
       try {
         this.connection.close();
       } catch (IOException ioe) {
-        LOG.debug("Got " + ioe + " when closing connection");
+        LOG.debug("Got IOE when closing connection", ioe);
       }
     }
     this.stopped = true;

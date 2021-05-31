@@ -309,7 +309,7 @@ public class WALPlayer extends Configured implements Tool {
 
     String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
     if (hfileOutPath != null) {
-      LOG.debug("add incremental job :" + hfileOutPath + " from " + inputDirs);
+      LOG.debug("add incremental job : {} from {}", hfileOutPath, inputDirs);
 
       // the bulk HFile case
       List<TableName> tableNames = getTableNameList(tables);

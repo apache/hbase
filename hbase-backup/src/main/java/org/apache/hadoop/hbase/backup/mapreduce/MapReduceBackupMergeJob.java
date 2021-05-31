@@ -87,9 +87,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     // a Map task for each file
     String bids = StringUtils.join(backupIds, ",");
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Merge backup images " + bids);
-    }
+    LOG.debug("Merge backup images {}", bids);
 
     List<Pair<TableName, Path>> processedTableList = new ArrayList<>();
     boolean finishedTables = false;
@@ -140,7 +138,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
         }
         // Add to processed table list
         processedTableList.add(new Pair<>(tableNames[i], bulkOutputPath));
-        LOG.debug("Merge Job finished:" + result);
+        LOG.debug("Merge Job finished: {}", result);
       }
       List<TableName> tableList = toTableNameList(processedTableList);
       table.updateProcessedTablesForMerge(tableList);
@@ -156,7 +154,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       if (!fs.rename(backupDirPath, tmpBackupDir)) {
         throw new IOException("Failed to rename "+ backupDirPath +" to "+tmpBackupDir);
       } else {
-        LOG.debug("Renamed "+ backupDirPath +" to "+ tmpBackupDir);
+        LOG.debug("Renamed {} to {}", backupDirPath, tmpBackupDir);
       }
       // Move new data into backup dest
       for (Pair<TableName, Path> tn : processedTableList) {
@@ -387,9 +385,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       if (fs.exists(fileBackupDirPath)) {
         dirs.add(fileBackupDirPath);
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("File: " + fileBackupDirPath + " does not exist.");
-        }
+        LOG.debug("File: {} does not exist.", fileBackupDirPath);
       }
     }
     Path[] ret = new Path[dirs.size()];

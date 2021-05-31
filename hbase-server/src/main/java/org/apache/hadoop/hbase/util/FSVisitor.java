@@ -56,9 +56,7 @@ public final class FSVisitor {
       final StoreFileVisitor visitor) throws IOException {
     List<FileStatus> regions = FSUtils.listStatusWithStatusFilter(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("No regions under directory:" + tableDir);
-      }
+      LOG.trace("No regions under directory: {}", tableDir);
       return;
     }
 
@@ -79,9 +77,7 @@ public final class FSVisitor {
       final StoreFileVisitor visitor) throws IOException {
     List<FileStatus> families = FSUtils.listStatusWithStatusFilter(fs, regionDir, new FSUtils.FamilyDirFilter(fs));
     if (families == null) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("No families under region directory:" + regionDir);
-      }
+      LOG.trace("No families under region directory: {}",regionDir);
       return;
     }
 
@@ -93,9 +89,7 @@ public final class FSVisitor {
       // get all the storeFiles in the family
       FileStatus[] storeFiles = CommonFSUtils.listStatus(fs, familyDir, fileFilter);
       if (storeFiles == null) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("No hfiles found for family: " + familyDir + ", skipping.");
-        }
+        LOG.trace("No hfiles found for family: {}, skipping.", familyDir);
         continue;
       }
 

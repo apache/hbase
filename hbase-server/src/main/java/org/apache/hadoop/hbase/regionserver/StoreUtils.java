@@ -123,9 +123,7 @@ public class StoreUtils {
     // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
     if (comparator.compareRows(midKey, firstKey) == 0 ||
         comparator.compareRows(midKey, lastKey) == 0) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("cannot split {} because midkey is the same as first or last row", file);
-      }
+      LOG.debug("cannot split {} because midkey is the same as first or last row", file);
       return Optional.empty();
     }
     return Optional.of(CellUtil.cloneRow(midKey));

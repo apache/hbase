@@ -333,9 +333,7 @@ public class QuotaCache implements Stoppable {
       }
 
       for (final K key: toRemove) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("evict " + type + " key=" + key);
-        }
+        LOG.trace("evict {} key={}", type, key);
         quotasMap.remove(key);
       }
 

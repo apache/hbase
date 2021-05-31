@@ -80,9 +80,7 @@ class CompletedProcedureCleaner<TEnvironment> extends ProcedureInMemoryChore<TEn
   @Override
   protected void periodicExecute(final TEnvironment env) {
     if (completed.isEmpty()) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("No completed procedures to cleanup.");
-      }
+      LOG.trace("No completed procedures to cleanup.");
       return;
     }
 

@@ -202,7 +202,7 @@ public class ProcedureCoordinator {
     Collection<Procedure> toNotify = procedures.values();
 
     boolean isTraceEnabled = LOG.isTraceEnabled();
-    LOG.debug("received connection failure: " + message, cause);
+    LOG.debug("received connection failure: {}", message, cause);
     for (Procedure proc : toNotify) {
       if (proc == null) {
         continue;
@@ -221,7 +221,7 @@ public class ProcedureCoordinator {
    * @param reason serialized information about the abort
    */
   public void abortProcedure(String procName, ForeignException reason) {
-    LOG.debug("abort procedure " + procName, reason);
+    LOG.debug("abort procedure {}", procName, reason);
     // if we know about the Procedure, notify it
     Procedure proc = procedures.get(procName);
     if (proc == null) {
@@ -279,9 +279,7 @@ public class ProcedureCoordinator {
       LOG.warn("Member '"+ member +"' is trying to acquire an unknown procedure '"+ procName +"'");
       return;
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Member '"+ member +"' acquired procedure '"+ procName +"'");
-    }
+    LOG.trace("Member '{}' acquired procedure '{}'", member, procName);
     proc.barrierAcquiredByMember(member);
   }
 
@@ -298,9 +296,7 @@ public class ProcedureCoordinator {
       LOG.warn("Member '"+ member +"' is trying to release an unknown procedure '"+ procName +"'");
       return;
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Member '"+ member +"' released procedure '"+ procName +"'");
-    }
+    LOG.trace("Member '{}' released procedure '{}'", member, procName);
     proc.barrierReleasedByMember(member, dataFromMember);
   }
 

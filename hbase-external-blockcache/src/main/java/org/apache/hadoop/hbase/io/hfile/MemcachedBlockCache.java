@@ -138,11 +138,7 @@ public class MemcachedBlockCache implements BlockCache {
     } catch (Exception e) {
       // Catch a pretty broad set of exceptions to limit any changes in the memecache client
       // and how it handles failures from leaking into the read path.
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Exception pulling from memcached [ "
-            + cacheKey.toString()
-            + " ]. Treating as a miss.", e);
-      }
+      LOG.debug("Exception pulling from memcached [{}]. Treating as a miss.", cacheKey, e);
       result = null;
     } finally {
       span.end();
@@ -168,9 +164,7 @@ public class MemcachedBlockCache implements BlockCache {
       LOG.warn("Error deleting " + cacheKey.toString(), e);
       Thread.currentThread().interrupt();
     } catch (ExecutionException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Error deleting " + cacheKey.toString(), e);
-      }
+      LOG.debug("Error deleting {}", cacheKey, e);
     }
     return false;
   }

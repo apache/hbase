@@ -66,9 +66,7 @@ public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy {
     }
 
     // Didn't find any CFs which were above the threshold for selection.
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Since none of the CFs were above the size, flushing all.");
-    }
+    LOG.debug("Since none of the CFs were above the size, flushing all.");
     return stores;
   }
 

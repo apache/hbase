@@ -105,7 +105,7 @@ public class FavoredNodesManager {
     int dnPort = NetUtils.createSocketAddr(
         dnConf.get(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
             DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT)).getPort();
-    LOG.debug("Loaded default datanode port for FN: " + datanodeDataTransferPort);
+    LOG.debug("Loaded default datanode port for FN: {}", datanodeDataTransferPort);
     return dnPort;
   }
 

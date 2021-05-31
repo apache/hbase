@@ -108,7 +108,7 @@ public class ByteBufferListOutputStream extends ByteBufferOutputStream {
     try {
       close();
     } catch (IOException e) {
-      LOG.debug(e.toString(), e);
+      LOG.debug("Error closing", e);
     }
     // Return back all the BBs to pool
     for (ByteBuff buf : this.allBufs) {

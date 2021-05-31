@@ -46,12 +46,9 @@ public abstract class OffPeakHours {
       return DISABLED;
     }
 
-    if (! isValidHour(startHour) || ! isValidHour(endHour)) {
-      if (LOG.isWarnEnabled()) {
-        LOG.warn("Ignoring invalid start/end hour for peak hour : start = " +
-            startHour + " end = " + endHour +
-            ". Valid numbers are [0-23]");
-      }
+    if (!isValidHour(startHour) || !isValidHour(endHour)) {
+      LOG.warn("Ignoring invalid start/end hour for peak hour : start = " + startHour + " end = "
+          + endHour + ". Valid numbers are [0-23]");
       return DISABLED;
     }
 

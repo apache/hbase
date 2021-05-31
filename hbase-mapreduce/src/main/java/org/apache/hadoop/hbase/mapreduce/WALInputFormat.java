@@ -314,7 +314,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
   private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime)
       throws IOException {
     List<FileStatus> result = new ArrayList<>();
-    LOG.debug("Scanning " + dir.toString() + " for WAL files");
+    LOG.debug("Scanning {} for WAL files", dir);
     RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(dir);
     if (!iter.hasNext()) {
       return Collections.emptyList();

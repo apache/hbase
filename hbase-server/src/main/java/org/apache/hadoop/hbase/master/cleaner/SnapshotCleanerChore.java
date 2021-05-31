@@ -66,9 +66,8 @@ public class SnapshotCleanerChore extends ScheduledChore {
 
   @Override
   protected void chore() {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Snapshot Cleaner Chore is starting up...");
-    }
+    LOG.trace("Snapshot Cleaner Chore is starting up...");
+
     try {
       List<SnapshotProtos.SnapshotDescription> completedSnapshotsList =
               this.snapshotManager.getCompletedSnapshots();
@@ -94,9 +93,7 @@ public class SnapshotCleanerChore extends ScheduledChore {
     } catch (IOException e) {
       LOG.error("Error while cleaning up Snapshots...", e);
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Snapshot Cleaner Chore is closing...");
-    }
+    LOG.trace("Snapshot Cleaner Chore is closing...");
   }
 
   private void deleteExpiredSnapshot(SnapshotProtos.SnapshotDescription snapshotDescription) {

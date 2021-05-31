@@ -81,11 +81,8 @@ public class ConstraintProcessor implements RegionCoprocessor, RegionObserver {
       throw new IllegalArgumentException(e);
     }
 
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Finished loading " + constraints.size()
-          + " user Constraints on table: " + desc.getTableName());
-    }
-
+    LOG.info("Finished loading " + constraints.size() + " user Constraints on table: "
+        + desc.getTableName());
   }
 
   @Override

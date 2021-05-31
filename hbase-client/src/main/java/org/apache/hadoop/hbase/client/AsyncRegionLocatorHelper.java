@@ -80,8 +80,7 @@ final class AsyncRegionLocatorHelper {
       RegionMovedException rme = (RegionMovedException) cause;
       HRegionLocation newLoc =
         new HRegionLocation(loc.getRegion(), rme.getServerName(), rme.getLocationSeqNum());
-      LOG.debug("Try updating {} with the new location {} constructed by {}", loc, newLoc,
-        rme.toString());
+      LOG.debug("Try updating {} with the new location {} constructed by {}", loc, newLoc, rme);
       addToCache.accept(newLoc);
     } else {
       LOG.debug("Try removing {} from cache", loc);

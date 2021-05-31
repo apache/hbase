@@ -330,9 +330,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       src.removeServer(el);
       if (onlineServers != null) {
         if (!onlineServers.contains(el)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Dropping " + el + " during move-to-default rsgroup because not online");
-          }
+          LOG.debug("Dropping {} during move-to-default rsgroup because not online", el);
           continue;
         }
       }

@@ -198,17 +198,16 @@ public abstract class TableBackupClient {
               new Path(HBackupFileSystem.getTableBackupDir(backupInfo.getBackupRootDir(),
                 backupInfo.getBackupId(), table));
           if (outputFs.delete(targetDirPath, true)) {
-            LOG.debug("Cleaning up uncompleted backup data at " + targetDirPath.toString()
-                + " done.");
+            LOG.debug("Cleaning up uncompleted backup data at {} done.", targetDirPath);
           } else {
-            LOG.debug("No data has been copied to " + targetDirPath.toString() + ".");
+            LOG.debug("No data has been copied to {}", targetDirPath);
           }
 
           Path tableDir = targetDirPath.getParent();
           FileStatus[] backups = CommonFSUtils.listStatus(outputFs, tableDir);
           if (backups == null || backups.length == 0) {
             outputFs.delete(tableDir, true);
-            LOG.debug(tableDir.toString() + " is empty, remove it.");
+            LOG.debug("{} is empty, remove it.", tableDir);
           }
         }
       }
@@ -352,7 +351,7 @@ public abstract class TableBackupClient {
     }
     for (FileStatus file : files) {
       if (file.getPath().getName().startsWith("_distcp_logs")) {
-        LOG.debug("Delete log files of DistCp: " + file.getPath().getName());
+        LOG.debug("Delete log files of DistCp: {}", file.getPath().getName());
         CommonFSUtils.delete(fs, file.getPath(), true);
       }
     }

@@ -3346,10 +3346,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private void checkLimitOfRows(int numOfCompleteRows, int limitOfRows, boolean moreRows,
       ScannerContext scannerContext, ScanResponse.Builder builder) {
     if (numOfCompleteRows >= limitOfRows) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Done scanning, limit of rows reached, moreRows: " + moreRows +
-            " scannerContext: " + scannerContext);
-      }
+      LOG.trace("Done scanning, limit of rows reached, moreRows: {} scannerContext: {}", moreRows,
+        scannerContext);
       builder.setMoreResults(false);
     }
   }
@@ -3571,19 +3569,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException e) {
       if (request.hasScannerId()) {
         String scannerName = toScannerName(request.getScannerId());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            "Server shutting down and client tried to access missing scanner " + scannerName);
-        }
+        LOG.debug("Server shutting down and client tried to access missing scanner {}",
+          scannerName);
         final LeaseManager leaseManager = regionServer.getLeaseManager();
         if (leaseManager != null) {
           try {
             leaseManager.cancelLease(scannerName);
           } catch (LeaseException le) {
             // No problem, ignore
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Un-able to cancel lease of scanner. It could already be closed.");
-            }
+            LOG.trace("Un-able to cancel lease of scanner. It could already be closed.");
           }
         }
       }

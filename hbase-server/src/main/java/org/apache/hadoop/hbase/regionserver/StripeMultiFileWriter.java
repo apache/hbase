@@ -359,9 +359,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
       // When expired stripes were going to be merged into one, and if no writer was created during
       // the compaction, we need to create an empty file to preserve metadata.
       if (existingWriters.isEmpty() && 1 == targetCount) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Merge expired stripes into one, create an empty file to preserve metadata.");
-        }
+        LOG.debug("Merge expired stripes into one, create an empty file to preserve metadata.");
         boundaries.add(left);
         existingWriters.add(writerFactory.createWriter());
       }

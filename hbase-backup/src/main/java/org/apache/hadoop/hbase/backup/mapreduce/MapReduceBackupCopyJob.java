@@ -24,7 +24,6 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -210,8 +209,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
             String newProgressStr = progressData + "%";
             LOG.info("Progress: " + newProgressStr);
             updateProgress(backupInfo, backupManager, progressData.intValue(), bytesCopied);
-            LOG.debug("Backup progress data updated to backup system table: \"Progress: "
-                + newProgressStr + ".\"");
+            LOG.debug("Backup progress data updated to backup system table: \"Progress: {} \"", newProgressStr);
             lastProgress = newProgress;
           }
           Thread.sleep(progressReportFreq);
@@ -244,7 +242,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       LOG.debug("DistCp job-id: " + jobID + " completed: " + job.isComplete() + " "
           + job.isSuccessful());
       Counters ctrs = job.getCounters();
-      LOG.debug(Objects.toString(ctrs));
+      LOG.debug("{}", ctrs);
       if (job.isComplete() && !job.isSuccessful()) {
         throw new Exception("DistCp job-id: " + jobID + " failed");
       }
@@ -430,7 +428,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       }
 
       job.killJob();
-      LOG.debug("Killed copy job " + id);
+      LOG.debug("Killed copy job {}", id);
     } catch (InterruptedException e) {
       throw new IOException(e);
     }

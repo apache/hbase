@@ -104,9 +104,7 @@ public class ScannerResource extends ResourceBase {
       ScannerInstanceResource instance =
         new ScannerInstanceResource(tableName, id, gen, model.getBatch());
       scanners.put(id, instance);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("new scanner: " + id);
-      }
+      LOG.trace("new scanner: {}", id);
       UriBuilder builder = uriInfo.getAbsolutePathBuilder();
       URI uri = builder.path(id).build();
       servlet.getMetrics().incrementSucessfulPutRequests(1);

@@ -191,9 +191,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     boolean tryingMajor, boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
     CompactionRequestImpl result = tryingMajor ? selectMajorCompaction(candidateSelection)
       : selectMinorCompaction(candidateSelection, mayUseOffPeak, mayBeStuck);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Generated compaction request: " + result);
-    }
+    LOG.debug("Generated compaction request: {}", result);
     return result;
   }
 
@@ -252,9 +250,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
           fileList.add(it.next().getFirst());
         }
         if (fileList.size() >= minThreshold) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Processing files: " + fileList + " for window: " + window);
-          }
+          LOG.debug("Processing files: {} for window: {}", fileList, window);
           DateTieredCompactionRequest request = generateCompactionRequest(fileList, window,
             mayUseOffPeak, mayBeStuck, minThreshold, now);
           if (request != null) {

@@ -89,9 +89,7 @@ public class GCMultipleMergedRegionsProcedure extends
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, GCMergedRegionsState state)
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
         case GC_MERGED_REGIONS_PREPARE:

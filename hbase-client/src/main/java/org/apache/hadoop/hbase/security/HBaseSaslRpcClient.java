@@ -114,9 +114,7 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
             throw new IOException("Server asks us to fall back to SIMPLE auth, "
                 + "but this client is configured to only allow secure connections.");
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Server asks us to fall back to simple auth.");
-          }
+          LOG.debug("Server asks us to fall back to simple auth.");
           dispose();
           return false;
         }

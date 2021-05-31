@@ -129,9 +129,7 @@ public final class ZKUtil {
     }
     int timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT,
         HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("{} opening connection to ZooKeeper ensemble={}", identifier, ensemble);
-    }
+    LOG.trace("{} opening connection to ZooKeeper ensemble={}", identifier, ensemble);
     int retry = conf.getInt("zookeeper.recovery.retry", 3);
     int retryIntervalMillis =
       conf.getInt("zookeeper.recovery.retry.intervalmill", 1000);

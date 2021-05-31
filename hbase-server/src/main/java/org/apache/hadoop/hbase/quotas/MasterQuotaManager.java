@@ -470,18 +470,14 @@ public class MasterQuotaManager implements RegionStateListener {
     quotaOps.preApply(currentQuota);
     // Translate the protobuf request back into a POJO
     QuotaSettings newQuota = QuotaSettings.buildFromProto(req);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Deserialized quota from request: " + newQuota);
-    }
+    LOG.trace("Deserialized quota from request: {}", newQuota);
 
     // Merge the current quota settings with the new quota settings the user provided.
     //
     // NB: while SetQuotaRequest technically allows for multi types of quotas to be set in one
     // message, the Java API (in Admin/AsyncAdmin) does not. Assume there is only one type.
     GlobalQuotaSettingsImpl mergedQuota = currentQuota.merge(newQuota);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Computed merged quota from current quota and user request: " + mergedQuota);
-    }
+    LOG.trace("Computed merged quota from current quota and user request: {}", mergedQuota);
 
     // Submit new changes
     if (mergedQuota == null) {

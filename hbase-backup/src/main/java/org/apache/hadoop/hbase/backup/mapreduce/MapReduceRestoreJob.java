@@ -92,9 +92,7 @@ public class MapReduceRestoreJob implements RestoreJob {
         if (succeeded(result)) {
           // do bulk load
           BulkLoadHFiles loader = BackupUtils.createLoader(getConf());
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Restoring HFiles from directory " + bulkOutputPath);
-          }
+          LOG.debug("Restoring HFiles from directory {}", bulkOutputPath);
 
           if (loader.bulkLoad(newTableNames[i], bulkOutputPath).isEmpty()) {
             throw new IOException("Can not restore from backup directory " + dirs +
@@ -104,7 +102,7 @@ public class MapReduceRestoreJob implements RestoreJob {
           throw new IOException("Can not restore from backup directory " + dirs
               + " (check Hadoop/MR and HBase logs). Player return code =" + result);
         }
-        LOG.debug("Restore Job finished:" + result);
+        LOG.debug("Restore Job finished: {}", result);
       } catch (Exception e) {
         LOG.error(e.toString(), e);
         throw new IOException("Can not restore from backup directory " + dirs

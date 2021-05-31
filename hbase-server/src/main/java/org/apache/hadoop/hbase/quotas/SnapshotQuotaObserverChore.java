@@ -90,9 +90,7 @@ public class SnapshotQuotaObserverChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Computing sizes of snapshots for quota management.");
-      }
+      LOG.trace("Computing sizes of snapshots for quota management.");
       long start = System.nanoTime();
       _chore();
       if (null != metrics) {

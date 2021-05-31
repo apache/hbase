@@ -501,9 +501,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
   @Override
   public void close() {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Stopping rpc client");
-    }
+    LOG.debug("Stopping rpc client");
     Collection<T> connToClose;
     synchronized (connections) {
       if (!running) {

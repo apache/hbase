@@ -68,9 +68,7 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, GCRegionState state)
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.trace("{} execute state={}", this, state);
     MasterServices masterServices = env.getMasterServices();
     try {
       switch (state) {

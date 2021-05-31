@@ -191,9 +191,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
    */
   public void updateHeartBeat() {
     lastHeartBeat.set(System.currentTimeMillis());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Heartbeat " + toString());
-    }
+    LOG.debug("Heartbeat {}", this);
   }
 
   /**
@@ -204,10 +202,10 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   @Override
   protected synchronized boolean setTimeoutFailure(final MasterProcedureEnv env) {
     synchronized (event) {
-      if (LOG.isDebugEnabled()) LOG.debug("Timeout failure " + this.event);
+      LOG.debug("Timeout failure {}", this.event);
       if (!event.isReady()) {  // Maybe unlock() awakened the event.
         setState(ProcedureProtos.ProcedureState.RUNNABLE);
-        if (LOG.isDebugEnabled()) LOG.debug("Calling wake on " + this.event);
+        LOG.debug("Calling wake on {}", this.event);
         event.wake(env.getProcedureScheduler());
       }
     }
@@ -309,9 +307,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     boolean ret = lock.acquireLock(env);
     locked.set(ret);
     if (ret) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("LOCKED " + toString());
-      }
+      LOG.debug("LOCKED {}", this);
       lastHeartBeat.set(System.currentTimeMillis());
       return LockState.LOCK_ACQUIRED;
     }

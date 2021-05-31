@@ -177,9 +177,7 @@ public class JSONBean {
           // UnsupportedOperationExceptions happen in the normal course of business,
           // so no need to log them as errors all the time.
           if (e.getCause() instanceof UnsupportedOperationException) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Getting attribute " + prs + " of " + oname + " threw " + e);
-            }
+            LOG.trace("Getting attribute {} of {} threw an exception", prs, oname, e);
           } else {
             LOG.error("Getting attribute " + prs + " of " + oname + " threw an exception", e);
           }
@@ -281,9 +279,7 @@ public class JSONBean {
       // UnsupportedOperationExceptions happen in the normal course of business,
       // so no need to log them as errors all the time.
       if (e.getCause() instanceof UnsupportedOperationException) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Getting attribute " + attName + " of " + oname + " threw " + e);
-        }
+        LOG.trace("Getting attribute {} of {} threw an exception", attName, oname, e);
       } else {
         LOG.error("getting attribute " + attName + " of " + oname + " threw an exception", e);
       }
@@ -291,7 +287,7 @@ public class JSONBean {
     } catch (RuntimeErrorException e) {
       // RuntimeErrorException happens when an unexpected failure occurs in getAttribute
       // for example https://issues.apache.org/jira/browse/DAEMON-120
-      LOG.debug("getting attribute " + attName + " of " + oname + " threw an exception", e);
+      LOG.debug("getting attribute {} of {} threw an exception", attName, oname, e);
       return;
     } catch (AttributeNotFoundException e) {
       // Ignored the attribute was not found, which should never happen because the bean

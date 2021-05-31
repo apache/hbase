@@ -423,9 +423,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           try {
             blockOnSync(syncFuture);
           } catch (IOException ioe) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Stale sync exception", ioe);
-            }
+            LOG.trace("Stale sync exception", ioe);
           }
         }
       }

@@ -347,9 +347,7 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
         }
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(tunerLog.toString());
-    }
+    LOG.debug("{}", tunerLog);
     return newTuneDirection;
   }
 

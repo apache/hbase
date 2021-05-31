@@ -233,9 +233,7 @@ public class RegionGroupingProvider implements WALProvider {
         provider.shutdown();
       } catch (IOException e) {
         LOG.error("Problem shutting down wal provider '" + provider + "': " + e.getMessage());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Details of problem shutting down wal provider '" + provider + "'", e);
-        }
+        LOG.debug("Details of problem shutting down wal provider '{}'", provider, e);
         failure = e;
       }
     }
@@ -253,9 +251,7 @@ public class RegionGroupingProvider implements WALProvider {
         provider.close();
       } catch (IOException e) {
         LOG.error("Problem closing wal provider '" + provider + "': " + e.getMessage());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Details of problem closing wal provider '" + provider + "'", e);
-        }
+        LOG.debug("Details of problem closing wal provider '{}'", provider, e);
         failure = e;
       }
     }

@@ -158,9 +158,7 @@ public class AuthenticationTokenSecretManager
         }
       }
       zkWatcher.refreshKeys();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Sync token keys from zookeeper");
-      }
+      LOG.debug("Sync token keys from zookeeper");
       masterKey = allKeys.get(identifier.getKeyId());
     }
     if (masterKey == null) {
@@ -213,9 +211,7 @@ public class AuthenticationTokenSecretManager
       return false;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing keyid={}", keyId);
-    }
+    LOG.debug("Removing keyid={}", keyId);
 
     allKeys.remove(keyId);
     return true;
@@ -342,9 +338,7 @@ public class AuthenticationTokenSecretManager
         try {
           Thread.sleep(5000);
         } catch (InterruptedException ie) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Interrupted waiting for next update", ie);
-          }
+          LOG.debug("Interrupted waiting for next update", ie);
         }
       }
     }

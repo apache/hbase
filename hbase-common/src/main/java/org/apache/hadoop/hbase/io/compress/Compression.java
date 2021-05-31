@@ -356,7 +356,7 @@ public final class Compression {
       CompressionCodec codec = getCodec(conf);
       if (codec != null) {
         Compressor compressor = CodecPool.getCompressor(codec);
-        if (LOG.isTraceEnabled()) LOG.trace("Retrieved compressor " + compressor + " from pool.");
+        LOG.trace("Retrieved compressor {} from pool.", compressor);
         if (compressor != null) {
           if (compressor.finished()) {
             // Somebody returns the compressor to CodecPool but is still using it.
@@ -371,7 +371,7 @@ public final class Compression {
 
     public void returnCompressor(Compressor compressor) {
       if (compressor != null) {
-        if (LOG.isTraceEnabled()) LOG.trace("Returning compressor " + compressor + " to pool.");
+        LOG.trace("Returning compressor {} to pool.", compressor);
         CodecPool.returnCompressor(compressor);
       }
     }
@@ -380,7 +380,7 @@ public final class Compression {
       CompressionCodec codec = getCodec(conf);
       if (codec != null) {
         Decompressor decompressor = CodecPool.getDecompressor(codec);
-        if (LOG.isTraceEnabled()) LOG.trace("Retrieved decompressor " + decompressor + " from pool.");
+        LOG.trace("Retrieved decompressor {} from pool.", decompressor);
         if (decompressor != null) {
           if (decompressor.finished()) {
             // Somebody returns the decompressor to CodecPool but is still using it.
@@ -396,10 +396,10 @@ public final class Compression {
 
     public void returnDecompressor(Decompressor decompressor) {
       if (decompressor != null) {
-        if (LOG.isTraceEnabled()) LOG.trace("Returning decompressor " + decompressor + " to pool.");
+        LOG.trace("Returning decompressor {} to pool.", decompressor);
         CodecPool.returnDecompressor(decompressor);
         if (decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
-          if (LOG.isTraceEnabled()) LOG.trace("Ending decompressor " + decompressor);
+          LOG.trace("Ending decompressor {}", decompressor);
           decompressor.end();
         }
       }

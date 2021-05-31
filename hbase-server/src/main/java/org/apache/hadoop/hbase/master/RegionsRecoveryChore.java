@@ -80,10 +80,8 @@ public class RegionsRecoveryChore extends ScheduledChore {
 
   @Override
   protected void chore() {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(
-        "Starting up Regions Recovery chore for reopening regions based on storeFileRefCount...");
-    }
+    LOG.trace(
+      "Starting up Regions Recovery chore for reopening regions based on storeFileRefCount...");
     try {
       // only if storeFileRefCountThreshold > 0, consider the feature turned on
       if (storeFileRefCountThreshold > 0) {
@@ -106,19 +104,15 @@ public class RegionsRecoveryChore extends ScheduledChore {
           });
         }
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Reopening regions with very high storeFileRefCount is disabled. " +
-            "Provide threshold value > 0 for {} to enable it.",
-            HConstants.STORE_FILE_REF_COUNT_THRESHOLD);
-        }
+        LOG.debug(
+          "Reopening regions with very high storeFileRefCount is disabled. "
+              + "Provide threshold value > 0 for {} to enable it.",
+          HConstants.STORE_FILE_REF_COUNT_THRESHOLD);
       }
     } catch (Exception e) {
       LOG.error("Error while reopening regions based on storeRefCount threshold", e);
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(
-        "Exiting Regions Recovery chore for reopening regions based on storeFileRefCount...");
-    }
+    LOG.trace("Exiting Regions Recovery chore for reopening regions based on storeFileRefCount...");
   }
 
   private Map<TableName, List<byte[]>> getTableToRegionsByRefCount(

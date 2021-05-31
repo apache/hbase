@@ -259,9 +259,7 @@ public final class EncryptionUtil {
     } catch (KeyException e) {
       // If the current master key fails to unwrap, try the alternate, if
       // one is configured
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Unable to unwrap key with current master key '" + masterKeyName + "'");
-      }
+      LOG.debug("Unable to unwrap key with current master key '{}'", masterKeyName);
       String alternateKeyName =
         conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
       if (alternateKeyName != null) {

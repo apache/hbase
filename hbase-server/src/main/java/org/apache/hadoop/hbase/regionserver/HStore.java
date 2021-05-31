@@ -1102,11 +1102,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     this.storeSize.addAndGet(r.length());
     this.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
 
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Added " + sf + ", entries=" + r.getEntries() +
-        ", sequenceid=" + logCacheFlushId +
-        ", filesize=" + TraditionalBinaryPrefix.long2String(r.length(), "", 1));
-    }
+    LOG.info("Added " + sf + ", entries=" + r.getEntries() + ", sequenceid=" + logCacheFlushId
+        + ", filesize=" + TraditionalBinaryPrefix.long2String(r.length(), "", 1));
     return sf;
   }
 
@@ -2475,11 +2472,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         HStore.this.storeSize.addAndGet(storeFile.getReader().length());
         HStore.this.totalUncompressedBytes
             .addAndGet(storeFile.getReader().getTotalUncompressedBytes());
-        if (LOG.isInfoEnabled()) {
-          LOG.info(this + " added " + storeFile + ", entries=" + storeFile.getReader().getEntries() +
-              ", sequenceid=" + storeFile.getReader().getSequenceID() + ", filesize="
-              + TraditionalBinaryPrefix.long2String(storeFile.getReader().length(), "", 1));
-        }
+        LOG.info(this + " added " + storeFile + ", entries=" + storeFile.getReader().getEntries()
+            + ", sequenceid=" + storeFile.getReader().getSequenceID() + ", filesize="
+            + TraditionalBinaryPrefix.long2String(storeFile.getReader().length(), "", 1));
       }
 
       long snapshotId = -1; // -1 means do not drop
@@ -2838,10 +2833,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         filesWithSizes.add(Maps.immutableEntry(storeFile.getPath().getName(), fileSize));
       }
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Files archived: " + archivedFiles + ", reporting the following to the Master: "
-          + filesWithSizes);
-    }
+    LOG.trace("Files archived:{}, reporting the following to the Master: {}", archivedFiles,
+      filesWithSizes);
     boolean success = rss.reportFileArchivalForQuotas(getTableName(), filesWithSizes);
     if (!success) {
       LOG.warn("Failed to report archival of files: " + filesWithSizes);

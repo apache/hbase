@@ -194,9 +194,8 @@ public class RegionServerSpaceQuotaManager {
    * Disables enforcement on any violation policy on the given <code>tableName</code>.
    */
   public void disableViolationPolicyEnforcement(TableName tableName) {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Disabling violation policy enforcement on " + tableName);
-    }
+    LOG.trace("Disabling violation policy enforcement on {}", tableName);
+
     // "Disables" the policy
     synchronized (enforcedPolicies) {
       SpaceViolationPolicyEnforcement enforcement = enforcedPolicies.remove(tableName);

@@ -256,9 +256,7 @@ public class HRegionFileSystem {
     Path familyDir = getStoreDir(familyName);
     FileStatus[] files = CommonFSUtils.listStatus(this.fs, familyDir);
     if (files == null) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("No StoreFiles for: " + familyDir);
-      }
+      LOG.trace("No StoreFiles for: {}", familyDir);
       return null;
     }
 
@@ -293,9 +291,7 @@ public class HRegionFileSystem {
     List<LocatedFileStatus> locatedFileStatuses = CommonFSUtils.listLocatedStatus(
         regionfs.getFileSystem(), familyDir);
     if (locatedFileStatuses == null) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("No StoreFiles for: " + familyDir);
-      }
+      LOG.trace("No StoreFiles for: {}", familyDir);
       return null;
     }
 
@@ -490,9 +486,7 @@ public class HRegionFileSystem {
     if (!fs.exists(buildPath)) {
       throw new FileNotFoundException(buildPath.toString());
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Committing " + buildPath + " as " + dstPath);
-    }
+    LOG.debug("Committing {} as {}", buildPath, dstPath);
     return dstPath;
   }
 
@@ -1029,8 +1023,7 @@ public class HRegionFileSystem {
       // Write HRI to a file in case we need to recover hbase:meta
       regionFs.writeRegionInfoOnFilesystem(false);
     } else {
-      if (LOG.isDebugEnabled())
-        LOG.debug("Skipping creation of .regioninfo file for " + regionInfo);
+      LOG.debug("Skipping creation of .regioninfo file for {}", regionInfo);
     }
     return regionFs;
   }
@@ -1066,9 +1059,7 @@ public class HRegionFileSystem {
       if (regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
         regionFs.checkRegionInfoOnFilesystem();
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipping creation of .regioninfo file for " + regionInfo);
-        }
+        LOG.debug("Skipping creation of .regioninfo file for {}", regionInfo);
       }
     }
 
@@ -1093,9 +1084,7 @@ public class HRegionFileSystem {
       return;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("DELETING region " + regionDir);
-    }
+    LOG.debug("DELETING region {}", regionDir);
 
     // Archive region
     Path rootDir = CommonFSUtils.getRootDir(conf);
@@ -1237,9 +1226,7 @@ public class HRegionFileSystem {
   private static void sleepBeforeRetry(String msg, int sleepMultiplier, int baseSleepBeforeRetries,
       int hdfsClientRetriesNumber) throws InterruptedException {
     if (sleepMultiplier > hdfsClientRetriesNumber) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(msg + ", retries exhausted");
-      }
+      LOG.debug("{}, retries exhausted", msg);
       return;
     }
     if (LOG.isDebugEnabled()) {

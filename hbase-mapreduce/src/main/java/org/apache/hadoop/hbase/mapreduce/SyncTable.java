@@ -518,9 +518,7 @@ public class SyncTable extends Configured implements Tool {
 
         int cellKeyComparison = compareCellKeysWithinRow(sourceCell, targetCell);
         if (cellKeyComparison < 0) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Target missing cell: " + sourceCell);
-          }
+          LOG.debug("Target missing cell: {}", sourceCell);
           context.getCounter(Counter.TARGETMISSINGCELLS).increment(1);
           matchingRow = false;
 
@@ -534,9 +532,7 @@ public class SyncTable extends Configured implements Tool {
 
           sourceCell = sourceCells.nextCellInRow();
         } else if (cellKeyComparison > 0) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Source missing cell: " + targetCell);
-          }
+          LOG.debug("Source missing cell: {}", targetCell);
           context.getCounter(Counter.SOURCEMISSINGCELLS).increment(1);
           matchingRow = false;
 

@@ -82,9 +82,8 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
       }
       // since quotaTable is present so setting the flag as true.
       quotaTablePresent = true;
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Reading current quota snapshots from hbase:quota.");
-      }
+      LOG.trace("Reading current quota snapshots from hbase:quota.");
+
       // Get the snapshots that the quota manager is currently aware of
       final Map<TableName, SpaceQuotaSnapshot> currentSnapshots =
           getManager().copyQuotaSnapshots();
@@ -109,14 +108,10 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
           boolean currInViolation = isInViolation(currentSnapshot);
           boolean newInViolation = newSnapshot.getQuotaStatus().isInViolation();
           if (!currInViolation && newInViolation) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Enabling " + newSnapshot + " on " + tableName);
-            }
+            LOG.trace("Enabling {} on {}", newSnapshot, tableName);
             getManager().enforceViolationPolicy(tableName, newSnapshot);
           } else if (currInViolation && !newInViolation) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Removing quota violation policy on " + tableName);
-            }
+            LOG.trace("Removing quota violation policy on {}", tableName);
             getManager().disableViolationPolicyEnforcement(tableName);
           } else if (currInViolation && newInViolation) {
             if (LOG.isTraceEnabled()) {
@@ -132,9 +127,7 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
       for (TableName tableName : currentSnapshots.keySet()) {
         // check whether table was removed in new snapshot
         if (!newSnapshots.containsKey(tableName)) {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Removing quota violation policy on " + tableName);
-          }
+          LOG.trace("Removing quota violation policy on {}", tableName);
           getManager().disableViolationPolicyEnforcement(tableName);
         }
       }

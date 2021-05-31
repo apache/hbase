@@ -322,9 +322,7 @@ public class SimpleRpcServer extends RpcServer {
         LOG.info(Thread.currentThread().getName() + ": readAndProcess caught InterruptedException", ieo);
         throw ieo;
       } catch (Exception e) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Caught exception while reading:", e);
-        }
+        LOG.debug("Caught exception while reading", e);
         count = -1; //so that the (count < 0) block is executed
       }
       if (count < 0) {

@@ -148,14 +148,14 @@ public final class BackupUtils {
         LOG.debug("Finished copying tableinfo.");
         List<RegionInfo> regions = MetaTableAccessor.getTableRegions(conn, table);
         // For each region, write the region info to disk
-        LOG.debug("Starting to write region info for table " + table);
+        LOG.debug("Starting to write region info for table {}", table);
         for (RegionInfo regionInfo : regions) {
           Path regionDir = FSUtils
             .getRegionDirFromTableDir(new Path(backupInfo.getTableBackupDir(table)), regionInfo);
           regionDir = new Path(backupInfo.getTableBackupDir(table), regionDir.getName());
           writeRegioninfoOnFilesystem(conf, targetFs, regionDir, regionInfo);
         }
-        LOG.debug("Finished writing region info for table " + table);
+        LOG.debug("Finished writing region info for table {}", table);
       }
     }
   }
@@ -465,7 +465,7 @@ public final class BackupUtils {
         FileStatus[] backups = listStatus(outputFs, tableDir, null);
         if (backups == null || backups.length == 0) {
           outputFs.delete(tableDir, true);
-          LOG.debug(tableDir.toString() + " is empty, remove it.");
+          LOG.debug("{} is empty, remove it.", tableDir);
         }
       }
       outputFs.delete(new Path(targetDir, backupInfo.getBackupId()), true);

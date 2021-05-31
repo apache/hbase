@@ -348,9 +348,7 @@ public class VisibilityUtils {
       int labelOrdinal = 0;
       if (node instanceof LeafExpressionNode) {
         identifier = ((LeafExpressionNode) node).getIdentifier();
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("The identifier is " + identifier);
-        }
+        LOG.trace("The identifier is {}", identifier);
         labelOrdinal = ordinalProvider.getLabelOrdinal(identifier);
         checkAuths(auths, labelOrdinal, identifier, checkAuths);
       } else {

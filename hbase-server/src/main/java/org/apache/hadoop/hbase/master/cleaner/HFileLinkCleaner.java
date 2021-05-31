@@ -82,10 +82,8 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
             filePath);
           return !fs.exists(hfilePath);
         } catch (IOException e) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: "
-              + hfilePath);
-          }
+          LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: {}",
+            hfilePath);
           return false;
         }
       }
@@ -96,11 +94,9 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
         backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
         return CommonFSUtils.listStatus(fs, backRefDir) == null;
       } catch (IOException e) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            "Couldn't get the references, not deleting file, just in case. filePath=" +
-              filePath + ", backRefDir=" + backRefDir);
-        }
+        LOG.debug(
+          "Couldn't get the references, not deleting file, just in case. filePath={}, backRefDir={}",
+          filePath, backRefDir);
         return false;
       }
     } finally {

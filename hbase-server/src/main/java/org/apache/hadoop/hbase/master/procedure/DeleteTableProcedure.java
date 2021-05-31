@@ -83,9 +83,7 @@ public class DeleteTableProcedure
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, DeleteTableState state)
       throws InterruptedException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
         case DELETE_TABLE_PRE_OPERATION:

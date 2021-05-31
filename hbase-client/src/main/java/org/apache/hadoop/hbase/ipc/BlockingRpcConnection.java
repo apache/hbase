@@ -61,7 +61,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -262,16 +261,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         /*
          * The max number of retries is 45, which amounts to 20s*45 = 15 minutes retries.
          */
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Received exception in connection setup.\n" +
-              StringUtils.stringifyException(toe));
-        }
+        LOG.debug("Received exception in connection setup", toe);
         handleConnectionFailure(timeoutFailures++, this.rpcClient.maxRetries, toe);
       } catch (IOException ie) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Received exception in connection setup.\n" +
-              StringUtils.stringifyException(ie));
-        }
+        LOG.debug("Received exception in connection setup", ie);
         handleConnectionFailure(ioFailures++, this.rpcClient.maxRetries, ie);
       }
     }
@@ -303,11 +296,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       ExceptionUtil.rethrowIfInterrupt(ie);
     }
 
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Retrying connect to server: " + remoteId.getAddress() +
-        " after sleeping " + this.rpcClient.failureSleep + "ms. Already tried " + curRetries +
-        " time(s).");
-    }
+    LOG.info("Retrying connect to server: " + remoteId.getAddress() + " after sleeping "
+        + this.rpcClient.failureSleep + "ms. Already tried " + curRetries + " time(s).");
   }
 
   /*
@@ -711,9 +701,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // Clean up open calls but don't treat this as a fatal condition,
         // since we expect certain responses to not make it by the specified
         // {@link ConnectionId#rpcTimeout}.
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("ignored", e);
-        }
+        LOG.trace("ignored", e);
       } else {
         synchronized (this) {
           closeConn(e);

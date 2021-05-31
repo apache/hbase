@@ -107,7 +107,7 @@ public class ReplicationQueueInfo {
       }
     }
 
-    LOG.debug("Found dead servers:" + result);
+    LOG.debug("Found dead servers: {}", result);
   }
 
   public List<ServerName> getDeadRegionServers() {

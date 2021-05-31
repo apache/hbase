@@ -105,9 +105,7 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
   }
 
   public MetricsUserSourceImpl(String user, MetricsUserAggregateSourceImpl agg) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating new MetricsUserSourceImpl for user " + user);
-    }
+    LOG.debug("Creating new MetricsUserSourceImpl for user: {}", user);
 
     this.user = user;
     this.agg = agg;
@@ -150,9 +148,7 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
       return;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing user Metrics for user: " + user);
-    }
+    LOG.debug("Removing user Metrics for user: {}", user);
 
     synchronized (this) {
       registry.removeMetric(userGetKey);

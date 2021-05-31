@@ -130,9 +130,7 @@ public class QuotaObserverChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Refreshing space quotas in RegionServer");
-      }
+      LOG.trace("Refreshing space quotas in RegionServer");
       long start = System.nanoTime();
       _chore();
       if (metrics != null) {
@@ -147,9 +145,7 @@ public class QuotaObserverChore extends ScheduledChore {
     // Get the total set of tables that have quotas defined. Includes table quotas
     // and tables included by namespace quotas.
     TablesWithQuotas tablesWithQuotas = fetchAllTablesWithQuotasDefined();
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Found following tables with quotas: " + tablesWithQuotas);
-    }
+    LOG.trace("Found following tables with quotas: {}", tablesWithQuotas);
 
     if (metrics != null) {
       // Set the number of namespaces and tables with quotas defined
@@ -191,10 +187,9 @@ public class QuotaObserverChore extends ScheduledChore {
       final SpaceQuotaSnapshot currentSnapshot = tableSnapshotStore.getCurrentState(tableInLimbo);
       SpaceQuotaStatus currentStatus = currentSnapshot.getQuotaStatus();
       if (currentStatus.isInViolation()) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Moving " + tableInLimbo + " out of violation because fewer region sizes were"
-              + " reported than required.");
-        }
+        LOG.trace(
+          "Moving {} out of violation because fewer region sizes were reported than required.",
+          tableInLimbo);
         SpaceQuotaSnapshot targetSnapshot = new SpaceQuotaSnapshot(
             SpaceQuotaStatus.notInViolation(), currentSnapshot.getUsage(),
             currentSnapshot.getLimit());
@@ -246,10 +241,7 @@ public class QuotaObserverChore extends ScheduledChore {
     for (TableName table : tablesWithTableQuotas) {
       final SpaceQuota spaceQuota = tableSnapshotStore.getSpaceQuota(table);
       if (spaceQuota == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Unexpectedly did not find a space quota for " + table
-              + ", maybe it was recently deleted.");
-        }
+        LOG.debug("Unexpectedly did not find a space quota for {}, maybe it was recently deleted", table);
         continue;
       }
       final SpaceQuotaSnapshot currentSnapshot = tableSnapshotStore.getCurrentState(table);
@@ -288,10 +280,8 @@ public class QuotaObserverChore extends ScheduledChore {
       // Get the quota definition for the namespace
       final SpaceQuota spaceQuota = namespaceSnapshotStore.getSpaceQuota(namespace);
       if (spaceQuota == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Could not get Namespace space quota for " + namespace
-              + ", maybe it was recently deleted.");
-        }
+        LOG.debug("Could not get Namespace space quota for {}, maybe it was recently deleted",
+          namespace);
         continue;
       }
       final SpaceQuotaSnapshot currentSnapshot = namespaceSnapshotStore.getCurrentState(namespace);
@@ -342,9 +332,7 @@ public class QuotaObserverChore extends ScheduledChore {
         if (isDisableSpaceViolationPolicy(currPolicy, targetPolicy)) {
           QuotaUtil.enableTableIfNotEnabled(conn, table);
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(table + " moved into observance of table space quota.");
-        }
+        LOG.debug("{} moved into observance of table space quota", table);
       } else {
         // We're either moving into violation or changing violation policies
         if (currPolicy != targetPolicy && SpaceViolationPolicy.DISABLE == currPolicy) {
@@ -354,18 +342,16 @@ public class QuotaObserverChore extends ScheduledChore {
           // In case of Disable SVP, we need to disable the table as it moves into violation
           QuotaUtil.disableTableIfNotDisabled(conn, table);
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            table + " moved into violation of table space quota with policy of " + targetPolicy);
-        }
+        LOG.debug("{} moved into violation of table space quota with policy of {}", table,
+          targetPolicy);
       }
     } else if (LOG.isTraceEnabled()) {
       // Policies are the same, so we have nothing to do except log this. Don't need to re-update
       // the quota table
       if (!currentStatus.isInViolation()) {
-        LOG.trace(table + " remains in observance of quota.");
+        LOG.trace("{} remains in observance of quota.", table);
       } else {
-        LOG.trace(table + " remains in violation of quota.");
+        LOG.trace("{} remains in violation of quota.", table);
       }
     }
   }
@@ -405,10 +391,9 @@ public class QuotaObserverChore extends ScheduledChore {
           // If there is a quota on this table in violation
           if (tableSnapshotStore.getCurrentState(tableInNS).getQuotaStatus().isInViolation()) {
             // Table-level quota violation policy is being applied here.
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Not activating Namespace violation policy because a Table violation"
-                  + " policy is already in effect for " + tableInNS);
-            }
+            LOG.trace("Not activating Namespace violation policy because a Table violation"
+                + " policy is already in effect for {}",
+              tableInNS);
           } else {
             LOG.info(tableInNS + " moving into observance of namespace space quota");
             this.snapshotNotifier.transitionTable(tableInNS, targetSnapshot);
@@ -424,10 +409,8 @@ public class QuotaObserverChore extends ScheduledChore {
               !Objects.equals(QuotaSnapshotStore.NO_QUOTA, tableQuotaSnapshot);
           if (hasTableQuota && tableQuotaSnapshot.getQuotaStatus().isInViolation()) {
             // Table-level quota violation policy is being applied here.
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Not activating Namespace violation policy because a Table violation"
-                  + " policy is already in effect for " + tableInNS);
-            }
+            LOG.trace("Not activating Namespace violation policy because a Table violation"
+                + " policy is already in effect for {}", tableInNS);
           } else {
             // No table quota present or a table quota present that is not in violation
             LOG.info(tableInNS + " moving into violation of namespace space quota with policy "
@@ -442,9 +425,7 @@ public class QuotaObserverChore extends ScheduledChore {
       // Policies are the same
       if (!targetStatus.isInViolation()) {
         // Both are NONE, so we remain in observance
-        if (LOG.isTraceEnabled()) {
-          LOG.trace(namespace + " remains in observance of quota.");
-        }
+        LOG.trace("{} remains in observance of quota.", namespace);
       } else {
         // Namespace quota is still in violation, need to enact if the table quota is not
         // taking priority.
@@ -452,10 +433,8 @@ public class QuotaObserverChore extends ScheduledChore {
           // Does a table policy exist
           if (tableSnapshotStore.getCurrentState(tableInNS).getQuotaStatus().isInViolation()) {
             // Table-level quota violation policy is being applied here.
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Not activating Namespace violation policy because Table violation"
-                  + " policy is already in effect for " + tableInNS);
-            }
+            LOG.trace("Not activating Namespace violation policy because Table violation"
+                + " policy is already in effect for {}", tableInNS);
           } else {
             // No table policy, so enact namespace policy
             LOG.info(tableInNS + " moving into violation of namespace space quota");
@@ -502,17 +481,12 @@ public class QuotaObserverChore extends ScheduledChore {
           // Collect all of the tables in the namespace
           TableName[] tablesInNS = conn.getAdmin().listTableNamesByNamespace(namespace);
           for (TableName tableUnderNs : tablesInNS) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Adding " + tableUnderNs + " under " +  namespace
-                  + " as having a namespace quota");
-            }
+            LOG.trace("Adding {} under {} as having a namespace quota", tableUnderNs, namespace);
             tablesWithQuotas.addNamespaceQuotaTable(tableUnderNs);
           }
         } else {
           assert tableName != null;
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Adding " + tableName + " as having table quota.");
-          }
+          LOG.trace("Adding {} as having table quota.", tableName);
           // namespace is already null, must be a non-null tableName
           tablesWithQuotas.addTableQuotaTable(tableName);
         }
@@ -730,9 +704,7 @@ public class QuotaObserverChore extends ScheduledChore {
         final int numRegionsInTable = getNumRegions(table);
         // If the table doesn't exist (no regions), bail out.
         if (numRegionsInTable == 0) {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Filtering " + table + " because no regions were reported");
-          }
+          LOG.trace("Filtering {} because no regions were reported", table);
           tablesToRemove.add(table);
           continue;
         }

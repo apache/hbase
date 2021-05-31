@@ -49,11 +49,7 @@ public class FailedServers {
     final long expiry = EnvironmentEdgeManager.currentTime() + recheckServersTimeout;
     this.failedServers.put(address, expiry);
     this.latestExpiry = expiry;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-        "Added failed server with address " + address + " to list caused by "
-            + throwable.toString());
-    }
+    LOG.debug("Added failed server with address {} to list caused by {}", address, throwable);
   }
 
   /**

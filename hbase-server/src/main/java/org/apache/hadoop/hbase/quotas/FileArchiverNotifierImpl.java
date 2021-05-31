@@ -126,16 +126,13 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
       // Same as "start < lastFullCompute" but avoiding numeric overflow per the
       // System.nanoTime() javadoc
       if (lastFullCompute != Long.MIN_VALUE && start - lastFullCompute < 0) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("A full computation was performed after this request was received."
-              + " Ignoring requested updates: " + fileSizes);
-        }
+        LOG.trace("A full computation was performed after this request was received."
+            + " Ignoring requested updates: {}",
+          fileSizes);
         return;
       }
 
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("currentSnapshots: " + currentSnapshots + " fileSize: "+ fileSizes);
-      }
+      LOG.trace("currentSnapshots: {} fileSize: {}", currentSnapshots, fileSizes);
 
       // Write increment to quota table for the correct snapshot. Only do this if we have snapshots
       // and some files that were archived.
@@ -175,9 +172,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
     }
     // We have computed changes to the snapshot size, we need to record them.
     if (!snapshotSizeChanges.isEmpty()) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Writing snapshot size changes for: " + snapshotSizeChanges);
-      }
+      LOG.trace("Writing snapshot size changes for: {}", snapshotSizeChanges);
       persistSnapshotSizeChanges(snapshotSizeChanges);
     }
   }
@@ -339,9 +334,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
 
     // compute new size for table + snapshots for that table
     List<SnapshotWithSize> snapshotSizes = computeSnapshotSizes(this.currentSnapshots);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Computed snapshot sizes for " + tn + " of " + snapshotSizes);
-    }
+    LOG.trace("Computed snapshot sizes for {} of {}", tn, snapshotSizes);
 
     // Compute the total size of all snapshots against our table
     final long totalSnapshotSize = snapshotSizes.stream().mapToLong((sws) -> sws.getSize()).sum();
@@ -390,9 +383,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
       return null;
     }
 
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Paths for " + tn + ": " + tableReferencedStoreFiles);
-    }
+    LOG.trace("Paths for {}: {}", tn, tableReferencedStoreFiles);
 
     // For each snapshot on this table, get the files which the snapshot references which
     // the table does not.
@@ -402,9 +393,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
       SnapshotDescription sd = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
       SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, sd);
 
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Files referenced by other snapshots: " + snapshotReferencedFiles);
-      }
+      LOG.trace("Files referenced by other snapshots: {}", snapshotReferencedFiles);
 
       // Get the set of files from the manifest that this snapshot references which are not also
       // referenced by the originating table.
@@ -412,16 +401,12 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
           manifest, (sfn) -> !tableReferencedStoreFiles.contains(sfn)
               && !snapshotReferencedFiles.contains(sfn));
 
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Snapshot " + snapshotName + " solely references the files: "
-            + unreferencedStoreFileNames);
-      }
+      LOG.trace("Snapshot {} solely references the files: {}", snapshotName,
+        unreferencedStoreFileNames);
 
       // Compute the size of the store files for this snapshot
       long size = getSizeOfStoreFiles(tn, unreferencedStoreFileNames);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Computed size of " + snapshotName + " to be " + size);
-      }
+      LOG.trace("Computed size of {} to be {}", snapshotName, size);
 
       // Persist this snapshot's size into the map
       snapshotSizes.add(new SnapshotWithSize(snapshotName, size));
