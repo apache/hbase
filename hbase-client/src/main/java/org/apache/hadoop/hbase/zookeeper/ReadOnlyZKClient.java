@@ -88,7 +88,7 @@ public final class ReadOnlyZKClient implements Closeable {
     public void exec(ZooKeeper zk) {
     }
 
-    public void connectFailed(IOException e) {
+    public void connectFailed(Exception e) {
     }
 
     public void closed(IOException e) {
@@ -236,7 +236,7 @@ public final class ReadOnlyZKClient implements Closeable {
     }
 
     @Override
-    public void connectFailed(IOException e) {
+    public void connectFailed(Exception e) {
       if (delay(retryIntervalMs, maxRetries)) {
         LOG.warn("{} to {} failed to connect to zk fo {} of {}, retries = {}", getId(),
           connectString, operationType, path, retries, e);
@@ -344,7 +344,7 @@ public final class ReadOnlyZKClient implements Closeable {
         ZooKeeper zk;
         try {
           zk = getZk();
-        } catch (IOException e) {
+        } catch (Exception e) {
           task.connectFailed(e);
           continue;
         }
