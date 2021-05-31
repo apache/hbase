@@ -1003,11 +1003,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }
     // Initialize after meta is up as below scans meta
-    if (getFavoredNodesManager() != null && !maintenanceMode) {
-      SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
-          new SnapshotOfRegionAssignmentFromMeta(getConnection());
-      snapshotOfRegionAssignment.initialize();
-      getFavoredNodesManager().initialize(snapshotOfRegionAssignment);
+    FavoredNodesManager fnm = getFavoredNodesManager();
+    if (fnm != null) {
+      fnm.initializeFromMeta();
     }
 
     // set cluster status again after user regions are assigned

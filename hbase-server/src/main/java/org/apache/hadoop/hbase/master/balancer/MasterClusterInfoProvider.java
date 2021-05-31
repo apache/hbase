@@ -101,6 +101,14 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
   }
 
   @Override
+  public void unassign(RegionInfo regionInfo) throws IOException {
+    AssignmentManager am = services.getAssignmentManager();
+    if (am != null) {
+      am.unassign(regionInfo);
+    }
+  }
+
+  @Override
   public TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
     TableDescriptors tds = services.getTableDescriptors();
     return tds != null ? tds.get(tableName) : null;
@@ -125,6 +133,12 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
       }
     }
     return false;
+  }
+
+  @Override
+  public List<ServerName> getOnlineServersList() {
+    ServerManager sm = services.getServerManager();
+    return sm != null ? sm.getOnlineServersList() : Collections.emptyList();
   }
 
   @Override
@@ -168,6 +182,12 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
     if (isBalancerRejectionRecording) {
       namedQueueRecorder.addRecord(new BalancerRejectionDetails(rejection.get()));
     }
+  }
+
+  @Override
+  public ServerMetrics getLoad(ServerName serverName) {
+    ServerManager sm = services.getServerManager();
+    return sm != null ? sm.getLoad(serverName) : null;
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
