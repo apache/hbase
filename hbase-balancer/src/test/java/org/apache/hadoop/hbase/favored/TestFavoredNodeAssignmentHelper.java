@@ -30,8 +30,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.TreeMap;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -286,8 +286,7 @@ public class TestFavoredNodeAssignmentHelper {
   }
 
   private Triple<Map<RegionInfo, ServerName>, FavoredNodeAssignmentHelper, List<RegionInfo>>
-  secondaryAndTertiaryRSPlacementHelper(
-      int regionCount, Map<String, Integer> rackToServerCount) {
+    secondaryAndTertiaryRSPlacementHelper(int regionCount, Map<String, Integer> rackToServerCount) {
     Map<RegionInfo, ServerName> primaryRSMap = new HashMap<RegionInfo, ServerName>();
     List<ServerName> servers = getServersFromRack(rackToServerCount);
     FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, rackManager);
@@ -321,7 +320,9 @@ public class TestFavoredNodeAssignmentHelper {
     assertTrue(helper.canPlaceFavoredNodes());
 
     Map<ServerName, List<RegionInfo>> assignmentMap = new HashMap<>();
-    if (primaryRSMap == null) primaryRSMap = new HashMap<>();
+    if (primaryRSMap == null) {
+      primaryRSMap = new HashMap<>();
+    }
     // create some regions
     List<RegionInfo> regions = new ArrayList<>(regionCount);
     for (int i = 0; i < regionCount; i++) {
@@ -348,34 +349,36 @@ public class TestFavoredNodeAssignmentHelper {
     }
     // Verify that the regions got placed in the way we expect (documented in
     // FavoredNodeAssignmentHelper#placePrimaryRSAsRoundRobin)
-    checkNumRegions(regionCount, firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
-        regionsOnRack2, regionsOnRack3, assignmentMap);
+    checkNumRegions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1, regionsOnRack2,
+      regionsOnRack3);
   }
 
-  private void checkNumRegions(int regionCount, int firstRackSize, int secondRackSize,
-      int thirdRackSize, int regionsOnRack1, int regionsOnRack2, int regionsOnRack3,
-      Map<ServerName, List<RegionInfo>> assignmentMap) {
-    //The regions should be distributed proportionately to the racksizes
-    //Verify the ordering was as expected by inserting the racks and regions
-    //in sorted maps. The keys being the racksize and numregions; values are
-    //the relative positions of the racksizes and numregions respectively
-    SortedMap<Integer, Integer> rackMap = new TreeMap<>();
+  private void checkNumRegions(int firstRackSize, int secondRackSize, int thirdRackSize,
+    int regionsOnRack1, int regionsOnRack2, int regionsOnRack3) {
+    // The regions should be distributed proportionately to the racksizes
+    // Verify the ordering was as expected by inserting the racks and regions
+    // in sorted maps. The keys being the racksize and numregions; values are
+    // the relative positions of the racksizes and numregions respectively
+    NavigableMap<Integer, Integer> rackMap = new TreeMap<>();
     rackMap.put(firstRackSize, 1);
     rackMap.put(secondRackSize, 2);
     rackMap.put(thirdRackSize, 3);
-    SortedMap<Integer, Integer> regionMap = new TreeMap<>();
+    NavigableMap<Integer, Integer> regionMap = new TreeMap<>();
     regionMap.put(regionsOnRack1, 1);
     regionMap.put(regionsOnRack2, 2);
     regionMap.put(regionsOnRack3, 3);
-    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
-        regionsOnRack1, regionsOnRack2, regionsOnRack3),
-        rackMap.get(firstRackSize) == regionMap.get(regionsOnRack1));
-    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
-        regionsOnRack1, regionsOnRack2, regionsOnRack3),
-        rackMap.get(secondRackSize) == regionMap.get(regionsOnRack2));
-    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
-        regionsOnRack1, regionsOnRack2, regionsOnRack3),
-        rackMap.get(thirdRackSize) == regionMap.get(regionsOnRack3));
+    assertEquals(
+      printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1, regionsOnRack2,
+        regionsOnRack3),
+      rackMap.get(firstRackSize).intValue(), regionMap.get(regionsOnRack1).intValue());
+    assertEquals(
+      printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1, regionsOnRack2,
+        regionsOnRack3),
+      rackMap.get(secondRackSize).intValue(), regionMap.get(regionsOnRack2).intValue());
+    assertEquals(
+      printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1, regionsOnRack2,
+        regionsOnRack3),
+      rackMap.get(thirdRackSize).intValue(), regionMap.get(regionsOnRack3).intValue());
   }
 
   private String printProportions(int firstRackSize, int secondRackSize,

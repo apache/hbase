@@ -59,6 +59,10 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
   }
 
   @Override
+  public void unassign(RegionInfo regionInfo) throws IOException {
+  }
+
+  @Override
   public TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
     return null;
   }
@@ -77,6 +81,11 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
   @Override
   public boolean hasRegionReplica(Collection<RegionInfo> regions) throws IOException {
     return false;
+  }
+
+  @Override
+  public List<ServerName> getOnlineServersList() {
+    return Collections.emptyList();
   }
 
   @Override
@@ -106,5 +115,10 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
   @Override
   public void onConfigurationChange(Configuration conf) {
     this.conf = conf;
+  }
+
+  @Override
+  public ServerMetrics getLoad(ServerName serverName) {
+    return null;
   }
 }

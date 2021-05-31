@@ -48,6 +48,9 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -814,7 +817,7 @@ public class FavoredNodeAssignmentHelper {
     return generatedFavNodes;
   }
 
-  /*
+  /**
    * Get the rack of server from local mapping when present, saves lookup by the RackManager.
    */
   private String getRackOfServer(ServerName sn) {
@@ -825,5 +828,14 @@ public class FavoredNodeAssignmentHelper {
       this.regionServerToRackMap.put(sn.getHostname(), rack);
       return rack;
     }
+  }
+
+  public static int getDataNodePort(Configuration conf) {
+    HdfsConfiguration.init();
+    Configuration dnConf = new HdfsConfiguration(conf);
+    int dnPort = NetUtils.createSocketAddr(dnConf.get(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
+      DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT)).getPort();
+    LOG.debug("Loaded default datanode port for FN: {}", dnPort);
+    return dnPort;
   }
 }

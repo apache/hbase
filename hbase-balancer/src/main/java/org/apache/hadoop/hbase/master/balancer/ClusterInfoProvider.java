@@ -61,6 +61,11 @@ public interface ClusterInfoProvider extends ConfigurationObserver {
   List<RegionInfo> getAssignedRegions();
 
   /**
+   * Unassign the given region.
+   */
+  void unassign(RegionInfo regionInfo) throws IOException;
+
+  /**
    * Get the table descriptor for the given table.
    */
   TableDescriptor getTableDescriptor(TableName tableName) throws IOException;
@@ -82,6 +87,11 @@ public interface ClusterInfoProvider extends ConfigurationObserver {
    * Check whether we have region replicas enabled for the tables of the given regions.
    */
   boolean hasRegionReplica(Collection<RegionInfo> regions) throws IOException;
+
+  /**
+   * Returns a copy of the internal list of online servers.
+   */
+  List<ServerName> getOnlineServersList();
 
   /**
    * Returns a copy of the internal list of online servers matched by the given {@code filter}.
@@ -110,4 +120,9 @@ public interface ClusterInfoProvider extends ConfigurationObserver {
    * Record the given balancer rejection.
    */
   void recordBalancerRejection(Supplier<BalancerRejection> rejection);
+
+  /**
+   * Returns server metrics of the given server if serverName is known else null
+   */
+  ServerMetrics getLoad(ServerName serverName);
 }

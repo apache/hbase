@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.favored;
 
 import static org.apache.hadoop.hbase.ServerName.NON_STARTCODE;
 import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.FAVORED_NODES_NUM;
+import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.getDataNodePort;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.PRIMARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.SECONDARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY;
 
-import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,17 +32,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
 import org.apache.hadoop.hbase.master.balancer.ClusterInfoProvider;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -60,8 +54,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  */
 @InterfaceAudience.Private
 public class FavoredNodesManager {
-
-  private static final Logger LOG = LoggerFactory.getLogger(FavoredNodesManager.class);
 
   private final FavoredNodesPlan globalFavoredNodesAssignmentPlan;
   private final Map<ServerName, List<RegionInfo>> primaryRSToRegionMap;
@@ -83,30 +75,21 @@ public class FavoredNodesManager {
     this.teritiaryRSToRegionMap = new HashMap<>();
   }
 
-  public synchronized void initialize(SnapshotOfRegionAssignmentFromMeta snapshot) {
+  public void initializeFromMeta() throws IOException {
+    SnapshotOfRegionAssignmentFromMeta snapshot =
+      new SnapshotOfRegionAssignmentFromMeta(provider.getConnection());
+    snapshot.initialize();
     // Add snapshot to structures made on creation. Current structures may have picked
     // up data between construction and the scan of meta needed before this method
-    // is called.  See HBASE-23737 "[Flakey Tests] TestFavoredNodeTableImport fails 30% of the time"
-    this.globalFavoredNodesAssignmentPlan.
-      updateFavoredNodesMap(snapshot.getExistingAssignmentPlan());
-    primaryRSToRegionMap.putAll(snapshot.getPrimaryToRegionInfoMap());
-    secondaryRSToRegionMap.putAll(snapshot.getSecondaryToRegionInfoMap());
-    teritiaryRSToRegionMap.putAll(snapshot.getTertiaryToRegionInfoMap());
-    datanodeDataTransferPort= getDataNodePort();
-  }
-
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|FavoredNodesManager).java")
-  public int getDataNodePort() {
-    HdfsConfiguration.init();
-
-    Configuration dnConf = new HdfsConfiguration(provider.getConfiguration());
-
-    int dnPort = NetUtils.createSocketAddr(
-        dnConf.get(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
-            DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT)).getPort();
-    LOG.debug("Loaded default datanode port for FN: " + datanodeDataTransferPort);
-    return dnPort;
+    // is called. See HBASE-23737 "[Flakey Tests] TestFavoredNodeTableImport fails 30% of the time"
+    synchronized (this) {
+      this.globalFavoredNodesAssignmentPlan
+        .updateFavoredNodesMap(snapshot.getExistingAssignmentPlan());
+      primaryRSToRegionMap.putAll(snapshot.getPrimaryToRegionInfoMap());
+      secondaryRSToRegionMap.putAll(snapshot.getSecondaryToRegionInfoMap());
+      teritiaryRSToRegionMap.putAll(snapshot.getTertiaryToRegionInfoMap());
+      datanodeDataTransferPort = getDataNodePort(provider.getConfiguration());
+    }
   }
 
   public synchronized List<ServerName> getFavoredNodes(RegionInfo regionInfo) {

@@ -36,9 +36,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -67,17 +65,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements FavoredNodesPromoter {
   private static final Logger LOG = LoggerFactory.getLogger(FavoredNodeLoadBalancer.class);
 
-  private MasterServices services;
   private FavoredNodesManager fnm;
 
-  public void setMasterServices(MasterServices services) {
-    this.services = services;
-  }
-
   @Override
-  public void initialize() {
-    super.initialize();
-    this.fnm = services.getFavoredNodesManager();
+  public void setFavoredNodesManager(FavoredNodesManager fnm) {
+    this.fnm = fnm;
   }
 
   @Override
@@ -86,8 +78,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
     // TODO. Look at is whether Stochastic loadbalancer can be integrated with this
     List<RegionPlan> plans = new ArrayList<>();
     Map<ServerName, ServerName> serverNameWithoutCodeToServerName = new HashMap<>();
-    ServerManager serverMgr = services.getServerManager();
-    for (ServerName sn : serverMgr.getOnlineServersList()) {
+    for (ServerName sn : provider.getOnlineServersList()) {
       ServerName s = ServerName.valueOf(sn.getHostname(), sn.getPort(), ServerName.NON_STARTCODE);
       // FindBugs complains about useless store! serverNameToServerNameWithoutCode.put(sn, s);
       serverNameWithoutCodeToServerName.put(s, sn);
@@ -106,9 +97,8 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
         if (favoredNodes == null || favoredNodes.get(0).equals(currentServerWithoutStartCode)) {
           continue; // either favorednodes does not exist or we are already on the primary node
         }
-        ServerName destination = null;
         // check whether the primary is available
-        destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(0));
+        ServerName destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(0));
         if (destination == null) {
           // check whether the region is on secondary/tertiary
           if (currentServerWithoutStartCode.equals(favoredNodes.get(1))
@@ -117,10 +107,10 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
           }
           // the region is currently on none of the favored nodes
           // get it on one of them if possible
-          ServerMetrics l1 = services.getServerManager()
-              .getLoad(serverNameWithoutCodeToServerName.get(favoredNodes.get(1)));
-          ServerMetrics l2 = services.getServerManager()
-              .getLoad(serverNameWithoutCodeToServerName.get(favoredNodes.get(2)));
+          ServerMetrics l1 =
+            provider.getLoad(serverNameWithoutCodeToServerName.get(favoredNodes.get(1)));
+          ServerMetrics l2 =
+            provider.getLoad(serverNameWithoutCodeToServerName.get(favoredNodes.get(2)));
           if (l1 != null && l2 != null) {
             if (l1.getRegionMetrics().size() > l2.getRegionMetrics().size()) {
               destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(2));
@@ -176,8 +166,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
       Map<ServerName,List<RegionInfo>> regionsWithFavoredNodesMap = segregatedRegions.getFirst();
       List<RegionInfo> regionsWithNoFavoredNodes = segregatedRegions.getSecond();
       assignmentMap = new HashMap<>();
-      roundRobinAssignmentImpl(assignmentHelper, assignmentMap, regionsWithNoFavoredNodes,
-          servers);
+      roundRobinAssignmentImpl(assignmentHelper, assignmentMap, regionsWithNoFavoredNodes);
       // merge the assignment maps
       assignmentMap.putAll(regionsWithFavoredNodesMap);
     } catch (Exception ex) {
@@ -283,8 +272,8 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
       // assign the region to the one with a lower load
       // (both have the desired hdfs blocks)
       ServerName s;
-      ServerMetrics tertiaryLoad = services.getServerManager().getLoad(tertiaryHost);
-      ServerMetrics secondaryLoad = services.getServerManager().getLoad(secondaryHost);
+      ServerMetrics tertiaryLoad = provider.getLoad(tertiaryHost);
+      ServerMetrics secondaryLoad = provider.getLoad(secondaryHost);
       if (secondaryLoad.getRegionMetrics().size() < tertiaryLoad.getRegionMetrics().size()) {
         s = secondaryHost;
       } else {
@@ -314,8 +303,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   private void roundRobinAssignmentImpl(FavoredNodeAssignmentHelper assignmentHelper,
-      Map<ServerName, List<RegionInfo>> assignmentMap,
-      List<RegionInfo> regions, List<ServerName> servers) throws IOException {
+    Map<ServerName, List<RegionInfo>> assignmentMap, List<RegionInfo> regions) throws IOException {
     Map<RegionInfo, ServerName> primaryRSMap = new HashMap<>();
     // figure the primary RSs
     assignmentHelper.placePrimaryRSAsRoundRobin(assignmentMap, primaryRSMap, regions);
