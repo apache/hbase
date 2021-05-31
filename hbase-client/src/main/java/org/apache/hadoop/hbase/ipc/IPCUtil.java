@@ -162,7 +162,7 @@ class IPCUtil {
 
   private static String getCallTarget(InetSocketAddress addr, RegionInfo regionInfo) {
     return "address=" + addr +
-      (regionInfo != null? ", region=" + regionInfo.getRegionNameAsString(): null);
+      (regionInfo != null? ", region=" + regionInfo.getRegionNameAsString(): "");
   }
 
   /**
