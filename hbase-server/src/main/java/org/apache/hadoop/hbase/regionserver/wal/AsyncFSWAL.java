@@ -31,6 +31,7 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.Queue;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -712,14 +713,17 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
-  protected final long closeWriter(AsyncWriter writer) {
+  protected final long closeWriter(AsyncWriter writer, Path path) {
     if (writer != null) {
+      inflightWALClosures.put(path.getName(), writer);
       long fileLength = writer.getLength();
       closeExecutor.execute(() -> {
         try {
           writer.close();
         } catch (IOException e) {
           LOG.warn("close old writer failed", e);
+        } finally {
+          inflightWALClosures.remove(path.getName());
         }
       });
       return fileLength;
@@ -733,7 +737,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       throws IOException {
     Preconditions.checkNotNull(nextWriter);
     waitForSafePoint();
-    long oldFileLen = closeWriter(this.writer);
+    long oldFileLen = closeWriter(this.writer, oldPath);
     logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
     this.writer = nextWriter;
     if (nextWriter instanceof AsyncProtobufLogWriter) {
@@ -759,7 +763,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   @Override
   protected void doShutdown() throws IOException {
     waitForSafePoint();
-    closeWriter(this.writer);
+    closeWriter(this.writer, getOldPath());
     this.writer = null;
     closeExecutor.shutdown();
     try {
