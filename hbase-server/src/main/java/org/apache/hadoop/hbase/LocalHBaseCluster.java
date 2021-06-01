@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.compactionserver.HCompactionServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
@@ -61,6 +62,8 @@ public class LocalHBaseCluster {
   private static final Logger LOG = LoggerFactory.getLogger(LocalHBaseCluster.class);
   private final List<JVMClusterUtil.MasterThread> masterThreads = new CopyOnWriteArrayList<>();
   private final List<JVMClusterUtil.RegionServerThread> regionThreads = new CopyOnWriteArrayList<>();
+  private final List<JVMClusterUtil.CompactionServerThread> compactionServerThreads =
+      new CopyOnWriteArrayList<>();
   private final static int DEFAULT_NO = 1;
   /** local mode */
   public static final String LOCAL = "local";
@@ -426,11 +429,62 @@ public class LocalHBaseCluster {
     }
   }
 
+  @SuppressWarnings("unchecked")
+  public JVMClusterUtil.CompactionServerThread addCompactionServer(
+    Configuration config, final int index) throws IOException {
+    // Create each compaction server with its own Configuration instance so each has
+    // its Connection instance rather than share (see HBASE_INSTANCES down in
+    // the guts of ConnectionManager).
+    JVMClusterUtil.CompactionServerThread cst =
+      JVMClusterUtil.createCompactionServerThread(config, index);
+    this.compactionServerThreads.add(cst);
+    return cst;
+  }
+
+  JVMClusterUtil.CompactionServerThread addCompactionServer(final Configuration config,
+      final int index, User user) throws IOException, InterruptedException {
+    return user.runAs(
+      (PrivilegedExceptionAction<JVMClusterUtil.CompactionServerThread>) () -> addCompactionServer(
+        config, index));
+  }
+
+  /**
+   * @param serverNumber compaction server number
+   * @return compaction server
+   */
+  HCompactionServer getCompactionServer(int serverNumber) {
+    return compactionServerThreads.get(serverNumber).getCompactionServer();
+  }
+
+  /**
+   * @return Read-only list of compaction server threads.
+   */
+  List<JVMClusterUtil.CompactionServerThread> getCompactionServers() {
+    return Collections.unmodifiableList(this.compactionServerThreads);
+  }
+
+  /**
+   * @return List of running servers (Some servers may have been killed or aborted during lifetime
+   *         of cluster; these servers are not included in this list).
+   */
+  List<JVMClusterUtil.CompactionServerThread> getLiveCompactionServers() {
+    List<JVMClusterUtil.CompactionServerThread> liveServers = new ArrayList<>();
+    List<JVMClusterUtil.CompactionServerThread> list = getCompactionServers();
+    for (JVMClusterUtil.CompactionServerThread cst : list) {
+      if (cst.isAlive()) {
+        liveServers.add(cst);
+      } else {
+        LOG.info("Not alive {}", cst.getName());
+      }
+    }
+    return liveServers;
+  }
+
   /**
    * Start the cluster.
    */
   public void startup() throws IOException {
-    JVMClusterUtil.startup(this.masterThreads, this.regionThreads);
+    JVMClusterUtil.startup(this.masterThreads, this.regionThreads, this.compactionServerThreads);
   }
 
   /**

@@ -1929,11 +1929,11 @@ public class RSRpcServices extends AbstractRpcServices implements
       int timeout = regionServer.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT) >> 2; // Quarter of RPC timeout
       long endTime = System.currentTimeMillis() + timeout;
-      synchronized (regionServer.online) {
+      synchronized (regionServer.getOnline()) {
         try {
           while (System.currentTimeMillis() <= endTime
               && !regionServer.isStopped() && !regionServer.isOnline()) {
-            regionServer.online.wait(regionServer.getMsgInterval());
+            regionServer.getOnline().wait(regionServer.getMsgInterval());
           }
           checkOpen();
         } catch (InterruptedException t) {

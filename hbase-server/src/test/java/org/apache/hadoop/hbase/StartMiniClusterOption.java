@@ -77,6 +77,11 @@ public final class StartMiniClusterOption {
   private Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass;
 
   /**
+   * Number of compaction servers to start up.
+   */
+  private final int numCompactionServers;
+
+  /**
    * Number of datanodes. Used to create mini DSF cluster. Surpassed by {@link #dataNodeHosts} size.
    */
   private final int numDataNodes;
@@ -109,14 +114,16 @@ public final class StartMiniClusterOption {
    */
   private StartMiniClusterOption(int numMasters, int numAlwaysStandByMasters,
       Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
-      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass, int numDataNodes,
-      String[] dataNodeHosts, int numZkServers, boolean createRootDir, boolean createWALDir) {
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
+      int numCompactionServers, int numDataNodes, String[] dataNodeHosts, int numZkServers,
+      boolean createRootDir, boolean createWALDir) {
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
     this.masterClass = masterClass;
     this.numRegionServers = numRegionServers;
     this.rsPorts = rsPorts;
     this.rsClass = rsClass;
+    this.numCompactionServers = numCompactionServers;
     this.numDataNodes = numDataNodes;
     this.dataNodeHosts = dataNodeHosts;
     this.numZkServers = numZkServers;
@@ -148,6 +155,10 @@ public final class StartMiniClusterOption {
     return rsClass;
   }
 
+  public int getNumCompactionServers() {
+    return numCompactionServers;
+  }
+
   public int getNumDataNodes() {
     return numDataNodes;
   }
@@ -172,9 +183,10 @@ public final class StartMiniClusterOption {
   public String toString() {
     return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass
         + ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts)
-        + ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes
-        + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers
-        + ", createRootDir=" + createRootDir + ", createWALDir=" + createWALDir + '}';
+        + ", rsClass=" + rsClass + ", numCompactionServers=" + numCompactionServers
+        + ", numDataNodes=" + numDataNodes + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts)
+        + ", numZkServers=" + numZkServers + ", createRootDir=" + createRootDir + ", createWALDir="
+        + createWALDir + '}';
   }
 
   /**
@@ -196,6 +208,7 @@ public final class StartMiniClusterOption {
     private Class<? extends HMaster> masterClass = null;
     private int numRegionServers = 1;
     private List<Integer> rsPorts = null;
+    private int numCompactionServers;
     private Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass = null;
     private int numDataNodes = 1;
     private String[] dataNodeHosts = null;
@@ -210,9 +223,9 @@ public final class StartMiniClusterOption {
       if (dataNodeHosts != null && dataNodeHosts.length != 0) {
         numDataNodes = dataNodeHosts.length;
       }
-      return new StartMiniClusterOption(numMasters,numAlwaysStandByMasters, masterClass,
-          numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
-          createRootDir, createWALDir);
+      return new StartMiniClusterOption(numMasters, numAlwaysStandByMasters, masterClass,
+          numRegionServers, rsPorts, rsClass, numCompactionServers, numDataNodes, dataNodeHosts,
+          numZkServers, createRootDir, createWALDir);
     }
 
     public Builder numMasters(int numMasters) {
@@ -232,6 +245,11 @@ public final class StartMiniClusterOption {
 
     public Builder numRegionServers(int numRegionServers) {
       this.numRegionServers = numRegionServers;
+      return this;
+    }
+
+    public Builder numCompactionServers(int numCompactionServers) {
+      this.numCompactionServers = numCompactionServers;
       return this;
     }
 
