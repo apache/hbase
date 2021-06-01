@@ -103,8 +103,10 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   /** Returns a WALEntryFilter for checking replication per table and CF. Subclasses can
    * return null if they don't want this filter */
   protected WALEntryFilter getNamespaceTableCfWALEntryFilter() {
-    //If neither namespaces nor Table CFs map are set, there's no reason to create this filter
-    if(ctx.getPeerConfig().getNamespaces()==null && ctx.getPeerConfig().getTableCFsMap()==null){
+    //If none of the below sets are defined, there's no reason to create this filter
+    if(ctx.getPeerConfig().getNamespaces()==null && ctx.getPeerConfig().getTableCFsMap()==null
+        && ctx.getPeerConfig().getExcludeNamespaces()==null
+        && ctx.getPeerConfig().getExcludeTableCFsMap()==null) {
       return null;
     }
     return new NamespaceTableCfWALEntryFilter(ctx.getReplicationPeer());

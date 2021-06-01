@@ -51,7 +51,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.mockito.Mockito;
 
 @Category({ ReplicationTests.class, SmallTests.class })
 public class TestReplicationWALEntryFilters {
@@ -507,7 +506,8 @@ public class TestReplicationWALEntryFilters {
 
 
   private Entry createMetaEntry(TableName tableName) {
-    WALKeyImpl key1 = new WALKeyImpl(Bytes.toBytes("test-region"), tableName, System.currentTimeMillis());
+    WALKeyImpl key1 = new WALKeyImpl(Bytes.toBytes("test-region"), tableName,
+      System.currentTimeMillis());
     WALProtos.RegionEventDescriptor event = ProtobufUtil.toRegionEventDescriptor(
       WALProtos.RegionEventDescriptor.EventType.REGION_OPEN,
       RegionInfoBuilder.FIRST_META_REGIONINFO, 0,
