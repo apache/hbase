@@ -223,10 +223,9 @@ class WALEntryStream implements Closeable {
       if (trailerSize < 0) {
         if (currentPositionOfReader < stat.getLen()) {
           final long skippedBytes = stat.getLen() - currentPositionOfReader;
-          LOG.debug(
-            "Reached the end of WAL {}. It was not closed cleanly," +
-              " so we did not parse {} bytes of data. This is normally ok.",
-            currentPath, skippedBytes);
+          // See the commits in HBASE-25924/HBASE-25932 for context.
+          LOG.warn("Reached the end of WAL {}. It was not closed cleanly," +
+              " so we did not parse {} bytes of data.", currentPath, skippedBytes);
           metrics.incrUncleanlyClosedWALs();
           metrics.incrBytesSkippedInUncleanlyClosedWALs(skippedBytes);
         }

@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -187,6 +188,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   /** Listeners that are called on WAL events. */
   protected final List<WALActionsListener> listeners = new CopyOnWriteArrayList<>();
+
+  /** Tracks the logs in the process of being closed. */
+  protected final Map<String, W> inflightWALClosures = new ConcurrentHashMap<>();
 
   /**
    * Class that does accounting of sequenceids in WAL subsystem. Holds oldest outstanding sequence
@@ -948,6 +952,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   /**
+   * @return number of WALs currently in the process of closing.
+   */
+  public int getInflightWALCloseCount() {
+    return inflightWALClosures.size();
+  }
+
+  /**
    * updates the sequence number of a specific store. depending on the flag: replaces current seq
    * number if the given seq id is bigger, or even if it is lower than existing one
    */
@@ -1112,9 +1123,18 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     try {
       Path currentPath = getOldPath();
       if (path.equals(currentPath)) {
+        // Currently active path.
         W writer = this.writer;
         return writer != null ? OptionalLong.of(writer.getSyncedLength()) : OptionalLong.empty();
       } else {
+        W temp = inflightWALClosures.get(path.getName());
+        if (temp != null) {
+          // In the process of being closed, trailer bytes may or may not be flushed.
+          // Ensuring that we read all the bytes in a file is critical for correctness of tailing
+          // use cases like replication, see HBASE-25924/HBASE-25932.
+          return OptionalLong.of(temp.getSyncedLength());
+        }
+        // Log rolled successfully.
         return OptionalLong.empty();
       }
     } finally {
