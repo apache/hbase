@@ -607,7 +607,7 @@ public final class FSUtils {
   throws IOException {
     // Rewrite the file as pb.  Move aside the old one first, write new
     // then delete the moved-aside file.
-    Path movedAsideName = new Path(p + "." + System.currentTimeMillis());
+    Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
     if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
     setClusterId(fs, rootdir, cid, 100);
     if (!fs.delete(movedAsideName, false)) {

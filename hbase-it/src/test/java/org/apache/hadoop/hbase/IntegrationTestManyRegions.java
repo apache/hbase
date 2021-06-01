@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.junit.After;
@@ -126,11 +127,11 @@ public class IntegrationTestManyRegions {
     byte[][] splits = algo.split(REGION_COUNT);
 
     LOG.info(String.format("Creating table %s with %d splits.", TABLE_NAME, REGION_COUNT));
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     try {
       admin.createTable(tableDescriptor, splits);
       LOG.info(String.format("Pre-split table created successfully in %dms.",
-          (System.currentTimeMillis() - startTime)));
+          (EnvironmentEdgeManager.currentTime() - startTime)));
     } catch (IOException e) {
       LOG.error("Failed to create table", e);
     }

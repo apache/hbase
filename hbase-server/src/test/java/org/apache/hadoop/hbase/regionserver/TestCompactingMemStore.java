@@ -230,15 +230,15 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     addRows(this.memstore);
     Cell closestToEmpty = ((CompactingMemStore)this.memstore).getNextRow(KeyValue.LOWESTKEY);
     assertTrue(CellComparator.getInstance().compareRows(closestToEmpty,
-        new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
+        new KeyValue(Bytes.toBytes(0), EnvironmentEdgeManager.currentTime())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((CompactingMemStore)this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
-          System.currentTimeMillis()));
+        EnvironmentEdgeManager.currentTime()));
       if (i + 1 == ROW_COUNT) {
         assertNull(nr);
       } else {
         assertTrue(CellComparator.getInstance().compareRows(nr,
-            new KeyValue(Bytes.toBytes(i + 1), System.currentTimeMillis())) == 0);
+            new KeyValue(Bytes.toBytes(i + 1), EnvironmentEdgeManager.currentTime())) == 0);
       }
     }
     //starting from each row, validate results should contain the starting row
@@ -865,7 +865,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     int cellsCount = hmc.getActive().getCellsCount();
     int totalLen = 0;
     for (int i = 0; i < keys.length; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       Threads.sleep(1); // to make sure each kv gets a different ts
       byte[] row = Bytes.toBytes(keys[i]);
       byte[] val = Bytes.toBytes(keys[i] + i);
@@ -889,7 +889,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     int cellsCount = hmc.getActive().getCellsCount();
     int totalLen = 0;
     for (int i = 0; i < keys.length; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       Threads.sleep(1); // to make sure each kv gets a different ts
       byte[] row = Bytes.toBytes(keys[i]);
       KeyValue kv = new KeyValue(row, fam, qf, timestamp, val);

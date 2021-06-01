@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -112,7 +113,7 @@ public class ScannerResultGenerator extends ResultGenerator {
       }
       scanner = table.getScanner(scan);
       cached = null;
-      id = Long.toString(System.currentTimeMillis()) +
+      id = Long.toString(EnvironmentEdgeManager.currentTime()) +
              Integer.toHexString(scanner.hashCode());
     } finally {
       table.close();

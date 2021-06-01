@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -283,20 +284,20 @@ public class TestVerifyReplication extends TestReplicationBase {
     // Take source and target tables snapshot
     Path rootDir = CommonFSUtils.getRootDir(CONF1);
     FileSystem fs = rootDir.getFileSystem(CONF1);
-    String sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
+    String sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
       Bytes.toString(famName), sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
     Path peerRootDir = CommonFSUtils.getRootDir(CONF2);
     FileSystem peerFs = peerRootDir.getFileSystem(CONF2);
-    String peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
+    String peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), tableName,
       Bytes.toString(famName), peerSnapshotName, peerRootDir, peerFs, true);
 
     String peerFSAddress = peerFs.getUri().toString();
     String tmpPath1 = UTIL1.getRandomDir().toString();
-    String tmpPath2 = "/tmp" + System.currentTimeMillis();
+    String tmpPath2 = "/tmp" + EnvironmentEdgeManager.currentTime();
 
     String[] args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + tmpPath1, "--peerSnapshotName=" + peerSnapshotName,
@@ -320,11 +321,11 @@ public class TestVerifyReplication extends TestReplicationBase {
     Delete delete = new Delete(put.getRow());
     htable2.delete(delete);
 
-    sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
+    sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
       Bytes.toString(famName), sourceSnapshotName, rootDir, fs, true);
 
-    peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
+    peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), tableName,
       Bytes.toString(famName), peerSnapshotName, peerRootDir, peerFs, true);
 
@@ -388,20 +389,20 @@ public class TestVerifyReplication extends TestReplicationBase {
     // Take source and target tables snapshot
     Path rootDir = CommonFSUtils.getRootDir(CONF1);
     FileSystem fs = rootDir.getFileSystem(CONF1);
-    String sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
+    String sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
             Bytes.toString(noRepfamName), sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
     Path peerRootDir = CommonFSUtils.getRootDir(CONF2);
     FileSystem peerFs = peerRootDir.getFileSystem(CONF2);
-    String peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
+    String peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), peerTableName,
             Bytes.toString(noRepfamName), peerSnapshotName, peerRootDir, peerFs, true);
 
     String peerFSAddress = peerFs.getUri().toString();
     String tmpPath1 = UTIL1.getRandomDir().toString();
-    String tmpPath2 = "/tmp" + System.currentTimeMillis();
+    String tmpPath2 = "/tmp" + EnvironmentEdgeManager.currentTime();
 
     String[] args = new String[] { "--peerTableName=" + peerTableName.getNameAsString(),
       "--sourceSnapshotName=" + sourceSnapshotName,
@@ -426,11 +427,11 @@ public class TestVerifyReplication extends TestReplicationBase {
     Delete delete = new Delete(put.getRow());
     htable3.delete(delete);
 
-    sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
+    sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
             Bytes.toString(noRepfamName), sourceSnapshotName, rootDir, fs, true);
 
-    peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
+    peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), peerTableName,
             Bytes.toString(noRepfamName), peerSnapshotName, peerRootDir, peerFs, true);
 

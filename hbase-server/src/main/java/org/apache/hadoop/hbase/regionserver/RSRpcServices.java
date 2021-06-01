@@ -2048,10 +2048,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       // We are assigning meta, wait a little for regionserver to finish initialization.
       int timeout = regionServer.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT) >> 2; // Quarter of RPC timeout
-      long endTime = System.currentTimeMillis() + timeout;
+      long endTime = EnvironmentEdgeManager.currentTime() + timeout;
       synchronized (regionServer.online) {
         try {
-          while (System.currentTimeMillis() <= endTime
+          while (EnvironmentEdgeManager.currentTime() <= endTime
               && !regionServer.isStopped() && !regionServer.isOnline()) {
             regionServer.online.wait(regionServer.msgInterval);
           }
@@ -3336,7 +3336,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       timeLimitDelta = Math.max(timeLimitDelta / 2, minimumScanTimeLimitDelta);
       // XXX: Can not use EnvironmentEdge here because TestIncrementTimeRange use a
       // ManualEnvironmentEdge. Consider using System.nanoTime instead.
-      return System.currentTimeMillis() + timeLimitDelta;
+      return EnvironmentEdgeManager.currentTime() + timeLimitDelta;
     }
     // Default value of timeLimit is negative to indicate no timeLimit should be
     // enforced.

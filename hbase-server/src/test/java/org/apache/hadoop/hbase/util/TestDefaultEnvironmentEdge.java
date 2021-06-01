@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static junit.framework.Assert.assertTrue;
-import static junit.framework.Assert.fail;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -40,10 +41,10 @@ public class TestDefaultEnvironmentEdge {
   @Test
   public void testGetCurrentTimeUsesSystemClock() {
     DefaultEnvironmentEdge edge = new DefaultEnvironmentEdge();
-    long systemTime = System.currentTimeMillis();
+    long systemTime = EnvironmentEdgeManager.currentTime();
     long edgeTime = edge.currentTime();
     assertTrue("System time must be either the same or less than the edge time",
-            systemTime < edgeTime || systemTime == edgeTime);
+      systemTime < edgeTime || systemTime == edgeTime);
     try {
       Thread.sleep(1);
     } catch (InterruptedException e) {
@@ -51,6 +52,6 @@ public class TestDefaultEnvironmentEdge {
     }
     long secondEdgeTime = edge.currentTime();
     assertTrue("Second time must be greater than the first",
-            secondEdgeTime > edgeTime);
+      secondEdgeTime > edgeTime);
   }
 }

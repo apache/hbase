@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -458,12 +459,13 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
     int numSinks = getNumSinks();
     if (numSinks == 0) {
-      if((System.currentTimeMillis() - lastSinkFetchTime) >= (maxRetriesMultiplier*1000)) {
+      if ((EnvironmentEdgeManager.currentTime() - lastSinkFetchTime) >=
+          (maxRetriesMultiplier*1000)) {
         LOG.warn(
           "No replication sinks found, returning without replicating. "
             + "The source should retry with the same set of edits. Not logging this again for "
             + "the next {} seconds.", maxRetriesMultiplier);
-        lastSinkFetchTime = System.currentTimeMillis();
+        lastSinkFetchTime = EnvironmentEdgeManager.currentTime();
       }
       sleepForRetries("No sinks available at peer", sleepMultiplier);
       return false;

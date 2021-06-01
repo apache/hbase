@@ -107,7 +107,7 @@ public class TestScannerFromBucketCache {
     byte[] qf2 = Bytes.toBytes("qualifier2");
     byte[] fam1 = Bytes.toBytes("lrucache");
 
-    long ts1 = 1; // System.currentTimeMillis();
+    long ts1 = 1;
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 
@@ -145,7 +145,7 @@ public class TestScannerFromBucketCache {
     byte[] qf2 = Bytes.toBytes("qualifier2");
     byte[] fam1 = Bytes.toBytes("famoffheap");
 
-    long ts1 = 1; // System.currentTimeMillis();
+    long ts1 = 1;
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 
@@ -186,7 +186,7 @@ public class TestScannerFromBucketCache {
     byte[] qf2 = Bytes.toBytes("qualifier2");
     byte[] fam1 = Bytes.toBytes("famoffheap");
 
-    long ts1 = 1; // System.currentTimeMillis();
+    long ts1 = 1;
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 

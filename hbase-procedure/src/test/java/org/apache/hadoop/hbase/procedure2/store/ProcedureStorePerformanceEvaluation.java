@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
@@ -159,7 +159,8 @@ public abstract class ProcedureStorePerformanceEvaluation<T extends ProcedureSto
       boolean failure = false;
       try {
         for (Future<?> future : futures) {
-          long timeout = start + WORKER_THREADS_TIMEOUT_SEC * 1000 - System.currentTimeMillis();
+          long timeout = start + WORKER_THREADS_TIMEOUT_SEC * 1000 -
+            EnvironmentEdgeManager.currentTime();
           failure |= (future.get(timeout, TimeUnit.MILLISECONDS).equals(EXIT_FAILURE));
         }
       } catch (Exception e) {

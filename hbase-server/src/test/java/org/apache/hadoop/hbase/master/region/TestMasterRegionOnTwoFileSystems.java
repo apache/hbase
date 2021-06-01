@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -135,7 +136,8 @@ public class TestMasterRegionOnTwoFileSystems {
     Path walRootDir = WAL_UTIL.getDataTestDirOnTestFS();
     FileSystem walFs = WAL_UTIL.getTestFileSystem();
     walFs.delete(walRootDir, true);
-    region = createMasterRegion(ServerName.valueOf("localhost", 12345, System.currentTimeMillis()));
+    region = createMasterRegion(ServerName.valueOf("localhost", 12345,
+      EnvironmentEdgeManager.currentTime()));
   }
 
   @After
@@ -219,7 +221,7 @@ public class TestMasterRegionOnTwoFileSystems {
       }
       region.close(true);
       region = createMasterRegion(
-        ServerName.valueOf("localhost", 12345, System.currentTimeMillis() + round + 1));
+        ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime() + round + 1));
       try (RegionScanner scanner = region.getScanner(new Scan())) {
         List<Cell> cells = new ArrayList<>();
         boolean moreValues = true;

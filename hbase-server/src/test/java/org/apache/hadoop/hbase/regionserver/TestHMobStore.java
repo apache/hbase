@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Assert;
 import org.junit.Before;
@@ -114,7 +115,7 @@ public class TestHMobStore {
   private Cell seekKey3;
   private NavigableSet<byte[]> qualifiers = new ConcurrentSkipListSet<>(Bytes.BYTES_COMPARATOR);
   private List<Cell> expected = new ArrayList<>();
-  private long id = System.currentTimeMillis();
+  private long id = EnvironmentEdgeManager.currentTime();
   private Get get = new Get(row);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final String DIR = TEST_UTIL.getDataTestDir("TestHMobStore").toString();

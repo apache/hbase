@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 
 public class CloneSnapshotFromClientNormalTestBase extends CloneSnapshotFromClientTestBase {
@@ -28,7 +29,7 @@ public class CloneSnapshotFromClientNormalTestBase extends CloneSnapshotFromClie
   @Test
   public void testCloneSnapshot() throws IOException, InterruptedException {
     TableName clonedTableName =
-      TableName.valueOf(getValidMethodName() + "-" + System.currentTimeMillis());
+      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
     testCloneSnapshot(clonedTableName, emptySnapshot, 0);
@@ -50,10 +51,10 @@ public class CloneSnapshotFromClientNormalTestBase extends CloneSnapshotFromClie
 
   @Test
   public void testCloneSnapshotCrossNamespace() throws IOException, InterruptedException {
-    String nsName = getValidMethodName() + "_ns_" + System.currentTimeMillis();
+    String nsName = getValidMethodName() + "_ns_" + EnvironmentEdgeManager.currentTime();
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
     final TableName clonedTableName =
-      TableName.valueOf(nsName, getValidMethodName() + "-" + System.currentTimeMillis());
+      TableName.valueOf(nsName, getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
     testCloneSnapshot(clonedTableName, emptySnapshot, 0);

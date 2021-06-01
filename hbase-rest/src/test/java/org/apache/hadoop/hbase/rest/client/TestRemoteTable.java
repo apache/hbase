@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.http.Header;
 import org.apache.http.message.BasicHeader;
 import org.junit.After;
@@ -97,7 +98,7 @@ public class TestRemoteTable {
   private static final byte[] VALUE_2 = Bytes.toBytes("testvalue2");
 
   private static final long ONE_HOUR = 60 * 60 * 1000;
-  private static final long TS_2 = System.currentTimeMillis();
+  private static final long TS_2 = EnvironmentEdgeManager.currentTime();
   private static final long TS_1 = TS_2 - ONE_HOUR;
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

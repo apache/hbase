@@ -21,9 +21,10 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 
 /**
  * ScannerContext instances encapsulate limit tracking AND progress towards those limits during
@@ -55,7 +56,7 @@ public class ScannerContext {
   /**
    * A different set of progress fields. Only include batch, dataSize and heapSize. Compare to
    * LimitFields, ProgressFields doesn't contain time field. As we save a deadline in LimitFields,
-   * so use {@link System#currentTimeMillis()} directly when check time limit.
+   * so use {@link EnvironmentEdgeManager.currentTime()} directly when check time limit.
    */
   ProgressFields progress;
 
@@ -310,12 +311,12 @@ public class ScannerContext {
 
   /**
    * @param checkerScope The scope that the limit is being checked from. The time limit is always
-   *          checked against {@link System#currentTimeMillis()}
+   *          checked against {@link EnvironmentEdgeManager.currentTime}
    * @return true when the limit is enforceable from the checker's scope and it has been reached
    */
   boolean checkTimeLimit(LimitScope checkerScope) {
     return hasTimeLimit(checkerScope) &&
-      (returnImmediately || System.currentTimeMillis() >= limits.getTime());
+      (returnImmediately || EnvironmentEdgeManager.currentTime() >= limits.getTime());
   }
 
   /**

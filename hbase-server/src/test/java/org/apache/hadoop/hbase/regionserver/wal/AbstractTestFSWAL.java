@@ -181,7 +181,7 @@ public abstract class AbstractTestFSWAL {
       throws IOException {
     final byte[] row = Bytes.toBytes(cf);
     for (int i = 0; i < times; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       WALEdit cols = new WALEdit();
       cols.add(new KeyValue(row, row, row, timestamp, row));
       WALKeyImpl key = new WALKeyImpl(hri.getEncodedNameAsBytes(), htd.getTableName(),
@@ -390,7 +390,7 @@ public abstract class AbstractTestFSWAL {
     final String name = "testFailedToCreateWALIfParentRenamed";
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), name,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
-    long filenum = System.currentTimeMillis();
+    long filenum = EnvironmentEdgeManager.currentTime();
     Path path = wal.computeFilename(filenum);
     wal.createWriterInstance(path);
     Path parent = path.getParent();
@@ -469,7 +469,7 @@ public abstract class AbstractTestFSWAL {
       for (int i = 0; i < countPerFamily; i++) {
         final RegionInfo info = region.getRegionInfo();
         final WALKeyImpl logkey = new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis(), clusterIds, -1, -1, region.getMVCC(), scopes);
+          EnvironmentEdgeManager.currentTime(), clusterIds, -1, -1, region.getMVCC(), scopes);
         wal.append(info, logkey, edits, true);
         region.getMVCC().completeAndWait(logkey.getWriteEntry());
       }
@@ -511,7 +511,7 @@ public abstract class AbstractTestFSWAL {
     for (byte[] fam : td.getColumnFamilyNames()) {
       scopes.put(fam, 0);
     }
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     byte[] row = Bytes.toBytes("row");
     WALEdit cols = new WALEdit();
     cols.add(new KeyValue(row, row, row, timestamp, row));

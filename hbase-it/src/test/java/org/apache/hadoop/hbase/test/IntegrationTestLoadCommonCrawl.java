@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.test.util.warc.WARCInputFormat;
 import org.apache.hadoop.hbase.test.util.warc.WARCRecord;
 import org.apache.hadoop.hbase.test.util.warc.WARCWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -582,7 +583,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           String contentType = warcHeader.getField("WARC-Identified-Payload-Type");
           if (contentType != null) {
             LOG.debug("Processing record id=" + recordID + ", targetURI=\"" + targetURI + "\"");
-            long now = System.currentTimeMillis();
+            long now = EnvironmentEdgeManager.currentTime();
 
             // Make row key
 

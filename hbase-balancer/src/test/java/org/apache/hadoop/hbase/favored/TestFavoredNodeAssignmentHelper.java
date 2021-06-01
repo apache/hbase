@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Triple;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -98,7 +99,8 @@ public class TestFavoredNodeAssignmentHelper {
       }
     });
     for (int i = 0; i < 40; i++) {
-      ServerName server = ServerName.valueOf("foo" + i, 1234, System.currentTimeMillis());
+      ServerName server = ServerName.valueOf("foo" + i, 1234,
+        EnvironmentEdgeManager.currentTime());
       String rack = getRack(i);
       if (!rack.equals(RackManager.UNKNOWN_RACK)) {
         rackToServers.computeIfAbsent(rack, k -> new ArrayList<>()).add(server);

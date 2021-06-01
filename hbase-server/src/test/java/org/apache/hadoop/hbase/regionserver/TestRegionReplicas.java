@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -295,8 +296,8 @@ public class TestRegionReplicas {
       // force compaction
       HTU.compact(table.getName(), true);
 
-      long wakeUpTime = System.currentTimeMillis() + 4 * refreshPeriod;
-      while (System.currentTimeMillis() < wakeUpTime) {
+      long wakeUpTime = EnvironmentEdgeManager.currentTime() + 4 * refreshPeriod;
+      while (EnvironmentEdgeManager.currentTime() < wakeUpTime) {
         assertGetRpc(hriSecondary, 42, true);
         assertGetRpc(hriSecondary, 1042, true);
         assertGetRpc(hriSecondary, 2042, true);

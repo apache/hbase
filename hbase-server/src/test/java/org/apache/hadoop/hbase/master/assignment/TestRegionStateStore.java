@@ -158,7 +158,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testMetaLocationForRegionReplicasIsAddedAtRegionSplit() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     ServerName serverName0 =
       ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
     TableName tableName = name.getTableName();
@@ -189,7 +189,7 @@ public class TestRegionStateStore {
   @Test
   public void testEmptyMetaDaughterLocationDuringSplit() throws IOException {
     TableName tableName = name.getTableName();
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     ServerName serverName0 =
       ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
     RegionInfo parent = RegionInfoBuilder.newBuilder(tableName)
@@ -230,7 +230,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testMetaLocationForRegionReplicasIsAddedAtRegionMerge() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     ServerName serverName0 =
       ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
 
@@ -261,7 +261,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testMastersSystemTimeIsUsedInMergeRegions() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     TableName tableName = name.getTableName();
 
     RegionInfo regionInfoA = RegionInfoBuilder.newBuilder(tableName)
@@ -397,7 +397,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testMetaLocationForRegionReplicasIsRemovedAtTableDeletion() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     TableName tableName = name.getTableName();
     RegionInfo primary = RegionInfoBuilder.newBuilder(tableName)
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)

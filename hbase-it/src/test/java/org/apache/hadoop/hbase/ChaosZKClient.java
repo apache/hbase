@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
@@ -118,9 +119,9 @@ public class ChaosZKClient {
         CreateMode.EPHEMERAL_SEQUENTIAL,
         submitTaskCallback,
         taskObject);
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
 
-      while ((System.currentTimeMillis() - start) < TASK_EXECUTION_TIMEOUT) {
+      while ((EnvironmentEdgeManager.currentTime() - start) < TASK_EXECUTION_TIMEOUT) {
         if(taskStatus != null) {
           return taskStatus;
         }

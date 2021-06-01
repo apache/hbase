@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -130,7 +131,7 @@ public class TestSecureWAL {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(row, family, Bytes.toBytes(i), value));
       wal.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
-        System.currentTimeMillis(), mvcc, scopes), kvs);
+        EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
     }
     wal.sync();
     final Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);

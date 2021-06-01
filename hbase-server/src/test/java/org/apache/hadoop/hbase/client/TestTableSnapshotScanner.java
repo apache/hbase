@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -448,7 +449,7 @@ public class TestTableSnapshotScanner {
         }
       });
       // set file modify time and then run cleaner
-      long time = System.currentTimeMillis() - TimeToLiveHFileCleaner.DEFAULT_TTL * 1000;
+      long time = EnvironmentEdgeManager.currentTime() - TimeToLiveHFileCleaner.DEFAULT_TTL * 1000;
       traverseAndSetFileTime(HFileArchiveUtil.getArchivePath(conf), time);
       UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().runCleaner();
       // scan snapshot

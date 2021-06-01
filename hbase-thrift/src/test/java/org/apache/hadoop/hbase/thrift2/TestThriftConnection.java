@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.thrift.Constants;
 import org.apache.hadoop.hbase.thrift2.client.ThriftConnection;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -99,7 +100,7 @@ public class TestThriftConnection {
   private static final byte[] VALUE_2 = Bytes.toBytes("testvalue2");
 
   private static final long ONE_HOUR = 60 * 60 * 1000;
-  private static final long TS_2 = System.currentTimeMillis();
+  private static final long TS_2 = EnvironmentEdgeManager.currentTime();
   private static final long TS_1 = TS_2 - ONE_HOUR;
 
 

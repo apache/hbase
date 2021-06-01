@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -47,7 +49,7 @@ class MonitoredTaskImpl implements MonitoredTask {
   private static final Gson GSON = GsonUtil.createGson().create();
 
   public MonitoredTaskImpl() {
-    startTime = System.currentTimeMillis();
+    startTime = EnvironmentEdgeManager.currentTime();
     statusTime = startTime;
     stateTime = startTime;
     warnTime = startTime;
@@ -161,7 +163,7 @@ class MonitoredTaskImpl implements MonitoredTask {
   @Override
   public void setStatus(String status) {
     this.status = status;
-    statusTime = System.currentTimeMillis();
+    statusTime = EnvironmentEdgeManager.currentTime();
     if (journalEnabled) {
       journal.add(new StatusJournalEntryImpl(this.status, statusTime));
     }
@@ -169,7 +171,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   protected void setState(State state) {
     this.state = state;
-    stateTime = System.currentTimeMillis();
+    stateTime = EnvironmentEdgeManager.currentTime();
   }
 
   @Override

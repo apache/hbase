@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -134,7 +135,7 @@ public class TestMasterMetricsWrapper {
         Bytes.toBytes("Z"), 5);
 
       // wait till the table is assigned
-      long timeoutTime = System.currentTimeMillis() + 1000;
+      long timeoutTime = EnvironmentEdgeManager.currentTime() + 1000;
       while (true) {
         List<RegionInfo> regions = master.getAssignmentManager().
           getRegionStates().getRegionsOfTable(table);
@@ -142,7 +143,7 @@ public class TestMasterMetricsWrapper {
           hri = regions.get(2);
           break;
         }
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (now > timeoutTime) {
           fail("Could not find an online region");
         }
@@ -155,14 +156,14 @@ public class TestMasterMetricsWrapper {
 
       TEST_UTIL.getAdmin().offline(hri.getRegionName());
 
-      timeoutTime = System.currentTimeMillis() + 800;
+      timeoutTime = EnvironmentEdgeManager.currentTime() + 800;
       RegionStates regionStates = master.getAssignmentManager().getRegionStates();
       while (true) {
         if (regionStates.getRegionByStateOfTable(table)
             .get(RegionState.State.OFFLINE).contains(hri)) {
           break;
         }
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (now > timeoutTime) {
           fail("Failed to offline the region in time");
           break;

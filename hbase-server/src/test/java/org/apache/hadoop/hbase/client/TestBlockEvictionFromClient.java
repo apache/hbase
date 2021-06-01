@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -1478,12 +1479,13 @@ public class TestBlockEvictionFromClient {
 
   private void waitForStoreFileCount(HStore store, int count, int timeout)
       throws InterruptedException {
-    long start = System.currentTimeMillis();
-    while (start + timeout > System.currentTimeMillis() && store.getStorefilesCount() != count) {
+    long start = EnvironmentEdgeManager.currentTime();
+    while (start + timeout > EnvironmentEdgeManager.currentTime() &&
+        store.getStorefilesCount() != count) {
       Thread.sleep(100);
     }
-    System.out.println("start=" + start + ", now=" + System.currentTimeMillis() + ", cur=" +
-        store.getStorefilesCount());
+    System.out.println("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() +
+      ", cur=" + store.getStorefilesCount());
     assertEquals(count, store.getStorefilesCount());
   }
 

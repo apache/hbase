@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPoli
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
@@ -248,7 +249,7 @@ public class TestMajorCompaction {
     // should result in a compacted store file that has no references to the
     // deleted row.
     LOG.debug("Adding deletes to memstore and flushing");
-    Delete delete = new Delete(secondRowBytes, System.currentTimeMillis());
+    Delete delete = new Delete(secondRowBytes, EnvironmentEdgeManager.currentTime());
     byte[][] famAndQf = { COLUMN_FAMILY, null };
     delete.addFamily(famAndQf[0]);
     r.delete(delete);

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
@@ -74,8 +75,8 @@ public class TestMajorCompactor {
     assertTrue(numberOfRegions < numHFiles);
 
     MajorCompactor compactor =
-        new MajorCompactor(utility.getConfiguration(), tableName,
-            Sets.newHashSet(Bytes.toString(FAMILY)), 1, System.currentTimeMillis(), 200);
+      new MajorCompactor(utility.getConfiguration(), tableName,
+        Sets.newHashSet(Bytes.toString(FAMILY)), 1, EnvironmentEdgeManager.currentTime(), 200);
     compactor.initializeWorkQueues();
     compactor.compactAllRegions();
     compactor.shutdown();

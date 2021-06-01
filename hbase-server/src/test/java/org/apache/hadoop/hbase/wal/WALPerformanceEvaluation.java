@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.util.Tool;
@@ -530,13 +531,13 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
 
   private long runBenchmark(Runnable[] runnable, final int numThreads) throws InterruptedException {
     Thread[] threads = new Thread[numThreads];
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < numThreads; ++i) {
       threads[i] = new Thread(runnable[i%runnable.length], "t" + i + ",r" + (i%runnable.length));
       threads[i].start();
     }
     for (Thread t : threads) t.join();
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTime();
     return(endTime - startTime);
   }
 

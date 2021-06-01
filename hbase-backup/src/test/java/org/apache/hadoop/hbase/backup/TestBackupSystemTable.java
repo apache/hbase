@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -520,8 +521,8 @@ public class TestBackupSystemTable {
         new BackupInfo("backup_" + System.nanoTime(), BackupType.FULL, new TableName[] {
             TableName.valueOf("t1"), TableName.valueOf("t2"), TableName.valueOf("t3") },
             "/hbase/backup");
-    ctxt.setStartTs(System.currentTimeMillis());
-    ctxt.setCompleteTs(System.currentTimeMillis() + 1);
+    ctxt.setStartTs(EnvironmentEdgeManager.currentTime());
+    ctxt.setCompleteTs(EnvironmentEdgeManager.currentTime() + 1);
     return ctxt;
   }
 

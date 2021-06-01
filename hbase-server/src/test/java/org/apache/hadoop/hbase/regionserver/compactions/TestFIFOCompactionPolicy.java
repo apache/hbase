@@ -216,7 +216,7 @@ public class TestFIFOCompactionPolicy {
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
         .build();
     Table table = TEST_UTIL.createTable(desc, null);
-    long ts = System.currentTimeMillis() - 10 * 1000;
+    long ts = EnvironmentEdgeManager.currentTime() - 10 * 1000;
     Put put =
         new Put(Bytes.toBytes("row1")).addColumn(family, qualifier, ts, Bytes.toBytes("value0"));
     table.put(put);

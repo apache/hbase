@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -56,7 +57,7 @@ public class TestRegionInfoDisplay {
     .setStartKey(startKey)
     .setEndKey(endKey)
     .setSplit(false)
-    .setRegionId(System.currentTimeMillis())
+    .setRegionId(EnvironmentEdgeManager.currentTime())
     .setReplicaId(1).build();
     checkEquality(ri, conf);
     Assert.assertArrayEquals(RegionInfoDisplay.HIDDEN_END_KEY,

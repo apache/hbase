@@ -148,7 +148,7 @@ public abstract class Compactor<T extends CellSink> {
   private FileDetails getFileDetails(
       Collection<HStoreFile> filesToCompact, boolean allFiles, boolean major) throws IOException {
     FileDetails fd = new FileDetails();
-    long oldestHFileTimestampToKeepMVCC = System.currentTimeMillis() -
+    long oldestHFileTimestampToKeepMVCC = EnvironmentEdgeManager.currentTime() -
       (1000L * 60 * 60 * 24 * this.keepSeqIdPeriod);
 
     for (HStoreFile file : filesToCompact) {

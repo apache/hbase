@@ -615,9 +615,9 @@ public class CanaryTool implements Tool, Canary {
             tableDesc.getTableName(), region.getRegionNameAsString(), column.getNameAsString(),
             Bytes.toStringBinary(rowToCheck));
           try {
-            long startTime = System.currentTimeMillis();
+            long startTime = EnvironmentEdgeManager.currentTime();
             table.put(put);
-            long time = System.currentTimeMillis() - startTime;
+            long time = EnvironmentEdgeManager.currentTime() - startTime;
             this.readWriteLatency.add(time);
             sink.publishWriteTiming(serverName, region, column, time);
           } catch (Exception e) {
@@ -1017,8 +1017,8 @@ public class CanaryTool implements Tool, Canary {
         // Do monitor !!
         try {
           monitor = this.newMonitor(connection, monitorTargets);
-          monitorThread = new Thread(monitor, "CanaryMonitor-" + System.currentTimeMillis());
-          startTime = System.currentTimeMillis();
+          startTime = EnvironmentEdgeManager.currentTime();
+          monitorThread = new Thread(monitor, "CanaryMonitor-" + startTime);
           monitorThread.start();
           while (!monitor.isDone()) {
             // wait for 1 sec
@@ -1032,7 +1032,7 @@ public class CanaryTool implements Tool, Canary {
                 return INIT_ERROR_EXIT_CODE;
               }
             }
-            currentTimeLength = System.currentTimeMillis() - startTime;
+            currentTimeLength = EnvironmentEdgeManager.currentTime() - startTime;
             if (currentTimeLength > timeout) {
               LOG.error("The monitor is running too long (" + currentTimeLength
                   + ") after timeout limit:" + timeout

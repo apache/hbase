@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -122,7 +123,7 @@ public abstract class ZKNodeTracker extends ZKListener {
     }
 
     boolean notimeout = timeout == 0;
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long remaining = timeout;
     if (refresh) {
       try {
@@ -160,7 +161,7 @@ public abstract class ZKNodeTracker extends ZKListener {
       // We expect a notification; but we wait with a
       //  a timeout to lower the impact of a race condition if any
       wait(100);
-      remaining = timeout - (System.currentTimeMillis() - startTime);
+      remaining = timeout - (EnvironmentEdgeManager.currentTime() - startTime);
     }
     return this.data;
   }

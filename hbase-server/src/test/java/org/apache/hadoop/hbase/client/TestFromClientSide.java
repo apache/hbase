@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -216,7 +217,7 @@ public class TestFromClientSide extends FromClientSideBase {
       .build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     try (Table h = TEST_UTIL.getConnection().getTable(tableName)) {
-      long ts = System.currentTimeMillis();
+      long ts = EnvironmentEdgeManager.currentTime();
       Put p = new Put(T1, ts);
       p.addColumn(FAMILY, C0, T1);
       h.put(p);
@@ -275,7 +276,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
     try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
       // future timestamp
-      long ts = System.currentTimeMillis() * 2;
+      long ts = EnvironmentEdgeManager.currentTime() * 2;
       Put put = new Put(ROW, ts);
       put.addColumn(FAMILY, COLUMN, VALUE);
       table.put(put);

@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -399,8 +400,8 @@ public class TestWALEntryStream {
     attributes.put("foo", Bytes.toBytes("foo-value"));
     attributes.put("bar", Bytes.toBytes("bar-value"));
     WALKeyImpl key = new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-        System.currentTimeMillis(), new ArrayList<UUID>(), 0L, 0L,
-        mvcc, scopes, attributes);
+      EnvironmentEdgeManager.currentTime(), new ArrayList<UUID>(), 0L, 0L,
+      mvcc, scopes, attributes);
     Assert.assertEquals(attributes, key.getExtendedAttributes());
 
     WALProtos.WALKey.Builder builder = key.getBuilder(WALCellCodec.getNoneCompressor());
@@ -661,8 +662,8 @@ public class TestWALEntryStream {
 
   private void appendToLog(String key) throws IOException {
     final long txid = log.appendData(info,
-      new WALKeyImpl(info.getEncodedNameAsBytes(), tableName, System.currentTimeMillis(),
-          mvcc, scopes), getWALEdit(key));
+      new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+        EnvironmentEdgeManager.currentTime(), mvcc, scopes), getWALEdit(key));
     log.sync(txid);
   }
 
@@ -685,14 +686,14 @@ public class TestWALEntryStream {
 
   private long appendToLog(int count) throws IOException {
     return log.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-      System.currentTimeMillis(), mvcc, scopes), getWALEdits(count));
+      EnvironmentEdgeManager.currentTime(), mvcc, scopes), getWALEdits(count));
   }
 
   private WALEdit getWALEdits(int count) {
     WALEdit edit = new WALEdit();
     for (int i = 0; i < count; i++) {
-      edit.add(new KeyValue(Bytes.toBytes(System.currentTimeMillis()), family, qualifier,
-          System.currentTimeMillis(), qualifier));
+      edit.add(new KeyValue(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), family,
+        qualifier, EnvironmentEdgeManager.currentTime(), qualifier));
     }
     return edit;
   }
@@ -700,7 +701,8 @@ public class TestWALEntryStream {
   private WALEdit getWALEdit(String row) {
     WALEdit edit = new WALEdit();
     edit.add(
-      new KeyValue(Bytes.toBytes(row), family, qualifier, System.currentTimeMillis(), qualifier));
+      new KeyValue(Bytes.toBytes(row), family, qualifier, EnvironmentEdgeManager.currentTime(),
+        qualifier));
     return edit;
   }
 

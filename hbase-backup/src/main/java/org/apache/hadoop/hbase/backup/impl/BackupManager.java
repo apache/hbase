@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -382,11 +383,11 @@ public class BackupManager implements Closeable {
    * @throws IOException if active session already exists
    */
   public void startBackupSession() throws IOException {
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long timeout = conf.getInt(BACKUP_EXCLUSIVE_OPERATION_TIMEOUT_SECONDS_KEY,
       DEFAULT_BACKUP_EXCLUSIVE_OPERATION_TIMEOUT) * 1000L;
     long lastWarningOutputTime = 0;
-    while (System.currentTimeMillis() - startTime < timeout) {
+    while (EnvironmentEdgeManager.currentTime() - startTime < timeout) {
       try {
         systemTable.startBackupExclusiveOperation();
         return;
@@ -400,8 +401,8 @@ public class BackupManager implements Closeable {
             Thread.currentThread().interrupt();
           }
           if (lastWarningOutputTime == 0
-              || (System.currentTimeMillis() - lastWarningOutputTime) > 60000) {
-            lastWarningOutputTime = System.currentTimeMillis();
+              || (EnvironmentEdgeManager.currentTime() - lastWarningOutputTime) > 60000) {
+            lastWarningOutputTime = EnvironmentEdgeManager.currentTime();
             LOG.warn("Waiting to acquire backup exclusive lock for {}s",
                 +(lastWarningOutputTime - startTime) / 1000);
           }

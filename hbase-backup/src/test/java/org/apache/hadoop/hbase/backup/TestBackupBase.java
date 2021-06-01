@@ -425,7 +425,7 @@ public class TestBackupBase {
   }
 
   protected static void createTables() throws Exception {
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     table1 = TableName.valueOf("test-" + tid);
     Admin ha = TEST_UTIL.getAdmin();
 
