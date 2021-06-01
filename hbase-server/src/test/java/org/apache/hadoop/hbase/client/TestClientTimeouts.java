@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -161,7 +162,7 @@ public class TestClientTimeouts {
    */
   static class RandomTimeoutBlockingRpcChannel
       extends AbstractRpcClient.BlockingRpcChannelImplementation {
-    private static final Random RANDOM = new Random(System.currentTimeMillis());
+    private static final Random RANDOM = new Random(EnvironmentEdgeManager.currentTime());
     public static final double CHANCE_OF_TIMEOUT = 0.3;
     private static AtomicInteger invokations = new AtomicInteger();
 

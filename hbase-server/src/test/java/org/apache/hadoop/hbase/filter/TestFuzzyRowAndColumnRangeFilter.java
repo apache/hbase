@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -174,7 +175,7 @@ public class TestFuzzyRowAndColumnRangeFilter {
     ResultScanner scanner = hTable.getScanner(scan);
     List<Cell> results = new ArrayList<>();
     Result result;
-    long timeBeforeScan = System.currentTimeMillis();
+    long timeBeforeScan = EnvironmentEdgeManager.currentTime();
     while ((result = scanner.next()) != null) {
       for (Cell kv : result.listCells()) {
         LOG.info("Got rk: " + Bytes.toStringBinary(CellUtil.cloneRow(kv)) + " cq: "
@@ -182,7 +183,7 @@ public class TestFuzzyRowAndColumnRangeFilter {
         results.add(kv);
       }
     }
-    long scanTime = System.currentTimeMillis() - timeBeforeScan;
+    long scanTime = EnvironmentEdgeManager.currentTime() - timeBeforeScan;
     scanner.close();
 
     LOG.info("scan time = " + scanTime + "ms");

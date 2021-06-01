@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -190,7 +191,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
     }
 
     if (currentWriteBufferSize.get() == 0) {
-      firstRecordInBufferTimestamp.set(System.currentTimeMillis());
+      firstRecordInBufferTimestamp.set(EnvironmentEdgeManager.currentTime());
     }
     currentWriteBufferSize.addAndGet(toAddSize);
     writeAsyncBuffer.addAll(ms);
@@ -209,7 +210,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
     if (currentWriteBufferSize.get() == 0) {
       return; // Nothing to flush
     }
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     if (firstRecordInBufferTimestamp.get() + writeBufferPeriodicFlushTimeoutMs.get() > now) {
       return; // No need to flush yet
     }

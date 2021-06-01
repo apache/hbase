@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -90,7 +91,7 @@ public class TableRecordReaderImpl {
     this.scanner = this.htable.getScanner(currentScan);
     if (logScannerActivity) {
       LOG.info("Current scan=" + currentScan.toString());
-      timestamp = System.currentTimeMillis();
+      timestamp = EnvironmentEdgeManager.currentTime();
       rowcount = 0;
     }
   }
@@ -212,7 +213,7 @@ public class TableRecordReaderImpl {
         if (logScannerActivity) {
           rowcount ++;
           if (rowcount >= logPerRowCount) {
-            long now = System.currentTimeMillis();
+            long now = EnvironmentEdgeManager.currentTime();
             LOG.info("Mapper took {}ms to process {} rows", (now - timestamp), rowcount);
             timestamp = now;
             rowcount = 0;
@@ -264,7 +265,7 @@ public class TableRecordReaderImpl {
     } catch (IOException ioe) {
       updateCounters();
       if (logScannerActivity) {
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         LOG.info("Mapper took {}ms to process {} rows", (now - timestamp), rowcount);
         LOG.info(ioe.toString(), ioe);
         String lastRow = lastSuccessfulRow == null ?

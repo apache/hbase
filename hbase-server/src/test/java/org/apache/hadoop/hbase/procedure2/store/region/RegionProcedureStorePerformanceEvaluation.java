@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStorePerformanceEvaluat
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
@@ -46,7 +47,7 @@ public class RegionProcedureStorePerformanceEvaluation
     private final Configuration conf;
 
     private final ServerName serverName =
-      ServerName.valueOf("localhost", 12345, System.currentTimeMillis());
+      ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime());
 
     private volatile boolean abort = false;
 

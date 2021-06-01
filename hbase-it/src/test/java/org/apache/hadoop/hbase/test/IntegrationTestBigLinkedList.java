@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Random64;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -711,9 +712,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           while (numQueries < maxQueries) {
             numQueries++;
             byte[] prev = node.prev;
-            long t1 = System.currentTimeMillis();
+            long t1 = EnvironmentEdgeManager.currentTime();
             node = getNode(prev, table, node);
-            long t2 = System.currentTimeMillis();
+            long t2 = EnvironmentEdgeManager.currentTime();
             if (node == null) {
               LOG.error("ConcurrentWalker found UNDEFINED NODE: " + Bytes.toStringBinary(prev));
               context.getCounter(Counts.UNDEFINED).increment(1l);
@@ -1702,10 +1703,10 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       scan.setBatch(1);
       scan.addColumn(FAMILY_NAME, COLUMN_PREV);
 
-      long t1 = System.currentTimeMillis();
+      long t1 = EnvironmentEdgeManager.currentTime();
       ResultScanner scanner = table.getScanner(scan);
       Result result = scanner.next();
-      long t2 = System.currentTimeMillis();
+      long t2 = EnvironmentEdgeManager.currentTime();
       scanner.close();
 
       if ( result != null) {
@@ -1785,9 +1786,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         while (node != null && node.prev.length != NO_KEY.length &&
             numQueries < maxQueries) {
           byte[] prev = node.prev;
-          long t1 = System.currentTimeMillis();
+          long t1 = EnvironmentEdgeManager.currentTime();
           node = getNode(prev, table, node);
-          long t2 = System.currentTimeMillis();
+          long t2 = EnvironmentEdgeManager.currentTime();
           if (logEvery > 0 && numQueries % logEvery == 0) {
             System.out.printf("CQ %d: %d %s \n", numQueries, t2 - t1, Bytes.toStringBinary(prev));
           }

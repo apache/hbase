@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
@@ -67,7 +68,7 @@ public class TestCellCounter {
   private static Path FQ_OUTPUT_DIR;
   private static final String OUTPUT_DIR = "target" + File.separator + "test-data" + File.separator
       + "output";
-  private static long now = System.currentTimeMillis();
+  private static long now = EnvironmentEdgeManager.currentTime();
 
   @Rule
   public TestName name = new TestName();

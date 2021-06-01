@@ -33,6 +33,7 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.common.X509Exception;
@@ -416,15 +417,14 @@ public class MiniZooKeeperCluster {
 
   // XXX: From o.a.zk.t.ClientBase. We just dropped the check for ssl/secure.
   private static boolean waitForServerDown(int port, long timeout) throws IOException {
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     while (true) {
       try {
         send4LetterWord(HOST, port, "stat", false, (int)timeout);
       } catch (IOException | X509Exception.SSLContextException e) {
         return true;
       }
-
-      if (System.currentTimeMillis() > start + timeout) {
+      if (EnvironmentEdgeManager.currentTime() > start + timeout) {
         break;
       }
       try {
@@ -439,7 +439,7 @@ public class MiniZooKeeperCluster {
   // XXX: From o.a.zk.t.ClientBase. Its in the test jar but we don't depend on zk test jar.
   // We remove the SSL/secure bit. Not used in here.
   private static boolean waitForServerUp(int port, long timeout) throws IOException {
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     while (true) {
       try {
         String result = send4LetterWord(HOST, port, "stat", false, (int)timeout);
@@ -456,7 +456,7 @@ public class MiniZooKeeperCluster {
         LOG.info("{}:{} not up", HOST, port, e);
       }
 
-      if (System.currentTimeMillis() > start + timeout) {
+      if (EnvironmentEdgeManager.currentTime() > start + timeout) {
         break;
       }
       try {

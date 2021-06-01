@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -249,10 +250,10 @@ public class TestBlockReorderMultiBlocks {
     for (int i = 0; i < 10; i++) {
       LocatedBlocks l;
       // The NN gets the block list asynchronously, so we may need multiple tries to get the list
-      final long max = System.currentTimeMillis() + 10000;
+      final long max = EnvironmentEdgeManager.currentTime() + 10000;
       boolean done;
       do {
-        Assert.assertTrue("Can't get enouth replica.", System.currentTimeMillis() < max);
+        Assert.assertTrue("Can't get enouth replica", EnvironmentEdgeManager.currentTime() < max);
         l = getNamenode(dfs.getClient()).getBlockLocations(src, 0, 1);
         Assert.assertNotNull("Can't get block locations for " + src, l);
         Assert.assertNotNull(l.getLocatedBlocks());

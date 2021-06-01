@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -84,8 +85,8 @@ public class TestEnableRSGroups {
     // wait RSGroupBasedLoadBalancer online
     RSGroupBasedLoadBalancer loadBalancer =
         (RSGroupBasedLoadBalancer) TEST_UTIL.getMiniHBaseCluster().getMaster().getLoadBalancer();
-    long start = System.currentTimeMillis();
-    while (System.currentTimeMillis() - start <= 60000 && !loadBalancer.isOnline()) {
+    long start = EnvironmentEdgeManager.currentTime();
+    while (EnvironmentEdgeManager.currentTime() - start <= 60000 && !loadBalancer.isOnline()) {
       LOG.info("waiting for rsgroup load balancer onLine...");
       sleep(200);
     }

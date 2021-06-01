@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -151,8 +152,8 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    */
   public void waitForRegionServerToStart(String hostname, int port, long timeout)
       throws IOException {
-    long start = System.currentTimeMillis();
-    while ((System.currentTimeMillis() - start) < timeout) {
+    long start = EnvironmentEdgeManager.currentTime();
+    while ((EnvironmentEdgeManager.currentTime() - start) < timeout) {
       for (ServerName server : getClusterMetrics().getLiveServerMetrics().keySet()) {
         if (server.getHostname().equals(hostname) && server.getPort() == port) {
           return;

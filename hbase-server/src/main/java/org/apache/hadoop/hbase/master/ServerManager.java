@@ -482,8 +482,7 @@ public class ServerManager {
     ZKWatcher zkw = master.getZooKeeper();
     int onlineServersCt;
     while ((onlineServersCt = onlineServers.size()) > 0){
-
-      if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+      if (EnvironmentEdgeManager.currentTime() > (previousLogTime + 1000)) {
         Set<ServerName> remainingServers = onlineServers.keySet();
         synchronized (onlineServers) {
           if (remainingServers.size() == 1 && remainingServers.contains(sn)) {
@@ -500,7 +499,7 @@ public class ServerManager {
           sb.append(key);
         }
         LOG.info("Waiting on regionserver(s) " + sb.toString());
-        previousLogTime = System.currentTimeMillis();
+        previousLogTime = EnvironmentEdgeManager.currentTime();
       }
 
       try {
@@ -698,8 +697,8 @@ public class ServerManager {
     if (timeout < 0) {
       return;
     }
-    long expiration = timeout + System.currentTimeMillis();
-    while (System.currentTimeMillis() < expiration) {
+    long expiration = timeout + EnvironmentEdgeManager.currentTime();
+    while (EnvironmentEdgeManager.currentTime() < expiration) {
       controller.reset();
       try {
         RegionInfo rsRegion =
@@ -797,7 +796,7 @@ public class ServerManager {
       maxToStart = Integer.MAX_VALUE;
     }
 
-    long now =  System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     final long startTime = now;
     long slept = 0;
     long lastLogTime = 0;
@@ -830,7 +829,7 @@ public class ServerManager {
       // We sleep for some time
       final long sleepTime = 50;
       Thread.sleep(sleepTime);
-      now =  System.currentTimeMillis();
+      now = EnvironmentEdgeManager.currentTime();
       slept = now - startTime;
 
       oldCount = count;

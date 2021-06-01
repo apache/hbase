@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.junit.AfterClass;
@@ -139,7 +140,7 @@ public class TestRegionReplicaSplit {
       final RegionInfo fakeHri =
         RegionInfoBuilder.newBuilder(table.getName()).setStartKey(Bytes.toBytes("a"))
           .setEndKey(Bytes.toBytes("b")).setReplicaId(1)
-          .setRegionId(System.currentTimeMillis()).build();
+          .setRegionId(EnvironmentEdgeManager.currentTime()).build();
 
       // To test AssignProcedure can defend this case.
       HTU.getMiniHBaseCluster().getMaster().getAssignmentManager().assign(fakeHri);

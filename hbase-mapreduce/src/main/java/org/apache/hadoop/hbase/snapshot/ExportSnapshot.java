@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -416,7 +417,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         int reportBytes = 0;
         int bytesRead;
 
-        long stime = System.currentTimeMillis();
+        long stime = EnvironmentEdgeManager.currentTime();
         while ((bytesRead = in.read(buffer)) > 0) {
           out.write(buffer, 0, bytesRead);
           totalBytesWritten += bytesRead;
@@ -431,7 +432,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             reportBytes = 0;
           }
         }
-        long etime = System.currentTimeMillis();
+        long etime = EnvironmentEdgeManager.currentTime();
 
         context.getCounter(Counter.BYTES_COPIED).increment(reportBytes);
         context.setStatus(String.format(statusMessage,

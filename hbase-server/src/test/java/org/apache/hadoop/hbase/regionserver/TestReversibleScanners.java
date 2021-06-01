@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -82,7 +83,7 @@ public class TestReversibleScanners {
   HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static byte[] FAMILYNAME = Bytes.toBytes("testCf");
-  private static long TS = System.currentTimeMillis();
+  private static long TS = EnvironmentEdgeManager.currentTime();
   private static int MAXMVCC = 7;
   private static byte[] ROW = Bytes.toBytes("testRow");
   private static final int ROWSIZE = 200;

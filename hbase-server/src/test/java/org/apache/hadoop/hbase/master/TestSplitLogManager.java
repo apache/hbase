@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.regionserver.TestMasterAddressTracker.NodeCreationListener;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -253,7 +254,7 @@ public class TestSplitLogManager {
     assertTrue(task.isOrphan());
     waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
     assertFalse(task.isUnassigned());
-    long curt = System.currentTimeMillis();
+    long curt = EnvironmentEdgeManager.currentTime();
     assertTrue((task.last_update <= curt) &&
         (task.last_update > (curt - 1000)));
     LOG.info("waiting for manager to resubmit the orphan task");

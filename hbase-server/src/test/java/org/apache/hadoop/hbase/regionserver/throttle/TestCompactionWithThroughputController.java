@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -125,18 +126,18 @@ public class TestCompactionWithThroughputController {
     try {
       HStore store = prepareData();
       assertEquals(10, store.getStorefilesCount());
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       TEST_UTIL.getAdmin().majorCompact(tableName);
       while (store.getStorefilesCount() != 1) {
         Thread.sleep(20);
       }
-      long duration = System.currentTimeMillis() - startTime;
+      long duration = EnvironmentEdgeManager.currentTime() - startTime;
       double throughput = (double) store.getStorefilesSize() / duration * 1000;
       // confirm that the speed limit work properly(not too fast, and also not too slow)
       // 20% is the max acceptable error rate.
       assertTrue(throughput < throughputLimit * 1.2);
       assertTrue(throughput > throughputLimit * 0.8);
-      return System.currentTimeMillis() - startTime;
+      return EnvironmentEdgeManager.currentTime() - startTime;
     } finally {
       TEST_UTIL.shutdownMiniCluster();
     }
@@ -154,12 +155,12 @@ public class TestCompactionWithThroughputController {
     try {
       HStore store = prepareData();
       assertEquals(10, store.getStorefilesCount());
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       TEST_UTIL.getAdmin().majorCompact(tableName);
       while (store.getStorefilesCount() != 1) {
         Thread.sleep(20);
       }
-      return System.currentTimeMillis() - startTime;
+      return EnvironmentEdgeManager.currentTime() - startTime;
     } finally {
       TEST_UTIL.shutdownMiniCluster();
     }

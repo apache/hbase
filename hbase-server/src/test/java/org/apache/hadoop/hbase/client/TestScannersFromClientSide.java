@@ -912,7 +912,7 @@ public class TestScannersFromClientSide {
   @Test
   public void testReadExpiredDataForRawScan() throws IOException {
     TableName tableName = name.getTableName();
-    long ts = System.currentTimeMillis() - 10000;
+    long ts = EnvironmentEdgeManager.currentTime() - 10000;
     byte[] value = Bytes.toBytes("expired");
     try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
       table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, ts, value));
@@ -932,7 +932,7 @@ public class TestScannersFromClientSide {
   @Test
   public void testScanWithColumnsAndFilterAndVersion() throws IOException {
     TableName tableName = name.getTableName();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try (Table table = TEST_UTIL.createTable(tableName, FAMILY, 4)) {
       for (int i = 0; i < 4; i++) {
         Put put = new Put(ROW);

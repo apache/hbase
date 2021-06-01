@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -151,7 +152,7 @@ public class TestSnapshotMetadata {
    *  Create a table that has non-default properties so we can see if they hold
    */
   private void createTableWithNonDefaultProperties() throws Exception {
-    final long startTime = System.currentTimeMillis();
+    final long startTime = EnvironmentEdgeManager.currentTime();
     final String sourceTableNameAsString = STRING_TABLE_NAME + startTime;
     originalTableName = TableName.valueOf(sourceTableNameAsString);
 
@@ -193,8 +194,8 @@ public class TestSnapshotMetadata {
     // Clone the original table
     final String clonedTableNameAsString = "clone" + originalTableName;
     final TableName clonedTableName = TableName.valueOf(clonedTableNameAsString);
-    final String snapshotNameAsString = "snapshot" + originalTableName
-        + System.currentTimeMillis();
+    final String snapshotNameAsString = "snapshot" + originalTableName +
+      EnvironmentEdgeManager.currentTime();
     final byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
 
     // restore the snapshot into a cloned table and examine the output
@@ -285,8 +286,8 @@ public class TestSnapshotMetadata {
     }
 
     // take a "disabled" snapshot
-    final String snapshotNameAsString = "snapshot" + originalTableName
-        + System.currentTimeMillis();
+    final String snapshotNameAsString = "snapshot" + originalTableName +
+      EnvironmentEdgeManager.currentTime();
     final byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
 
     SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName,
@@ -296,7 +297,7 @@ public class TestSnapshotMetadata {
     admin.enableTable(originalTableName);
 
     if (changeMetadata) {
-      final String newFamilyNameAsString = "newFamily" + System.currentTimeMillis();
+      final String newFamilyNameAsString = "newFamily" + EnvironmentEdgeManager.currentTime();
       final byte[] newFamilyName = Bytes.toBytes(newFamilyNameAsString);
 
       admin.disableTable(originalTableName);

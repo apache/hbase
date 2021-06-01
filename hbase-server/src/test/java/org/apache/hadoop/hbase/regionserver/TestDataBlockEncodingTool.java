@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -81,7 +82,7 @@ public class TestDataBlockEncodingTool {
         new StoreFileWriter.Builder(conf, fs)
             .withFilePath(path)
             .withFileContext(meta).build();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     byte[] FAMILY = Bytes.toBytes("cf");
     byte[] QUALIFIER = Bytes.toBytes("q");
     try {

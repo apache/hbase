@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -158,7 +159,7 @@ public class TestLogRollingNoCluster {
       final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
       try {
         for (int i = 0; i < this.count; i++) {
-          long now = System.currentTimeMillis();
+          long now = EnvironmentEdgeManager.currentTime();
           // Roll every ten edits
           if (i % 10 == 0) {
             this.wal.rollWriter();

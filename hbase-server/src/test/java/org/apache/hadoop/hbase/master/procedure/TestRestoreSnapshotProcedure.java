@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -96,7 +97,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
   }
 
   private void setupSnapshotAndUpdateTable() throws Exception {
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     final byte[] snapshotName = Bytes.toBytes("snapshot-" + tid);
     Admin admin = UTIL.getAdmin();
     // create Table

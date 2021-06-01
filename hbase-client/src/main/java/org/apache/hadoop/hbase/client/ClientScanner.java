@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.LeaseException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,7 +104,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     }
     this.scan = scan;
     this.tableName = tableName;
-    this.lastNext = System.currentTimeMillis();
+    this.lastNext = EnvironmentEdgeManager.currentTime();
     this.connection = connection;
     this.pool = pool;
     this.primaryOperationTimeout = primaryOperationTimeout;
@@ -449,7 +450,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
         }
         continue;
       }
-      long currentTime = System.currentTimeMillis();
+      long currentTime = EnvironmentEdgeManager.currentTime();
       if (this.scanMetrics != null) {
         this.scanMetrics.sumOfMillisSecBetweenNexts.addAndGet(currentTime - lastNext);
       }

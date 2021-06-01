@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.RegionInfoDisplay;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -248,7 +249,7 @@ public class HRegionInfo implements RegionInfo {
   public HRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
       final boolean split)
   throws IllegalArgumentException {
-    this(tableName, startKey, endKey, split, System.currentTimeMillis());
+    this(tableName, startKey, endKey, split, EnvironmentEdgeManager.currentTime());
   }
 
   /**

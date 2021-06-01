@@ -112,14 +112,14 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
     // wait till the table is assigned
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    long timeoutTime = System.currentTimeMillis() + 3000;
+    long timeoutTime = EnvironmentEdgeManager.currentTime() + 3000;
     while (true) {
       List<RegionInfo> regions =
           master.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName);
       if (regions.size() > 3) {
         return regions.get(2);
       }
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       if (now > timeoutTime) {
         fail("Could not find an online region");
       }
@@ -163,13 +163,13 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     assertTrue(destServerName != null && !destServerName.equals(serverName));
     admin.move(hri.getRegionName(), destServerName).get();
 
-    long timeoutTime = System.currentTimeMillis() + 30000;
+    long timeoutTime = EnvironmentEdgeManager.currentTime() + 30000;
     while (true) {
       ServerName sn = rawAdmin.getRegionLocation(hri.getRegionName()).get().getServerName();
       if (sn != null && sn.equals(destServerName)) {
         break;
       }
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       if (now > timeoutTime) {
         fail("Failed to move the region in time: " + hri);
       }
@@ -426,14 +426,14 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       }
     }
 
-    long curt = System.currentTimeMillis();
+    long curt = EnvironmentEdgeManager.currentTime();
     long waitTime = 10000;
     long endt = curt + waitTime;
     CompactionState state = admin.getCompactionState(tableName).get();
     while (state == CompactionState.NONE && curt < endt) {
       Thread.sleep(1);
       state = admin.getCompactionState(tableName).get();
-      curt = System.currentTimeMillis();
+      curt = EnvironmentEdgeManager.currentTime();
     }
     // Now, should have the right compaction state,
     // otherwise, the compaction should have already been done

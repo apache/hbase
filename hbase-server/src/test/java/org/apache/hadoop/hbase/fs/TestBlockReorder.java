@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -112,10 +113,10 @@ public class TestBlockReorder {
     fop.close();
 
     // Let's check we can read it when everybody's there
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     FSDataInputStream fin = dfs.open(p);
     Assert.assertTrue(toWrite == fin.readDouble());
-    long end = System.currentTimeMillis();
+    long end = EnvironmentEdgeManager.currentTime();
     LOG.info("readtime= " + (end - start));
     fin.close();
     Assert.assertTrue((end - start) < 30 * 1000);
@@ -194,12 +195,11 @@ public class TestBlockReorder {
     // Now it will fail with a timeout, unfortunately it does not always connect to the same box,
     // so we try retries times;  with the reorder it will never last more than a few milli seconds
     for (int i = 0; i < retries; i++) {
-      start = System.currentTimeMillis();
-
+      start = EnvironmentEdgeManager.currentTime();
       fin = dfs.open(p);
       Assert.assertTrue(toWrite == fin.readDouble());
       fin.close();
-      end = System.currentTimeMillis();
+      end = EnvironmentEdgeManager.currentTime();
       LOG.info("HFileSystem readtime= " + (end - start));
       Assert.assertFalse("We took too much time to read", (end - start) > 60000);
     }

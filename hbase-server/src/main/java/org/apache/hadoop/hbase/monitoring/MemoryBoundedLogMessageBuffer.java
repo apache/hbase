@@ -24,8 +24,8 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -54,7 +54,7 @@ public class MemoryBoundedLogMessageBuffer {
    * older messages until the desired memory limit is achieved.
    */
   public synchronized void add(String messageText) {
-    LogMessage message = new LogMessage(messageText, System.currentTimeMillis());
+    LogMessage message = new LogMessage(messageText, EnvironmentEdgeManager.currentTime());
     
     usage += message.estimateHeapUsage();
     messages.add(message);

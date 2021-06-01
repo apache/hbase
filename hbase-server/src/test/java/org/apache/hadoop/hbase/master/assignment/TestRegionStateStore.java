@@ -149,7 +149,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testMetaLocationForRegionReplicasIsRemovedAtTableDeletion() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     TableName tableName = name.getTableName();
     RegionInfo primary = RegionInfoBuilder.newBuilder(tableName)
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)

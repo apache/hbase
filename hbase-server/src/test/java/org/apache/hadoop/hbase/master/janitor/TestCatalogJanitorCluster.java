@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.Before;
@@ -121,11 +122,11 @@ public class TestCatalogJanitorCluster {
     RegionInfo ri = t3Ris.get(0);
     RegionInfo newRi1 = RegionInfoBuilder.newBuilder(ri.getTable())
       .setStartKey(incrementRow(ri.getStartKey())).setEndKey(incrementRow(ri.getEndKey())).build();
-    Put p1 = MetaTableAccessor.makePutFromRegionInfo(newRi1, System.currentTimeMillis());
+    Put p1 = MetaTableAccessor.makePutFromRegionInfo(newRi1, EnvironmentEdgeManager.currentTime());
     RegionInfo newRi2 = RegionInfoBuilder.newBuilder(newRi1.getTable())
       .setStartKey(incrementRow(newRi1.getStartKey())).setEndKey(incrementRow(newRi1.getEndKey()))
       .build();
-    Put p2 = MetaTableAccessor.makePutFromRegionInfo(newRi2, System.currentTimeMillis());
+    Put p2 = MetaTableAccessor.makePutFromRegionInfo(newRi2, EnvironmentEdgeManager.currentTime());
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(p1, p2));
     janitor.scan();
     report = janitor.getLastReport();
@@ -182,7 +183,8 @@ public class TestCatalogJanitorCluster {
     // add a new region [a, cc)
     RegionInfo newRiT4 = RegionInfoBuilder.newBuilder(T4).setStartKey("a".getBytes())
       .setEndKey("cc".getBytes()).build();
-    Put putForT4 = MetaTableAccessor.makePutFromRegionInfo(newRiT4, System.currentTimeMillis());
+    Put putForT4 = MetaTableAccessor.makePutFromRegionInfo(newRiT4,
+      EnvironmentEdgeManager.currentTime());
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(putForT4));
 
     janitor.scan();
@@ -204,7 +206,8 @@ public class TestCatalogJanitorCluster {
     // add a new region [a, g)
     RegionInfo newRiT5 = RegionInfoBuilder.newBuilder(T5).setStartKey("a".getBytes())
       .setEndKey("g".getBytes()).build();
-    Put putForT5 = MetaTableAccessor.makePutFromRegionInfo(newRiT5, System.currentTimeMillis());
+    Put putForT5 = MetaTableAccessor.makePutFromRegionInfo(newRiT5,
+      EnvironmentEdgeManager.currentTime());
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(putForT5));
 
     janitor.scan();

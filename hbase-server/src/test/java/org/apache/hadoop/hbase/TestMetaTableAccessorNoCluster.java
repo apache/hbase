@@ -34,19 +34,17 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.internal.matchers.Any;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -147,8 +145,8 @@ public class TestMetaTableAccessorNoCluster {
     ZKWatcher zkw = new ZKWatcher(UTIL.getConfiguration(),
       this.getClass().getSimpleName(), ABORTABLE, true);
     // This is a servername we use in a few places below.
-    ServerName sn = ServerName.valueOf("example.com", 1234, System.currentTimeMillis());
-
+    ServerName sn = ServerName.valueOf("example.com", 1234,
+      EnvironmentEdgeManager.currentTime());
     ClusterConnection connection = null;
     try {
       // Mock an ClientProtocol. Our mock implementation will fail a few

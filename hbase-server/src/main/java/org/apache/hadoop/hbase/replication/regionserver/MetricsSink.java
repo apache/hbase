@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * This class is for maintaining the various replication statistics for a sink and publishing them
@@ -28,8 +29,8 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 @InterfaceAudience.Private
 public class MetricsSink {
 
-  private long lastTimestampForAge = System.currentTimeMillis();
-  private long startTimestamp = System.currentTimeMillis();
+  private long lastTimestampForAge = EnvironmentEdgeManager.currentTime();
+  private long startTimestamp = EnvironmentEdgeManager.currentTime();
   private final MetricsReplicationSinkSource mss;
 
   public MetricsSink() {
@@ -47,7 +48,7 @@ public class MetricsSink {
     long age = 0;
     if (lastTimestampForAge != timestamp) {
       lastTimestampForAge = timestamp;
-      age = System.currentTimeMillis() - lastTimestampForAge;
+      age = EnvironmentEdgeManager.currentTime() - lastTimestampForAge;
     }
     mss.setLastAppliedOpAge(age);
     return age;

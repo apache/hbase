@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -115,7 +116,7 @@ public class TestExportSnapshotV1NoCluster {
   static Path getDestinationDir(FileSystem fs, HBaseCommonTestingUtility hctu, Path testDir)
       throws IOException {
     Path path = new Path(new Path(testDir, "export-test"),
-      "export-" + System.currentTimeMillis()).makeQualified(fs.getUri(),
+      "export-" + EnvironmentEdgeManager.currentTime()).makeQualified(fs.getUri(),
       fs.getWorkingDirectory());
     LOG.info("Export destination={}, fs={}, fsurl={}, fswd={}, testDir={}", path, fs, fs.getUri(),
       fs.getWorkingDirectory(), testDir);

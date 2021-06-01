@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -241,7 +242,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     } else {
       response = next();
     }
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     boolean isHeartBeat = response.hasHeartbeatMessage() && response.getHeartbeatMessage();
     setHeartbeatMessage(isHeartBeat);
     if (isHeartBeat && scan.isNeedCursorResult() && response.hasCursor()) {
@@ -249,7 +250,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     }
     Result[] rrs = ResponseConverter.getResults(getRpcControllerCellScanner(), response);
     if (logScannerActivity) {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       if (now - timestamp > logCutOffLatency) {
         int rows = rrs == null ? 0 : rrs.length;
         LOG.info("Took " + (now - timestamp) + "ms to fetch " + rows + " rows from scanner="

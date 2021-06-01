@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -155,14 +156,14 @@ public class TestRemoteAdminRetries {
   }
 
   private void testTimedOutCall(CallExecutor callExecutor) throws Exception {
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     try {
       callExecutor.run();
       fail("should be timeout exception!");
     } catch (IOException e) {
       assertTrue(Pattern.matches(".*MyTable.*timed out", e.toString()));
     }
-    assertTrue((System.currentTimeMillis() - start) > MAX_TIME);
+    assertTrue((EnvironmentEdgeManager.currentTime() - start) > MAX_TIME);
   }
 
   private static interface CallExecutor {

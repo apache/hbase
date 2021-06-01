@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -128,7 +129,7 @@ public class TestMasterRegionCompaction extends MasterRegionTestBase {
     Thread.sleep(2000);
     // touch one file
 
-    long currentTime = System.currentTimeMillis();
+    long currentTime = EnvironmentEdgeManager.currentTime();
     fs.setTimes(compactedHFiles[0].getPath(), currentTime, currentTime);
     Thread.sleep(3000);
     // only the touched file is still there after clean up

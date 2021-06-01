@@ -673,7 +673,7 @@ public class TestRegionObserverInterface {
     EvenOnlyCompactor compactor = (EvenOnlyCompactor) cp;
 
     // force a compaction
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     admin.flush(compactTable);
     // wait for flush
     for (int i = 0; i < 10; i++) {
@@ -956,7 +956,7 @@ public class TestRegionObserverInterface {
     HFileContext context = new HFileContextBuilder().build();
     HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf)).withPath(fs, path)
         .withFileContext(context).create();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       for (int i = 1; i <= 9; i++) {
         KeyValue kv =

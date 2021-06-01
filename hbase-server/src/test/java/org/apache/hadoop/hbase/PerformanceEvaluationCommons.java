@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +67,7 @@ public class PerformanceEvaluationCommons {
 
   public static void concurrentReads(final Runnable r) {
     final int count = 1;
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     List<Thread> threads = new ArrayList<>(count);
     for (int i = 0; i < count; i++) {
       threads.add(new Thread(r, "concurrentRead-" + i));
@@ -81,6 +82,6 @@ public class PerformanceEvaluationCommons {
         e.printStackTrace();
       }
     }
-    LOG.info("Test took " + (System.currentTimeMillis() - now));
+    LOG.info("Test took " + (EnvironmentEdgeManager.currentTime() - now));
   }
 }

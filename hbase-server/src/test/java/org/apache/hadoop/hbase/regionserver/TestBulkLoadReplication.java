@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
@@ -129,8 +130,6 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   private static final Path BULK_LOAD_BASE_DIR = new Path("/bulk_dir");
 
-  private static Table htable3;
-
   @Rule
   public TestName name = new TestName();
 
@@ -164,7 +163,6 @@ public class TestBulkLoadReplication extends TestReplicationBase {
       admin3.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     }
     UTIL3.waitUntilAllRegionsAssigned(tableName);
-    htable3 = connection3.getTable(tableName);
   }
 
   @Before
@@ -363,7 +361,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
         new StoreFileWriter.Builder(util.getConfiguration(),
           new CacheConfig(util.getConfiguration()), util.getTestFileSystem()).withFileContext(meta)
           .withFilePath(new Path(basePath, mobFileName.getFileName())).build();
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       try {
         for (int i = 0; i < 10; i++) {
           byte[] key = Bytes.add(Bytes.toBytes(rowKey), Bytes.toBytes(i));

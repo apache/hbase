@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -99,7 +100,7 @@ public class TestWarmupRegion {
 
     // future timestamp
     for (int i = 0; i < numRows; i++) {
-      long ts = System.currentTimeMillis() * 2;
+      long ts = EnvironmentEdgeManager.currentTime() * 2;
       Put put = new Put(ROW, ts);
       put.addColumn(FAMILY, COLUMN, VALUE);
       table.put(put);

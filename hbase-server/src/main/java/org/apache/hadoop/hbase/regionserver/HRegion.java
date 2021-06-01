@@ -832,7 +832,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     /*
      * timestamp.slop provides a server-side constraint on the timestamp. This
-     * assumes that you base your TS around currentTimeMillis(). In this case,
+     * assumes that you base your TS around EnvironmentEdgeManager.currentTime(). In this case,
      * throw an error to the user if the user-specified TS is newer than now +
      * slop. LATEST_TIMESTAMP == don't use this functionality
      */
@@ -1938,7 +1938,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         return true;
       }
       if (!writestate.flushing) return true;
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       long duration = 0;
       boolean interrupted = false;
       LOG.debug("waiting for cache flush to complete for region " + this);
@@ -1954,7 +1954,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             interrupted = true;
             break;
           } finally {
-            duration = System.currentTimeMillis() - start;
+            duration = EnvironmentEdgeManager.currentTime() - start;
           }
         }
       } finally {
@@ -6579,7 +6579,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (call.isPresent()) {
         long deadline = call.get().getDeadline();
         if (deadline < Long.MAX_VALUE) {
-          int timeToDeadline = (int) (deadline - System.currentTimeMillis());
+          int timeToDeadline = (int) (deadline - EnvironmentEdgeManager.currentTime());
           if (timeToDeadline <= this.rowLockWaitDuration) {
             reachDeadlineFirst = true;
             timeout = timeToDeadline;

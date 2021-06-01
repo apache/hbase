@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -161,7 +162,7 @@ public class TestMasterNoCluster {
    */
   @Ignore @Test // Disabled since HBASE-18511. Reenable when master can carry regions.
   public void testFailover() throws Exception {
-    final long now = System.currentTimeMillis();
+    final long now = EnvironmentEdgeManager.currentTime();
     // Names for our three servers.  Make the port numbers match hostname.
     // Will come in use down in the server when we need to figure how to respond.
     final ServerName sn0 = ServerName.valueOf("0.example.org", 0, now);

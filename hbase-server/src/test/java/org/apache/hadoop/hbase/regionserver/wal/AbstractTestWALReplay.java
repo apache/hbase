@@ -155,8 +155,8 @@ public abstract class AbstractTestWALReplay {
     this.hbaseRootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
-      ServerName.valueOf(currentTest.getMethodName() + "-manual", 16010, System.currentTimeMillis())
-          .toString();
+      ServerName.valueOf(currentTest.getMethodName() + "-manual", 16010, ee.currentTime())
+        .toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(this.hbaseRootDir, logName);
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {

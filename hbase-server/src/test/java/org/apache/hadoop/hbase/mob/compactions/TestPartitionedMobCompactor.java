@@ -73,9 +73,9 @@ import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -85,6 +85,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @Category(LargeTests.class)
 public class TestPartitionedMobCompactor {
@@ -159,7 +161,7 @@ public class TestPartitionedMobCompactor {
   @Test
   public void testCompactionSelectPartFilesWeeklyPolicyWithPastWeek() throws Exception {
     String tableName = "testCompactionSelectPartFilesWeeklyPolicyWithPastWeek";
-    Date dateLastWeek = new Date(System.currentTimeMillis() - (7 * DAY_IN_MS));
+    Date dateLastWeek = new Date(EnvironmentEdgeManager.currentTime() - (7 * DAY_IN_MS));
     testCompactionAtMergeSize(tableName, 700, CompactionType.PART_FILES, false, false, dateLastWeek,
         MobCompactPartitionPolicy.WEEKLY, 7);
   }
@@ -167,7 +169,7 @@ public class TestPartitionedMobCompactor {
   @Test
   public void testCompactionSelectAllFilesWeeklyPolicyWithPastWeek() throws Exception {
     String tableName = "testCompactionSelectAllFilesWeeklyPolicyWithPastWeek";
-    Date dateLastWeek = new Date(System.currentTimeMillis() - (7 * DAY_IN_MS));
+    Date dateLastWeek = new Date(EnvironmentEdgeManager.currentTime() - (7 * DAY_IN_MS));
     testCompactionAtMergeSize(tableName, 3000, CompactionType.ALL_FILES,
         false, false, dateLastWeek, MobCompactPartitionPolicy.WEEKLY, 7);
   }
@@ -175,7 +177,7 @@ public class TestPartitionedMobCompactor {
   @Test
   public void testCompactionSelectAllFilesMonthlyPolicy() throws Exception {
     String tableName = "testCompactionSelectAllFilesMonthlyPolicy";
-    Date dateLastWeek = new Date(System.currentTimeMillis() - (7 * DAY_IN_MS));
+    Date dateLastWeek = new Date(EnvironmentEdgeManager.currentTime() - (7 * DAY_IN_MS));
     testCompactionAtMergeSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD,
         CompactionType.ALL_FILES, false, false, dateLastWeek,
         MobCompactPartitionPolicy.MONTHLY, 7);
@@ -198,7 +200,7 @@ public class TestPartitionedMobCompactor {
   @Test
   public void testCompactionSelectPartFilesMonthlyPolicyWithPastWeek() throws Exception {
     String tableName = "testCompactionSelectPartFilesMonthlyPolicyWithPastWeek";
-    Date dateLastWeek = new Date(System.currentTimeMillis() - (7 * DAY_IN_MS));
+    Date dateLastWeek = new Date(EnvironmentEdgeManager.currentTime() - (7 * DAY_IN_MS));
     Calendar calendar =  Calendar.getInstance();
     Date firstDayOfCurrentMonth = MobUtils.getFirstDayOfMonth(calendar, new Date());
     CompactionType type = CompactionType.PART_FILES;
@@ -219,7 +221,7 @@ public class TestPartitionedMobCompactor {
   @Test
   public void testCompactionSelectAllFilesMonthlyPolicyWithPastWeek() throws Exception {
     String tableName = "testCompactionSelectAllFilesMonthlyPolicyWithPastWeek";
-    Date dateLastWeek = new Date(System.currentTimeMillis() - (7 * DAY_IN_MS));
+    Date dateLastWeek = new Date(EnvironmentEdgeManager.currentTime() - (7 * DAY_IN_MS));
 
     testCompactionAtMergeSize(tableName, 3000, CompactionType.ALL_FILES,
         false, false, dateLastWeek, MobCompactPartitionPolicy.MONTHLY, 7);
@@ -230,7 +232,7 @@ public class TestPartitionedMobCompactor {
     String tableName = "testCompactionSelectPartFilesMonthlyPolicyWithPastMonth";
 
     // back 5 weeks, it is going to be a past month
-    Date dateLastMonth = new Date(System.currentTimeMillis() - (7 * 5 * DAY_IN_MS));
+    Date dateLastMonth = new Date(EnvironmentEdgeManager.currentTime() - (7 * 5 * DAY_IN_MS));
     testCompactionAtMergeSize(tableName, 200, CompactionType.PART_FILES, false, false, dateLastMonth,
         MobCompactPartitionPolicy.MONTHLY, 28);
   }
@@ -240,7 +242,7 @@ public class TestPartitionedMobCompactor {
     String tableName = "testCompactionSelectAllFilesMonthlyPolicyWithPastMonth";
 
     // back 5 weeks, it is going to be a past month
-    Date dateLastMonth = new Date(System.currentTimeMillis() - (7 * 5 * DAY_IN_MS));
+    Date dateLastMonth = new Date(EnvironmentEdgeManager.currentTime() - (7 * 5 * DAY_IN_MS));
     testCompactionAtMergeSize(tableName, 750, CompactionType.ALL_FILES,
         false, false, dateLastMonth, MobCompactPartitionPolicy.MONTHLY, 28);
   }
@@ -425,7 +427,7 @@ public class TestPartitionedMobCompactor {
           new StoreFileWriter.Builder(conf, cacheConf, fs).withFileContext(meta)
               .withFilePath(new Path(basePath, mobFileName.getFileName())).build();
 
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       try {
         for (int i = 0; i < 10; i++) {
           byte[] key = Bytes.add(Bytes.toBytes(k0), Bytes.toBytes(i));
@@ -456,7 +458,7 @@ public class TestPartitionedMobCompactor {
         new StoreFileWriter.Builder(conf, cacheConf, fs).withFileContext(meta)
             .withFilePath(new Path(basePath, mobFileName.getFileName())).build();
 
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       byte[] key = Bytes.add(Bytes.toBytes(KEYS[startKey]), Bytes.toBytes(0));
       byte[] dummyData = new byte[5000];
@@ -860,7 +862,7 @@ public class TestPartitionedMobCompactor {
    */
   private static void writeStoreFile(final StoreFileWriter writer, byte[]row, byte[] family,
       byte[] qualifier, Type type, int size) throws IOException {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       byte[] dummyData = new byte[size];
       new Random().nextBytes(dummyData);

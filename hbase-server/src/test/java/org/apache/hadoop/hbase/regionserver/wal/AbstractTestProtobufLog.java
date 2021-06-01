@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALCoprocessor;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -133,10 +134,9 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
   private void doRead(boolean withTrailer) throws IOException {
     final int columnCount = 5;
     final int recordCount = 5;
-    final TableName tableName =
-        TableName.valueOf("tablename");
+    final TableName tableName = TableName.valueOf("tablename");
     final byte[] row = Bytes.toBytes("row");
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     Path path = new Path(dir, "tempwal");
     // delete the log if already exists, for test only
     fs.delete(path, true);

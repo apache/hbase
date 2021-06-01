@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -122,9 +123,9 @@ public class TestSnapshotFromAdmin {
     String snapshot = "snapshot";
     final TableName table = TableName.valueOf(name.getMethodName());
     // get start time
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     admin.snapshot(snapshot, table);
-    long finish = System.currentTimeMillis();
+    long finish = EnvironmentEdgeManager.currentTime();
     long elapsed = (finish - start);
     assertTrue("Elapsed time:" + elapsed + " is more than expected max:" + time, elapsed <= time);
     admin.close();

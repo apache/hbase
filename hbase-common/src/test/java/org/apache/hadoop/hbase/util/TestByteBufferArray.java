@@ -39,7 +39,7 @@ import org.junit.experimental.categories.Category;
 @Category({ MiscTests.class, SmallTests.class })
 public class TestByteBufferArray {
 
-  private static final Random RANDOM = new Random(System.currentTimeMillis());
+  private static final Random RANDOM = new Random(EnvironmentEdgeManager.currentTime());
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -149,7 +150,8 @@ public class TestRogueRSAssignment {
     List<HRegionInfo> tableRegions = createTable(tableName);
 
     final ServerName sn = ServerName.parseVersionedServerName(
-        ServerName.valueOf("1.example.org", 1, System.currentTimeMillis()).getVersionedBytes());
+        ServerName.valueOf("1.example.org", 1, EnvironmentEdgeManager.currentTime())
+          .getVersionedBytes());
 
     // make fake request with a region assigned to different RS
     RegionServerStatusProtos.RegionServerReportRequest.Builder request =

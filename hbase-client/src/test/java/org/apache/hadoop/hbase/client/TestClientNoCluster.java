@@ -57,11 +57,11 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Ignore;
@@ -72,6 +72,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -643,7 +644,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     CellProtos.Cell.Builder cellBuilder = CellProtos.Cell.newBuilder();
     cellBuilder.setRow(row);
     cellBuilder.setFamily(CATALOG_FAMILY_BYTESTRING);
-    cellBuilder.setTimestamp(System.currentTimeMillis());
+    cellBuilder.setTimestamp(EnvironmentEdgeManager.currentTime());
     return cellBuilder;
   }
 
@@ -767,7 +768,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    */
   static void cycle(int id, final Configuration c, final Connection sharedConnection) throws IOException {
     long namespaceSpan = c.getLong("hbase.test.namespace.span", 1000000);
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     final int printInterval = 100000;
     Random rd = new Random(id);
     boolean get = c.getBoolean("hbase.test.do.gets", false);
@@ -786,7 +787,7 @@ public class TestClientNoCluster extends Configured implements Tool {
           }
         }
         LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
-            (System.currentTimeMillis() - startTime) + "ms");
+          (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
       }
     } else {
       try (BufferedMutator mutator = sharedConnection.getBufferedMutator(tableName)) {
@@ -803,7 +804,7 @@ public class TestClientNoCluster extends Configured implements Tool {
           }
         }
         LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
-            (System.currentTimeMillis() - startTime) + "ms");
+          (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
         }
     }
   }

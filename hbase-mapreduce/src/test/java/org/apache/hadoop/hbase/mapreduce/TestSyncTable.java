@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.mapreduce.SyncTable.SyncMapper.Counter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.mapreduce.Counters;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -159,7 +160,7 @@ public class TestSyncTable {
     final TableName sourceTableName = TableName.valueOf(name.getMethodName() + "_source");
     final TableName targetTableName = TableName.valueOf(name.getMethodName() + "_target");
     Path testDir = TEST_UTIL.getDataTestDirOnTestFS("testSyncTableIgnoreTimestampsTrue");
-    long current = System.currentTimeMillis();
+    long current = EnvironmentEdgeManager.currentTime();
     writeTestData(sourceTableName, targetTableName, current - 1000, current);
     hashSourceTable(sourceTableName, testDir, "--ignoreTimestamps=true");
     Counters syncCounters = syncTables(sourceTableName, targetTableName,
@@ -490,7 +491,7 @@ public class TestSyncTable {
     int sourceRegions = 10;
     int targetRegions = 6;
     if (ArrayUtils.isEmpty(timestamps)) {
-      long current = System.currentTimeMillis();
+      long current = EnvironmentEdgeManager.currentTime();
       timestamps = new long[]{current,current};
     }
 

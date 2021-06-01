@@ -26,6 +26,7 @@ import java.util.UUID;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -193,13 +194,13 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    */
   public synchronized void setRegionServers(List<ServerName> regionServers) {
     this.regionServers = regionServers;
-    lastRegionServerUpdate = System.currentTimeMillis();
+    lastRegionServerUpdate = EnvironmentEdgeManager.currentTime();
   }
 
   /**
    * Get the timestamp at which the last change occurred to the list of region servers to replicate
    * to.
-   * @return The System.currentTimeMillis at the last time the list of peer region servers changed.
+   * @return The last time the list of peer region servers changed.
    */
   public long getLastRegionServerUpdate() {
     return lastRegionServerUpdate;

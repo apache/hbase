@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -156,7 +157,7 @@ public class TestSnapshotTemporaryDirectory {
   @Test
   public void testRestoreDisabledSnapshot()
       throws IOException, InterruptedException {
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     TableName tableName = TableName.valueOf("testtb-" + tid);
     byte[] emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     byte[] snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
@@ -223,7 +224,7 @@ public class TestSnapshotTemporaryDirectory {
   @Test
   public void testRestoreEnabledSnapshot()
       throws IOException, InterruptedException {
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     TableName tableName = TableName.valueOf("testtb-" + tid);
     byte[] emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     byte[] snapshotName0 = Bytes.toBytes("snaptb0-" + tid);

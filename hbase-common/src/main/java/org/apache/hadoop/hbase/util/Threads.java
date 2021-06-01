@@ -149,7 +149,7 @@ public class Threads {
    * @param msToWait the amount of time to sleep in milliseconds
    */
   public static void sleepWithoutInterrupt(final long msToWait) {
-    long timeMillis = System.currentTimeMillis();
+    long timeMillis = EnvironmentEdgeManager.currentTime();
     long endTime = timeMillis + msToWait;
     boolean interrupted = false;
     while (timeMillis < endTime) {
@@ -158,7 +158,7 @@ public class Threads {
       } catch (InterruptedException ex) {
         interrupted = true;
       }
-      timeMillis = System.currentTimeMillis();
+      timeMillis = EnvironmentEdgeManager.currentTime();
     }
 
     if (interrupted) {

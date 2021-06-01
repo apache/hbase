@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterfa
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -125,7 +126,7 @@ import org.junit.experimental.categories.Category;
     final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
     // for each RS, create an empty wal with same walGroupId
     final List<Path> emptyWalPaths = new ArrayList<>();
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
         UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
@@ -165,7 +166,7 @@ import org.junit.experimental.categories.Category;
     final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
     // for each RS, create an empty wal with same walGroupId
     final List<Path> emptyWalPaths = new ArrayList<>();
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
         UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
@@ -223,8 +224,7 @@ import org.junit.experimental.categories.Category;
     final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
     // for each RS, create an empty wal with same walGroupId
     final List<Path> emptyWalPaths = new ArrayList<>();
-
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     WAL wal = null;
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
@@ -279,8 +279,7 @@ import org.junit.experimental.categories.Category;
     final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
     // for each RS, create an empty wal with same walGroupId
     final List<Path> emptyWalPaths = new ArrayList<>();
-
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     WAL wal = null;
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =

@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -234,7 +235,7 @@ public class TestFromClientSide3 {
       byte[] row = Bytes.toBytes("SpecifiedRow");
       byte[] qual0 = Bytes.toBytes("qual0");
       byte[] qual1 = Bytes.toBytes("qual1");
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       Delete d = new Delete(row, now);
       table.delete(d);
 

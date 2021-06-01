@@ -92,7 +92,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -103,6 +102,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @Category(LargeTests.class)
 public class TestMobCompactor {
@@ -438,7 +439,7 @@ public class TestMobCompactor {
     loadData(admin, bufMut, tableName, count, rowNumPerFile);
     int rowNumPerRegion = count * rowNumPerFile;
 
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     byte[] snapshotName1 = Bytes.toBytes("snaptb-" + tid);
     // take a snapshot
     admin.snapshot(snapshotName1, tableName);

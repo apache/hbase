@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -151,7 +152,7 @@ public class TestZooKeeper {
    * Make sure we can use the cluster
    */
   private void testSanity(final String testName) throws Exception {
-    String tableName = testName + "_" + System.currentTimeMillis();
+    String tableName = testName + "_" + EnvironmentEdgeManager.currentTime();
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam")).build();
     LOG.info("Creating table " + tableName);

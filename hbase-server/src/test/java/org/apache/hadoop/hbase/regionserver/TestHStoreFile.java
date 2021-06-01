@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -152,7 +153,7 @@ public class TestHStoreFile extends HBaseTestCase {
    */
   public static void writeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier)
       throws IOException {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
         for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
@@ -541,7 +542,7 @@ public class TestHStoreFile extends HBaseTestCase {
   private void bloomWriteRead(StoreFileWriter writer, FileSystem fs) throws Exception {
     float err = conf.getFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, 0);
     Path f = writer.getPath();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < 2000; i += 2) {
       String row = String.format(localFormatter, i);
       KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
@@ -636,7 +637,7 @@ public class TestHStoreFile extends HBaseTestCase {
             .build();
 
     // add delete family
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < 2000; i += 2) {
       String row = String.format(localFormatter, i);
       KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
@@ -745,9 +746,9 @@ public class TestHStoreFile extends HBaseTestCase {
               .withFileContext(meta)
               .build();
 
-      long now = System.currentTimeMillis();
-      for (int i = 0; i < rowCount*2; i += 2) { // rows
-        for (int j = 0; j < colCount*2; j += 2) {   // column qualifiers
+      long now = EnvironmentEdgeManager.currentTime();
+      for (int i = 0; i < rowCount * 2; i += 2) { // rows
+        for (int j = 0; j < colCount * 2; j += 2) { // column qualifiers
           String row = String.format(localFormatter, i);
           String col = String.format(localFormatter, j);
           for (int k= 0; k < versions; ++k) { // versions

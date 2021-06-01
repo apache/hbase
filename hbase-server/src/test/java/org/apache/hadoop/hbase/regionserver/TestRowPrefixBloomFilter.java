@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -149,7 +150,7 @@ public class TestRowPrefixBloomFilter {
         .withMaxKeyCount(expKeys)
         .withFileContext(meta)
         .build();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       //Put with valid row style
       for (int i = 0; i < prefixRowCount; i += 2) { // prefix rows

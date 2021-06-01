@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Assert;
@@ -332,7 +333,7 @@ public class TestHRegionInfo {
   public void testParseName() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] startKey = Bytes.toBytes("startKey");
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     int replicaId = 42;
 
     // test without replicaId
@@ -362,7 +363,7 @@ public class TestHRegionInfo {
     byte[] startKey = Bytes.toBytes("startKey");
     byte[] endKey = Bytes.toBytes("endKey");
     boolean split = false;
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     int replicaId = 42;
 
 
@@ -402,7 +403,7 @@ public class TestHRegionInfo {
     checkEquality(h, conf);
     // check HRIs with non-default replicaId
     h = new HRegionInfo(TableName.valueOf(name.getMethodName()), startKey, endKey, false,
-        System.currentTimeMillis(), 1);
+      EnvironmentEdgeManager.currentTime(), 1);
     checkEquality(h, conf);
     Assert.assertArrayEquals(HRegionInfo.HIDDEN_END_KEY,
         HRegionInfo.getEndKeyForDisplay(h, conf));

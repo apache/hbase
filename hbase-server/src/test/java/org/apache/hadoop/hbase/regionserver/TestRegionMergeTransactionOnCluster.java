@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
@@ -249,9 +250,9 @@ public class TestRegionMergeTransactionOnCluster {
       ADMIN.compactRegion(mergedRegionInfo.getRegionName());
       // clean up the merged region store files
       // wait until merged region have reference file
-      long timeout = System.currentTimeMillis() + waitTime;
+      long timeout = EnvironmentEdgeManager.currentTime() + waitTime;
       int newcount = 0;
-      while (System.currentTimeMillis() < timeout) {
+      while (EnvironmentEdgeManager.currentTime() < timeout) {
         for(ColumnFamilyDescriptor colFamily : columnFamilies) {
           newcount += hrfs.getStoreFiles(colFamily.getName()).size();
         }
@@ -269,7 +270,7 @@ public class TestRegionMergeTransactionOnCluster {
         cleaner.chore();
         Thread.sleep(1000);
       }
-      while (System.currentTimeMillis() < timeout) {
+      while (EnvironmentEdgeManager.currentTime() < timeout) {
         int newcount1 = 0;
         for(ColumnFamilyDescriptor colFamily : columnFamilies) {
           newcount1 += hrfs.getStoreFiles(colFamily.getName()).size();
@@ -437,8 +438,8 @@ public class TestRegionMergeTransactionOnCluster {
       int expectedRegionNum) throws Exception {
     List<Pair<RegionInfo, ServerName>> tableRegionsInMeta;
     List<RegionInfo> tableRegionsInMaster;
-    long timeout = System.currentTimeMillis() + waitTime;
-    while (System.currentTimeMillis() < timeout) {
+    long timeout = EnvironmentEdgeManager.currentTime() + waitTime;
+    while (EnvironmentEdgeManager.currentTime() < timeout) {
       tableRegionsInMeta =
           MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getConnection(), tablename);
       tableRegionsInMaster =

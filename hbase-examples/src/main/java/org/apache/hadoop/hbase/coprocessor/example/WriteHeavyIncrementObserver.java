@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.math.IntMath;
@@ -225,7 +226,7 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
   private long getUniqueTimestamp(byte[] row) {
     int slot = Bytes.hashCode(row) & mask;
     MutableLong lastTimestamp = lastTimestamps[slot];
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     synchronized (lastTimestamp) {
       long pt = lastTimestamp.longValue() >> 10;
       if (now > pt) {

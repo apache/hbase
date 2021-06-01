@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -81,8 +82,7 @@ public class RestoreSnapshotFromClientTestBase {
   @Before
   public void setup() throws Exception {
     this.admin = TEST_UTIL.getAdmin();
-
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     tableName = TableName.valueOf(getValidMethodName() + "-" + tid);
     emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     snapshotName0 = Bytes.toBytes("snaptb0-" + tid);

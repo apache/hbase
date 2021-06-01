@@ -63,7 +63,7 @@ public abstract class ModifyRegionUtils {
 
   public static RegionInfo[] createRegionInfos(TableDescriptor tableDescriptor,
       byte[][] splitKeys) {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     RegionInfo[] hRegionInfos = null;
     if (splitKeys == null || splitKeys.length == 0) {
       hRegionInfos = new RegionInfo[]{

@@ -38,9 +38,9 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.log4j.Appender;
@@ -264,7 +264,7 @@ public class TestRegionServerReportForDuty {
   }
 
   /**
-   * Tests region sever reportForDuty with manual environment edge
+   * Tests region sever reportForDuty with a non-default environment edge
    */
   @Test
   public void testReportForDutyWithEnvironmentEdge() throws Exception {
@@ -282,15 +282,14 @@ public class TestRegionServerReportForDuty {
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART,
       tablesOnMaster ? 2 : 1);
 
-    // Inject manual environment edge for clock skew computation between RS and master
-    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    // Inject non-default environment edge
+    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
     master = cluster.addMaster();
     rs = cluster.addRegionServer();
     LOG.debug("Starting master: " + master.getMaster().getServerName());
     master.start();
     rs.start();
-
     waitForClusterOnline(master);
   }
 

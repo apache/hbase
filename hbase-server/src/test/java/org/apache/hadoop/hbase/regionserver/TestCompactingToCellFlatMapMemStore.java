@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -493,7 +494,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   private void addRowsByKeysWith50Cols(AbstractMemStore hmc, String[] keys) {
     byte[] fam = Bytes.toBytes("testfamily");
     for (int i = 0; i < keys.length; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       Threads.sleep(1); // to make sure each kv gets a different ts
       byte[] row = Bytes.toBytes(keys[i]);
       for(int  j =0 ;j < 50; j++) {
@@ -631,8 +632,8 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     byte[] row = Bytes.toBytes(keys1[0]);
     byte[] val = Bytes.toBytes(keys1[0] + 0);
     KeyValue kv =
-        new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
-            System.currentTimeMillis(), val);
+      new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
+        EnvironmentEdgeManager.currentTime(), val);
 
     // test 1 bucket
     int totalCellsLen = addRowsByKeys(memstore, keys1);
@@ -697,8 +698,8 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     byte[] row = Bytes.toBytes(keys1[0]);
     byte[] val = Bytes.toBytes(bigVal);
     KeyValue kv =
-            new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
-                    System.currentTimeMillis(), val);
+      new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
+        EnvironmentEdgeManager.currentTime(), val);
 
     // test 1 bucket
     int totalCellsLen = addRowsByKeys(memstore, keys1, val);
@@ -771,8 +772,8 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     byte[] row = Bytes.toBytes(keys1[0]);
     byte[] val = Bytes.toBytes(bigVal);
     KeyValue kv =
-            new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
-                    System.currentTimeMillis(), val);
+      new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
+        EnvironmentEdgeManager.currentTime(), val);
 
     // test 1 bucket
     int totalCellsLen = addRowsByKeys(memstore, keys1, val);
@@ -874,7 +875,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
 
     // Measuring the size of a single kv
     KeyValue kv = new KeyValue(Bytes.toBytes("A"), Bytes.toBytes("testfamily"),
-            Bytes.toBytes("testqualifier"), System.currentTimeMillis(), val);
+            Bytes.toBytes("testqualifier"), EnvironmentEdgeManager.currentTime(), val);
     long oneCellOnCCMHeapSize =
         (long) ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(kv.getSerializedSize());
     long oneCellOnCSLMHeapSize =
@@ -910,7 +911,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     byte[] qf = Bytes.toBytes("testqualifier");
     MemStoreSizing memstoreSizing = new NonThreadSafeMemStoreSizing();
     for (int i = 0; i < keys.length; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       Threads.sleep(1); // to make sure each kv gets a different ts
       byte[] row = Bytes.toBytes(keys[i]);
       byte[] val = Bytes.toBytes(keys[i] + i);
@@ -929,8 +930,8 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     byte[] row = Bytes.toBytes("A");
     byte[] val = Bytes.toBytes("A" + 0);
     KeyValue kv =
-        new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
-            System.currentTimeMillis(), val);
+      new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
+        EnvironmentEdgeManager.currentTime(), val);
     return ClassSize.align(
         ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + KeyValue.FIXED_OVERHEAD + kv.getSerializedSize());
   }
@@ -940,8 +941,8 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     byte[] row = Bytes.toBytes("A");
     byte[] val = Bytes.toBytes("A" + 0);
     KeyValue kv =
-        new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
-            System.currentTimeMillis(), val);
+      new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
+        EnvironmentEdgeManager.currentTime(), val);
 
     return toCellChunkMap ?
         ClassSize.align(

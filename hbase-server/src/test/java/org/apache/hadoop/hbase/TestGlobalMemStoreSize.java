@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
@@ -117,10 +118,10 @@ public class TestGlobalMemStoreSize {
         flush(r, server);
       }
       LOG.info("Post flush on " + server.getServerName());
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       long timeout = now + 1000;
       while(server.getRegionServerAccounting().getGlobalMemStoreDataSize() != 0 &&
-          timeout < System.currentTimeMillis()) {
+          timeout < EnvironmentEdgeManager.currentTime()) {
         Threads.sleep(10);
       }
       long size = server.getRegionServerAccounting().getGlobalMemStoreDataSize();

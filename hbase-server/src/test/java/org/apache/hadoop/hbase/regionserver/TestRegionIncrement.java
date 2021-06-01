@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.TestIncrementsFromClientSide;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -179,7 +180,7 @@ public class TestRegionIncrement {
   throws IOException, InterruptedException {
     final HRegion region = getRegion(TEST_UTIL.getConfiguration(),
         TestIncrementsFromClientSide.filterStringSoTableNameSafe(this.name.getMethodName()));
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     try {
       SingleCellIncrementer [] threads = new SingleCellIncrementer[THREAD_COUNT];
       for (int i = 0; i < threads.length; i++) {
@@ -204,7 +205,8 @@ public class TestRegionIncrement {
       assertEquals(INCREMENT_COUNT * THREAD_COUNT, total);
     } finally {
       closeRegion(region);
-      LOG.info(this.name.getMethodName() + " " + (System.currentTimeMillis() - startTime) + "ms");
+      LOG.info(this.name.getMethodName() + " " +
+        (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
     }
   }
 
@@ -219,7 +221,7 @@ public class TestRegionIncrement {
   throws IOException, InterruptedException {
     final HRegion region = getRegion(TEST_UTIL.getConfiguration(),
         TestIncrementsFromClientSide.filterStringSoTableNameSafe(this.name.getMethodName()));
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     try {
       CrossRowCellIncrementer [] threads = new CrossRowCellIncrementer[THREAD_COUNT];
       for (int i = 0; i < threads.length; i++) {
@@ -241,7 +243,8 @@ public class TestRegionIncrement {
       assertEquals(INCREMENT_COUNT * THREAD_COUNT, total);
     } finally {
       closeRegion(region);
-      LOG.info(this.name.getMethodName() + " " + (System.currentTimeMillis() - startTime) + "ms");
+      LOG.info(this.name.getMethodName() + " " +
+        (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
     }
   }
 }

@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -65,7 +66,7 @@ public class TestClockSkewDetection {
     RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
     request.setPort(1234);
     request.setServerStartCode(-1);
-    request.setServerCurrentTime(System.currentTimeMillis());
+    request.setServerCurrentTime(EnvironmentEdgeManager.currentTime());
     sm.regionServerStartup(request.build(), 0, "0.0.0", ia1);
 
     final Configuration c = HBaseConfiguration.create();
@@ -80,7 +81,7 @@ public class TestClockSkewDetection {
       request = RegionServerStartupRequest.newBuilder();
       request.setPort(1235);
       request.setServerStartCode(-1);
-      request.setServerCurrentTime(System.currentTimeMillis() - maxSkew * 2);
+      request.setServerCurrentTime(EnvironmentEdgeManager.currentTime() - maxSkew * 2);
       sm.regionServerStartup(request.build(), 0, "0.0.0", ia2);
       fail("HMaster should have thrown a ClockOutOfSyncException but didn't.");
     } catch(ClockOutOfSyncException e) {
@@ -96,7 +97,7 @@ public class TestClockSkewDetection {
       request = RegionServerStartupRequest.newBuilder();
       request.setPort(1236);
       request.setServerStartCode(-1);
-      request.setServerCurrentTime(System.currentTimeMillis() + maxSkew * 2);
+      request.setServerCurrentTime(EnvironmentEdgeManager.currentTime() + maxSkew * 2);
       sm.regionServerStartup(request.build(), 0, "0.0.0", ia3);
       fail("HMaster should have thrown a ClockOutOfSyncException but didn't.");
     } catch (ClockOutOfSyncException e) {
@@ -110,7 +111,7 @@ public class TestClockSkewDetection {
     request = RegionServerStartupRequest.newBuilder();
     request.setPort(1237);
     request.setServerStartCode(-1);
-    request.setServerCurrentTime(System.currentTimeMillis() - warningSkew * 2);
+    request.setServerCurrentTime(EnvironmentEdgeManager.currentTime() - warningSkew * 2);
     sm.regionServerStartup(request.build(), 0, "0.0.0", ia4);
 
     // make sure values above warning threshold but below max threshold don't kill
@@ -119,7 +120,7 @@ public class TestClockSkewDetection {
     request = RegionServerStartupRequest.newBuilder();
     request.setPort(1238);
     request.setServerStartCode(-1);
-    request.setServerCurrentTime(System.currentTimeMillis() + warningSkew * 2);
+    request.setServerCurrentTime(EnvironmentEdgeManager.currentTime() + warningSkew * 2);
     sm.regionServerStartup(request.build(), 0, "0.0.0", ia5);
   }
 }

@@ -2217,7 +2217,7 @@ public class AssignmentManager {
   private void acceptPlan(final HashMap<RegionInfo, RegionStateNode> regions,
       final Map<ServerName, List<RegionInfo>> plan) throws HBaseIOException {
     final ProcedureEvent<?>[] events = new ProcedureEvent[regions.size()];
-    final long st = System.currentTimeMillis();
+    final long st = EnvironmentEdgeManager.currentTime();
 
     if (plan.isEmpty()) {
       throw new HBaseIOException("unable to compute plans for regions=" + regions.size());
@@ -2243,7 +2243,7 @@ public class AssignmentManager {
     }
     ProcedureEvent.wakeEvents(getProcedureScheduler(), events);
 
-    final long et = System.currentTimeMillis();
+    final long et = EnvironmentEdgeManager.currentTime();
     if (LOG.isTraceEnabled()) {
       LOG.trace("ASSIGN ACCEPT " + events.length + " -> " +
           StringUtils.humanTimeDiff(et - st));

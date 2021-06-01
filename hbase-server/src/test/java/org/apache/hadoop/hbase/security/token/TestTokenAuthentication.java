@@ -463,7 +463,7 @@ public class TestTokenAuthentication {
 //        final RpcClient rpcClient = RpcClientFactory.createClient(c, clusterId.toString());
 //        ServerName sn =
 //            ServerName.valueOf(server.getAddress().getHostName(), server.getAddress().getPort(),
-//                System.currentTimeMillis());
+//                EnvironmentEdgeManager.currentTime());
 //        try {
 //          // Make a proxy to go between the shaded RpcController that rpc expects and the
 //          // non-shaded controller this CPEP is providing. This is because this test does a neat

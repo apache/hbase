@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -82,6 +81,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector.Level;
 
@@ -401,7 +401,7 @@ public class TestConnectionImplementation {
     table.put(put);
 
     ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
-    mee.setValue(System.currentTimeMillis());
+    mee.setValue(EnvironmentEdgeManager.currentTime());
     EnvironmentEdgeManager.injectEdge(mee);
     LOG.info("first get");
     table.get(new Get(ROW));

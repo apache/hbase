@@ -25,15 +25,16 @@ import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.trace.TraceUtil;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.TraceScope;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * The request processing logic, which is usually executed in thread pools provided by an
@@ -101,7 +102,7 @@ public class CallRunner {
         }
         return;
       }
-      call.setStartTime(System.currentTimeMillis());
+      call.setStartTime(EnvironmentEdgeManager.currentTime());
       if (call.getStartTime() > call.getDeadline()) {
         RpcServer.LOG.warn("Dropping timed out call: " + call);
         return;

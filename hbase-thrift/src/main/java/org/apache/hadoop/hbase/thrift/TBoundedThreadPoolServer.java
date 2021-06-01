@@ -26,6 +26,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.thrift.TException;
 import org.apache.thrift.TProcessor;
@@ -222,7 +223,7 @@ public class TBoundedThreadPoolServer extends TServer {
 
     long msLeftToWait =
         serverOptions.stopTimeoutUnit.toMillis(serverOptions.stopTimeoutVal);
-    long timeMillis = System.currentTimeMillis();
+    long timeMillis = EnvironmentEdgeManager.currentTime();
 
     LOG.info("Waiting for up to " + msLeftToWait + " ms to finish processing" +
         " pending requests");
@@ -232,7 +233,7 @@ public class TBoundedThreadPoolServer extends TServer {
         executorService.awaitTermination(msLeftToWait, TimeUnit.MILLISECONDS);
         break;
       } catch (InterruptedException ix) {
-        long timePassed = System.currentTimeMillis() - timeMillis;
+        long timePassed = EnvironmentEdgeManager.currentTime() - timeMillis;
         msLeftToWait -= timePassed;
         timeMillis += timePassed;
         interrupted = true;

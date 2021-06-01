@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.regionserver.wal.TestWALActionsListener;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -163,7 +164,7 @@ public class TestHRegionServerBulkLoad {
         .withPath(fs, path)
         .withFileContext(context)
         .create();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys
       for (int i = 0; i < numRows; i++) {

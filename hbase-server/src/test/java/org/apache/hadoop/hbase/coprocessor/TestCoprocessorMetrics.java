@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.junit.AfterClass;
@@ -109,14 +110,14 @@ public class TestCoprocessorMetrics {
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                TableDescriptor desc, RegionInfo[] regions) throws IOException {
       // we rely on the fact that there is only 1 instance of our MasterObserver
-      this.start = System.currentTimeMillis();
+      this.start = EnvironmentEdgeManager.currentTime();
     }
 
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                 TableDescriptor desc, RegionInfo[] regions) throws IOException {
       if (this.start > 0) {
-        long time = System.currentTimeMillis() - start;
+        long time = EnvironmentEdgeManager.currentTime() - start;
         LOG.info("Create table took: " + time);
         createTableTimer.updateMillis(time);
       }

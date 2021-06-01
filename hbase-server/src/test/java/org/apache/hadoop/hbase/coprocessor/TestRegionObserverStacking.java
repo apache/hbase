@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -68,7 +69,7 @@ public class TestRegionObserverStacking extends TestCase {
         final Put put, final WALEdit edit,
         final Durability durability)
         throws IOException {
-      id = System.currentTimeMillis();
+      id = EnvironmentEdgeManager.currentTime();
       try {
         Thread.sleep(10);
       } catch (InterruptedException ex) {
@@ -89,7 +90,7 @@ public class TestRegionObserverStacking extends TestCase {
         final Put put, final WALEdit edit,
         final Durability durability)
         throws IOException {
-      id = System.currentTimeMillis();
+      id = EnvironmentEdgeManager.currentTime();
       try {
         Thread.sleep(10);
       } catch (InterruptedException ex) {
@@ -110,7 +111,7 @@ public class TestRegionObserverStacking extends TestCase {
         final Put put, final WALEdit edit,
         final Durability durability)
         throws IOException {
-      id = System.currentTimeMillis();
+      id = EnvironmentEdgeManager.currentTime();
       try {
         Thread.sleep(10);
       } catch (InterruptedException ex) {

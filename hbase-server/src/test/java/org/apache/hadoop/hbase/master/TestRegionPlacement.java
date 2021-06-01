@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
@@ -190,7 +191,7 @@ public class TestRegionPlacement {
       throws IOException, InterruptedException, KeeperException {
     ServerName serverToKill = null;
     int killIndex = 0;
-    Random random = new Random(System.currentTimeMillis());
+    Random random = new Random(EnvironmentEdgeManager.currentTime());
     ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
     LOG.debug("Server holding meta " + metaServer);
     boolean isNamespaceServer = false;

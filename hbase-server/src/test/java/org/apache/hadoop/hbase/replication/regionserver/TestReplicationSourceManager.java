@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -292,7 +293,8 @@ public abstract class TestReplicationSourceManager {
       }
       LOG.info(Long.toString(i));
       final long txid = wal.appendData(hri,
-        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, EnvironmentEdgeManager.currentTime(),
+          mvcc, scopes),
         edit);
       wal.sync(txid);
     }
@@ -306,7 +308,8 @@ public abstract class TestReplicationSourceManager {
 
     for (int i = 0; i < 3; i++) {
       wal.appendData(hri,
-        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, EnvironmentEdgeManager.currentTime(),
+          mvcc, scopes),
         edit);
     }
     wal.sync();
@@ -324,7 +327,8 @@ public abstract class TestReplicationSourceManager {
       new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
 
     wal.appendData(hri,
-      new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+      new WALKeyImpl(hri.getEncodedNameAsBytes(), test, EnvironmentEdgeManager.currentTime(),
+        mvcc, scopes),
       edit);
     wal.sync();
 

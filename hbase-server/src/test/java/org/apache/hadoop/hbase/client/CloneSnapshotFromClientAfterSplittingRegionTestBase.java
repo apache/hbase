@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 
 public class CloneSnapshotFromClientAfterSplittingRegionTestBase
@@ -53,7 +54,7 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
       // Clone the snapshot to another table
       TableName clonedTableName =
-        TableName.valueOf(getValidMethodName() + "-" + System.currentTimeMillis());
+        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
@@ -93,7 +94,7 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
       // Clone the snapshot to another table
       TableName clonedTableName =
-        TableName.valueOf(getValidMethodName() + "-" + System.currentTimeMillis());
+        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 

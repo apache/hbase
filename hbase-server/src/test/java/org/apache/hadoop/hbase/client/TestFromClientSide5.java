@@ -951,7 +951,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
   @Test
   public void testCheckAndMutateWithTimeRange() throws IOException {
     try (Table table = TEST_UTIL.createTable(name.getTableName(), FAMILY)) {
-      final long ts = System.currentTimeMillis() / 2;
+      final long ts = EnvironmentEdgeManager.currentTime() / 2;
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
 
@@ -1485,12 +1485,13 @@ public class TestFromClientSide5 extends FromClientSideBase {
 
   private void waitForStoreFileCount(HStore store, int count, int timeout)
       throws InterruptedException {
-    long start = System.currentTimeMillis();
-    while (start + timeout > System.currentTimeMillis() && store.getStorefilesCount() != count) {
+    long start = EnvironmentEdgeManager.currentTime();
+    while (start + timeout > EnvironmentEdgeManager.currentTime() &&
+        store.getStorefilesCount() != count) {
       Thread.sleep(100);
     }
-    System.out.println("start=" + start + ", now=" + System.currentTimeMillis() + ", cur=" +
-        store.getStorefilesCount());
+    System.out.println("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() +
+      ", cur=" + store.getStorefilesCount());
     assertEquals(count, store.getStorefilesCount());
   }
 

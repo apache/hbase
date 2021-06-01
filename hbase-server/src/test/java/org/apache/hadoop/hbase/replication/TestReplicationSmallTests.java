@@ -316,7 +316,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     assertEquals(NB_ROWS_IN_BIG_BATCH, res.length);
 
     LOG.info("Looking in table2 for replicated rows in testLoading");
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     // Retry more than NB_RETRIES. As it was, retries were done in 5 seconds and we'd fail
     // sometimes.
     final long retries = NB_RETRIES * 10;
@@ -337,7 +337,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
           }
           LOG.error("Last row: " + lastRow);
           fail("Waited too much time for normal batch replication, " + res.length + " instead of "
-              + NB_ROWS_IN_BIG_BATCH + "; waited=" + (System.currentTimeMillis() - start) + "ms");
+            + NB_ROWS_IN_BIG_BATCH + "; waited="
+            + (EnvironmentEdgeManager.currentTime() - start) + "ms");
         } else {
           LOG.info("Only got " + res.length + " rows... retrying");
           Thread.sleep(SLEEP_TIME);

@@ -153,7 +153,7 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
     }
     long currentTime = EnvironmentEdgeManager.currentTime();
     FailureInfo fInfo =
-        computeIfAbsent(repeatedFailuresMap, serverName, () -> new FailureInfo(currentTime));
+      computeIfAbsent(repeatedFailuresMap, serverName, () -> new FailureInfo(currentTime));
     fInfo.timeOfLatestAttemptMilliSec = currentTime;
     fInfo.numConsecutiveFailures.incrementAndGet();
   }
@@ -180,7 +180,7 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
    * cleanupInterval ms.
    */
   protected void occasionallyCleanupFailureInformation() {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     if (!(now > lastFailureMapCleanupTimeMilliSec
         + failureMapCleanupIntervalMilliSec))
       return;
@@ -295,7 +295,7 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
       repeatedFailuresMap.remove(server);
     } else {
       // update time of last attempt
-      long currentTime = System.currentTimeMillis();
+      long currentTime = EnvironmentEdgeManager.currentTime();
       fInfo.timeOfLatestAttemptMilliSec = currentTime;
 
       // Release the lock if we were retrying inspite of FastFail

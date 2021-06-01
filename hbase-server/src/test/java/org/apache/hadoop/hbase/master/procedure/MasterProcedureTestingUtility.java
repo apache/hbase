@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -336,7 +337,7 @@ public class MasterProcedureTestingUtility {
     // Ensure one row per region
     assertTrue(rows >= splitKeys.length);
     for (byte[] k: splitKeys) {
-      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), k);
+      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), k);
       byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
       mutator.mutate(createPut(families, key, value));
       rows--;
@@ -344,7 +345,8 @@ public class MasterProcedureTestingUtility {
 
     // Add other extra rows. more rows, more files
     while (rows-- > 0) {
-      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
+      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()),
+        Bytes.toBytes(rows));
       byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
       mutator.mutate(createPut(families, key, value));
     }

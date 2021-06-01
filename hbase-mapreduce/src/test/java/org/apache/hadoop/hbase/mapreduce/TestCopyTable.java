@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.mob.MobTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
@@ -292,7 +293,7 @@ public class TestCopyTable {
     p.addColumn(FAMILY_B, QUALIFIER, Bytes.toBytes("Data23"));
     t.put(p);
 
-    long currentTime = System.currentTimeMillis();
+    long currentTime = EnvironmentEdgeManager.currentTime();
     String[] args = new String[] { "--new.name=" + targetTable, "--families=a:b", "--all.cells",
         "--starttime=" + (currentTime - 100000), "--endtime=" + (currentTime + 100000),
         "--versions=1", sourceTable.getNameAsString() };

@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.ClassRule;
 import org.junit.Ignore;
@@ -636,7 +637,7 @@ public class TestStoreScanner {
 
   @Test
   public void testDeleteVersionMaskingMultiplePuts() throws IOException {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     KeyValue [] kvs1 = new KeyValue[] {
         create("R1", "cf", "a", now, KeyValue.Type.Put, "dont-care"),
         create("R1", "cf", "a", now, KeyValue.Type.Delete, "dont-care")
@@ -662,7 +663,7 @@ public class TestStoreScanner {
 
   @Test
   public void testDeleteVersionsMixedAndMultipleVersionReturn() throws IOException {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     KeyValue [] kvs1 = new KeyValue[] {
         create("R1", "cf", "a", now, KeyValue.Type.Put, "dont-care"),
         create("R1", "cf", "a", now, KeyValue.Type.Delete, "dont-care")
@@ -823,7 +824,7 @@ public class TestStoreScanner {
    */
   @Test
   public void testWildCardTtlScan() throws IOException {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     KeyValue [] kvs = new KeyValue[] {
         create("R1", "cf", "a", now-1000, KeyValue.Type.Put, "dont-care"),
         create("R1", "cf", "b", now-10, KeyValue.Type.Put, "dont-care"),
@@ -889,7 +890,7 @@ public class TestStoreScanner {
    */
   @Test
   public void testExpiredDeleteFamily() throws Exception {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     KeyValue[] kvs = new KeyValue[] {
       new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null, now-1000,
         KeyValue.Type.DeleteFamily),
@@ -916,7 +917,7 @@ public class TestStoreScanner {
   @Test
   public void testDeleteMarkerLongevity() throws Exception {
     try {
-      final long now = System.currentTimeMillis();
+      final long now = EnvironmentEdgeManager.currentTime();
       EnvironmentEdgeManagerTestHelper.injectEdge(new EnvironmentEdge() {
         @Override
         public long currentTime() {
@@ -986,7 +987,7 @@ public class TestStoreScanner {
 
   @Test
   public void testPreadNotEnabledForCompactionStoreScanners() throws Exception {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     KeyValue[] kvs = new KeyValue[] {
       new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null, now - 1000,
         KeyValue.Type.DeleteFamily),

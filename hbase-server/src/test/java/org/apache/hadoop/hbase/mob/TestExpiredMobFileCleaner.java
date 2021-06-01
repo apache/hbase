@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -131,14 +132,14 @@ public class TestExpiredMobFileCleaner {
     Path mobDirPath = MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
 
     byte[] dummyData = makeDummyData(600);
-    long ts = System.currentTimeMillis() - 3 * secondsOfDay() * 1000; // 3 days before
+    long ts = EnvironmentEdgeManager.currentTime() - 3 * secondsOfDay() * 1000; // 3 days before
     putKVAndFlush(table, row1, dummyData, ts);
     FileStatus[] firstFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     //the first mob file
     assertEquals("Before cleanup without delay 1", 1, firstFiles.length);
     String firstFile = firstFiles[0].getPath().getName();
 
-    ts = System.currentTimeMillis() - 1 * secondsOfDay() * 1000; // 1 day before
+    ts = EnvironmentEdgeManager.currentTime() - 1 * secondsOfDay() * 1000; // 1 day before
     putKVAndFlush(table, row2, dummyData, ts);
     FileStatus[] secondFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     //now there are 2 mob files

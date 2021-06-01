@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -197,7 +198,7 @@ public class TestFastFail {
             doneHalfway.countDown();
             continueOtherHalf.await();
 
-            long startTime = System.currentTimeMillis();
+            long startTime = EnvironmentEdgeManager.currentTime();
             g = new Get(row);
             g.addColumn(FAMILY, QUALIFIER);
             try {
@@ -213,7 +214,7 @@ public class TestFastFail {
               numFailedThreads.addAndGet(1);
               return false;
             } finally {
-              long enTime = System.currentTimeMillis();
+              long enTime = EnvironmentEdgeManager.currentTime();
               totalTimeTaken.addAndGet(enTime - startTime);
               if ((enTime - startTime) >= SLEEPTIME) {
                 // Considering the slow workers as the blockedWorkers.

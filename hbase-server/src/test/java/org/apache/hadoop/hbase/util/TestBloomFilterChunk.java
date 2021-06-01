@@ -128,24 +128,24 @@ public class TestBloomFilterChunk extends TestCase {
     float err = (float)0.01;
     BloomFilterChunk b = new BloomFilterChunk(10*1000*1000, (float)err, Hash.MURMUR_HASH, 3);
     b.allocBloom();
-    long startTime =  System.currentTimeMillis();
+    long startTime =  EnvironmentEdgeManager.currentTime();
     long origSize = b.getByteSize();
     for (int i = 0; i < 1*1000*1000; ++i) {
       byte[] ib = Bytes.toBytes(i);
       b.add(ib, 0, ib.length);
     }
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTime();
     System.out.println("Total Add time = " + (endTime - startTime) + "ms");
 
     // fold
-    startTime = System.currentTimeMillis();
+    startTime = EnvironmentEdgeManager.currentTime();
     b.compactBloom();
-    endTime = System.currentTimeMillis();
+    endTime = EnvironmentEdgeManager.currentTime();
     System.out.println("Total Fold time = " + (endTime - startTime) + "ms");
     assertTrue(origSize >= b.getByteSize()<<3);
 
     // test
-    startTime = System.currentTimeMillis();
+    startTime = EnvironmentEdgeManager.currentTime();
     int falsePositives = 0;
     for (int i = 0; i < 2*1000*1000; ++i) {
 
@@ -158,7 +158,7 @@ public class TestBloomFilterChunk extends TestCase {
         assertFalse(i < 1*1000*1000);
       }
     }
-    endTime = System.currentTimeMillis();
+    endTime = EnvironmentEdgeManager.currentTime();
     System.out.println("Total Contains time = " + (endTime - startTime) + "ms");
     System.out.println("False Positive = " + falsePositives);
     assertTrue(falsePositives <= (1*1000*1000)*err);

@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.util.DNS;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -297,7 +298,7 @@ public class ThriftServer  extends Configured implements Tool {
     int port = conf.getInt(THRIFT_INFO_SERVER_PORT , THRIFT_INFO_SERVER_PORT_DEFAULT);
 
     if (port >= 0) {
-      conf.setLong("startcode", System.currentTimeMillis());
+      conf.setLong("startcode", EnvironmentEdgeManager.currentTime());
       String a = conf
           .get(THRIFT_INFO_SERVER_BINDING_ADDRESS, THRIFT_INFO_SERVER_BINDING_ADDRESS_DEFAULT);
       infoServer = new InfoServer("thrift", a, port, false, conf);

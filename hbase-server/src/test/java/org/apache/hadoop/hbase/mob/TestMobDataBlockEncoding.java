@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -104,7 +105,7 @@ public class TestMobDataBlockEncoding {
   public void testDataBlockEncoding(DataBlockEncoding encoding) throws Exception {
     String TN = "testDataBlockEncoding" + encoding;
     setUp(defaultThreshold, TN, encoding);
-    long ts1 = System.currentTimeMillis();
+    long ts1 = EnvironmentEdgeManager.currentTime();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
     byte[] value = generateMobValue((int) defaultThreshold + 1);

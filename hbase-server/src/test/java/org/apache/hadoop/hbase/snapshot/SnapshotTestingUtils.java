@@ -844,13 +844,13 @@ public final class SnapshotTestingUtils {
     loadData(util, mutator, rows, families);
   }
 
-  public static void loadData(final HBaseTestingUtility util, final BufferedMutator mutator, int rows,
-      byte[]... families) throws IOException, InterruptedException {
+  public static void loadData(final HBaseTestingUtility util, final BufferedMutator mutator,
+      int rows, byte[]... families) throws IOException, InterruptedException {
     // Ensure one row per region
     assertTrue(rows >= KEYS.length);
     for (byte k0: KEYS) {
       byte[] k = new byte[] { k0 };
-      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), k);
+      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), k);
       byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
       final byte[][] families1 = families;
       final byte[] key1 = key;
@@ -861,7 +861,8 @@ public final class SnapshotTestingUtils {
 
     // Add other extra rows. more rows, more files
     while (rows-- > 0) {
-      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
+      byte[] value = Bytes.add(Bytes.toBytes(EnvironmentEdgeManager.currentTime()),
+        Bytes.toBytes(rows));
       byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
       final byte[][] families1 = families;
       final byte[] key1 = key;

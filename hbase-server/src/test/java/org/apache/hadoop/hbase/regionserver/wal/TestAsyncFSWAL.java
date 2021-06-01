@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -136,7 +137,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
     for (byte[] fam : td.getColumnFamilyNames()) {
       scopes.put(fam, 0);
     }
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     String testName = currentTest.getMethodName();
     AtomicInteger failedCount = new AtomicInteger(0);
     try (LogRoller roller = new LogRoller(services);

@@ -2545,7 +2545,8 @@ public class MasterRpcServices extends RSRpcServices implements
         RegionState.State newState = RegionState.State.convert(s.getState());
         LOG.info("{} set region={} state from {} to {}", master.getClientIdAuditPrefix(), info,
           prevState.getState(), newState);
-        Put metaPut = MetaTableAccessor.makePutFromRegionInfo(info, System.currentTimeMillis());
+        Put metaPut = MetaTableAccessor.makePutFromRegionInfo(info,
+          EnvironmentEdgeManager.currentTime());
         metaPut.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
           Bytes.toBytes(newState.name()));
         List<Put> putList = new ArrayList<>();

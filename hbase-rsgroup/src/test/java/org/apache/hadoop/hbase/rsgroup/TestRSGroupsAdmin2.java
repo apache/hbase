@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -501,8 +502,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     AtomicBoolean changed = new AtomicBoolean(false);
     Thread t1 = new Thread(() -> {
       LOG.debug("thread1 start running, will recover region state");
-      long current = System.currentTimeMillis();
-      while (System.currentTimeMillis() - current <= 50000) {
+      long current = EnvironmentEdgeManager.currentTime();
+      while (EnvironmentEdgeManager.currentTime() - current <= 50000) {
         List<RegionInfo> regions = master.getAssignmentManager().getRegionsOnServer(movedServer);
         LOG.debug("server region size is:{}", regions.size());
         assert regions.size() >= 1;
@@ -602,8 +603,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     AtomicBoolean changed = new AtomicBoolean(false);
     Thread t1 = new Thread(() -> {
       LOG.info("thread1 start running, will recover region state");
-      long current = System.currentTimeMillis();
-      while (System.currentTimeMillis() - current <= 50000) {
+      long current = EnvironmentEdgeManager.currentTime();
+      while (EnvironmentEdgeManager.currentTime() - current <= 50000) {
         List<RegionInfo> regions = master.getAssignmentManager().getRegionsOnServer(ss);
         List<RegionInfo> tableRegions = new ArrayList<>();
         for (RegionInfo regionInfo : regions) {
@@ -662,9 +663,9 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       }
       return getTableRegionMap().get(tableName).size() >= tableRegionCount;
     });
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
-    long timeTaken = System.currentTimeMillis() - startTime;
+    long timeTaken = EnvironmentEdgeManager.currentTime() - startTime;
     String msg =
       "Should not take mote than 15000 ms to move a table with 100 regions. Time taken  ="
         + timeTaken + " ms";

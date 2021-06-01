@@ -67,8 +67,8 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -77,6 +77,7 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @Category({ClientTests.class, LargeTests.class})
 public class TestAsyncProcess {
@@ -1024,9 +1025,9 @@ public class TestAsyncProcess {
     };
     t2.start();
 
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     ap.submit(null, DUMMY_TABLE, new ArrayList<>(), false, null, false);
-    long end = System.currentTimeMillis();
+    long end = EnvironmentEdgeManager.currentTime();
 
     //Adds 100 to secure us against approximate timing.
     Assert.assertTrue(start + 100L + sleepTime > end);
@@ -1757,7 +1758,7 @@ public class TestAsyncProcess {
     Put p = createPut(1, true);
     mutator.mutate(p);
 
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     try {
       mutator.flush();
       Assert.fail();
@@ -1765,7 +1766,7 @@ public class TestAsyncProcess {
       assertEquals(1, expected.getNumExceptions());
       assertTrue(expected.getRow(0) == p);
     }
-    long actualSleep = System.currentTimeMillis() - startTime;
+    long actualSleep = EnvironmentEdgeManager.currentTime() - startTime;
     long expectedSleep = 0L;
     for (int i = 0; i < retries; i++) {
       expectedSleep += ConnectionUtils.getPauseTime(specialPause, i);
@@ -1784,7 +1785,7 @@ public class TestAsyncProcess {
     mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
     Assert.assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
     mutator.mutate(p);
-    startTime = System.currentTimeMillis();
+    startTime = EnvironmentEdgeManager.currentTime();
     try {
       mutator.flush();
       Assert.fail();
@@ -1792,7 +1793,7 @@ public class TestAsyncProcess {
       assertEquals(1, expected.getNumExceptions());
       assertTrue(expected.getRow(0) == p);
     }
-    actualSleep = System.currentTimeMillis() - startTime;
+    actualSleep = EnvironmentEdgeManager.currentTime() - startTime;
     expectedSleep = 0L;
     for (int i = 0; i < retries; i++) {
       expectedSleep += ConnectionUtils.getPauseTime(normalPause, i);

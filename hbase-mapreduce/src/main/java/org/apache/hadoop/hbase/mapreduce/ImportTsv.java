@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -765,7 +766,7 @@ public class ImportTsv extends Configured implements Tool {
     }
 
     // If timestamp option is not specified, use current system time.
-    long timstamp = getConf().getLong(TIMESTAMP_CONF_KEY, System.currentTimeMillis());
+    long timstamp = getConf().getLong(TIMESTAMP_CONF_KEY, EnvironmentEdgeManager.currentTime());
 
     // Set it back to replace invalid timestamp (non-numeric) with current
     // system time

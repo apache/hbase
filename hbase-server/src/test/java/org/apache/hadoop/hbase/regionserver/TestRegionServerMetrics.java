@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -156,14 +157,14 @@ public class TestRegionServerMetrics {
   }
 
   public void waitTableDeleted(TableName name, long timeoutInMillis) throws Exception {
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     while (true) {
       HTableDescriptor[] tables = admin.listTables();
       for (HTableDescriptor htd : tables) {
         if (htd.getNameAsString() == name.getNameAsString())
           return;
       }
-      if (System.currentTimeMillis() - start > timeoutInMillis)
+      if (EnvironmentEdgeManager.currentTime() - start > timeoutInMillis)
         return;
       Thread.sleep(1000);
     }

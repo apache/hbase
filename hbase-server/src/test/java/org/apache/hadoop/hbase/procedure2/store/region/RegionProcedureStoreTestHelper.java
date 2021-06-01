@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureLoader;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 final class RegionProcedureStoreTestHelper {
 
@@ -39,7 +40,7 @@ final class RegionProcedureStoreTestHelper {
     Server server = mock(Server.class);
     when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
-      .thenReturn(ServerName.valueOf("localhost", 12345, System.currentTimeMillis()));
+      .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
     return server;
   }
 
