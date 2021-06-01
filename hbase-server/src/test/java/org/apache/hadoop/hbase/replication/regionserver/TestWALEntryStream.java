@@ -109,6 +109,13 @@ public class TestWALEntryStream {
 
   /**
    * Test helper that waits until a non-null entry is available in the stream next or times out.
+   * A {@link WALEntryStream} provides a streaming access to a queue of log files. Since the stream
+   * can be consumed as the file is being written, callers relying on {@link WALEntryStream#next()}
+   * may need to retry multiple times before an entry appended to the WAL is visible to the stream
+   * consumers. One such cause of delay is the close() of writer writing these log files. While the
+   * closure is in progress, the stream does not switch to the next log in the queue and next() may
+   * return null entries. This utility wraps these retries into a single next call and that makes
+   * the test code simpler.
    */
   private static class WALEntryStreamWithRetries extends WALEntryStream {
     // Class member to be able to set a non-final from within a lambda.
