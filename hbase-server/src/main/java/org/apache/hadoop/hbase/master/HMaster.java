@@ -109,6 +109,9 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
 import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
+import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
+import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
+import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
@@ -190,9 +193,9 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -418,7 +421,6 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public HMaster(final Configuration conf) throws IOException {
     super(conf);
-    TraceUtil.initTracer(conf);
     try {
       if (conf.getBoolean(MAINTENANCE_MODE, false)) {
         LOG.info("Detected {}=true via configuration.", MAINTENANCE_MODE);
@@ -683,7 +685,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         LoadBalancer.class);
     }
     this.balancer = new RSGroupBasedLoadBalancer();
-    this.balancer.setConf(conf);
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
 
@@ -802,7 +803,7 @@ public class HMaster extends HRegionServer implements MasterServices {
      */
     status.setStatus("Initializing Master file system");
 
-    this.masterActiveTime = System.currentTimeMillis();
+    this.masterActiveTime = EnvironmentEdgeManager.currentTime();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
 
     // always initialize the MemStoreLAB as we use a region to store data in master now, see
@@ -896,7 +897,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // Start the Zombie master detector after setting master as active, see HBASE-21535
     Thread zombieDetector = new Thread(new MasterInitializationMonitor(this),
-        "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
+        "ActiveMasterInitializationMonitor-" + EnvironmentEdgeManager.currentTime());
     zombieDetector.setDaemon(true);
     zombieDetector.start();
 
@@ -928,8 +929,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // initialize load balancer
     this.balancer.setMasterServices(this);
-    this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
     this.balancer.initialize();
+    this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // start up all service threads.
     status.setStatus("Initializing master service threads");
@@ -1003,15 +1004,13 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }
     // Initialize after meta is up as below scans meta
-    if (getFavoredNodesManager() != null && !maintenanceMode) {
-      SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
-          new SnapshotOfRegionAssignmentFromMeta(getConnection());
-      snapshotOfRegionAssignment.initialize();
-      getFavoredNodesManager().initialize(snapshotOfRegionAssignment);
+    FavoredNodesManager fnm = getFavoredNodesManager();
+    if (fnm != null) {
+      fnm.initializeFromMeta();
     }
 
     // set cluster status again after user regions are assigned
-    this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
+    this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // Start balancer and meta catalog janitor after meta and regions have been assigned.
     status.setStatus("Starting balancer and catalog janitor");
@@ -1045,8 +1044,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     status.markComplete("Initialization successful");
     LOG.info(String.format("Master has completed initialization %.3fsec",
-       (System.currentTimeMillis() - masterActiveTime) / 1000.0f));
-    this.masterFinishedInitializationTime = System.currentTimeMillis();
+       (EnvironmentEdgeManager.currentTime() - masterActiveTime) / 1000.0f));
+    this.masterFinishedInitializationTime = EnvironmentEdgeManager.currentTime();
     configurationManager.registerObserver(this.balancer);
     configurationManager.registerObserver(this.cleanerPool);
     configurationManager.registerObserver(this.hfileCleaner);
@@ -1106,11 +1105,11 @@ public class HMaster extends HRegionServer implements MasterServices {
      * After master has started up, lets do balancer post startup initialization. Since this runs
      * in activeMasterManager thread, it should be fine.
      */
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     this.balancer.postMasterStartupInitialize();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Balancer post startup initialization complete, took " + (
-          (System.currentTimeMillis() - start) / 1000) + " seconds");
+          (EnvironmentEdgeManager.currentTime() - start) / 1000) + " seconds");
     }
   }
 
@@ -1262,7 +1261,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return notifier;
   }
 
-  boolean isCatalogJanitorEnabled() {
+  public boolean isCatalogJanitorEnabled() {
     return catalogJanitorChore != null ? catalogJanitorChore.getEnabled() : false;
   }
 
@@ -1498,7 +1497,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  private void startProcedureExecutor() throws IOException {
+  // will be override in UT
+  protected void startProcedureExecutor() throws IOException {
     procedureExecutor.startWorkers();
   }
 
@@ -1619,7 +1619,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // Sleep to next balance plan start time
     // But if there are zero regions in transition, it can skip sleep to speed up.
-    while (!interrupted && System.currentTimeMillis() < nextBalanceStartTime
+    while (!interrupted && EnvironmentEdgeManager.currentTime() < nextBalanceStartTime
         && this.assignmentManager.getRegionStates().hasRegionsInTransition()) {
       try {
         Thread.sleep(100);
@@ -1632,7 +1632,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     while (!interrupted
         && maxRegionsInTransition > 0
         && this.assignmentManager.getRegionStates().getRegionsInTransitionCount()
-        >= maxRegionsInTransition && System.currentTimeMillis() <= cutoffTime) {
+        >= maxRegionsInTransition && EnvironmentEdgeManager.currentTime() <= cutoffTime) {
       try {
         // sleep if the number of regions in transition exceeds the limit
         Thread.sleep(100);
@@ -1686,7 +1686,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         // if hbase:meta region is in transition, result of assignment cannot be recorded
         // ignore the force flag in that case
         boolean metaInTransition = assignmentManager.isMetaRegionInTransition();
-        String prefix = force && !metaInTransition ? "R" : "Not r";
         List<RegionStateNode> toPrint = regionsInTransition;
         int max = 5;
         boolean truncated = false;
@@ -1694,9 +1693,12 @@ public class HMaster extends HRegionServer implements MasterServices {
           toPrint = regionsInTransition.subList(0, max);
           truncated = true;
         }
-        LOG.info(prefix + " not running balancer because " + regionsInTransition.size() +
-          " region(s) in transition: " + toPrint + (truncated? "(truncated list)": ""));
-        if (!force || metaInTransition) return false;
+        if (!force || metaInTransition) {
+          LOG.info("Not running balancer (force=" + force + ", metaRIT=" + metaInTransition +
+            ") because " + regionsInTransition.size() + " region(s) in transition: " + toPrint +
+            (truncated? "(truncated list)": ""));
+          return false;
+        }
       }
       if (this.serverManager.areDeadServersInProgress()) {
         LOG.info("Not running balancer because processing dead regionserver(s): " +
@@ -1724,7 +1726,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
 
       //Give the balancer the current cluster state.
-      this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
+      this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
 
@@ -1757,7 +1759,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   public List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans) {
     List<RegionPlan> successRegionPlans = new ArrayList<>();
     int maxRegionsInTransition = getMaxRegionsInTransition();
-    long balanceStartTime = System.currentTimeMillis();
+    long balanceStartTime = EnvironmentEdgeManager.currentTime();
     long cutoffTime = balanceStartTime + this.maxBalancingTime;
     int rpCount = 0;  // number of RegionPlans balanced so far
     if (plans != null && !plans.isEmpty()) {
@@ -1787,7 +1789,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
         // if performing next balance exceeds cutoff time, exit the loop
         if (this.maxBalancingTime > 0 && rpCount < plans.size()
-          && System.currentTimeMillis() > cutoffTime) {
+          && EnvironmentEdgeManager.currentTime() > cutoffTime) {
           // TODO: After balance, there should not be a cutoff time (keeping it as
           // a security net for now)
           LOG.debug("No more balancing till next balance run; maxBalanceTime="

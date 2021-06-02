@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -104,12 +105,12 @@ public class TestSafemodeBringsDownMaster {
     DistributedFileSystem dfs = (DistributedFileSystem) dfsCluster.getFileSystem();
     dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
     final long timeOut = 180000;
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     int index = -1;
     do {
       index = UTIL.getMiniHBaseCluster().getServerWithMeta();
     } while (index == -1 &&
-      startTime + timeOut < System.currentTimeMillis());
+      startTime + timeOut < EnvironmentEdgeManager.currentTime());
 
     if (index != -1){
       UTIL.getMiniHBaseCluster().abortRegionServer(index);

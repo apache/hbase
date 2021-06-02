@@ -607,7 +607,7 @@ public final class FSUtils {
   throws IOException {
     // Rewrite the file as pb.  Move aside the old one first, write new
     // then delete the moved-aside file.
-    Path movedAsideName = new Path(p + "." + System.currentTimeMillis());
+    Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
     if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
     setClusterId(fs, rootdir, cid, 100);
     if (!fs.delete(movedAsideName, false)) {
@@ -940,10 +940,11 @@ public final class FSUtils {
   public static List<Path> getTableDirs(final FileSystem fs, final Path rootdir)
       throws IOException {
     List<Path> tableDirs = new ArrayList<>();
-
-    for (FileStatus status : fs
-        .globStatus(new Path(rootdir, new Path(HConstants.BASE_NAMESPACE_DIR, "*")))) {
-      tableDirs.addAll(FSUtils.getLocalTableDirs(fs, status.getPath()));
+    Path baseNamespaceDir = new Path(rootdir, HConstants.BASE_NAMESPACE_DIR);
+    if (fs.exists(baseNamespaceDir)) {
+      for (FileStatus status : fs.globStatus(new Path(baseNamespaceDir, "*"))) {
+        tableDirs.addAll(FSUtils.getLocalTableDirs(fs, status.getPath()));
+      }
     }
     return tableDirs;
   }

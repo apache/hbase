@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
@@ -402,14 +403,14 @@ public class TestThriftHBaseServiceHandler {
     List<TColumnValue> columnValues = new ArrayList<>(1);
     TColumnValue columnValueA = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
       wrap(valueAname));
-    columnValueA.setTimestamp(System.currentTimeMillis() - 10);
+    columnValueA.setTimestamp(EnvironmentEdgeManager.currentTime() - 10);
     columnValues.add(columnValueA);
     TPut put = new TPut(wrap(rowName), columnValues);
 
     put.setColumnValues(columnValues);
 
     handler.put(table, put);
-    columnValueA.setTimestamp(System.currentTimeMillis());
+    columnValueA.setTimestamp(EnvironmentEdgeManager.currentTime());
     handler.put(table, put);
 
     TGet get = new TGet(wrap(rowName));
@@ -439,8 +440,8 @@ public class TestThriftHBaseServiceHandler {
     byte[] rowName = Bytes.toBytes("testDeleteSingleTimestamp");
     ByteBuffer table = wrap(tableAname);
 
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
+    long timestamp1 = EnvironmentEdgeManager.currentTime() - 10;
+    long timestamp2 = EnvironmentEdgeManager.currentTime();
 
     List<TColumnValue> columnValues = new ArrayList<>(1);
     TColumnValue columnValueA = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
@@ -484,8 +485,8 @@ public class TestThriftHBaseServiceHandler {
     byte[] rowName = Bytes.toBytes("testDeleteFamily");
     ByteBuffer table = wrap(tableAname);
 
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
+    long timestamp1 = EnvironmentEdgeManager.currentTime() - 10;
+    long timestamp2 = EnvironmentEdgeManager.currentTime();
 
     List<TColumnValue> columnValues = new ArrayList<>();
     TColumnValue columnValueA =
@@ -526,8 +527,8 @@ public class TestThriftHBaseServiceHandler {
     byte[] rowName = Bytes.toBytes("testDeleteFamilyVersion");
     ByteBuffer table = wrap(tableAname);
 
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
+    long timestamp1 = EnvironmentEdgeManager.currentTime() - 10;
+    long timestamp2 = EnvironmentEdgeManager.currentTime();
 
     List<TColumnValue> columnValues = new ArrayList<>();
     TColumnValue columnValueA =
@@ -925,7 +926,7 @@ public class TestThriftHBaseServiceHandler {
         wrap(valueAname));
     TColumnValue familyBColumnValue = new TColumnValue(wrap(familyBname), wrap(qualifierBname),
         wrap(valueBname));
-    long minTimestamp = System.currentTimeMillis();
+    long minTimestamp = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < 10; i++) {
       familyAColumnValue.setTimestamp(minTimestamp + i);
       familyBColumnValue.setTimestamp(minTimestamp + i);
@@ -1793,10 +1794,10 @@ public class TestThriftHBaseServiceHandler {
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
                          List<Cell> results) throws IOException {
       try {
-        long start = System.currentTimeMillis();
+        long start = EnvironmentEdgeManager.currentTime();
         TimeUnit.MILLISECONDS.sleep(delayMillis);
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Slept for " + (System.currentTimeMillis() - start) + " msec");
+          LOG.trace("Slept for " + (EnvironmentEdgeManager.currentTime() - start) + " msec");
         }
       } catch (InterruptedException ie) {
         throw new InterruptedIOException("Interrupted while sleeping");

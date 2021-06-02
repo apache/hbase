@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -162,7 +163,7 @@ public class TestLogRollingNoCluster {
         FSTableDescriptors.tryUpdateMetaTableDescriptor(TEST_UTIL.getConfiguration());
         TableDescriptor htd = tds.get(TableName.META_TABLE_NAME);
         for (int i = 0; i < this.count; i++) {
-          long now = System.currentTimeMillis();
+          long now = EnvironmentEdgeManager.currentTime();
           // Roll every ten edits
           if (i % 10 == 0) {
             this.wal.rollWriter();

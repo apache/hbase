@@ -111,11 +111,11 @@ public class RegionStateStore {
           if (r != null && !r.isEmpty()) {
             long st = 0;
             if (LOG.isTraceEnabled()) {
-              st = System.currentTimeMillis();
+              st = EnvironmentEdgeManager.currentTime();
             }
             visitMetaEntry(visitor, r);
             if (LOG.isTraceEnabled()) {
-              long et = System.currentTimeMillis();
+              long et = EnvironmentEdgeManager.currentTime();
               LOG.trace("[T] LOAD META PERF " + StringUtils.humanTimeDiff(et - st));
             }
           } else if (isDebugEnabled) {

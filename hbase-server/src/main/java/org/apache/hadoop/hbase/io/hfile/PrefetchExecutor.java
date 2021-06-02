@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +63,7 @@ public final class PrefetchExecutor {
       new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
-          String name = "hfile-prefetch-" + System.currentTimeMillis();
+          String name = "hfile-prefetch-" + EnvironmentEdgeManager.currentTime();
           Thread t = new Thread(r, name);
           t.setDaemon(true);
           return t;

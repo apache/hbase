@@ -1846,6 +1846,14 @@ public interface Admin extends Abortable, Closeable {
   void updateConfiguration() throws IOException;
 
   /**
+   * Update the configuration and trigger an online config change
+   * on all the regionservers in the RSGroup.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   */
+  void updateConfiguration(String groupName) throws IOException;
+
+  /**
    * Get the info port of the current master if one is available.
    * @return master info port
    * @throws IOException if a remote or network exception occurs

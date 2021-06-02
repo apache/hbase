@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -147,7 +148,7 @@ public class TestCatalogJanitor {
     Path storedir = HRegionFileSystem.getStoreHomedir(tabledir, splita,
       td.getColumnFamilies()[0].getName());
     Reference ref = Reference.createTopReference(Bytes.toBytes("ccc"));
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     // Reference name has this format: StoreFile#REF_NAME_PARSER
     Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());
     FileSystem fs = this.masterServices.getMasterFileSystem().getFileSystem();
@@ -620,7 +621,7 @@ public class TestCatalogJanitor {
       td.getColumnFamilies()[0].getName());
     Reference ref =
       top ? Reference.createTopReference(midkey) : Reference.createBottomReference(midkey);
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     // Reference name has this format: StoreFile#REF_NAME_PARSER
     Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());
     FileSystem fs = services.getMasterFileSystem().getFileSystem();

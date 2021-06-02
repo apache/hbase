@@ -76,7 +76,11 @@ public class TestCompressionTest {
     assertTrue(CompressionTest.testCompression("GZ"));
 
     if (NativeCodeLoader.isNativeCodeLoaded()) {
-      nativeCodecTest("LZO", "lzo2", "com.hadoop.compression.lzo.LzoCodec");
+      // LZO is GPL so not included in hadoop install. You need to do an extra install to pick
+      // up the needed support. This article is good on the steps needed to add LZO support:
+      // https://stackoverflow.com/questions/23441142/class-com-hadoop-compression-lzo-lzocodec-not-found-for-spark-on-cdh-5
+      // Its unlikely at test time that the extras are installed so this test is useless.
+      // nativeCodecTest("LZO", "lzo2", "com.hadoop.compression.lzo.LzoCodec");
       nativeCodecTest("LZ4", null, "org.apache.hadoop.io.compress.Lz4Codec");
       nativeCodecTest("SNAPPY", "snappy", "org.apache.hadoop.io.compress.SnappyCodec");
       nativeCodecTest("BZIP2", "bzip2", "org.apache.hadoop.io.compress.BZip2Codec");
@@ -84,9 +88,15 @@ public class TestCompressionTest {
     } else {
       // Hadoop nativelib is not available
       LOG.debug("Native code not loaded");
-      assertFalse(CompressionTest.testCompression("LZO"));
-      assertFalse(CompressionTest.testCompression("LZ4"));
-      assertFalse(CompressionTest.testCompression("SNAPPY"));
+      // This check is useless as it fails with
+      //  ...DoNotRetryIOException: Compression algorithm 'lzo' previously failed test.
+      // assertFalse("LZO", CompressionTest.testCompression("LZO"));
+      // LZ4 requires that the native lib be present before 3.3.1. After 3.3.1, hadoop uses
+      // lz4-java which will do java version of lz4 as last resort -- so the below fails before
+      // 3.3.1 but passes at 3.3.1+... so commenting it out. See HADOOP-17292.
+      // assertFalse("LZ4", CompressionTest.testCompression("LZ4"));
+      // Same thing happens for snappy. See HADOOP-17125
+      // assertFalse(CompressionTest.testCompression("SNAPPY"));
       assertFalse(CompressionTest.testCompression("BZIP2"));
       assertFalse(CompressionTest.testCompression("ZSTD"));
     }

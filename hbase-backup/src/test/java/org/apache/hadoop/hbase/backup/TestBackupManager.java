@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -96,17 +97,17 @@ public class TestBackupManager {
       public void run() {
         try {
           backupManager.startBackupSession();
-          boolean result = startTimes.compareAndSet(0, 0, System.currentTimeMillis());
+          boolean result = startTimes.compareAndSet(0, 0, EnvironmentEdgeManager.currentTime());
           if (!result) {
-            result = startTimes.compareAndSet(1, 0, System.currentTimeMillis());
+            result = startTimes.compareAndSet(1, 0, EnvironmentEdgeManager.currentTime());
             if (!result) {
               throw new IOException("PANIC! Unreachable code");
             }
           }
           Thread.sleep(sleepTime);
-          result = stopTimes.compareAndSet(0, 0, System.currentTimeMillis());
+          result = stopTimes.compareAndSet(0, 0, EnvironmentEdgeManager.currentTime());
           if (!result) {
-            result = stopTimes.compareAndSet(1, 0, System.currentTimeMillis());
+            result = stopTimes.compareAndSet(1, 0, EnvironmentEdgeManager.currentTime());
             if (!result) {
               throw new IOException("PANIC! Unreachable code");
             }

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Gauge;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,14 +78,14 @@ public class ExampleMasterObserverWithMetrics implements MasterCoprocessor, Mast
                              TableDescriptor desc, RegionInfo[] regions) throws IOException {
     // we rely on the fact that there is only 1 instance of our MasterObserver. We keep track of
     // when the operation starts before the operation is executing.
-    this.createTableStartTime = System.currentTimeMillis();
+    this.createTableStartTime = EnvironmentEdgeManager.currentTime();
   }
 
   @Override
   public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
                               TableDescriptor desc, RegionInfo[] regions) throws IOException {
     if (this.createTableStartTime > 0) {
-      long time = System.currentTimeMillis() - this.createTableStartTime;
+      long time = EnvironmentEdgeManager.currentTime() - this.createTableStartTime;
       LOG.info("Create table took: " + time);
 
       // Update the timer metric for the create table operation duration.

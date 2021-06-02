@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -104,7 +105,7 @@ public class TestWideScanner {
     for (char c = 'a'; c <= 'c'; c++) {
       byte[] row = Bytes.toBytes("ab" + c);
       int i, j;
-      long ts = System.currentTimeMillis();
+      long ts = EnvironmentEdgeManager.currentTime();
       for (i = 0; i < 100; i++) {
         byte[] b = Bytes.toBytes(String.format("%10d", i));
         for (j = 0; j < 100; j++) {

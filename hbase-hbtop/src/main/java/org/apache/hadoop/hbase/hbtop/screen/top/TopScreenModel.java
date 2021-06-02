@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.hadoop.hbase.hbtop.field.FieldValue;
 import org.apache.hadoop.hbase.hbtop.mode.DrillDownInfo;
 import org.apache.hadoop.hbase.hbtop.mode.Mode;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -146,7 +147,7 @@ public class TopScreenModel {
 
   private void refreshSummary(ClusterMetrics clusterMetrics) {
     String currentTime = ISO_8601_EXTENDED_TIME_FORMAT
-      .format(System.currentTimeMillis());
+      .format(EnvironmentEdgeManager.currentTime());
     String version = clusterMetrics.getHBaseVersion();
     String clusterId = clusterMetrics.getClusterId();
     int liveServers = clusterMetrics.getLiveServerMetrics().size();

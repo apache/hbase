@@ -223,10 +223,9 @@ class WALEntryStream implements Closeable {
       if (trailerSize < 0) {
         if (currentPositionOfReader < stat.getLen()) {
           final long skippedBytes = stat.getLen() - currentPositionOfReader;
-          LOG.debug(
-            "Reached the end of WAL {}. It was not closed cleanly," +
-              " so we did not parse {} bytes of data. This is normally ok.",
-            currentPath, skippedBytes);
+          // See the commits in HBASE-25924/HBASE-25932 for context.
+          LOG.warn("Reached the end of WAL {}. It was not closed cleanly," +
+              " so we did not parse {} bytes of data.", currentPath, skippedBytes);
           metrics.incrUncleanlyClosedWALs();
           metrics.incrBytesSkippedInUncleanlyClosedWALs(skippedBytes);
         }
@@ -374,8 +373,8 @@ class WALEntryStream implements Closeable {
       handleFileNotFound(path, (FileNotFoundException)ioe);
     } catch (LeaseNotRecoveredException lnre) {
       // HBASE-15019 the WAL was not closed due to some hiccup.
-      LOG.warn("Try to recover the WAL lease " + currentPath, lnre);
-      recoverLease(conf, currentPath);
+      LOG.warn("Try to recover the WAL lease " + path, lnre);
+      recoverLease(conf, path);
       reader = null;
     } catch (NullPointerException npe) {
       // Workaround for race condition in HDFS-4380

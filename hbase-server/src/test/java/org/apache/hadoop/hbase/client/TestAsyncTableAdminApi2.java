@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -243,7 +244,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
       admin.flush(tableName).join();
     }
     admin.majorCompact(tableName).join();
-    long curt = System.currentTimeMillis();
+    long curt = EnvironmentEdgeManager.currentTime();
     long waitTime = 10000;
     long endt = curt + waitTime;
     CompactionState state = admin.getCompactionState(tableName).get();
@@ -251,7 +252,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     while (state == CompactionState.NONE && curt < endt) {
       Thread.sleep(100);
       state = admin.getCompactionState(tableName).get();
-      curt = System.currentTimeMillis();
+      curt = EnvironmentEdgeManager.currentTime();
       LOG.info("Current compaction state 2 is " + state);
     }
     // Now, should have the right compaction state, let's wait until the compaction is done

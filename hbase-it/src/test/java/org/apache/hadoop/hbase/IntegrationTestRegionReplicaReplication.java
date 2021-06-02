@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.ConstantDelayQueue;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedUpdater;
 import org.apache.hadoop.hbase.util.MultiThreadedWriter;
@@ -163,15 +164,15 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
       getConf().getInt("hbase.region.replica.replication.cache.disabledAndDroppedTables.expiryMs",
         5000) + 1000);
 
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     String runtimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());
     long runtime = util.getConfiguration().getLong(runtimeKey, defaultRunTime);
     long startKey = 0;
 
     long numKeys = getNumKeys(keysPerServerPerIter);
-    while (System.currentTimeMillis() - start < 0.9 * runtime) {
+    while (EnvironmentEdgeManager.currentTime() - start < 0.9 * runtime) {
       LOG.info("Intended run time: " + (runtime/60000) + " min, left:" +
-          ((runtime - (System.currentTimeMillis() - start))/60000) + " min");
+          ((runtime - (EnvironmentEdgeManager.currentTime() - start))/60000) + " min");
 
       int verifyPercent = 100;
       int updatePercent = 20;

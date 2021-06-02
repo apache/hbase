@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.client.RegionInfoBuilder.FIRST_META_REGION
 import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForDefaultReplica;
 import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForReplica;
 import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMagic;
+import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFuture;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 
@@ -94,7 +95,9 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   @Override
   public CompletableFuture<String> getClusterId() {
-    return getAndConvert(znodePaths.clusterIdZNode, ZKConnectionRegistry::getClusterId);
+    return tracedFuture(
+      () -> getAndConvert(znodePaths.clusterIdZNode, ZKConnectionRegistry::getClusterId),
+      "ZKConnectionRegistry.getClusterId");
   }
 
   ReadOnlyZKClient getZKClient() {
@@ -192,19 +195,20 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   @Override
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
-    CompletableFuture<RegionLocations> future = new CompletableFuture<>();
-    addListener(
-      zk.list(znodePaths.baseZNode)
-        .thenApply(children -> children.stream()
+    return tracedFuture(() -> {
+      CompletableFuture<RegionLocations> future = new CompletableFuture<>();
+      addListener(
+        zk.list(znodePaths.baseZNode).thenApply(children -> children.stream()
           .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
-      (metaReplicaZNodes, error) -> {
-        if (error != null) {
-          future.completeExceptionally(error);
-          return;
-        }
-        getMetaRegionLocation(future, metaReplicaZNodes);
-      });
-    return future;
+        (metaReplicaZNodes, error) -> {
+          if (error != null) {
+            future.completeExceptionally(error);
+            return;
+          }
+          getMetaRegionLocation(future, metaReplicaZNodes);
+        });
+      return future;
+    }, "ZKConnectionRegistry.getMetaRegionLocations");
   }
 
   private static ZooKeeperProtos.Master getMasterProto(byte[] data) throws IOException {
@@ -218,7 +222,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   @Override
   public CompletableFuture<ServerName> getActiveMaster() {
-    return getAndConvert(znodePaths.masterAddressZNode, ZKConnectionRegistry::getMasterProto)
+    return tracedFuture(
+      () -> getAndConvert(znodePaths.masterAddressZNode, ZKConnectionRegistry::getMasterProto)
         .thenApply(proto -> {
           if (proto == null) {
             return null;
@@ -226,7 +231,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
           HBaseProtos.ServerName snProto = proto.getMaster();
           return ServerName.valueOf(snProto.getHostName(), snProto.getPort(),
             snProto.getStartCode());
-        });
+        }),
+      "ZKConnectionRegistry.getActiveMaster");
   }
 
   @Override

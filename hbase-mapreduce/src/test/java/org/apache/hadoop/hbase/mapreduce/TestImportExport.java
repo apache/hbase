@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -130,7 +131,7 @@ public class TestImportExport {
   private static String FQ_OUTPUT_DIR;
   private static final String EXPORT_BATCH_SIZE = "100";
 
-  private static final long now = System.currentTimeMillis();
+  private static final long now = EnvironmentEdgeManager.currentTime();
   private final TableName EXPORT_TABLE = TableName.valueOf("export_table");
   private final TableName IMPORT_TABLE = TableName.valueOf("import_table");
   public static final byte TEST_TAG_TYPE =  (byte) (Tag.CUSTOM_TAG_TYPE_RANGE + 1);
@@ -605,7 +606,7 @@ public class TestImportExport {
   @Test
   public void testExportScan() throws Exception {
     int version = 100;
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long endTime = startTime + 1;
     String prefix = "row";
     String label_0 = "label_0";

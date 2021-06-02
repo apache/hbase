@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
@@ -1135,7 +1136,7 @@ public class TestAccessController extends SecureTestUtil {
         byte[] family, byte[] qualifier,
         byte[] startKey, byte[] endKey, int numRows) throws IOException {
       HFile.Writer writer = null;
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       try {
         HFileContext context = new HFileContextBuilder().build();
         writer = HFile.getWriterFactory(conf, new CacheConfig(conf)).withPath(fs, path)

@@ -76,7 +76,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -925,8 +924,8 @@ public class ReplicationSourceManager implements ReplicationListener {
         LOG.error(String.format("ReplicationException: cannot claim dead region (%s)'s " +
             "replication queue. Znode : (%s)" +
             " Possible solution: check if znode size exceeds jute.maxBuffer value. " +
-            " If so, increase it for both client and server side." + e),  deadRS,
-            queueStorage.getRsNode(deadRS));
+            " If so, increase it for both client and server side.",
+          deadRS, queueStorage.getRsNode(deadRS)), e);
         server.abort("Failed to claim queue from dead regionserver.", e);
         return;
       }
@@ -1202,7 +1201,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * This ReplicationSource is NOT created via {@link ReplicationSourceFactory}.
    * @see #addSource(String) This is a specialization of the addSource call.
    * @see #catalogReplicationSource for a note on this ReplicationSource's lifecycle (and more on
-   * why the special handling).
+   *    why the special handling).
    */
   private ReplicationSourceInterface createCatalogReplicationSource(RegionInfo regionInfo)
       throws IOException {

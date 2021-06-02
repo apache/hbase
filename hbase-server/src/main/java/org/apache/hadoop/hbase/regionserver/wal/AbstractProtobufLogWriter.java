@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
@@ -144,9 +145,22 @@ public abstract class AbstractProtobufLogWriter {
     boolean doCompress = conf.getBoolean(HConstants.ENABLE_WAL_COMPRESSION, false);
     if (doCompress) {
       try {
+        final boolean useTagCompression =
+          conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
+        final boolean useValueCompression =
+          conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
+        final Compression.Algorithm valueCompressionType =
+          useValueCompression ? CompressionContext.getValueCompressionAlgorithm(conf) :
+            Compression.Algorithm.NONE;
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Initializing compression context for {}: isRecoveredEdits={}" +
+            ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}", path,
+            CommonFSUtils.isRecoveredEdits(path), useTagCompression, useValueCompression,
+            valueCompressionType);
+        }
         this.compressionContext =
           new CompressionContext(LRUDictionary.class, CommonFSUtils.isRecoveredEdits(path),
-            conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true));
+            useTagCompression, useValueCompression, valueCompressionType);
       } catch (Exception e) {
         throw new IOException("Failed to initiate CompressionContext", e);
       }
@@ -165,17 +179,29 @@ public abstract class AbstractProtobufLogWriter {
 
     initOutput(fs, path, overwritable, bufferSize, replication, blocksize);
 
-    boolean doTagCompress = doCompress
-        && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
-    length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC, buildWALHeader(conf,
-      WALHeader.newBuilder().setHasCompression(doCompress).setHasTagCompression(doTagCompress))));
+    boolean doTagCompress = doCompress &&
+      conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
+    boolean doValueCompress = doCompress &&
+      conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
+    WALHeader.Builder headerBuilder = WALHeader.newBuilder()
+      .setHasCompression(doCompress)
+      .setHasTagCompression(doTagCompress)
+      .setHasValueCompression(doValueCompress);
+    if (doValueCompress) {
+      headerBuilder.setValueCompressionAlgorithm(
+        CompressionContext.getValueCompressionAlgorithm(conf).ordinal());
+    }
+    length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC,
+      buildWALHeader(conf, headerBuilder)));
 
     initAfterHeader(doCompress);
 
     // instantiate trailer to default value.
     trailer = WALTrailer.newBuilder().build();
+
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Initialized protobuf WAL=" + path + ", compression=" + doCompress);
+      LOG.trace("Initialized protobuf WAL={}, compression={}, tagCompression={}" +
+        ", valueCompression={}", path, doCompress, doTagCompress, doValueCompress);
     }
   }
 

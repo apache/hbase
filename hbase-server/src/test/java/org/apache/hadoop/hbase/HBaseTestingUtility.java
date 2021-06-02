@@ -118,9 +118,9 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -603,8 +603,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
     Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
       "ERROR");
-
-    TraceUtil.initTracer(conf);
 
     this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
         true, null, racks, hosts, null);
@@ -1112,7 +1110,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     Log4jUtils.setLogLevel(org.apache.hadoop.hbase.ScheduledChore.class.getName(), "INFO");
 
     Configuration c = new Configuration(this.conf);
-    TraceUtil.initTracer(c);
     this.hbaseCluster = new MiniHBaseCluster(c, option.getNumMasters(),
       option.getNumAlwaysStandByMasters(), option.getNumRegionServers(), option.getRsPorts(),
       option.getMasterClass(), option.getRsClass());
@@ -2924,9 +2921,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
     //ensure that we have connection to the server before closing down, otherwise
     //the close session event will be eaten out before we start CONNECTING state
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     while (newZK.getState() != States.CONNECTED
-         && System.currentTimeMillis() - start < 1000) {
+         && EnvironmentEdgeManager.currentTime() - start < 1000) {
        Thread.sleep(1);
     }
     newZK.close();
@@ -3975,11 +3972,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public void assertRegionOnServer(
       final RegionInfo hri, final ServerName server,
       final long timeout) throws IOException, InterruptedException {
-    long timeoutTime = System.currentTimeMillis() + timeout;
+    long timeoutTime = EnvironmentEdgeManager.currentTime() + timeout;
     while (true) {
       List<RegionInfo> regions = getAdmin().getRegions(server);
       if (regions.stream().anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0)) return;
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       if (now > timeoutTime) break;
       Thread.sleep(10);
     }
@@ -3994,7 +3991,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public void assertRegionOnlyOnServer(
       final RegionInfo hri, final ServerName server,
       final long timeout) throws IOException, InterruptedException {
-    long timeoutTime = System.currentTimeMillis() + timeout;
+    long timeoutTime = EnvironmentEdgeManager.currentTime() + timeout;
     while (true) {
       List<RegionInfo> regions = getAdmin().getRegions(server);
       if (regions.stream().anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0)) {
@@ -4013,7 +4010,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         }
         return; // good, we are happy
       }
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       if (now > timeoutTime) break;
       Thread.sleep(10);
     }

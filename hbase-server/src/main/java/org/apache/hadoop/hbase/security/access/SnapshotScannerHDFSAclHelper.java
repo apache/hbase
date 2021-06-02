@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -150,11 +151,11 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
   public boolean grantAcl(UserPermission userPermission, Set<String> skipNamespaces,
       Set<TableName> skipTables) {
     try {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       handleGrantOrRevokeAcl(userPermission, HDFSAclOperation.OperationType.MODIFY, skipNamespaces,
         skipTables);
       LOG.info("Set HDFS acl when grant {}, cost {} ms", userPermission,
-        System.currentTimeMillis() - start);
+        EnvironmentEdgeManager.currentTime() - start);
       return true;
     } catch (Exception e) {
       LOG.error("Set HDFS acl error when grant: {}", userPermission, e);
@@ -172,11 +173,11 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
   public boolean revokeAcl(UserPermission userPermission, Set<String> skipNamespaces,
       Set<TableName> skipTables) {
     try {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       handleGrantOrRevokeAcl(userPermission, HDFSAclOperation.OperationType.REMOVE, skipNamespaces,
         skipTables);
       LOG.info("Set HDFS acl when revoke {}, cost {} ms", userPermission,
-        System.currentTimeMillis() - start);
+        EnvironmentEdgeManager.currentTime() - start);
       return true;
     } catch (Exception e) {
       LOG.error("Set HDFS acl error when revoke: {}", userPermission, e);
@@ -191,7 +192,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
    */
   public boolean snapshotAcl(SnapshotDescription snapshot) {
     try {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       TableName tableName = snapshot.getTableName();
       // global user permission can be inherited from default acl automatically
       Set<String> userSet = getUsersWithTableReadAction(tableName, true, false);
@@ -201,7 +202,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
             true, HDFSAclOperation.AclType.DEFAULT_ADN_ACCESS)).get();
       }
       LOG.info("Set HDFS acl when snapshot {}, cost {} ms", snapshot.getName(),
-        System.currentTimeMillis() - start);
+        EnvironmentEdgeManager.currentTime() - start);
       return true;
     } catch (Exception e) {
       LOG.error("Set HDFS acl error when snapshot {}", snapshot, e);
@@ -218,13 +219,13 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
   public boolean removeNamespaceAccessAcl(TableName tableName, Set<String> removeUsers,
       String operation) {
     try {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       if (removeUsers.size() > 0) {
         handleNamespaceAccessAcl(tableName.getNamespaceAsString(), removeUsers,
           HDFSAclOperation.OperationType.REMOVE);
       }
       LOG.info("Remove HDFS acl when {} table {}, cost {} ms", operation, tableName,
-        System.currentTimeMillis() - start);
+        EnvironmentEdgeManager.currentTime() - start);
       return true;
     } catch (Exception e) {
       LOG.error("Remove HDFS acl error when {} table {}", operation, tableName, e);
@@ -240,13 +241,13 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
    */
   public boolean removeNamespaceDefaultAcl(String namespace, Set<String> removeUsers) {
     try {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       Path archiveNsDir = pathHelper.getArchiveNsDir(namespace);
       HDFSAclOperation operation = new HDFSAclOperation(fs, archiveNsDir, removeUsers,
           HDFSAclOperation.OperationType.REMOVE, false, HDFSAclOperation.AclType.DEFAULT);
       operation.handleAcl();
       LOG.info("Remove HDFS acl when delete namespace {}, cost {} ms", namespace,
-        System.currentTimeMillis() - start);
+        EnvironmentEdgeManager.currentTime() - start);
       return true;
     } catch (Exception e) {
       LOG.error("Remove HDFS acl error when delete namespace {}", namespace, e);
@@ -262,13 +263,13 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
    */
   public boolean removeTableDefaultAcl(TableName tableName, Set<String> removeUsers) {
     try {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       Path archiveTableDir = pathHelper.getArchiveTableDir(tableName);
       HDFSAclOperation operation = new HDFSAclOperation(fs, archiveTableDir, removeUsers,
           HDFSAclOperation.OperationType.REMOVE, false, HDFSAclOperation.AclType.DEFAULT);
       operation.handleAcl();
       LOG.info("Remove HDFS acl when delete table {}, cost {} ms", tableName,
-        System.currentTimeMillis() - start);
+        EnvironmentEdgeManager.currentTime() - start);
       return true;
     } catch (Exception e) {
       LOG.error("Remove HDFS acl error when delete table {}", tableName, e);
@@ -284,7 +285,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
    */
   public boolean addTableAcl(TableName tableName, Set<String> users, String operation) {
     try {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       if (users.size() > 0) {
         HDFSAclOperation.OperationType operationType = HDFSAclOperation.OperationType.MODIFY;
         handleNamespaceAccessAcl(tableName.getNamespaceAsString(), users, operationType);
@@ -292,7 +293,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
           operationType);
       }
       LOG.info("Set HDFS acl when {} table {}, cost {} ms", operation, tableName,
-        System.currentTimeMillis() - start);
+        EnvironmentEdgeManager.currentTime() - start);
       return true;
     } catch (Exception e) {
       LOG.error("Set HDFS acl error when {} table {}", operation, tableName, e);
@@ -308,13 +309,13 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
    */
   public boolean removeTableAcl(TableName tableName, Set<String> users) {
     try {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       if (users.size() > 0) {
         handleTableAcl(Sets.newHashSet(tableName), users, new HashSet<>(0), new HashSet<>(0),
           HDFSAclOperation.OperationType.REMOVE);
       }
       LOG.info("Set HDFS acl when create or modify table {}, cost {} ms", tableName,
-        System.currentTimeMillis() - start);
+        EnvironmentEdgeManager.currentTime() - start);
       return true;
     } catch (Exception e) {
       LOG.error("Set HDFS acl error when create or modify table {}", tableName, e);

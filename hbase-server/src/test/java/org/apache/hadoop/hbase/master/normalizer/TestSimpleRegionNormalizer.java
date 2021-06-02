@@ -21,6 +21,7 @@ import static java.lang.String.format;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.DEFAULT_MERGE_MIN_REGION_AGE_DAYS;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_ENABLED_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_MIN_REGION_AGE_DAYS_KEY;
+import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_MIN_REGION_COUNT_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_MIN_REGION_SIZE_MB_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MIN_REGION_COUNT_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.SPLIT_ENABLED_KEY;
@@ -137,7 +138,7 @@ public class TestSimpleRegionNormalizer {
     when(masterServices.getAssignmentManager().getRegionStates()
       .getRegionState(any(RegionInfo.class)))
       .thenReturn(RegionState.createForTesting(null, state));
-    assertThat(normalizer.getMinRegionCount(), greaterThanOrEqualTo(regionInfos.size()));
+    assertThat(normalizer.getMergeMinRegionCount(), greaterThanOrEqualTo(regionInfos.size()));
 
     List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(format("Unexpected plans for RegionState %s", state), plans, empty());
@@ -370,7 +371,19 @@ public class TestSimpleRegionNormalizer {
 
   @Test
   public void testHonorsMinimumRegionCount() {
-    conf.setInt(MIN_REGION_COUNT_KEY, 1);
+    honorsMinimumRegionCount(MERGE_MIN_REGION_COUNT_KEY);
+  }
+
+  /**
+   * Test the backward compatibility of the deprecated MIN_REGION_COUNT_KEY configuration.
+   */
+  @Test
+  public void testHonorsOldMinimumRegionCount() {
+    honorsMinimumRegionCount(MIN_REGION_COUNT_KEY);
+  }
+
+  private void honorsMinimumRegionCount(String confKey) {
+    conf.setInt(confKey, 1);
     final TableName tableName = name.getTableName();
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 3);
     // create a table topology that results in both a merge plan and a split plan. Assert that the
@@ -378,6 +391,7 @@ public class TestSimpleRegionNormalizer {
     // threshold, and that the split plan is create in both cases.
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 1, 10);
     setupMocksForNormalizer(regionSizes, regionInfos);
+    assertEquals(1, normalizer.getMergeMinRegionCount());
 
     List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, contains(
@@ -388,15 +402,29 @@ public class TestSimpleRegionNormalizer {
         .build()));
 
     // have to call setupMocks again because we don't have dynamic config update on normalizer.
-    conf.setInt(MIN_REGION_COUNT_KEY, 4);
+    conf.setInt(confKey, 4);
     setupMocksForNormalizer(regionSizes, regionInfos);
+    assertEquals(4, normalizer.getMergeMinRegionCount());
     assertThat(normalizer.computePlansForTable(tableDescriptor), contains(
       new SplitNormalizationPlan(regionInfos.get(2), 10)));
   }
 
   @Test
   public void testHonorsMinimumRegionCountInTD() {
-    conf.setInt(MIN_REGION_COUNT_KEY, 1);
+    honorsOldMinimumRegionCountInTD(MERGE_MIN_REGION_COUNT_KEY);
+  }
+
+  /**
+   * Test the backward compatibility of the deprecated MIN_REGION_COUNT_KEY configuration in table
+   * descriptor.
+   */
+  @Test
+  public void testHonorsOldMinimumRegionCountInTD() {
+    honorsOldMinimumRegionCountInTD(MIN_REGION_COUNT_KEY);
+  }
+
+  private void honorsOldMinimumRegionCountInTD(String confKey) {
+    conf.setInt(confKey, 1);
     final TableName tableName = name.getTableName();
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 3);
     // create a table topology that results in both a merge plan and a split plan. Assert that the
@@ -404,6 +432,7 @@ public class TestSimpleRegionNormalizer {
     // threshold, and that the split plan is create in both cases.
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 1, 10);
     setupMocksForNormalizer(regionSizes, regionInfos);
+    assertEquals(1, normalizer.getMergeMinRegionCount());
 
     List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, contains(
@@ -413,7 +442,7 @@ public class TestSimpleRegionNormalizer {
         .addTarget(regionInfos.get(1), 1)
         .build()));
 
-    when(tableDescriptor.getValue(MIN_REGION_COUNT_KEY)).thenReturn("4");
+    when(tableDescriptor.getValue(confKey)).thenReturn("4");
     assertThat(normalizer.computePlansForTable(tableDescriptor), contains(
       new SplitNormalizationPlan(regionInfos.get(2), 10)));
   }

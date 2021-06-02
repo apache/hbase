@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -151,7 +152,7 @@ public class TestLogsCleaner {
     final FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(OLD_PROCEDURE_WALS_DIR);
 
-    final long now = System.currentTimeMillis();
+    final long now = EnvironmentEdgeManager.currentTime();
 
     // Case 1: 2 invalid files, which would be deleted directly
     fs.createNewFile(new Path(OLD_WALS_DIR, "a"));
@@ -227,8 +228,8 @@ public class TestLogsCleaner {
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
 
     List<FileStatus> dummyFiles = Arrays.asList(
-        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log1")),
-        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2"))
+      new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(), new Path("log1")),
+      new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(), new Path("log2"))
     );
 
     FaultyZooKeeperWatcher faultyZK =
@@ -287,7 +288,7 @@ public class TestLogsCleaner {
 
     // Subtract 1000 from current time so modtime is for sure older
     // than 'now'.
-    long modTime = System.currentTimeMillis() - 1000;
+    long modTime = EnvironmentEdgeManager.currentTime() - 1000;
     List<FileStatus> dummyFiles = Arrays.asList(
         new FileStatus(100, false, 3, 100, modTime, new Path("log1")),
         new FileStatus(100, false, 3, 100, modTime, new Path("log2"))

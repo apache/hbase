@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.namequeues.SlowLogPersistentService;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,7 +129,7 @@ public class SlowLogQueueService implements NamedQueueService {
     Message param = rpcLogDetails.getParam();
     long receiveTime = rpcCall.getReceiveTime();
     long startTime = rpcCall.getStartTime();
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTime();
     int processingTime = (int) (endTime - startTime);
     int qTime = (int) (startTime - receiveTime);
     final SlowLogParams slowLogParams = ProtobufUtil.getSlowLogParams(param);

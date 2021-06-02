@@ -346,9 +346,9 @@ public class TestHRegion {
       }
 
       @Override
-      public void sync(long txid) throws IOException {
+      protected void doSync(long txid, boolean forceSync) throws IOException {
         storeFlushCtx.prepare();
-        super.sync(txid);
+        super.doSync(txid, forceSync);
       }
     }
 
@@ -1659,11 +1659,11 @@ public class TestHRegion {
 
   private void waitForCounter(MetricsWALSource source, String metricName, long expectedCount)
       throws InterruptedException {
-    long startWait = System.currentTimeMillis();
+    long startWait = EnvironmentEdgeManager.currentTime();
     long currentCount;
     while ((currentCount = metricsAssertHelper.getCounter(metricName, source)) < expectedCount) {
       Thread.sleep(100);
-      if (System.currentTimeMillis() - startWait > 10000) {
+      if (EnvironmentEdgeManager.currentTime() - startWait > 10000) {
         fail(String.format("Timed out waiting for '%s' >= '%s', currentCount=%s", metricName,
             expectedCount, currentCount));
       }
@@ -1897,7 +1897,7 @@ public class TestHRegion {
     // Setting up region
     this.region = initHRegion(tableName, method, CONF, fam1);
     // Putting data in key
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     Put put = new Put(row1);
     put.addColumn(fam1, qf1, now, val1);
     region.put(put);
@@ -2044,7 +2044,7 @@ public class TestHRegion {
     region.put(put);
 
     // Creating put to add
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     KeyValue kv = new KeyValue(row1, fam2, qf1, ts, KeyValue.Type.Put, val2);
     put = new Put(row1);
     put.add(kv);
@@ -2496,7 +2496,7 @@ public class TestHRegion {
     // Setting up region
     this.region = initHRegion(tableName, method, CONF, fam1);
     // Putting data in key
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     Put put = new Put(row1);
     put.addColumn(fam1, qf1, now, val1);
     region.put(put);
@@ -2654,7 +2654,7 @@ public class TestHRegion {
     region.put(put);
 
     // Creating put to add
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     KeyValue kv = new KeyValue(row1, fam2, qf1, ts, KeyValue.Type.Put, val2);
     put = new Put(row1);
     put.add(kv);
@@ -3335,7 +3335,7 @@ public class TestHRegion {
       region.put(new Put(row).addColumn(fam, Bytes.toBytes("qual"), Bytes.toBytes("value")));
       // TS out of range. should error
       region.put(new Put(row).addColumn(fam, Bytes.toBytes("qual"),
-          System.currentTimeMillis() + 2000, Bytes.toBytes("value")));
+        EnvironmentEdgeManager.currentTime() + 2000, Bytes.toBytes("value")));
       fail("Expected IOE for TS out of configured timerange");
     } catch (FailedSanityCheckException ioe) {
       LOG.debug("Received expected exception", ioe);
@@ -3396,7 +3396,7 @@ public class TestHRegion {
       .setRow(row)
       .setFamily(COLUMN_FAMILY_BYTES)
       .setQualifier(qual1)
-      .setTimestamp(System.currentTimeMillis())
+      .setTimestamp(EnvironmentEdgeManager.currentTime())
       .setType(KeyValue.Type.Put.getCode())
       .setValue(value1)
       .build();
@@ -3406,7 +3406,7 @@ public class TestHRegion {
       .setRow(row)
       .setFamily(COLUMN_FAMILY_BYTES)
       .setQualifier(qual1)
-      .setTimestamp(System.currentTimeMillis())
+      .setTimestamp(EnvironmentEdgeManager.currentTime())
       .setType(KeyValue.Type.Put.getCode())
       .setValue(Bytes.toBytes("xxxxxxxxxx"))
       .build();
@@ -3551,7 +3551,7 @@ public class TestHRegion {
 
     // extract the key values out the memstore:
     // This is kinda hacky, but better than nothing...
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     AbstractMemStore memstore = (AbstractMemStore) region.getStore(fam1).memstore;
     Cell firstCell = memstore.getActive().first();
     assertTrue(firstCell.getTimestamp() <= now);
@@ -3825,7 +3825,7 @@ public class TestHRegion {
     byte[] fam4 = Bytes.toBytes("fam4");
 
     byte[][] families = { fam1, fam2, fam3, fam4 };
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
 
     // Setting up region
     this.region = initHRegion(tableName, method, CONF, families);
@@ -3883,7 +3883,7 @@ public class TestHRegion {
     byte[] fam1 = Bytes.toBytes("fam1");
     byte[][] families = { fam1 };
 
-    long ts1 = System.currentTimeMillis();
+    long ts1 = EnvironmentEdgeManager.currentTime();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 
@@ -3936,7 +3936,7 @@ public class TestHRegion {
     byte[] fam1 = Bytes.toBytes("fam1");
     byte[][] families = { fam1 };
 
-    long ts1 = 1; // System.currentTimeMillis();
+    long ts1 = 1;
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 
@@ -4070,7 +4070,7 @@ public class TestHRegion {
     byte[] fam1 = Bytes.toBytes("fam1");
     byte[][] families = { fam1 };
 
-    long ts1 = System.currentTimeMillis();
+    long ts1 = EnvironmentEdgeManager.currentTime();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 
@@ -4124,7 +4124,7 @@ public class TestHRegion {
     byte[] qf2 = Bytes.toBytes("qualifier2");
     byte[] fam1 = Bytes.toBytes("fam1");
 
-    long ts1 = 1; // System.currentTimeMillis();
+    long ts1 = 1;
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 
@@ -4505,7 +4505,7 @@ public class TestHRegion {
         region.put(put);
 
         if (i != 0 && i % compactInterval == 0) {
-          LOG.debug("iteration = " + i+ " ts="+System.currentTimeMillis());
+          LOG.debug("iteration = " + i+ " ts=" + EnvironmentEdgeManager.currentTime());
           region.compact(true);
         }
 
@@ -4524,7 +4524,7 @@ public class TestHRegion {
           if (!toggle) {
             flushThread.flush();
           }
-          assertEquals("toggle="+toggle+"i=" + i + " ts="+System.currentTimeMillis(),
+          assertEquals("toggle="+toggle+"i=" + i + " ts=" + EnvironmentEdgeManager.currentTime(),
               expectedCount, res.size());
           toggle = !toggle;
         }
@@ -5612,7 +5612,7 @@ public class TestHRegion {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     TableDescriptor tableDescriptor = builder.build();
-    long time = System.currentTimeMillis();
+    long time = EnvironmentEdgeManager.currentTime();
     RegionInfo primaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
       .setRegionId(time).setReplicaId(0).build();
     RegionInfo secondaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
@@ -5661,7 +5661,7 @@ public class TestHRegion {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     TableDescriptor tableDescriptor = builder.build();
-    long time = System.currentTimeMillis();
+    long time = EnvironmentEdgeManager.currentTime();
     RegionInfo primaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
       .setRegionId(time).setReplicaId(0).build();
     RegionInfo secondaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
@@ -5719,7 +5719,7 @@ public class TestHRegion {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     TableDescriptor tableDescriptor = builder.build();
-    long time = System.currentTimeMillis();
+    long time = EnvironmentEdgeManager.currentTime();
     RegionInfo primaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
       .setRegionId(time).setReplicaId(0).build();
     RegionInfo secondaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
