@@ -269,10 +269,10 @@ public final class ServerMetricsBuilder {
     private final Map<byte[], UserMetrics> userMetrics;
 
     ServerMetricsImpl(ServerName serverName, int versionNumber, String version,
-        long requestCountPerSecond, long requestCount, long readRequestsCount, long writeRequestsCount, Size usedHeapSize, Size maxHeapSize,
-        int infoServerPort, List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
-        Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
-        long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics) {
+        long requestCountPerSecond, long requestCount, long readRequestsCount, long writeRequestsCount,
+        Size usedHeapSize, Size maxHeapSize, int infoServerPort, List<ReplicationLoadSource> sources,
+        ReplicationLoadSink sink, Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames,
+        long reportTimestamp, long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics) {
       this.serverName = Preconditions.checkNotNull(serverName);
       this.versionNumber = versionNumber;
       this.version = version;
