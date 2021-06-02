@@ -23,7 +23,7 @@ Copyright ${project.inceptionYear}-${copyright-end-year} The Apache Software Fou
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
 ## Specially handled included deps. e.g. ASL2.0 works that have additional bundled works but
-#set($bundled-boostrap = ${bundled-boostrap.equalsIgnoreCase("true")})
+#set($bundled-bootstrap = ${bundled-bootstrap.equalsIgnoreCase("true")})
 #set($bundled-logo = ${bundled-logo.equalsIgnoreCase("true")})
 #set($bundled-dependencies = ${bundled-dependencies.equalsIgnoreCase("true")})
 #if($bundled-bootstrap || $bundled-logo || $bundled-dependencies)
