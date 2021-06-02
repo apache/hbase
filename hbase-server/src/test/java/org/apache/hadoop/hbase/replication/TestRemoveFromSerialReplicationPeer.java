@@ -25,9 +25,13 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -89,13 +93,17 @@ public class TestRemoveFromSerialReplicationPeer extends SerialReplicationTestBa
     waitUntilHasLastPushedSequenceId(region);
 
     UTIL.getAdmin().updateReplicationPeerConfig(PEER_ID,
-      ReplicationPeerConfig.newBuilder(peerConfig).setTableCFsMap(Collections.emptyMap()).build());
+      ReplicationPeerConfig.newBuilder(peerConfig)
+        .setTableCFsMap(Collections.emptyMap())
+        .setReplicateAllUserTables(true)
+        .setExcludeTableCFsMap(ImmutableMap.of(tableName, Collections.emptyList())).build());
 
     ReplicationQueueStorage queueStorage =
       UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
     assertEquals(HConstants.NO_SEQNUM,
       queueStorage.getLastSequenceId(region.getEncodedName(), PEER_ID));
   }
+
 
   @Test
   public void testRemoveSerialFlag() throws Exception {

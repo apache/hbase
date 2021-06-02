@@ -73,8 +73,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,6 +93,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationEndpoint.class);
 
   static int numRegionServers;
+
+  @Rule
+  public final TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -310,25 +315,25 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       .setReplicateAllUserTables(false)
       // sets namespaces
       .setNamespaces(namespaces).build();
-    hbaseAdmin.addReplicationPeer("testNamespacesMutualExclusiveScopesWALEntryFilter", rpc);
+    hbaseAdmin.addReplicationPeer(name.getMethodName(), rpc);
     ChainWALEntryFilter filter = (ChainWALEntryFilter)
       SelfWrappedReplicationEndpointForTest.endpoint.getWALEntryfilter();
     //The above peer config should always create exactly one filter of type
     assertEquals(1, filter.filters.length);
     //We had set namespaces, so it should be a NamespaceTableCfWALEntryFilter
     assertTrue(filter.filters[0] instanceof NamespaceTableCfWALEntryFilter);
-    hbaseAdmin.removeReplicationPeer("testNamespacesMutualExclusiveScopesWALEntryFilter");
+    hbaseAdmin.removeReplicationPeer(name.getMethodName());
     rpc = ReplicationPeerConfig.newBuilder()
       .setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
       .setReplicationEndpointImpl(SelfWrappedReplicationEndpointForTest.class.getName())
       .build();
-    hbaseAdmin.addReplicationPeer("testNamespacesMutualExclusiveScopesWALEntryFilter", rpc);
+    hbaseAdmin.addReplicationPeer(name.getMethodName(), rpc);
     filter = (ChainWALEntryFilter)
       SelfWrappedReplicationEndpointForTest.endpoint.getWALEntryfilter();
     assertEquals(1, filter.filters.length);
     //We had not set namespaces nor tableCfsMap, so it should be a ScopeWALEntryFilter
     assertTrue(filter.filters[0] instanceof ScopeWALEntryFilter);
-    hbaseAdmin.removeReplicationPeer("testNamespacesMutualExclusiveScopesWALEntryFilter");
+    hbaseAdmin.removeReplicationPeer(name.getMethodName());
     Map<TableName,List<String>> tableCfsMap = new HashMap<>();
     tableCfsMap.put(TableName.valueOf("test-tbl"), new ArrayList<>());
     rpc = ReplicationPeerConfig.newBuilder()
@@ -337,13 +342,13 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       .setReplicateAllUserTables(false)
       .setTableCFsMap(tableCfsMap)
       .build();
-    hbaseAdmin.addReplicationPeer("testNamespacesMutualExclusiveScopesWALEntryFilter", rpc);
+    hbaseAdmin.addReplicationPeer(name.getMethodName(), rpc);
     filter = (ChainWALEntryFilter)
       SelfWrappedReplicationEndpointForTest.endpoint.getWALEntryfilter();
     assertEquals(1, filter.filters.length);
     //We had set tableCfsMap, so it should be a NamespaceTableCfWALEntryFilter
     assertTrue(filter.filters[0] instanceof NamespaceTableCfWALEntryFilter);
-    hbaseAdmin.removeReplicationPeer("testNamespacesMutualExclusiveScopesWALEntryFilter");
+    hbaseAdmin.removeReplicationPeer(name.getMethodName());
   }
 
 
@@ -447,11 +452,11 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     // after calling #setAgeOfLastShippedOpByTable
     boolean containsRandomNewTable = source.getSingleSourceSourceByTable()
         .containsKey("RandomNewTable");
-    assertEquals(false, containsRandomNewTable);
+    Assert.assertEquals(false, containsRandomNewTable);
     source.updateTableLevelMetrics(createWALEntriesWithSize("RandomNewTable"));
     containsRandomNewTable = source.getSingleSourceSourceByTable()
         .containsKey("RandomNewTable");
-    assertEquals(true, containsRandomNewTable);
+    Assert.assertEquals(true, containsRandomNewTable);
     MetricsReplicationTableSource msr = source.getSingleSourceSourceByTable()
         .get("RandomNewTable");
 

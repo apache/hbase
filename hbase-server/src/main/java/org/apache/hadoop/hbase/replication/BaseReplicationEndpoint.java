@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,11 +106,13 @@ public abstract class BaseReplicationEndpoint extends AbstractService
    * return null if they don't want this filter */
   protected WALEntryFilter getNamespaceTableCfWALEntryFilter() {
     //If none of the below sets are defined, there's no reason to create this filter
-    if(ctx.getPeerConfig().getNamespaces()==null && ctx.getPeerConfig().getTableCFsMap()==null
-        && ctx.getPeerConfig().getExcludeNamespaces()==null
-        && ctx.getPeerConfig().getExcludeTableCFsMap()==null) {
+    if(CollectionUtils.isEmpty(ctx.getPeerConfig().getNamespaces())
+        && MapUtils.isEmpty(ctx.getPeerConfig().getTableCFsMap())
+        && CollectionUtils.isEmpty(ctx.getPeerConfig().getExcludeNamespaces())
+        && MapUtils.isEmpty(ctx.getPeerConfig().getExcludeTableCFsMap())) {
       return null;
     }
+
     return new NamespaceTableCfWALEntryFilter(ctx.getReplicationPeer());
   }
 
