@@ -306,9 +306,7 @@ public class TestRegionsRecoveryChore {
       }
 
       @Override
-      public long getRequestCountPerSecond() {
-        return 0;
-      }
+      public long getRequestCountPerSecond() { return 0; }
 
       @Override
       public long getRequestCount() {
