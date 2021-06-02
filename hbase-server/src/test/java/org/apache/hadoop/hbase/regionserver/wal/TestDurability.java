@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -124,7 +125,8 @@ public class TestDurability {
   @Test
   public void testDurability() throws Exception {
     WALFactory wals = new WALFactory(CONF,
-        ServerName.valueOf("TestDurability", 16010, System.currentTimeMillis()).toString());
+      ServerName.valueOf("TestDurability", 16010, EnvironmentEdgeManager.currentTime())
+        .toString());
     HRegion region = createHRegion(wals, Durability.USE_DEFAULT);
     WAL wal = region.getWAL();
     HRegion deferredRegion = createHRegion(region.getTableDescriptor(), region.getRegionInfo(),
@@ -188,7 +190,8 @@ public class TestDurability {
 
     // Setting up region
     WALFactory wals = new WALFactory(CONF,
-        ServerName.valueOf("TestIncrement", 16010, System.currentTimeMillis()).toString());
+      ServerName.valueOf("TestIncrement", 16010, EnvironmentEdgeManager.currentTime())
+        .toString());
     HRegion region = createHRegion(wals, Durability.USE_DEFAULT);
     WAL wal = region.getWAL();
 
@@ -253,9 +256,9 @@ public class TestDurability {
 
     // Setting up region
     WALFactory wals = new WALFactory(CONF,
-        ServerName
-            .valueOf("testIncrementWithReturnResultsSetToFalse", 16010, System.currentTimeMillis())
-            .toString());
+      ServerName.valueOf("testIncrementWithReturnResultsSetToFalse",
+        16010, EnvironmentEdgeManager.currentTime())
+          .toString());
     HRegion region = createHRegion(wals, Durability.USE_DEFAULT);
 
     Increment inc1 = new Increment(row1);

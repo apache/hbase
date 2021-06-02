@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -139,7 +140,7 @@ public class TestCellComparator {
    */
   @Test
   public void testMetaComparisons() throws Exception {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
 
     // Meta compares
     Cell aaa = createByteBufferKeyValueFromKeyValue(new KeyValue(
@@ -176,7 +177,7 @@ public class TestCellComparator {
    */
   @Test
   public void testMetaComparisons2() {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     CellComparator c = MetaCellComparator.META_COMPARATOR;
     assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
             Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now)),

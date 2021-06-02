@@ -21,15 +21,16 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 
 public class CloneSnapshotFromClientErrorTestBase extends CloneSnapshotFromClientTestBase {
 
   @Test(expected = SnapshotDoesNotExistException.class)
   public void testCloneNonExistentSnapshot() throws IOException, InterruptedException {
-    String snapshotName = "random-snapshot-" + System.currentTimeMillis();
+    String snapshotName = "random-snapshot-" + EnvironmentEdgeManager.currentTime();
     final TableName tableName =
-      TableName.valueOf(getValidMethodName() + "-" + System.currentTimeMillis());
+      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     admin.cloneSnapshot(snapshotName, tableName);
   }
 

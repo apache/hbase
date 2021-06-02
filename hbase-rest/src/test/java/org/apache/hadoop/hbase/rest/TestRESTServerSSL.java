@@ -40,6 +40,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import sun.security.x509.AlgorithmId;
 
 @Category({ RestTests.class, MediumTests.class})
 public class TestRESTServerSSL {
@@ -59,6 +60,10 @@ public class TestRESTServerSSL {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    // Workaround for jdk8 252 bug. See https://github.com/bcgit/bc-java/issues/941
+    // Below is a workaround described in above URL. Issue fingered first in comments in
+    // HBASE-25920 Support Hadoop 3.3.1
+    AlgorithmId.get("PBEWithSHA1AndDESede");
     keyDir = initKeystoreDir();
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
     X509Certificate serverCertificate = KeyStoreTestUtil.generateCertificate(

@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -50,10 +51,9 @@ public class TestCoprocessorStop {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorStop.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final String MASTER_FILE =
-                              "master" + System.currentTimeMillis();
-  private static final String REGIONSERVER_FILE =
-                              "regionserver" + System.currentTimeMillis();
+  private static final String MASTER_FILE = "master" + EnvironmentEdgeManager.currentTime();
+  private static final String REGIONSERVER_FILE = "regionserver" +
+    EnvironmentEdgeManager.currentTime();
 
   public static class FooCoprocessor implements MasterCoprocessor, RegionServerCoprocessor {
     @Override

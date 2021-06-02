@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HealthChecker.HealthCheckerExitStatus;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -62,8 +63,9 @@ public class HealthCheckChore extends ScheduledChore {
             + " number of times consecutively.");
       }
       // Always log health report.
-      LOG.info("Health status at " + StringUtils.formatTime(System.currentTimeMillis()) + " : "
-          + report.getHealthReport());
+      LOG.info("Health status at " +
+        StringUtils.formatTime(EnvironmentEdgeManager.currentTime()) + " : " +
+          report.getHealthReport());
     }
   }
 
@@ -73,9 +75,9 @@ public class HealthCheckChore extends ScheduledChore {
       // First time we are seeing a failure. No need to stop, just
       // record the time.
       numTimesUnhealthy++;
-      startWindow = System.currentTimeMillis();
+      startWindow = EnvironmentEdgeManager.currentTime();
     } else {
-      if ((System.currentTimeMillis() - startWindow) < failureWindow) {
+      if ((EnvironmentEdgeManager.currentTime() - startWindow) < failureWindow) {
         numTimesUnhealthy++;
         if (numTimesUnhealthy == threshold) {
           stop = true;
@@ -85,7 +87,7 @@ public class HealthCheckChore extends ScheduledChore {
       } else {
         // Outside of failure window, so we reset to 1.
         numTimesUnhealthy = 1;
-        startWindow = System.currentTimeMillis();
+        startWindow = EnvironmentEdgeManager.currentTime();
         stop = false;
       }
     }

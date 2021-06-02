@@ -179,10 +179,10 @@ space. The only way to stop using the space of a particular MOB hfile is to ensu
 hold references to it. To do that we need to ensure we have written the current values into a new
 MOB hfile. If our backing filesystem has a limitation on the number of files that can be present, as
 HDFS does, then even if we do not have deletes or updates of MOB cells eventually there will be a
-sufficient number of MOB hfiles that we will need to coallesce them.
+sufficient number of MOB hfiles that we will need to coalesce them.
 
 Periodically a chore in the master coordinates having the region servers
-perform a special major compaction that also handles rewritting new MOB files. Like all compactions
+perform a special major compaction that also handles rewriting new MOB files. Like all compactions
 the Region Server will create updated hfiles that hold both the cells that are smaller than the MOB
 threshold and cells that hold references to the newly rewritten MOB file. Because this rewriting has
 the advantage of looking across all active cells for the region our several small MOB files should
@@ -237,7 +237,7 @@ To determine if a MOB HFile meets the second criteria the chore extracts metadat
 HFiles for each MOB enabled column family for a given table. That metadata enumerates the complete
 set of MOB HFiles needed to satisfy the references stored in the normal HFile area.
 
-The period of the cleaner chore can be configued by setting `hbase.master.mob.cleaner.period` to a
+The period of the cleaner chore can be configured by setting `hbase.master.mob.cleaner.period` to a
 positive integer number of seconds. It defaults to running daily. You should not need to tune it
 unless you have a very aggressive TTL or a very high rate of MOB updates with a correspondingly
 high rate of non-MOB compactions.
@@ -247,7 +247,7 @@ high rate of non-MOB compactions.
 ==== Further limiting write amplification
 
 If your MOB workload has few to no updates or deletes then you can opt-in to MOB compactions that
-optimize for limiting the amount of write amplification. It acheives this by setting a
+optimize for limiting the amount of write amplification. It achieves this by setting a
 size threshold to ignore MOB files during the compaction process. When a given region goes
 through MOB compaction it will evaluate the size of the MOB file that currently holds the actual
 value and skip rewriting the value if that file is over threshold.
@@ -629,7 +629,7 @@ HBase upgrades.
 
 Prior to the work in HBASE-22749, "Distributed MOB compactions", HBase had the Master coordinate all
 compaction maintenance of the MOB hfiles. Centralizing management of the MOB data allowed for space
-optimizations but safely coordinating that managemet with Region Servers resulted in edge cases that
+optimizations but safely coordinating that management with Region Servers resulted in edge cases that
 caused data loss (ref link:https://issues.apache.org/jira/browse/HBASE-22075[HBASE-22075]).
 
 Users of the MOB feature upgrading to a version of HBase that includes HBASE-22749 should be aware

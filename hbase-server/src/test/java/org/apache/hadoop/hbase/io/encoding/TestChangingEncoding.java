@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -237,14 +238,14 @@ public class TestChangingEncoding {
     admin.majorCompact(tableName);
 
     // Waiting for the compaction to start, at least .5s.
-    final long maxWaitime = System.currentTimeMillis() + 500;
+    final long maxWaitime = EnvironmentEdgeManager.currentTime() + 500;
     boolean cont;
     do {
-      cont = rs.compactSplitThread.getCompactionQueueSize() == 0;
+      cont = rs.getCompactSplitThread().getCompactionQueueSize() == 0;
       Threads.sleep(1);
-    } while (cont && System.currentTimeMillis() < maxWaitime);
+    } while (cont && EnvironmentEdgeManager.currentTime() < maxWaitime);
 
-    while (rs.compactSplitThread.getCompactionQueueSize() > 0) {
+    while (rs.getCompactSplitThread().getCompactionQueueSize() > 0) {
       Threads.sleep(1);
     }
     LOG.debug("Compaction queue size reached 0, continuing");

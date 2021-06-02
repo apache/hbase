@@ -29,9 +29,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Sends responses of RPC back to clients.
@@ -162,7 +163,7 @@ class SimpleRpcServerResponder extends Thread {
    * @return the time of the purge.
    */
   private long purge(long lastPurgeTime) {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     if (now < lastPurgeTime + this.simpleRpcServer.purgeTimeout) {
       return lastPurgeTime;
     }
@@ -247,7 +248,7 @@ class SimpleRpcServerResponder extends Thread {
       return true;
     } else {
       // set the serve time when the response has to be sent later
-      conn.lastSentTime = System.currentTimeMillis();
+      conn.lastSentTime = EnvironmentEdgeManager.currentTime();
       return false; // Socket can't take more, we will have to come back.
     }
   }

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -62,7 +63,7 @@ public class TestDumpReplicationQueues {
     when(zkWatcherMock.getRecoverableZooKeeper()).thenReturn(recoverableZooKeeperMock);
     when(zkWatcherMock.getZNodePaths()).thenReturn(zNodePath);
     List<String> nodes = new ArrayList<>();
-    String server = "rs1,60030,"+System.currentTimeMillis();
+    String server = "rs1,60030," + EnvironmentEdgeManager.currentTime();
     nodes.add(server);
     when(recoverableZooKeeperMock.getChildren("/hbase/rs", null)).thenReturn(nodes);
     when(recoverableZooKeeperMock.getChildren("/hbase/replication/rs", null)).

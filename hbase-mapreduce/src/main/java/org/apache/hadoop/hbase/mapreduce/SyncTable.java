@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
@@ -493,7 +494,7 @@ public class SyncTable extends Configured implements Tool {
             sourceCell.getFamilyOffset(), sourceCell.getFamilyLength())
           .setQualifier(sourceCell.getQualifierArray(),
             sourceCell.getQualifierOffset(), sourceCell.getQualifierLength())
-          .setTimestamp(System.currentTimeMillis())
+          .setTimestamp(EnvironmentEdgeManager.currentTime())
           .setValue(sourceCell.getValueArray(),
             sourceCell.getValueOffset(), sourceCell.getValueLength()).build();
       }

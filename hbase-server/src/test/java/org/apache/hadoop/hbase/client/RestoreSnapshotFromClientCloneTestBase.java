@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 
 public class RestoreSnapshotFromClientCloneTestBase extends RestoreSnapshotFromClientTestBase {
@@ -27,7 +28,7 @@ public class RestoreSnapshotFromClientCloneTestBase extends RestoreSnapshotFromC
   @Test
   public void testCloneSnapshotOfCloned() throws IOException, InterruptedException {
     TableName clonedTableName =
-      TableName.valueOf(getValidMethodName() + "-" + System.currentTimeMillis());
+      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, getNumReplicas());

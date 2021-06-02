@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -117,8 +118,8 @@ public class TestMemStoreSegmentsIterator {
     final byte[] f = Bytes.toBytes(FAMILY);
     final byte[] q = Bytes.toBytes(COLUMN);
     final byte[] v = Bytes.toBytes(3);
-    final KeyValue kv1 = new KeyValue(one, f, q, System.currentTimeMillis(), v);
-    final KeyValue kv2 = new KeyValue(two, f, q, System.currentTimeMillis(), v);
+    final KeyValue kv1 = new KeyValue(one, f, q, EnvironmentEdgeManager.currentTime(), v);
+    final KeyValue kv2 = new KeyValue(two, f, q, EnvironmentEdgeManager.currentTime(), v);
     // the seqId of first cell less than Integer.MAX_VALUE,
     // the seqId of second cell greater than integer.MAX_VALUE
     kv1.setSequenceId(LESS_THAN_INTEGER_MAX_VALUE_SEQ_ID);

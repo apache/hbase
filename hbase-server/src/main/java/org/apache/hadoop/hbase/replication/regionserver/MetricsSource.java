@@ -300,6 +300,15 @@ public class MetricsSource implements BaseSource {
     return singleSourceSource.getSizeOfLogQueue();
   }
 
+
+  /**
+   * Get the value of uncleanlyClosedWAL counter
+   * @return uncleanlyClosedWAL
+   */
+  public long getUncleanlyClosedWALs() {
+    return singleSourceSource.getUncleanlyClosedWALs();
+  }
+
   /**
    * Get the timestampsOfLastShippedOp, if there are multiple groups, return the latest one
    * @return lastTimestampForAge

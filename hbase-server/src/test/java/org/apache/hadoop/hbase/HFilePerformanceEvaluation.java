@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * This class runs performance benchmarks for {@link HFile}.
@@ -331,7 +332,7 @@ public class HFilePerformanceEvaluation {
     long run() throws Exception {
       long elapsedTime;
       setUp();
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       try {
         for (int i = 0; i < totalRows; i++) {
           if (i > 0 && i % getReportingPeriod() == 0) {
@@ -339,7 +340,7 @@ public class HFilePerformanceEvaluation {
           }
           doRow(i);
         }
-        elapsedTime = System.currentTimeMillis() - startTime;
+        elapsedTime = EnvironmentEdgeManager.currentTime() - startTime;
       } finally {
         tearDown();
       }

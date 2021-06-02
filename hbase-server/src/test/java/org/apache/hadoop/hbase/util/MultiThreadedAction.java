@@ -158,7 +158,7 @@ public abstract class MultiThreadedAction {
     this.endKey = endKey;
     this.numThreads = numThreads;
     (new Thread(new ProgressReporter(actionLetter),
-        "MultiThreadedAction-ProgressReporter-" + System.currentTimeMillis())).start();
+        "MultiThreadedAction-ProgressReporter-" + EnvironmentEdgeManager.currentTime())).start();
   }
 
   private static String formatTime(long elapsedTime) {
@@ -182,7 +182,7 @@ public abstract class MultiThreadedAction {
 
     @Override
     public void run() {
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       long priorNumKeys = 0;
       long priorCumulativeOpTime = 0;
       int priorAverageKeysPerSecond = 0;
@@ -197,7 +197,7 @@ public abstract class MultiThreadedAction {
           LOG.info(threadsLeft + "Number of keys = 0");
         } else {
           long numKeys = MultiThreadedAction.this.numKeys.get();
-          long time = System.currentTimeMillis() - startTime;
+          long time = EnvironmentEdgeManager.currentTime() - startTime;
           long totalOpTime = totalOpTimeMs.get();
 
           long numKeysDelta = numKeys - priorNumKeys;

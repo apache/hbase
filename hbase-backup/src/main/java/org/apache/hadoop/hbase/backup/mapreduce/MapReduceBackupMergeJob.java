@@ -18,15 +18,15 @@
 package org.apache.hadoop.hbase.backup.mapreduce;
 
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
-
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
-
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -240,13 +240,12 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
    * @throws IOException exception
    */
   protected void copyFile(FileSystem fs, Path p, Path newPath) throws IOException {
-    File f = File.createTempFile("data", "meta");
-    Path localPath = new Path(f.getAbsolutePath());
-    fs.copyToLocalFile(p, localPath);
-    fs.copyFromLocalFile(localPath, newPath);
+    try (InputStream in = fs.open(p); OutputStream out = fs.create(newPath, true)) {
+      IOUtils.copy(in, out);
+    }
     boolean exists = fs.exists(newPath);
     if (!exists) {
-      throw new IOException("Failed to copy meta file to: "+ newPath);
+      throw new IOException("Failed to copy meta file to: " + newPath);
     }
   }
 

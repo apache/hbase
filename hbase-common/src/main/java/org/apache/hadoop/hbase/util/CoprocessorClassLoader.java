@@ -174,7 +174,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
       for (Path path : FileUtil.stat2Paths(fileStatuses)) {  // for each file that match the pattern
         if (fs.isFile(path)) {  // only process files, skip for directories
           File dst = new File(parentDirStr, "." + pathPrefix + "."
-            + path.getName() + "." + System.currentTimeMillis() + ".jar");
+            + path.getName() + "." + EnvironmentEdgeManager.currentTime() + ".jar");
           fs.copyToLocalFile(path, new Path(dst.toString()));
           dst.deleteOnExit();
 
@@ -188,7 +188,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
               Matcher m = libJarPattern.matcher(entry.getName());
               if (m.matches()) {
                 File file = new File(parentDirStr, "." + pathPrefix + "."
-                  + path.getName() + "." + System.currentTimeMillis() + "." + m.group(1));
+                  + path.getName() + "." + EnvironmentEdgeManager.currentTime() + "." + m.group(1));
                 try (FileOutputStream outStream = new FileOutputStream(file)) {
                   IOUtils.copyBytes(jarFile.getInputStream(entry),
                     outStream, conf, true);

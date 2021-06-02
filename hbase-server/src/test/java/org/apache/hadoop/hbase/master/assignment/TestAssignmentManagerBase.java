@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Before;
@@ -309,7 +310,8 @@ public abstract class TestAssignmentManagerBase {
     ServerName newSn = ServerName.valueOf("localhost", 10000 + newRsAdded, 1);
     newRsAdded++;
     try {
-      this.master.getServerManager().regionServerReport(newSn, ServerMetricsBuilder.of(newSn));
+      this.master.getServerManager().regionServerReport(newSn, ServerMetricsBuilder
+        .newBuilder(newSn).setLastReportTimestamp(EnvironmentEdgeManager.currentTime()).build());
     } catch (YouAreDeadException e) {
       // should not happen
       throw new UncheckedIOException(e);

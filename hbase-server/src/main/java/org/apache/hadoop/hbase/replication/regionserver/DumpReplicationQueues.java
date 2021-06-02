@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
@@ -208,8 +209,9 @@ public class DumpReplicationQueues extends Configured implements Tool {
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
 
-    ZKWatcher zkw = new ZKWatcher(conf, "DumpReplicationQueues" + System.currentTimeMillis(),
-        new WarnOnlyAbortable(), true);
+    ZKWatcher zkw = new ZKWatcher(conf, "DumpReplicationQueues" +
+        EnvironmentEdgeManager.currentTime(),
+      new WarnOnlyAbortable(), true);
 
     try {
       // Our zk watcher

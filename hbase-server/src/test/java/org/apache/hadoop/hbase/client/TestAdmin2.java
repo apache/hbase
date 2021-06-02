@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.Assert;
@@ -274,8 +275,8 @@ public class TestAdmin2 extends TestAdminBase {
     }
     boolean isInList = ProtobufUtil.getOnlineRegions(
       rs.getRSRpcServices()).contains(info);
-    long timeout = System.currentTimeMillis() + 10000;
-    while ((System.currentTimeMillis() < timeout) && (isInList)) {
+    long timeout = EnvironmentEdgeManager.currentTime() + 10000;
+    while ((EnvironmentEdgeManager.currentTime() < timeout) && (isInList)) {
       Thread.sleep(100);
       isInList = ProtobufUtil.getOnlineRegions(
         rs.getRSRpcServices()).contains(info);
@@ -328,8 +329,8 @@ public class TestAdmin2 extends TestAdminBase {
 
     boolean isInList = ProtobufUtil.getOnlineRegions(
       rs.getRSRpcServices()).contains(info);
-    long timeout = System.currentTimeMillis() + 10000;
-    while ((System.currentTimeMillis() < timeout) && (isInList)) {
+    long timeout = EnvironmentEdgeManager.currentTime() + 10000;
+    while ((EnvironmentEdgeManager.currentTime() < timeout) && (isInList)) {
       Thread.sleep(100);
       isInList = ProtobufUtil.getOnlineRegions(
         rs.getRSRpcServices()).contains(info);

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -178,7 +179,7 @@ public class TestMobStoreScanner {
   public void testReadPt() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     setUp(0L, tableName);
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     byte[] value1 = Bytes.toBytes("value1");
     Put put1 = new Put(row1);
     put1.addColumn(family, qf1, ts, value1);
@@ -278,7 +279,7 @@ public class TestMobStoreScanner {
   private void testGet(TableName tableName, boolean reversed, boolean doFlush)
       throws Exception {
     setUp(defaultThreshold, tableName);
-    long ts1 = System.currentTimeMillis();
+    long ts1 = EnvironmentEdgeManager.currentTime();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
     byte [] value = generateMobValue((int)defaultThreshold+1);
@@ -301,7 +302,7 @@ public class TestMobStoreScanner {
   private void testGetReferences(boolean reversed) throws Exception {
     TableName tn = TableName.valueOf("testGetReferences" + reversed);
     setUp(defaultThreshold, tn);
-    long ts1 = System.currentTimeMillis();
+    long ts1 = EnvironmentEdgeManager.currentTime();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
     byte [] value = generateMobValue((int)defaultThreshold+1);
@@ -337,7 +338,7 @@ public class TestMobStoreScanner {
     byte [] valueLess = generateMobValue((int)defaultThreshold-1);
     byte [] valueEqual = generateMobValue((int)defaultThreshold);
     byte [] valueGreater = generateMobValue((int)defaultThreshold+1);
-    long ts1 = System.currentTimeMillis();
+    long ts1 = EnvironmentEdgeManager.currentTime();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 
@@ -384,7 +385,7 @@ public class TestMobStoreScanner {
   private void testGetFromArchive(boolean reversed) throws Exception {
     TableName tn = TableName.valueOf("testGetFromArchive" + reversed);
     setUp(defaultThreshold, tn);
-    long ts1 = System.currentTimeMillis();
+    long ts1 = EnvironmentEdgeManager.currentTime();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
     byte [] value = generateMobValue((int)defaultThreshold+1);

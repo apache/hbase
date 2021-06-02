@@ -1152,6 +1152,22 @@ module Hbase
           raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(' '))
         end
       end
+      if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT_MAJOR)
+        compression = arg.delete(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT_MAJOR).upcase.to_sym
+        if org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
+          cfdb.setMajorCompactionCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
+        else
+          raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(' '))
+        end
+      end
+      if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT_MINOR)
+        compression = arg.delete(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT_MINOR).upcase.to_sym
+        if org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
+          cfdb.setMinorCompactionCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
+        else
+          raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(' '))
+        end
+      end
       if arg.include?(ColumnFamilyDescriptorBuilder::STORAGE_POLICY)
         storage_policy = arg.delete(ColumnFamilyDescriptorBuilder::STORAGE_POLICY).upcase
         cfdb.setStoragePolicy(storage_policy)
@@ -1364,6 +1380,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Updates the configuration of all the regionservers in the rsgroup.
+    def update_rsgroup_config(groupName)
+      @admin.updateConfiguration(groupName)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Returns namespace's structure description
     def describe_namespace(namespace_name)
       namespace = @admin.getNamespaceDescriptor(namespace_name)
@@ -1492,7 +1514,13 @@ module Hbase
       tdb.setMergeEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::MERGE_ENABLED))) if arg.include?(TableDescriptorBuilder::MERGE_ENABLED)
       tdb.setNormalizationEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZATION_ENABLED))) if arg.include?(TableDescriptorBuilder::NORMALIZATION_ENABLED)
       tdb.setNormalizerTargetRegionCount(JInteger.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_COUNT))) if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_COUNT)
-      tdb.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE))) if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE)
+      # TODO: Keeping backward compatability for NORMALIZER_TARGET_REGION_SIZE with HBASE-25651 change. Can be removed in later version
+      if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE)
+        warn 'Use of NORMALIZER_TARGET_REGION_SIZE has been deprecated and will be removed in future version, please use NORMALIZER_TARGET_REGION_SIZE_MB instead'
+        tdb.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE)))
+      end
+      tdb.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE_MB))) \
+        if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE_MB)
       tdb.setMemStoreFlushSize(arg.delete(TableDescriptorBuilder::MEMSTORE_FLUSHSIZE)) if arg.include?(TableDescriptorBuilder::MEMSTORE_FLUSHSIZE)
       tdb.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf(arg.delete(TableDescriptorBuilder::DURABILITY))) if arg.include?(TableDescriptorBuilder::DURABILITY)
       tdb.setPriority(JInteger.valueOf(arg.delete(TableDescriptorBuilder::PRIORITY))) if arg.include?(TableDescriptorBuilder::PRIORITY)
@@ -1742,6 +1770,25 @@ module Hbase
         balancer_decisions_resp_arr << balancer_dec_resp.toJsonPrettyPrint
       }
       balancer_decisions_resp_arr
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Retrieve latest balancer rejections made by LoadBalancers
+    def get_balancer_rejections(args)
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 250
+      end
+
+      log_type = 'BALANCER_REJECTION'
+      log_dest = org.apache.hadoop.hbase.client.ServerType::MASTER
+      balancer_rejections_responses = @admin.getLogEntries(nil, log_type, log_dest, limit, nil)
+      balancer_rejections_resp_arr = []
+      balancer_rejections_responses.each { |balancer_dec_resp|
+        balancer_rejections_resp_arr << balancer_dec_resp.toJsonPrettyPrint
+      }
+      balancer_rejections_resp_arr
     end
 
     #----------------------------------------------------------------------------------------------

@@ -142,10 +142,9 @@ public class TestWALObserver {
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
     this.hbaseRootDir = CommonFSUtils.getRootDir(conf);
     this.hbaseWALRootDir = CommonFSUtils.getWALRootDir(conf);
-    this.oldLogDir = new Path(this.hbaseWALRootDir,
-        HConstants.HREGION_OLDLOGDIR_NAME);
+    this.oldLogDir = new Path(this.hbaseWALRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName = ServerName.valueOf(currentTest.getMethodName(), 16010,
-        System.currentTimeMillis()).toString();
+      EnvironmentEdgeManager.currentTime()).toString();
     this.logDir = new Path(this.hbaseWALRootDir,
       AbstractFSWALProvider.getWALDirectoryName(serverName));
 
@@ -352,7 +351,8 @@ public class TestWALObserver {
         LOG.info("WALSplit path == " + p);
         // Make a new wal for new region open.
         final WALFactory wals2 = new WALFactory(conf,
-            ServerName.valueOf(currentTest.getMethodName() + "2", 16010, System.currentTimeMillis())
+            ServerName.valueOf(currentTest.getMethodName() + "2", 16010,
+              EnvironmentEdgeManager.currentTime())
                 .toString());
         WAL wal2 = wals2.getWAL(null);
         HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir,

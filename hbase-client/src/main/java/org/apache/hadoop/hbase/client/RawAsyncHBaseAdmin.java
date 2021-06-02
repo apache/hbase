@@ -2906,6 +2906,42 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> updateConfiguration(String groupName) {
+    CompletableFuture<Void> future = new CompletableFuture<Void>();
+    addListener(
+      getRSGroup(groupName),
+      (rsGroupInfo, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else if (rsGroupInfo == null) {
+          future.completeExceptionally(
+            new IllegalArgumentException("Group does not exist: " + groupName));
+        } else {
+          addListener(getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)), (status, err2) -> {
+            if (err2 != null) {
+              future.completeExceptionally(err2);
+            } else {
+              List<CompletableFuture<Void>> futures = new ArrayList<>();
+              List<ServerName> groupServers = status.getServersName().stream().filter(
+                s -> rsGroupInfo.containsServer(s.getAddress())).collect(Collectors.toList());
+              groupServers.forEach(server -> futures.add(updateConfiguration(server)));
+              addListener(
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()])),
+                (result, err3) -> {
+                  if (err3 != null) {
+                    future.completeExceptionally(err3);
+                  } else {
+                    future.complete(result);
+                  }
+                });
+            }
+          });
+        }
+      });
+    return future;
+  }
+
+  @Override
   public CompletableFuture<Void> rollWALWriter(ServerName serverName) {
     return this
         .<Void> newAdminCaller()
@@ -4202,6 +4238,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .call();
   }
 
+  private CompletableFuture<List<LogEntry>> getBalancerRejections(final int limit) {
+    return this.<List<LogEntry>>newMasterCaller()
+      .action((controller, stub) ->
+        this.call(controller, stub,
+          ProtobufUtil.toBalancerRejectionRequest(limit),
+          MasterService.Interface::getLogEntries, ProtobufUtil::toBalancerRejectionResponse))
+      .call();
+  }
+
   @Override
   public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
       String logType, ServerType serverType, int limit,
@@ -4209,19 +4254,28 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (logType == null || serverType == null) {
       throw new IllegalArgumentException("logType and/or serverType cannot be empty");
     }
-    if (logType.equals("SLOW_LOG") || logType.equals("LARGE_LOG")) {
-      if (ServerType.MASTER.equals(serverType)) {
-        throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
-      }
-      return getSlowLogResponses(filterParams, serverNames, limit, logType);
-    } else if (logType.equals("BALANCER_DECISION")) {
-      if (ServerType.REGION_SERVER.equals(serverType)) {
-        throw new IllegalArgumentException(
-          "Balancer Decision logs are not maintained by HRegionServer");
-      }
-      return getBalancerDecisions(limit);
+    switch (logType){
+      case "SLOW_LOG":
+      case "LARGE_LOG":
+        if (ServerType.MASTER.equals(serverType)) {
+          throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
+        }
+        return getSlowLogResponses(filterParams, serverNames, limit, logType);
+      case "BALANCER_DECISION":
+        if (ServerType.REGION_SERVER.equals(serverType)) {
+          throw new IllegalArgumentException(
+            "Balancer Decision logs are not maintained by HRegionServer");
+        }
+        return getBalancerDecisions(limit);
+      case "BALANCER_REJECTION":
+        if (ServerType.REGION_SERVER.equals(serverType)) {
+          throw new IllegalArgumentException(
+            "Balancer Rejection logs are not maintained by HRegionServer");
+        }
+        return getBalancerRejections(limit);
+      default:
+        return CompletableFuture.completedFuture(Collections.emptyList());
     }
-    return CompletableFuture.completedFuture(Collections.emptyList());
   }
 
 }

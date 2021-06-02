@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -304,8 +305,8 @@ public class TestFilterSerialization {
 
     // Non-empty timestamp list
     LinkedList<Long> list = new LinkedList<>();
-    list.add(System.currentTimeMillis());
-    list.add(System.currentTimeMillis());
+    list.add(EnvironmentEdgeManager.currentTime());
+    list.add(EnvironmentEdgeManager.currentTime());
     timestampsFilter = new TimestampsFilter(list);
     assertTrue(timestampsFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(timestampsFilter))));

@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -84,14 +85,14 @@ public class TestReplicationKillRS extends TestReplicationBase {
     }
 
     int lastCount = 0;
-    final long start = System.currentTimeMillis();
+    final long start = EnvironmentEdgeManager.currentTime();
     int i = 0;
     try (Connection conn = ConnectionFactory.createConnection(CONF2)) {
       try (Table table = conn.getTable(tableName)) {
         while (true) {
           if (i == NB_RETRIES - 1) {
             fail("Waited too much time for queueFailover replication. " + "Waited "
-                + (System.currentTimeMillis() - start) + "ms.");
+                + (EnvironmentEdgeManager.currentTime() - start) + "ms.");
           }
           Result[] res2;
           try (ResultScanner scanner = table.getScanner(new Scan())) {

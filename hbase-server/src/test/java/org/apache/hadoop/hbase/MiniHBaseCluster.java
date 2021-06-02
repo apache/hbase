@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -445,10 +446,9 @@ public class MiniHBaseCluster extends HBaseCluster {
     JVMClusterUtil.RegionServerThread t =  startRegionServer();
     ServerName rsServerName = t.getRegionServer().getServerName();
 
-    long start = System.currentTimeMillis();
-    ClusterMetrics clusterStatus;
-    while ((System.currentTimeMillis() - start) < timeout) {
-      clusterStatus = getClusterMetrics();
+    long start = EnvironmentEdgeManager.currentTime();
+    ClusterMetrics clusterStatus = getClusterMetrics();
+    while ((EnvironmentEdgeManager.currentTime() - start) < timeout) {
       if (clusterStatus != null && clusterStatus.getLiveServerMetrics().containsKey(rsServerName)) {
         return t;
       }
@@ -650,9 +650,9 @@ public class MiniHBaseCluster extends HBaseCluster {
   @Override
   public boolean waitForActiveAndReadyMaster(long timeout) throws IOException {
     List<JVMClusterUtil.MasterThread> mts;
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     while (!(mts = getMasterThreads()).isEmpty()
-        && (System.currentTimeMillis() - start) < timeout) {
+        && (EnvironmentEdgeManager.currentTime() - start) < timeout) {
       for (JVMClusterUtil.MasterThread mt : mts) {
         if (mt.getMaster().isActiveMaster() && mt.getMaster().isInitialized()) {
           return true;

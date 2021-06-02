@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -198,7 +199,7 @@ public class TestRegionInfoBuilder {
   public void testParseName() throws IOException {
     final TableName tableName = name.getTableName();
     byte[] startKey = Bytes.toBytes("startKey");
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     int replicaId = 42;
 
     // test without replicaId
@@ -228,7 +229,7 @@ public class TestRegionInfoBuilder {
     byte[] startKey = Bytes.toBytes("startKey");
     byte[] endKey = Bytes.toBytes("endKey");
     boolean split = false;
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     int replicaId = 42;
 
     RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(endKey)

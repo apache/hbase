@@ -34,6 +34,7 @@ public class NamedQueueGetResponse {
 
   private List<TooSlowLog.SlowLogPayload> slowLogPayloads;
   private List<RecentLogs.BalancerDecision> balancerDecisions;
+  private List<RecentLogs.BalancerRejection> balancerRejections;
   private NamedQueuePayload.NamedQueueEvent namedQueueEvent;
 
   public List<TooSlowLog.SlowLogPayload> getSlowLogPayloads() {
@@ -52,6 +53,14 @@ public class NamedQueueGetResponse {
     this.balancerDecisions = balancerDecisions;
   }
 
+  public List<RecentLogs.BalancerRejection> getBalancerRejections() {
+    return balancerRejections;
+  }
+
+  public void setBalancerRejections(List<RecentLogs.BalancerRejection> balancerRejections) {
+    this.balancerRejections = balancerRejections;
+  }
+
   public NamedQueuePayload.NamedQueueEvent getNamedQueueEvent() {
     return namedQueueEvent;
   }
@@ -65,6 +74,7 @@ public class NamedQueueGetResponse {
     return new ToStringBuilder(this)
       .append("slowLogPayloads", slowLogPayloads)
       .append("balancerDecisions", balancerDecisions)
+      .append("balancerRejections", balancerRejections)
       .append("namedQueueEvent", namedQueueEvent)
       .toString();
   }

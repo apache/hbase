@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -289,7 +290,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
     }
     Put tmpPut = new Put(Bytes.toBytes("tmprow"));
     tmpPut.addColumn(HConstants.CATALOG_FAMILY, null, value);
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long remaining = timeout;
     while (remaining > 0) {
       if (log.isLowReplicationRollEnabled() == expect) {
@@ -302,7 +303,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
         } catch (InterruptedException e) {
           // continue
         }
-        remaining = timeout - (System.currentTimeMillis() - startTime);
+        remaining = timeout - (EnvironmentEdgeManager.currentTime() - startTime);
       }
     }
   }
@@ -367,7 +368,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
     writeData(table, 2);
 
-    long curTime = System.currentTimeMillis();
+    long curTime = EnvironmentEdgeManager.currentTime();
     LOG.info("log.getCurrentFileName(): " + log.getCurrentFileName());
     long oldFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
     assertTrue("Log should have a timestamp older than now",
@@ -462,7 +463,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       writeData(table, 1002);
 
-      long curTime = System.currentTimeMillis();
+      long curTime = EnvironmentEdgeManager.currentTime();
       LOG.info("log.getCurrentFileName()): " + AbstractFSWALProvider.getCurrentFileName(log));
       long oldFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
       assertTrue("Log should have a timestamp older than now",

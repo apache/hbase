@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -85,7 +86,7 @@ public class TestActiveMasterManager {
       }
 
       // Create the master node with a dummy address
-      ServerName master = ServerName.valueOf("localhost", 1, System.currentTimeMillis());
+      ServerName master = ServerName.valueOf("localhost", 1, EnvironmentEdgeManager.currentTime());
       // Should not have a master yet
       DummyMaster dummyMaster = new DummyMaster(zk, master);
       ClusterStatusTracker clusterStatusTracker =
@@ -134,9 +135,9 @@ public class TestActiveMasterManager {
 
       // Create the master node with a dummy address
       ServerName firstMasterAddress =
-          ServerName.valueOf("localhost", 1, System.currentTimeMillis());
+          ServerName.valueOf("localhost", 1, EnvironmentEdgeManager.currentTime());
       ServerName secondMasterAddress =
-          ServerName.valueOf("localhost", 2, System.currentTimeMillis());
+          ServerName.valueOf("localhost", 2, EnvironmentEdgeManager.currentTime());
 
       // Should not have a master yet
       DummyMaster ms1 = new DummyMaster(zk, firstMasterAddress);

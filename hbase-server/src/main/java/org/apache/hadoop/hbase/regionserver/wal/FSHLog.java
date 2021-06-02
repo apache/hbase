@@ -29,6 +29,7 @@ import com.lmax.disruptor.LifecycleAware;
 import com.lmax.disruptor.TimeoutException;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
+import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -47,7 +48,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +66,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * The default implementation of FSWAL.
+ * The original implementation of FSWAL.
  */
 @InterfaceAudience.Private
 public class FSHLog extends AbstractFSWAL<Writer> {
@@ -364,7 +363,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           // use assert to make sure no change breaks the logic that
           // sequence and zigzagLatch will be set together
           assert sequence > 0L : "Failed to get sequence from ring buffer";
-          TraceUtil.addTimelineAnnotation("awaiting safepoint");
           syncFuture = zigzagLatch.waitSafePoint(publishSyncOnRingBuffer(sequence, false));
         }
       } catch (FailedSyncBeforeLogCloseException e) {
@@ -382,6 +380,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         // In case of having unflushed entries or we already reached the
         // closeErrorsTolerated count, call the closeWriter inline rather than in async
         // way so that in case of an IOE we will throw it back and abort RS.
+        inflightWALClosures.put(oldPath.getName(), writer);
         if (isUnflushedEntries() || closeErrorCount.get() >= this.closeErrorsTolerated) {
           closeWriter(this.writer, oldPath, true);
         } else {
@@ -435,10 +434,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   private void closeWriter(Writer writer, Path path, boolean syncCloseCall) throws IOException {
+    Span span = Span.current();
     try {
-      TraceUtil.addTimelineAnnotation("closing writer");
+      span.addEvent("closing writer");
       writer.close();
-      TraceUtil.addTimelineAnnotation("writer closed");
+      span.addEvent("writer closed");
     } catch (IOException ioe) {
       int errors = closeErrorCount.incrementAndGet();
       boolean hasUnflushedEntries = isUnflushedEntries();
@@ -449,6 +449,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       }
       LOG.warn("Riding over failed WAL close of " + path
           + "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK", ioe);
+    } finally {
+      inflightWALClosures.remove(path.getName());
     }
   }
 
@@ -641,15 +643,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           }
           // I got something. Lets run. Save off current sequence number in case it changes
           // while we run.
-          //TODO handle htrace API change, see HBASE-18895
-          //TraceScope scope = Trace.continueSpan(takeSyncFuture.getSpan());
           long start = System.nanoTime();
           Throwable lastException = null;
           try {
-            TraceUtil.addTimelineAnnotation("syncing writer");
             long unSyncedFlushSeq = highestUnsyncedTxid;
             writer.sync(sf.isForceSync());
-            TraceUtil.addTimelineAnnotation("writer synced");
             if (unSyncedFlushSeq > currentSequence) {
               currentSequence = unSyncedFlushSeq;
             }
@@ -661,9 +659,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             LOG.warn("UNEXPECTED", e);
             lastException = e;
           } finally {
-            // reattach the span to the future before releasing.
-            //TODO handle htrace API change, see HBASE-18895
-            // takeSyncFuture.setSpan(scope.getSpan());
             // First release what we 'took' from the queue.
             syncCount += releaseSyncFuture(takeSyncFuture, currentSequence, lastException);
             // Can we release other syncs?
@@ -792,7 +787,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   // Sync all known transactions
-  private void publishSyncThenBlockOnCompletion(TraceScope scope, boolean forceSync) throws IOException {
+  private void publishSyncThenBlockOnCompletion(boolean forceSync) throws IOException {
     SyncFuture syncFuture = publishSyncOnRingBuffer(forceSync);
     blockOnSync(syncFuture);
   }
@@ -818,31 +813,17 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   @Override
-  public void sync() throws IOException {
-    sync(useHsync);
+  protected void doSync(boolean forceSync) throws IOException {
+    publishSyncThenBlockOnCompletion(forceSync);
   }
 
   @Override
-  public void sync(boolean forceSync) throws IOException {
-    try (TraceScope scope = TraceUtil.createTrace("FSHLog.sync")) {
-      publishSyncThenBlockOnCompletion(scope, forceSync);
-    }
-  }
-
-  @Override
-  public void sync(long txid) throws IOException {
-    sync(txid, useHsync);
-  }
-
-  @Override
-  public void sync(long txid, boolean forceSync) throws IOException {
+  protected void doSync(long txid, boolean forceSync) throws IOException {
     if (this.highestSyncedTxid.get() >= txid) {
       // Already sync'd.
       return;
     }
-    try (TraceScope scope = TraceUtil.createTrace("FSHLog.sync")) {
-      publishSyncThenBlockOnCompletion(scope, forceSync);
-    }
+    publishSyncThenBlockOnCompletion(forceSync);
   }
 
   boolean isLowReplicationRollEnabled() {
@@ -1044,8 +1025,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           }
         } else if (truck.type() == RingBufferTruck.Type.APPEND) {
           FSWALEntry entry = truck.unloadAppend();
-          //TODO handle htrace API change, see HBASE-18895
-          //TraceScope scope = Trace.continueSpan(entry.detachSpan());
           try {
             if (this.exception != null) {
               // Return to keep processing events coming off the ringbuffer

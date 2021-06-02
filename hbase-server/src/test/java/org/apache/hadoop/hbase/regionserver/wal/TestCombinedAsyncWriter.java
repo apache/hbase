@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider.AsyncWriter;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -99,7 +100,7 @@ public class TestCombinedAsyncWriter {
     int recordCount = 5;
     TableName tableName = TableName.valueOf("tablename");
     byte[] row = Bytes.toBytes("row");
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     Path path1 = getPath(1);
     Path path2 = getPath(2);
     FileSystem fs = UTIL.getTestFileSystem();

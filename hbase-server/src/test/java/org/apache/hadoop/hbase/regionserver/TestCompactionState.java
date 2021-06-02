@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -190,14 +191,14 @@ public class TestCompactionState {
           admin.majorCompact(table);
         }
       }
-      long curt = System.currentTimeMillis();
+      long curt = EnvironmentEdgeManager.currentTime();
       long waitTime = 5000;
       long endt = curt + waitTime;
       CompactionState state = getCompactionState(stateSource, master, admin, table);
       while (state == CompactionState.NONE && curt < endt) {
         Thread.sleep(10);
         state = getCompactionState(stateSource, master, admin, table);
-        curt = System.currentTimeMillis();
+        curt = EnvironmentEdgeManager.currentTime();
       }
       // Now, should have the right compaction state,
       // otherwise, the compaction should have already been done

@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
@@ -81,6 +82,8 @@ public class ProtobufLogReader extends ReaderBase {
   protected WALCellCodec.ByteStringUncompressor byteStringUncompressor;
   protected boolean hasCompression = false;
   protected boolean hasTagCompression = false;
+  protected boolean hasValueCompression = false;
+  protected Compression.Algorithm valueCompressionType = null;
   // walEditsStopOffset is the position of the last byte to read. After reading the last WALEdit
   // entry in the wal, the inputstream's position is equal to walEditsStopOffset.
   private long walEditsStopOffset;
@@ -205,6 +208,10 @@ public class ProtobufLogReader extends ReaderBase {
   private String initInternal(FSDataInputStream stream, boolean isFirst)
       throws IOException {
     close();
+    if (!isFirst) {
+      // Re-compute the file length.
+      this.fileLength = fs.getFileStatus(path).getLen();
+    }
     long expectedPos = PB_WAL_MAGIC.length;
     if (stream == null) {
       stream = fs.open(path);
@@ -227,6 +234,16 @@ public class ProtobufLogReader extends ReaderBase {
       WALProtos.WALHeader header = builder.build();
       this.hasCompression = header.hasHasCompression() && header.getHasCompression();
       this.hasTagCompression = header.hasHasTagCompression() && header.getHasTagCompression();
+      this.hasValueCompression = header.hasHasValueCompression() &&
+        header.getHasValueCompression();
+      if (header.hasValueCompressionAlgorithm()) {
+        try {
+          this.valueCompressionType =
+            Compression.Algorithm.values()[header.getValueCompressionAlgorithm()];
+        } catch (ArrayIndexOutOfBoundsException e) {
+          throw new IOException("Invalid compression type", e);
+        }
+      }
     }
     this.inputStream = stream;
     this.walEditsStopOffset = this.fileLength;
@@ -235,7 +252,9 @@ public class ProtobufLogReader extends ReaderBase {
     this.seekOnFs(currentPosition);
     if (LOG.isTraceEnabled()) {
       LOG.trace("After reading the trailer: walEditsStopOffset: " + this.walEditsStopOffset
-          + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " + (trailerPresent ? "true, size: " + trailer.getSerializedSize() : "false") + ", currentPosition: " + currentPosition);
+          + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " +
+          (trailerPresent ? "true, size: " + trailer.getSerializedSize() : "false") +
+          ", currentPosition: " + currentPosition);
     }
     
     codecClsName = hdrCtxt.getCellCodecClsName();
@@ -325,6 +344,16 @@ public class ProtobufLogReader extends ReaderBase {
   @Override
   protected boolean hasTagCompression() {
     return this.hasTagCompression;
+  }
+
+  @Override
+  protected boolean hasValueCompression() {
+    return this.hasValueCompression;
+  }
+
+  @Override
+  protected Compression.Algorithm getValueCompressionAlgorithm() {
+    return this.valueCompressionType;
   }
 
   @Override

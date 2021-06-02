@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -162,7 +163,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
     return new RpcCall() {
       @Override
       public long getDeadline() {
-        return System.currentTimeMillis();
+        return EnvironmentEdgeManager.currentTime();
       }
 
       @Override

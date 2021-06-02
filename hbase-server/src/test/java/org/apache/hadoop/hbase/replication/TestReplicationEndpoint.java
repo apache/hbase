@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -420,7 +421,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
   private Entry createEntry(String tableName, TreeMap<byte[], Integer> scopes, byte[]... kvs) {
     WALKeyImpl key1 = new WALKeyImpl(new byte[0], TableName.valueOf(tableName),
-        System.currentTimeMillis() - 1L,
+      EnvironmentEdgeManager.currentTime() - 1L,
         scopes);
     WALEdit edit1 = new WALEdit();
 

@@ -42,7 +42,7 @@ public class ThrottledInputStream extends InputStream {
 
   private final InputStream rawStream;
   private final long maxBytesPerSec;
-  private final long startTime = System.currentTimeMillis();
+  private final long startTime = EnvironmentEdgeManager.currentTime();
 
   private long bytesRead = 0;
   private long totalSleepTime = 0;
@@ -164,7 +164,7 @@ public class ThrottledInputStream extends InputStream {
    * @return Read rate, in bytes/sec.
    */
   public long getBytesPerSec() {
-    long elapsed = (System.currentTimeMillis() - startTime) / 1000;
+    long elapsed = (EnvironmentEdgeManager.currentTime() - startTime) / 1000;
     if (elapsed == 0) {
       return bytesRead;
     } else {

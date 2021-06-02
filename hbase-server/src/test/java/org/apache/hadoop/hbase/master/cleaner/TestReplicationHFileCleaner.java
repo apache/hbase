@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
@@ -191,9 +192,10 @@ public class TestReplicationHFileCleaner {
     ReplicationHFileCleaner cleaner = new ReplicationHFileCleaner();
 
     List<FileStatus> dummyFiles =
-        Lists.newArrayList(new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path(
-            "hfile1")), new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path(
-            "hfile2")));
+      Lists.newArrayList(new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(),
+          new Path("hfile1")),
+        new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(),
+          new Path("hfile2")));
 
     FaultyZooKeeperWatcher faultyZK =
         new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);

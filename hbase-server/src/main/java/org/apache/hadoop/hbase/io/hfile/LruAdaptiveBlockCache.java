@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -1074,7 +1075,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       long freedSumMb = 0;
       int heavyEvictionCount = 0;
       int freedDataOverheadPercent = 0;
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       while (this.go) {
         synchronized (this) {
           try {
@@ -1107,7 +1108,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
         // This is should be almost the same time (+/- 10s)
         // because we get comparable volumes of freed bytes each time.
         // 10s because this is default period to run evict() (see above this.wait)
-        long stopTime = System.currentTimeMillis();
+        long stopTime = EnvironmentEdgeManager.currentTime();
         if ((stopTime - startTime) > 1000 * 10 - 1) {
           // Here we have to calc what situation we have got.
           // We have the limit "hbase.lru.cache.heavy.eviction.bytes.size.limit"

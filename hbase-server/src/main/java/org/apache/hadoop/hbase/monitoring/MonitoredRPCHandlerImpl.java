@@ -25,7 +25,7 @@ import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
@@ -196,7 +196,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
       long queueTime) {
     this.methodName = methodName;
     this.params = params;
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     this.rpcStartTime = now;
     setWarnTime(now);
     this.rpcQueueTime = queueTime;

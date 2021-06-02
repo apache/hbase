@@ -419,8 +419,10 @@ public class HFileOutputFormat2
 
       private void close(final StoreFileWriter w) throws IOException {
         if (w != null) {
-          w.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(System.currentTimeMillis()));
-          w.appendFileInfo(BULKLOAD_TASK_KEY, Bytes.toBytes(context.getTaskAttemptID().toString()));
+          w.appendFileInfo(BULKLOAD_TIME_KEY,
+            Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
+          w.appendFileInfo(BULKLOAD_TASK_KEY,
+            Bytes.toBytes(context.getTaskAttemptID().toString()));
           w.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(true));
           w.appendFileInfo(EXCLUDE_FROM_MINOR_COMPACTION_KEY, Bytes.toBytes(compactionExclude));
           w.appendTrackedTimestampsToMetadata();

@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils.IOExceptionSupplier;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -334,7 +335,7 @@ public final class WALSplitUtil {
   public static Path moveAsideBadEditsFile(final FileSystem fs, final Path edits)
       throws IOException {
     Path moveAsideName =
-        new Path(edits.getParent(), edits.getName() + "." + System.currentTimeMillis());
+        new Path(edits.getParent(), edits.getName() + "." + EnvironmentEdgeManager.currentTime());
     if (!fs.rename(edits, moveAsideName)) {
       LOG.warn("Rename failed from {} to {}", edits, moveAsideName);
     }

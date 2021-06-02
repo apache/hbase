@@ -413,10 +413,10 @@ public class TestFSTableDescriptors {
         new Path("/tmp", FSTableDescriptors.TABLEINFO_FILE_PREFIX));
     FileStatus future =
       new FileStatus(0, false, 0, 0, -1,
-        new Path("/tmp/tablinfo." + System.currentTimeMillis()));
+        new Path("/tmp/tablinfo." + EnvironmentEdgeManager.currentTime()));
     FileStatus farFuture =
       new FileStatus(0, false, 0, 0, -1,
-        new Path("/tmp/tablinfo." + System.currentTimeMillis() + 1000));
+        new Path("/tmp/tablinfo." + EnvironmentEdgeManager.currentTime() + 1000));
     FileStatus [] alist = {bare, future, farFuture};
     FileStatus [] blist = {bare, farFuture, future};
     FileStatus [] clist = {farFuture, bare, future};

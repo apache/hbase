@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -391,7 +392,7 @@ public class TestAsyncTable {
   @Deprecated
   public void testCheckAndMutateWithTimeRangeForOldApi() throws Exception {
     AsyncTable<?> table = getTable.get();
-    final long ts = System.currentTimeMillis() / 2;
+    final long ts = EnvironmentEdgeManager.currentTime() / 2;
     Put put = new Put(row);
     put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
 
@@ -750,7 +751,7 @@ public class TestAsyncTable {
   @Test
   public void testCheckAndMutateWithTimeRange() throws Exception {
     AsyncTable<?> table = getTable.get();
-    final long ts = System.currentTimeMillis() / 2;
+    final long ts = EnvironmentEdgeManager.currentTime() / 2;
     Put put = new Put(row);
     put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
 

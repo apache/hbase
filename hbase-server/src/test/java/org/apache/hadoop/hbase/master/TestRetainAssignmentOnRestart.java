@@ -22,13 +22,15 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
-
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
@@ -51,6 +53,33 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestRetainAssignmentOnRestart.class);
 
   private static int NUM_OF_RS = 3;
+
+  public static final class HMasterForTest extends HMaster {
+
+    public HMasterForTest(Configuration conf) throws IOException {
+      super(conf);
+    }
+
+    @Override
+    protected void startProcedureExecutor() throws IOException {
+      // only start procedure executor when we have all the regionservers ready to take regions
+      new Thread(() -> {
+        for (;;) {
+          if (getServerManager().createDestinationServersList().size() == NUM_OF_RS) {
+            try {
+              HMasterForTest.super.startProcedureExecutor();
+            } catch (IOException e) {
+              throw new UncheckedIOException(e);
+            }
+          }
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException e) {
+          }
+        }
+      }).start();
+    }
+  }
 
   @Override
   protected boolean splitWALCoordinatedByZk() {
@@ -205,7 +234,8 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
       HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     // Enable retain assignment during ServerCrashProcedure
     UTIL.getConfiguration().setBoolean(ServerCrashProcedure.MASTER_SCP_RETAIN_ASSIGNMENT, true);
-    UTIL.startMiniCluster(NUM_OF_RS);
+    UTIL.startMiniCluster(StartMiniClusterOption.builder().masterClass(HMasterForTest.class)
+      .numRegionServers(NUM_OF_RS).build());
 
     // Turn off balancer
     UTIL.getMiniHBaseCluster().getMaster().getMasterRpcServices().synchronousBalanceSwitch(false);

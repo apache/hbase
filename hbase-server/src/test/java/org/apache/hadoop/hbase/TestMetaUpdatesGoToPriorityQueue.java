@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -121,7 +122,7 @@ public class TestMetaUpdatesGoToPriorityQueue {
     }
     SpyingRpcScheduler scheduler = (SpyingRpcScheduler) rs.getRpcServer().getScheduler();
     long prevCalls = scheduler.numPriorityCalls;
-    long time = System.currentTimeMillis();
+    long time = EnvironmentEdgeManager.currentTime();
     Put putParent = MetaTableAccessor.makePutFromRegionInfo(
       RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
     MetaTableAccessor.addDaughtersToPut(putParent, splitA, splitB);

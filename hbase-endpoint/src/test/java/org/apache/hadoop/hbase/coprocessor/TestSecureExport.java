@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -105,7 +106,7 @@ public class TestSecureExport {
   private static final byte[] ROW3 = Bytes.toBytes("row3");
   private static final byte[] QUAL = Bytes.toBytes("qual");
   private static final String LOCALHOST = "localhost";
-  private static final long NOW = System.currentTimeMillis();
+  private static final long NOW = EnvironmentEdgeManager.currentTime();
   // user granted with all global permission
   private static final String USER_ADMIN = "admin";
   // user is table owner. will have all permissions on table

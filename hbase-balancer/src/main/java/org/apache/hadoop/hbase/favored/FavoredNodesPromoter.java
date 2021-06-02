@@ -37,4 +37,6 @@ public interface FavoredNodesPromoter {
       throws IOException;
 
   List<ServerName> getFavoredNodes(RegionInfo regionInfo);
+
+  void setFavoredNodesManager(FavoredNodesManager fnm);
 }

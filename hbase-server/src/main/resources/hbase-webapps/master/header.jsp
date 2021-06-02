@@ -21,6 +21,7 @@
     import="org.apache.hadoop.hbase.master.HMaster"
     import="org.apache.hadoop.hbase.quotas.QuotaUtil"
     import="org.apache.hadoop.hbase.HBaseConfiguration"
+    import="org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer"
 %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
@@ -60,6 +61,7 @@
             <% if (master.isActiveMaster()){ %>
               <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
               <li><a href="/hbck.jsp">HBCK Report</a></li>
+              <li><a href="/namedQueueLog.jsp">Named Queue Logs</a></li>
               <% if (master.getConfiguration().getBoolean(QuotaUtil.QUOTA_CONF_KEY, false)) { %>
                 <li><a href="/quotas.jsp">Quotas</a></li>
               <% }%>

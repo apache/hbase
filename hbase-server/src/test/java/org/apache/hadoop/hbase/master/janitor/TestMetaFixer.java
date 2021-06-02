@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -168,12 +169,12 @@ public class TestMetaFixer {
   private static RegionInfo makeOverlap(MasterServices services, RegionInfo a, RegionInfo b)
       throws IOException {
     RegionInfo overlapRegion = RegionInfoBuilder.newBuilder(a.getTable()).
-        setStartKey(a.getStartKey()).
-        setEndKey(b.getEndKey()).
-        build();
+      setStartKey(a.getStartKey()).
+      setEndKey(b.getEndKey()).
+      build();
     MetaTableAccessor.putsToMetaTable(services.getConnection(),
-        Collections.singletonList(MetaTableAccessor.makePutFromRegionInfo(overlapRegion,
-            System.currentTimeMillis())));
+      Collections.singletonList(MetaTableAccessor.makePutFromRegionInfo(overlapRegion,
+        EnvironmentEdgeManager.currentTime())));
     // TODO: Add checks at assign time to PREVENT being able to assign over existing assign.
     long assign = services.getAssignmentManager().assign(overlapRegion);
     ProcedureTestingUtility.waitProcedures(services.getMasterProcedureExecutor(), assign);

@@ -76,8 +76,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class KeyValue implements ExtendedCell, Cloneable {
-  private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<>();
-
   private static final Logger LOG = LoggerFactory.getLogger(KeyValue.class);
 
   public static final int FIXED_OVERHEAD = ClassSize.OBJECT + // the KeyValue object itself

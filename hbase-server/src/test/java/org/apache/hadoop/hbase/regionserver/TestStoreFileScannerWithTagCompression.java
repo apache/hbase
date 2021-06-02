@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -109,7 +110,7 @@ public class TestStoreFileScannerWithTagCompression {
   private void writeStoreFile(final StoreFileWriter writer) throws IOException {
     byte[] fam = Bytes.toBytes("f");
     byte[] qualifier = Bytes.toBytes("q");
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     byte[] b = Bytes.toBytes("k1");
     Tag t1 = new ArrayBackedTag((byte) 1, "tag1");
     Tag t2 = new ArrayBackedTag((byte) 2, "tag2");

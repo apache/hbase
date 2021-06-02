@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
@@ -201,7 +201,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   private class AddProcsWorker extends Thread {
     @Override
     public void run() {
-      final Random rand = new Random(System.currentTimeMillis());
+      final Random rand = new Random(EnvironmentEdgeManager.currentTime());
       long procId = procIds.incrementAndGet();
       int index;
       while (procId <= numOps) {
@@ -245,14 +245,14 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
    * @return time taken by threads to complete, in milliseconds.
    */
   long runThreads(Thread[] threads) throws Exception {
-    final long startTime = System.currentTimeMillis();
+    final long startTime = EnvironmentEdgeManager.currentTime();
     for (Thread t : threads) {
       t.start();
     }
     for (Thread t : threads) {
       t.join();
     }
-    return System.currentTimeMillis() - startTime;
+    return EnvironmentEdgeManager.currentTime() - startTime;
   }
 
   @Override

@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -98,11 +99,11 @@ public class DirScanPool implements ConfigurationObserver {
       return;
     }
     reconfigNotification = false;
-    long stopTime = System.currentTimeMillis() + timeout;
+    long stopTime = EnvironmentEdgeManager.currentTime() + timeout;
     while (cleanerLatch != 0 && timeout > 0) {
       try {
         wait(timeout);
-        timeout = stopTime - System.currentTimeMillis();
+        timeout = stopTime - EnvironmentEdgeManager.currentTime();
       } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
         break;

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoP
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.AfterClass;
@@ -108,7 +109,7 @@ public class TestSyncReplicationWALProvider {
     int recordCount = 100;
     int columnCount = 10;
     byte[] row = Bytes.toBytes("testRow");
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     ProtobufLogTestHelper.doWrite(wal, REGION, TABLE, columnCount, recordCount, row, timestamp,
       mvcc);
