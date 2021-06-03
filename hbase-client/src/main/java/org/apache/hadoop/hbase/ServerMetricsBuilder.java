@@ -72,6 +72,8 @@ public final class ServerMetricsBuilder {
       .setRequestCountPerSecond(serverLoadPB.getNumberOfRequests())
       .setRequestCount(serverLoadPB.getTotalNumberOfRequests())
       .setInfoServerPort(serverLoadPB.getInfoServerPort())
+      .setReadRequestCount(serverLoadPB.getReadRequestsCount())
+      .setWriteRequestCount(serverLoadPB.getWriteRequestsCount())
       .setMaxHeapSize(new Size(serverLoadPB.getMaxHeapMB(), Size.Unit.MEGABYTE))
       .setUsedHeapSize(new Size(serverLoadPB.getUsedHeapMB(), Size.Unit.MEGABYTE))
       .setCoprocessorNames(serverLoadPB.getCoprocessorsList().stream()
@@ -128,6 +130,8 @@ public final class ServerMetricsBuilder {
   private String version = "0.0.0";
   private long requestCountPerSecond;
   private long requestCount;
+  private long readRequestCount;
+  private long writeRequestCount;
   private Size usedHeapSize = Size.ZERO;
   private Size maxHeapSize = Size.ZERO;
   private int infoServerPort;
@@ -162,6 +166,17 @@ public final class ServerMetricsBuilder {
     this.requestCount = value;
     return this;
   }
+
+  public ServerMetricsBuilder setReadRequestCount(long value) {
+    this.readRequestCount = value;
+    return this;
+  }
+
+  public ServerMetricsBuilder setWriteRequestCount(long value) {
+    this.writeRequestCount = value;
+    return this;
+  }
+
 
   public ServerMetricsBuilder setUsedHeapSize(Size value) {
     this.usedHeapSize = value;
@@ -220,6 +235,8 @@ public final class ServerMetricsBuilder {
         version,
         requestCountPerSecond,
         requestCount,
+        readRequestCount,
+        writeRequestCount,
         usedHeapSize,
         maxHeapSize,
         infoServerPort,
@@ -238,6 +255,8 @@ public final class ServerMetricsBuilder {
     private final String version;
     private final long requestCountPerSecond;
     private final long requestCount;
+    private final long readRequestsCount;
+    private final long writeRequestsCount;
     private final Size usedHeapSize;
     private final Size maxHeapSize;
     private final int infoServerPort;
@@ -251,15 +270,18 @@ public final class ServerMetricsBuilder {
     private final Map<byte[], UserMetrics> userMetrics;
 
     ServerMetricsImpl(ServerName serverName, int versionNumber, String version,
-        long requestCountPerSecond, long requestCount, Size usedHeapSize, Size maxHeapSize,
+        long requestCountPerSecond, long requestCount, long readRequestsCount,
+        long writeRequestsCount, Size usedHeapSize, Size maxHeapSize,
         int infoServerPort, List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
-        Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
-        long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics) {
+        Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames,
+        long reportTimestamp, long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics) {
       this.serverName = Preconditions.checkNotNull(serverName);
       this.versionNumber = versionNumber;
       this.version = version;
       this.requestCountPerSecond = requestCountPerSecond;
       this.requestCount = requestCount;
+      this.readRequestsCount = readRequestsCount;
+      this.writeRequestsCount = writeRequestsCount;
       this.usedHeapSize = Preconditions.checkNotNull(usedHeapSize);
       this.maxHeapSize = Preconditions.checkNotNull(maxHeapSize);
       this.infoServerPort = infoServerPort;
@@ -294,6 +316,16 @@ public final class ServerMetricsBuilder {
     @Override
     public long getRequestCount() {
       return requestCount;
+    }
+
+    @Override
+    public long getReadRequestsCount() {
+      return readRequestsCount;
+    }
+
+    @Override
+    public long getWriteRequestsCount() {
+      return writeRequestsCount;
     }
 
     @Override
