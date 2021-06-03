@@ -451,25 +451,25 @@ public abstract class Compactor<T extends CellSink> {
             progress.cancel();
             return false;
           }
-          if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
-            if (lastCleanCell != null) {
-              // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly.
-              // ShipperListener will do a clone of the last cells it refer, so need to set back
-              // sequence id before ShipperListener.beforeShipped
-              PrivateCellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);
-            }
-            // Clone the cells that are in the writer so that they are freed of references,
-            // if they are holding any.
-            ((ShipperListener) writer).beforeShipped();
-            // The SHARED block references, being read for compaction, will be kept in prevBlocks
-            // list(See HFileScannerImpl#prevBlocks). In case of scan flow, after each set of cells
-            // being returned to client, we will call shipped() which can clear this list. Here by
-            // we are doing the similar thing. In between the compaction (after every N cells
-            // written with collective size of 'shippedCallSizeLimit') we will call shipped which
-            // may clear prevBlocks list.
-            kvs.shipped();
-            bytesWrittenProgressForShippedCall = 0;
+        }
+        if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
+          if (lastCleanCell != null) {
+            // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly.
+            // ShipperListener will do a clone of the last cells it refer, so need to set back
+            // sequence id before ShipperListener.beforeShipped
+            PrivateCellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);
           }
+          // Clone the cells that are in the writer so that they are freed of references,
+          // if they are holding any.
+          ((ShipperListener) writer).beforeShipped();
+          // The SHARED block references, being read for compaction, will be kept in prevBlocks
+          // list(See HFileScannerImpl#prevBlocks). In case of scan flow, after each set of cells
+          // being returned to client, we will call shipped() which can clear this list. Here by
+          // we are doing the similar thing. In between the compaction (after every N cells
+          // written with collective size of 'shippedCallSizeLimit') we will call shipped which
+          // may clear prevBlocks list.
+          kvs.shipped();
+          bytesWrittenProgressForShippedCall = 0;
         }
         if (lastCleanCell != null) {
           // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly
