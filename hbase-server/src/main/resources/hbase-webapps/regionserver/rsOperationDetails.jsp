@@ -21,33 +21,51 @@
   import="java.util.Date"
   import="java.util.List"
   import="java.util.Arrays"
-  import="java.util.HashSet"
+  import="java.util.Collections"
   import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.client.Admin"
   import="org.apache.hadoop.hbase.client.SnapshotDescription"
-  import="org.apache.hadoop.hbase.http.InfoServer"
-  import="org.apache.hadoop.hbase.master.HMaster"
-  import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
   import="org.apache.hadoop.util.StringUtils"
-  import="org.apache.hadoop.hbase.TableName"
-  import="org.apache.hadoop.hbase.client.ServerType"
-  import="org.apache.hadoop.hbase.client.LogEntry"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
   import="org.apache.hadoop.hbase.client.OnlineLogRecord"
   import="org.apache.hadoop.hbase.HConstants"
-  import="org.apache.hadoop.hbase.ServerName"
+  import="org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog"
+  import="org.apache.hadoop.hbase.namequeues.NamedQueueRecorder"
+  import="org.apache.hadoop.hbase.namequeues.RpcLogDetails"
+  import="org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest"
+  import="org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse"
+  import="org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponseRequest"
+  import="org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType"
 %>
 <%
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
+  List<TooSlowLog.SlowLogPayload> slowLogs = Collections.emptyList();
+  List<TooSlowLog.SlowLogPayload> largeLogs = Collections.emptyList();
   Configuration conf = rs.getConfiguration();
-  List<OnlineLogRecord> slowLogs = null;
-  List<OnlineLogRecord> largeLogs = null;
+  boolean isSlowLogEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, false);
 
-  if(rs.isOnline()) {
-    try (Admin rsAdmin = rs.getConnection().getAdmin()) {
-      slowLogs = (List<OnlineLogRecord>)(List<?>)rsAdmin.getLogEntries(new HashSet<ServerName>(Arrays.asList(rs.getServerName())), "SLOW_LOG", ServerType.REGION_SERVER, HConstants.DEFAULT_SLOW_LOG_RING_BUFFER_SIZE, null);
-      largeLogs = (List<OnlineLogRecord>)(List<?>)rsAdmin.getLogEntries(new HashSet<ServerName>(Arrays.asList(rs.getServerName())), "LARGE_LOG", ServerType.REGION_SERVER, HConstants.DEFAULT_SLOW_LOG_RING_BUFFER_SIZE, null);
-    }
+  if(rs.isOnline() && isSlowLogEnabled) {
+    NamedQueueRecorder namedQueueRecorder = rs.getNamedQueueRecorder();
+
+    NamedQueueGetRequest slowRequest = new NamedQueueGetRequest();
+    slowRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
+    slowRequest.setSlowLogResponseRequest(SlowLogResponseRequest.newBuilder()
+      .setLogType(LogType.SLOW_LOG)
+      .setLimit(Integer.MAX_VALUE)
+      .build());
+    NamedQueueGetResponse slowResponse =
+      namedQueueRecorder.getNamedQueueRecords(slowRequest);
+    slowLogs = slowResponse.getSlowLogPayloads();
+
+
+    NamedQueueGetRequest largeRequest = new NamedQueueGetRequest();
+    largeRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
+    largeRequest.setSlowLogResponseRequest(SlowLogResponseRequest.newBuilder()
+      .setLogType(LogType.LARGE_LOG)
+      .setLimit(Integer.MAX_VALUE)
+      .build());
+    NamedQueueGetResponse largeResponse =
+      namedQueueRecorder.getNamedQueueRecords(largeRequest);
+    largeLogs = largeResponse.getSlowLogPayloads();
   }
 %>
 
@@ -59,20 +77,23 @@
 <div class="container-fluid content">
   <div class="row">
     <div class="page-header">
-    <h2>Named Queues</h2>
+    <h1>Operations Details</h1>
+    <p>HBase uses some fixed-size ring buffers to maintain rolling window history of specific server-side operation details.
+    This page list all operation details retrieve from these ring buffers</p>
     </div>
-    </div>
+  </div>
 <div class="tabbable">
   <ul class="nav nav-pills">
     <li class="active">
-      <a href="#tab_named_queue1" data-toggle="tab"> Slow Logs </a>
+      <a href="#tab_named_queue1" data-toggle="tab"> Slow RPCs </a>
     </li>
     <li class="">
-          <a href="#tab_named_queue2" data-toggle="tab"> Large Logs </a>
+      <a href="#tab_named_queue2" data-toggle="tab"> Large Response RPCs </a>
     </li>
   </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
       <div class="tab-pane active" id="tab_named_queue1">
+      <p>Slow RPCs record those RPCs whose processing time is greater than the threshold (see the setting 'hbase.ipc.warn.response.time' for details)</p>
         <table class="table table-striped" style="white-space:nowrap">
         <tr>
             <th>Start Time</th>
@@ -91,9 +112,9 @@
             <th>Param</th>
           </tr>
           <% if (slowLogs != null && !slowLogs.isEmpty()) {%>
-            <% for (OnlineLogRecord r : slowLogs) { %>
+            <% for (TooSlowLog.SlowLogPayload r : slowLogs) { %>
             <tr>
-             <td><%=new Date(r.getStartTime())%></td>
+             <td><%=new Date(r.getStartTime() + 1800*1000)%></td>
              <td><%=r.getProcessingTime()%>ms</td>
              <td><%=r.getQueueTime()%>ms</td>
              <td><%=StringUtils.byteDesc(r.getResponseSize())%></td>
@@ -102,8 +123,8 @@
              <td><%=r.getMethodName()%></td>
              <td><%=r.getRegionName()%></td>
              <td><%=r.getUserName()%></td>
-             <td><%=r.getMultiGetsCount()%></td>
-             <td><%=r.getMultiMutationsCount()%></td>
+             <td><%=r.getMultiGets()%></td>
+             <td><%=r.getMultiMutations()%></td>
              <td><%=r.getMultiServiceCalls()%></td>
              <td><%=r.getCallDetails()%></td>
              <td><%=r.getParam()%></td>
@@ -113,6 +134,7 @@
           </table>
       </div>
       <div class="tab-pane" id="tab_named_queue2">
+        <p>Large response RPCs record those RPCs whose returned data size is greater than the threshold (see the setting'hbase.ipc.warn.response.size' for details)</p>
           <table class="table table-striped" style="white-space:nowrap">
           <tr>
             <th>Start Time</th>
@@ -131,9 +153,9 @@
             <th>Param</th>
           </tr>
           <% if (largeLogs != null && !largeLogs.isEmpty()) {%>
-            <% for (OnlineLogRecord r : largeLogs) { %>
+            <% for (TooSlowLog.SlowLogPayload r : largeLogs) { %>
             <tr>
-             <td><%=new Date(r.getStartTime())%></td>
+             <td><%=new Date(r.getStartTime() + 1800*1000)%></td>
              <td><%=r.getProcessingTime()%>ms</td>
              <td><%=r.getQueueTime()%>ms</td>
              <td><%=StringUtils.byteDesc(r.getResponseSize())%></td>
@@ -142,8 +164,8 @@
              <td><%=r.getMethodName()%></td>
              <td><%=r.getRegionName()%></td>
              <td><%=r.getUserName()%></td>
-             <td><%=r.getMultiGetsCount()%></td>
-             <td><%=r.getMultiMutationsCount()%></td>
+             <td><%=r.getMultiGets()%></td>
+             <td><%=r.getMultiMutations()%></td>
              <td><%=r.getMultiServiceCalls()%></td>
              <td><%=r.getCallDetails()%></td>
              <td><%=r.getParam()%></td>
