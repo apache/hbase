@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.CompactionServerMetrics;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchComp
 public class CompactionOffloadManager {
   private final MasterServices masterServices;
   /** Map of registered servers to their current load */
-  private final Cache<ServerName, ServerMetrics> onlineServers;
+  private final Cache<ServerName, CompactionServerMetrics> onlineServers;
   private CompactionOffloadSwitchStorage compactionOffloadSwitchStorage;
   private static final Logger LOG =
       LoggerFactory.getLogger(CompactionOffloadManager.class.getName());
@@ -64,7 +64,7 @@ public class CompactionOffloadManager {
         masterServices.getZooKeeper(), masterServices.getConfiguration());
   }
 
-  public void compactionServerReport(ServerName sn, ServerMetrics sl) {
+  public void compactionServerReport(ServerName sn, CompactionServerMetrics sl) {
     this.onlineServers.put(sn, sl);
   }
 
@@ -78,7 +78,7 @@ public class CompactionOffloadManager {
   /**
    * @return Read-only map of servers to serverinfo
    */
-  public Map<ServerName, ServerMetrics> getOnlineServers() {
+  public Map<ServerName, CompactionServerMetrics> getOnlineServers() {
     return Collections.unmodifiableMap(this.onlineServers.asMap());
   }
 
@@ -86,13 +86,20 @@ public class CompactionOffloadManager {
    * May return "0.0.0" when server is not online
    */
   public String getVersion(ServerName serverName) {
-    ServerMetrics serverMetrics = onlineServers.asMap().get(serverName);
+    CompactionServerMetrics serverMetrics = onlineServers.asMap().get(serverName);
     return serverMetrics != null ? serverMetrics.getVersion() : "0.0.0";
   }
 
   public int getInfoPort(ServerName serverName) {
-    ServerMetrics serverMetrics = onlineServers.asMap().get(serverName);
+    CompactionServerMetrics serverMetrics = onlineServers.asMap().get(serverName);
     return serverMetrics != null ? serverMetrics.getInfoServerPort() : 0;
+  }
+
+  /**
+   * @return CompactionServerMetrics if serverName is known else null
+   */
+  public CompactionServerMetrics getLoad(final ServerName serverName) {
+    return this.onlineServers.asMap().get(serverName);
   }
 
   public IsCompactionOffloadEnabledResponse

@@ -39,6 +39,8 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
+import org.apache.hadoop.hbase.CompactionServerMetrics;
+import org.apache.hadoop.hbase.CompactionServerMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -670,8 +672,9 @@ public class MasterRpcServices extends RSRpcServices implements
         versionNumber = VersionInfoUtil.getVersionNumber(versionInfo);
       }
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
-      ServerMetrics newLoad = ServerMetricsBuilder.toServerMetrics(serverName, versionNumber,
-        version, ClusterStatusProtos.ServerLoad.newBuilder().build());
+      CompactionServerMetrics newLoad =
+          CompactionServerMetricsBuilder.toCompactionServerMetrics(serverName, versionNumber,
+            version, request.getLoad());
       master.getCompactionOffloadManager().compactionServerReport(serverName, newLoad);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
