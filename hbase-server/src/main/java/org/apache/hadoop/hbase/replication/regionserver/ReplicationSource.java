@@ -259,7 +259,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
   }
 
-  @InterfaceAudience.Private
+  @Override
   public Map<String, PriorityBlockingQueue<Path>> getQueues() {
     return logQueue.getQueues();
   }

@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -171,5 +173,10 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   @Override
   public ReplicationPeer getPeer() {
     return replicationPeer;
+  }
+
+  @Override
+  public Map<String, PriorityBlockingQueue<Path>> getQueues() {
+	return null;
   }
 }

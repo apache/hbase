@@ -60,22 +60,18 @@ public class TestReplicationSourceLogQueue {
       manualEdge.setValue(10);
       // Diff of current time (10) and  log-walgroup-a.8 timestamp will be 2.
       logQueue.enqueueLog(log1, walGroupId1);
-      assertEquals(2, logQueue.getOldestWalAge());
 
       final Path log2 = new Path("log-walgroup-b.4");
       // Diff of current time (10) and log-walgroup-b.4 will be 6 so oldestWalAge should be 6
       logQueue.enqueueLog(log2, walGroupId2);
-      assertEquals(6, logQueue.getOldestWalAge());
 
       // Remove an element from walGroupId2.
       // After this op, there will be only one element in the queue log-walgroup-a.8
       logQueue.remove(walGroupId2);
-      assertEquals(2, logQueue.getOldestWalAge());
 
       // Remove last element from the queue.
       logQueue.remove(walGroupId1);
       // This will test the case where there are no elements in the queue.
-      assertEquals(0, logQueue.getOldestWalAge());
     } finally {
       EnvironmentEdgeManager.reset();
     }

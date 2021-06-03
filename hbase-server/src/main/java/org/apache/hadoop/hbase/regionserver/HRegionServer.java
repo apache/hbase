@@ -147,6 +147,7 @@ import org.apache.hadoop.hbase.regionserver.http.RSStatusServlet;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.security.SecurityConstants;
@@ -454,6 +455,9 @@ public class HRegionServer extends Thread implements
 
   /** The nonce manager chore. */
   private ScheduledChore nonceManagerChore;
+
+  // The metrics source chore
+  private MetricsSourceRefresherChore metricsSourceChore;
 
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
@@ -1980,14 +1984,24 @@ public class HRegionServer extends Thread implements
    * Start up replication source and sink handlers.
    */
   private void startReplicationService() throws IOException {
+	boolean is_replication_enabled = false;
     if (sameReplicationSourceAndSink && this.replicationSourceHandler != null) {
+      is_replication_enabled = true;
       this.replicationSourceHandler.startReplicationService();
     } else {
       if (this.replicationSourceHandler != null) {
+    	is_replication_enabled = true;
         this.replicationSourceHandler.startReplicationService();
       }
       if (this.replicationSinkHandler != null) {
         this.replicationSinkHandler.startReplicationService();
+      }
+    }
+    if (is_replication_enabled) {
+      int duration = this.conf.getInt(MetricsSourceRefresherChore.DURATION,
+      MetricsSourceRefresherChore.DEFAULT_DURATION);
+      for (ReplicationSourceInterface  source: this.getReplicationSourceService().getReplicationManager().getSources()) {
+        this.metricsSourceChore = new MetricsSourceRefresherChore(duration, this, source);
       }
     }
   }
