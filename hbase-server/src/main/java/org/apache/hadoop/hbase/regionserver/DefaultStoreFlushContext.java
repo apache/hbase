@@ -82,7 +82,8 @@ public class DefaultStoreFlushContext extends StoreFlushContext {
     return commit(p -> store.commitFile(p, cacheFlushSeqNum, status));
   }
 
-  protected boolean commit(DefaultStoreFlusher.IOCheckedFunction<Path,HStoreFile> commitFunction) throws IOException {
+  protected boolean commit(DefaultStoreFlusher.IOCheckedFunction<Path,HStoreFile> commitFunction)
+      throws IOException {
     if (CollectionUtils.isEmpty(this.tempFiles)) {
       return false;
     }

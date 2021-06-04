@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -59,8 +58,9 @@ public class DefaultStoreFlusher extends StoreFlusher {
 
 
   protected List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
-    MonitoredTask status, ThroughputController throughputController,
-    FlushLifeCycleTracker tracker, IOCheckedFunction<HStore,StoreFileWriter> createWriter) throws IOException {
+      MonitoredTask status, ThroughputController throughputController,
+      FlushLifeCycleTracker tracker, IOCheckedFunction<HStore,StoreFileWriter> createWriter)
+        throws IOException {
     ArrayList<Path> result = new ArrayList<>();
     int cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries

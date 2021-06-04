@@ -20,6 +20,10 @@ package org.apache.hadoop.hbase.regionserver;
 import static junit.framework.TestCase.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -30,9 +34,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
-
-import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Test class for the TestPersistedStoreFlushContext

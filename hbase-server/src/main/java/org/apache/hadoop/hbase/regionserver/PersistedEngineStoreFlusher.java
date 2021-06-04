@@ -21,18 +21,13 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -57,7 +52,8 @@ public class PersistedEngineStoreFlusher extends DefaultStoreFlusher {
 
   public StoreFileWriter createWriter(long maxKeyCount, Compression.Algorithm compression,
       boolean includesTag) throws IOException {
-    Path familyDir = new Path(store.getRegionFileSystem().getRegionDir(), store.getColumnFamilyName());
+    Path familyDir = new Path(store.getRegionFileSystem().getRegionDir(),
+      store.getColumnFamilyName());
     HFileContext hFileContext = store.createFileContext(compression, true,
       includesTag, store.getStoreContext().getEncryptionContext());
 
