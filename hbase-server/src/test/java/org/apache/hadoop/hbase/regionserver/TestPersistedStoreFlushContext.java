@@ -25,10 +25,12 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,6 +42,10 @@ import org.mockito.ArgumentCaptor;
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestPersistedStoreFlushContext {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestPersistedStoreFlushContext.class);
 
   @Rule
   public TestName name = new TestName();

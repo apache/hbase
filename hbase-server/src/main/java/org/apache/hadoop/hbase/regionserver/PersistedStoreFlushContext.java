@@ -46,7 +46,8 @@ public class PersistedStoreFlushContext extends DefaultStoreFlushContext {
   @Override
   public boolean commit(MonitoredTask status) throws IOException {
     return super.commit(p -> {
-      status.setStatus("Flushing " + this.store + ": reopening file created directly in family dir");
+      status.setStatus("Flushing " + this.store +
+        ": reopening file created directly in family dir");
       HStoreFile sf = store.createStoreFileAndReader(p);
 
       StoreFileReader r = sf.getReader();

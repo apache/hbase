@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -26,9 +30,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.List;
 
 /**
  * Default implementation of StoreFlusher.
