@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
@@ -264,12 +265,12 @@ public class TestBackupSystemTable {
 
     table.writeRegionServerLogTimestamp(tables, rsTimestampMap, "root");
 
-    HashMap<TableName, HashMap<String, Long>> result = table.readLogTimestampMap("root");
+    Map<TableName, Map<String, Long>> result = table.readLogTimestampMap("root");
 
     assertTrue(tables.size() == result.size());
 
     for (TableName t : tables) {
-      HashMap<String, Long> rstm = result.get(t);
+      Map<String, Long> rstm = result.get(t);
       assertNotNull(rstm);
       assertEquals(rstm.get("rs1:100"), new Long(100L));
       assertEquals(rstm.get("rs2:100"), new Long(101L));
@@ -295,7 +296,7 @@ public class TestBackupSystemTable {
     assertTrue(5 == result.size());
 
     for (TableName t : tables) {
-      HashMap<String, Long> rstm = result.get(t);
+      Map<String, Long> rstm = result.get(t);
       assertNotNull(rstm);
       if (t.equals(TableName.valueOf("t3")) == false) {
         assertEquals(rstm.get("rs1:100"), new Long(100L));
@@ -309,7 +310,7 @@ public class TestBackupSystemTable {
     }
 
     for (TableName t : tables1) {
-      HashMap<String, Long> rstm = result.get(t);
+      Map<String, Long> rstm = result.get(t);
       assertNotNull(rstm);
       assertEquals(rstm.get("rs1:100"), new Long(200L));
       assertEquals(rstm.get("rs2:100"), new Long(201L));

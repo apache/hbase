@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -59,16 +60,16 @@ public class IncrementalBackupManager extends BackupManager {
    * @return The new HashMap of RS log time stamps after the log roll for this incremental backup.
    * @throws IOException exception
    */
-  public HashMap<String, Long> getIncrBackupLogFileMap() throws IOException {
+  public Map<String, Long> getIncrBackupLogFileMap() throws IOException {
     List<String> logList;
-    HashMap<String, Long> newTimestamps;
-    HashMap<String, Long> previousTimestampMins;
+    Map<String, Long> newTimestamps;
+    Map<String, Long> previousTimestampMins;
 
     String savedStartCode = readBackupStartCode();
 
     // key: tableName
     // value: <RegionServer,PreviousTimeStamp>
-    HashMap<TableName, HashMap<String, Long>> previousTimestampMap = readLogTimestampMap();
+    Map<TableName, Map<String, Long>> previousTimestampMap = readLogTimestampMap();
 
     previousTimestampMins = BackupUtils.getRSLogTimestampMins(previousTimestampMap);
 
@@ -125,8 +126,8 @@ public class IncrementalBackupManager extends BackupManager {
    * @return a list of log files to be backed up
    * @throws IOException exception
    */
-  private List<String> getLogFilesForNewBackup(HashMap<String, Long> olderTimestamps,
-      HashMap<String, Long> newestTimestamps, Configuration conf, String savedStartCode)
+  private List<String> getLogFilesForNewBackup(Map<String, Long> olderTimestamps,
+      Map<String, Long> newestTimestamps, Configuration conf, String savedStartCode)
       throws IOException {
     LOG.debug("In getLogFilesForNewBackup()\n" + "olderTimestamps: " + olderTimestamps
         + "\n newestTimestamps: " + newestTimestamps);

@@ -480,7 +480,7 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   public void writeRegionServerLogTimestamp(Set<TableName> tables,
-      HashMap<String, Long> newTimestamps) throws IOException {
+      Map<String, Long> newTimestamps) throws IOException {
     systemTable.writeRegionServerLogTimestamp(tables, newTimestamps, backupInfo.getBackupRootDir());
   }
 
@@ -491,7 +491,7 @@ public class BackupManager implements Closeable {
    *         RegionServer,PreviousTimeStamp
    * @throws IOException exception
    */
-  public HashMap<TableName, HashMap<String, Long>> readLogTimestampMap() throws IOException {
+  public Map<TableName, Map<String, Long>> readLogTimestampMap() throws IOException {
     return systemTable.readLogTimestampMap(backupInfo.getBackupRootDir());
   }
 

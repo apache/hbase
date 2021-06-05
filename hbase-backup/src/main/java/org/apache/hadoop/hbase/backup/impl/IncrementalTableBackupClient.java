@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -299,7 +298,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     // After this checkpoint, even if entering cancel process, will let the backup finished
     try {
       // Set the previousTimestampMap which is before this current log roll to the manifest.
-      HashMap<TableName, HashMap<String, Long>> previousTimestampMap =
+      Map<TableName, Map<String, Long>> previousTimestampMap =
           backupManager.readLogTimestampMap();
       backupInfo.setIncrTimestampMap(previousTimestampMap);
 
@@ -307,9 +306,10 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       // For incremental backup, it contains the incremental backup table set.
       backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
 
-      HashMap<TableName, HashMap<String, Long>> newTableSetTimestampMap =
+      Map<TableName, Map<String, Long>> newTableSetTimestampMap =
           backupManager.readLogTimestampMap();
 
+      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
       Long newStartCode =
           BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
       backupManager.writeBackupStartCode(newStartCode);

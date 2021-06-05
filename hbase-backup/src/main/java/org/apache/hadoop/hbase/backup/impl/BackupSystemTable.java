@@ -853,7 +853,7 @@ public final class BackupSystemTable implements Closeable {
    * @throws IOException exception
    */
   public void writeRegionServerLogTimestamp(Set<TableName> tables,
-      HashMap<String, Long> newTimestamps, String backupRoot) throws IOException {
+      Map<String, Long> newTimestamps, String backupRoot) throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("write RS log time stamps to backup system table for tables ["
           + StringUtils.join(tables, ",") + "]");
@@ -878,13 +878,13 @@ public final class BackupSystemTable implements Closeable {
    *         RegionServer,PreviousTimeStamp
    * @throws IOException exception
    */
-  public HashMap<TableName, HashMap<String, Long>> readLogTimestampMap(String backupRoot)
+  public Map<TableName, Map<String, Long>> readLogTimestampMap(String backupRoot)
       throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("read RS log ts from backup system table for root=" + backupRoot);
     }
 
-    HashMap<TableName, HashMap<String, Long>> tableTimestampMap = new HashMap<>();
+    Map<TableName, Map<String, Long>> tableTimestampMap = new HashMap<>();
 
     Scan scan = createScanForReadLogTimestampMap(backupRoot);
     try (Table table = connection.getTable(tableName);

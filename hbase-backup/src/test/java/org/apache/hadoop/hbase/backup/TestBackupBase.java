@@ -155,7 +155,7 @@ public class TestBackupBase {
         // set overall backup status: complete. Here we make sure to complete the backup.
         // After this checkpoint, even if entering cancel process, will let the backup finished
         // Set the previousTimestampMap which is before this current log roll to the manifest.
-        HashMap<TableName, HashMap<String, Long>> previousTimestampMap =
+        Map<TableName, Map<String, Long>> previousTimestampMap =
             backupManager.readLogTimestampMap();
         backupInfo.setIncrTimestampMap(previousTimestampMap);
 
@@ -164,7 +164,7 @@ public class TestBackupBase {
         backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
         failStageIf(Stage.stage_3);
 
-        HashMap<TableName, HashMap<String, Long>> newTableSetTimestampMap =
+        Map<TableName, Map<String, Long>> newTableSetTimestampMap =
             backupManager.readLogTimestampMap();
 
         Long newStartCode =
@@ -252,7 +252,7 @@ public class TestBackupBase {
         // For incremental backup, it contains the incremental backup table set.
         backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
 
-        HashMap<TableName, HashMap<String, Long>> newTableSetTimestampMap =
+        Map<TableName, Map<String, Long>> newTableSetTimestampMap =
             backupManager.readLogTimestampMap();
 
         Long newStartCode =

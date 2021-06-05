@@ -186,9 +186,10 @@ public class FullTableBackupClient extends TableBackupClient {
       // For incremental backup, it contains the incremental backup table set.
       backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
 
-      HashMap<TableName, HashMap<String, Long>> newTableSetTimestampMap =
+      Map<TableName, Map<String, Long>> newTableSetTimestampMap =
           backupManager.readLogTimestampMap();
 
+      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
       Long newStartCode =
           BackupUtils.getMinValue(BackupUtils
               .getRSLogTimestampMins(newTableSetTimestampMap));
