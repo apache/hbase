@@ -343,15 +343,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       sendRejectionReasonToRingBuffer(() -> getBalanceReason(calculatedTotal, calculatedMultiplier),
         costFunctions);
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("{} {}; total cost={}, sum multiplier={}; cost/multiplier to need a balance is {}",
-          balanced ? "Skipping load balancing because balanced" : "We need to load balance",
-          isByTable ? String.format("table (%s)", tableName) : "cluster",
-          total, sumMultiplier, minCostNeedBalance);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Balance decision detailed function costs={}", functionCost());
-      }
+    LOG.info("{} {}; total cost={}, sum multiplier={}; cost/multiplier to need a balance is {}",
+      balanced ? "Skipping load balancing because balanced" :
+        "Start calculating moving plan without logging info for up to {} secs",
+      isByTable ? String.format("table (%s)", tableName) : "cluster",
+      total, sumMultiplier, minCostNeedBalance, maxRunningTime / 1000);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Balance decision detailed function costs={}", functionCost());
     }
+
     return !balanced;
   }
 
@@ -470,17 +470,17 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
     if (initCost > currentCost) {
       List<RegionPlan> plans = createRegionPlans(cluster);
-      LOG.info("Finished computing new load balance plan. Computation took {}" +
-        " to try {} different iterations.  Found a solution that moves " +
-        "{} regions; Going from a computed cost of {}" +
-        " to a new cost of {}", java.time.Duration.ofMillis(endTime - startTime),
-        step, plans.size(), initCost, currentCost);
+      LOG.info("Finished computing new load balance plan. Computation took {} ms" +
+          " to try {} different iterations.  Found a solution that moves " +
+          "{} regions; Going from a computed cost of {}" +
+          " to a new cost of {}. Move plan to be submitted to master to execute",
+        endTime - startTime, step, plans.size(), initCost, currentCost);
       sendRegionPlansToRingBuffer(plans, currentCost, initCost, initFunctionTotalCosts, step);
       return plans;
     }
     LOG.info("Could not find a better load balance plan.  Tried {} different configurations in " +
-      "{}, and did not find anything with a computed cost less than {}", step,
-      java.time.Duration.ofMillis(endTime - startTime), initCost);
+        "{} ms, and did not find anything with a computed cost less than {}", step,
+      endTime - startTime, initCost);
     return null;
   }
 
