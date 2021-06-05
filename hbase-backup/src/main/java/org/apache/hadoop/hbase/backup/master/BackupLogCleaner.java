@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -91,17 +92,34 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
-  private Map<TableName, Long> getTableToLatestBackupMapping(List<BackupInfo> backups) {
-    Map<TableName, Long> tableToLastBackupMap = new HashMap<>();
-    for (BackupInfo backup : backups) {
-      for (TableName table : backup.getTables()) {
-        tableToLastBackupMap.putIfAbsent(table, backup.getStartTs());
-        if (tableToLastBackupMap.get(table) < backup.getStartTs()) {
-          tableToLastBackupMap.put(table, backup.getStartTs());
+
+  private Map<Address, Long> getServersToOldestBackupMapping(List<BackupInfo> backups)
+    throws IOException {
+    Map<Address, Long> serverAddressToLastBackupMap = new HashMap<>();
+
+    Set<Address> allServers =
+      serverManager.getOnlineServersList().stream().map(serverName -> serverName.getAddress())
+        .collect(Collectors.toSet());
+    for (BackupInfo backupInfo : backups) {
+      for (TableName tableName : backupInfo.getTables()) {
+        Optional<RSGroupInfo> rsGroupInfoOptional =
+          RSGroupUtil.getRSGroupInfo(master, rsGroupInfoManager, tableName);
+
+        Set<Address> servers;
+        if (rsGroupInfoOptional.isPresent()) {
+          servers = rsGroupInfoOptional.get().getServers();
+          LOG.debug("RSgroup servers picked for table {} are {}", servers.size(), tableName);
+        } else {
+          servers = allServers;
+          LOG.debug("All servers picked for table {} are {}", servers.size(), tableName);
         }
+
+
+
       }
     }
-    return tableToLastBackupMap;
+
+    return serverAddressToLastBackupMap;
   }
 
   private Map<Address, Long> getServersToOldestBackupMapping(
@@ -110,6 +128,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     for (Map.Entry<TableName, Long> entry : tableToLastBackupMap.entrySet()) {
       TableName tableName = entry.getKey();
       Long lastTableBackupTimestamp = entry.getValue();
+
       Optional<RSGroupInfo> rsGroupInfoOptional =
         RSGroupUtil.getRSGroupInfo(master, rsGroupInfoManager, tableName);
       Set<Address> servers;
@@ -122,6 +141,8 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
             .collect(Collectors.toSet());
         LOG.debug("All servers picked for table {} are {}", servers.size(), tableName);
       }
+
+
       for (Address address : servers) {
         addressToLastBackupMap.putIfAbsent(address, lastTableBackupTimestamp);
         if (addressToLastBackupMap.get(address) > lastTableBackupTimestamp) {
@@ -151,8 +172,9 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     Map<TableName, Long> tableToLastBackupMap;
     try {
       try (BackupManager backupManager = new BackupManager(conn, getConf())) {
-        tableToLastBackupMap = getTableToLatestBackupMapping(backupManager.getBackupHistory(true));
-        addressToLastBackupMap = getServersToOldestBackupMapping(tableToLastBackupMap);
+        tableToLastBackupMap =
+          BackupUtils.getTableToLastStartCodeMapping(backupManager.getBackupHistory(true));
+        addressToLastBackupMap = getServersToOldestBackupMapping(backupManager.getBackupHistory(true));
       }
     } catch (IOException ex) {
       LOG.error("Failed to analyse backup history with exception: {}. Retaining all logs",

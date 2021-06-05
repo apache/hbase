@@ -78,6 +78,28 @@ public final class BackupUtils {
   }
 
   /**
+   * Loop through the backups to identify the latest backup performed for each table with its
+   * timestamp
+   *
+   * @param backups list of backups
+   * @return the latest start code for each table
+   */
+  public static Map<TableName, Long> getTableToLastStartCodeMapping(List<BackupInfo> backups) {
+    Map<TableName, Long> tableToLastBackupMap = new HashMap<>();
+    for (BackupInfo backup : backups) {
+      Long startTimestamp = BackupUtils.getMinValue(BackupUtils
+        .getRSLogTimestampMins(backup.getTableSetTimestampMap()));
+      for (TableName table : backup.getTables()) {
+        tableToLastBackupMap.putIfAbsent(table, startTimestamp);
+        if (tableToLastBackupMap.get(table) < startTimestamp) {
+          tableToLastBackupMap.put(table, startTimestamp);
+        }
+      }
+    }
+    return tableToLastBackupMap;
+  }
+
+  /**
    * Loop through the RS log timestamp map for the tables, for each RS, find the min timestamp value
    * for the RS among the tables.
    * @param rsLogTimestampMap timestamp map
