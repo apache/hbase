@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * In that sense, this class does not abstract away <strong>every</strong> interface that
  * MiniHBaseCluster or DistributedHBaseCluster provide.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public abstract class HBaseCluster implements Closeable, Configurable {
   // Log is being used in DistributedHBaseCluster class, hence keeping it as package scope
   static final Logger LOG = LoggerFactory.getLogger(HBaseCluster.class.getName());
