@@ -91,29 +91,6 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        2.2.7
-      </td>
-      <td style="test-align: left">
-        2021/04/11
-      </td>
-      <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.2.7/api_compare_2.2.7RC0_to_2.2.6.html">2.2.7 vs 2.2.6</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.2.7/CHANGES.md">Changes</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.2.7/RELEASENOTES.md">Release Notes</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.2.7/hbase-2.2.7-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/2.2.7/hbase-2.2.7-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.2.7/hbase-2.2.7-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.2.7/hbase-2.2.7-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.2.7/hbase-2.2.7-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.2.7/hbase-2.2.7-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.2.7/hbase-2.2.7-client-bin.tar.gz">client-bin</a> (<a href="https://apache.org/dist/hbase/2.2.7/hbase-2.2.7-client-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.2.7/hbase-2.2.7-client-bin.tar.gz.asc">asc</a>)
-      </td>
-      <td><em>EOL</em></td>
-    </tr>
-    <tr>
-      <td style="test-align: left">
         1.6.0
       </td>
       <td style="test-align: left">
