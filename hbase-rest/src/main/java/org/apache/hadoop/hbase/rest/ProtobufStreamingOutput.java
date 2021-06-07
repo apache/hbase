@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.rest;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.StreamingOutput;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -33,6 +31,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.javax.ws.rs.WebApplicationException;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.StreamingOutput;
 
 @InterfaceAudience.Private
 public class ProtobufStreamingOutput implements StreamingOutput {

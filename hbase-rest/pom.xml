@@ -130,15 +130,6 @@
     </plugins>
   </build>
   <dependencies>
-    <!--This one is upfront to get in front of
-         any dependency that pulls in jersey-core.
-         Jersey-core has implemented version 1
-         Interfaces of what is in this dependency
-         which does version 2.-->
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
-    </dependency>
     <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -160,7 +151,6 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-protocol-shaded</artifactId>
-      <type>jar</type>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -226,6 +216,10 @@
     <!-- REST dependencies -->
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-jackson-jaxrs-json-provider</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
       <artifactId>hbase-shaded-miscellaneous</artifactId>
     </dependency>
     <dependency>
@@ -259,10 +253,6 @@
     <dependency>
       <groupId>com.sun.activation</groupId>
       <artifactId>javax.activation</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.jaxrs</groupId>
-      <artifactId>jackson-jaxrs-json-provider</artifactId>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
