@@ -285,12 +285,12 @@ public class TestHbck {
     ServerName serverName = testRs.getServerName();
     Hbck hbck = getHbck();
     List<Long> pids =
-      hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+      hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
     assertTrue(pids.get(0) > 0);
     LOG.info("pid is {}", pids.get(0));
 
     List<Long> newPids =
-      hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+      hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
     assertTrue(newPids.get(0) < 0);
     LOG.info("pid is {}", newPids.get(0));
     waitOnPids(pids);

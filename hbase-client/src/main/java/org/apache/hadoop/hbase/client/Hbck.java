@@ -116,17 +116,6 @@ public interface Hbck extends Abortable, Closeable {
   List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean override, boolean recursive)
       throws IOException;
 
-  /**
-   * Use {@link #scheduleServerCrashProcedures(List)} instead.
-   * @deprecated since 2.2.1. Will removed in 3.0.0.
-   */
-  @Deprecated
-  default List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
-      throws IOException {
-    return scheduleServerCrashProcedures(
-        serverNames.stream().map(ProtobufUtil::toServerName).collect(Collectors.toList()));
-  }
-
   List<Long> scheduleServerCrashProcedures(List<ServerName> serverNames) throws IOException;
 
   List<Long> scheduleSCPsForUnknownServers() throws IOException;
