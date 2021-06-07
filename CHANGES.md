@@ -20,6 +20,57 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.4 - 2021-06-14
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25666](https://issues.apache.org/jira/browse/HBASE-25666) | Explain why balancer is skipping runs |  Major | Balancer, master, UI |
+| [HBASE-25942](https://issues.apache.org/jira/browse/HBASE-25942) | Get rid of null regioninfo in wrapped connection exceptions |  Trivial | logging |
+| [HBASE-25908](https://issues.apache.org/jira/browse/HBASE-25908) | Exclude jakarta.activation-api |  Major | hadoop3, shading |
+| [HBASE-25933](https://issues.apache.org/jira/browse/HBASE-25933) | Log trace raw exception, instead of cause message in NettyRpcServerRequestDecoder |  Minor | . |
+| [HBASE-25906](https://issues.apache.org/jira/browse/HBASE-25906) | UI of master-status to show recent history of balancer desicion |  Major | Balancer, master, UI |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25930](https://issues.apache.org/jira/browse/HBASE-25930) | Thrift does not support requests in Kerberos environment |  Major | Thrift |
+| [HBASE-25929](https://issues.apache.org/jira/browse/HBASE-25929) | RegionServer JVM crash when compaction |  Critical | Compaction |
+| [HBASE-25924](https://issues.apache.org/jira/browse/HBASE-25924) | Seeing a spike in uncleanlyClosedWALs metric. |  Major | Replication, wal |
+| [HBASE-25932](https://issues.apache.org/jira/browse/HBASE-25932) | TestWALEntryStream#testCleanClosedWALs test is failing. |  Major | metrics, Replication, wal |
+| [HBASE-25903](https://issues.apache.org/jira/browse/HBASE-25903) | ReadOnlyZKClient APIs - CompletableFuture.get() calls can cause threads to hang forver when ZK client create throws Non IOException |  Major | . |
+| [HBASE-25927](https://issues.apache.org/jira/browse/HBASE-25927) | Fix the log messages by not stringifying the exceptions in log |  Minor | logging |
+| [HBASE-25938](https://issues.apache.org/jira/browse/HBASE-25938) | The SnapshotOfRegionAssignmentFromMeta.initialize call in FavoredNodeLoadBalancer is just a dummy one |  Major | Balancer, FavoredNodes |
+| [HBASE-25898](https://issues.apache.org/jira/browse/HBASE-25898) | RS getting aborted due to NPE in Replication WALEntryStream |  Critical | Replication |
+| [HBASE-25875](https://issues.apache.org/jira/browse/HBASE-25875) | RegionServer failed to start due to IllegalThreadStateException in AuthenticationTokenSecretManager.start |  Major | . |
+| [HBASE-25892](https://issues.apache.org/jira/browse/HBASE-25892) | 'False' should be 'True' in auditlog of listLabels |  Major | logging, security |
+| [HBASE-25817](https://issues.apache.org/jira/browse/HBASE-25817) | Memory leak from thrift server hashMap |  Minor | Thrift |
+| [HBASE-25848](https://issues.apache.org/jira/browse/HBASE-25848) | Add flexibility to backup replication in case replication filter throws an exception |  Major | . |
+| [HBASE-25827](https://issues.apache.org/jira/browse/HBASE-25827) | Per Cell TTL tags get duplicated with increments causing tags length overflow |  Critical | regionserver |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25910](https://issues.apache.org/jira/browse/HBASE-25910) | Fix TestClusterPortAssignment.testClusterPortAssignment test and re-enable it. |  Minor | flakies, test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25963](https://issues.apache.org/jira/browse/HBASE-25963) | HBaseCluster should be marked as IA.Public |  Major | API |
+| [HBASE-25941](https://issues.apache.org/jira/browse/HBASE-25941) | TestRESTServerSSL fails because of jdk bug |  Major | test |
+| [HBASE-25940](https://issues.apache.org/jira/browse/HBASE-25940) | Update Compression/TestCompressionTest: LZ4, SNAPPY, LZO |  Major | . |
+| [HBASE-25791](https://issues.apache.org/jira/browse/HBASE-25791) | UI of master-status to show a recent history of  that why balancer  was rejected to run |  Major | Balancer, master, UI |
+
+
 ## Release 2.4.3 - 2021-05-21
 
 

@@ -20,6 +20,19 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.4 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-25963](https://issues.apache.org/jira/browse/HBASE-25963) | *Major* | **HBaseCluster should be marked as IA.Public**
+
+Change HBaseCluster to IA.Public as its sub class MiniHBaseCluster is IA.Public.
+
+
+
 # HBASE  2.4.3 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
