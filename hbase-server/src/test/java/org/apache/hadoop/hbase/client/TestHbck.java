@@ -67,7 +67,6 @@ import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Class to test HBaseHbck. Spins up the minicluster once at test start and then takes it down
