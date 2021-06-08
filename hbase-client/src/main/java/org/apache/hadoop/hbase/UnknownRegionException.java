@@ -26,8 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class UnknownRegionException extends DoNotRetryRegionException {
-
-  private static final long serialVersionUID = 8052818407096543141L;
+  private static final long serialVersionUID = 1968858760475205392L;
 
   /**
    * Constructs a new UnknownRegionException with the specified detail message.
