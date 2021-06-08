@@ -55,9 +55,8 @@ public class PersistedStoreFlushContext extends DefaultStoreFlushContext {
       this.store.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
 
       if (LOG.isInfoEnabled()) {
-        LOG.info("Added " + sf + ", entries=" + r.getEntries() +
-          ", sequenceid=" + cacheFlushSeqNum +
-          ", filesize=" +
+        LOG.info("Added {}, entries={}, sequenceid={}, filesize={}", sf, r.getEntries(),
+          cacheFlushSeqNum,
           StringUtils.TraditionalBinaryPrefix.long2String(r.length(), "", 1));
       }
       return sf;

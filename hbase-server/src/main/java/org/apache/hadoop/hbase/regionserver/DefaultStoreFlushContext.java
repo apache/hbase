@@ -125,8 +125,6 @@ public class DefaultStoreFlushContext extends StoreFlushContext {
     return store.updateStorefiles(storeFiles, snapshot.getId());
   }
 
-
-
   @Override
   public long getOutputFileSize() {
     return outputFileSize;

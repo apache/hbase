@@ -32,7 +32,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 
 /**
- * Default implementation of StoreFlusher.
+ * A StoreFlusher that writes hfiles directly into the actual store directory,
+ * instead of a temp dir..
  */
 @InterfaceAudience.Private
 public class PersistedEngineStoreFlusher extends DefaultStoreFlusher {

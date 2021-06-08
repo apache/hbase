@@ -50,10 +50,6 @@ public class TestPersistedStoreFlushContext {
   @Rule
   public TestName name = new TestName();
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final String DIR =
-    TEST_UTIL.getDataTestDir("TestPersistedStoreFlushContext").toString();
-
   @Test
   public void testCommit() throws Exception {
     HStore mockStore = mock(HStore.class);
@@ -62,7 +58,7 @@ public class TestPersistedStoreFlushContext {
     mockStore.flushedCellsCount = new AtomicLong(0);
     mockStore.flushedCellsSize = new AtomicLong(0);
     mockStore.flushedOutputFileSize = new AtomicLong(0);
-    Path filePath = new Path(DIR + name.getMethodName());
+    Path filePath = new Path(name.getMethodName());
     ArgumentCaptor<Path> captor = ArgumentCaptor.forClass(Path.class);
     HStoreFile mockStoreFile = mock(HStoreFile.class);
     when(mockStoreFile.getReader()).thenReturn(mock(StoreFileReader.class));

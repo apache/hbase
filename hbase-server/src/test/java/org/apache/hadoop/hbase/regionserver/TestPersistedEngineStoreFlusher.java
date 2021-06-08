@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.ChecksumType;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -65,18 +65,18 @@ public class TestPersistedEngineStoreFlusher {
   @Rule
   public TestName name = new TestName();
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final String DIR =
-    TEST_UTIL.getDataTestDir("TestPersistedEngineStoreFlusher").toString();
+  private Configuration config = new Configuration();
+  private HStore mockStore;
+  private MemStoreSnapshot mockSnapshot;
+  private String cfName = name.getMethodName()+"-CF";
 
-  @Test
-  public void testCreateWriter() throws Exception {
-    Path filePath = new Path(DIR + name.getMethodName());
-    HStore mockStore = mock(HStore.class);
+  @Before
+  public void setup() throws Exception {
+    Path filePath = new Path(name.getMethodName());
+    mockStore = mock(HStore.class);
     HRegionFileSystem mockRegionFS = mock(HRegionFileSystem.class);
     when(mockStore.getRegionFileSystem()).thenReturn(mockRegionFS);
     when(mockRegionFS.getRegionDir()).thenReturn(filePath);
-    String cfName = name.getMethodName()+"-CF";
     when(mockStore.getColumnFamilyName()).thenReturn(cfName);
     HFileContext mockFileContext = mock(HFileContext.class);
     when(mockFileContext.getBytesPerChecksum()).thenReturn(100);
@@ -84,11 +84,8 @@ public class TestPersistedEngineStoreFlusher {
     when(mockStore.createFileContext(isNull(), anyBoolean(),
       anyBoolean(), isNull())).thenReturn(mockFileContext);
     when(mockStore.getStoreContext()).thenReturn(mockStoreContext);
-    Configuration config = new Configuration();
-    MemStoreSnapshot mockSnapshot = mock(MemStoreSnapshot.class);
+    mockSnapshot = mock(MemStoreSnapshot.class);
     when(mockSnapshot.getCellsCount()).thenReturn(1);
-    MonitoredTask mockStatus = mock(MonitoredTask.class);
-    PersistedEngineStoreFlusher flusher = new PersistedEngineStoreFlusher(config, mockStore);
     when(mockStore.getHRegion()).thenReturn(mock(HRegion.class));
     ScanInfo mockScanInfo = mock(ScanInfo.class);
     when(mockStore.getScanInfo()).thenReturn(mockScanInfo);
@@ -105,7 +102,7 @@ public class TestPersistedEngineStoreFlusher {
     when(mockFS.getConf()).thenReturn(config);
     when(mockFS.create(any(Path.class), any(FsPermission.class), any(Boolean.class),
       any(Integer.class), any(Short.class), any(Long.class), any()))
-        .thenReturn(mock(FSDataOutputStream.class));
+      .thenReturn(mock(FSDataOutputStream.class));
     CacheConfig mockCacheConfig = mock(CacheConfig.class);
     when(mockCacheConfig.getByteBuffAllocator()).thenReturn(mock(ByteBuffAllocator.class));
     when(mockStore.getCacheConfig()).thenReturn(mockCacheConfig);
@@ -114,10 +111,16 @@ public class TestPersistedEngineStoreFlusher {
     when(mockFileContext.getChecksumType()).thenReturn(ChecksumType.NULL);
     when(mockFileContext.getCellComparator()).thenReturn(mock(CellComparator.class));
     when(mockStore.getRegionInfo()).thenReturn(mock(RegionInfo.class));
-    List<Path> files = flusher.flushSnapshot(mockSnapshot, 0, mockStatus,
+  }
+
+  @Test
+  public void testCreateWriter() throws Exception {
+    PersistedEngineStoreFlusher flusher = new PersistedEngineStoreFlusher(config, mockStore);
+    List<Path> files = flusher.flushSnapshot(mockSnapshot, 0, mock(MonitoredTask.class),
       null, FlushLifeCycleTracker.DUMMY);
     assertEquals(1, files.size());
     //asserts the file is created in the CF dir directly, instead of a temp dif
+    Path filePath = new Path(name.getMethodName());
     assertEquals(new Path(filePath, cfName), files.get(0).getParent());
   }
 
