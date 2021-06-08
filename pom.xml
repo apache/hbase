@@ -2009,6 +2009,10 @@
             <artifactId>netty</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
@@ -2631,6 +2635,10 @@
                 <artifactId>netty</artifactId>
               </exclusion>
               <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
               </exclusion>
@@ -2662,6 +2670,10 @@
                 <artifactId>netty</artifactId>
               </exclusion>
               <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
               </exclusion>
@@ -2681,6 +2693,10 @@
               <exclusion>
                 <groupId>io.netty</groupId>
                 <artifactId>netty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
@@ -2708,6 +2724,10 @@
               <exclusion>
                 <groupId>io.netty</groupId>
                 <artifactId>netty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>stax</groupId>
@@ -2749,6 +2769,10 @@
               <exclusion>
                 <groupId>io.netty</groupId>
                 <artifactId>netty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>stax</groupId>
@@ -2829,6 +2853,10 @@
                 <artifactId>netty</artifactId>
               </exclusion>
               <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
               </exclusion>
@@ -2868,6 +2896,10 @@
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>jackson-xc</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -2924,6 +2956,10 @@
               <exclusion>
                 <groupId>io.netty</groupId>
                 <artifactId>netty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>com.google.code.findbugs</groupId>
@@ -3006,6 +3042,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
@@ -3049,6 +3089,11 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <!--HERE-->
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
@@ -3077,6 +3122,10 @@
              <exclusion>
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
@@ -3141,6 +3190,14 @@
                <groupId>log4j</groupId>
                <artifactId>log4j</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -3189,6 +3246,10 @@
              <exclusion>
                <groupId>log4j</groupId>
                <artifactId>log4j</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -3265,6 +3326,10 @@
              <exclusion>
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
              <exclusion>
                <groupId>com.google.code.findbugs</groupId>
@@ -3367,6 +3432,13 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <!-- MiniMRCluster needs the hadoop netty-all transitive include... a
+               netty-all 4.0.52 version.... so we have to let it through.
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
+             -->
              <exclusion>
                <groupId>com.google.code.findbugs</groupId>
                <artifactId>jsr305</artifactId>
