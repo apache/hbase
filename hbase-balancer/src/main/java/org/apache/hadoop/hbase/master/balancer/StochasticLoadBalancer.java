@@ -180,7 +180,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       CostFunction func = createCostFunction(clazz, conf);
       LOG.info("Successfully loaded custom CostFunction '{}'", func.getClass().getSimpleName());
       costFunctions.add(func);
-      sumMultiplier += func.getMultiplier();
     }
   }
 
@@ -222,8 +221,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
     regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
-
-    sumMultiplier = 0.0f;
+    
     costFunctions = new ArrayList<>();
     addCostFunction(new RegionCountSkewCostFunction(conf));
     addCostFunction(new PrimaryRegionCountSkewCostFunction(conf));
@@ -291,8 +289,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private String getBalanceReason(double total) {
     if (total <= 0) {
       return "(weighted sum of imbalance = " + total + " <= 0";
-    } else if (sumMultiplier <= 0) {
-      return "sumMultiplier = " + sumMultiplier + " <= 0";
     } else if ((total / sumMultiplier) < minCostNeedBalance) {
       return "(weighted average imbalance = " +
         (total / sumMultiplier) + " < threshold (" + minCostNeedBalance + ")";
@@ -322,40 +318,34 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return true;
     }
 
+    sumMultiplier = 0.0f;
     double total = 0.0;
     for (CostFunction c : costFunctions) {
       float multiplier = c.getMultiplier();
       double cost = c.cost();
-      if (multiplier <= 0) {
-        LOG.trace("{} not needed because multiplier is <= 0", c.getClass().getSimpleName());
-        continue;
-      }
       if (!c.isNeeded()) {
         LOG.trace("{} not needed", c.getClass().getSimpleName());
         continue;
       }
-      if (cost < minCostNeedBalance)
-      {
-        LOG.debug("Imbalance of {} on the scale of [0, 1] is {} < threshold ({}).",
-          c.getClass().getSimpleName(), cost, minCostNeedBalance);
-      }
       total += cost * multiplier;
+      sumMultiplier += multiplier;
     }
 
-    boolean balanced = total <= 0 || sumMultiplier <= 0 ||
-        (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance);
+    boolean balanced = (total / sumMultiplier < minCostNeedBalance);
+
     if (balanced) {
       final double calculatedTotal = total;
-      sendRejectionReasonToRingBuffer(() -> getBalanceReason(calculatedTotal),
-        costFunctions);
+      sendRejectionReasonToRingBuffer(() -> getBalanceReason(calculatedTotal), costFunctions);
+      LOG.info("{} - skipping load balancing because weighted average imbalance={} > threshold({})."
+          + "functionCost={}."
+          + "If you want more aggressive balancing, either lower minCostNeedbalance {}"
+          + "or increase the relative weight(s) of the specific cost function(s).",
+        isByTable ? "Table specific ("+tableName+")" : "Cluster wide", functionCost(),
+        total / sumMultiplier, minCostNeedBalance);
+    } else {
+      LOG.info("{} - Calculating plan. may take up to {}ms to complete.",
+        isByTable ? "Table specific ("+tableName+")" : "Cluster wide", maxRunningTime);
     }
-    LOG.info("{} {} ", isByTable ? String.format("table (%s)", tableName) : "cluster",
-      balanced ? "Skipping load balancing because weighted average imbalance= "
-        + total / sumMultiplier + "< threshold (" + minCostNeedBalance + ") on the scale of [0, 1]."
-        + "If you want more aggressive balancing, either lower threshold minCostNeedbalance ("
-        + minCostNeedBalance + ") or increase the relative weight(s) of the specific cost function(s)."
-        : "Calculating plan. May take up to " + maxRunningTime + " ms to complete.");
-
     return !balanced;
   }
 
@@ -388,8 +378,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // Allow turning this feature off if the locality cost is not going to
     // be used in any computations.
     RegionHDFSBlockLocationFinder finder = null;
-    if ((this.localityCost != null && this.localityCost.getMultiplier() > 0)
-        || (this.rackLocalityCost != null && this.rackLocalityCost.getMultiplier() > 0)) {
+    if ((this.localityCost != null)
+        || (this.rackLocalityCost != null)) {
       finder = this.regionFinder;
     }
 
@@ -485,8 +475,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return plans;
     }
     LOG.info("Could not find a better moving plan.  Tried {} different configurations in " +
-        "{} ms, and did not find anything with a computed cost less than {}", step,
-      endTime - startTime, initCost);
+        "{} ms, and did not find anything with an imbalance score less than {}", step,
+      endTime - startTime, initCost / sumMultiplier);
     LOG.info("Balancer is going into sleep until next period");
     return null;
   }
@@ -498,7 +488,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       if (costFunctions != null) {
         for (CostFunction c : costFunctions) {
           float multiplier = c.getMultiplier();
-          if (multiplier <= 0 || !c.isNeeded()) {
+          if (!c.isNeeded()) {
             continue;
           }
           builder.addCostFuncInfo(c.getClass().getName(), c.cost(), c.getMultiplier());
@@ -555,7 +545,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     float multiplier = costFunction.getMultiplier();
     if (multiplier > 0) {
       costFunctions.add(costFunction);
-      sumMultiplier += multiplier;
     }
   }
 
@@ -564,10 +553,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     for (CostFunction c : costFunctions) {
       builder.append(c.getClass().getSimpleName());
       builder.append(" : (");
-      if (c.isNeeded() || c.getMultiplier() > 0) {
+      if (c.isNeeded()) {
           builder.append("multiplier=" + c.getMultiplier());
         builder.append(", ");
-        builder.append("imbalance=" + c.cost());
+        double cost = c.cost();
+        builder.append("imbalance=" + cost);
+        if (cost < minCostNeedBalance) {
+          builder.append(", balanced");
+        }
       } else {
         builder.append("not needed");
       }
@@ -579,7 +572,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private String totalCostsPerFunc() {
     StringBuilder builder = new StringBuilder();
     for (CostFunction c : costFunctions) {
-      if (c.getMultiplier() <= 0 || !c.isNeeded()) {
+      if (!c.isNeeded()) {
         continue;
       }
       double cost = c.getMultiplier() * c.cost();
@@ -663,7 +656,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   void updateCostsWithAction(BalancerClusterState cluster, BalanceAction action) {
     for (CostFunction c : costFunctions) {
-      if (c.getMultiplier() > 0 && c.isNeeded()) {
+      if (c.isNeeded()) {
         c.postAction(action);
       }
     }
@@ -702,7 +695,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       CostFunction c = costFunctions.get(i);
       this.tempFunctionCosts[i] = 0.0;
 
-      if (c.getMultiplier() <= 0 || !c.isNeeded()) {
+      if (!c.isNeeded()) {
         continue;
       }
 
