@@ -263,6 +263,14 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       DEFAULT_ASYNC_WAL_WAIT_ON_SHUTDOWN_IN_SECONDS);
   }
 
+  /**
+   * Helper that marks the future as DONE and offers it back to the cache.
+   */
+  private void markFutureDoneAndOffer(SyncFuture future, long txid, Throwable t) {
+    future.done(txid, t);
+    syncFutureCache.offer(future);
+  }
+
   private static boolean waitingRoll(int epochAndState) {
     return (epochAndState & 1) != 0;
   }
@@ -397,7 +405,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     for (Iterator<SyncFuture> iter = syncFutures.iterator(); iter.hasNext();) {
       SyncFuture sync = iter.next();
       if (sync.getTxid() <= txid) {
-        sync.done(txid, null);
+        markFutureDoneAndOffer(sync, txid, null);
         iter.remove();
         finished++;
       } else {
@@ -416,7 +424,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         long maxSyncTxid = highestSyncedTxid.get();
         for (SyncFuture sync : syncFutures) {
           maxSyncTxid = Math.max(maxSyncTxid, sync.getTxid());
-          sync.done(maxSyncTxid, null);
+          markFutureDoneAndOffer(sync, maxSyncTxid, null);
         }
         highestSyncedTxid.set(maxSyncTxid);
         int finished = syncFutures.size();
@@ -531,7 +539,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       for (Iterator<SyncFuture> syncIter = syncFutures.iterator(); syncIter.hasNext();) {
         SyncFuture future = syncIter.next();
         if (future.getTxid() < txid) {
-          future.done(future.getTxid(), error);
+          markFutureDoneAndOffer(future, future.getTxid(), error);
           syncIter.remove();
         } else {
           break;
@@ -796,7 +804,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       }
     }
     // and fail them
-    syncFutures.forEach(f -> f.done(f.getTxid(), error));
+    syncFutures.forEach(f -> markFutureDoneAndOffer(f, f.getTxid(), error));
     if (!(consumeExecutor instanceof EventLoop)) {
       consumeExecutor.shutdown();
     }
