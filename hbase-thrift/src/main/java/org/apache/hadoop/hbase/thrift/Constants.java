@@ -65,6 +65,10 @@ public final class Constants {
       "hbase.thrift.ssl.exclude.protocols";
   public static final String THRIFT_SSL_INCLUDE_PROTOCOLS_KEY =
       "hbase.thrift.ssl.include.protocols";
+  public static final String THRIFT_SSL_KEYSTORE_TYPE_KEY =
+    "hbase.thrift.ssl.keystore.type";
+  public static final String THRIFT_SSL_KEYSTORE_TYPE_DEFAULT =
+    "jks";
 
 
   public static final String THRIFT_SUPPORT_PROXYUSER_KEY = "hbase.thrift.support.proxyuser";
