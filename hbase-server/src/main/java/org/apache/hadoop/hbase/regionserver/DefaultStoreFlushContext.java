@@ -43,12 +43,12 @@ public class DefaultStoreFlushContext extends StoreFlushContext {
 
   private static final Logger LOG = LoggerFactory.getLogger(DefaultStoreFlushContext.class);
 
-  private MemStoreSnapshot snapshot;
-  private List<Path> tempFiles;
-  private List<Path> committedFiles;
-  private long cacheFlushCount;
-  private long cacheFlushSize;
-  private long outputFileSize;
+  protected MemStoreSnapshot snapshot;
+  protected List<Path> tempFiles;
+  protected List<Path> committedFiles;
+  protected long cacheFlushCount;
+  protected long cacheFlushSize;
+  protected long outputFileSize;
 
   public void init(HStore store, Long cacheFlushSeqNum, FlushLifeCycleTracker tracker) {
     super.init(store, cacheFlushSeqNum, tracker);
@@ -79,13 +79,18 @@ public class DefaultStoreFlushContext extends StoreFlushContext {
 
   @Override
   public boolean commit(MonitoredTask status) throws IOException {
+    return commit(p -> store.commitFile(p, cacheFlushSeqNum, status));
+  }
+
+  protected boolean commit(DefaultStoreFlusher.IOCheckedFunction<Path,HStoreFile> commitFunction)
+      throws IOException {
     if (CollectionUtils.isEmpty(this.tempFiles)) {
       return false;
     }
     List<HStoreFile> storeFiles = new ArrayList<>(this.tempFiles.size());
     for (Path storeFilePath : tempFiles) {
       try {
-        HStoreFile sf = store.commitFile(storeFilePath, cacheFlushSeqNum, status);
+        HStoreFile sf = commitFunction.apply(storeFilePath);
         outputFileSize += sf.getReader().length();
         storeFiles.add(sf);
       } catch (IOException ex) {
