@@ -159,6 +159,7 @@ public class CallRunner {
           sucessful = true;
         }
       }
+      this.status.markComplete("To send response");
       // return back the RPC request read BB we can do here. It is done by now.
       call.cleanup();
       // Set the response
@@ -166,8 +167,6 @@ public class CallRunner {
       CellScanner cells = resultPair != null ? resultPair.getSecond() : null;
       call.setResponse(param, cells, errorThrowable, error);
       call.sendResponseIfReady();
-      this.status.markComplete("Sent response");
-      this.status.pause("Waiting for a call");
     } catch (OutOfMemoryError e) {
       if (this.rpcServer.getErrorHandler() != null) {
         if (this.rpcServer.getErrorHandler().checkOOME(e)) {
@@ -191,6 +190,11 @@ public class CallRunner {
       if (!sucessful) {
         this.rpcServer.addCallSize(call.getSize() * -1);
       }
+
+      if (this.status.isRPCRunning()) {
+        this.status.markComplete("Call error");
+      }
+      this.status.pause("Waiting for a call");
       cleanup();
     }
   }
