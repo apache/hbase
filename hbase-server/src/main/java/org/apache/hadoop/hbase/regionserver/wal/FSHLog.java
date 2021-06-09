@@ -202,12 +202,7 @@ public class FSHLog implements WAL {
    */
   private final RingBufferEventHandler ringBufferEventHandler;
 
-  /**
-   * Map of {@link SyncFuture}s owned by Thread objects. Used so we reuse SyncFutures.
-   * Thread local is used so JVM can GC the terminated thread for us. See HBASE-21228
-   * <p>
-   */
-  private final ThreadLocal<SyncFuture> cachedSyncFutures;
+  private final SyncFutureCache syncFutureCache;
 
   /**
    * The highest known outstanding unsync'd WALEdit sequence number where sequence number is the
@@ -597,12 +592,7 @@ public class FSHLog implements WAL {
     this.ringBufferEventHandler = new RingBufferEventHandler(syncerCount, maxBatchCount);
     this.disruptor.handleExceptionsWith(new RingBufferExceptionHandler());
     this.disruptor.handleEventsWith(new RingBufferEventHandler [] {this.ringBufferEventHandler});
-    this.cachedSyncFutures = new ThreadLocal<SyncFuture>() {
-      @Override
-      protected SyncFuture initialValue() {
-        return new SyncFuture();
-      }
-    };
+    this.syncFutureCache = new SyncFutureCache(conf);
     // Starting up threads in constructor is a no no; Interface should have an init call.
     this.disruptor.start();
   }
@@ -1126,6 +1116,10 @@ public class FSHLog implements WAL {
       // With disruptor down, this is safe to let go.
       if (this.appendExecutor !=  null) this.appendExecutor.shutdown();
 
+      if (syncFutureCache != null) {
+        syncFutureCache.clear();
+      }
+
       // Tell our listeners that the log is closing
       if (!this.listeners.isEmpty()) {
         for (WALActionsListener i : this.listeners) {
@@ -1496,7 +1490,8 @@ public class FSHLog implements WAL {
     return this.disruptor.getRingBuffer().next();
   }
 
-  private SyncFuture publishSyncOnRingBuffer(Span span, boolean forceSync) {
+  @InterfaceAudience.Private
+  public SyncFuture publishSyncOnRingBuffer(Span span, boolean forceSync) {
     long sequence = this.disruptor.getRingBuffer().next();
     return publishSyncOnRingBuffer(sequence, span, forceSync);
   }
@@ -1523,10 +1518,6 @@ public class FSHLog implements WAL {
       syncFuture.get(walSyncTimeout);
       return syncFuture.getSpan();
     } catch (TimeoutIOException tioe) {
-      // SyncFuture reuse by thread, if TimeoutIOException happens, ringbuffer
-      // still refer to it, so if this thread use it next time may get a wrong
-      // result.
-      this.cachedSyncFutures.remove();
       throw tioe;
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted", ie);
@@ -1544,7 +1535,7 @@ public class FSHLog implements WAL {
   }
 
   private SyncFuture getSyncFuture(final long sequence, Span span) {
-    return cachedSyncFutures.get().reset(sequence);
+    return syncFutureCache.getIfPresentOrNew().reset(sequence);
   }
 
   private void postSync(final long timeInNanos, final int handlerSyncs) {
@@ -1815,6 +1806,10 @@ public class FSHLog implements WAL {
       return syncFuture;
     }
 
+    boolean isSafePointAttained() {
+      return safePointAttainedLatch.getCount() == 0;
+    }
+
     /**
      * Called by Thread B when it attains the 'safe point'.  In this method, Thread B signals
      * Thread A it can proceed. Thread B will be held in here until {@link #releaseSafePoint()}
@@ -1902,7 +1897,7 @@ public class FSHLog implements WAL {
       for (int i = 0; i < this.syncFuturesCount.get(); i++) {
         this.syncFutures[i].done(sequence, e);
       }
-      this.syncFuturesCount.set(0);
+      offerDoneSyncsBackToCache();
     }
 
     /**
@@ -2018,10 +2013,23 @@ public class FSHLog implements WAL {
               new DamagedWALException("On sync", this.exception));
         }
         attainSafePoint(sequence);
-        this.syncFuturesCount.set(0);
+        // It is critical that we offer the futures back to the cache for reuse here after the
+        // safe point is attained and all the clean up has been done. There have been
+        // issues with reusing sync futures early causing WAL lockups, see HBASE-25984.
+        offerDoneSyncsBackToCache();
       } catch (Throwable t) {
         LOG.error("UNEXPECTED!!! syncFutures.length=" + this.syncFutures.length, t);
       }
+    }
+
+    /**
+     * Offers the finished syncs back to the cache for reuse.
+     */
+    private void offerDoneSyncsBackToCache() {
+      for (int i = 0; i < this.syncFuturesCount.get(); i++) {
+        syncFutureCache.offer(syncFutures[i]);
+      }
+      this.syncFuturesCount.set(0);
     }
 
     SafePointZigZagLatch attainSafePoint() {
