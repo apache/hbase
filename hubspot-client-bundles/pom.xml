@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <artifactId>hbase-build-configuration</artifactId>
+    <groupId>org.apache.hbase</groupId>
+    <version>2.5.0</version>
+    <relativePath>../hbase-build-configuration</relativePath>
+  </parent>
+
+  <groupId>com.hubspot.hbase</groupId>
+  <artifactId>hubspot-client-bundles</artifactId>
+  <packaging>pom</packaging>
+  <name>Bundled versions of the hbase client</name>
+
+  <modules>
+    <module>hbase-client-bundle</module>
+    <module>hbase-mapreduce-bundle</module>
+  </modules>
+
+  <properties>
+    <shade.prefix>org.apache.hadoop.hbase.shaded</shade.prefix>
+    <!--
+      zookeeper version should be relatively compatible, and the default version
+      brings in netty-resolver 4.1.45.Final, which is not compatible with our default netty version
+      -->
+    <zookeeper.version>3.4.14</zookeeper.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.hubspot.hbase</groupId>
+        <artifactId>hbase-client-bundle</artifactId>
+        <version>${project.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-client</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.hubspot.hbase</groupId>
+        <artifactId>hbase-mapreduce-bundle</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>create-bundle-with-relocations</id>
+              <goals>
+                <goal>shade</goal>
+              </goals>
+              <phase>package</phase>
+              <configuration>
+                <outputFile combine.self="override"/>
+                <createDependencyReducedPom>true</createDependencyReducedPom>
+                <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+                <createSourcesJar>true</createSourcesJar>
+                <shadeSourcesContent>true</shadeSourcesContent>
+                <useBaseVersion>true</useBaseVersion>
+                <relocations>
+                  <relocation>
+                    <pattern>com.google.protobuf</pattern>
+                    <shadedPattern>${shade.prefix}.com.google.protobuf</shadedPattern>
+                  </relocation>
+                  <relocation>
+                    <pattern>com.codahale.metrics</pattern>
+                    <shadedPattern>${shade.prefix}.com.codahale.metrics</shadedPattern>
+                  </relocation>
+                  <!-- 
+                    This is a little brittle, but as far as I can tell this class list hasn't
+                    really changed much. The core problem this solves is that our hadoop jobs
+                    are executed with mapreduce.job.classloader.system.classes set, including
+                    org.apache.hadoop. As a result trying to load any of these classes will
+                    throw ClassNotFoundException because they aren't actually system classes
+                    but are covered by that property. Another option would be to exclude
+                    org.apache.hadoop.metrics2 from the system classes list, but there are a
+                    bunch of classes in there in hadoop and it's hard to know the implications 
+                    of that. So I decided to solve this for hbase by shading these classes
+                    which are brought in by hbase-hadoop-compat and hbase-hadoop2-compat.
+                    These classes are used in snapshot scan jobs, because the metrics are 
+                    initialized when opening an HFile for read.
+                  -->
+                  <relocation>
+                    <pattern>org.apache.hadoop.metrics2</pattern>
+                    <shadedPattern>${shade.prefix}.org.apache.hadoop.metrics2</shadedPattern>
+                    <includes>
+                      <include>org.apache.hadoop.metrics2.MetricHistogram</include>
+                      <include>org.apache.hadoop.metrics2.MetricsExecutor</include>
+                      <include>org.apache.hadoop.metrics2.impl.JmxCacheBuster*</include>
+                      <include>org.apache.hadoop.metrics2.lib.DefaultMetricsSystemHelper</include>
+                      <include>org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry</include>
+                      <include>org.apache.hadoop.metrics2.lib.MetricsExecutorImpl</include>
+                      <include>org.apache.hadoop.metrics2.lib.MetricsExecutorImpl*</include>
+                      <include>org.apache.hadoop.metrics2.lib.MutableFastCounter</include>
+                      <include>org.apache.hadoop.metrics2.lib.MutableHistogram</include>
+                      <include>org.apache.hadoop.metrics2.lib.MutableRangeHistogram</include>
+                      <include>org.apache.hadoop.metrics2.lib.MutableSizeHistogram</include>
+                      <include>org.apache.hadoop.metrics2.lib.MutableTimeHistogram</include>
+                      <include>org.apache.hadoop.metrics2.util.MetricQuantile</include>
+                      <include>org.apache.hadoop.metrics2.util.MetricSampleQuantiles*</include>
+                    </includes>
+                  </relocation>
+                </relocations>
+                <filters>
+                  <filter>
+                    <artifact>*:*</artifact>
+                    <excludes>
+                      <exclude>META-INF/*.SF</exclude>
+                      <exclude>META-INF/*.DSA</exclude>
+                      <exclude>META-INF/*.RSA</exclude>
+                    </excludes>
+                  </filter>
+                </filters>
+                <transformers>
+                  <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                </transformers>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

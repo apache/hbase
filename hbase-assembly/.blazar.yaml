@@ -1,0 +1,37 @@
+buildpack:
+  host: git.hubteam.com
+  organization: HubSpotProtected
+  repository: Blazar-Buildpack-Java
+  branch: v2
+
+provides:
+  - name: hbase-rpm
+
+env:
+  RPMS_OUTPUT_DIR: "$WORKSPACE/generated_rpms"
+  MAVEN_PHASE: package assembly:single
+
+before:
+  - description: "Prepare build environment"
+    commands:
+      - $WORKSPACE/build-scripts/prepare_environment.sh
+
+after:
+  onSuccess:
+    - description: "Ensure $RPMS_OUTPUT_DIR exists"
+      commands:
+        - mkdir -p $RPMS_OUTPUT_DIR
+
+    - description: "Create RPM Package"
+      commands:
+        - ./rpm-build/build.sh
+
+    - description: "List RPMs in $RPMS_OUTPUT_DIR"
+      commands:
+        - echo "The following Rpms are ready for upload"
+        - ls -lah $RPMS_OUTPUT_DIR
+
+    - description: "Publish RPM"
+      commands:
+        - echo "Will upload to $YUM_REPO"
+        - rpm-upload --rpms-dir=$WORKSPACE/generated_rpms/ --repo-name $YUM_REPO

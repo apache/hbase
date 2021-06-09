@@ -34,6 +34,15 @@
     <license.bundles.dependencies>true</license.bundles.dependencies>
   </properties>
   <dependencies>
+    <!--
+      Added by HubSpot since this module was in the original hadoop-three-compat moduleSet include list,
+      which is now converted to a dependencySet.
+    -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-annotations</artifactId>
+    </dependency>
+
     <!-- client artifacts for downstream use -->
     <dependency>
       <groupId>org.apache.hbase</groupId>

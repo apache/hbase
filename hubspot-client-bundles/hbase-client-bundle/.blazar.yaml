@@ -1,0 +1,18 @@
+# Note: this blazar yaml has been copied to all of the maven submodules (EXCEPT hbase-assembly) so
+# that they can be properly configured. If you make changes to this, you will need to make sure all
+# submodules are also updated accordingly. If you added a new submodule, you'll need to make sure
+# it gets a copy of this .blazar.yaml. In either case, use copy_blazar_yaml.sh to copy to all
+# subdirs containing a pom.xml.
+# Make sure to also check hbase-assembly/.blazar.yaml to see if any changes should be added there as well.
+# Prefer making changes to prepare_environment.sh instead, if possible.
+
+buildpack:
+  host: git.hubteam.com
+  organization: HubSpotProtected
+  repository: Blazar-Buildpack-Java
+  branch: v2
+
+before:
+  - description: "Prepare build environment"
+    commands:
+      - $WORKSPACE/build-scripts/prepare_environment.sh cdh5
