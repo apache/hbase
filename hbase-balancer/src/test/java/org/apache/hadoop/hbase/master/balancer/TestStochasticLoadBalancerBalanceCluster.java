@@ -51,8 +51,10 @@ public class TestStochasticLoadBalancerBalanceCluster extends StochasticBalancer
    */
   @Test
   public void testBalanceCluster() throws Exception {
-    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
+    // Set the limits generously to avoid flaky test results. SB is a random walk algorithm and
+    // therefore might take longer to find the solution at one iteration when we repeat
+    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 20000000L);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 300 * 1000); // 300 sec
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.onConfigurationChange(conf);
     for (int[] mockCluster : clusterStateMocks) {
