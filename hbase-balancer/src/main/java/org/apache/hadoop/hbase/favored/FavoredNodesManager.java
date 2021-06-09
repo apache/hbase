@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.favored;
 
 import static org.apache.hadoop.hbase.ServerName.NON_STARTCODE;
 import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.FAVORED_NODES_NUM;
+import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.getDataNodePort;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.PRIMARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.SECONDARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY;
@@ -31,88 +32,71 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.hbase.master.balancer.ClusterInfoProvider;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
- * FavoredNodesManager is responsible for maintaining favored nodes info in internal cache and
- * META table. Its the centralized store for all favored nodes information. All reads and updates
- * should be done through this class. There should only be one instance of
- * {@link FavoredNodesManager} in Master. {@link FavoredNodesPlan} and favored node information
- * from {@link SnapshotOfRegionAssignmentFromMeta} should not be used outside this class (except
- * for tools that only read or fortest cases). All other classes including Favored balancers
- * and {@link FavoredNodeAssignmentHelper} should use {@link FavoredNodesManager} for any
+ * FavoredNodesManager is responsible for maintaining favored nodes info in internal cache and META
+ * table. Its the centralized store for all favored nodes information. All reads and updates should
+ * be done through this class. There should only be one instance of {@link FavoredNodesManager} in
+ * Master. {@link FavoredNodesPlan} and favored node information from
+ * {@link SnapshotOfRegionAssignmentFromMeta} should not be used outside this class (except for
+ * tools that only read or fortest cases). All other classes including Favored balancers and
+ * {@link FavoredNodeAssignmentHelper} should use {@link FavoredNodesManager} for any
  * read/write/deletes to favored nodes.
  */
 @InterfaceAudience.Private
 public class FavoredNodesManager {
-  private static final Logger LOG = LoggerFactory.getLogger(FavoredNodesManager.class);
 
   private final FavoredNodesPlan globalFavoredNodesAssignmentPlan;
   private final Map<ServerName, List<RegionInfo>> primaryRSToRegionMap;
   private final Map<ServerName, List<RegionInfo>> secondaryRSToRegionMap;
   private final Map<ServerName, List<RegionInfo>> teritiaryRSToRegionMap;
 
-  private final MasterServices masterServices;
-  private final RackManager rackManager;
+  private final ClusterInfoProvider provider;
 
   /**
    * Datanode port to be used for Favored Nodes.
    */
   private int datanodeDataTransferPort;
 
-  public FavoredNodesManager(MasterServices masterServices) {
-    this.masterServices = masterServices;
+  public FavoredNodesManager(ClusterInfoProvider provider) {
+    this.provider = provider;
     this.globalFavoredNodesAssignmentPlan = new FavoredNodesPlan();
     this.primaryRSToRegionMap = new HashMap<>();
     this.secondaryRSToRegionMap = new HashMap<>();
     this.teritiaryRSToRegionMap = new HashMap<>();
-    this.rackManager = new RackManager(masterServices.getConfiguration());
   }
 
-  public synchronized void initialize(SnapshotOfRegionAssignmentFromMeta snapshot) {
+  public void initializeFromMeta() throws IOException {
+    SnapshotOfRegionAssignmentFromMeta snapshot =
+      new SnapshotOfRegionAssignmentFromMeta(provider.getConnection());
+    snapshot.initialize();
     // Add snapshot to structures made on creation. Current structures may have picked
     // up data between construction and the scan of meta needed before this method
-    // is called.  See HBASE-23737 "[Flakey Tests] TestFavoredNodeTableImport fails 30% of the time"
-    this.globalFavoredNodesAssignmentPlan.
-      updateFavoredNodesMap(snapshot.getExistingAssignmentPlan());
-    primaryRSToRegionMap.putAll(snapshot.getPrimaryToRegionInfoMap());
-    secondaryRSToRegionMap.putAll(snapshot.getSecondaryToRegionInfoMap());
-    teritiaryRSToRegionMap.putAll(snapshot.getTertiaryToRegionInfoMap());
-    datanodeDataTransferPort= getDataNodePort();
-  }
-
-  public int getDataNodePort() {
-    HdfsConfiguration.init();
-
-    Configuration dnConf = new HdfsConfiguration(masterServices.getConfiguration());
-
-    int dnPort = NetUtils.createSocketAddr(
-        dnConf.get(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
-            DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT)).getPort();
-    LOG.debug("Loaded default datanode port for FN: " + datanodeDataTransferPort);
-    return dnPort;
+    // is called. See HBASE-23737 "[Flakey Tests] TestFavoredNodeTableImport fails 30% of the time"
+    synchronized (this) {
+      this.globalFavoredNodesAssignmentPlan
+        .updateFavoredNodesMap(snapshot.getExistingAssignmentPlan());
+      primaryRSToRegionMap.putAll(snapshot.getPrimaryToRegionInfoMap());
+      secondaryRSToRegionMap.putAll(snapshot.getSecondaryToRegionInfoMap());
+      teritiaryRSToRegionMap.putAll(snapshot.getTertiaryToRegionInfoMap());
+      datanodeDataTransferPort = getDataNodePort(provider.getConfiguration());
+    }
   }
 
   public synchronized List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
     return this.globalFavoredNodesAssignmentPlan.getFavoredNodes(regionInfo);
   }
 
-  /*
+  /**
    * Favored nodes are not applicable for system tables. We will use this to check before
    * we apply any favored nodes logic on a region.
    */
@@ -128,7 +112,7 @@ public class FavoredNodesManager {
     return regions.stream().filter(r -> !isFavoredNodeApplicable(r)).collect(Collectors.toSet());
   }
 
-  /*
+  /**
    * This should only be used when sending FN information to the region servers. Instead of
    * sending the region server port, we use the datanode port. This helps in centralizing the DN
    * port logic in Master. The RS uses the port from the favored node list as hints.
@@ -148,7 +132,6 @@ public class FavoredNodesManager {
 
   public synchronized void updateFavoredNodes(Map<RegionInfo, List<ServerName>> regionFNMap)
       throws IOException {
-
     Map<RegionInfo, List<ServerName>> regionToFavoredNodes = new HashMap<>();
     for (Map.Entry<RegionInfo, List<ServerName>> entry : regionFNMap.entrySet()) {
       RegionInfo regionInfo = entry.getKey();
@@ -187,7 +170,7 @@ public class FavoredNodesManager {
 
     // Lets do a bulk update to meta since that reduces the RPC's
     FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes,
-        masterServices.getConnection());
+        provider.getConnection());
     deleteFavoredNodesForRegions(regionToFavoredNodes.keySet());
 
     for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
@@ -227,13 +210,13 @@ public class FavoredNodesManager {
     teritiaryRSToRegionMap.put(serverToUse, regionList);
   }
 
-  /*
+  /**
    * Get the replica count for the servers provided.
-   *
-   * For each server, replica count includes three counts for primary, secondary and tertiary.
-   * If a server is the primary favored node for 10 regions, secondary for 5 and tertiary
-   * for 1, then the list would be [10, 5, 1]. If the server is newly added to the cluster is
-   * not a favored node for any region, the replica count would be [0, 0, 0].
+   * <p/>
+   * For each server, replica count includes three counts for primary, secondary and tertiary. If a
+   * server is the primary favored node for 10 regions, secondary for 5 and tertiary for 1, then the
+   * list would be [10, 5, 1]. If the server is newly added to the cluster is not a favored node for
+   * any region, the replica count would be [0, 0, 0].
    */
   public synchronized Map<ServerName, List<Integer>> getReplicaLoad(List<ServerName> servers) {
     Map<ServerName, List<Integer>> result = Maps.newHashMap();
@@ -296,9 +279,5 @@ public class FavoredNodesManager {
       regionInfos.addAll(teritiaryRSToRegionMap.get(serverToUse));
     }
     return regionInfos;
-  }
-
-  public RackManager getRackManager() {
-    return rackManager;
   }
 }

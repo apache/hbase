@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.hbtop.screen.help.HelpScreenView;
 import org.apache.hadoop.hbase.hbtop.screen.mode.ModeScreenView;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 
@@ -92,7 +93,7 @@ public class TopScreenPresenter {
 
   public long refresh(boolean force) {
     if (!force) {
-      long delay = System.currentTimeMillis() - lastRefreshTimestamp;
+      long delay = EnvironmentEdgeManager.currentTime() - lastRefreshTimestamp;
       if (delay < refreshDelay.get()) {
         return refreshDelay.get() - delay;
       }
@@ -114,7 +115,7 @@ public class TopScreenPresenter {
 
     topScreenView.refreshTerminal();
 
-    lastRefreshTimestamp = System.currentTimeMillis();
+    lastRefreshTimestamp = EnvironmentEdgeManager.currentTime();
     iterations++;
     return refreshDelay.get();
   }

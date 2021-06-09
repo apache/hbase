@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.AfterClass;
@@ -165,14 +166,14 @@ public class TestVerifyReplicationCrossDiffHdfs {
   public void testVerifyRepBySnapshot() throws Exception {
     Path rootDir = CommonFSUtils.getRootDir(conf1);
     FileSystem fs = rootDir.getFileSystem(conf1);
-    String sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
+    String sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(util1.getAdmin(), TABLE_NAME,
         Bytes.toString(FAMILY), sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
     Path peerRootDir = CommonFSUtils.getRootDir(conf2);
     FileSystem peerFs = peerRootDir.getFileSystem(conf2);
-    String peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
+    String peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(util2.getAdmin(), TABLE_NAME,
         Bytes.toString(FAMILY), peerSnapshotName, peerRootDir, peerFs, true);
 

@@ -580,7 +580,7 @@ public class HRegionServer extends Thread implements
   public HRegionServer(final Configuration conf) throws IOException {
     super("RegionServer");  // thread name
     try {
-      this.startcode = System.currentTimeMillis();
+      this.startcode = EnvironmentEdgeManager.currentTime();
       this.conf = conf;
       this.dataFsOk = true;
       this.masterless = conf.getBoolean(MASTERLESS_CONFIG_NAME, false);
@@ -1059,7 +1059,7 @@ public class HRegionServer extends Thread implements
       }
 
       // We registered with the Master.  Go into run mode.
-      long lastMsg = System.currentTimeMillis();
+      long lastMsg = EnvironmentEdgeManager.currentTime();
       long oldRequestCount = -1;
       // The main run loop.
       while (!isStopped() && isHealthy()) {
@@ -1090,10 +1090,10 @@ public class HRegionServer extends Thread implements
             LOG.debug("Waiting on " + getOnlineRegionsAsPrintableString());
           }
         }
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if ((now - lastMsg) >= msgInterval) {
           tryRegionServerReport(lastMsg, now);
-          lastMsg = System.currentTimeMillis();
+          lastMsg = EnvironmentEdgeManager.currentTime();
         }
         if (!isStopped() && !isAborted()) {
           this.sleeper.sleep();
@@ -1402,6 +1402,8 @@ public class HRegionServer extends Thread implements
     serverLoad.setTotalNumberOfRequests(regionServerWrapper.getTotalRequestCount());
     serverLoad.setUsedHeapMB((int)(usedMemory / 1024 / 1024));
     serverLoad.setMaxHeapMB((int) (maxMemory / 1024 / 1024));
+    serverLoad.setReadRequestsCount(this.metricsRegionServerImpl.getReadRequestsCount());
+    serverLoad.setWriteRequestsCount(this.metricsRegionServerImpl.getWriteRequestsCount());
     Set<String> coprocessors = getWAL(null).getCoprocessorHost().getCoprocessors();
     Builder coprocessorBuilder = Coprocessor.newBuilder();
     for (String coprocessor : coprocessors) {
@@ -1493,8 +1495,8 @@ public class HRegionServer extends Thread implements
         // Only print a message if the count of regions has changed.
         if (count != lastCount) {
           // Log every second at most
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
-            previousLogTime = System.currentTimeMillis();
+          if (EnvironmentEdgeManager.currentTime() > (previousLogTime + 1000)) {
+            previousLogTime = EnvironmentEdgeManager.currentTime();
             lastCount = count;
             LOG.info("Waiting on " + count + " regions to close");
             // Only print out regions still closing if a small number else will
@@ -2268,6 +2270,7 @@ public class HRegionServer extends Thread implements
         // auto bind enabled, try to use another port
         LOG.info("Failed binding http info server to port: " + port);
         port++;
+        LOG.info("Retry starting http info server with port: " + port);
       }
     }
     port = this.infoServer.getPort();
@@ -2778,9 +2781,9 @@ public class HRegionServer extends Thread implements
             LOG.debug("No master found and cluster is stopped; bailing out");
             return null;
           }
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+          if (EnvironmentEdgeManager.currentTime() > (previousLogTime + 1000)) {
             LOG.debug("No master found; retry");
-            previousLogTime = System.currentTimeMillis();
+            previousLogTime = EnvironmentEdgeManager.currentTime();
           }
           refresh = true; // let's try pull it from ZK directly
           if (sleepInterrupted(200)) {
@@ -2805,7 +2808,7 @@ public class HRegionServer extends Thread implements
           intLockStub = LockService.newBlockingStub(channel);
           break;
         } catch (IOException e) {
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+          if (EnvironmentEdgeManager.currentTime() > (previousLogTime + 1000)) {
             e = e instanceof RemoteException ?
               ((RemoteException)e).unwrapRemoteException() : e;
             if (e instanceof ServerNotRunningYetException) {
@@ -2813,7 +2816,7 @@ public class HRegionServer extends Thread implements
             } else {
               LOG.warn("Unable to connect to master. Retrying. Error was:", e);
             }
-            previousLogTime = System.currentTimeMillis();
+            previousLogTime = EnvironmentEdgeManager.currentTime();
           }
           if (sleepInterrupted(200)) {
             interrupted = true;

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -341,14 +342,14 @@ public class TestFuzzyRowFilterEndToEnd {
     RegionScanner scanner = first.getScanner(scan);
     List<Cell> results = new ArrayList<>();
     // Result result;
-    long timeBeforeScan = System.currentTimeMillis();
+    long timeBeforeScan = EnvironmentEdgeManager.currentTime();
     int found = 0;
     while (scanner.next(results)) {
       found += results.size();
       results.clear();
     }
     found += results.size();
-    long scanTime = System.currentTimeMillis() - timeBeforeScan;
+    long scanTime = EnvironmentEdgeManager.currentTime() - timeBeforeScan;
     scanner.close();
 
     LOG.info("\nscan time = " + scanTime + "ms");
@@ -442,7 +443,7 @@ public class TestFuzzyRowFilterEndToEnd {
     ResultScanner scanner = hTable.getScanner(scan);
     List<Cell> results = new ArrayList<>();
     Result result;
-    long timeBeforeScan = System.currentTimeMillis();
+    long timeBeforeScan = EnvironmentEdgeManager.currentTime();
     while ((result = scanner.next()) != null) {
       for (Cell kv : result.listCells()) {
         LOG.info("Got rk: " + Bytes.toStringBinary(CellUtil.cloneRow(kv)) + " cq: "
@@ -450,7 +451,7 @@ public class TestFuzzyRowFilterEndToEnd {
         results.add(kv);
       }
     }
-    long scanTime = System.currentTimeMillis() - timeBeforeScan;
+    long scanTime = EnvironmentEdgeManager.currentTime() - timeBeforeScan;
     scanner.close();
 
     LOG.info("scan time = " + scanTime + "ms");

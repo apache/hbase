@@ -53,17 +53,21 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -91,10 +95,11 @@ public class TestWALEntryStream {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWALEntryStream.class);
 
-  private static HBaseTestingUtility TEST_UTIL;
-  private static Configuration CONF;
-  private static FileSystem fs;
-  private static MiniDFSCluster cluster;
+  private static final long TEST_TIMEOUT_MS = 5000;
+  protected static HBaseTestingUtility TEST_UTIL;
+  protected static Configuration CONF;
+  protected static FileSystem fs;
+  protected static MiniDFSCluster cluster;
   private static final TableName tableName = TableName.valueOf("tablename");
   private static final byte[] family = Bytes.toBytes("column");
   private static final byte[] qualifier = Bytes.toBytes("qualifier");
@@ -102,6 +107,34 @@ public class TestWALEntryStream {
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.LAST_ROW).build();
   private static final NavigableMap<byte[], Integer> scopes = getScopes();
   private final String fakeWalGroupId = "fake-wal-group-id";
+
+  /**
+   * Test helper that waits until a non-null entry is available in the stream next or times out.
+   * A {@link WALEntryStream} provides a streaming access to a queue of log files. Since the stream
+   * can be consumed as the file is being written, callers relying on {@link WALEntryStream#next()}
+   * may need to retry multiple times before an entry appended to the WAL is visible to the stream
+   * consumers. One such cause of delay is the close() of writer writing these log files. While the
+   * closure is in progress, the stream does not switch to the next log in the queue and next() may
+   * return null entries. This utility wraps these retries into a single next call and that makes
+   * the test code simpler.
+   */
+  private static class WALEntryStreamWithRetries extends WALEntryStream {
+    // Class member to be able to set a non-final from within a lambda.
+    private Entry result;
+
+    public WALEntryStreamWithRetries(ReplicationSourceLogQueue logQueue, Configuration conf,
+         long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
+         MetricsSource metrics, String walGroupId) throws IOException {
+      super(logQueue, conf, startPosition, walFileLengthProvider, serverName, metrics, walGroupId);
+    }
+
+    @Override
+    public Entry next() {
+      Waiter.waitFor(CONF, TEST_TIMEOUT_MS, () -> (
+          result = WALEntryStreamWithRetries.super.next()) != null);
+      return result;
+    }
+  }
 
   private static NavigableMap<byte[], Integer> getScopes() {
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -148,7 +181,9 @@ public class TestWALEntryStream {
 
   @After
   public void tearDown() throws Exception {
-    log.close();
+    if (log != null) {
+      log.close();
+    }
   }
 
   // Try out different combinations of row count and KeyValue count
@@ -215,7 +250,7 @@ public class TestWALEntryStream {
 
     appendToLogAndSync();
 
-    try (WALEntryStream entryStream = new WALEntryStream(logQueue, CONF, oldPos,
+    try (WALEntryStream entryStream = new WALEntryStreamWithRetries(logQueue, CONF, oldPos,
         log, null, new MetricsSource("1"), fakeWalGroupId)) {
       // Read the newly added entry, make sure we made progress
       WAL.Entry entry = entryStream.next();
@@ -229,7 +264,7 @@ public class TestWALEntryStream {
     log.rollWriter();
     appendToLogAndSync();
 
-    try (WALEntryStream entryStream = new WALEntryStream(logQueue, CONF, oldPos,
+    try (WALEntryStream entryStream = new WALEntryStreamWithRetries(logQueue, CONF, oldPos,
         log, null, new MetricsSource("1"), fakeWalGroupId)) {
       WAL.Entry entry = entryStream.next();
       assertNotEquals(oldPos, entryStream.getPosition());
@@ -255,7 +290,7 @@ public class TestWALEntryStream {
     appendToLog("1");
     appendToLog("2");// 2
     try (WALEntryStream entryStream =
-        new WALEntryStream(logQueue, CONF, 0, log, null,
+        new WALEntryStreamWithRetries(logQueue, CONF, 0, log, null,
           new MetricsSource("1"), fakeWalGroupId)) {
       assertEquals("1", getRow(entryStream.next()));
 
@@ -365,8 +400,8 @@ public class TestWALEntryStream {
     attributes.put("foo", Bytes.toBytes("foo-value"));
     attributes.put("bar", Bytes.toBytes("bar-value"));
     WALKeyImpl key = new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-        System.currentTimeMillis(), new ArrayList<UUID>(), 0L, 0L,
-        mvcc, scopes, attributes);
+      EnvironmentEdgeManager.currentTime(), new ArrayList<UUID>(), 0L, 0L,
+      mvcc, scopes, attributes);
     Assert.assertEquals(attributes, key.getExtendedAttributes());
 
     WALProtos.WALKey.Builder builder = key.getBuilder(WALCellCodec.getNoneCompressor());
@@ -530,7 +565,8 @@ public class TestWALEntryStream {
 
       @Override
       public boolean evaluate() throws Exception {
-        return fs.getFileStatus(walPath).getLen() > 0;
+        return fs.getFileStatus(walPath).getLen() > 0 &&
+            ((AbstractFSWAL) log).getInflightWALCloseCount() == 0;
       }
 
       @Override
@@ -539,12 +575,13 @@ public class TestWALEntryStream {
       }
 
     });
-    long walLength = fs.getFileStatus(walPath).getLen();
 
     ReplicationSourceWALReader reader = createReader(false, CONF);
 
     WALEntryBatch entryBatch = reader.take();
     assertEquals(walPath, entryBatch.getLastWalPath());
+
+    long walLength = fs.getFileStatus(walPath).getLen();
     assertTrue("Position " + entryBatch.getLastWalPosition() + " is out of range, file length is " +
       walLength, entryBatch.getLastWalPosition() <= walLength);
     assertEquals(1, entryBatch.getNbEntries());
@@ -625,8 +662,8 @@ public class TestWALEntryStream {
 
   private void appendToLog(String key) throws IOException {
     final long txid = log.appendData(info,
-      new WALKeyImpl(info.getEncodedNameAsBytes(), tableName, System.currentTimeMillis(),
-          mvcc, scopes), getWALEdit(key));
+      new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+        EnvironmentEdgeManager.currentTime(), mvcc, scopes), getWALEdit(key));
     log.sync(txid);
   }
 
@@ -649,14 +686,14 @@ public class TestWALEntryStream {
 
   private long appendToLog(int count) throws IOException {
     return log.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-      System.currentTimeMillis(), mvcc, scopes), getWALEdits(count));
+      EnvironmentEdgeManager.currentTime(), mvcc, scopes), getWALEdits(count));
   }
 
   private WALEdit getWALEdits(int count) {
     WALEdit edit = new WALEdit();
     for (int i = 0; i < count; i++) {
-      edit.add(new KeyValue(Bytes.toBytes(System.currentTimeMillis()), family, qualifier,
-          System.currentTimeMillis(), qualifier));
+      edit.add(new KeyValue(Bytes.toBytes(EnvironmentEdgeManager.currentTime()), family,
+        qualifier, EnvironmentEdgeManager.currentTime(), qualifier));
     }
     return edit;
   }
@@ -664,7 +701,8 @@ public class TestWALEntryStream {
   private WALEdit getWALEdit(String row) {
     WALEdit edit = new WALEdit();
     edit.add(
-      new KeyValue(Bytes.toBytes(row), family, qualifier, System.currentTimeMillis(), qualifier));
+      new KeyValue(Bytes.toBytes(row), family, qualifier, EnvironmentEdgeManager.currentTime(),
+        qualifier));
     return edit;
   }
 
@@ -861,5 +899,23 @@ public class TestWALEntryStream {
     }
     // After removing one wal, size of log queue will be 1 again.
     assertEquals(1, logQueue.getMetrics().getSizeOfLogQueue());
+  }
+
+  /**
+   * Tests that wals are closed cleanly and we read the trailer when we remove wal
+   * from WALEntryStream.
+   */
+  @Test
+  public void testCleanClosedWALs() throws Exception {
+    try (WALEntryStream entryStream = new WALEntryStreamWithRetries(
+      logQueue, CONF, 0, log, null, logQueue.getMetrics(), fakeWalGroupId)) {
+      assertEquals(0, logQueue.getMetrics().getUncleanlyClosedWALs());
+      appendToLogAndSync();
+      assertNotNull(entryStream.next());
+      log.rollWriter();
+      appendToLogAndSync();
+      assertNotNull(entryStream.next());
+      assertEquals(0, logQueue.getMetrics().getUncleanlyClosedWALs());
+    }
   }
 }

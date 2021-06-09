@@ -16,16 +16,16 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,6 +33,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.io.CharStreams;
 
 /**
  * This is an optional Cost function designed to allow region count skew across RegionServers. A
@@ -169,14 +172,14 @@ public class HeterogeneousRegionCountCostFunction extends CostFunction {
         if (line.startsWith("#")) {
           continue;
         }
-        final String[] splits = line.split(" ");
-        if (splits.length != 2) {
+        final List<String> splits = Splitter.on(' ').splitToList(line);
+        if (splits.size() != 2) {
           throw new IOException(
               "line '" + line + "' is malformated, " + "expected [regexp] [limit]. Skipping line");
         }
 
-        final Pattern pattern = Pattern.compile(splits[0]);
-        final Integer limit = Integer.parseInt(splits[1]);
+        final Pattern pattern = Pattern.compile(splits.get(0));
+        final Integer limit = Integer.parseInt(splits.get(1));
         this.limitPerRule.put(pattern, limit);
       } catch (final IOException | NumberFormatException | PatternSyntaxException e) {
         LOG.error("error on line: " + e);
@@ -209,29 +212,17 @@ public class HeterogeneousRegionCountCostFunction extends CostFunction {
   private List<String> readFileFromHDFS(final String filename) throws IOException {
     final Path path = new Path(filename);
     final FileSystem fs = FileSystem.get(this.conf);
-    final BufferedReader reader = new BufferedReader(new InputStreamReader(fs.open(path)));
-    return readLines(reader);
+    try (BufferedReader reader =
+      new BufferedReader(new InputStreamReader(fs.open(path), StandardCharsets.UTF_8))) {
+      return CharStreams.readLines(reader);
+    }
   }
 
   /**
    * used to read the rule files from local FS
    */
   private List<String> readFileFromLocalFS(final String filename) throws IOException {
-    BufferedReader reader = new BufferedReader(new FileReader(filename));
-    return readLines(reader);
-  }
-
-  private List<String> readLines(BufferedReader reader) throws IOException {
-    final List<String> records = new ArrayList<>();
-    try {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        records.add(line);
-      }
-    } finally {
-      reader.close();
-    }
-    return records;
+    return Files.readAllLines(Paths.get(filename), StandardCharsets.UTF_8);
   }
 
   /**

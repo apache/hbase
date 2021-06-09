@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -315,7 +316,7 @@ public class SimpleRpcServer extends RpcServer {
       if (c == null) {
         return;
       }
-      c.setLastContact(System.currentTimeMillis());
+      c.setLastContact(EnvironmentEdgeManager.currentTime());
       try {
         count = c.readAndProcess();
       } catch (InterruptedException ieo) {
@@ -331,7 +332,7 @@ public class SimpleRpcServer extends RpcServer {
         closeConnection(c);
         c = null;
       } else {
-        c.setLastContact(System.currentTimeMillis());
+        c.setLastContact(EnvironmentEdgeManager.currentTime());
       }
     }
 
@@ -586,7 +587,8 @@ public class SimpleRpcServer extends RpcServer {
     }
 
     SimpleServerRpcConnection register(SocketChannel channel) {
-      SimpleServerRpcConnection connection = getConnection(channel, System.currentTimeMillis());
+      SimpleServerRpcConnection connection = getConnection(channel,
+        EnvironmentEdgeManager.currentTime());
       add(connection);
       if (LOG.isTraceEnabled()) {
         LOG.trace("Connection from " + connection +
@@ -617,7 +619,7 @@ public class SimpleRpcServer extends RpcServer {
     // synch'ed to avoid explicit invocation upon OOM from colliding with
     // timer task firing
     synchronized void closeIdle(boolean scanAll) {
-      long minLastContact = System.currentTimeMillis() - maxIdleTime;
+      long minLastContact = EnvironmentEdgeManager.currentTime() - maxIdleTime;
       // concurrent iterator might miss new connections added
       // during the iteration, but that's ok because they won't
       // be idle yet anyway and will be caught on next scan

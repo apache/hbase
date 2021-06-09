@@ -87,7 +87,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
 
     @Override
     public void insert(final Table table, Put put, final long keyBase) {
-      final long start = System.currentTimeMillis();
+      final long start = EnvironmentEdgeManager.currentTime();
       try {
         put = (Put) dataGenerator.beforeMutate(keyBase, put);
         writerAction.setPut(put);
@@ -150,8 +150,8 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
       pw.flush();
       exceptionInfo = StringUtils.stringifyException(e);
     }
-    LOG.error("Failed to insert: " + keyBase + " after " + (System.currentTimeMillis() - start)
-        + "ms; region information: " + getRegionDebugInfoSafe(table, put.getRow()) + "; errors: "
-        + exceptionInfo);
+    LOG.error("Failed to insert: " + keyBase + " after " +
+      (EnvironmentEdgeManager.currentTime() - start) + "ms; region information: " +
+        getRegionDebugInfoSafe(table, put.getRow()) + "; errors: " + exceptionInfo);
   }
 }

@@ -85,7 +85,8 @@ public class TestRegionPlacement2 {
       (FavoredNodeLoadBalancer) LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setClusterInfoProvider(
       new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
-    balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
+    balancer
+      .setFavoredNodesManager(TEST_UTIL.getMiniHBaseCluster().getMaster().getFavoredNodesManager());
     balancer.initialize();
     List<ServerName> servers = new ArrayList<>();
     for (int i = 0; i < SLAVES; i++) {
@@ -149,7 +150,8 @@ public class TestRegionPlacement2 {
       (FavoredNodeLoadBalancer) LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setClusterInfoProvider(
       new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
-    balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
+    balancer
+      .setFavoredNodesManager(TEST_UTIL.getMiniHBaseCluster().getMaster().getFavoredNodesManager());
     balancer.initialize();
     List<ServerName> servers = new ArrayList<>();
     for (int i = 0; i < SLAVES; i++) {

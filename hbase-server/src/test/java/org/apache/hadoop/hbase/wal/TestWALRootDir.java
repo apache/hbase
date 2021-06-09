@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -97,9 +98,9 @@ public class TestWALRootDir {
     byte [] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
-        System.currentTimeMillis(), value));
-    long txid =
-      log.appendData(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 0), edit);
+      EnvironmentEdgeManager.currentTime(), value));
+    long txid = log.appendData(regionInfo, getWalKey(EnvironmentEdgeManager.currentTime(),
+      regionInfo, 0), edit);
     log.sync(txid);
     assertEquals("Expect 1 log have been created", 1,
         getWALFiles(walFs, walRootDir).size());
@@ -108,8 +109,9 @@ public class TestWALRootDir {
     assertEquals(2, getWALFiles(walFs, new Path(walRootDir,
         HConstants.HREGION_LOGDIR_NAME)).size());
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
-        System.currentTimeMillis(), value));
-    txid = log.appendData(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 1), edit);
+      EnvironmentEdgeManager.currentTime(), value));
+    txid = log.appendData(regionInfo, getWalKey(EnvironmentEdgeManager.currentTime(),
+      regionInfo, 1), edit);
     log.sync(txid);
     log.rollWriter();
     log.shutdown();

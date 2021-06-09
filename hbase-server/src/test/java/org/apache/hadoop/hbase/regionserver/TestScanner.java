@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -257,7 +258,7 @@ public class TestScanner {
 
       // Write information to the meta table
 
-      Put put = new Put(ROW_KEY, System.currentTimeMillis());
+      Put put = new Put(ROW_KEY, EnvironmentEdgeManager.currentTime());
 
       put.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
           RegionInfo.toByteArray(REGION_INFO));
@@ -284,7 +285,7 @@ public class TestScanner {
 
       String address = HConstants.LOCALHOST_IP + ":" + HBaseTestingUtility.randomFreePort();
 
-      put = new Put(ROW_KEY, System.currentTimeMillis());
+      put = new Put(ROW_KEY, EnvironmentEdgeManager.currentTime());
       put.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
           Bytes.toBytes(address));
 
@@ -321,7 +322,7 @@ public class TestScanner {
 
       address = "bar.foo.com:4321";
 
-      put = new Put(ROW_KEY, System.currentTimeMillis());
+      put = new Put(ROW_KEY, EnvironmentEdgeManager.currentTime());
 
       put.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes.toBytes(address));
       table.put(put);

@@ -154,7 +154,7 @@ public class TestHStore {
   List<Cell> expected = new ArrayList<>();
   List<Cell> result = new ArrayList<>();
 
-  long id = System.currentTimeMillis();
+  long id = EnvironmentEdgeManager.currentTime();
   Get get = new Get(row);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -1058,7 +1058,7 @@ public class TestHStore {
   @Test
   public void testNumberOfMemStoreScannersAfterFlush() throws IOException {
     long seqId = 100;
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     Cell cell0 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
         .setQualifier(qf1).setTimestamp(timestamp).setType(Cell.Type.Put)
         .setValue(qf1).build();
@@ -1072,7 +1072,7 @@ public class TestHStore {
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1));
 
     seqId = 101;
-    timestamp = System.currentTimeMillis();
+    timestamp = EnvironmentEdgeManager.currentTime();
     Cell cell2 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row2).setFamily(family)
         .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.Type.Put)
         .setValue(qf1).build();
@@ -1519,7 +1519,7 @@ public class TestHStore {
 
   @Test
   public void testAge() throws IOException {
-    long currentTime = System.currentTimeMillis();
+    long currentTime = EnvironmentEdgeManager.currentTime();
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
     edge.setValue(currentTime);
     EnvironmentEdgeManager.injectEdge(edge);
@@ -1607,7 +1607,7 @@ public class TestHStore {
     // Set the lower threshold to invoke the "MERGE" policy
     MyStore store = initMyStore(name.getMethodName(), conf, new MyStoreHook() {});
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     long seqID = 1L;
     // Add some data to the region and do some flushes
     for (int i = 1; i < 10; i++) {

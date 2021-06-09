@@ -73,7 +73,7 @@ import org.slf4j.LoggerFactory;
  * family. The column family currently has one column in it, the 'state' column:
  *
  * <pre>
- * table:state => contains table state
+ * table:state =&gt; contains table state
  * </pre>
  *
  * For the catalog family, see the comments of {@link CatalogFamilyFormat} for more details.
@@ -747,11 +747,12 @@ public final class MetaTableAccessor {
   }
 
   /**
-   * Adds daughter region infos to hbase:meta row for the specified region. Note that this does not
-   * add its daughter's as different rows, but adds information about the daughters in the same row
-   * as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)} if
-   * you want to do that.
+   * Adds daughter region infos to hbase:meta row for the specified region.
+   * <p/>
+   * Note that this does not add its daughter's as different rows, but adds information about the
+   * daughters in the same row as the parent. Now only used in snapshot. Use
+   * {@link org.apache.hadoop.hbase.master.assignment.RegionStateStore} if you want to split a
+   * region.
    * @param connection connection we're using
    * @param regionInfo RegionInfo of parent region
    * @param splitA first split daughter of the parent regionInfo

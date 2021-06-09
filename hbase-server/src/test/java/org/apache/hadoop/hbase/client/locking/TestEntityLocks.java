@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -100,14 +101,14 @@ public class TestEntityLocks {
   }
 
   private boolean waitLockTimeOut(EntityLock lock, long maxWaitTimeMillis) {
-    long startMillis = System.currentTimeMillis();
+    long startMillis = EnvironmentEdgeManager.currentTime();
     while (lock.isLocked()) {
       LOG.info("Sleeping...");
       Threads.sleepWithoutInterrupt(100);
       if (!lock.isLocked()) {
         return true;
       }
-      if (System.currentTimeMillis() - startMillis > maxWaitTimeMillis) {
+      if (EnvironmentEdgeManager.currentTime() - startMillis > maxWaitTimeMillis) {
         LOG.info("Timedout...");
         return false;
       }

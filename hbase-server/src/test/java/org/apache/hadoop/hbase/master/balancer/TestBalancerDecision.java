@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +30,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
@@ -55,6 +59,10 @@ public class TestBalancerDecision extends StochasticBalancerTestBase {
   @Test
   public void testBalancerDecisions() {
     conf.setBoolean("hbase.master.balancer.decision.buffer.enabled", true);
+    MasterServices services = mock(MasterServices.class);
+    when(services.getConfiguration()).thenReturn(conf);
+    MasterClusterInfoProvider provider = new MasterClusterInfoProvider(services);
+    loadBalancer.setClusterInfoProvider(provider);
     loadBalancer.onConfigurationChange(conf);
     float minCost = conf.getFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);
@@ -78,7 +86,7 @@ public class TestBalancerDecision extends StochasticBalancerTestBase {
       namedQueueGetRequest
         .setBalancerDecisionsRequest(MasterProtos.BalancerDecisionsRequest.getDefaultInstance());
       NamedQueueGetResponse namedQueueGetResponse =
-        loadBalancer.namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+        provider.getNamedQueueRecorder().getNamedQueueRecords(namedQueueGetRequest);
       List<RecentLogs.BalancerDecision> balancerDecisions =
         namedQueueGetResponse.getBalancerDecisions();
       MasterProtos.BalancerDecisionsResponse response =

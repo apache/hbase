@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -44,7 +45,7 @@ public class TestWALInputFormat {
   public void testAddFile() {
     List<FileStatus> lfss = new ArrayList<>();
     LocatedFileStatus lfs = Mockito.mock(LocatedFileStatus.class);
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     Mockito.when(lfs.getPath()).thenReturn(new Path("/name." + now));
     WALInputFormat.addFile(lfss, lfs, now, now);
     assertEquals(1, lfss.size());

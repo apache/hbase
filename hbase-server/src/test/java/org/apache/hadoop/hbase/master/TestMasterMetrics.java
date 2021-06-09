@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -92,7 +93,8 @@ public class TestMasterMetrics {
               try {
                 serverManager.regionServerReport(sn,
                   ServerMetricsBuilder.newBuilder(sn).setVersionNumber(sm.getVersionNumber())
-                    .setVersion(sm.getVersion()).setLastReportTimestamp(System.currentTimeMillis())
+                    .setVersion(sm.getVersion())
+                      .setLastReportTimestamp(EnvironmentEdgeManager.currentTime())
                     .build());
               } catch (YouAreDeadException e) {
                 throw new UncheckedIOException(e);
@@ -147,20 +149,28 @@ public class TestMasterMetrics {
 
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
-      .setTotalNumberOfRequests(expectedRequestNumber).build();
+       .setTotalNumberOfRequests(expectedRequestNumber)
+       .setReadRequestsCount(expectedRequestNumber)
+       .setWriteRequestsCount(expectedRequestNumber).build();
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
     metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
+    metricsHelper.assertCounter("cluster_read_requests", expectedRequestNumber, masterSource);
+    metricsHelper.assertCounter("cluster_write_requests", expectedRequestNumber, masterSource);
 
     expectedRequestNumber = 15000;
 
-    sl = ClusterStatusProtos.ServerLoad.newBuilder().setTotalNumberOfRequests(expectedRequestNumber)
-      .build();
+    sl = ClusterStatusProtos.ServerLoad.newBuilder()
+            .setTotalNumberOfRequests(expectedRequestNumber)
+            .setReadRequestsCount(expectedRequestNumber)
+            .setWriteRequestsCount(expectedRequestNumber).build();
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
     metricsHelper.assertCounter("cluster_requests", expectedRequestNumber, masterSource);
+    metricsHelper.assertCounter("cluster_read_requests", expectedRequestNumber, masterSource);
+    metricsHelper.assertCounter("cluster_write_requests", expectedRequestNumber, masterSource);
   }
 
   @Test

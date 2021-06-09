@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor.Status;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Handles log splitting a wal
@@ -68,7 +69,7 @@ public class WALSplitterHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     Status status = null;
     try {
       status = this.splitTaskExecutor.exec(splitTaskDetails.getWALFile(), reporter);
@@ -101,7 +102,7 @@ public class WALSplitterHandler extends EventHandler {
       }
     } finally {
       LOG.info("Worker " + serverName + " done with task " + splitTaskDetails.toString() + " in "
-          + (System.currentTimeMillis() - startTime) + "ms. Status = " + status);
+          + (EnvironmentEdgeManager.currentTime() - startTime) + "ms. Status = " + status);
       this.inProgressTasks.decrementAndGet();
     }
   }

@@ -44,6 +44,7 @@ import javax.net.ssl.SSLContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.Constants;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
@@ -332,7 +333,7 @@ public class Client {
         method.addHeader(header);
       }
     }
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     if (resp != null) EntityUtils.consumeQuietly(resp.getEntity());
     resp = httpClient.execute(method);
     if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
@@ -342,7 +343,7 @@ public class Client {
       resp = httpClient.execute(method);
     }
 
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTime();
     if (LOG.isTraceEnabled()) {
       LOG.trace(method.getMethod() + " " + uri + " " + resp.getStatusLine().getStatusCode() + " " +
           resp.getStatusLine().getReasonPhrase() + " in " + (endTime - startTime) + " ms");

@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -67,7 +68,7 @@ public class TestDependentColumnFilter {
   private static final byte[][] FAMILIES = {
     Bytes.toBytes("familyOne"),Bytes.toBytes("familyTwo")
   };
-  private static final long STAMP_BASE = System.currentTimeMillis();
+  private static final long STAMP_BASE = EnvironmentEdgeManager.currentTime();
   private static final long[] STAMPS = {
     STAMP_BASE-100, STAMP_BASE-200, STAMP_BASE-300
   };

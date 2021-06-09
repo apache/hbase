@@ -127,9 +127,9 @@ public class SlowLogTableAccessor {
   }
 
   /**
-   * Create rowKey: currentTimeMillis APPEND slowLogPayload.hashcode
+   * Create rowKey: currentTime APPEND slowLogPayload.hashcode
    * Scan on slowlog table should keep records with sorted order of time, however records
-   * added at the very same time (currentTimeMillis) could be in random order.
+   * added at the very same time could be in random order.
    *
    * @param slowLogPayload SlowLogPayload to process
    * @return rowKey byte[]
@@ -141,8 +141,8 @@ public class SlowLogTableAccessor {
     if (lastFiveDig.startsWith("-")) {
       lastFiveDig = String.valueOf(RANDOM.nextInt(99999));
     }
-    final long currentTimeMillis = EnvironmentEdgeManager.currentTime();
-    final String timeAndHashcode = currentTimeMillis + lastFiveDig;
+    final long currentTime = EnvironmentEdgeManager.currentTime();
+    final String timeAndHashcode = currentTime + lastFiveDig;
     final long rowKeyLong = Long.parseLong(timeAndHashcode);
     return Bytes.toBytes(rowKeyLong);
   }

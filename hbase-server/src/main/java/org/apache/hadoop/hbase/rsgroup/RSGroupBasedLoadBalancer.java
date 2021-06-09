@@ -34,14 +34,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.ClusterInfoProvider;
-import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.balancer.MasterClusterInfoProvider;
 import org.apache.hadoop.hbase.net.Address;
@@ -74,6 +72,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupBasedLoadBalancer.class);
 
   private MasterServices masterServices;
+  private ClusterInfoProvider provider;
   private FavoredNodesManager favoredNodesManager;
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private volatile LoadBalancer internalBalancer;
@@ -345,21 +344,17 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         throw new IOException(e);
       }
     }
+    this.provider = new MasterClusterInfoProvider(masterServices);
     // avoid infinite nesting
     if (getClass().isAssignableFrom(balancerClass)) {
       balancerClass = LoadBalancerFactory.getDefaultLoadBalancerClass();
     }
     internalBalancer = ReflectionUtils.newInstance(balancerClass);
-    internalBalancer.setClusterInfoProvider(new MasterClusterInfoProvider(masterServices));
+    internalBalancer.setClusterInfoProvider(provider);
     // special handling for favor node balancers
     if (internalBalancer instanceof FavoredNodesPromoter) {
-      favoredNodesManager = new FavoredNodesManager(masterServices);
-      if (internalBalancer instanceof FavoredNodeLoadBalancer) {
-        ((FavoredNodeLoadBalancer) internalBalancer).setMasterServices(masterServices);
-      }
-      if (internalBalancer instanceof FavoredStochasticBalancer) {
-        ((FavoredStochasticBalancer) internalBalancer).setMasterServices(masterServices);
-      }
+      favoredNodesManager = new FavoredNodesManager(provider);
+      ((FavoredNodesPromoter) internalBalancer).setFavoredNodesManager(favoredNodesManager);
     }
     internalBalancer.initialize();
     // init fallback groups
@@ -394,6 +389,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         fallbackEnabled, newFallbackEnabled);
       fallbackEnabled = newFallbackEnabled;
     }
+    provider.onConfigurationChange(conf);
     internalBalancer.onConfigurationChange(conf);
   }
 

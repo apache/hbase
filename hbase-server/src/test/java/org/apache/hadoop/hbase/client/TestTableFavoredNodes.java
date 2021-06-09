@@ -306,7 +306,7 @@ public class TestTableFavoredNodes {
       snRSMap.put(rst.getMaster().getServerName(), rst.getMaster());
     }
 
-    int dnPort = fnm.getDataNodePort();
+    int dnPort = FavoredNodeAssignmentHelper.getDataNodePort(TEST_UTIL.getConfiguration());
     RegionLocator regionLocator = admin.getConnection().getRegionLocator(tableName);
     for (HRegionLocation regionLocation : regionLocator.getAllRegionLocations()) {
 

@@ -78,6 +78,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -97,11 +98,13 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.util.DNS;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -297,7 +300,7 @@ public class ThriftServer  extends Configured implements Tool {
     int port = conf.getInt(THRIFT_INFO_SERVER_PORT , THRIFT_INFO_SERVER_PORT_DEFAULT);
 
     if (port >= 0) {
-      conf.setLong("startcode", System.currentTimeMillis());
+      conf.setLong("startcode", EnvironmentEdgeManager.currentTime());
       String a = conf
           .get(THRIFT_INFO_SERVER_BINDING_ADDRESS, THRIFT_INFO_SERVER_BINDING_ADDRESS_DEFAULT);
       infoServer = new InfoServer("thrift", a, port, false, conf);
@@ -844,15 +847,30 @@ public class ThriftServer  extends Configured implements Tool {
   public int run(String[] strings) throws Exception {
     processOptions(strings);
     setupParamters();
-    startInfoServer();
     if (httpEnabled) {
       setupHTTPServer();
-      httpServer.start();
-      httpServer.join();
     } else {
       setupServer();
-      tserver.serve();
     }
+    serviceUGI.doAs(new PrivilegedAction<Object>() {
+      @Override
+      public Object run() {
+        try {
+          startInfoServer();
+          if (httpEnabled) {
+            httpServer.start();
+            httpServer.join();
+          } else {
+            tserver.serve();
+          }
+        } catch (Exception e) {
+          LOG.error(HBaseMarkers.FATAL, "Cannot run ThriftServer", e);
+
+          System.exit(-1);
+        }
+        return null;
+      }
+    });
     return 0;
   }
 

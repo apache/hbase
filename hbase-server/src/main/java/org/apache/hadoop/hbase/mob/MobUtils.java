@@ -720,20 +720,20 @@ public final class MobUtils {
       StringBuilder sb = new StringBuilder(100 + mobRefSet.size() * 105);
       boolean doubleSlash = false;
       for (TableName tableName : mobRefSet.keySet()) {
+        if (doubleSlash) {
+          sb.append("//");
+        } else {
+          doubleSlash = true;
+        }
         sb.append(tableName).append("/");
         boolean comma = false;
         for (String refs : mobRefSet.get(tableName)) {
-          sb.append(refs);
           if (comma) {
             sb.append(",");
           } else {
             comma = true;
           }
-        }
-        if (doubleSlash) {
-          sb.append("//");
-        } else {
-          doubleSlash = true;
+          sb.append(refs);
         }
       }
       return Bytes.toBytes(sb.toString());

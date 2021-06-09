@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -80,7 +81,8 @@ public class TestMasterAddressTracker {
 
   @Test
   public void testDeleteIfEquals() throws Exception {
-    final ServerName sn = ServerName.valueOf("localhost", 1234, System.currentTimeMillis());
+    final ServerName sn = ServerName.valueOf("localhost", 1234,
+      EnvironmentEdgeManager.currentTime());
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, 1772);
     try {
       assertFalse("shouldn't have deleted wrong master server.",
@@ -136,7 +138,8 @@ public class TestMasterAddressTracker {
   public void testMasterAddressTrackerFromZK() throws Exception {
     // Create the master node with a dummy address
     final int infoPort = 1235;
-    final ServerName sn = ServerName.valueOf("localhost", 1234, System.currentTimeMillis());
+    final ServerName sn = ServerName.valueOf("localhost", 1234,
+      EnvironmentEdgeManager.currentTime());
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, infoPort);
     try {
       assertTrue(addressTracker.hasMaster());
@@ -157,12 +160,14 @@ public class TestMasterAddressTracker {
 
   @Test
   public void testNoBackups() throws Exception {
-    final ServerName sn = ServerName.valueOf("localhost", 1234, System.currentTimeMillis());
+    final ServerName sn = ServerName.valueOf("localhost", 1234,
+      EnvironmentEdgeManager.currentTime());
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, 1772);
     try {
       assertEquals("Should receive 0 for backup not found.", 0,
-          addressTracker.getBackupMasterInfoPort(
-              ServerName.valueOf("doesnotexist.example.com", 1234, System.currentTimeMillis())));
+        addressTracker.getBackupMasterInfoPort(
+          ServerName.valueOf("doesnotexist.example.com", 1234,
+            EnvironmentEdgeManager.currentTime())));
     } finally {
       assertTrue("Couldn't clean up master",
           MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
@@ -179,7 +184,8 @@ public class TestMasterAddressTracker {
 
   @Test
   public void testBackupMasters() throws Exception {
-    final ServerName sn = ServerName.valueOf("localhost", 5678, System.currentTimeMillis());
+    final ServerName sn = ServerName.valueOf("localhost", 5678,
+      EnvironmentEdgeManager.currentTime());
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, 1111);
     assertTrue(addressTracker.hasMaster());
     ServerName activeMaster = addressTracker.getMasterAddress();

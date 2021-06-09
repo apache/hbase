@@ -56,7 +56,7 @@ public class TestThreads {
     });
     LOG.debug("Starting sleeper thread (" + SLEEP_TIME_MS + " ms)");
     sleeper.start();
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     LOG.debug("Main thread: sleeping for 200 ms");
     Threads.sleep(200);
 
@@ -75,7 +75,7 @@ public class TestThreads {
     assertTrue("sleepWithoutInterrupt did not preserve the thread's " +
         "interrupted status", wasInterrupted.get());
 
-    long timeElapsed = System.currentTimeMillis() - startTime;
+    long timeElapsed = EnvironmentEdgeManager.currentTime() - startTime;
     // We expect to wait at least SLEEP_TIME_MS, but we can wait more if there is a GC.
     assertTrue("Elapsed time " + timeElapsed + " ms is out of the expected " +
         " sleep time of " + SLEEP_TIME_MS, SLEEP_TIME_MS - timeElapsed < TOLERANCE_MS);

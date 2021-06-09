@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.rest.filter.RestCsrfPreventionFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.DNS;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Strings;
@@ -395,7 +396,7 @@ public class RESTServer implements Constants {
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
     if (port >= 0) {
-      conf.setLong("startcode", System.currentTimeMillis());
+      conf.setLong("startcode", EnvironmentEdgeManager.currentTime());
       String a = conf.get("hbase.rest.info.bindAddress", "0.0.0.0");
       this.infoServer = new InfoServer("rest", a, port, false, conf);
       this.infoServer.setAttribute("hbase.conf", conf);

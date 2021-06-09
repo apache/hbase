@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
@@ -74,8 +75,9 @@ public class ReplicationSyncUp extends Configured implements Tool {
       }
     };
     Configuration conf = getConf();
-    try (ZKWatcher zkw =
-      new ZKWatcher(conf, "syncupReplication" + System.currentTimeMillis(), abortable, true)) {
+    try (ZKWatcher zkw = new ZKWatcher(conf,
+        "syncupReplication" + EnvironmentEdgeManager.currentTime(),
+        abortable, true)) {
       Path walRootDir = CommonFSUtils.getWALRootDir(conf);
       FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
@@ -107,7 +109,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
 
     DummyServer(ZKWatcher zkw) {
       // a unique name in case the first run fails
-      hostname = System.currentTimeMillis() + ".SyncUpTool.replication.org";
+      hostname = EnvironmentEdgeManager.currentTime() + ".SyncUpTool.replication.org";
       this.zkw = zkw;
     }
 

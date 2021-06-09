@@ -67,7 +67,6 @@ import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Class to test HBaseHbck. Spins up the minicluster once at test start and then takes it down
@@ -285,12 +284,12 @@ public class TestHbck {
     ServerName serverName = testRs.getServerName();
     Hbck hbck = getHbck();
     List<Long> pids =
-      hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+      hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
     assertTrue(pids.get(0) > 0);
     LOG.info("pid is {}", pids.get(0));
 
     List<Long> newPids =
-      hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+      hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
     assertTrue(newPids.get(0) < 0);
     LOG.info("pid is {}", newPids.get(0));
     waitOnPids(pids);

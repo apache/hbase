@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
@@ -170,7 +171,7 @@ public class TestRegionStates {
     final int NRUNS = 1000000; // 1M
     final RegionStates stateMap = new RegionStates();
 
-    long st = System.currentTimeMillis();
+    long st = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < NRUNS; ++i) {
       final int regionId = i;
       executorService.submit(new Callable<Object>() {
@@ -182,12 +183,12 @@ public class TestRegionStates {
       });
     }
     waitExecutorService(NRUNS);
-    long et = System.currentTimeMillis();
+    long et = EnvironmentEdgeManager.currentTime();
     LOG.info(String.format("PERF STATEMAP INSERT: %s %s/sec",
       StringUtils.humanTimeDiff(et - st),
       StringUtils.humanSize(NRUNS / ((et - st) / 1000.0f))));
 
-    st = System.currentTimeMillis();
+    st = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < NRUNS; ++i) {
       final int regionId = i;
       executorService.submit(new Callable<Object>() {
@@ -200,7 +201,7 @@ public class TestRegionStates {
     }
 
     waitExecutorService(NRUNS);
-    et = System.currentTimeMillis();
+    et = EnvironmentEdgeManager.currentTime();
     LOG.info(String.format("PERF STATEMAP GET: %s %s/sec",
       StringUtils.humanTimeDiff(et - st),
       StringUtils.humanSize(NRUNS / ((et - st) / 1000.0f))));
@@ -212,11 +213,11 @@ public class TestRegionStates {
     final int NRUNS = 1 * 1000000; // 1M
 
     final RegionStates stateMap = new RegionStates();
-    long st = System.currentTimeMillis();
+    long st = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < NRUNS; ++i) {
       stateMap.createRegionStateNode(createRegionInfo(TABLE_NAME, i));
     }
-    long et = System.currentTimeMillis();
+    long et = EnvironmentEdgeManager.currentTime();
     LOG.info(String.format("PERF SingleThread: %s %s/sec",
         StringUtils.humanTimeDiff(et - st),
       StringUtils.humanSize(NRUNS / ((et - st) / 1000.0f))));

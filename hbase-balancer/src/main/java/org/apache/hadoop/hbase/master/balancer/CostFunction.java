@@ -81,57 +81,6 @@ abstract class CostFunction {
 
   protected abstract double cost();
 
-  @SuppressWarnings("checkstyle:linelength")
-  /**
-   * Function to compute a scaled cost using
-   * {@link org.apache.commons.math3.stat.descriptive.DescriptiveStatistics#DescriptiveStatistics()}.
-   * It assumes that this is a zero sum set of costs. It assumes that the worst case possible is all
-   * of the elements in one region server and the rest having 0.
-   * @param stats the costs
-   * @return a scaled set of costs.
-   */
-  protected final double costFromArray(double[] stats) {
-    double totalCost = 0;
-    double total = getSum(stats);
-
-    double count = stats.length;
-    double mean = total / count;
-
-    // Compute max as if all region servers had 0 and one had the sum of all costs. This must be
-    // a zero sum cost for this to make sense.
-    double max = ((count - 1) * mean) + (total - mean);
-
-    // It's possible that there aren't enough regions to go around
-    double min;
-    if (count > total) {
-      min = ((count - total) * mean) + ((1 - mean) * total);
-    } else {
-      // Some will have 1 more than everything else.
-      int numHigh = (int) (total - (Math.floor(mean) * count));
-      int numLow = (int) (count - numHigh);
-
-      min = (numHigh * (Math.ceil(mean) - mean)) + (numLow * (mean - Math.floor(mean)));
-
-    }
-    min = Math.max(0, min);
-    for (int i = 0; i < stats.length; i++) {
-      double n = stats[i];
-      double diff = Math.abs(mean - n);
-      totalCost += diff;
-    }
-
-    double scaled = scale(min, max, totalCost);
-    return scaled;
-  }
-
-  private double getSum(double[] stats) {
-    double total = 0;
-    for (double s : stats) {
-      total += s;
-    }
-    return total;
-  }
-
   /**
    * Scale the value between 0 and 1.
    * @param min Min value
@@ -139,7 +88,7 @@ abstract class CostFunction {
    * @param value The value to be scaled.
    * @return The scaled value.
    */
-  protected final double scale(double min, double max, double value) {
+  protected static double scale(double min, double max, double value) {
     if (max <= min || value <= min) {
       return 0;
     }

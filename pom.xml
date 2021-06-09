@@ -1773,7 +1773,7 @@
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>3.4.1</hbase-thirdparty.version>
+    <hbase-thirdparty.version>3.5.1</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -2271,6 +2271,10 @@
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -2844,6 +2848,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
@@ -2927,6 +2935,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
@@ -2951,6 +2963,10 @@
              <exclusion>
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
@@ -3136,6 +3152,13 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <!-- MiniMRCluster needs the hadoop netty-all transitive include... a
+               netty-all 4.0.52 version.... so we have to let it through.
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
+             -->
              <exclusion>
                <groupId>com.google.code.findbugs</groupId>
                <artifactId>jsr305</artifactId>
@@ -3160,6 +3183,14 @@
                <groupId>log4j</groupId>
                <artifactId>log4j</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -3193,6 +3224,10 @@
              <exclusion>
                <groupId>log4j</groupId>
                <artifactId>log4j</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -3244,6 +3279,10 @@
              <exclusion>
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
              <exclusion>
                <groupId>com.google.code.findbugs</groupId>

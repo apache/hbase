@@ -27,38 +27,47 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 abstract class CostFromRegionLoadFunction extends CostFunction {
 
-  private double[] stats;
+  private final DoubleArrayCost cost = new DoubleArrayCost();
+
+  private double computeCostForRegionServer(int regionServerIndex) {
+    // Cost this server has from RegionLoad
+    double cost = 0;
+
+    // for every region on this server get the rl
+    for (int regionIndex : cluster.regionsPerServer[regionServerIndex]) {
+      Collection<BalancerRegionLoad> regionLoadList = cluster.regionLoads[regionIndex];
+
+      // Now if we found a region load get the type of cost that was requested.
+      if (regionLoadList != null) {
+        cost += getRegionLoadCost(regionLoadList);
+      }
+    }
+    return cost;
+  }
 
   @Override
   void prepare(BalancerClusterState cluster) {
     super.prepare(cluster);
-    if (stats == null || stats.length != cluster.numServers) {
-      stats = new double[cluster.numServers];
-    }
+    cost.prepare(cluster.numServers);
+    cost.setCosts(costs -> {
+      for (int i = 0; i < costs.length; i++) {
+        costs[i] = computeCostForRegionServer(i);
+      }
+    });
+  }
+
+  @Override
+  protected void regionMoved(int region, int oldServer, int newServer) {
+    // recompute the stat for the given two region servers
+    cost.setCosts(costs -> {
+      costs[oldServer] = computeCostForRegionServer(oldServer);
+      costs[newServer] = computeCostForRegionServer(newServer);
+    });
   }
 
   @Override
   protected final double cost() {
-    for (int i = 0; i < stats.length; i++) {
-      // Cost this server has from RegionLoad
-      double cost = 0;
-
-      // for every region on this server get the rl
-      for (int regionIndex : cluster.regionsPerServer[i]) {
-        Collection<BalancerRegionLoad> regionLoadList = cluster.regionLoads[regionIndex];
-
-        // Now if we found a region load get the type of cost that was requested.
-        if (regionLoadList != null) {
-          cost += getRegionLoadCost(regionLoadList);
-        }
-      }
-
-      // Add the total cost to the stats.
-      stats[i] = cost;
-    }
-
-    // Now return the scaled cost from data held in the stats object.
-    return costFromArray(stats);
+    return cost.cost();
   }
 
   protected double getRegionLoadCost(Collection<BalancerRegionLoad> regionLoadList) {

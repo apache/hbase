@@ -58,6 +58,16 @@ public interface ServerMetrics {
   long getRequestCount();
 
   /**
+   * @return total Number of read requests from the start of the region server.
+   */
+  long getReadRequestsCount();
+
+  /**
+   * @return total Number of write requests from the start of the region server.
+   */
+  long getWriteRequestsCount();
+
+  /**
    * @return the amount of used heap
    */
   Size getUsedHeapSize();

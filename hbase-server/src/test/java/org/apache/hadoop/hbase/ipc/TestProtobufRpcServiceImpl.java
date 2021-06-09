@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -58,13 +59,14 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
   public static BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr,
       User user) throws IOException {
     return TestProtobufRpcProto.newBlockingStub(client.createBlockingRpcChannel(
-      ServerName.valueOf(addr.getHostName(), addr.getPort(), System.currentTimeMillis()), user, 0));
+      ServerName.valueOf(addr.getHostName(), addr.getPort(),
+        EnvironmentEdgeManager.currentTime()), user, 0));
   }
 
   public static Interface newStub(RpcClient client, InetSocketAddress addr) throws IOException {
     return TestProtobufRpcProto.newStub(client.createRpcChannel(
-      ServerName.valueOf(addr.getHostName(), addr.getPort(), System.currentTimeMillis()),
-      User.getCurrent(), 0));
+      ServerName.valueOf(addr.getHostName(), addr.getPort(),
+        EnvironmentEdgeManager.currentTime()), User.getCurrent(), 0));
   }
 
   @Override

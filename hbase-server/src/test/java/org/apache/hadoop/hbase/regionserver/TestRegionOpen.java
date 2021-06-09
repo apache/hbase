@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -117,7 +118,7 @@ public class TestRegionOpen {
     // Create new HRI with non-default region replica id
     RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName())
       .setStartKey(Bytes.toBytes("A")).setEndKey(Bytes.toBytes("B"))
-      .setRegionId(System.currentTimeMillis()).setReplicaId(2).build();
+      .setRegionId(EnvironmentEdgeManager.currentTime()).setReplicaId(2).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
       CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri);
     Path regionDir = regionFs.getRegionDir();

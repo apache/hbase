@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Before;
@@ -103,9 +104,9 @@ public class TestProcedureSchedulerConcurrency {
             }
           }
           if (wakeCount.get() != oldWakeCount) {
-            lastUpdate = System.currentTimeMillis();
+            lastUpdate = EnvironmentEdgeManager.currentTime();
           } else if (wakeCount.get() >= NRUNS &&
-              (System.currentTimeMillis() - lastUpdate) > WAIT_THRESHOLD) {
+              (EnvironmentEdgeManager.currentTime() - lastUpdate) > WAIT_THRESHOLD) {
             break;
           }
           Threads.sleepWithoutInterrupt(25);

@@ -106,7 +106,7 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
     conf.setFloat("hbase.hregion.majorcompaction.jitter", 0);
     store.storeEngine.getCompactionPolicy().setConf(conf);
     try {
-      // The modTime of the mocked store file is currentTimeMillis, so we need to increase the
+      // The modTime of the mocked store file is the current time, so we need to increase the
       // timestamp a bit to make sure that now - lowestModTime is greater than major compaction
       // period(1ms).
       // trigger an aged major compaction

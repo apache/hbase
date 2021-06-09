@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -94,10 +95,10 @@ public class TestZKSecretWatcherRefreshKeys {
     Integer[] keys = { 1, 2, 3, 4, 5, 6 };
     for (Integer key : keys) {
       AuthenticationKey ak = new AuthenticationKey(key,
-          System.currentTimeMillis() + 600 * 1000, null);
+        EnvironmentEdgeManager.currentTime() + 600 * 1000, null);
       ZKUtil.createWithParents(zk,
-          ZNodePaths.joinZNode(watcher.getKeysParentZNode(), key.toString()),
-          Writables.getBytes(ak));
+        ZNodePaths.joinZNode(watcher.getKeysParentZNode(), key.toString()),
+        Writables.getBytes(ak));
     }
     Assert.assertNull(keyManager.getCurrentKey());
     watcher.refreshKeys();

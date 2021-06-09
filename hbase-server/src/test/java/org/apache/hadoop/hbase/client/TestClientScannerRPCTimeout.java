@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -109,9 +110,9 @@ public class TestClientScannerRPCTimeout {
     result = scanner.next();
     assertTrue("Expected row: row-1", Bytes.equals(r1, result.getRow()));
     LOG.info("Got expected first row");
-    long t1 = System.currentTimeMillis();
+    long t1 = EnvironmentEdgeManager.currentTime();
     result = scanner.next();
-    assertTrue((System.currentTimeMillis() - t1) > rpcTimeout);
+    assertTrue((EnvironmentEdgeManager.currentTime() - t1) > rpcTimeout);
     assertTrue("Expected row: row-2", Bytes.equals(r2, result.getRow()));
     RSRpcServicesWithScanTimeout.seqNoToSleepOn = -1;// No need of sleep
     result = scanner.next();

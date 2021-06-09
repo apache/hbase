@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureStoreListener;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.zookeeper.KeeperException;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -149,7 +150,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     for (int i = 0; i < numServes; ++i) {
       ServerName sn = ServerName.valueOf("localhost", 100 + i, 1);
       serverManager.regionServerReport(sn, ServerMetricsBuilder.newBuilder(sn)
-        .setLastReportTimestamp(System.currentTimeMillis()).build());
+        .setLastReportTimestamp(EnvironmentEdgeManager.currentTime()).build());
     }
     this.procedureExecutor.getEnvironment().setEventReady(initialized, true);
   }
@@ -176,7 +177,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     }
     ServerName sn = ServerName.valueOf(serverName.getAddress().toString(), startCode);
     serverManager.regionServerReport(sn, ServerMetricsBuilder.newBuilder(sn)
-      .setLastReportTimestamp(System.currentTimeMillis()).build());
+      .setLastReportTimestamp(EnvironmentEdgeManager.currentTime()).build());
   }
 
   @Override

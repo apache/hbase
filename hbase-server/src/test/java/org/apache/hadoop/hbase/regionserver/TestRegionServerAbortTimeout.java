@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -111,9 +112,9 @@ public class TestRegionServerAbortTimeout {
     // Abort one region server
     UTIL.getMiniHBaseCluster().getRegionServer(0).abort("Abort RS for test");
 
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long timeout = REGIONS_NUM * SLEEP_TIME_WHEN_CLOSE_REGION * 10;
-    while (System.currentTimeMillis() - startTime < timeout) {
+    while (EnvironmentEdgeManager.currentTime() - startTime < timeout) {
       if (UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size() == 1) {
         assertTrue("Abort timer task should be scheduled", abortTimeoutTaskScheduled);
         return;

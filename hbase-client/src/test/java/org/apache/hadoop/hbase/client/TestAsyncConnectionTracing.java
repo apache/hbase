@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -53,7 +54,7 @@ public class TestAsyncConnectionTracing {
   private static Configuration CONF = HBaseConfiguration.create();
 
   private ServerName masterServer =
-    ServerName.valueOf("localhost", 12345, System.currentTimeMillis());
+    ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime());
 
   private AsyncConnection conn;
 
@@ -87,7 +88,8 @@ public class TestAsyncConnectionTracing {
       .filter(s -> s.getName().equals("AsyncConnection." + methodName)).findFirst().get();
     assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
     if (serverName != null) {
-      assertEquals(serverName.getServerName(), data.getAttributes().get(TraceUtil.SERVER_NAME_KEY));
+      assertEquals(serverName.getServerName(),
+        data.getAttributes().get(TraceUtil.SERVER_NAME_KEY));
     }
   }
 
@@ -99,7 +101,8 @@ public class TestAsyncConnectionTracing {
 
   @Test
   public void testHbckWithServerName() throws IOException {
-    ServerName serverName = ServerName.valueOf("localhost", 23456, System.currentTimeMillis());
+    ServerName serverName = ServerName.valueOf("localhost", 23456,
+      EnvironmentEdgeManager.currentTime());
     conn.getHbck(serverName);
     assertTrace("getHbck", serverName);
   }

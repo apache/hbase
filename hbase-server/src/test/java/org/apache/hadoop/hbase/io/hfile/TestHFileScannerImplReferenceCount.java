@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.io.hfile.bucket.TestBucketCache;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -139,7 +140,7 @@ public class TestHFileScannerImplReferenceCount {
     this.allocator = ByteBuffAllocator.create(UTIL.getConfiguration(), true);
     this.conf = new Configuration(UTIL.getConfiguration());
     this.fs = this.workDir.getFileSystem(conf);
-    this.hfilePath = new Path(this.workDir, caseName + System.currentTimeMillis());
+    this.hfilePath = new Path(this.workDir, caseName + EnvironmentEdgeManager.currentTime());
     LOG.info("Start to write {} cells into hfile: {}, case:{}", CELL_COUNT, hfilePath, caseName);
   }
 

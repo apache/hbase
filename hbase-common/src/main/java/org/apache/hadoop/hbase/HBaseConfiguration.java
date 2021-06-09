@@ -62,6 +62,11 @@ public class HBaseConfiguration extends Configuration {
    * HBASE-24667: This config hbase.regionserver.hostname.disable.master.reversedns will be
    * replaced by hbase.unsafe.regionserver.hostname.disable.master.reversedns. Keep the old config
    * keys here for backward compatibility.
+   * <br>
+   * Note: Before Hadoop-3.3, we must call the addDeprecations method before creating the
+   * Configuration object to work correctly. After this bug is fixed in hadoop-3.3, there will be
+   * no order problem.
+   * @see <a href="https://issues.apache.org/jira/browse/HADOOP-15708">HADOOP-15708</a>
    */
   private static void addDeprecatedKeys() {
     Configuration.addDeprecations(new DeprecationDelta[]{
@@ -80,7 +85,9 @@ public class HBaseConfiguration extends Configuration {
       new DeprecationDelta("hlog.input.tables", "wal.input.tables"),
       new DeprecationDelta("hlog.input.tablesmap", "wal.input.tablesmap"),
       new DeprecationDelta("hbase.master.mob.ttl.cleaner.period",
-        "hbase.master.mob.cleaner.period")
+        "hbase.master.mob.cleaner.period"),
+      new DeprecationDelta("hbase.normalizer.min.region.count",
+        "hbase.normalizer.merge.min.region.count")
     });
   }
 
