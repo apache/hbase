@@ -151,6 +151,7 @@ class ReplicationSourceWALReader extends Thread {
             } else {
               addBatchToShippingQueue(batch);
             }
+            sleepMultiplier = 1;
           }
         } catch (WALEntryFilterRetryableException | IOException e) { // stream related
           if (handleEofException(e, batch)) {
