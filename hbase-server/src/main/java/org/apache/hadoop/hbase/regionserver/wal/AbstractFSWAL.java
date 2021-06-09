@@ -342,8 +342,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected final AtomicBoolean rollRequested = new AtomicBoolean(false);
 
-  private final ExecutorService logArchiveExecutor = Executors.newSingleThreadExecutor(
-    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("WAL-Archiver-%d").build());
+  private final ExecutorService logArchiveOrShutdownExecutor = Executors.newSingleThreadExecutor(
+    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("WAL-Archive-Or-Shutdown-%d").build());
 
   private final int archiveRetries;
 
@@ -778,7 +778,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       final List<Pair<Path, Long>> localLogsToArchive = logsToArchive;
       // make it async
       for (Pair<Path, Long> log : localLogsToArchive) {
-        logArchiveExecutor.execute(() -> {
+        logArchiveOrShutdownExecutor.execute(() -> {
           archive(log);
         });
         this.walFile2Props.remove(log.getFirst());
@@ -997,16 +997,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       }
     }
 
-    ExecutorService shutdownExecutor = Executors.newFixedThreadPool(1,
-      new com.google.common.util.concurrent.ThreadFactoryBuilder().setDaemon(true)
-        .setNameFormat("AbstractFSWAL-shutdown-").build());
-    Future<Void> future = shutdownExecutor.submit(new Callable<Void>() {
+    Future<Void> future = logArchiveOrShutdownExecutor.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         if (rollWriterLock.tryLock(walShutdownTimeout, TimeUnit.SECONDS)) {
           try {
             doShutdown();
-            logArchiveExecutor.shutdownNow();
           } finally {
             rollWriterLock.unlock();
           }
@@ -1016,7 +1012,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         return null;
       }
     });
-    shutdownExecutor.shutdown();
+    logArchiveOrShutdownExecutor.shutdown();
 
     try {
       future.get(walShutdownTimeout, TimeUnit.MILLISECONDS);
