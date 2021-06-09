@@ -287,6 +287,35 @@ message ServerLoad {
   repeated UserLoad userLoads = 12;
 }
 
+message CompactionServerLoad {
+  required int64 compacting_cells = 1;
+  required int64 compacted_cells = 2;
+  repeated string compaction_tasks = 3;
+
+  /** Total Number of requests from the start of the compaction server. */
+  optional uint64 total_number_of_requests = 4;
+
+  /**
+   * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
+   * time is measured as the difference, measured in milliseconds, between the current time
+   * and midnight, January 1, 1970 UTC.
+   */
+  optional uint64 report_start_time = 5;
+
+  /**
+   * Time when report was generated.
+   * time is measured as the difference, measured in milliseconds, between the current time
+   * and midnight, January 1, 1970 UTC.
+   */
+  optional uint64 report_end_time = 6;
+
+  /**
+   * The port number that this compaction server is hosing an info server on.
+   */
+  optional uint32 info_server_port = 7;
+
+}
+
 message LiveServerInfo {
   required ServerName server = 1;
   required ServerLoad server_load = 2;

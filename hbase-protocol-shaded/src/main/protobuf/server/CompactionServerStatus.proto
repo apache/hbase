@@ -32,6 +32,8 @@ import "server/ErrorHandling.proto";
 
 message CompactionServerReportRequest {
   required ServerName server = 1;
+  /** load the server is under */
+  optional CompactionServerLoad load = 2;
 }
 
 message CompactionServerReportResponse {

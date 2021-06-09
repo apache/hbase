@@ -27,9 +27,7 @@ HMaster master;
         java.util.*;
         org.apache.hadoop.hbase.master.HMaster;
         org.apache.hadoop.hbase.procedure2.util.StringUtils;
-        org.apache.hadoop.hbase.replication.ReplicationLoadSource;
-        org.apache.hadoop.hbase.RegionMetrics;
-        org.apache.hadoop.hbase.ServerMetrics;
+        org.apache.hadoop.hbase.CompactionServerMetrics;
         org.apache.hadoop.hbase.ServerName;
         org.apache.hadoop.hbase.Size;
         org.apache.hadoop.hbase.util.VersionInfo;
@@ -40,17 +38,21 @@ HMaster master;
 <%if (servers != null && servers.size() > 0)%>
 
 <%java>
-ServerName [] serverNames = servers.toArray(new ServerName[servers.size()]);
-Arrays.sort(serverNames);
+  ServerName [] serverNames = servers.toArray(new ServerName[servers.size()]);
+  Arrays.sort(serverNames);
 </%java>
 
 <div class="tabbable">
     <ul class="nav nav-pills">
         <li class="active"><a href="#tab_compactionserver_baseStats" data-toggle="tab">Base Stats</a></li>
+        <li class=""><a href="#tab_compactionserver_compactStats" data-toggle="tab">Compactions</a></li>
     </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
         <div class="tab-pane active" id="tab_compactionserver_baseStats">
             <& baseStats; serverNames = serverNames; &>
+        </div>
+        <div class="tab-pane" id="tab_compactionserver_compactStats">
+            <& compactionStats; serverNames = serverNames; &>
         </div>
     </div>
 </div>
@@ -72,28 +74,17 @@ Arrays.sort(serverNames);
 </thead>
 <tbody>
 <%java>
-    int totalRegions = 0;
-    int totalRequestsPerSecond = 0;
-    int inconsistentNodeNum = 0;
-    String masterVersion = VersionInfo.getVersion();
-    for (ServerName serverName: serverNames) {
-
-    ServerMetrics sl = master.getServerManager().getLoad(serverName);
+  int inconsistentNodeNum = 0;
+  String masterVersion = VersionInfo.getVersion();
+  for(ServerName serverName:serverNames) {
+    CompactionServerMetrics sl = master.getCompactionOffloadManager().getLoad(serverName);
     String version = master.getCompactionServerVersion(serverName);
     if (!masterVersion.equals(version)) {
-        inconsistentNodeNum ++;
+      inconsistentNodeNum ++;
     }
-
-    double requestsPerSecond = 0.0;
-    int numRegionsOnline = 0;
     long lastContact = 0;
-
     if (sl != null) {
-        requestsPerSecond = sl.getRequestCountPerSecond();
-        numRegionsOnline = sl.getRegionMetrics().size();
-        totalRegions += sl.getRegionMetrics().size();
-        totalRequestsPerSecond += sl.getRequestCountPerSecond();
-        lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
+      lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
     }
     long startcode = serverName.getStartcode();
 </%java>
@@ -119,6 +110,53 @@ Arrays.sort(serverNames);
 </table>
 </%def>
 
+
+<%def compactionStats>
+<%args>
+   ServerName [] serverNames;
+</%args>
+<table id="compactionStatsTable" class="tablesorter table table-striped">
+<thead>
+<tr>
+    <th>ServerName</th>
+    <th>Num. Compacting Cells</th>
+    <th>Num. Compacted Cells</th>
+    <th>Compaction Progress</th>
+    <th>Num. Compaction Tasks</th>
+</tr>
+</thead>
+<tbody>
+<%java>
+  for(ServerName serverName:serverNames) {
+    CompactionServerMetrics sl = master.getCompactionOffloadManager().getLoad(serverName);
+    if (sl != null) {
+      long totalCompactingCells = sl.getCompactingCellCount();
+      long totalCompactedCells = sl.getCompactedCellCount();
+      long compactionTaskNum = sl.getCompactionTasks().size();
+      String percentDone = "";
+      if  (totalCompactingCells > 0) {
+        percentDone = String.format("%.2f", 100 *
+          ((float) totalCompactedCells / totalCompactingCells)) + "%";
+      }
+</%java>
+<tr>
+<td><& serverNameLink; serverName=serverName; &></td>
+<td><% String.format("%,d", totalCompactingCells) %></td>
+<td><% String.format("%,d", totalCompactedCells) %></td>
+<td><% percentDone %></td>
+<td><% String.format("%,d", compactionTaskNum) %></td>
+</tr>
+<%java>
+   } else {
+</%java>
+<& emptyStat; serverName=serverName; &>
+<%java>
+    }
+}
+</%java>
+</tbody>
+</table>
+</%def>
 
 <%def serverNameLink>
         <%args>
