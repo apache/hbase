@@ -7291,11 +7291,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         outResults.addAll(tmpList);
       }
 
-      if (!outResults.isEmpty()) {
-        readRequestsCount.increment();
-        if (metricsRegion != null) {
-          metricsRegion.updateReadRequestCount();
-        }
+      readRequestsCount.increment();
+      if (metricsRegion != null) {
+        metricsRegion.updateReadRequestCount();
       }
 
       // If the size limit was reached it means a partial Result is being returned. Returning a
