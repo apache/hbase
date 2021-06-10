@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
@@ -258,11 +260,14 @@ public class WALCellCodec implements Codec {
           // Write tags using Dictionary compression
           PrivateCellUtil.compressTags(out, cell, compression.tagCompressionContext);
         } else {
-          // Tag compression is disabled within the WAL compression. Just write the tags bytes as
-          // it is.
+          // Tag compression is disabled within the WAL compression. Just write the tags bytes
+          // as it is.
           PrivateCellUtil.writeTags(out, cell, tagsLength);
         }
       }
+      // Flush the output stream now to minimize the chance an reader actively tailing the
+      // WAL will encounter a short read.
+      out.flush();
     }
 
     private void writeCompressedValue(OutputStream out, Cell cell) throws IOException {
@@ -381,8 +386,13 @@ public class WALCellCodec implements Codec {
     private void readCompressedValue(InputStream in, byte[] outArray, int outOffset,
         int expectedLength) throws IOException {
       int compressedLen = StreamUtils.readRawVarint32(in);
-      int read = compression.getValueCompressor().decompress(in, compressedLen, outArray,
-        outOffset, expectedLength);
+      // A partial read of the compressed bytes, depending on which compression codec is used,
+      // can cause messy IO errors. This can happen when the reader is actively tailing a file
+      // being written, for replication.
+      byte[] buffer = new byte[compressedLen];
+      IOUtils.readFully(in, buffer, 0, compressedLen);
+      int read = compression.getValueCompressor().decompress(new ByteArrayInputStream(buffer),
+        compressedLen, outArray, outOffset, expectedLength);
       if (read != expectedLength) {
         throw new IOException("ValueCompressor state error: short read");
       }
