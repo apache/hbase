@@ -78,6 +78,7 @@ public class InfoServer {
         .trustStore(c.get("ssl.server.truststore.location"),
                 HBaseConfiguration.getPassword(c, "ssl.server.truststore.password", null),
                 c.get("ssl.server.truststore.type", "jks"));
+      builder.excludeCiphers(c.get("ssl.server.exclude.cipher.list"));
     }
     // Enable SPNEGO authentication
     if ("kerberos".equalsIgnoreCase(c.get(HttpServer.HTTP_UI_AUTHENTICATION, null))) {
