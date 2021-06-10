@@ -46,7 +46,7 @@ public class TestReplicationCompressedWAL extends TestReplicationBase {
       HBaseClassTestRule.forClass(TestReplicationCompressedWAL.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestReplicationCompressedWAL.class);
-  static final int NUM_BATCHES = 100;
+  static final int NUM_BATCHES = 20;
   static final int NUM_ROWS_PER_BATCH = 100;
 
   @BeforeClass

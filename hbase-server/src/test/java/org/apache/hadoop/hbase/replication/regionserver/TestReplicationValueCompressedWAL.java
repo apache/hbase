@@ -38,7 +38,6 @@ public class TestReplicationValueCompressedWAL extends TestReplicationBase {
       HBaseClassTestRule.forClass(TestReplicationValueCompressedWAL.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestReplicationValueCompressedWAL.class);
-  static final int NUM_ROWS = 10;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
