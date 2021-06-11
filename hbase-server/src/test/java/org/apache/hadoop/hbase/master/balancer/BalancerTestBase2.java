@@ -27,7 +27,7 @@ public class BalancerTestBase2 extends BalancerTestBase {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 3 * 60 * 1000);
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
     loadBalancer.setConf(conf);
   }
