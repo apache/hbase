@@ -71,6 +71,11 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
   }
 
   @Override
+  public AsyncCompactionServerCaller getCompactionServerCaller(ServerName serverName) {
+    return new AsyncCompactionServerCaller(serverName, this);
+  }
+
+  @Override
   public CompletableFuture<FlushRegionResponse> flush(byte[] regionName,
       boolean writeFlushWALMarker) {
     RawAsyncHBaseAdmin admin = (RawAsyncHBaseAdmin) getAdmin();

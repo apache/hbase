@@ -1525,14 +1525,64 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
   }
 
-  protected List<HStoreFile> doCompaction(CompactionRequestImpl cr,
-      Collection<HStoreFile> filesToCompact, User user, long compactionStartTime,
-      List<Path> newFiles) throws IOException {
+  protected boolean completeCompaction(CompactionRequestImpl cr, List<String> filesToCompact,
+    User user, List<String> newFiles) throws IOException {
+    Collection<HStoreFile> selectedStoreFiles = new ArrayList<>();
+    for (String selectedFile : filesToCompact) {
+      HStoreFile storeFile = getStoreFileBasedOnFileName(selectedFile);
+      if (storeFile == null) {
+        return false;
+      } else {
+        selectedStoreFiles.add(storeFile);
+      }
+    }
+    Path regionDir = getRegionFileSystem().getRegionDir();
+    Path regionTmpDir = new Path(regionDir, ".tmp");
+    Path storeTmpDir = new Path(regionTmpDir, getColumnFamilyName());
+    List<Path> newFilePaths = new ArrayList<>();
+    for (String newFile : newFiles) {
+      newFilePaths.add(new Path(storeTmpDir, newFile));
+    }
+    completeCompaction(cr, selectedStoreFiles, user, newFilePaths);
+    return true;
+  }
+
+  private HStoreFile getStoreFileBasedOnFileName(String fileName) {
+    for (HStoreFile storefile : getStorefiles()) {
+      if (storefile.getPath().getName().equals(fileName)) {
+        LOG.debug("Found store file: {} for selectFileName: {}", storefile, fileName);
+        return storefile;
+      }
+    }
+    LOG.warn("Does not found store file for selectFileName: {}", fileName);
+    return null;
+  }
+
+  private HStoreFile getStoreFile(Path path) {
+    for (HStoreFile storefile : getStorefiles()) {
+      if (storefile.getPath().equals(path)) {
+        return storefile;
+      }
+    }
+    return null;
+  }
+
+  private synchronized List<HStoreFile> completeCompaction(CompactionRequestImpl cr,
+    Collection<HStoreFile> filesToCompact, User user, List<Path> newFiles) throws IOException {
+    // TODO check store contains files to compact
     // Do the steps necessary to complete the compaction.
     setStoragePolicyFromFileName(newFiles);
     List<HStoreFile> sfs = moveCompactedFilesIntoPlace(cr, newFiles, user);
     writeCompactionWalRecord(filesToCompact, sfs);
     replaceStoreFiles(filesToCompact, sfs);
+    return sfs;
+  }
+
+  protected List<HStoreFile> doCompaction(CompactionRequestImpl cr,
+      Collection<HStoreFile> filesToCompact, User user, long compactionStartTime,
+      List<Path> newFiles) throws IOException {
+    List<HStoreFile> sfs = completeCompaction(cr, filesToCompact, user, newFiles);
+
     if (cr.isMajor()) {
       majorCompactedCellsCount.addAndGet(getCompactionProgress().getTotalCompactingKVs());
       majorCompactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);
@@ -1577,7 +1627,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     for (Path newFile : newFiles) {
       assert newFile != null;
       HStoreFile sf = moveFileIntoPlace(newFile);
-      if (this.getCoprocessorHost() != null) {
+      if (this.getCoprocessorHost() != null && cr != null) {
         getCoprocessorHost().postCompact(this, sf, cr.getTracker(), cr, user);
       }
       assert sf != null;
@@ -1880,21 +1930,30 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     // Before we do compaction, try to get rid of unneeded files to simplify things.
     removeUnneededFiles();
 
-    final CompactionContext compaction = storeEngine.createCompaction();
+    if (region.getRegionServerServices().isCompactionOffloadEnabled()) {
+      if (!requestToCompactionManager(forceMajor, priority)) {
+        // if request to cm error, do local compaction or retry
+        return selectCompaction(priority, tracker, user, filesCompacting);
+      } else {
+        LOG.debug("request compaction to compaction server, regioninfo:{}, store ",
+          this.getRegionInfo(), this);
+      }
+      return Optional.empty();
+    } else {
+      return selectCompaction(priority, tracker, user, filesCompacting);
+    }
+  }
+
+
+  public Optional<CompactionContext> selectCompaction(int priority,
+    CompactionLifeCycleTracker tracker, User user, List<HStoreFile> filesCompacting)
+    throws IOException {
+  final CompactionContext compaction = storeEngine.createCompaction();
     CompactionRequestImpl request = null;
     this.lock.readLock().lock();
     try {
       synchronized (filesCompacting) {
-        // First, see if coprocessor would want to override selection.
-        if (this.getCoprocessorHost() != null) {
-          final List<HStoreFile> candidatesForCoproc = compaction.preSelect(this.filesCompacting);
-          boolean override = getCoprocessorHost().preCompactSelection(this,
-              candidatesForCoproc, tracker, user);
-          if (override) {
-            // Coprocessor is overriding normal file selection.
-            compaction.forceSelect(new CompactionRequestImpl(candidatesForCoproc));
-          }
-        }
+        preCompactionSelection(compaction, tracker, user);
 
         // Normal case - coprocessor is not overriding file selection.
         if (!compaction.hasSelection()) {
@@ -1916,11 +1975,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
             offPeakCompactionTracker.set(false);
           }
         }
-        if (this.getCoprocessorHost() != null) {
-          this.getCoprocessorHost().postCompactSelection(
-              this, ImmutableList.copyOf(compaction.getRequest().getFiles()), tracker,
-              compaction.getRequest(), user);
-        }
+        postCompactionSelection(compaction, tracker, user);
         // Finally, we have the resulting files list. Check if we have any files at all.
         request = compaction.getRequest();
         Collection<HStoreFile> selectedFiles = request.getFiles();
@@ -1964,6 +2019,34 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
     this.region.reportCompactionRequestStart(request.isMajor());
     return Optional.of(compaction);
+  }
+
+  private void preCompactionSelection(CompactionContext compaction,
+    CompactionLifeCycleTracker tracker, User user) throws IOException {
+    // First, see if coprocessor would want to override selection.
+    if (this.getCoprocessorHost() != null) {
+      final List<HStoreFile> candidatesForCoproc = compaction.preSelect(this.filesCompacting);
+      boolean override =
+        getCoprocessorHost().preCompactSelection(this, candidatesForCoproc, tracker, user);
+      if (override) {
+        // Coprocessor is overriding normal file selection.
+        compaction.forceSelect(new CompactionRequestImpl(candidatesForCoproc));
+      }
+    }
+  }
+
+  private void postCompactionSelection(CompactionContext compaction,
+    CompactionLifeCycleTracker tracker, User user) throws IOException {
+    if (this.getCoprocessorHost() != null) {
+      this.getCoprocessorHost().postCompactSelection(this,
+        ImmutableList.copyOf(compaction.getRequest().getFiles()), tracker, compaction.getRequest(),
+        user);
+    }
+  }
+
+  private boolean requestToCompactionManager(boolean forceMajor, int priority) {
+    return region.getRegionServerServices().requestCompactRegion(region.getRegionInfo(),
+      storeContext.getFamily(), forceMajor, priority);
   }
 
   /** Adds the files to compacting files. filesCompacting must be locked. */
@@ -2916,5 +2999,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     } else {
       mixedRowReadsCount.increment();
     }
+  }
+
+  public boolean getForceMajor() {
+    return this.forceMajor;
+  }
+
+  public void setForceMajor(boolean newForceMajor) {
+    this.forceMajor = newForceMajor;
   }
 }

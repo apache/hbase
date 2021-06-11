@@ -161,6 +161,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos.CompactionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos.CompactionServerReportResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos.CompactionServerStatusService;
@@ -344,6 +350,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaSta
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
@@ -370,7 +377,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Rena
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -418,11 +424,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.
 public class MasterRpcServices extends RSRpcServices implements
     MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
     LockService.BlockingInterface, HbckService.BlockingInterface,
-    ClientMetaService.BlockingInterface, CompactionServerStatusService.BlockingInterface {
+    ClientMetaService.BlockingInterface, CompactionServerStatusService.BlockingInterface,
+  CompactionProtos.CompactionService.BlockingInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(MasterRpcServices.class.getName());
   private static final Logger AUDITLOG =
-      LoggerFactory.getLogger("SecurityLogger."+MasterRpcServices.class.getName());
+      LoggerFactory.getLogger("SecurityLogger." + MasterRpcServices.class.getName());
 
   private final HMaster master;
 
@@ -567,6 +574,9 @@ public class MasterRpcServices extends RSRpcServices implements
     bssi.add(new BlockingServiceAndInterface(
         CompactionServerStatusService.newReflectiveBlockingService(this),
         CompactionServerStatusService.BlockingInterface.class));
+    bssi.add(new BlockingServiceAndInterface(
+      CompactionService.newReflectiveBlockingService(this),
+      CompactionService.BlockingInterface.class));
     bssi.addAll(super.getServices(conf));
     return bssi;
   }
@@ -3471,6 +3481,19 @@ public class MasterRpcServices extends RSRpcServices implements
     } catch (Exception e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public CompactResponse requestCompaction(RpcController controller, CompactRequest request)
+      throws ServiceException {
+    master.getCompactionOffloadManager().requestCompaction(request);
+    return CompactResponse.newBuilder().build();
+  }
+
+  @Override
+  public CompleteCompactionResponse completeCompaction(RpcController controller,
+    CompleteCompactionRequest request) {
+    throw new UnsupportedOperationException("master not receive completeCompaction");
   }
 
 }

@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -384,5 +385,16 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public AsyncClusterConnection getAsyncClusterConnection() {
     return null;
+  }
+
+  @Override
+  public boolean isCompactionOffloadEnabled() {
+    return true;
+  }
+
+  @Override
+  public boolean requestCompactRegion(RegionInfo regionInfo, ColumnFamilyDescriptor cfd,
+    boolean major, int priority) {
+    return false;
   }
 }

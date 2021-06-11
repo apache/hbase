@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -101,6 +102,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private final ConcurrentMap<String, ClientService.Interface> rsStubs = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, AdminService.Interface> adminSubs = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, CompactionService.Interface> CompactionSubs = new ConcurrentHashMap<>();
 
   private final AtomicReference<MasterService.Interface> masterStub = new AtomicReference<>();
 
@@ -278,10 +280,20 @@ class AsyncConnectionImpl implements AsyncConnection {
     return AdminService.newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
   }
 
+  private CompactionService.Interface createCompactionServerStub(ServerName serverName) throws IOException {
+    return CompactionService.newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
+  }
+
   AdminService.Interface getAdminStub(ServerName serverName) throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(adminSubs,
       getStubKey(AdminService.getDescriptor().getName(), serverName),
       () -> createAdminServerStub(serverName));
+  }
+
+  CompactionService.Interface getCompactionStub(ServerName serverName) throws IOException {
+    return ConcurrentMapUtils.computeIfAbsentEx(CompactionSubs,
+      getStubKey(CompactionService.getDescriptor().getName(), serverName),
+      () -> createCompactionServerStub(serverName));
   }
 
   CompletableFuture<MasterService.Interface> getMasterStub() {

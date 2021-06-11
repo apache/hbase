@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
@@ -219,6 +220,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
@@ -357,6 +361,7 @@ public class HRegionServer extends AbstractServer implements
   // Stub to do region server status calls against the master.
   private volatile RegionServerStatusService.BlockingInterface rssStub;
   private volatile LockService.BlockingInterface lockStub;
+  private volatile CompactionService.BlockingInterface cmsStub;
 
   private UncaughtExceptionHandler uncaughtExceptionHandler;
 
@@ -3735,5 +3740,68 @@ public class HRegionServer extends AbstractServer implements
   @InterfaceAudience.Private
   public long getRetryPauseTime() {
     return this.retryPauseTime;
+  }
+
+  @Override
+  public boolean isCompactionOffloadEnabled(){
+    return regionServerCompactionOffloadManager.isCompactionOffloadEnabled();
+  }
+
+  private synchronized void createCompactionManagerStub(boolean refresh) {
+    // Create Master Compaction service stub without refreshing the master node from ZK,
+    // use cached data
+    if (cmsStub == null) {
+      cmsStub =
+          (CompactionService.BlockingInterface) createMasterStub(CompactionService.class, refresh);
+    }
+  }
+
+  /**
+   * Send compaction request to compaction manager
+   * @return True if send request successfully, otherwise false
+   * @throws IOException If an error occurs
+   */
+  @Override
+  public boolean requestCompactRegion(RegionInfo regionInfo, ColumnFamilyDescriptor cfd,
+    boolean major, int priority) {
+    if (!isCompactionOffloadEnabled()) {
+      return false;
+    }
+    if (cmsStub == null) {
+      createCompactionManagerStub(false);
+    }
+    if (cmsStub == null) {
+      return false;
+    }
+    CompactionService.BlockingInterface cms = cmsStub;
+    InetSocketAddress[] favoredNodesForRegion =
+      getFavoredNodesForRegion(regionInfo.getEncodedName());
+    CompactRequest.Builder builder =
+      CompactRequest.newBuilder().setServer(ProtobufUtil.toServerName(getServerName()))
+        .setRegionInfo(ProtobufUtil.toRegionInfo(regionInfo))
+        .setFamily(ProtobufUtil.toColumnFamilySchema(cfd)).setMajor(major).setPriority(priority);
+    if (favoredNodesForRegion != null) {
+      for (InetSocketAddress address : favoredNodesForRegion) {
+        builder.addFavoredNodes(ProtobufUtil
+          .toServerName(ServerName.valueOf(address.getHostName(), address.getPort(), 0L)));
+      }
+    }
+    CompactRequest compactRequest = builder.build();
+    try {
+      LOG.debug("Request compaction to CompactionManager, region: {}, store: {}",
+        regionInfo.getRegionNameAsString(), cfd.getNameAsString());
+      CompactResponse response = cms.requestCompaction(null, compactRequest);
+      LOG.debug("Receive response of compaction from CompactionManager, region: {}, store: {}",
+        regionInfo.getRegionNameAsString(), cfd.getNameAsString());
+      return true;
+    } catch (ServiceException se) {
+      LOG.error("Failed to request compact region", se);
+      if (cmsStub == cms) {
+        cmsStub = null;
+      }
+      // Couldn't connect to the compaction manager, get location from zk and reconnect
+      createCompactionManagerStub(true);
+      return false;
+    }
   }
 }

@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -69,6 +70,7 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -174,6 +176,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -3760,6 +3764,40 @@ public class RSRpcServices extends AbstractRpcServices implements
     }
     stats.withMaxCacheSize(regionServer.getBlockCache().map(BlockCache::getMaxSize).orElse(0L));
     return builder.setStats(ProtobufUtil.toCacheEvictionStats(stats.build())).build();
+  }
+
+
+  @Override
+  public CompleteCompactionResponse completeCompaction(RpcController controller,
+      CompleteCompactionRequest request) throws ServiceException {
+    RegionInfo regionInfo = ProtobufUtil.toRegionInfo(request.getRegionInfo());
+    ColumnFamilyDescriptor family = ProtobufUtil.toColumnFamilyDescriptor(request.getFamily());
+    LOG.debug("Region server receive complete compaction for region: {}, cf: {}",
+      regionInfo.getRegionNameAsString(), family.getNameAsString());
+    boolean success = false;
+    HRegion onlineRegion = regionServer.getOnlineRegion(regionInfo.getRegionName());
+    if (onlineRegion != null) {
+      HStore store = onlineRegion.getStore(family.getName());
+      if (store != null) {
+        if (store.getForceMajor()) {
+          store.setForceMajor(request.getNewForceMajor());
+        }
+        List<String> selectedFiles =
+            request.getSelectedFilesList().stream().collect(Collectors.toList());
+        List<String> newFiles = request.getNewFilesList().stream().collect(Collectors.toList());
+        try {
+          success = store.completeCompaction(null, selectedFiles, null, newFiles);
+          LOG.debug("Complete compaction result: {} for region: {}, store {}", success,
+            regionInfo.getRegionNameAsString(),
+            store.getColumnFamilyDescriptor().getNameAsString());
+        } catch (IOException e) {
+          LOG.error("Failed to complete compaction for region: {}, store {}",
+            regionInfo.getRegionNameAsString(), store.getColumnFamilyDescriptor().getNameAsString(),
+            e);
+        }
+      }
+    }
+    return CompleteCompactionResponse.newBuilder().setSuccess(success).build();
   }
 
   private void executeOpenRegionProcedures(OpenRegionRequest request,
