@@ -314,11 +314,16 @@
           for (int j = 0; j < numMetaReplicas; j++) {
             RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                                     RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+            //If a metaLocation is null, All of its info would be empty here to be displayed.
             ServerName metaLocation = null;
             try {
               metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
             } catch (NotAllMetaRegionsOnlineException e) {
-              //Should ignore this Exception for we don't need to display rit meta region info in UI
+              //Since a region in transition state throw a NotAllMetaRegionsOnlineException then
+              //could cause the whole UI crash, and the operator could have learned that this
+              //region is in transition state from the master status UI. We should ignore to display
+              //this region info.
+              continue;
             }
             for (int i = 0; i < 1; i++) {
               String hostAndPort = "";
@@ -384,11 +389,16 @@
            for (int j = 0; j < numMetaReplicas; j++) {
              RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                                      RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+             //If a metaLocation is null, All of its info would be empty here to be displayed.
              ServerName metaLocation = null;
              try {
                metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
              } catch (NotAllMetaRegionsOnlineException e) {
-               //Should ignore this Exception for we don't need to display rit meta region info in UI
+               //Since a region in transition state throw a NotAllMetaRegionsOnlineException then
+               //could cause the whole UI crash, and the operator could have learned that this
+               //region is in transition state from the master status UI. We should ignore to display
+               //this region info.
+               continue;
              }
              for (int i = 0; i < 1; i++) {
                String hostAndPort = "";
@@ -437,11 +447,16 @@
           for (int j = 0; j < numMetaReplicas; j++) {
             RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                                     RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+            //If a metaLocation is null, All of its info would be empty here to be displayed.
             ServerName metaLocation = null;
             try {
               metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
             } catch (NotAllMetaRegionsOnlineException e) {
-              //Should ignore this Exception for we don't need to display rit meta region info in UI
+              //Since a region in transition state throw a NotAllMetaRegionsOnlineException then
+              //could cause the whole UI crash, and the operator could have learned that this
+              //region is in transition state from the master status UI. We should ignore to display
+              //this region info.
+              continue;
             }
             for (int i = 0; i < 1; i++) {
               String hostAndPort = "";
