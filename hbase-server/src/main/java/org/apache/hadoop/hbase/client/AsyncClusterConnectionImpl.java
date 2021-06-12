@@ -91,7 +91,7 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
   }
 
   @Override
-  public AsyncCompactionServerService getCompactionServerCaller(ServerName serverName) {
+  public AsyncCompactionServerService getCompactionServerService(ServerName serverName) {
     return new AsyncCompactionServerService(serverName, this);
   }
 
