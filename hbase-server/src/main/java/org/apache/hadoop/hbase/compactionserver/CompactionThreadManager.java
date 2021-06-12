@@ -34,9 +34,9 @@ import org.slf4j.LoggerFactory;
 public class CompactionThreadManager {
   private static Logger LOG = LoggerFactory.getLogger(CompactionThreadManager.class);
 
-  // process name
   private final Configuration conf;
-  private final ConcurrentMap<ServerName, AsyncRegionServerAdmin> rsAdmins = new ConcurrentHashMap<>();
+  private final ConcurrentMap<ServerName, AsyncRegionServerAdmin> rsAdmins =
+      new ConcurrentHashMap<>();
   private final HCompactionServer server;
 
   public CompactionThreadManager(final Configuration conf, HCompactionServer server) {

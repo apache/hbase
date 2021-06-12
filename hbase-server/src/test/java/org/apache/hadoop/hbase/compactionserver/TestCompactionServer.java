@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.compactionserver;
 
+import static org.junit.Assert.assertNull;
+
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -40,8 +42,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.junit.Assert.assertNull;
 
 @Category({CompactionServerTests.class, MediumTests.class})
 public class TestCompactionServer {
@@ -114,7 +114,7 @@ public class TestCompactionServer {
     CompactionOffloadManager compactionOffloadManager = MASTER.getCompactionOffloadManager();
     TEST_UTIL.waitFor(60000,
       () -> initialNum + 1 == compactionOffloadManager.getOnlineServersList().size()
-    && null != compactionOffloadManager.getLoad(compactionServerName));
+          && null != compactionOffloadManager.getLoad(compactionServerName));
 
     compactionServer.stop("test");
 

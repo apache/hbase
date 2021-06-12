@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -27,6 +30,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.security.token.Token;
@@ -41,18 +45,34 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBul
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 
 /**
  * The implementation of AsyncClusterConnection.
  */
 @InterfaceAudience.Private
 class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClusterConnection {
-
+  private final ConcurrentMap<String, CompactionService.Interface> CompactionSubs = new ConcurrentHashMap<>();
   public AsyncClusterConnectionImpl(Configuration conf, ConnectionRegistry registry,
       String clusterId, SocketAddress localAddress, User user) {
     super(conf, registry, clusterId, localAddress, user);
+  }
+
+  CompactionProtos.CompactionService.Interface getCompactionStub(ServerName serverName) throws
+    IOException {
+    return ConcurrentMapUtils.computeIfAbsentEx(CompactionSubs,
+      getStubKey(CompactionProtos.CompactionService.getDescriptor().getName(), serverName),
+      () -> createCompactionServerStub(serverName));
+  }
+
+  private CompactionProtos.CompactionService.Interface
+      createCompactionServerStub(ServerName serverName) throws IOException {
+    return CompactionProtos.CompactionService
+        .newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
   }
 
   @Override
@@ -71,8 +91,8 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
   }
 
   @Override
-  public AsyncCompactionServerCaller getCompactionServerCaller(ServerName serverName) {
-    return new AsyncCompactionServerCaller(serverName, this);
+  public AsyncCompactionServerService getCompactionServerCaller(ServerName serverName) {
+    return new AsyncCompactionServerService(serverName, this);
   }
 
   @Override

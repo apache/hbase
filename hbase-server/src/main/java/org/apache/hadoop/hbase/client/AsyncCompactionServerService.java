@@ -26,10 +26,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
-
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
 
 
 /**
@@ -42,20 +41,21 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.Compac
  * usage for now, if later we want to unify them, we can move the retry logic into this class.
  */
 @InterfaceAudience.Private
-public class AsyncCompactionServerCaller {
+public class AsyncCompactionServerService {
 
   private final ServerName server;
 
-  private final AsyncConnectionImpl conn;
+  private final AsyncClusterConnectionImpl conn;
 
-  AsyncCompactionServerCaller(ServerName server, AsyncConnectionImpl conn) {
+  AsyncCompactionServerService(ServerName server, AsyncClusterConnectionImpl conn) {
     this.server = server;
     this.conn = conn;
   }
 
   @FunctionalInterface
   private interface RpcCall<RESP> {
-    void call(CompactionService.Interface stub, HBaseRpcController controller, RpcCallback<RESP> done);
+    void call(CompactionService.Interface stub, HBaseRpcController controller,
+        RpcCallback<RESP> done);
   }
 
   private <RESP> CompletableFuture<RESP> call(RpcCall<RESP> rpcCall) {

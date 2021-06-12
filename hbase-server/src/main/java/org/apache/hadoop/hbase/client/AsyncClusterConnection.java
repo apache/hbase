@@ -44,7 +44,7 @@ public interface AsyncClusterConnection extends AsyncConnection {
   /**
    * Get the compaction service for the given compaction server.
    */
-  AsyncCompactionServerCaller getCompactionServerCaller(ServerName serverName);
+  AsyncCompactionServerService getCompactionServerCaller(ServerName serverName);
 
   /**
    * Get the nonce generator for this connection.

@@ -1930,7 +1930,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     // Before we do compaction, try to get rid of unneeded files to simplify things.
     removeUnneededFiles();
 
-    if (region.getRegionServerServices().isCompactionOffloadEnabled()) {
+    if (region.getRegionServerServices() != null
+        && region.getRegionServerServices().isCompactionOffloadEnabled()) {
       if (!requestToCompactionManager(forceMajor, priority)) {
         // if request to cm error, do local compaction or retry
         return selectCompaction(priority, tracker, user, filesCompacting);
@@ -1944,11 +1945,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
   }
 
-
   public Optional<CompactionContext> selectCompaction(int priority,
-    CompactionLifeCycleTracker tracker, User user, List<HStoreFile> filesCompacting)
-    throws IOException {
-  final CompactionContext compaction = storeEngine.createCompaction();
+      CompactionLifeCycleTracker tracker, User user, List<HStoreFile> filesCompacting)
+      throws IOException {
+    final CompactionContext compaction = storeEngine.createCompaction();
     CompactionRequestImpl request = null;
     this.lock.readLock().lock();
     try {

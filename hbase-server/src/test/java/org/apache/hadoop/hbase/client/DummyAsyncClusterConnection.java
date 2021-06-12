@@ -109,7 +109,7 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   }
 
   @Override
-  public AsyncCompactionServerCaller getCompactionServerCaller(ServerName serverName) {
+  public AsyncCompactionServerService getCompactionServerCaller(ServerName serverName) {
     return null;
   }
 

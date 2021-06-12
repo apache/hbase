@@ -86,9 +86,9 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
@@ -212,6 +212,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.UserLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor.Builder;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
@@ -220,9 +223,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
@@ -3790,7 +3790,7 @@ public class HRegionServer extends AbstractServer implements
     try {
       LOG.debug("Request compaction to CompactionManager, region: {}, store: {}",
         regionInfo.getRegionNameAsString(), cfd.getNameAsString());
-      CompactResponse response = cms.requestCompaction(null, compactRequest);
+      cms.requestCompaction(null, compactRequest);
       LOG.debug("Receive response of compaction from CompactionManager, region: {}, store: {}",
         regionInfo.getRegionNameAsString(), cfd.getNameAsString());
       return true;

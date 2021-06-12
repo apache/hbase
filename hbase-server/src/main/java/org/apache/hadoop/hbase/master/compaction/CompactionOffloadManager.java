@@ -36,9 +36,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactRequest;
@@ -145,8 +145,7 @@ public class CompactionOffloadManager {
   }
 
   /**
-   * Just like there is a 1-1 mapping for region to RS, 
-   * we will have it for compaction of region to CS.
+   * Like there is a 1-1 mapping for region to RS, we will have it for compaction of region to CS.
    */
   private ServerName selectCompactionServer(CompactRequest request) throws ServiceException {
     List<ServerName> compactionServerList = getOnlineServersList();

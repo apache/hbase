@@ -36,10 +36,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
-
-
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
 
 @InterfaceAudience.Private
 public class CSRpcServices extends AbstractRpcServices
