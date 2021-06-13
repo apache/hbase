@@ -104,8 +104,7 @@ public class BoundedDelegatingInputStream extends DelegatingInputStream {
     if (pos >= limit) {
       return 0;
     }
-    int available = in.available();
-    return (int) Math.min(available, limit - pos);
+    return (int) (limit - pos);
   }
 
 }
