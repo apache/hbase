@@ -45,7 +45,7 @@ class RegionCountSkewCostFunction extends CostFunction {
   void prepare(BalancerClusterState cluster) {
     super.prepare(cluster);
     cost.prepare(cluster.numServers);
-    cost.setCosts(costs -> {
+    cost.applyCostsChange(costs -> {
       for (int i = 0; i < cluster.numServers; i++) {
         costs[i] = cluster.regionsPerServer[i].length;
       }
@@ -67,7 +67,7 @@ class RegionCountSkewCostFunction extends CostFunction {
 
   @Override
   protected void regionMoved(int region, int oldServer, int newServer) {
-    cost.setCosts(costs -> {
+    cost.applyCostsChange(costs -> {
       costs[oldServer] = cluster.regionsPerServer[oldServer].length;
       costs[newServer] = cluster.regionsPerServer[newServer].length;
     });
