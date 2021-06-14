@@ -109,8 +109,7 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
   @Override
   public void mutateRows(RpcController controller, MutateRowsRequest request,
       RpcCallback<MutateRowsResponse> done) {
-    MutateRowsResponse response = MutateRowsResponse.getDefaultInstance();
-
+    boolean matches = true;
     List<Region.RowLock> rowLocks = null;
     try {
       // set of rows to lock, sorted to avoid deadlocks
@@ -141,7 +140,6 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
         rowsToLock.add(m.getRow());
       }
 
-      boolean matches = true;
       if (request.getConditionCount() > 0) {
         // Get row locks for the mutations and the conditions
         rowLocks = new ArrayList<>();
@@ -184,7 +182,7 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
         }
       }
     }
-    done.run(response);
+    done.run(MutateRowsResponse.newBuilder().setProcessed(matches).build());
   }
 
   private boolean matches(Region region, ClientProtos.Condition condition) throws IOException {
