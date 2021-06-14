@@ -96,7 +96,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.
  * MultiRowMutationService.BlockingInterface service =
  *   MultiRowMutationService.newBlockingStub(channel);
  * MutateRowsRequest mrm = mrmBuilder.build();
- * service.mutateRows(null, mrm);
+ * MultiRowMutationProtos.MutateRowsResponse response = service.mutateRows(null, mrm);
+ *
+ * // We can get the result of the conditional update
+ * boolean processed = response.getProcessed();
  * </code>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
