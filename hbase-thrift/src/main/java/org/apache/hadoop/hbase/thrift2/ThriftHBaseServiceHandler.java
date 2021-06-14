@@ -186,7 +186,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   private int addScanner(ResultScanner scanner) {
     int id = nextScannerId.getAndIncrement();
     scannerMap.put(id, scanner);
-    return id;
+    return id; 
   }
 
   /**
