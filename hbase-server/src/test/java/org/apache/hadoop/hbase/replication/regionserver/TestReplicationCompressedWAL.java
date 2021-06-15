@@ -69,7 +69,7 @@ public class TestReplicationCompressedWAL extends TestReplicationBase {
     for (int i = 0; i < NUM_BATCHES; i++) {
       putBatch(i);
       getBatch(i);
-    }    
+    }
   }
 
   protected static void getBatch(int batch) throws IOException, InterruptedException {
