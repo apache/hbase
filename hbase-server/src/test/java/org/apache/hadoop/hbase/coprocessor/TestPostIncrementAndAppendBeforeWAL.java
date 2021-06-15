@@ -18,21 +18,28 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -45,6 +52,10 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TestFromClientSide;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.security.access.AccessControlConstants;
+import org.apache.hadoop.hbase.security.access.AccessController;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,7 +75,7 @@ import org.slf4j.LoggerFactory;
  * {@link RegionObserver#postIncrementBeforeWAL(ObserverContext, Mutation, List)} and
  * {@link RegionObserver#postAppendBeforeWAL(ObserverContext, Mutation, List)}. These methods may
  * change the cells which will be applied to memstore and WAL. So add unit test for the case which
- * change the cell's column family.
+ * change the cell's column family and tags.
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestPostIncrementAndAppendBeforeWAL {
@@ -92,6 +103,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
   private static final byte[] CQ1 = Bytes.toBytes("cq1");
   private static final byte[] CQ2 = Bytes.toBytes("cq2");
   private static final byte[] VALUE = Bytes.toBytes("value");
+  private static final byte[] VALUE2 = Bytes.toBytes("valuevalue");
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -158,6 +170,71 @@ public class TestPostIncrementAndAppendBeforeWAL {
       } catch (Exception e) {
         assertTrue(e instanceof NoSuchColumnFamilyException);
       }
+    }
+  }
+
+  @Test
+  public void testChangeCellWithACLTag() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    createTableWithCoprocessor(tableName, ChangeCellWithACLTagObserver.class.getName());
+    try (Table table = connection.getTable(tableName)) {
+      // Increment without TTL
+      Increment increment = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1)
+        .setACL(new HashMap<>());
+      Result result = table.increment(increment);
+      assertEquals(1, result.size());
+      assertEquals(1, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
+      Get get = new Get(ROW).addColumn(CF1_BYTES, CQ1);
+      result = table.get(get);
+      assertEquals(1, result.size());
+      assertEquals(1, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
+
+      // Append without TTL
+      Append append = new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE)
+        .setACL(new HashMap<>());
+      result = table.append(append);
+      assertEquals(1, result.size());
+      assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
+      get = new Get(ROW).addColumn(CF1_BYTES, CQ2).setACL(new HashMap<>());
+      result = table.get(get);
+      assertEquals(1, result.size());
+      assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
+
+      // Increment with TTL
+      Increment firstIncrement = new Increment(ROW).addColumn(CF2_BYTES, CQ1, 1)
+        .setACL(new HashMap<>());;
+      Result firstResult = table.increment(firstIncrement);
+      assertEquals(1, firstResult.size());
+      assertEquals(1, Bytes.toLong(firstResult.getValue(CF2_BYTES, CQ1)));
+
+      Increment incrementWithTTL = new Increment(ROW).addColumn(CF2_BYTES, CQ1, 1)
+        .setTTL(1000).setACL(new HashMap<>());
+      Result secondResult = table.increment(incrementWithTTL);
+      assertEquals(1, secondResult.size());
+      assertEquals(2, Bytes.toLong(secondResult.getValue(CF2_BYTES, CQ1)));
+      Thread.sleep(2000);
+      get = new Get(ROW).addColumn(CF2_BYTES, CQ1);
+      result = table.get(get);
+      assertEquals(1, result.size());
+      assertEquals(1, Bytes.toLong(result.getValue(CF2_BYTES, CQ1)));
+
+      // Append with TTL
+      Append firstAppend = new Append(ROW).addColumn(CF2_BYTES, CQ2, VALUE)
+        .setACL(new HashMap<>());;
+      firstResult = table.append(firstAppend);
+      assertEquals(1, firstResult.size());
+      assertTrue(Bytes.equals(VALUE, firstResult.getValue(CF2_BYTES, CQ2)));
+
+      Append secondAppend = new Append(ROW).addColumn(CF2_BYTES, CQ2, VALUE)
+        .setTTL(1000).setACL(new HashMap<>());
+      secondResult = table.append(secondAppend);
+      assertEquals(1, secondResult.size());
+      assertTrue(Bytes.equals(VALUE2, secondResult.getValue(CF2_BYTES, CQ2)));
+      Thread.sleep(2000);
+      get = new Get(ROW).addColumn(CF2_BYTES, CQ2);
+      result = table.get(get);
+      assertEquals(1, result.size());
+      assertTrue(Bytes.equals(VALUE, result.getValue(CF2_BYTES, CQ2)));
     }
   }
 
@@ -230,6 +307,27 @@ public class TestPostIncrementAndAppendBeforeWAL {
           .map(
             pair -> new Pair<>(pair.getFirst(), newCellWithNotExistColumnFamily(pair.getSecond())))
           .collect(Collectors.toList());
+    }
+  }
+
+  public static class ChangeCellWithACLTagObserver extends AccessController {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
+    @Override
+    public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
+      return super.postIncrementBeforeWAL(ctx, mutation, cellPairs);
+    }
+
+    @Override
+    public List<Pair<Cell, Cell>> postAppendBeforeWAL(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
+      return super.postAppendBeforeWAL(ctx, mutation, cellPairs);
     }
   }
 }
