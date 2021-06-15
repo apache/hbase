@@ -1860,11 +1860,9 @@ public final class ZKUtil {
       sb.append("\nRegion server holding hbase:meta:");
       sb.append("\n ").append(MetaTableLocator.getMetaRegionLocation(zkw));
       int numMetaReplicas = zkw.getMetaReplicaNodes().size();
-      if (numMetaReplicas > 1) {
-        for (int i = 1; i < numMetaReplicas; i++) {
-          sb.append("\n replica" + i + ": "
-            + MetaTableLocator.getMetaRegionLocation(zkw, i));
-        }
+      for (int i = 1; i < numMetaReplicas; i++) {
+        sb.append("\n replica" + i + ": "
+          + MetaTableLocator.getMetaRegionLocation(zkw, i));
       }
       sb.append("\nRegion servers:");
       final List<String> rsChildrenNoWatchList =
