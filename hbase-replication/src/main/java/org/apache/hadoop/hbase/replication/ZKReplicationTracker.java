@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import java.util.ArrayList;
+import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -30,8 +30,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class is a ZooKeeper implementation of the ReplicationTracker interface. This class is
@@ -39,9 +37,7 @@ import org.slf4j.LoggerFactory;
  * interface.
  */
 @InterfaceAudience.Private
-public class ReplicationTrackerZKImpl implements ReplicationTracker {
-
-  private static final Logger LOG = LoggerFactory.getLogger(ReplicationTrackerZKImpl.class);
+class ZKReplicationTracker extends ReplicationTrackerBase {
 
   // Zookeeper
   private final ZKWatcher zookeeper;
@@ -49,42 +45,14 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
   private final Abortable abortable;
   // All about stopping
   private final Stoppable stopper;
-  // listeners to be notified
-  private final List<ReplicationListener> listeners = new CopyOnWriteArrayList<>();
   // List of all the other region servers in this cluster
-  private final List<ServerName> otherRegionServers = new ArrayList<>();
+  private final Set<ServerName> regionServers = new HashSet<>();
 
-  public ReplicationTrackerZKImpl(ZKWatcher zookeeper, Abortable abortable, Stoppable stopper) {
-    this.zookeeper = zookeeper;
-    this.abortable = abortable;
-    this.stopper = stopper;
+  ZKReplicationTracker(ReplicationTrackerParams params) {
+    this.zookeeper = params.zookeeper();
+    this.abortable = params.abortable();
+    this.stopper = params.stopptable();
     this.zookeeper.registerListener(new OtherRegionServerWatcher(this.zookeeper));
-    // watch the changes
-    refreshOtherRegionServersList(true);
-  }
-
-  @Override
-  public void registerListener(ReplicationListener listener) {
-    listeners.add(listener);
-  }
-
-  @Override
-  public void removeListener(ReplicationListener listener) {
-    listeners.remove(listener);
-  }
-
-  /**
-   * Return a snapshot of the current region servers.
-   */
-  @Override
-  public List<ServerName> getListOfRegionServers() {
-    refreshOtherRegionServersList(false);
-
-    List<ServerName> list = null;
-    synchronized (otherRegionServers) {
-      list = new ArrayList<>(otherRegionServers);
-    }
-    return list;
   }
 
   /**
@@ -106,6 +74,9 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
      */
     @Override
     public void nodeCreated(String path) {
+      if (stopper.isStopped()) {
+        return;
+      }
       refreshListIfRightPath(path);
     }
 
@@ -118,14 +89,10 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
       if (stopper.isStopped()) {
         return;
       }
-      boolean cont = refreshListIfRightPath(path);
-      if (!cont) {
+      if (!refreshListIfRightPath(path)) {
         return;
       }
-      LOG.info(path + " znode expired, triggering replicatorRemoved event");
-      for (ReplicationListener rl : listeners) {
-        rl.regionServerRemoved(getZNodeName(path));
-      }
+      notifyListeners(ServerName.valueOf(getZNodeName(path)));
     }
 
     /**
@@ -144,7 +111,7 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
       if (!path.startsWith(this.watcher.getZNodePaths().rsZNode)) {
         return false;
       }
-      return refreshOtherRegionServersList(true);
+      return refreshRegionServerList();
     }
   }
 
@@ -164,14 +131,14 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
    * @return true if the local list of the other region servers was updated with the ZK data (even
    *         if it was empty), false if the data was missing in ZK
    */
-  private boolean refreshOtherRegionServersList(boolean watch) {
-    List<ServerName> newRsList = getRegisteredRegionServers(watch);
+  private boolean refreshRegionServerList() {
+    Set<ServerName> newRsList = getRegisteredRegionServers();
     if (newRsList == null) {
       return false;
     } else {
-      synchronized (otherRegionServers) {
-        otherRegionServers.clear();
-        otherRegionServers.addAll(newRsList);
+      synchronized (regionServers) {
+        regionServers.clear();
+        regionServers.addAll(newRsList);
       }
     }
     return true;
@@ -181,19 +148,26 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
    * Get a list of all the other region servers in this cluster and set a watch
    * @return a list of server nanes
    */
-  private List<ServerName> getRegisteredRegionServers(boolean watch) {
+  private Set<ServerName> getRegisteredRegionServers() {
     List<String> result = null;
     try {
-      if (watch) {
-        result = ZKUtil.listChildrenAndWatchThem(this.zookeeper,
-                this.zookeeper.getZNodePaths().rsZNode);
-      } else {
-        result = ZKUtil.listChildrenNoWatch(this.zookeeper, this.zookeeper.getZNodePaths().rsZNode);
-      }
+      result =
+        ZKUtil.listChildrenAndWatchThem(this.zookeeper, this.zookeeper.getZNodePaths().rsZNode);
     } catch (KeeperException e) {
       this.abortable.abort("Get list of registered region servers", e);
     }
     return result == null ? null :
-      result.stream().map(ServerName::parseServerName).collect(Collectors.toList());
+      result.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
+  }
+
+  @Override
+  protected Set<ServerName> internalLoadLiveRegionServersAndInitializeListeners()
+    throws IOException {
+    if (!refreshRegionServerList()) {
+      throw new IOException("failed to refresh region server list");
+    }
+    synchronized (regionServers) {
+      return new HashSet<>(regionServers);
+    }
   }
 }

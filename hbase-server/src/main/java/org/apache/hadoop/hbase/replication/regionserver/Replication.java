@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
+import org.apache.hadoop.hbase.replication.ReplicationTrackerParams;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
@@ -101,8 +102,10 @@ public class Replication implements ReplicationSourceService {
       this.replicationPeers =
           ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
-      this.replicationTracker =
-          ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.server, this.server);
+      this.replicationTracker = ReplicationFactory
+        .getReplicationTracker(ReplicationTrackerParams.create(server.getConfiguration(), server)
+          .abortable(server).zookeeper(server.getZooKeeper()).choreService(server.getChoreService())
+          .connection(server.getConnection()));
     } catch (Exception e) {
       throw new IOException("Failed replication handler create", e);
     }

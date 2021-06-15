@@ -18,8 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -28,6 +27,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class ReplicationFactory {
+
+  public static final String REPLICATION_TRACKER_IMPL = "hbase.replication.tracker.impl";
+
   private ReplicationFactory() {
   }
 
@@ -35,8 +37,9 @@ public final class ReplicationFactory {
     return new ReplicationPeers(zk, conf);
   }
 
-  public static ReplicationTracker getReplicationTracker(ZKWatcher zookeeper, Abortable abortable,
-      Stoppable stopper) {
-    return new ReplicationTrackerZKImpl(zookeeper, abortable, stopper);
+  public static ReplicationTracker getReplicationTracker(ReplicationTrackerParams params) {
+    Class<? extends ReplicationTracker> clazz = params.conf().getClass(REPLICATION_TRACKER_IMPL,
+      ZKReplicationTracker.class, ReplicationTracker.class);
+    return ReflectionUtils.newInstance(clazz, params);
   }
 }

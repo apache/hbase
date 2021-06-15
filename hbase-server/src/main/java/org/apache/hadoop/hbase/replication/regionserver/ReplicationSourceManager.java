@@ -76,6 +76,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -281,13 +282,19 @@ public class ReplicationSourceManager implements ReplicationListener {
     if (currentReplicators == null || currentReplicators.isEmpty()) {
       return;
     }
-    List<ServerName> otherRegionServers = replicationTracker.getListOfRegionServers();
-    LOG.info(
-      "Current list of replicators: " + currentReplicators + " other RSs: " + otherRegionServers);
+    Set<ServerName> liveRegionServers;
+    try {
+      liveRegionServers = replicationTracker.loadLiveRegionServersAndInitializeListeners();
+    } catch (IOException e) {
+      server.abort("Failed load live region server list for replication", e);
+      return;
+    }
+    LOG.info("Current list of replicators: {}, live RSes: {}", currentReplicators,
+      liveRegionServers);
 
     // Look if there's anything to process after a restart
     for (ServerName rs : currentReplicators) {
-      if (!otherRegionServers.contains(rs)) {
+      if (!liveRegionServers.contains(rs)) {
         transferQueues(rs);
       }
     }
@@ -830,8 +837,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   @Override
-  public void regionServerRemoved(String regionserver) {
-    transferQueues(ServerName.valueOf(regionserver));
+  public void regionServerRemoved(ServerName regionserver) {
+    transferQueues(regionserver);
   }
 
   /**

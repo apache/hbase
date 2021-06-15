@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -33,5 +34,5 @@ public interface ReplicationListener {
    * A region server has been removed from the local cluster
    * @param regionServer the removed region server
    */
-  public void regionServerRemoved(String regionServer);
+  public void regionServerRemoved(ServerName regionServer);
 }
