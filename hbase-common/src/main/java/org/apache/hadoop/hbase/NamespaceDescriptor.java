@@ -47,6 +47,10 @@ public class NamespaceDescriptor {
   public static final byte [] DEFAULT_NAMESPACE_NAME = Bytes.toBytes("default");
   public static final String DEFAULT_NAMESPACE_NAME_STR =
       Bytes.toString(DEFAULT_NAMESPACE_NAME);
+  /** Master local region namespace name. */
+  public static final byte [] MASTER_NAMESPACE_NAME = Bytes.toBytes("master");
+  public static final String MASTER_NAMESPACE_NAME_STR =
+    Bytes.toString(MASTER_NAMESPACE_NAME);
 
   public static final NamespaceDescriptor DEFAULT_NAMESPACE = NamespaceDescriptor.create(
     DEFAULT_NAMESPACE_NAME_STR).build();
@@ -58,6 +62,7 @@ public class NamespaceDescriptor {
     Set<String> set = new HashSet<>();
     set.add(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR);
     set.add(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
+    set.add(NamespaceDescriptor.MASTER_NAMESPACE_NAME_STR);
     RESERVED_NAMESPACES = Collections.unmodifiableSet(set);
   }
   public final static Set<byte[]> RESERVED_NAMESPACES_BYTES;
