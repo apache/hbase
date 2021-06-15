@@ -1947,68 +1947,37 @@ public class AccessController extends BaseMasterAndRegionObserver
       MutationType opType, Mutation mutation, Cell oldCell, Cell newCell) throws IOException {
     // If the HFile version is insufficient to persist tags, we won't have any
     // work to do here
-    if (!cellFeaturesEnabled) {
+    if (!cellFeaturesEnabled || mutation.getACL() == null) {
       return newCell;
     }
 
-    // Collect any ACLs from the old cell
+    // As Increment and Append operations have already copied the tags of oldCell to the newCell,
+    // there is no need to rewrite them again. Just extract non-acl tags of newCell if we need to
+    // add a new acl tag for the cell. Actually, oldCell is useless here.
     List<Tag> tags = Lists.newArrayList();
     ListMultimap<String,Permission> perms = ArrayListMultimap.create();
-    if (oldCell != null) {
+    if (newCell != null) {
       // Save an object allocation where we can
-      if (oldCell.getTagsLength() > 0) {
-        Iterator<Tag> tagIterator = CellUtil.tagsIterator(oldCell.getTagsArray(),
-          oldCell.getTagsOffset(), oldCell.getTagsLength());
+      if (newCell.getTagsLength() > 0) {
+        Iterator<Tag> tagIterator = CellUtil
+          .tagsIterator(newCell.getTagsArray(), newCell.getTagsOffset(), newCell.getTagsLength());
         while (tagIterator.hasNext()) {
           Tag tag = tagIterator.next();
           if (tag.getType() != AccessControlLists.ACL_TAG_TYPE) {
             // Not an ACL tag, just carry it through
             if (LOG.isTraceEnabled()) {
-              LOG.trace("Carrying forward tag from " + oldCell + ": type " + tag.getType() +
+              LOG.trace("Carrying forward tag from " + newCell + ": type " + tag.getType() +
                 " length " + tag.getTagLength());
             }
             tags.add(tag);
-          } else {
-            // Merge the perms from the older ACL into the current permission set
-            // TODO: The efficiency of this can be improved. Don't build just to unpack
-            // again, use the builder
-            AccessControlProtos.UsersAndPermissions.Builder builder =
-              AccessControlProtos.UsersAndPermissions.newBuilder();
-            ProtobufUtil.mergeFrom(builder, tag.getBuffer(), tag.getTagOffset(), tag.getTagLength());
-            ListMultimap<String,Permission> kvPerms =
-              ProtobufUtil.toUsersAndPermissions(builder.build());
-            perms.putAll(kvPerms);
           }
         }
       }
     }
 
-    // Do we have an ACL on the operation?
-    byte[] aclBytes = mutation.getACL();
-    if (aclBytes != null) {
-      // Yes, use it
-      tags.add(new Tag(AccessControlLists.ACL_TAG_TYPE, aclBytes));
-    } else {
-      // No, use what we carried forward
-      if (perms != null) {
-        // TODO: If we collected ACLs from more than one tag we may have a
-        // List<Permission> of size > 1, this can be collapsed into a single
-        // Permission
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Carrying forward ACLs from " + oldCell + ": " + perms);
-        }
-        tags.add(new Tag(AccessControlLists.ACL_TAG_TYPE,
-            ProtobufUtil.toUsersAndPermissions(perms).toByteArray()));
-      }
-    }
-
-    // If we have no tags to add, just return
-    if (tags.isEmpty()) {
-      return newCell;
-    }
-
-    Cell rewriteCell = new TagRewriteCell(newCell, Tag.fromList(tags));
-    return rewriteCell;
+    // We have checked mutation ACL not null.
+    tags.add(new Tag(AccessControlLists.ACL_TAG_TYPE, mutation.getACL()));
+    return new TagRewriteCell(newCell, Tag.fromList(tags));
   }
 
   @Override
