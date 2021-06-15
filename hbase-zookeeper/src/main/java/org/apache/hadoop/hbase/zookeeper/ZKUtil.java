@@ -1844,7 +1844,7 @@ public final class ZKUtil {
       sb.append("HBase is rooted at ").append(zkw.getZNodePaths().baseZNode);
       sb.append("\nActive master address: ");
       try {
-        sb.append(MasterAddressTracker.getMasterAddress(zkw));
+        sb.append("\n ").append(MasterAddressTracker.getMasterAddress(zkw));
       } catch (IOException e) {
         sb.append("<<FAILED LOOKUP: " + e.getMessage() + ">>");
       }
@@ -1856,12 +1856,12 @@ public final class ZKUtil {
           sb.append("\n ").append(child);
         }
       }
-      sb.append("\nRegion server holding hbase:meta: "
-        + MetaTableLocator.getMetaRegionLocation(zkw));
+      sb.append("\nRegion server holding hbase:meta:");
+      sb.append("\n ").append(MetaTableLocator.getMetaRegionLocation(zkw));
       int numMetaReplicas = zkw.getMetaReplicaNodes().size();
       for (int i = 1; i < numMetaReplicas; i++) {
-        sb.append("\nRegion server holding hbase:meta, replicaId " + i + " "
-                    + MetaTableLocator.getMetaRegionLocation(zkw, i));
+        sb.append("\n replica" + i + ": "
+          + MetaTableLocator.getMetaRegionLocation(zkw, i));
       }
       sb.append("\nRegion servers:");
       final List<String> rsChildrenNoWatchList =
