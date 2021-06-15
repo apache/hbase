@@ -95,8 +95,7 @@ public class BoundedDelegatingInputStream extends DelegatingInputStream {
   }
 
   /**
-   * Call the delegate's {@code available()} method.
-   * @return the delegate's available bytes if the current position is less than the
+   * @return the remaining bytes within the bound if the current position is less than the
    *   limit, or 0 otherwise.
    */
   @Override
@@ -104,8 +103,13 @@ public class BoundedDelegatingInputStream extends DelegatingInputStream {
     if (pos >= limit) {
       return 0;
     }
-    int available = in.available();
-    return (int) Math.min(available, limit - pos);
+    // Do not call the delegate's available() method. Data in a bounded input stream is assumed
+    // available up to the limit and that is the contract we have with our callers. Regardless
+    // of what we do here, read() and skip() will behave as expected when EOF is encountered if
+    // the underlying stream is closed early or otherwise could not provide enough bytes.
+    // Note: This class is used to supply buffers to compression codecs during WAL tailing and
+    // successful decompression depends on this behavior.
+    return (int) (limit - pos);
   }
 
 }
