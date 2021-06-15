@@ -49,7 +49,7 @@ abstract class CostFromRegionLoadFunction extends CostFunction {
   void prepare(BalancerClusterState cluster) {
     super.prepare(cluster);
     cost.prepare(cluster.numServers);
-    cost.setCosts(costs -> {
+    cost.applyCostsChange(costs -> {
       for (int i = 0; i < costs.length; i++) {
         costs[i] = computeCostForRegionServer(i);
       }
@@ -59,7 +59,7 @@ abstract class CostFromRegionLoadFunction extends CostFunction {
   @Override
   protected void regionMoved(int region, int oldServer, int newServer) {
     // recompute the stat for the given two region servers
-    cost.setCosts(costs -> {
+    cost.applyCostsChange(costs -> {
       costs[oldServer] = computeCostForRegionServer(oldServer);
       costs[newServer] = computeCostForRegionServer(newServer);
     });
