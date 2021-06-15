@@ -268,6 +268,7 @@ public abstract class Compactor<T extends CellSink> {
    * @throws IOException if creation failed
    * @deprecated Use initWriter instead.
    */
+  @Deprecated
   protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind, boolean major)
       throws IOException {
     // When all MVCC readpoints are 0, don't write them.
@@ -283,11 +284,11 @@ public abstract class Compactor<T extends CellSink> {
    * Default method for initializing a StoreFileWriter in the compaction process, this creates the
    * resulting files on a temp directory. Therefore, upon compaction commit time, these files
    * should be renamed into the actual store dir.
-   * @param fd
-   * @param shouldDropBehind
-   * @param major
+   * @param fd the file details.
+   * @param shouldDropBehind boolean for the drop-behind output stream cache settings.
+   * @param major if compaction is major.
    * @return Writer for a new StoreFile in the tmp dir.
-   * @throws IOException
+   * @throws IOException if it fails to initialise the writer.
    */
   protected StoreFileWriter initWriter(FileDetails fd, boolean shouldDropBehind, boolean major)
     throws IOException {
@@ -556,10 +557,10 @@ public abstract class Compactor<T extends CellSink> {
    * then create a reader and cache it into the store.
    * @param cr the compaction request.
    * @param newFiles the new files created by this compaction under a temp dir.
-   * @param user the running user/
+   * @param user the running user.
    * @return A list of the resulting store files already placed in the store dir and loaded into the
-   * store cache.
-   * @throws IOException
+   *  store cache.
+   * @throws IOException if the commit fails.
    */
   public List<HStoreFile> commitCompaction(CompactionRequestImpl cr, List<Path> newFiles, User user)
       throws IOException {
@@ -584,7 +585,7 @@ public abstract class Compactor<T extends CellSink> {
    * HStoreFile instance
    * @param newFile the new file created.
    * @return an HStoreFile instance.
-   * @throws IOException
+   * @throws IOException if the file store creation fails.
    */
   protected HStoreFile createFileInStoreDir(Path newFile) throws IOException {
     Path destPath = this.store.getRegionFileSystem().

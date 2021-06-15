@@ -19,6 +19,11 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.mockito.Mockito.mock;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -39,10 +44,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Test class for DirectInStoreCompactor.
@@ -113,7 +114,8 @@ public class TestDefaultCompactor {
     }
     DefaultCompactor compactor = new DefaultCompactor(config, store);
     //pass the renamed original file, then asserts it has the proper store dir path
-    List<HStoreFile> result = compactor.commitCompaction(mock(CompactionRequestImpl.class), tmpFilesList, null);
+    List<HStoreFile> result = compactor.commitCompaction(mock(CompactionRequestImpl.class),
+      tmpFilesList, null);
     assertEquals(1, result.size());
     assertEquals(filePath, result.get(0).getPath());
   }

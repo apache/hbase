@@ -50,8 +50,7 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   private final CellSinkFactory<StoreFileWriter> writerFactory =
       new CellSinkFactory<StoreFileWriter>() {
         @Override
-        public StoreFileWriter createWriter(InternalScanner scanner,
-            org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
+        public StoreFileWriter createWriter(InternalScanner scanner, FileDetails fd,
             boolean shouldDropBehind, boolean major) throws IOException {
           return initWriter(fd, shouldDropBehind, major);
         }

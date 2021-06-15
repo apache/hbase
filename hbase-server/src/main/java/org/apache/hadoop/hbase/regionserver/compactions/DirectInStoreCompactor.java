@@ -1,4 +1,25 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.hbase.regionserver.compactions;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -8,22 +29,13 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.function.Supplier;
 
 @InterfaceAudience.Private
 public class DirectInStoreCompactor extends DefaultCompactor {
   public DirectInStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
-
 
   @Override
   protected StoreFileWriter initWriter(FileDetails fd, boolean shouldDropBehind, boolean major)
@@ -35,9 +47,9 @@ public class DirectInStoreCompactor extends DefaultCompactor {
       fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0, shouldDropBehind);
   }
 
-  private StoreFileWriter createWriterInFamilyDir(long maxKeyCount, Compression.Algorithm compression,
-      boolean includeMVCCReadpoint, boolean includesTag, boolean shouldDropBehind)
-        throws IOException {
+  private StoreFileWriter createWriterInFamilyDir(long maxKeyCount,
+      Compression.Algorithm compression, boolean includeMVCCReadpoint, boolean includesTag,
+        boolean shouldDropBehind) throws IOException {
     final CacheConfig writerCacheConf;
     // Don't cache data on write on compactions.
     writerCacheConf = new CacheConfig(store.getCacheConfig());
@@ -48,8 +60,8 @@ public class DirectInStoreCompactor extends DefaultCompactor {
       favoredNodes = store.getHRegion().getRegionServerServices().getFavoredNodesForRegion(
         store.getHRegion().getRegionInfo().getEncodedName());
     }
-    HFileContext hFileContext = store.createFileContext(compression, includeMVCCReadpoint, includesTag,
-      store.getCryptoContext());
+    HFileContext hFileContext = store.createFileContext(compression, includeMVCCReadpoint,
+      includesTag, store.getCryptoContext());
     Path familyDir = new Path(store.getRegionFileSystem().getRegionDir(),
       store.getColumnFamilyDescriptor().getNameAsString());
     StoreFileWriter.Builder builder = new StoreFileWriter.Builder(conf, writerCacheConf,
