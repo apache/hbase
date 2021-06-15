@@ -76,7 +76,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -99,6 +98,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 
 /**
  * Run tests that use the HBase clients; {@link Table}.
@@ -302,8 +302,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
               MultiRowMutationService.newBlockingStub(channel);
-      MultiRowMutationProtos.MutateRowsResponse response =
-        service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
       assertTrue(response.getProcessed());
@@ -353,8 +352,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      MultiRowMutationProtos.MutateRowsResponse response =
-        service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
       assertTrue(response.getProcessed());
@@ -400,8 +398,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      MultiRowMutationProtos.MutateRowsResponse response =
-        service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
       assertFalse(response.getProcessed());
@@ -449,8 +446,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      MultiRowMutationProtos.MutateRowsResponse response =
-        service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
       assertTrue(response.getProcessed());
@@ -498,8 +494,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      MultiRowMutationProtos.MutateRowsResponse response =
-        service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
       assertFalse(response.getProcessed());
@@ -549,8 +544,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      MultiRowMutationProtos.MutateRowsResponse response =
-        service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
       assertTrue(response.getProcessed());
@@ -600,8 +594,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      MultiRowMutationProtos.MutateRowsResponse response =
-        service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
       assertFalse(response.getProcessed());
