@@ -43,7 +43,16 @@ final class DoubleArrayCost {
     }
   }
 
-  void setCosts(Consumer<double[]> consumer) {
+  /**
+   * We do not want to introduce a getCosts method to let upper layer get the cost array directly,
+   * so here we introduce this method to take a {@link Consumer} as parameter, where we will pass
+   * the actual cost array in, so you can change the element of the cost array in the
+   * {@link Consumer} implementation.
+   * <p/>
+   * Usually, in prepare method, you need to fill all the elements of the cost array, while in
+   * regionMoved method, you just need to update the element for the effect region servers.
+   */
+  void applyCostsChange(Consumer<double[]> consumer) {
     consumer.accept(costs);
     costsChanged = true;
   }

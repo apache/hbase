@@ -864,7 +864,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     void init(Cluster cluster) {
       super.init(cluster);
       cost.prepare(cluster.numServers);
-      cost.setCosts(costs -> {
+      cost.applyCostsChange(costs -> {
         for (int i = 0; i < cluster.numServers; i++) {
           costs[i] = cluster.regionsPerServer[i].length;
         }
@@ -886,7 +886,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     @Override
     protected void regionMoved(int region, int oldServer, int newServer) {
-      cost.setCosts(costs -> {
+      cost.applyCostsChange(costs -> {
         costs[oldServer] = cluster.regionsPerServer[oldServer].length;
         costs[newServer] = cluster.regionsPerServer[newServer].length;
       });
@@ -928,7 +928,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return;
       }
       cost.prepare(cluster.numServers);
-      cost.setCosts(costs -> {
+      cost.applyCostsChange(costs -> {
         for (int i = 0; i < costs.length; i++) {
           costs[i] = computeCostForRegionServer(i);
         }
@@ -942,7 +942,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     @Override
     protected void regionMoved(int region, int oldServer, int newServer) {
-      cost.setCosts(costs -> {
+      cost.applyCostsChange(costs -> {
         costs[oldServer] = computeCostForRegionServer(oldServer);
         costs[newServer] = computeCostForRegionServer(newServer);
       });
@@ -1110,7 +1110,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     void init(Cluster cluster) {
       super.init(cluster);
       cost.prepare(cluster.numServers);
-      cost.setCosts(costs -> {
+      cost.applyCostsChange(costs -> {
         for (int i = 0; i < costs.length; i++) {
           costs[i] = computeCostForRegionServer(i);
         }
@@ -1120,7 +1120,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     @Override
     protected void regionMoved(int region, int oldServer, int newServer) {
       // recompute the stat for the given two region servers
-      cost.setCosts(costs -> {
+      cost.applyCostsChange(costs -> {
         costs[oldServer] = computeCostForRegionServer(oldServer);
         costs[newServer] = computeCostForRegionServer(newServer);
       });
