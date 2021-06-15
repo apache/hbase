@@ -87,6 +87,7 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
       NettyRpcServer.LOG.warn(requestTooBigMessage);
 
       if (connection.connectionHeaderRead) {
+        in.skipBytes(FRAME_LENGTH_FIELD_LENGTH);
         handleTooBigRequest(in);
         return;
       }
@@ -122,6 +123,7 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
     }
 
     RPCProtos.RequestHeader header = getHeader(in, headerSize);
+    NettyRpcServer.LOG.info("BigRequest header is = " + header);
 
     // Notify the client about the offending request
     NettyServerCall reqTooBig = connection.createCall(header.getCallId(), connection.service, null,
