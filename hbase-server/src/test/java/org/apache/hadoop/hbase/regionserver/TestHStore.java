@@ -1347,21 +1347,6 @@ public class TestHStore {
       }
     }
     assertEquals(2, resultCells);
-
-    // set prevent loop skip off
-    scannerContext = contextBuilder.setPreventLoopReadEnabled(false).build();
-    // should scan all cells not expired at one time
-    myList.clear();
-    try (InternalScanner scanner = (InternalScanner) store.getScanner(scan, null,
-      seqId + 3)) {
-      scanner.next(myList, scannerContext);
-      assertEquals(2, myList.size());
-      for (Cell c : myList) {
-        byte[] actualValue = CellUtil.cloneValue(c);
-        assertTrue("expected:" + Bytes.toStringBinary(value1) + ", actual:" + Bytes
-          .toStringBinary(actualValue), Bytes.equals(actualValue, value1));
-      }
-    }
   }
 
   @Test
