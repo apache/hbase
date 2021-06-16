@@ -212,6 +212,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
       Result secondResult = table.increment(incrementWithTTL);
       assertEquals(1, secondResult.size());
       assertEquals(2, Bytes.toLong(secondResult.getValue(CF2_BYTES, CQ1)));
+      // Wait 2s to let the last increment expire.
       Thread.sleep(2000);
       get = new Get(ROW).addColumn(CF2_BYTES, CQ1);
       result = table.get(get);
@@ -224,7 +225,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
       firstResult = table.append(firstAppend);
       assertEquals(1, firstResult.size());
       assertTrue(Bytes.equals(VALUE, firstResult.getValue(CF2_BYTES, CQ2)));
-
+      // Wait 2s to let the last increment expire.
       Append secondAppend = new Append(ROW).addColumn(CF2_BYTES, CQ2, VALUE)
         .setTTL(1000).setACL(new HashMap<>());
       secondResult = table.append(secondAppend);
