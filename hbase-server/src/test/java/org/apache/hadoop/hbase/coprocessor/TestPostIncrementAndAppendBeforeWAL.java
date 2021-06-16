@@ -174,68 +174,76 @@ public class TestPostIncrementAndAppendBeforeWAL {
   }
 
   @Test
-  public void testChangeCellWithACLTag() throws Exception {
+  public void testIncrementTTLWithACLTag() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
     createTableWithCoprocessor(tableName, ChangeCellWithACLTagObserver.class.getName());
     try (Table table = connection.getTable(tableName)) {
       // Increment without TTL
-      Increment increment = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1)
-        .setACL(new HashMap<>());
-      Result result = table.increment(increment);
+      Increment firstIncrement = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1).setACL(new HashMap<>());
+      Result result = table.increment(firstIncrement);
       assertEquals(1, result.size());
       assertEquals(1, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
+
+      // Check if the new cell can be read
       Get get = new Get(ROW).addColumn(CF1_BYTES, CQ1);
       result = table.get(get);
       assertEquals(1, result.size());
       assertEquals(1, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
 
-      // Append without TTL
-      Append append = new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE)
-        .setACL(new HashMap<>());
-      result = table.append(append);
-      assertEquals(1, result.size());
-      assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
-      get = new Get(ROW).addColumn(CF1_BYTES, CQ2).setACL(new HashMap<>());
-      result = table.get(get);
-      assertEquals(1, result.size());
-      assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
-
       // Increment with TTL
-      Increment firstIncrement = new Increment(ROW).addColumn(CF2_BYTES, CQ1, 1)
-        .setACL(new HashMap<>());;
-      Result firstResult = table.increment(firstIncrement);
-      assertEquals(1, firstResult.size());
-      assertEquals(1, Bytes.toLong(firstResult.getValue(CF2_BYTES, CQ1)));
+      Increment secondIncrement = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1).setTTL(1000)
+        .setACL(new HashMap<>());
+      result = table.increment(secondIncrement);
 
-      Increment incrementWithTTL = new Increment(ROW).addColumn(CF2_BYTES, CQ1, 1)
-        .setTTL(1000).setACL(new HashMap<>());
-      Result secondResult = table.increment(incrementWithTTL);
-      assertEquals(1, secondResult.size());
-      assertEquals(2, Bytes.toLong(secondResult.getValue(CF2_BYTES, CQ1)));
-      // Wait 2s to let the last increment expire.
+      // We should get value 2 here
+      assertEquals(1, result.size());
+      assertEquals(2, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
+
+      // Wait 2s to let the second increment expire
       Thread.sleep(2000);
-      get = new Get(ROW).addColumn(CF2_BYTES, CQ1);
+      get = new Get(ROW).addColumn(CF1_BYTES, CQ1);
+      result = table.get(get);
+
+      // The value should revert to 1
+      assertEquals(1, result.size());
+      assertEquals(1, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
+    }
+  }
+
+  @Test
+  public void testAppendTTLWithACLTag() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    createTableWithCoprocessor(tableName, ChangeCellWithACLTagObserver.class.getName());
+    try (Table table = connection.getTable(tableName)) {
+      // Append without TTL
+      Append firstAppend = new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE).setACL(new HashMap<>());
+      Result result = table.append(firstAppend);
+      assertEquals(1, result.size());
+      assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
+
+      // Check if the new cell can be read
+      Get get = new Get(ROW).addColumn(CF1_BYTES, CQ2);
       result = table.get(get);
       assertEquals(1, result.size());
-      assertEquals(1, Bytes.toLong(result.getValue(CF2_BYTES, CQ1)));
+      assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
 
       // Append with TTL
-      Append firstAppend = new Append(ROW).addColumn(CF2_BYTES, CQ2, VALUE)
-        .setACL(new HashMap<>());;
-      firstResult = table.append(firstAppend);
-      assertEquals(1, firstResult.size());
-      assertTrue(Bytes.equals(VALUE, firstResult.getValue(CF2_BYTES, CQ2)));
-      // Wait 2s to let the last increment expire.
-      Append secondAppend = new Append(ROW).addColumn(CF2_BYTES, CQ2, VALUE)
-        .setTTL(1000).setACL(new HashMap<>());
-      secondResult = table.append(secondAppend);
-      assertEquals(1, secondResult.size());
-      assertTrue(Bytes.equals(VALUE2, secondResult.getValue(CF2_BYTES, CQ2)));
-      Thread.sleep(2000);
-      get = new Get(ROW).addColumn(CF2_BYTES, CQ2);
-      result = table.get(get);
+      Append secondAppend = new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE).setTTL(1000)
+        .setACL(new HashMap<>());
+      result = table.append(secondAppend);
+
+      // We should get "valuevalue""
       assertEquals(1, result.size());
-      assertTrue(Bytes.equals(VALUE, result.getValue(CF2_BYTES, CQ2)));
+      assertTrue(Bytes.equals(VALUE2, result.getValue(CF1_BYTES, CQ2)));
+
+      // Wait 2s to let the second increment expire
+      Thread.sleep(2000);
+      get = new Get(ROW).addColumn(CF1_BYTES, CQ2);
+      result = table.get(get);
+
+      // The value should revert to "value"
+      assertEquals(1, result.size());
+      assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
     }
   }
 
