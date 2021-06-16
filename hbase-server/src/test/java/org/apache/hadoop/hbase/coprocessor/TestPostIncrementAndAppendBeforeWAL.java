@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -40,6 +42,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagBuilderFactory;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -52,6 +56,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TestFromClientSide;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.regionserver.TestTags;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -104,6 +109,9 @@ public class TestPostIncrementAndAppendBeforeWAL {
   private static final byte[] CQ2 = Bytes.toBytes("cq2");
   private static final byte[] VALUE = Bytes.toBytes("value");
   private static final byte[] VALUE2 = Bytes.toBytes("valuevalue");
+  private static final String USER = "User";
+  private static final Permission PERMS =
+    Permission.newBuilder().withActions(Permission.Action.READ).build();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -179,7 +187,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
     createTableWithCoprocessor(tableName, ChangeCellWithACLTagObserver.class.getName());
     try (Table table = connection.getTable(tableName)) {
       // Increment without TTL
-      Increment firstIncrement = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1).setACL(new HashMap<>());
+      Increment firstIncrement = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1)
+        .setACL(USER, PERMS);
       Result result = table.increment(firstIncrement);
       assertEquals(1, result.size());
       assertEquals(1, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
@@ -192,7 +201,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
       // Increment with TTL
       Increment secondIncrement = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1).setTTL(1000)
-        .setACL(new HashMap<>());
+        .setACL(USER, PERMS);
       result = table.increment(secondIncrement);
 
       // We should get value 2 here
@@ -216,7 +225,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
     createTableWithCoprocessor(tableName, ChangeCellWithACLTagObserver.class.getName());
     try (Table table = connection.getTable(tableName)) {
       // Append without TTL
-      Append firstAppend = new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE).setACL(new HashMap<>());
+      Append firstAppend = new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE).setACL(USER, PERMS);
       Result result = table.append(firstAppend);
       assertEquals(1, result.size());
       assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
@@ -229,7 +238,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
       // Append with TTL
       Append secondAppend = new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE).setTTL(1000)
-        .setACL(new HashMap<>());
+        .setACL(USER, PERMS);
       result = table.append(secondAppend);
 
       // We should get "valuevalue""
@@ -245,6 +254,19 @@ public class TestPostIncrementAndAppendBeforeWAL {
       assertEquals(1, result.size());
       assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
     }
+  }
+
+  private static boolean checkAclTag(byte[] acl, Cell cell) {
+    Iterator<Tag> iter = PrivateCellUtil.tagsIterator(cell);
+    while (iter.hasNext()) {
+      Tag tag = iter.next();
+      if (tag.getType() == TagType.ACL_TAG_TYPE) {
+        Tag temp = TagBuilderFactory.create().
+          setTagType(TagType.ACL_TAG_TYPE).setTagValue(acl).build();
+        return Tag.matchingValue(tag, temp);
+      }
+    }
+    return false;
   }
 
   public static class ChangeCellWithDifferntColumnFamilyObserver
@@ -336,7 +358,13 @@ public class TestPostIncrementAndAppendBeforeWAL {
     public List<Pair<Cell, Cell>> postAppendBeforeWAL(
       ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
-      return super.postAppendBeforeWAL(ctx, mutation, cellPairs);
+      List<Pair<Cell, Cell>> result = super.postAppendBeforeWAL(ctx, mutation, cellPairs);
+      for (Pair<Cell, Cell> pair : result) {
+        if (mutation.getACL() != null && !checkAclTag(mutation.getACL(), pair.getSecond())) {
+          throw new DoNotRetryIOException("Unmatched ACL tag.");
+        }
+      }
+      return result;
     }
   }
 }
