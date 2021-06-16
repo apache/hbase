@@ -130,7 +130,7 @@ JVM. When selecting your JDK distribution, please take this into consideration.
 ====
 
 .Java support by release line
-[cols="4*^.^", options="header"]
+[cols="3*^.^", options="header"]
 |===
 |Java Version
 |HBase 1.4+
@@ -289,7 +289,7 @@ Use the following legend to interpret this table:
 link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in newer minor releases
 * icon:exclamation-circle[role="yellow"] = Not tested, may/may-not function
 
-[cols="1,5*^.^", options="header"]
+[cols="1,4*^.^", options="header"]
 |===
 | | HBase-1.4.x | HBase-1.6.x | HBase-1.7.x | HBase-2.3.x
 |Hadoop-2.7.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
