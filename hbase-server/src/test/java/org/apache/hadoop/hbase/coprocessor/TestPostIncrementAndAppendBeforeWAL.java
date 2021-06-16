@@ -236,7 +236,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
       assertEquals(1, result.size());
       assertTrue(Bytes.equals(VALUE2, result.getValue(CF1_BYTES, CQ2)));
 
-      // Wait 2s to let the second increment expire
+      // Wait 2s to let the second append expire
       Thread.sleep(2000);
       get = new Get(ROW).addColumn(CF1_BYTES, CQ2);
       result = table.get(get);
