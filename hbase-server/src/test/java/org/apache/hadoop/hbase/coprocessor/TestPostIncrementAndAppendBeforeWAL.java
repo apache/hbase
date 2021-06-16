@@ -349,15 +349,15 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
-      List<Pair<Cell, Cell>> cellPairs) throws IOException {
+        ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+        List<Pair<Cell, Cell>> cellPairs) throws IOException {
       return super.postIncrementBeforeWAL(ctx, mutation, cellPairs);
     }
 
     @Override
     public List<Pair<Cell, Cell>> postAppendBeforeWAL(
-      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
-      List<Pair<Cell, Cell>> cellPairs) throws IOException {
+        ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+        List<Pair<Cell, Cell>> cellPairs) throws IOException {
       List<Pair<Cell, Cell>> result = super.postAppendBeforeWAL(ctx, mutation, cellPairs);
       for (Pair<Cell, Cell> pair : result) {
         if (mutation.getACL() != null && !checkAclTag(mutation.getACL(), pair.getSecond())) {
