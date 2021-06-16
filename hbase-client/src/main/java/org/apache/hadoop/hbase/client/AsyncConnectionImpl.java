@@ -100,8 +100,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final NonceGenerator nonceGenerator;
 
   private final ConcurrentMap<String, ClientService.Interface> rsStubs = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, AdminService.Interface> adminSubs =
-      new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, AdminService.Interface> adminSubs = new ConcurrentHashMap<>();
 
   private final AtomicReference<MasterService.Interface> masterStub = new AtomicReference<>();
 

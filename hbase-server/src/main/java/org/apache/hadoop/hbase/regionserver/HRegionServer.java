@@ -213,7 +213,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.Reg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.UserLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor.Builder;
