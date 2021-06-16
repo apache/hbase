@@ -899,4 +899,22 @@ public class TestWALEntryStream {
     // After removing one wal, size of log queue will be 1 again.
     assertEquals(1, logQueue.getMetrics().getSizeOfLogQueue());
   }
+
+  /**
+   * Tests that wals are closed cleanly and we read the trailer when we remove wal
+   * from WALEntryStream.
+   */
+  @Test
+  public void testCleanClosedWALs() throws Exception {
+    try (WALEntryStream entryStream = new WALEntryStream(
+      logQueue, fs, conf, logQueue.getMetrics(), fakeWalGroupId)) {
+      assertEquals(0, logQueue.getMetrics().getUncleanlyClosedWALs());
+      appendToLog();
+      assertNotNull(entryStream.next());
+      log.rollWriter();
+      appendToLog();
+      assertNotNull(entryStream.next());
+      assertEquals(0, logQueue.getMetrics().getUncleanlyClosedWALs());
+    }
+  }
 }

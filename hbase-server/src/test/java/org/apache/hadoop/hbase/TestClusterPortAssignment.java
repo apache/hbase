@@ -19,12 +19,13 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.net.BindException;
 
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 
 import org.junit.Test;
@@ -39,7 +40,7 @@ public class TestClusterPortAssignment {
    * Check that we can start an HBase cluster specifying a custom set of
    * RPC and infoserver ports.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testClusterPortAssignment() throws Exception {
     boolean retry = false;
     do {
@@ -48,10 +49,15 @@ public class TestClusterPortAssignment {
       int rsPort =  HBaseTestingUtility.randomFreePort();
       int rsInfoPort =  HBaseTestingUtility.randomFreePort();
       TEST_UTIL.getConfiguration().setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, false);
+      TEST_UTIL.getConfiguration().setBoolean(HConstants.REGIONSERVER_INFO_PORT_AUTO, false);
+      TEST_UTIL.getConfiguration().setBoolean("fs.hdfs.impl.disable.cache", true);
       TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_PORT, masterPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, masterInfoPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, rsPort);
       TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_INFO_PORT, rsInfoPort);
+      LOG.info(
+          "Ports: " + masterPort + ", " + masterInfoPort + ", " + rsPort + ", "
+              + rsInfoPort);
       try {
         MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster();
         assertTrue("Cluster failed to come up", cluster.waitForActiveAndReadyMaster(30000));
@@ -64,9 +70,16 @@ public class TestClusterPortAssignment {
           cluster.getRegionServer(0).getRpcServer().getListenerAddress().getPort());
         assertEquals("RS info port is incorrect", rsInfoPort,
           cluster.getRegionServer(0).getInfoServer().getPort());
-      } catch (BindException e) {
-        LOG.info("Failed to bind, need to retry", e);
-        retry = true;
+      } catch (Exception e) {
+        Throwable rootCause = ExceptionUtils.getRootCause(e);
+        if (rootCause instanceof BindException) {
+          LOG.info("Failed bind, need to retry", e);
+          retry = true;
+        } else {
+          LOG.error("Failed to start mini cluster", e);
+          retry = false;
+          fail("Failed to start mini cluster with assigned ports.");
+        }
       } finally {
         TEST_UTIL.shutdownMiniCluster();
       }
