@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+
 /**
  * This class is a ZooKeeper implementation of the ReplicationTracker interface. This class is
  * responsible for handling replication events that are defined in the ReplicationListener
@@ -121,8 +123,8 @@ class ZKReplicationTracker extends ReplicationTrackerBase {
    * @return the id or an empty string if path is invalid
    */
   private String getZNodeName(String fullPath) {
-    String[] parts = fullPath.split("/");
-    return parts.length > 0 ? parts[parts.length - 1] : "";
+    List<String> parts = Splitter.on('/').splitToList(fullPath);
+    return parts.size() > 0 ? parts.get(parts.size() - 1) : "";
   }
 
   /**

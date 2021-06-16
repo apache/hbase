@@ -279,11 +279,10 @@ public class ReplicationSourceManager implements ReplicationListener {
       server.abort("Failed to get all replicators", e);
       return;
     }
-    if (currentReplicators == null || currentReplicators.isEmpty()) {
-      return;
-    }
     Set<ServerName> liveRegionServers;
     try {
+      // must call this method to load the first snapshot of live region servers and initialize
+      // listeners
       liveRegionServers = replicationTracker.loadLiveRegionServersAndInitializeListeners();
     } catch (IOException e) {
       server.abort("Failed load live region server list for replication", e);
@@ -291,6 +290,9 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
     LOG.info("Current list of replicators: {}, live RSes: {}", currentReplicators,
       liveRegionServers);
+    if (currentReplicators == null || currentReplicators.isEmpty()) {
+      return;
+    }
 
     // Look if there's anything to process after a restart
     for (ServerName rs : currentReplicators) {
