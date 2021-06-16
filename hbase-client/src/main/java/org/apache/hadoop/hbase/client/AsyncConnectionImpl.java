@@ -100,7 +100,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final NonceGenerator nonceGenerator;
 
   private final ConcurrentMap<String, ClientService.Interface> rsStubs = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, AdminService.Interface> adminStubs =
+  private final ConcurrentMap<String, AdminService.Interface> adminSubs =
       new ConcurrentHashMap<>();
 
   private final AtomicReference<MasterService.Interface> masterStub = new AtomicReference<>();
@@ -280,7 +280,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   AdminService.Interface getAdminStub(ServerName serverName) throws IOException {
-    return ConcurrentMapUtils.computeIfAbsentEx(adminStubs,
+    return ConcurrentMapUtils.computeIfAbsentEx(adminSubs,
       getStubKey(AdminService.getDescriptor().getName(), serverName),
       () -> createAdminServerStub(serverName));
   }

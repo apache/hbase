@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -62,7 +61,7 @@ public class AsyncCompactionServerService {
     CompletableFuture<RESP> future = new CompletableFuture<>();
     HBaseRpcController controller = conn.rpcControllerFactory.newController();
     try {
-      rpcCall.call(conn.getCompactionStub(server), controller, new RpcCallback<RESP>() {
+      rpcCall.call(conn.createCompactionServerStub(server), controller, new RpcCallback<RESP>() {
         @Override
         public void run(RESP resp) {
           if (controller.failed()) {
@@ -72,7 +71,7 @@ public class AsyncCompactionServerService {
           }
         }
       });
-    } catch (IOException e) {
+    } catch (Exception e) {
       future.completeExceptionally(e);
     }
     return future;

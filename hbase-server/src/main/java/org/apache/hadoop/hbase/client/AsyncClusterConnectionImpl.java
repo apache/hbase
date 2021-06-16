@@ -56,21 +56,12 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
  */
 @InterfaceAudience.Private
 class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClusterConnection {
-  private final ConcurrentMap<String, CompactionService.Interface> CompactionSubs = new ConcurrentHashMap<>();
   public AsyncClusterConnectionImpl(Configuration conf, ConnectionRegistry registry,
       String clusterId, SocketAddress localAddress, User user) {
     super(conf, registry, clusterId, localAddress, user);
   }
 
-  CompactionProtos.CompactionService.Interface getCompactionStub(ServerName serverName) throws
-    IOException {
-    return ConcurrentMapUtils.computeIfAbsentEx(CompactionSubs,
-      getStubKey(CompactionProtos.CompactionService.getDescriptor().getName(), serverName),
-      () -> createCompactionServerStub(serverName));
-  }
-
-  private CompactionProtos.CompactionService.Interface
-      createCompactionServerStub(ServerName serverName) throws IOException {
+  CompactionProtos.CompactionService.Interface createCompactionServerStub(ServerName serverName) {
     return CompactionProtos.CompactionService
         .newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
   }

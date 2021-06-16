@@ -40,7 +40,6 @@ public class CompactionThreadManager {
   private final HCompactionServer server;
 
   public CompactionThreadManager(final Configuration conf, HCompactionServer server) {
-    TraceUtil.initTracer(conf);
     this.conf = conf;
     this.server = server;
   }
