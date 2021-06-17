@@ -24,6 +24,7 @@
   import="java.util.Date"
 %>
 <%@ page import="org.apache.hadoop.hbase.thrift.ImplType" %>
+<%@ page import="org.apache.hadoop.hbase.util.JvmVersion" %>
 
 <%
 Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf");
@@ -97,6 +98,11 @@ String framed = conf.get("hbase.regionserver.thrift.framed", "false");
             <th>Attribute Name</th>
             <th>Value</th>
             <th>Description</th>
+        </tr>
+        <tr>
+            <td>JVM Version</td>
+            <td><%= JvmVersion.getVersion() %></td>
+            <td>JVM vendor and version information</td>
         </tr>
         <tr>
             <td>HBase Version</td>
