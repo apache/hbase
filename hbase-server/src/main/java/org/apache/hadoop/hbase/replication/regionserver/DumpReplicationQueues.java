@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
+import org.apache.hadoop.hbase.replication.ReplicationTrackerParams;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -311,9 +312,11 @@ public class DumpReplicationQueues extends Configured implements Tool {
     StringBuilder sb = new StringBuilder();
 
     queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
-    replicationTracker = ReplicationFactory.getReplicationTracker(zkw, new WarnOnlyAbortable(),
-      new WarnOnlyStoppable());
-    Set<ServerName> liveRegionServers = new HashSet<>(replicationTracker.getListOfRegionServers());
+    replicationTracker = ReplicationFactory
+      .getReplicationTracker(ReplicationTrackerParams.create(getConf(), new WarnOnlyStoppable())
+        .abortable(new WarnOnlyAbortable()).zookeeper(zkw));
+    Set<ServerName> liveRegionServers =
+      new HashSet<>(replicationTracker.loadLiveRegionServersAndInitializeListeners());
 
     // Loops each peer on each RS and dumps the queues
     List<ServerName> regionservers = queueStorage.getListOfReplicators();

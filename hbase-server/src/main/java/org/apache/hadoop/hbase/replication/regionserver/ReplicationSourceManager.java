@@ -41,7 +41,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -262,16 +261,24 @@ public class ReplicationSourceManager implements ReplicationListener {
       server.abort("Failed to get all replicators", e);
       return;
     }
+    Set<ServerName> liveRegionServers;
+    try {
+      // must call this method to load the first snapshot of live region servers and initialize
+      // listeners
+      liveRegionServers = replicationTracker.loadLiveRegionServersAndInitializeListeners();
+    } catch (IOException e) {
+      server.abort("Failed load live region server list for replication", e);
+      return;
+    }
+    LOG.info("Current list of replicators: {}, live RSes: {}", currentReplicators,
+      liveRegionServers);
     if (currentReplicators == null || currentReplicators.isEmpty()) {
       return;
     }
-    List<ServerName> otherRegionServers = replicationTracker.getListOfRegionServers();
-    LOG.info(
-      "Current list of replicators: " + currentReplicators + " other RSs: " + otherRegionServers);
 
     // Look if there's anything to process after a restart
     for (ServerName rs : currentReplicators) {
-      if (!otherRegionServers.contains(rs)) {
+      if (!liveRegionServers.contains(rs)) {
         transferQueues(rs);
       }
     }
@@ -659,8 +666,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   @Override
-  public void regionServerRemoved(String regionserver) {
-    transferQueues(ServerName.valueOf(regionserver));
+  public void regionServerRemoved(ServerName regionserver) {
+    transferQueues(regionserver);
   }
 
   /**

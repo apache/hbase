@@ -18,18 +18,20 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import java.util.List;
-
+import java.io.IOException;
+import java.util.Set;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This is the interface for a Replication Tracker. A replication tracker provides the facility to
- * subscribe and track events that reflect a change in replication state. These events are used by
- * the ReplicationSourceManager to coordinate replication tasks such as addition/deletion of queues
- * and queue failover. These events are defined in the ReplicationListener interface. If a class
- * would like to listen to replication events it must implement the ReplicationListener interface
- * and register itself with a Replication Tracker.
+ * This is the interface for a Replication Tracker.
+ * <p/>
+ * A replication tracker provides the facility to subscribe and track events that reflect a change
+ * in replication state. These events are used by the ReplicationSourceManager to coordinate
+ * replication tasks such as addition/deletion of queues and queue failover. These events are
+ * defined in the ReplicationListener interface. If a class would like to listen to replication
+ * events it must implement the ReplicationListener interface and register itself with a Replication
+ * Tracker.
  */
 @InterfaceAudience.Private
 public interface ReplicationTracker {
@@ -40,11 +42,20 @@ public interface ReplicationTracker {
    */
   void registerListener(ReplicationListener listener);
 
+  /**
+   * Remove a replication listener
+   * @param listener the listener to remove
+   */
   void removeListener(ReplicationListener listener);
 
   /**
-   * Returns a list of other live region servers in the cluster.
-   * @return List of region servers.
+   * In this method, you need to load the newest list of region server list and return it, and all
+   * later changes to the region server list must be passed to the listeners.
+   * <p/>
+   * This is very important for us to not miss a region server crash.
+   * <p/>
+   * Notice that this method can only be called once.
+   * @return Set of region servers.
    */
-  List<ServerName> getListOfRegionServers();
+  Set<ServerName> loadLiveRegionServersAndInitializeListeners() throws IOException;
 }
