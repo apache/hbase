@@ -209,7 +209,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
       assertEquals(2, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
 
       // Wait 2s to let the second increment expire
-      Thread.sleep(2000);
+      Thread.sleep(10000);
       get = new Get(ROW).addColumn(CF1_BYTES, CQ1);
       result = table.get(get);
 
@@ -246,7 +246,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
       assertTrue(Bytes.equals(VALUE2, result.getValue(CF1_BYTES, CQ2)));
 
       // Wait 2s to let the second append expire
-      Thread.sleep(2000);
+      Thread.sleep(10000);
       get = new Get(ROW).addColumn(CF1_BYTES, CQ2);
       result = table.get(get);
 
