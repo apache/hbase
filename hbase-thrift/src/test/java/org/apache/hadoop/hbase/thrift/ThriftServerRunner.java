@@ -52,7 +52,8 @@ class ThriftServerRunner extends Thread implements Closeable {
     return this.exception;
   }
 
-  @Override public void run() {
+  @Override
+  public void run() {
     try {
       this.thriftServer.run(this.args);
     } catch (Exception e) {
@@ -61,7 +62,8 @@ class ThriftServerRunner extends Thread implements Closeable {
     }
   }
 
-  @Override public void close() throws IOException {
+  @Override
+  public void close() throws IOException {
     LOG.info(String.format("Stopping %s", this));
     this.thriftServer.stop();
   }
