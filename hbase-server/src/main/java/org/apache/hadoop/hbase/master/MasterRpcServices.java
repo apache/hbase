@@ -1401,7 +1401,7 @@ public class MasterRpcServices extends RSRpcServices
         master.cpHost.preRegionOffline(hri);
       }
       LOG.info(master.getClientIdAuditPrefix() + " offline " + hri.getRegionNameAsString());
-      master.assignmentManager.regionOffline(hri);
+      master.assignmentManager.regionOffline(hri, true);
       if (master.cpHost != null) {
         master.cpHost.postRegionOffline(hri);
       }
