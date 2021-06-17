@@ -870,8 +870,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     private volatile CountDownLatch safePointReleasedLatch = new CountDownLatch(1);
 
     private void checkIfSyncFailed(SyncFuture syncFuture) throws FailedSyncBeforeLogCloseException {
-      if (syncFuture.isThrowable()) {
-        throw new FailedSyncBeforeLogCloseException(syncFuture.getThrowable());
+      Throwable t = syncFuture.getThrowable();
+      if (t != null) {
+        throw new FailedSyncBeforeLogCloseException(t);
       }
     }
 

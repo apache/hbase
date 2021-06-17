@@ -31,7 +31,6 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
-import java.util.OptionalLong;
 import java.util.Queue;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -131,10 +130,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncFSWAL.class);
 
-  private static final Comparator<SyncFuture> SEQ_COMPARATOR = (o1, o2) -> {
-    int c = Long.compare(o1.getTxid(), o2.getTxid());
-    return c != 0 ? c : Integer.compare(System.identityHashCode(o1), System.identityHashCode(o2));
-  };
+  private static final Comparator<SyncFuture> SEQ_COMPARATOR = Comparator.comparingLong(
+      SyncFuture::getTxid).thenComparingInt(System::identityHashCode);
 
   public static final String WAL_BATCH_SIZE = "hbase.wal.batch.size";
   public static final long DEFAULT_WAL_BATCH_SIZE = 64L * 1024;
@@ -371,7 +368,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   // sync futures then just use the default one.
   private boolean isHsync(long beginTxid, long endTxid) {
     SortedSet<SyncFuture> futures =
-      syncFutures.subSet(new SyncFuture().reset(beginTxid), new SyncFuture().reset(endTxid + 1));
+      syncFutures.subSet(new SyncFuture().reset(beginTxid, false),
+          new SyncFuture().reset(endTxid + 1, false));
     if (futures.isEmpty()) {
       return useHsync;
     }
