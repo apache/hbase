@@ -182,6 +182,10 @@ public class SplitTableRegionProcedure
     return daughterTwoRI;
   }
 
+  private boolean hasBestSplitRow() {
+    return bestSplitRow != null && bestSplitRow.length > 0;
+  }
+
   /**
    * Check whether the region is splittable
    * @param env MasterProcedureEnv
