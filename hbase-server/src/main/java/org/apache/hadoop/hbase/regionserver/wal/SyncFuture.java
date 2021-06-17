@@ -90,7 +90,8 @@ class SyncFuture {
 
   @Override
   public synchronized String toString() {
-    return "done=" + isDone() + ", txid=" + this.txid;
+    return "done=" + isDone() + ", txid=" + this.txid + " threadID=" + t.getId() +
+        " threadName=" + t.getName();
   }
 
   synchronized long getTxid() {
@@ -104,6 +105,15 @@ class SyncFuture {
   synchronized SyncFuture setForceSync(boolean forceSync) {
     this.forceSync = forceSync;
     return this;
+  }
+
+  /**
+   * Returns the thread that owned this sync future, use with caution as we return the reference to
+   * the actual thread object.
+   * @return the associated thread instance.
+   */
+  Thread getThread() {
+    return t;
   }
 
   /**
