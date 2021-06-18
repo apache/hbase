@@ -42,10 +42,10 @@ public class TestSyncFutureCache {
     final Configuration conf = HBaseConfiguration.create();
     SyncFutureCache cache = new SyncFutureCache(conf);
     try {
-      SyncFuture future0 = cache.getIfPresentOrNew().reset(0);
+      SyncFuture future0 = cache.getIfPresentOrNew().reset(0, false);
       assertNotNull(future0);
       // Get another future from the same thread, should be different one.
-      SyncFuture future1 = cache.getIfPresentOrNew().reset(1);
+      SyncFuture future1 = cache.getIfPresentOrNew().reset(1, false);
       assertNotNull(future1);
       assertNotSame(future0, future1);
       cache.offer(future1);
@@ -55,7 +55,8 @@ public class TestSyncFutureCache {
       assertEquals(future3, future0);
       final SyncFuture[] future4 = new SyncFuture[1];
       // From a different thread
-      CompletableFuture.runAsync(() -> future4[0] = cache.getIfPresentOrNew().reset(4)).get();
+      CompletableFuture.runAsync(() ->
+          future4[0] = cache.getIfPresentOrNew().reset(4, false)).get();
       assertNotNull(future4[0]);
       assertNotSame(future3, future4[0]);
       // Clean up
