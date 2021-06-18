@@ -183,7 +183,8 @@ public class TestPostMutationBeforeWAL {
   }
 
   private static boolean checkAclTag(byte[] acl, Cell cell) {
-    Iterator<Tag> iter = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+    Iterator<Tag> iter = CellUtil.tagsIterator(cell.getTagsArray(),
+      cell.getTagsOffset(), cell.getTagsLength());
     while (iter.hasNext()) {
       Tag tag = iter.next();
       if (tag.getType() == TagType.ACL_TAG_TYPE) {
@@ -197,8 +198,8 @@ public class TestPostMutationBeforeWAL {
 
     @Override
     public Cell postMutationBeforeWAL(ObserverContext<RegionCoprocessorEnvironment> ctx,
-      MutationType mutationType, Mutation mutation, Cell oldCell, Cell newCell)
-      throws IOException {
+        MutationType mutationType, Mutation mutation, Cell oldCell, Cell newCell)
+        throws IOException {
       Cell result = super.postMutationBeforeWAL(ctx, mutationType, mutation, oldCell, newCell);
       if (mutation.getACL() != null && !checkAclTag(mutation.getACL(), result)) {
         throw new DoNotRetryIOException("Unmatched ACL tag.");
