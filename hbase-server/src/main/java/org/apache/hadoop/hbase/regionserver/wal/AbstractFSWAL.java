@@ -961,7 +961,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   protected final SyncFuture getSyncFuture(long sequence, boolean forceSync) {
-    return syncFutureCache.getIfPresentOrNew().reset(sequence).setForceSync(forceSync);
+    return syncFutureCache.getIfPresentOrNew().reset(sequence, forceSync);
   }
 
   protected boolean isLogRollRequested() {
