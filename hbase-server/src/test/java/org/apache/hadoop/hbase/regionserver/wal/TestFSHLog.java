@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.replication.TestReplicationEndpoint;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
@@ -235,8 +234,8 @@ public class TestFSHLog {
         assertFalse(future1.isDone());
         // Unblock the safe point trigger..
         blockBeforeSafePoint.countDown();
-        // Wait for the safe point to be reached.
-        // With the deadlock in HBASE-25984, this is never possible, thus blocking the sync pipeline.
+        // Wait for the safe point to be reached. With the deadlock in HBASE-25984, this is never
+        // possible, thus blocking the sync pipeline.
         Waiter.waitFor(conf, TEST_TIMEOUT_MS, new Waiter.Predicate<Exception>() {
           @Override
           public boolean evaluate() throws Exception {
