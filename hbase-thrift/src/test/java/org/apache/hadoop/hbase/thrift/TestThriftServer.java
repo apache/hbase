@@ -1,4 +1,5 @@
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -232,10 +233,8 @@ public class TestThriftServer {
 
     // 3 to 6 seconds (to account for potential slowness), measured in nanoseconds
     try {
-      metricsHelper.assertGaugeGt("getTableNames_avg_time",
-        3L * 1000 * 1000 * 1000, metrics.getSource());
-      metricsHelper.assertGaugeLt("getTableNames_avg_time",
-        6L * 1000 * 1000 * 1000, metrics.getSource());
+      metricsHelper.assertGaugeGt("getTableNames_avg_time", 3L * 1000 * 1000 * 1000, metrics.getSource());
+      metricsHelper.assertGaugeLt("getTableNames_avg_time",6L * 1000 * 1000 * 1000, metrics.getSource());
     } catch (AssertionError e) {
       LOG.info("Fix me!  Why does this happen?  A concurrent cluster running?", e);
     }
