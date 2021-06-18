@@ -117,7 +117,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
@@ -1955,7 +1954,6 @@ public class AccessController extends BaseMasterAndRegionObserver
     // there is no need to rewrite them again. Just extract non-acl tags of newCell if we need to
     // add a new acl tag for the cell. Actually, oldCell is useless here.
     List<Tag> tags = Lists.newArrayList();
-    ListMultimap<String,Permission> perms = ArrayListMultimap.create();
     if (newCell != null) {
       // Save an object allocation where we can
       if (newCell.getTagsLength() > 0) {
