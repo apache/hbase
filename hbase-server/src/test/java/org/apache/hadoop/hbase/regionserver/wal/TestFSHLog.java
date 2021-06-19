@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -34,6 +35,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang.mutable.MutableBoolean;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -69,6 +72,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -84,6 +88,8 @@ import org.junit.rules.TestName;
 @Category(MediumTests.class)
 public class TestFSHLog {
   private static final Log LOG = LogFactory.getLog(TestFSHLog.class);
+
+  private static final long TEST_TIMEOUT_MS = 10000;
 
   protected static Configuration conf;
   protected static FileSystem fs;
@@ -158,6 +164,87 @@ public class TestFSHLog {
     } finally {
       if (log != null) {
         log.close();
+      }
+    }
+  }
+
+  /**
+   * Test for WAL stall due to sync future overwrites. See HBASE-25984.
+   */
+  @Test
+  public void testDeadlockWithSyncOverwrites() throws Exception {
+    final CountDownLatch blockBeforeSafePoint = new CountDownLatch(1);
+
+    class FailingWriter implements WALProvider.Writer {
+      @Override public void sync(boolean forceSync) throws IOException {
+        throw new IOException("Injected failure..");
+      }
+
+      @Override public void append(WAL.Entry entry) throws IOException {
+      }
+
+      @Override public long getLength() throws IOException {
+        return 0;
+      }
+      @Override public void close() throws IOException {
+      }
+    }
+
+    /*
+     * Custom FSHLog implementation with a conditional wait before attaining safe point.
+     */
+    class CustomFSHLog extends FSHLog {
+      public CustomFSHLog(FileSystem fs, Path rootDir, String logDir, String archiveDir,
+        Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
+        String prefix, String suffix) throws IOException {
+        super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
+      }
+
+      @Override
+      protected void beforeWaitOnSafePoint() {
+        try {
+          assertTrue(blockBeforeSafePoint.await(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+
+    try (FSHLog log = new CustomFSHLog(fs, walRootDir, dir.toString(),
+      HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null)) {
+      log.setWriter(new FailingWriter());
+      Field ringBufferEventHandlerField =
+        FSHLog.class.getDeclaredField("ringBufferEventHandler");
+      ringBufferEventHandlerField.setAccessible(true);
+      FSHLog.RingBufferEventHandler ringBufferEventHandler =
+        (FSHLog.RingBufferEventHandler) ringBufferEventHandlerField.get(log);
+      // Force a safe point
+      final FSHLog.SafePointZigZagLatch latch = ringBufferEventHandler.attainSafePoint();
+      try {
+        final SyncFuture future0 = log.publishSyncOnRingBuffer(null, false);
+        // Wait for the sync to be done.
+        Waiter.waitFor(conf, TEST_TIMEOUT_MS, new Waiter.Predicate<Exception>() {
+          @Override
+          public boolean evaluate() throws Exception {
+            return future0.isDone();
+          }
+        });
+        // Publish another sync from the same thread, this should not overwrite the done sync.
+        SyncFuture future1 = log.publishSyncOnRingBuffer(null, false);
+        assertFalse(future1.isDone());
+        // Unblock the safe point trigger..
+        blockBeforeSafePoint.countDown();
+        // Wait for the safe point to be reached. With the deadlock in HBASE-25984, this is never
+        // possible, thus blocking the sync pipeline.
+        Waiter.waitFor(conf, TEST_TIMEOUT_MS, new Waiter.Predicate<Exception>() {
+          @Override
+          public boolean evaluate() throws Exception {
+            return latch.isSafePointAttained();
+          }
+        });
+      } finally {
+        // Force release the safe point, for the clean up.
+        latch.releaseSafePoint();
       }
     }
   }
