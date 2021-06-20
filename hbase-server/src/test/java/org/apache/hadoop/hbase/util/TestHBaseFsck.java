@@ -928,7 +928,7 @@ public class TestHBaseFsck {
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
-            ERROR_CODE.OVERLAP_IN_REGION_CHAIN });
+        ERROR_CODE.OVERLAP_IN_REGION_CHAIN });
       assertEquals(3, hbck.getOverlapGroups(table).size());
       assertEquals(ROWKEYS.length, countRows());
 

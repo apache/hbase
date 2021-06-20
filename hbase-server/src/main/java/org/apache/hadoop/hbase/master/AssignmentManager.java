@@ -1665,10 +1665,10 @@ public class AssignmentManager extends ZooKeeperListener {
    * Marks the region as offline. In addition whether removing it from
    * replicas and master in-memory server holding map.
    * <p>
-   * @param regionInfo
+   * @param regionInfo - region info.
    * @param force - setting to true to force this region to be removed from replicas and master
-   * in-memory server holding map, to make this region not be re-opened on any other region servers.
-   * The only use case is hbck for now.
+   *   in-memory server holding map, to make this region not be re-opened on any other region servers.
+   *   The only use case is hbck for now.
    */
   public void regionOffline(final HRegionInfo regionInfo, boolean force) {
     regionOffline(regionInfo, null, force);
