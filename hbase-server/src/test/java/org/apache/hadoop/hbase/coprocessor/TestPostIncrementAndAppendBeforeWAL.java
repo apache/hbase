@@ -79,7 +79,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPostIncrementAndAppendBeforeWAL.class);
+    HBaseClassTestRule.forClass(TestPostIncrementAndAppendBeforeWAL.class);
 
   @Rule
   public TestName name = new TestName();
