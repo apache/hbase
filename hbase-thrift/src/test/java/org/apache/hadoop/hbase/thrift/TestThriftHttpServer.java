@@ -1,5 +1,5 @@
 /*
- *Copyright The Apache Software Foundation
+ * Copyright The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with this
@@ -10,6 +10,7 @@
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations
@@ -106,8 +107,9 @@ public class TestThriftHttpServer {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @Test
+  @Test(timeout=600000)
   public void testRunThriftServerWithHeaderBufferLength() throws Exception {
+
     // Test thrift server with HTTP header length less than 64k
     try {
       runThriftServer(1024 * 63);
