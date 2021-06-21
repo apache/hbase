@@ -75,7 +75,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.janitor.MetaFixer;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -229,6 +228,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
@@ -3460,4 +3461,25 @@ public class MasterRpcServices extends RSRpcServices implements
       .addAllBalancerRejection(balancerRejections).build();
   }
 
+  @Override
+  public GetRegionServersResponse getRegionServers(RpcController controller,
+    GetRegionServersRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+    Pair<List<ServerName>, Long> listAndHashCode =
+      master.getServerManager().getOnlineServerListAndHashCode();
+    if (request.hasHashCode() && listAndHashCode.getSecond().longValue() == request.getHashCode()) {
+      // The hash code does not change, return no change
+      return GetRegionServersResponse.newBuilder().setChanged(false).build();
+    }
+    GetRegionServersResponse.Builder builder = GetRegionServersResponse.newBuilder()
+      .setChanged(true).setHashCode(listAndHashCode.getSecond());
+    for (ServerName sn : listAndHashCode.getFirst()) {
+      builder.addServerName(ProtobufUtil.toServerName(sn));
+    }
+    return builder.build();
+  }
 }

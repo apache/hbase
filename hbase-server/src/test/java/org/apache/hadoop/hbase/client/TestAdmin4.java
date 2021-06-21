@@ -17,24 +17,24 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
-import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAdmin4 extends TestAdminBase {
@@ -60,11 +60,25 @@ public class TestAdmin4 extends TestAdminBase {
 
     // Stop decommissioned region server and verify it is removed from draining znode
     ServerName serverName = serversToDecommission.get(0);
-    ADMIN.stopRegionServer(serverName.getHostname()+":"+serverName.getPort());
+    ADMIN.stopRegionServer(serverName.getHostname() + ":" + serverName.getPort());
     assertNotEquals("RS not removed from decommissioned list", -1,
       TEST_UTIL.waitFor(10000, () -> ADMIN.listDecommissionedRegionServers().isEmpty()));
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     assertEquals(-1, ZKUtil.checkExists(zkw,
       ZNodePaths.joinZNode(zkw.getZNodePaths().drainingZNode, serverName.getServerName())));
+  }
+
+  @Test
+  public void testSyncRegionServers() throws Exception {
+    int rsCount = TEST_UTIL.getMiniHBaseCluster().getNumLiveRegionServers();
+    Pair<List<ServerName>, Long> pair = ADMIN.syncRegionServers();
+    assertEquals(rsCount, pair.getFirst().size());
+    assertFalse(ADMIN.syncRegionServers(pair.getSecond()).isPresent());
+    assertEquals(rsCount,
+      ADMIN.syncRegionServers(pair.getSecond().longValue() + 1).get().getFirst().size());
+    TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(30000);
+    pair = ADMIN.syncRegionServers(pair.getSecond().longValue()).get();
+    assertEquals(rsCount + 1, pair.getFirst().size());
+    assertFalse(ADMIN.syncRegionServers(pair.getSecond()).isPresent());
   }
 }

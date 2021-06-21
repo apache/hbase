@@ -940,4 +940,15 @@ class AsyncHBaseAdmin implements AsyncAdmin {
       Map<String, Object> filterParams) {
     return wrap(rawAdmin.getLogEntries(serverNames, logType, serverType, limit, filterParams));
   }
+
+  @Override
+  public CompletableFuture<Pair<List<ServerName>, Long>> syncRegionServers() {
+    return wrap(rawAdmin.syncRegionServers());
+  }
+
+  @Override
+  public CompletableFuture<Optional<Pair<List<ServerName>, Long>>>
+    syncRegionServers(long previousHashCode) {
+    return wrap(rawAdmin.syncRegionServers(previousHashCode));
+  }
 }

@@ -20,12 +20,14 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +53,18 @@ class MasterReplicationTracker extends ReplicationTrackerBase {
 
   private final Admin admin;
 
-  private volatile Set<ServerName> regionServers;
+  private static final class RegionServerListSnapshot {
+    final Set<ServerName> regionServers;
+
+    final long hashCode;
+
+    RegionServerListSnapshot(Pair<List<ServerName>, Long> pair) {
+      this.regionServers = Collections.unmodifiableSet(new HashSet<>(pair.getFirst()));
+      this.hashCode = pair.getSecond().longValue();
+    }
+  }
+
+  private volatile RegionServerListSnapshot snapshot;
 
   MasterReplicationTracker(ReplicationTrackerParams params) {
     try {
@@ -77,27 +90,26 @@ class MasterReplicationTracker extends ReplicationTrackerBase {
     };
   }
 
-  private Set<ServerName> reload() throws IOException {
-    return Collections.unmodifiableSet(new HashSet<>(admin.getRegionServers()));
-
-  }
-
   private void refresh() throws IOException {
-    Set<ServerName> newRegionServers = reload();
-    for (ServerName oldRs : regionServers) {
-      if (!newRegionServers.contains(oldRs)) {
-        notifyListeners(oldRs);
+    RegionServerListSnapshot currentSnapshot = snapshot;
+    admin.syncRegionServers(currentSnapshot.hashCode).ifPresent(pair -> {
+      RegionServerListSnapshot newSnapshot = new RegionServerListSnapshot(pair);
+      for (ServerName oldRs : currentSnapshot.regionServers) {
+        if (!newSnapshot.regionServers.contains(oldRs)) {
+          notifyListeners(oldRs);
+        }
       }
-    }
-    this.regionServers = newRegionServers;
+      this.snapshot = newSnapshot;
+    });
   }
 
   @Override
   protected Set<ServerName> internalLoadLiveRegionServersAndInitializeListeners()
     throws IOException {
-    Set<ServerName> newRegionServers = reload();
-    this.regionServers = newRegionServers;
+    RegionServerListSnapshot firstSnapshot =
+      new RegionServerListSnapshot(admin.syncRegionServers());
+    this.snapshot = firstSnapshot;
     choreService.scheduleChore(chore);
-    return newRegionServers;
+    return firstSnapshot.regionServers;
   }
 }

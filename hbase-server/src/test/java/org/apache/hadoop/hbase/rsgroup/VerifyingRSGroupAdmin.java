@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.Future;
@@ -925,11 +926,22 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   @Override
   public List<OnlineLogRecord> getSlowLogResponses(Set<ServerName> serverNames,
       LogQueryFilter logQueryFilter) throws IOException {
-    return null;
+    return admin.getSlowLogResponses(serverNames, logQueryFilter);
   }
 
   @Override
   public List<Boolean> clearSlowLogResponses(Set<ServerName> serverNames) throws IOException {
-    return null;
+    return admin.clearSlowLogResponses(serverNames);
+  }
+
+  @Override
+  public Pair<List<ServerName>, Long> syncRegionServers() throws IOException {
+    return admin.syncRegionServers();
+  }
+
+  @Override
+  public Optional<Pair<List<ServerName>, Long>> syncRegionServers(long previousHashCode)
+    throws IOException {
+    return admin.syncRegionServers(previousHashCode);
   }
 }

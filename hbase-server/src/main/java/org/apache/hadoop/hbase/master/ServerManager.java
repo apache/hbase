@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -35,6 +36,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -61,6 +63,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -69,6 +72,9 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.hash.HashFunction;
+import org.apache.hbase.thirdparty.com.google.common.hash.Hasher;
+import org.apache.hbase.thirdparty.com.google.common.hash.Hashing;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
@@ -162,6 +168,44 @@ public class ServerManager {
   /** Map of registered servers to their current load */
   private final ConcurrentNavigableMap<ServerName, ServerMetrics> onlineServers =
     new ConcurrentSkipListMap<>();
+
+  /**
+   * Store the snapshot of the current region server list, for improving read performance.
+   * <p/>
+   * The hashCode is used to determine whether there are changes to the region servers.
+   */
+  private static final class OnlineServerListSnapshot {
+
+    private static final HashFunction HASH = Hashing.murmur3_128();
+
+    final List<ServerName> servers;
+
+    final long hashCode;
+
+    public OnlineServerListSnapshot(List<ServerName> servers) {
+      this.servers = Collections.unmodifiableList(servers);
+      Hasher hasher = HASH.newHasher();
+      for (ServerName server : servers) {
+        hasher.putString(server.getServerName(), StandardCharsets.UTF_8);
+      }
+      this.hashCode = hasher.hash().asLong();
+    }
+
+    public OnlineServerListSnapshot add(ServerName server) {
+      List<ServerName> newServers = new ArrayList<>(this.servers);
+      newServers.add(server);
+      return new OnlineServerListSnapshot(newServers);
+    }
+
+    public OnlineServerListSnapshot remove(ServerName server) {
+      List<ServerName> newServers =
+        this.servers.stream().filter(s -> !s.equals(server)).collect(Collectors.toList());
+      return new OnlineServerListSnapshot(newServers);
+    }
+  }
+
+  private volatile OnlineServerListSnapshot onlineServersSnapshot =
+    new OnlineServerListSnapshot(Collections.emptyList());
 
   /** List of region servers that should not get any more new regions. */
   private final ArrayList<ServerName> drainingServers = new ArrayList<>();
@@ -427,9 +471,10 @@ public class ServerManager {
    * Adds the onlineServers list. onlineServers should be locked.
    * @param serverName The remote servers name.
    */
-  void recordNewServerWithLock(final ServerName serverName, final ServerMetrics sl) {
+  private void recordNewServerWithLock(final ServerName serverName, final ServerMetrics sl) {
     LOG.info("Registering regionserver=" + serverName);
     this.onlineServers.put(serverName, sl);
+    this.onlineServersSnapshot = this.onlineServersSnapshot.add(serverName);
   }
 
   public ConcurrentNavigableMap<byte[], Long> getFlushedSequenceIdByRegion() {
@@ -480,7 +525,7 @@ public class ServerManager {
   /** @return the count of active regionservers */
   public int countOfRegionServers() {
     // Presumes onlineServers is a concurrent map
-    return this.onlineServers.size();
+    return this.onlineServersSnapshot.servers.size();
   }
 
   /**
@@ -488,13 +533,21 @@ public class ServerManager {
    */
   public Map<ServerName, ServerMetrics> getOnlineServers() {
     // Presumption is that iterating the returned Map is OK.
-    synchronized (this.onlineServers) {
-      return Collections.unmodifiableMap(this.onlineServers);
-    }
+    return Collections.unmodifiableMap(this.onlineServers);
   }
 
   public DeadServer getDeadServers() {
     return this.deadservers;
+  }
+
+  /**
+   * Returns the current online region server list and the calculated hash code.
+   * <p/>
+   * The upper layer could make use of the returned hash code to test whether the list has changed.
+   */
+  public Pair<List<ServerName>, Long> getOnlineServerListAndHashCode() {
+    OnlineServerListSnapshot snapshot = this.onlineServersSnapshot;
+    return Pair.newPair(snapshot.servers, snapshot.hashCode);
   }
 
   /**
@@ -635,6 +688,7 @@ public class ServerManager {
         // not in online servers list.
         this.deadservers.putIfAbsent(sn);
         this.onlineServers.remove(sn);
+        this.onlineServersSnapshot = onlineServersSnapshot.remove(sn);
         onlineServers.notifyAll();
       } else {
         // If not online, that is odd but may happen if 'Unknown Servers' -- where meta
@@ -833,9 +887,7 @@ public class ServerManager {
    * @return A copy of the internal list of online servers.
    */
   public List<ServerName> getOnlineServersList() {
-    // TODO: optimize the load balancer call so we don't need to make a new list
-    // TODO: FIX. THIS IS POPULAR CALL.
-    return new ArrayList<>(this.onlineServers.keySet());
+    return this.onlineServersSnapshot.servers;
   }
 
   /**

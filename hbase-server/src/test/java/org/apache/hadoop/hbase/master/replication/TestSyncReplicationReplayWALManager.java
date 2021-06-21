@@ -33,7 +33,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -89,9 +88,8 @@ public class TestSyncReplicationReplayWALManager {
     doAnswer(inv -> listeners.add(inv.getArgument(0))).when(serverManager)
       .registerListener(any(ServerListener.class));
     ServerMetrics serverMetrics = mock(ServerMetrics.class);
-    doAnswer(inv -> onlineServers.stream()
-      .collect(Collectors.toMap(Function.identity(), k -> serverMetrics))).when(serverManager)
-        .getOnlineServers();
+    doAnswer(inv -> onlineServers.stream().collect(Collectors.toList())).when(serverManager)
+      .getOnlineServersList();
 
     MasterFileSystem mfs = mock(MasterFileSystem.class);
     when(mfs.getFileSystem()).thenReturn(UTIL.getTestFileSystem());

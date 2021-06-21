@@ -109,7 +109,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     if (serverManager == null) {
       return "";
     }
-    return StringUtils.join(serverManager.getOnlineServers().keySet(), ";");
+    return StringUtils.join(serverManager.getOnlineServersList(), ";");
   }
 
   @Override
@@ -118,7 +118,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     if (serverManager == null) {
       return 0;
     }
-    return serverManager.getOnlineServers().size();
+    return serverManager.countOfRegionServers();
   }
 
   @Override

@@ -20,7 +20,9 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPL
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.NON_META_FILTER;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -214,14 +216,15 @@ public class SplitWALManager {
     }
 
     public synchronized Optional<ServerName> acquire() {
-      List<ServerName> serverList = master.getServerManager().getOnlineServersList();
+      List<ServerName> serverList =
+        new ArrayList<>(master.getServerManager().getOnlineServersList());
       Collections.shuffle(serverList);
       Optional<ServerName> worker = serverList.stream().filter(
         serverName -> !currentWorkers.containsKey(serverName) || currentWorkers.get(serverName) > 0)
-          .findAny();
+        .findAny();
       if (worker.isPresent()) {
         currentWorkers.compute(worker.get(), (serverName,
-            availableWorker) -> availableWorker == null ? maxSplitTasks - 1 : availableWorker - 1);
+          availableWorker) -> availableWorker == null ? maxSplitTasks - 1 : availableWorker - 1);
       }
       return worker;
     }

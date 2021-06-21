@@ -113,7 +113,7 @@ public class SyncReplicationReplayWALManager {
     }
 
     public Optional<ServerName> acquire(ServerManager serverManager) {
-      Optional<ServerName> worker = serverManager.getOnlineServers().keySet().stream()
+      Optional<ServerName> worker = serverManager.getOnlineServersList().stream()
         .filter(server -> !usedWorkers.contains(server)).findAny();
       worker.ifPresent(usedWorkers::add);
       return worker;

@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
@@ -1289,5 +1290,16 @@ public class ThriftAdmin implements Admin {
       ServerType serverType, int limit, Map<String, Object> filterParams)
       throws IOException {
     throw new NotImplementedException("getLogEntries not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Pair<List<ServerName>, Long> syncRegionServers() throws IOException {
+    throw new NotImplementedException("syncRegionServers not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Optional<Pair<List<ServerName>, Long>> syncRegionServers(long previousHashCode)
+    throws IOException {
+    throw new NotImplementedException("syncRegionServers not supported in ThriftAdmin");
   }
 }

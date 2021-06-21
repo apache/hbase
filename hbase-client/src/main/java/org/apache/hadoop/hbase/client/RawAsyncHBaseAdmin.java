@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -191,6 +192,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNamesRequest;
@@ -4276,6 +4279,42 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       default:
         return CompletableFuture.completedFuture(Collections.emptyList());
     }
+  }
+
+  @Override
+  public CompletableFuture<Pair<List<ServerName>, Long>> syncRegionServers() {
+    return this.<Pair<List<ServerName>, Long>> newMasterCaller()
+      .action((controller, stub) -> this
+        .<GetRegionServersRequest, GetRegionServersResponse, Pair<List<ServerName>, Long>> call(
+          controller, stub, GetRegionServersRequest.getDefaultInstance(),
+          (s, c, req, done) -> s.getRegionServers(c, req, done), resp -> {
+            if (resp.getChanged()) {
+              return Pair.newPair(ProtobufUtil.toServerNameList(resp.getServerNameList()),
+                resp.getHashCode());
+            } else {
+              throw new HBaseIOException(
+                "Unexpected result gotten, should have region server list");
+            }
+          }))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<Optional<Pair<List<ServerName>, Long>>>
+    syncRegionServers(long previousHashCode) {
+    return this.<Optional<Pair<List<ServerName>, Long>>> newMasterCaller()
+      .action((controller, stub) -> this.<GetRegionServersRequest, GetRegionServersResponse,
+        Optional<Pair<List<ServerName>, Long>>> call(controller, stub,
+          GetRegionServersRequest.newBuilder().setHashCode(previousHashCode).build(),
+          (s, c, req, done) -> s.getRegionServers(c, req, done), resp -> {
+            if (resp.getChanged()) {
+              return Optional.of(Pair.newPair(
+                ProtobufUtil.toServerNameList(resp.getServerNameList()), resp.getHashCode()));
+            } else {
+              return Optional.empty();
+            }
+          }))
+      .call();
   }
 
 }

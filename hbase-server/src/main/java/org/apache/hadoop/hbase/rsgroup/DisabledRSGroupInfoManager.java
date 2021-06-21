@@ -64,7 +64,7 @@ class DisabledRSGroupInfoManager implements RSGroupInfoManager {
 
   private SortedSet<Address> getOnlineServers() {
     SortedSet<Address> onlineServers = new TreeSet<Address>();
-    serverManager.getOnlineServers().keySet().stream().map(ServerName::getAddress)
+    serverManager.getOnlineServersList().stream().map(ServerName::getAddress)
       .forEach(onlineServers::add);
     return onlineServers;
   }

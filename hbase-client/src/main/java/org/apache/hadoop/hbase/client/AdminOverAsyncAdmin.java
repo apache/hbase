@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
@@ -1062,5 +1063,16 @@ class AdminOverAsyncAdmin implements Admin {
       ServerType serverType, int limit, Map<String, Object> filterParams)
       throws IOException {
     return get(admin.getLogEntries(serverNames, logType, serverType, limit, filterParams));
+  }
+
+  @Override
+  public Pair<List<ServerName>, Long> syncRegionServers() throws IOException {
+    return get(admin.syncRegionServers());
+  }
+
+  @Override
+  public Optional<Pair<List<ServerName>, Long>> syncRegionServers(long previousHashCode)
+    throws IOException {
+    return get(admin.syncRegionServers(previousHashCode));
   }
 }

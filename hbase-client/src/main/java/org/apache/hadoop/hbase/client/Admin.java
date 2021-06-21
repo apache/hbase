@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -1116,7 +1117,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default Collection<ServerName> getRegionServers() throws IOException {
-    return getRegionServers(false);
+    return syncRegionServers().getFirst();
   }
 
   /**
@@ -1129,8 +1130,7 @@ public interface Admin extends Abortable, Closeable {
    */
   default Collection<ServerName> getRegionServers(boolean excludeDecommissionedRS)
       throws IOException {
-    List<ServerName> allServers =
-      getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).getServersName();
+    Collection<ServerName> allServers = getRegionServers();
     if (!excludeDecommissionedRS) {
       return allServers;
     }
@@ -1139,6 +1139,22 @@ public interface Admin extends Abortable, Closeable {
       .filter(s -> !decommissionedRegionServers.contains(s))
       .collect(ImmutableList.toImmutableList());
   }
+
+  /**
+   * Returns the current live region server list and the calculated hash code for the list.
+   * <p/>
+   * You could then use the hash code to call {@link #syncRegionServers(long)}.
+   * @see #syncRegionServers(long)
+   */
+  Pair<List<ServerName>, Long> syncRegionServers() throws IOException;
+
+  /**
+   * Returns the current live region server list and the calculated hash code for the list. The
+   * {@code previousHashCode} is used to determine whether the list has been changed. If not, return
+   * empty.
+   */
+  Optional<Pair<List<ServerName>, Long>> syncRegionServers(long previousHashCode)
+    throws IOException;
 
   /**
    * Get {@link RegionMetrics} of all regions hosted on a regionserver.

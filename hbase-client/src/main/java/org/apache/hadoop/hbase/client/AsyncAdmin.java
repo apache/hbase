@@ -1080,9 +1080,25 @@ public interface AsyncAdmin {
    * @return current live region servers list wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
-    return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME))
-        .thenApply(ClusterMetrics::getServersName);
+    return syncRegionServers().thenApply(Pair::getFirst);
   }
+
+  /**
+   * Returns the current live region server list and the calculated hash code for the list, wrapped
+   * by {@link CompletableFuture}.
+   * <p/>
+   * You could then use the hash code to call {@link #syncRegionServers(long)}.
+   * @see #syncRegionServers(long)
+   */
+  CompletableFuture<Pair<List<ServerName>, Long>> syncRegionServers();
+
+  /**
+   * Returns the current live region server list and the calculated hash code for the list, wrapped
+   * by {@link CompletableFuture}. The {@code previousHashCode} is used to determine whether the
+   * list has been changed. If not, return empty.
+   */
+  CompletableFuture<Optional<Pair<List<ServerName>, Long>>>
+    syncRegionServers(long previousHashCode);
 
   /**
    * @return a list of master coprocessors wrapped by {@link CompletableFuture}

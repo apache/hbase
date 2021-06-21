@@ -67,6 +67,7 @@ public abstract class ReplicationTrackerTestBase {
     assertEquals(1, rt.loadLiveRegionServersAndInitializeListeners().size());
     // delete one
     removeServer(sn);
+    Thread.sleep(2000);
     // wait for event
     Waiter.waitFor(HBaseConfiguration.create(), 15000, () -> rsRemovedCount.get() >= 1);
     assertEquals(sn, rsRemovedData);

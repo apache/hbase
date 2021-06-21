@@ -312,7 +312,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
    * @return Set of online Servers named for their hostname and port (not ServerName).
    */
   private Set<Address> getOnlineServers() {
-    return masterServices.getServerManager().getOnlineServers().keySet().stream()
+    return masterServices.getServerManager().getOnlineServersList().stream()
       .map(ServerName::getAddress).collect(Collectors.toSet());
   }
 
@@ -738,7 +738,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     // Get all online servers from Zookeeper and find out servers in default group
     SortedSet<Address> defaultServers = Sets.newTreeSet();
-    for (ServerName serverName : masterServices.getServerManager().getOnlineServers().keySet()) {
+    for (ServerName serverName : masterServices.getServerManager().getOnlineServersList()) {
       Address server = Address.fromParts(serverName.getHostname(), serverName.getPort());
       if (!serversInOtherGroup.contains(server)) { // not in other groups
         defaultServers.add(server);
@@ -874,7 +874,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     // This uglyness is because we only have Address, not ServerName.
     Set<Address> onlineServers = new HashSet<>();
     List<ServerName> drainingServers = masterServices.getServerManager().getDrainingServersList();
-    for (ServerName server : masterServices.getServerManager().getOnlineServers().keySet()) {
+    for (ServerName server : masterServices.getServerManager().getOnlineServersList()) {
       // Only online but not decommissioned servers are really online
       if (!drainingServers.contains(server)) {
         onlineServers.add(server.getAddress());
@@ -903,7 +903,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     // This uglyness is because we only have Address, not ServerName.
     // Online servers are keyed by ServerName.
     Set<Address> onlineServers = new HashSet<>();
-    for(ServerName server: masterServices.getServerManager().getOnlineServers().keySet()) {
+    for(ServerName server: masterServices.getServerManager().getOnlineServersList()) {
       onlineServers.add(server.getAddress());
     }
     for (Address address: servers) {
@@ -980,7 +980,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     // Get server names corresponding to given Addresses
     List<ServerName> movedServerNames = new ArrayList<>(regionsOwners.size());
     List<ServerName> srcGrpServerNames = new ArrayList<>(newRegionsOwners.size());
-    for (ServerName serverName : masterServices.getServerManager().getOnlineServers().keySet()) {
+    for (ServerName serverName : masterServices.getServerManager().getOnlineServersList()) {
       // In case region move failed in previous attempt, regionsOwners and newRegionsOwners
       // can have the same servers. So for all servers below both conditions to be checked
       if (newRegionsOwners.contains(serverName.getAddress())) {
@@ -1135,7 +1135,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
     }
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
-    for (ServerName serverName : masterServices.getServerManager().getOnlineServers().keySet()) {
+    for (ServerName serverName : masterServices.getServerManager().getOnlineServersList()) {
       if (rsGroupInfo.containsServer(serverName.getAddress())) {
         for (Map<ServerName, List<RegionInfo>> map : result.values()) {
           map.computeIfAbsent(serverName, k -> Collections.emptyList());

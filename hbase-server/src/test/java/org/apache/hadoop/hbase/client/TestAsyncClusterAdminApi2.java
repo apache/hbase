@@ -18,16 +18,20 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncConnectionConfiguration.START_LOG_ERRORS_AFTER_COUNT_KEY;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -39,7 +43,7 @@ import org.junit.experimental.categories.Category;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
- * Only used to test stopMaster/stopRegionServer/shutdown methods.
+ * Only used to test stopMaster/stopRegionServer/shutdown/syncRegionServers methods.
  */
 @Category({ ClientTests.class, MediumTests.class })
 public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
@@ -116,5 +120,19 @@ public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
       unit.sleep(timeout);
     } catch (InterruptedException e) {
     }
+  }
+
+  @Test
+  public void testSyncRegionServers() throws Exception {
+    int rsCount = TEST_UTIL.getMiniHBaseCluster().getNumLiveRegionServers();
+    Pair<List<ServerName>, Long> pair = admin.syncRegionServers().join();
+    assertEquals(rsCount, pair.getFirst().size());
+    assertFalse(admin.syncRegionServers(pair.getSecond()).join().isPresent());
+    assertEquals(rsCount,
+      admin.syncRegionServers(pair.getSecond().longValue() + 1).join().get().getFirst().size());
+    TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(30000);
+    pair = admin.syncRegionServers(pair.getSecond().longValue()).join().get();
+    assertEquals(rsCount + 1, pair.getFirst().size());
+    assertFalse(admin.syncRegionServers(pair.getSecond()).join().isPresent());
   }
 }
