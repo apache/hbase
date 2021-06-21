@@ -46,7 +46,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test class for DirectInStoreCompactor.
+ * Test class for DefaultCompactor.
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestDefaultCompactor {
