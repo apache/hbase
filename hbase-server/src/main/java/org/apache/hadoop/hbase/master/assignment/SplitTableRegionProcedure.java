@@ -619,9 +619,7 @@ public class SplitTableRegionProcedure
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
       env.getMasterConfiguration(), fs, tabledir, getParentRegion(), false);
     regionFs.createSplitsDir(daughterOneRI, daughterTwoRI);
-
     Pair<Integer, Integer> expectedReferences = splitStoreFiles(env, regionFs);
-
     assertReferenceFileCount(fs, expectedReferences.getFirst(),
       regionFs.getSplitsDir(daughterOneRI));
     //Move the files from the temporary .splits to the final /table/region directory
@@ -681,6 +679,7 @@ public class SplitTableRegionProcedure
       }
     }
     if (nbFiles == 0) {
+      LOG.info(">>>> no file to split...");
       // no file needs to be splitted.
       return new Pair<Integer, Integer>(0, 0);
     }

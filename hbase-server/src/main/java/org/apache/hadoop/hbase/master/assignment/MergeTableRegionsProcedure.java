@@ -24,6 +24,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -54,7 +56,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -74,6 +75,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.M
 @InterfaceAudience.Private
 public class MergeTableRegionsProcedure
     extends AbstractStateMachineTableProcedure<MergeTableRegionsState> {
+
+  public static final String MERGE_REGION_STRATEGY = "hbase.hregion.merge.strategy";
+
   private static final Logger LOG = LoggerFactory.getLogger(MergeTableRegionsProcedure.class);
   private ServerName regionLocation;
 
@@ -88,6 +92,8 @@ public class MergeTableRegionsProcedure
   private RegionInfo mergedRegion;
 
   private boolean force;
+
+  private MergeRegionsStrategy mergeStrategy;
 
   public MergeTableRegionsProcedure() {
     // Required by the Procedure framework to create the procedure on replay
@@ -107,6 +113,17 @@ public class MergeTableRegionsProcedure
     // Preflight depends on mergedRegion being set (at least).
     preflightChecks(env, true);
     this.force = force;
+    createMergeStrategy(env.getMasterConfiguration());
+  }
+
+  private void createMergeStrategy(Configuration conf) {
+    String className = conf.get(MERGE_REGION_STRATEGY, DefaultMergeStrategy.class.getName());
+    try {
+      LOG.info("instantiating write strategy {}", className);
+      mergeStrategy = (MergeRegionsStrategy) Class.forName(className).newInstance();
+    } catch (Exception e) {
+      LOG.error("Unable to create write strategy: {}", className, e);
+    }
   }
 
   /**
@@ -211,7 +228,7 @@ public class MergeTableRegionsProcedure
           break;
         case MERGE_TABLE_REGIONS_CREATE_MERGED_REGION:
           removeNonDefaultReplicas(env);
-          createMergedRegion(env);
+          mergeStrategy.createMergedRegion(env, regionsToMerge, mergedRegion);
           setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_WRITE_MAX_SEQUENCE_ID_FILE);
           break;
         case MERGE_TABLE_REGIONS_WRITE_MAX_SEQUENCE_ID_FILE:
@@ -281,7 +298,7 @@ public class MergeTableRegionsProcedure
           break;
         case MERGE_TABLE_REGIONS_CREATE_MERGED_REGION:
         case MERGE_TABLE_REGIONS_WRITE_MAX_SEQUENCE_ID_FILE:
-          cleanupMergedRegion(env);
+          mergeStrategy.cleanupMergedRegion(env, regionsToMerge, mergedRegion);
           break;
         case MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS:
           break;
@@ -562,85 +579,6 @@ public class MergeTableRegionsProcedure
   }
 
   /**
-   * Create merged region.
-   * The way the merge works is that we make a 'merges' temporary
-   * directory in the FIRST parent region to merge (Do not change this without
-   * also changing the rollback where we look in this FIRST region for the
-   * merge dir). We then collect here references to all the store files in all
-   * the parent regions including those of the FIRST parent region into a
-   * subdirectory, named for the resultant merged region. We then call
-   * commitMergeRegion. It finds this subdirectory of storefile references
-   * and moves them under the new merge region (creating the region layout
-   * as side effect). After assign of the new merge region, we will run a
-   * compaction. This will undo the references but the reference files remain
-   * in place until the archiver runs (which it does on a period as a chore
-   * in the RegionServer that hosts the merge region -- see
-   * CompactedHFilesDischarger). Once the archiver has moved aside the
-   * no-longer used references, the merge region no longer has references.
-   * The catalog janitor will notice when it runs next and it will remove
-   * the old parent regions.
-   */
-  private void createMergedRegion(final MasterProcedureEnv env) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
-    final FileSystem fs = mfs.getFileSystem();
-    HRegionFileSystem mergeRegionFs = null;
-    for (RegionInfo ri: this.regionsToMerge) {
-      HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
-          env.getMasterConfiguration(), fs, tabledir, ri, false);
-      if (mergeRegionFs == null) {
-        mergeRegionFs = regionFs;
-        mergeRegionFs.createMergesDir();
-      }
-      mergeStoreFiles(env, regionFs, mergeRegionFs.getMergesDir());
-    }
-    assert mergeRegionFs != null;
-    mergeRegionFs.commitMergedRegion(mergedRegion);
-
-    // Prepare to create merged regions
-    env.getAssignmentManager().getRegionStates().
-        getOrCreateRegionStateNode(mergedRegion).setState(State.MERGING_NEW);
-  }
-
-  /**
-   * Create reference file(s) to parent region hfiles in the <code>mergeDir</code>
-   * @param regionFs merge parent region file system
-   * @param mergeDir the temp directory in which we are accumulating references.
-   */
-  private void mergeStoreFiles(final MasterProcedureEnv env, final HRegionFileSystem regionFs,
-      final Path mergeDir) throws IOException {
-    final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
-    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
-      String family = hcd.getNameAsString();
-      final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
-      if (storeFiles != null && storeFiles.size() > 0) {
-        for (StoreFileInfo storeFileInfo : storeFiles) {
-          // Create reference file(s) to parent region file here in mergedDir.
-          // As this procedure is running on master, use CacheConfig.DISABLED means
-          // don't cache any block.
-          regionFs.mergeStoreFile(mergedRegion, family, new HStoreFile(
-              storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED), mergeDir);
-        }
-      }
-    }
-  }
-
-  /**
-   * Clean up a merged region on rollback after failure.
-   */
-  private void cleanupMergedRegion(final MasterProcedureEnv env) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    TableName tn = this.regionsToMerge[0].getTable();
-    final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), tn);
-    final FileSystem fs = mfs.getFileSystem();
-    // See createMergedRegion above where we specify the merge dir as being in the
-    // FIRST merge parent region.
-    HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
-      env.getMasterConfiguration(), fs, tabledir, regionsToMerge[0], false);
-    regionFs.cleanupMergedRegion(mergedRegion);
-  }
-
-  /**
    * Rollback close regions
    **/
   private void rollbackCloseRegionsForMerge(MasterProcedureEnv env) throws IOException {
@@ -762,5 +700,65 @@ public class MergeTableRegionsProcedure
     // Procedures. Here is a Procedure that has a PONR and cannot be aborted once it enters this
     // range of steps; what do we do for these should an operator want to cancel them? HBASE-20022.
     return isRollbackSupported(getCurrentState()) && super.abort(env);
+  }
+
+  public static class DefaultMergeStrategy extends MergeRegionsStrategy {
+
+    /**
+     * Create merged region.
+     * The way the merge works is that we make a 'merges' temporary
+     * directory in the FIRST parent region to merge (Do not change this without
+     * also changing the rollback where we look in this FIRST region for the
+     * merge dir). We then collect here references to all the store files in all
+     * the parent regions including those of the FIRST parent region into a
+     * subdirectory, named for the resultant merged region. We then call
+     * commitMergeRegion. It finds this subdirectory of storefile references
+     * and moves them under the new merge region (creating the region layout
+     * as side effect). After assign of the new merge region, we will run a
+     * compaction. This will undo the references but the reference files remain
+     * in place until the archiver runs (which it does on a period as a chore
+     * in the RegionServer that hosts the merge region -- see
+     * CompactedHFilesDischarger). Once the archiver has moved aside the
+     * no-longer used references, the merge region no longer has references.
+     * The catalog janitor will notice when it runs next and it will remove
+     * the old parent regions.
+     */
+    @Override
+    public HRegionFileSystem innerMergeRegions(MasterProcedureEnv env, FileSystem fs,
+        RegionInfo[] regionsToMerge, Path tableDir, RegionInfo mergedRegion) throws IOException {
+      HRegionFileSystem mergeRegionFs = null;
+      for (RegionInfo ri: regionsToMerge) {
+        HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
+          env.getMasterConfiguration(), fs, tableDir, ri, false);
+        if (mergeRegionFs == null) {
+          mergeRegionFs = regionFs;
+          mergeRegionFs.createMergesDir();
+        }
+        mergeStoreFiles(env, regionFs, mergeRegionFs.getMergesDir(), mergedRegion);
+      }
+      return mergeRegionFs;
+    }
+
+    private void mergeStoreFiles(MasterProcedureEnv env, HRegionFileSystem regionFs, Path mergeDir,
+        RegionInfo mergedRegion) throws IOException {
+      final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+      final Configuration conf = env.getMasterConfiguration();
+      final TableDescriptor htd = env.getMasterServices().getTableDescriptors()
+        .get(mergedRegion.getTable());
+      for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
+        String family = hcd.getNameAsString();
+        final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
+        if (storeFiles != null && storeFiles.size() > 0) {
+          for (StoreFileInfo storeFileInfo : storeFiles) {
+            // Create reference file(s) to parent region file here in mergedDir.
+            // As this procedure is running on master, use CacheConfig.DISABLED means
+            // don't cache any block.
+            regionFs.mergeStoreFile(mergedRegion, family,
+              new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED),
+              mergeDir);
+          }
+        }
+      }
+    }
   }
 }
