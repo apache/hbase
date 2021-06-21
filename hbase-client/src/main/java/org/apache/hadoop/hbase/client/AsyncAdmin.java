@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
@@ -1082,6 +1083,32 @@ public interface AsyncAdmin {
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
     return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME))
         .thenApply(ClusterMetrics::getServersName);
+  }
+
+  default CompletableFuture<Collection<ServerName>> getRegionServers(
+    boolean excludeDecommissionedRS) {
+    CompletableFuture<Collection<ServerName>> future = new CompletableFuture<>();
+    addListener(
+      getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).thenApply(ClusterMetrics::getServersName),
+      (allServers, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          if (!excludeDecommissionedRS) {
+            future.complete(allServers);
+          } else {
+            addListener(listDecommissionedRegionServers(), (decomServers, decomErr) -> {
+              if (decomErr != null) {
+                future.completeExceptionally(decomErr);
+              } else {
+                future.complete(allServers.stream().filter(s -> !decomServers.contains(s))
+                  .collect(ImmutableList.toImmutableList()));
+              }
+            });
+          }
+        }
+      });
+    return future;
   }
 
   /**
