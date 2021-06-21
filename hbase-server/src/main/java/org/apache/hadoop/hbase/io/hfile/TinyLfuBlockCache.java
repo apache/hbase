@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.io.netty.util.IllegalReferenceCountException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.slf4j.Logger;
@@ -158,13 +159,16 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey,
       boolean caching, boolean repeat, boolean updateCacheMetrics) {
-    Cacheable value = cache.asMap().computeIfPresent(cacheKey, (blockCacheKey, cacheable) -> {
-      // It will be referenced by RPC path, so increase here. NOTICE: Must do the retain inside
-      // this block. because if retain outside the map#computeIfPresent, the evictBlock may remove
-      // the block and release, then we're retaining a block with refCnt=0 which is disallowed.
-      cacheable.retain();
-      return cacheable;
-    });
+    Cacheable value = cache.getIfPresent(cacheKey);
+    if (value != null) {
+      try {
+        value.retain();
+      } catch (IllegalReferenceCountException e) {
+        value = null;
+        LOG.debug("TinyLfu cache block retain caused refCount Exception. Treating this as L1 cache"
+          + " miss. Exception: {}", e.getMessage());
+      }
+    }
     if (value == null) {
       if (repeat) {
         return null;

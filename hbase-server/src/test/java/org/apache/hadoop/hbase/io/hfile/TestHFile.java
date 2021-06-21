@@ -910,7 +910,7 @@ public class TestHFile  {
   }
 
   /**
-   * Test case for CombinedBlockCache with AdaptiveLRU as L1 cache
+   * Test case for CombinedBlockCache with LRU as L1 cache
    */
   @Test
   public void testReaderWithLruCombinedBlockCache() throws Exception {
