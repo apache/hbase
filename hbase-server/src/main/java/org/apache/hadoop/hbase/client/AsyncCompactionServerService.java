@@ -57,6 +57,8 @@ public class AsyncCompactionServerService {
         RpcCallback<RESP> done);
   }
 
+  // TODO: eliminate duplicate code in AsyncRegionServerAdmin and maybe we could also change the
+  //  way on how to do regionServerReport
   private <RESP> CompletableFuture<RESP> call(RpcCall<RESP> rpcCall) {
     CompletableFuture<RESP> future = new CompletableFuture<>();
     HBaseRpcController controller = conn.rpcControllerFactory.newController();

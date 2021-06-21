@@ -3786,6 +3786,8 @@ public class RSRpcServices extends AbstractRpcServices implements
             request.getSelectedFilesList().stream().collect(Collectors.toList());
         List<String> newFiles = request.getNewFilesList().stream().collect(Collectors.toList());
         try {
+          // TODO: If we could write HFile directly into the data directory, here the completion
+          //  will be easier
           success = store.completeCompaction(null, selectedFiles, null, newFiles);
           LOG.debug("Complete compaction result: {} for region: {}, store {}", success,
             regionInfo.getRegionNameAsString(),
