@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 
@@ -131,6 +133,11 @@ public class AsyncRegionServerAdmin {
   public CompletableFuture<GetOnlineRegionResponse> getOnlineRegion(
       GetOnlineRegionRequest request) {
     return call((stub, controller, done) -> stub.getOnlineRegion(controller, request, done));
+  }
+
+  public CompletableFuture<CompleteCompactionResponse>
+      completeCompaction(CompleteCompactionRequest request) {
+    return call((stub, controller, done) -> stub.completeCompaction(controller, request, done));
   }
 
   public CompletableFuture<OpenRegionResponse> openRegion(OpenRegionRequest request) {

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBul
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 
@@ -49,10 +50,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
  */
 @InterfaceAudience.Private
 class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClusterConnection {
-
   public AsyncClusterConnectionImpl(Configuration conf, ConnectionRegistry registry,
       String clusterId, SocketAddress localAddress, User user) {
     super(conf, registry, clusterId, localAddress, user);
+  }
+
+  CompactionProtos.CompactionService.Interface createCompactionServerStub(ServerName serverName) {
+    return CompactionProtos.CompactionService
+        .newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
   }
 
   @Override
@@ -68,6 +73,11 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
   @Override
   public AsyncRegionServerAdmin getRegionServerAdmin(ServerName serverName) {
     return new AsyncRegionServerAdmin(serverName, this);
+  }
+
+  @Override
+  public AsyncCompactionServerService getCompactionServerService(ServerName serverName) {
+    return new AsyncCompactionServerService(serverName, this);
   }
 
   @Override

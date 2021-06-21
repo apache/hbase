@@ -30,6 +30,7 @@ import "server/Quota.proto";
 import "server/ClusterStatus.proto";
 import "server/region/WAL.proto";
 import "server/region/TooSlowLog.proto";
+import "server/Compaction.proto";
 
 message GetRegionInfoRequest {
   required RegionSpecifier region = 1;
@@ -392,6 +393,9 @@ service AdminService {
 
   rpc ExecuteProcedures(ExecuteProceduresRequest)
     returns(ExecuteProceduresResponse);
+
+  rpc CompleteCompaction(CompleteCompactionRequest)
+    returns(CompleteCompactionResponse);
 
   rpc ClearSlowLogsResponses(ClearSlowLogResponseRequest)
     returns(ClearSlowLogResponses);

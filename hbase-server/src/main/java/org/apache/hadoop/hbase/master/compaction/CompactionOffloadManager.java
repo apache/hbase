@@ -22,22 +22,30 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.CompactionServerMetrics;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncCompactionServerService;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.SwitchCompactionOffloadProcedure;
 import org.apache.hadoop.hbase.regionserver.CompactionOffloadSwitchStorage;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCompactionOffloadEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCompactionOffloadEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchCompactionOffloadRequest;
@@ -51,6 +59,8 @@ public class CompactionOffloadManager {
   private CompactionOffloadSwitchStorage compactionOffloadSwitchStorage;
   private static final Logger LOG =
       LoggerFactory.getLogger(CompactionOffloadManager.class.getName());
+  private final ConcurrentMap<ServerName, AsyncCompactionServerService> csStubs =
+      new ConcurrentHashMap<>();
 
   public CompactionOffloadManager(final MasterServices master) {
     this.masterServices = master;
@@ -137,5 +147,42 @@ public class CompactionOffloadManager {
     masterServices.getMasterCoprocessorHost()
         .postSwitchCompactionOffload(oldCompactionOffloadEnable, compactionOffloadEnabled);
     return response;
+  }
+
+  /**
+   * Like there is a 1-1 mapping for region to RS, we will have it for compaction of region to CS.
+   */
+  private ServerName selectCompactionServer(CompactRequest request) throws ServiceException {
+    List<ServerName> compactionServerList = getOnlineServersList();
+    if (compactionServerList.size() <= 0) {
+      throw new ServiceException("compaction server is not available");
+    }
+    // TODO: need more complex and effective way to manage compaction of region to CS mapping.
+    //  maybe another assignment and balance module
+    long index = (request.getRegionInfo().getStartKey().hashCode() & Integer.MAX_VALUE)
+        % compactionServerList.size();
+    return compactionServerList.get((int) index);
+  }
+
+  private AsyncCompactionServerService getCsStub(final ServerName sn) throws IOException {
+    AsyncCompactionServerService csStub = this.csStubs.get(sn);
+    if (csStub == null) {
+      LOG.debug("New CS stub connection to {}", sn);
+      csStub = this.masterServices.getAsyncClusterConnection().getCompactionServerService(sn);
+      this.csStubs.put(sn, csStub);
+    }
+    return csStub;
+  }
+
+  public CompactResponse requestCompaction(CompactRequest request) throws ServiceException {
+    ServerName targetCompactionServer = selectCompactionServer(request);
+    LOG.info("Receive compaction request from {}, and send to Compaction server:{}",
+      ProtobufUtil.toString(request), targetCompactionServer);
+    try {
+      FutureUtils.get(getCsStub(targetCompactionServer).requestCompaction(request));
+    } catch (Throwable t) {
+      LOG.error("requestCompaction from master to CS error: {}", t);
+    }
+    return null;
   }
 }

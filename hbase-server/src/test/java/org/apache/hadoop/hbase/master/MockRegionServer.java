@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -139,6 +140,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBul
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 
@@ -755,5 +758,23 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   @Override
   public AsyncClusterConnection getAsyncClusterConnection() {
     return null;
+  }
+
+
+  @Override
+  public CompleteCompactionResponse completeCompaction(RpcController controller,
+    CompleteCompactionRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public boolean isCompactionOffloadEnabled() {
+    return true;
+  }
+
+  @Override
+  public boolean requestCompactRegion(RegionInfo regionInfo, ColumnFamilyDescriptor cfd,
+      boolean major, int priority) {
+    return false;
   }
 }
