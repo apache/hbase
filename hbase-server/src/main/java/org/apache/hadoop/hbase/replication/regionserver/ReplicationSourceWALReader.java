@@ -155,11 +155,11 @@ class ReplicationSourceWALReader extends Thread {
           entryBatchQueue.put(batch);
           sleepMultiplier = 1;
         }
-      } catch (IOException e) { // stream related
+      } catch (WALEntryFilterRetryableException | IOException e) { // stream related
         if (!handleEofException(e, batch)) {
           LOG.warn("Failed to read stream of replication entries", e);
           if (sleepMultiplier < maxRetriesMultiplier) {
-            sleepMultiplier ++;
+            sleepMultiplier++;
           }
           Threads.sleep(sleepForRetries * sleepMultiplier);
         }
