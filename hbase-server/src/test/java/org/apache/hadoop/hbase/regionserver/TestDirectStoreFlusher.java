@@ -53,14 +53,14 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test class for DirectInStoreFlusher
+ * Test class for DirectStoreFlusher
  */
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestDirectInStoreFlusher {
+public class TestDirectStoreFlusher {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDirectInStoreFlusher.class);
+    HBaseClassTestRule.forClass(TestDirectStoreFlusher.class);
 
   @Rule
   public TestName name = new TestName();
@@ -115,7 +115,7 @@ public class TestDirectInStoreFlusher {
 
   @Test
   public void testCreateWriter() throws Exception {
-    DirectInStoreFlusher flusher = new DirectInStoreFlusher(config, mockStore);
+    DirectStoreFlusher flusher = new DirectStoreFlusher(config, mockStore);
     List<Path> files = flusher.flushSnapshot(mockSnapshot, 0, mock(MonitoredTask.class),
       null, FlushLifeCycleTracker.DUMMY);
     assertEquals(1, files.size());

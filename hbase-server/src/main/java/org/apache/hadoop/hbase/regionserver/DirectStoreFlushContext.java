@@ -30,14 +30,14 @@ import org.slf4j.LoggerFactory;
  * directly in the store dir, and therefore, doesn't perform a rename from tmp dir
  * into the store dir.
  *
- * To be used only when PersistedStoreEngine is configured as the StoreEngine implementation.
+ * To be used only when DirectStoreFlushContext is configured as the StoreEngine implementation.
  */
 @InterfaceAudience.Private
-public class DirectInStoreFlushContext extends DefaultStoreFlushContext {
+public class DirectStoreFlushContext extends DefaultStoreFlushContext {
 
-  private static final Logger LOG = LoggerFactory.getLogger(DirectInStoreFlushContext.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DirectStoreFlushContext.class);
 
-  public DirectInStoreFlushContext(HStore store, Long cacheFlushSeqNum,
+  public DirectStoreFlushContext(HStore store, Long cacheFlushSeqNum,
     FlushLifeCycleTracker tracker) {
     super.init(store, cacheFlushSeqNum, tracker);
   }

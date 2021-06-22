@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class DirectInStoreCompactor extends DefaultCompactor {
-  public DirectInStoreCompactor(Configuration conf, HStore store) {
+public class DirectStoreCompactor extends DefaultCompactor {
+  public DirectStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
 
@@ -44,17 +44,17 @@ public class DirectInStoreCompactor extends DefaultCompactor {
     // See HBASE-8166, HBASE-12600, and HBASE-13389.
     return createWriterInFamilyDir(fd.maxKeyCount,
       major ? majorCompactionCompression : minorCompactionCompression,
-      fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0, shouldDropBehind);
+      fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0,
+      shouldDropBehind, fd.totalCompactedFilesSize);
   }
 
   private StoreFileWriter createWriterInFamilyDir(long maxKeyCount,
       Compression.Algorithm compression, boolean includeMVCCReadpoint, boolean includesTag,
-        boolean shouldDropBehind) throws IOException {
+        boolean shouldDropBehind, long totalCompactedFilesSize) throws IOException {
     final CacheConfig writerCacheConf;
     // Don't cache data on write on compactions.
     writerCacheConf = new CacheConfig(store.getCacheConfig());
-    writerCacheConf.setCacheDataOnWrite(false);
-
+    writerCacheConf.enableCacheOnWrite(totalCompactedFilesSize);
     InetSocketAddress[] favoredNodes = null;
     if (store.getHRegion().getRegionServerServices() != null) {
       favoredNodes = store.getHRegion().getRegionServerServices().getFavoredNodesForRegion(

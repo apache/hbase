@@ -33,12 +33,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A StoreFlusher that writes hfiles directly into the actual store directory,
- * instead of a temp dir..
+ * instead of a temp dir.
  */
 @InterfaceAudience.Private
-public class DirectInStoreFlusher extends DefaultStoreFlusher {
+public class DirectStoreFlusher extends DefaultStoreFlusher {
 
-  public DirectInStoreFlusher(Configuration conf, HStore store) {
+  public DirectStoreFlusher(Configuration conf, HStore store) {
     super(conf, store);
   }
 

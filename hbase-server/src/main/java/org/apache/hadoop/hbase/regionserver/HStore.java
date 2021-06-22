@@ -1151,16 +1151,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       // if data blocks are to be cached on write
       // during compaction, we should forcefully
       // cache index and bloom blocks as well
-      if (cacheCompactedBlocksOnWrite && totalCompactedFilesSize <= cacheConf
-        .getCacheCompactedBlocksOnWriteThreshold()) {
-        writerCacheConf.enableCacheOnWrite();
+      if (writerCacheConf.enableCacheOnWrite(totalCompactedFilesSize)) {
         if (!cacheOnWriteLogged) {
           LOG.info("For {} , cacheCompactedBlocksOnWrite is true, hence enabled " +
               "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks", this);
           cacheOnWriteLogged = true;
         }
       } else {
-        writerCacheConf.setCacheDataOnWrite(false);
         if (totalCompactedFilesSize > cacheConf.getCacheCompactedBlocksOnWriteThreshold()) {
           // checking condition once again for logging
           LOG.debug(

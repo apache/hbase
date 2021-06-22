@@ -37,14 +37,14 @@ import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
 
 /**
- * Test class for DirectInStoreFlushContext
+ * Test class for DirectStoreFlushContext
  */
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestDirectInStoreFlushContext {
+public class TestDirectStoreFlushContext {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDirectInStoreFlushContext.class);
+    HBaseClassTestRule.forClass(TestDirectStoreFlushContext.class);
 
   @Rule
   public TestName name = new TestName();
@@ -62,7 +62,7 @@ public class TestDirectInStoreFlushContext {
     HStoreFile mockStoreFile = mock(HStoreFile.class);
     when(mockStoreFile.getReader()).thenReturn(mock(StoreFileReader.class));
     when(mockStore.createStoreFileAndReader(captor.capture())).thenReturn(mockStoreFile);
-    DirectInStoreFlushContext context = new DirectInStoreFlushContext(mockStore,
+    DirectStoreFlushContext context = new DirectStoreFlushContext(mockStore,
       0L, FlushLifeCycleTracker.DUMMY);
     context.tempFiles = new ArrayList<>();
     context.tempFiles.add(filePath);

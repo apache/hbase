@@ -135,7 +135,7 @@ public abstract class Compactor<T extends CellSink> {
     /** Min SeqId to keep during a major compaction **/
     public long minSeqIdToKeep = 0;
     /** Total size of the compacted files **/
-    private long totalCompactedFilesSize = 0;
+    public long totalCompactedFilesSize = 0;
   }
 
   /**

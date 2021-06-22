@@ -56,14 +56,14 @@ import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
 
 /**
- * Test class for DirectInStoreCompactor.
+ * Test class for DirectStoreCompactor.
  */
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestDirectInStoreCompactor {
+public class TestDirectStoreCompactor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDirectInStoreCompactor.class);
+    HBaseClassTestRule.forClass(TestDirectStoreCompactor.class);
 
   @Rule
   public TestName name = new TestName();
@@ -113,7 +113,7 @@ public class TestDirectInStoreCompactor {
 
   @Test
   public void testInitWriter() throws Exception {
-    DirectInStoreCompactor compactor = new DirectInStoreCompactor(config, mockStore);
+    DirectStoreCompactor compactor = new DirectStoreCompactor(config, mockStore);
     StoreFileWriter writer = compactor.initWriter(mockFileDetails, false, false);
     Path filePath = new Path(name.getMethodName());
     assertEquals(new Path(filePath, cfName), writer.getPath().getParent());
@@ -124,7 +124,7 @@ public class TestDirectInStoreCompactor {
     HStoreFile mockFile = mock(HStoreFile.class);
     ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
     when(mockStore.createStoreFileAndReader(pathCaptor.capture())).thenReturn(mockFile);
-    DirectInStoreCompactor compactor = new DirectInStoreCompactor(config, mockStore);
+    DirectStoreCompactor compactor = new DirectStoreCompactor(config, mockStore);
     StoreFileWriter writer = compactor.initWriter(mockFileDetails, false, false);
     compactor.createFileInStoreDir(writer.getPath());
     assertEquals(writer.getPath(), pathCaptor.getValue());
