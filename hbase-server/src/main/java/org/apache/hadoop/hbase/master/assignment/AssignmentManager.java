@@ -1587,9 +1587,9 @@ public class AssignmentManager {
       regionStateStore.visitMetaForRegion(regionEncodedName, visitor);
       return regionStates.getRegionState(regionEncodedName) == null ? null :
         regionStates.getRegionState(regionEncodedName).getRegion();
-    } catch(IOException e) {
-      LOG.error("Error trying to load region {} from META", regionEncodedName, e);
-      throw new UnknownRegionException("Error while trying load region from meta");
+    } catch (IOException e) {
+      throw new UnknownRegionException(
+          "Error trying to load region " + regionEncodedName + " from META", e);
     }
   }
 
