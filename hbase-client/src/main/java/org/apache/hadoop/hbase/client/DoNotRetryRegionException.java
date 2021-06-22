@@ -37,6 +37,10 @@ public class DoNotRetryRegionException extends DoNotRetryIOException {
     super(s);
   }
 
+  public DoNotRetryRegionException(String s, Throwable cause) {
+    super(s, cause);
+  }
+
   public DoNotRetryRegionException(Throwable cause) {
     super(cause);
   }
