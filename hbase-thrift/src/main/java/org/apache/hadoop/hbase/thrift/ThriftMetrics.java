@@ -19,14 +19,14 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
@@ -61,11 +61,12 @@ public class ThriftMetrics  {
   public static final String SLOW_RESPONSE_NANO_SEC =
     "hbase.thrift.slow.response.nano.second";
   public static final long DEFAULT_SLOW_RESPONSE_NANO_SEC = 10 * 1000 * 1000;
+  private final ThriftServerType thriftServerType;
 
 
   public ThriftMetrics(Configuration conf, ThriftServerType t) {
     slowResponseTime = conf.getLong( SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
-
+    thriftServerType = t;
     if (t == ThriftServerType.ONE) {
       source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class).createThriftOneSource();
     } else if (t == ThriftServerType.TWO) {
@@ -155,5 +156,9 @@ public class ThriftMetrics  {
       t = t.getCause();
     }
     return ClientExceptionsUtil.findException(t);
+  }
+
+  public ThriftServerType getThriftServerType() {
+    return thriftServerType;
   }
 }

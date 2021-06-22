@@ -192,8 +192,16 @@ exception AlreadyExists {
   1:string message
 }
 
+/**
+ * Specify type of thrift server: thrift and thrift2
+ */
+enum TThriftServerType {
+  ONE = 1,
+  TWO = 2
+}
+
 //
-// Service 
+// Service
 //
 
 service Hbase {
@@ -204,7 +212,7 @@ service Hbase {
     /** name of the table */
     1:Bytes tableName
   ) throws (1:IOError io)
-    
+
   /**
    * Disables a table (takes it off-line) If it is being served, the master
    * will tell the servers to stop serving it.
@@ -221,13 +229,13 @@ service Hbase {
     /** name of the table to check */
     1:Bytes tableName
   ) throws (1:IOError io)
-    
+
   void compact(1:Bytes tableNameOrRegionName)
     throws (1:IOError io)
-  
+
   void majorCompact(1:Bytes tableNameOrRegionName)
     throws (1:IOError io)
-    
+
   /**
    * List all the userspace tables.
    *
@@ -285,7 +293,7 @@ service Hbase {
     1:Text tableName
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get a single TCell for the specified table, row, and column at the
    * latest timestamp. Returns an empty list if no such value exists.
    *
@@ -305,7 +313,7 @@ service Hbase {
     4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get the specified number of versions for the specified table,
    * row, and column.
    *
@@ -328,7 +336,7 @@ service Hbase {
     5:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get the specified number of versions for the specified table,
    * row, and column.  Only versions less than or equal to the specified
    * timestamp will be returned.
@@ -355,10 +363,10 @@ service Hbase {
     6:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get all the data for the specified table and row at the latest
    * timestamp. Returns an empty list if the row does not exist.
-   * 
+   *
    * @return TRowResult containing the row and map of columns to TCells
    */
   list<TRowResult> getRow(
@@ -372,10 +380,10 @@ service Hbase {
     3:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get the specified columns for the specified table and row at the latest
    * timestamp. Returns an empty list if the row does not exist.
-   * 
+   *
    * @return TRowResult containing the row and map of columns to TCells
    */
   list<TRowResult> getRowWithColumns(
@@ -392,10 +400,10 @@ service Hbase {
     4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get all the data for the specified table and row at the specified
    * timestamp. Returns an empty list if the row does not exist.
-   * 
+   *
    * @return TRowResult containing the row and map of columns to TCells
    */
   list<TRowResult> getRowTs(
@@ -411,11 +419,11 @@ service Hbase {
     /** Get attributes */
     4:map<Text, Text> attributes
   ) throws (1:IOError io)
-    
-  /** 
+
+  /**
    * Get the specified columns for the specified table and row at the specified
    * timestamp. Returns an empty list if the row does not exist.
-   * 
+   *
    * @return TRowResult containing the row and map of columns to TCells
    */
   list<TRowResult> getRowWithColumnsTs(
@@ -511,7 +519,7 @@ service Hbase {
     5:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Apply a series of mutations (updates/deletes) to a row in a
    * single transaction.  If an exception is thrown, then the
    * transaction is aborted.  Default current timestamp is used, and
@@ -531,7 +539,7 @@ service Hbase {
     4:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
-  /** 
+  /**
    * Apply a series of mutations (updates/deletes) to a row in a
    * single transaction.  If an exception is thrown, then the
    * transaction is aborted.  The specified timestamp is used, and
@@ -554,7 +562,7 @@ service Hbase {
     5:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
-  /** 
+  /**
    * Apply a series of batches (each a series of mutations on a single row)
    * in a single transaction.  If an exception is thrown, then the
    * transaction is aborted.  Default current timestamp is used, and
@@ -571,7 +579,7 @@ service Hbase {
     3:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
-  /** 
+  /**
    * Apply a series of batches (each a series of mutations on a single row)
    * in a single transaction.  If an exception is thrown, then the
    * transaction is aborted.  The specified timestamp is used, and
@@ -607,8 +615,8 @@ service Hbase {
     /** amount to increment by */
     4:i64 value
   ) throws (1:IOError io, 2:IllegalArgument ia)
-    
-  /** 
+
+  /**
    * Delete all cells that match the passed row and column.
    */
   void deleteAll(
@@ -625,7 +633,7 @@ service Hbase {
     4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Delete all cells that match the passed row and column and whose
    * timestamp is equal-to or older than the passed timestamp.
    */
@@ -710,7 +718,7 @@ service Hbase {
     3:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get a scanner on the current table starting at the specified row and
    * ending at the last row in the table.  Return the specified columns.
    *
@@ -737,7 +745,7 @@ service Hbase {
     4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get a scanner on the current table starting and stopping at the
    * specified rows.  ending at the last row in the table.  Return the
    * specified columns.
@@ -791,7 +799,7 @@ service Hbase {
     4:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get a scanner on the current table starting at the specified row and
    * ending at the last row in the table.  Return the specified columns.
    * Only values with the specified timestamp are returned.
@@ -822,7 +830,7 @@ service Hbase {
     5:map<Text, Text> attributes
   ) throws (1:IOError io)
 
-  /** 
+  /**
    * Get a scanner on the current table starting and stopping at the
    * specified rows.  ending at the last row in the table.  Return the
    * specified columns.  Only values with the specified timestamp are
@@ -879,8 +887,8 @@ service Hbase {
 
   /**
    * Returns, starting at the scanner's current row value nbRows worth of
-   * rows and advances to the next row in the table.  When there are no more 
-   * rows in the table, or a key greater-than-or-equal-to the scanner's 
+   * rows and advances to the next row in the table.  When there are no more
+   * rows in the table, or a key greater-than-or-equal-to the scanner's
    * specified stopRow is reached,  an empty list is returned.
    *
    * @return a TRowResult containing the current row and a map of the columns to TCells.
@@ -906,22 +914,6 @@ service Hbase {
     /** id of a scanner returned by scannerOpen */
     1:ScannerID id
   ) throws (1:IOError io, 2:IllegalArgument ia)
-
-  /**
-   * Get the row just before the specified one.
-   *
-   * @return value for specified row/column
-   */
-  list<TCell> getRowOrBefore(
-    /** name of table */
-    1:Text tableName,
-
-    /** row key */
-    2:Text row,
-
-    /** column name */
-    3:Text family
-  ) throws (1:IOError io)
 
   /**
    * Get the regininfo for the specified row. It scans
@@ -973,4 +965,11 @@ service Hbase {
     /** Mutation attributes */
     7:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
+   * Get the type of this thrift server.
+   *
+   * @return the type of this thrift server
+   */
+  TThriftServerType getThriftServerType()
 }

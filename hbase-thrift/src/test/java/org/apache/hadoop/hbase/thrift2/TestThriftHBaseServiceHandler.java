@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Consistency;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
@@ -46,11 +44,11 @@ import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.filter.ParseFilter;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.thrift.ErrorThrowingGetObserver;
+import org.apache.hadoop.hbase.thrift.HbaseHandlerMetricsProxy;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
@@ -97,7 +95,13 @@ import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.scanFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.incrementFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import static java.nio.ByteBuffer.wrap;
 
 /**
@@ -867,7 +871,6 @@ public class TestThriftHBaseServiceHandler {
     TScan scan = new TScan();
     scan.setStartRow("testSmallScan".getBytes());
     scan.setStopRow("testSmallScan\uffff".getBytes());
-    scan.setSmall(true);
     scan.setCaching(2);
 
     // get scanner and rows
@@ -1100,7 +1103,7 @@ public class TestThriftHBaseServiceHandler {
     ThriftMetrics metrics = getMetrics(conf);
     ThriftHBaseServiceHandler hbaseHandler = createHandler();
     THBaseService.Iface handler =
-        ThriftHBaseServiceHandler.newInstance(hbaseHandler, metrics);
+        HbaseHandlerMetricsProxy.newInstance(hbaseHandler, metrics, conf);
     byte[] rowName = "testMetrics".getBytes();
     ByteBuffer table = wrap(tableAname);
 
@@ -1143,7 +1146,7 @@ public class TestThriftHBaseServiceHandler {
     ThriftHBaseServiceHandler hbaseHandler = createHandler();
     ThriftMetrics metrics = getMetrics(UTIL.getConfiguration());
     THBaseService.Iface handler =
-        ThriftHBaseServiceHandler.newInstance(hbaseHandler, metrics);
+        HbaseHandlerMetricsProxy.newInstance(hbaseHandler, metrics, null);
     ByteBuffer tTableName = wrap(tableName.getName());
 
     // check metrics increment with a successful get
@@ -1217,7 +1220,7 @@ public class TestThriftHBaseServiceHandler {
       ThriftHBaseServiceHandler hbaseHandler = createHandler();
       ThriftMetrics metrics = getMetrics(UTIL.getConfiguration());
       THBaseService.Iface handler =
-          ThriftHBaseServiceHandler.newInstance(hbaseHandler, metrics);
+          HbaseHandlerMetricsProxy.newInstance(hbaseHandler, metrics, null);
       ByteBuffer tTableName = wrap(tableName.getName());
 
       // check metrics latency with a successful get

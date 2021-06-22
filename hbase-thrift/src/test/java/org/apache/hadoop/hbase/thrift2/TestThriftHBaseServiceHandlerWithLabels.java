@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.security.visibility.ScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.SimpleScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
-import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TAuthorization;
