@@ -1707,22 +1707,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public CompactionSwitchResponse compactionSwitch(RpcController controller,
       CompactionSwitchRequest request) throws ServiceException {
+    rpcPreCheck("compactionSwitch");
     final CompactSplit compactSplitThread = regionServer.getCompactSplitThread();
-    try {
-      checkOpen();
-      requestCount.increment();
-      boolean prevState = compactSplitThread.isCompactionsEnabled();
-      CompactionSwitchResponse response =
-          CompactionSwitchResponse.newBuilder().setPrevState(prevState).build();
-      if (prevState == request.getEnabled()) {
-        // passed in requested state is same as current state. No action required
-        return response;
-      }
-      compactSplitThread.switchCompaction(request.getEnabled());
+    requestCount.increment();
+    boolean prevState = compactSplitThread.isCompactionsEnabled();
+    CompactionSwitchResponse response =
+        CompactionSwitchResponse.newBuilder().setPrevState(prevState).build();
+    if (prevState == request.getEnabled()) {
+      // passed in requested state is same as current state. No action required
       return response;
-    } catch (IOException ie) {
-      throw new ServiceException(ie);
     }
+    compactSplitThread.switchCompaction(request.getEnabled());
+    return response;
   }
 
   /**
