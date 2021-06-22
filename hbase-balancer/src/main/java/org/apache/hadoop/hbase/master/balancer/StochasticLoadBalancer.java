@@ -125,7 +125,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private int stepsPerRegion = 800;
   private long maxRunningTime = 30 * 1000 * 1; // 30 seconds.
   private int numRegionLoadsToRemember = 15;
-  private float minCostNeedBalance = 0.05f;
+  private float minCostNeedBalance = 0.025f;
 
   private List<CandidateGenerator> candidateGenerators;
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
