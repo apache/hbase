@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -91,8 +91,10 @@ public abstract class WALEntryStreamTestBase {
 
     @Override
     public Entry next() {
-      Waiter.waitFor(CONF, TEST_TIMEOUT_MS,
-        () -> (result = WALEntryStreamWithRetries.super.next()) != null);
+      Waiter.waitFor(CONF, TEST_TIMEOUT_MS, () -> {
+        result = WALEntryStreamWithRetries.super.next();
+        return result != null;
+      });
       return result;
     }
   }
