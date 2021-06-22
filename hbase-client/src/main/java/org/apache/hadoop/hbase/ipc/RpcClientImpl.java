@@ -659,6 +659,7 @@ public class RpcClientImpl extends AbstractRpcClient {
                 UserGroupInformation.getLoginUser().reloginFromTicketCache();
               }
               disposeSasl();
+              refreshServerPrincipal();
               //have granularity of milliseconds
               //we are sleeping with the Connection lock held but since this
               //connection instance is being used for connecting to the server
@@ -689,6 +690,35 @@ public class RpcClientImpl extends AbstractRpcClient {
           throw new IOException(ex);
         }
       });
+    }
+
+    /**
+     * Refresh service principal.
+     * Avoid DNS jitter that KDC to be unable to find service principal.
+     *
+     * @throws IOException
+     */
+    private void refreshServerPrincipal() throws IOException {
+      SecurityInfo securityInfo =
+          SecurityInfo.getInfo(remoteId.getServiceName());
+      if (useSasl && securityInfo != null) {
+        String serverKey = securityInfo.getServerPrincipal();
+        if (serverKey == null) {
+          throw new IOException(
+              "Can't obtain server Kerberos config key from SecurityInfo");
+        }
+        String newServerPrincipal = SecurityUtil
+            .getServerPrincipal(conf.get(serverKey),
+                server.getAddress().getCanonicalHostName()
+                    .toLowerCase(Locale.ROOT));
+        if (!newServerPrincipal.equals(serverPrincipal)) {
+          serverPrincipal = newServerPrincipal;
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Refresh RPC Server Kerberos principal name for service="
+              + remoteId.getServiceName() + " to " + serverPrincipal);
+        }
+      }
     }
 
     protected synchronized void setupIOstreams() throws IOException {
