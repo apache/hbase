@@ -559,7 +559,7 @@ public abstract class Compactor<T extends CellSink> {
    * @param newFiles the new files created by this compaction under a temp dir.
    * @param user the running user.
    * @return A list of the resulting store files already placed in the store dir and loaded into the
-   *  store cache.
+   * store cache.
    * @throws IOException if the commit fails.
    */
   public List<HStoreFile> commitCompaction(CompactionRequestImpl cr, List<Path> newFiles, User user)

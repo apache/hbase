@@ -52,14 +52,9 @@ public class DirectStoreCompactor extends DefaultCompactor {
       Compression.Algorithm compression, boolean includeMVCCReadpoint, boolean includesTag,
         boolean shouldDropBehind, long totalCompactedFilesSize) throws IOException {
     final CacheConfig writerCacheConf;
-    // Don't cache data on write on compactions.
     writerCacheConf = new CacheConfig(store.getCacheConfig());
-    writerCacheConf.enableCacheOnWrite(totalCompactedFilesSize);
-    InetSocketAddress[] favoredNodes = null;
-    if (store.getHRegion().getRegionServerServices() != null) {
-      favoredNodes = store.getHRegion().getRegionServerServices().getFavoredNodesForRegion(
-        store.getHRegion().getRegionInfo().getEncodedName());
-    }
+    writerCacheConf.enableCacheOnWriteForCompactions(totalCompactedFilesSize);
+    InetSocketAddress[] favoredNodes = store.getStoreContext().getFavoredNodes();
     HFileContext hFileContext = store.createFileContext(compression, includeMVCCReadpoint,
       includesTag, store.getCryptoContext());
     Path familyDir = new Path(store.getRegionFileSystem().getRegionDir(),
@@ -80,8 +75,8 @@ public class DirectStoreCompactor extends DefaultCompactor {
    * Overrides Compactor original implementation, assuming the passed file is already in the store
    * directory, thus it only creates the related HStoreFile for the passed Path.
    * @param newFile the new file created.
-   * @return
-   * @throws IOException
+   * @return HStoreFile reference for the newly created file.
+   * @throws IOException if any error occurs.
    */
   @Override
   protected HStoreFile createFileInStoreDir(Path newFile) throws IOException {
