@@ -1409,7 +1409,8 @@ public class ThriftUtilities {
     TTableDescriptor out = new TTableDescriptor();
     out.setTableName(tableNameFromHBase(in.getTableName()));
     Map<ImmutableBytesWritable, ImmutableBytesWritable> attributes = in.getValues();
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> attribute : attributes.entrySet()) {
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> attribute
+      : attributes.entrySet()) {
       out.putToAttributes(ByteBuffer.wrap(attribute.getKey().get()),
         ByteBuffer.wrap(attribute.getValue().get()));
     }
