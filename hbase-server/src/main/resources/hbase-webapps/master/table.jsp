@@ -319,13 +319,11 @@
             try {
               metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
             } catch (NotAllMetaRegionsOnlineException e) {
-              //Since a region in transition state throw a NotAllMetaRegionsOnlineException then
-              //could cause the whole UI crash, and the operator could have learned that this
-              //region is in transition state from the master status UI. We should ignore to display
-              //this region info.
-              continue;
+              //Region in transition state here throw a NotAllMetaRegionsOnlineException causes
+              //the UI crash.
             }
             for (int i = 0; i < 1; i++) {
+              //If metaLocation is null, default value below would be displayed in UI.
               String hostAndPort = "";
               String readReq = "N/A";
               String writeReq = "N/A";
@@ -394,13 +392,11 @@
              try {
                metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
              } catch (NotAllMetaRegionsOnlineException e) {
-               //Since a region in transition state throw a NotAllMetaRegionsOnlineException then
-               //could cause the whole UI crash, and the operator could have learned that this
-               //region is in transition state from the master status UI. We should ignore to display
-               //this region info.
-               continue;
+               //Region in transition state here throw a NotAllMetaRegionsOnlineException causes
+               //the UI crash.
              }
              for (int i = 0; i < 1; i++) {
+               //If metaLocation is null, default value below would be displayed in UI.
                String hostAndPort = "";
                float locality = 0.0f;
                float localityForSsd = 0.0f;
@@ -452,13 +448,11 @@
             try {
               metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
             } catch (NotAllMetaRegionsOnlineException e) {
-              //Since a region in transition state throw a NotAllMetaRegionsOnlineException then
-              //could cause the whole UI crash, and the operator could have learned that this
-              //region is in transition state from the master status UI. We should ignore to display
-              //this region info.
-              continue;
+              //Region in transition state here throw a NotAllMetaRegionsOnlineException causes
+              //the UI crash.
             }
             for (int i = 0; i < 1; i++) {
+              //If metaLocation is null, default value below would be displayed in UI.
               String hostAndPort = "";
               long compactingCells = 0;
               long compactedCells = 0;
