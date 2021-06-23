@@ -240,7 +240,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     curFunctionCosts = new double[costFunctions.size()];
     tempFunctionCosts = new double[costFunctions.size()];
 
-    LOG.info("Loaded config; maxSteps=" + maxSteps + ", stepsPerRegion=" + stepsPerRegion +
+    LOG.info("Loaded config; maxSteps=" + maxSteps + " ,runMaxSteps=" + runMaxSteps,
+      ", stepsPerRegion=" + stepsPerRegion +
       ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable + ", CostFunctions=" +
       Arrays.toString(getCostFunctionNames()) + " etc.");
   }

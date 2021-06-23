@@ -70,7 +70,6 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
     conf.setFloat("hbase.master.balancer.stochastic.regionCountCost", 0);
     conf.setFloat("hbase.master.balancer.stochastic.primaryRegionCountCost", 0);
     conf.setFloat("hbase.master.balancer.stochastic.tableSkewCost", 0);
-    conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
     conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY,
       HeterogeneousRegionCountCostFunction.class.getName());
     // Need to ensure test dir has been created.
