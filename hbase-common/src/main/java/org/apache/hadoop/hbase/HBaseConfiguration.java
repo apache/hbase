@@ -254,14 +254,35 @@ public class HBaseConfiguration extends Configuration {
    */
   public static String getPassword(Configuration conf, String alias,
       String defPass) throws IOException {
-    String passwd;
-    char[] p = conf.getPassword(alias);
-    if (p != null) {
-      LOG.debug("Config option {} was found through the Configuration getPassword method.", alias);
-      passwd = new String(p);
-    } else {
-      LOG.debug("Config option {} was not found. Using provided default value", alias);
-      passwd = defPass;
+    String passwd = null;
+    try {
+      Method m = Configuration.class.getMethod("getPassword", String.class);
+      char[] p = (char[]) m.invoke(conf, alias);
+      if (p != null) {
+        LOG.debug(String.format("Config option \"%s\" was found through" +
+            " the Configuration getPassword method.", alias));
+        passwd = new String(p);
+      } else {
+        LOG.debug(String.format(
+            "Config option \"%s\" was not found. Using provided default value",
+            alias));
+        passwd = defPass;
+      }
+    } catch (NoSuchMethodException e) {
+      // this is a version of Hadoop where the credential
+      //provider API doesn't exist yet
+      LOG.debug(String.format(
+          "Credential.getPassword method is not available." +
+              " Falling back to configuration."));
+      passwd = conf.get(alias, defPass);
+    } catch (SecurityException e) {
+      throw new IOException(e.getMessage(), e);
+    } catch (IllegalAccessException e) {
+      throw new IOException(e.getMessage(), e);
+    } catch (IllegalArgumentException e) {
+      throw new IOException(e.getMessage(), e);
+    } catch (InvocationTargetException e) {
+      throw new IOException(e.getMessage(), e);
     }
     return passwd;
   }
