@@ -77,9 +77,10 @@ public final class DelayedUtil {
   /**
    * @return null (if an interrupt) or an instance of E; resets interrupt on calling thread.
    */
-  public static <E extends Delayed> E takeWithoutInterrupt(final DelayQueue<E> queue) {
+  public static <E extends Delayed> E takeWithoutInterrupt(final DelayQueue<E> queue,
+      final long timeout, final TimeUnit timeUnit) {
     try {
-      return queue.take();
+      return queue.poll(timeout, timeUnit);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return null;
