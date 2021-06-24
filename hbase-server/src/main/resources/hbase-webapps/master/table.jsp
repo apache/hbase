@@ -28,6 +28,7 @@
   import="java.util.Map"
   import="java.util.TreeMap"
   import="java.util.concurrent.TimeUnit"
+  import="org.codehaus.jettison.json.JSONArray"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HColumnDescriptor"
@@ -67,6 +68,7 @@
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
+
 <%!
   /**
    * @return An empty region load stamped with the passed in <code>regionInfo</code>
@@ -104,22 +106,7 @@
   String right = request.getParameter("right");
   long totalStoreFileSizeMB = 0;
 
-  final String numRegionsParam = request.getParameter("numRegions");
-  // By default, the page render up to 10000 regions to improve the page load time
-  int numRegionsToRender = 10000;
-  if (numRegionsParam != null) {
-    // either 'all' or a number
-    if (numRegionsParam.equals("all")) {
-      numRegionsToRender = -1;
-    } else {
-      try {
-        numRegionsToRender = Integer.parseInt(numRegionsParam);
-      } catch (NumberFormatException ex) {
-        // ignore
-      }
-    }
-  }
-  int numRegions = 0;
+  String stateJsonStr = "";
 
   String pageTitle;
   if ( !readOnly && action != null ) {
@@ -548,7 +535,6 @@
         RegionInfo regionInfo = hriEntry.getRegionInfo();
         ServerName addr = hriEntry.getServerName();
         regionsToServer.put(regionInfo, addr);
-
         if (addr != null) {
           ServerMetrics sl = master.getServerManager().getLoad(addr);
           if (sl != null) {
@@ -587,246 +573,247 @@
                 ((float) totalCompactedCells / totalCompactingCells)) + "%";
       }
       if(regions != null && regions.size() > 0) { %>
+    <%
+      List<Map.Entry<RegionInfo, RegionMetrics>> entryList = new ArrayList<>(regionsToLoad.entrySet());
+      List<Map<String, String>> baseList = new ArrayList<>();
+      for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
+        Map<String, String> reMap = new HashMap<>();
+        //base state
+        RegionInfo regionInfo = hriEntry.getKey();
+        ServerName addr = regionsToServer.get(regionInfo);
+        RegionMetrics load = hriEntry.getValue();
+        String readReq = "N/A";
+        String writeReq = "N/A";
+        String regionSize = ZEROMB;
+        String fileCount = "N/A";
+        String memSize = ZEROMB;
+        float locality = 0.0f;
+        String state = "N/A";
+        if (load != null) {
+          readReq = String.format("%,1d", load.getReadRequestCount());
+          writeReq = String.format("%,1d", load.getWriteRequestCount());
+          double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
+          if (rSize > 0) {
+            regionSize = StringUtils.byteDesc((long) rSize);
+          }
+          fileCount = String.format("%,1d", load.getStoreFileCount());
+          double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
+          if (mSize > 0) {
+            memSize = StringUtils.byteDesc((long) mSize);
+          }
+          locality = load.getDataLocality();
+        }
+        if (stateMap.containsKey(regionInfo.getEncodedName())) {
+          state = stateMap.get(regionInfo.getEncodedName()).toString();
+        }
+        if (addr != null) {
+          ServerMetrics sl = master.getServerManager().getLoad(addr);
+          // This port might be wrong if RS actually ended up using something else.
+          urlRegionServer = "//" + URLEncoder.encode(addr.getHostname()) + ":"
+            + master.getRegionServerInfoPort(addr) + "/rs-status";
+          if (sl != null) {
+            Integer i = regDistribution.get(addr);
+            if (null == i) {
+              i = Integer.valueOf(0);
+            }
+            regDistribution.put(addr, i + 1);
+            if (withReplica && RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
+              i = primaryRegDistribution.get(addr);
+              if (null == i) {
+                i = Integer.valueOf(0);
+              }
+              primaryRegDistribution.put(addr, i + 1);
+            }
+          }
+        }
+        reMap.put("regionName_base", Bytes.toStringBinary(regionInfo.getRegionName()));
+        reMap.put("regionName_compact", Bytes.toStringBinary(regionInfo.getRegionName()));
+        if (urlRegionServer != null) {
+          String regionServerName = addr == null
+            ? "-"
+            : addr.getHostname().toString() + ":" + master.getRegionServerInfoPort(addr);
+          reMap.put("regionServerName_base", regionServerName + "##" + urlRegionServer);
+          reMap.put("regionServerName_compact", regionServerName + "##" + urlRegionServer);
+        } else {
+          reMap.put("regionServerName_base", "");
+          reMap.put("regionServerName_compact", "");
+        }
+        reMap.put("readReq", readReq);
+        reMap.put("writeReq", writeReq);
+        reMap.put("regionSize", regionSize);
+        reMap.put("fileCount", fileCount);
+        reMap.put("memSize", memSize);
+        reMap.put("locality", String.format("%,1f", locality));
+        reMap.put("startKey", Bytes.toStringBinary(regionInfo.getStartKey()));
+        reMap.put("endKey", Bytes.toStringBinary(regionInfo.getEndKey()));
+        reMap.put("state", state);
+        if (withReplica) {
+          reMap.put("replicaId", String.valueOf(regionInfo.getReplicaId()));
+        } else {
+          reMap.put("replicaId", "");
+        }
+        //compaction state
+        long compactingCells = 0;
+        long compactedCells = 0;
+        String compactionProgress = "";
+        if (load != null) {
+          compactingCells = load.getCompactingCellCount();
+          compactedCells = load.getCompactedCellCount();
+          if (compactingCells > 0) {
+            compactionProgress = String.format("%.2f", 100 * ((float) compactedCells / compactingCells))
+              + "%";
+          }
+        }
+        reMap.put("compactingCells", String.format("%,1d", compactingCells));
+        reMap.put("compactedCells", String.format("%,1d", compactedCells));
+        reMap.put("RemainingCells", String.format("%,1d", compactingCells - compactedCells));
+        reMap.put("compactionProgress", compactionProgress);
+        baseList.add(reMap);
+
+      }
+      JSONArray stateJsonArr = new JSONArray(baseList);
+      stateJsonStr = stateJsonArr.toString();
+    %>
     <h2>Table Regions</h2>
     <div class="tabbable">
       <ul class="nav nav-pills">
-        <li class="active">
+        <li class="active" id="tab_base">
           <a href="#tab_baseStats" data-toggle="tab">Base Stats</a>
         </li>
-        <li class="">
+        <li class="" id="tab_compaction">
           <a href="#tab_compactStats" data-toggle="tab">Compactions</a>
+        </li>
+        <li style="float: right;">
+          <select class="pagination" id="page-select"
+                  style="font-size: 14px;height:32px; border: 1px solid #ddd;color: #337ab7; margin-top:0%;">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">all</option>
+          </select>
         </li>
       </ul>
       <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
         <div class="tab-pane active" id="tab_baseStats">
-          <table id="regionServerDetailsTable" class="tablesorter table table-striped">
-            <thead>
-            <tr>
-              <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
-              <th>Region Server</th>
-              <th>ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
-              <th>WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
-              <th>StorefileSize<br>(<%= totalSizeStr %>)</th>
-              <th>Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
-              <th>MemSize<br>(<%= totalMemSizeStr %>)</th>
-              <th>Locality</th>
-              <th>Start Key</th>
-              <th>End Key</th>
-              <th>Region State</th>
-              <%
-                if (withReplica) {
-              %>
-              <th>ReplicaID</th>
-              <%
-                }
-              %>
-            </tr>
-            </thead>
-            <tbody>
+        <table id="regionServerDetailsTable" class="tablesorter table table-striped">
+          <thead>
+          <tr>
+            <th class="header" onclick="customChange(this);" id="regionName_base">
+              Name(<%= String.format("%,1d", regions.size())%>)
+            </th>
+            <th class="header" onclick="customChange(this);" id="regionServerName_base">Region Server</th>
+            <th class="header" onclick="customChange(this);" id="readReq">
+              ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)
+            </th>
+            <th class="header" onclick="customChange(this);" id="writeReq">
+              WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)
+            </th>
+            <th class="header" onclick="customChange(this);" id="regionSize">
+              StorefileSize<br>(<%= totalSizeStr %>)
+            </th>
+            <th class="header" onclick="customChange(this);" id="fileCount">
+              Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)
+            </th>
+            <th class="header" onclick="customChange(this);" id="MemSize">
+              MemSize<br>(<%= totalMemSizeStr %>)
+            </th>
+            <th class="header" onclick="customChange(this);" id="locality">Locality</th>
+            <th class="header" onclick="customChange(this);" id="startKey">Start Key</th>
+            <th class="header" onclick="customChange(this);" id="endKey">End Key</th>
+            <th class="header" onclick="customChange(this);" id="state">Region State</th>
             <%
-              List<Map.Entry<RegionInfo, RegionMetrics>> entryList = new ArrayList<>(regionsToLoad.entrySet());
-              numRegions = regions.size();
-              int numRegionsRendered = 0;
-              // render all regions
-              if (numRegionsToRender < 0) {
-                numRegionsToRender = numRegions;
+              if (withReplica) {
+            %>
+            <th class="header" onclick="customChange(this);" id="replicaID">ReplicaID</th>
+            <%
               }
-              for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
-                RegionInfo regionInfo = hriEntry.getKey();
-                ServerName addr = regionsToServer.get(regionInfo);
-                RegionMetrics load = hriEntry.getValue();
-                String readReq = "N/A";
-                String writeReq = "N/A";
-                String regionSize = ZEROMB;
-                String fileCount = "N/A";
-                String memSize = ZEROMB;
-                float locality = 0.0f;
-                String state = "N/A";
-                if (load != null) {
-                  readReq = String.format("%,1d", load.getReadRequestCount());
-                  writeReq = String.format("%,1d", load.getWriteRequestCount());
-                  double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
-                  if (rSize > 0) {
-                    regionSize = StringUtils.byteDesc((long)rSize);
-                  }
-                  fileCount = String.format("%,1d", load.getStoreFileCount());
-                  double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
-                  if (mSize > 0) {
-                    memSize = StringUtils.byteDesc((long)mSize);
-                  }
-                  locality = load.getDataLocality();
-                }
-                if (stateMap.containsKey(regionInfo.getEncodedName())) {
-                  state = stateMap.get(regionInfo.getEncodedName()).toString();
-                }
-                if (addr != null) {
-                  ServerMetrics sl = master.getServerManager().getLoad(addr);
-                  // This port might be wrong if RS actually ended up using something else.
-                  urlRegionServer =
-                          "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
-                  if(sl != null) {
-                    Integer i = regDistribution.get(addr);
-                    if (null == i) i = Integer.valueOf(0);
-                    regDistribution.put(addr, i + 1);
-                    if (withReplica && RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
-                      i = primaryRegDistribution.get(addr);
-                      if (null == i) i = Integer.valueOf(0);
-                      primaryRegDistribution.put(addr, i+1);
-                    }
-                  }
-                }
-                if (numRegionsRendered < numRegionsToRender) {
-                  numRegionsRendered++;
             %>
-            <tr>
-              <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
-              <%
-                if (urlRegionServer != null) {
-              %>
-              <td>
-                <a href="<%= urlRegionServer %>"><%= addr == null? "-": StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
-              </td>
-              <%
-              } else {
-              %>
-              <td class="undeployed-region">not deployed</td>
-              <%
-                }
-              %>
-              <td><%= readReq%></td>
-              <td><%= writeReq%></td>
-              <td><%= regionSize%></td>
-              <td><%= fileCount%></td>
-              <td><%= memSize%></td>
-              <td><%= locality%></td>
-              <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
-              <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
-              <td><%= state%></td>
-              <%
-                if (withReplica) {
-              %>
-              <td><%= regionInfo.getReplicaId() %></td>
-              <%
-                }
-              %>
-            </tr>
-            <% } %>
-            <% } %>
-            </tbody>
-          </table>
-          <% if (numRegions > numRegionsRendered) {
-            String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
-          %>
-          <p>This table has <b><%= numRegions %></b> regions in total, in order to improve the page load time,
-            only <b><%= numRegionsRendered %></b> regions are displayed here, <a href="<%= allRegionsUrl %>">click
-              here</a> to see all regions.</p>
-          <% } %>
-        </div>
-        <div class="tab-pane" id="tab_compactStats">
-          <table id="tableCompactStatsTable" class="tablesorter table table-striped">
-            <thead>
-            <tr>
-              <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
-              <th>Region Server</th>
-              <th>Num. Compacting Cells<br>(<%= String.format("%,1d", totalCompactingCells)%>)</th>
-              <th>Num. Compacted Cells<br>(<%= String.format("%,1d", totalCompactedCells)%>)</th>
-              <th>Remaining Cells<br>(<%= String.format("%,1d", totalCompactingCells-totalCompactedCells)%>)</th>
-              <th>Compaction Progress<br>(<%= totalCompactionProgress %>)</th>
-            </tr>
-            </thead>
-            <tbody>
-            <%
-              numRegionsRendered = 0;
-              for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
-                RegionInfo regionInfo = hriEntry.getKey();
-                ServerName addr = regionsToServer.get(regionInfo);
-                RegionMetrics load = hriEntry.getValue();
-                long compactingCells = 0;
-                long compactedCells = 0;
-                String compactionProgress = "";
-                if (load != null) {
-                  compactingCells = load.getCompactingCellCount();
-                  compactedCells = load.getCompactedCellCount();
-                  if (compactingCells > 0) {
-                    compactionProgress = String.format("%.2f", 100 * ((float)
-                            compactedCells / compactingCells)) + "%";
-                  }
-                }
-                if (addr != null) {
-                  // This port might be wrong if RS actually ended up using something else.
-                  urlRegionServer =
-                          "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
-                }
-                if (numRegionsRendered < numRegionsToRender) {
-                  numRegionsRendered++;
-            %>
-            <tr>
-              <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
-              <%
-                if (urlRegionServer != null) {
-              %>
-              <td>
-                <a href="<%= urlRegionServer %>"><%= addr == null? "-": StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
-              </td>
-              <%
-              } else {
-              %>
-              <td class="undeployed-region">not deployed</td>
-              <%
-                }
-              %>
-              <td><%= String.format("%,1d", compactingCells)%></td>
-              <td><%= String.format("%,1d", compactedCells)%></td>
-              <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
-              <td><%= compactionProgress%></td>
-            </tr>
-            <% } %>
-            <% } %>
-            </tbody>
-          </table>
-          <% if (numRegions > numRegionsRendered) {
-            String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
-          %>
-          <p>This table has <b><%= numRegions %></b> regions in total, in order to improve the page load time,
-            only <b><%= numRegionsRendered %></b> regions are displayed here, <a href="<%= allRegionsUrl %>">click
-              here</a> to see all regions.</p>
-          <% } %>
-        </div>
+          </tr>
+          </thead>
+          <tbody id="tbody_basestate">
+          </tbody>
+        </table>
+      </div>
+      <div class="tab-pane" id="tab_compactStats">
+        <table id="tableCompactStatsTable" class="tablesorter table table-striped">
+          <thead>
+          <tr>
+            <th class="header" onclick="customChange(this);" id="regionName_compact">
+              Name(<%= String.format("%,1d", regions.size())%>)
+            </th>
+            <th class="header" onclick="customChange(this);" id="regionServerName_compact">Region Server</th>
+            <th class="header" onclick="customChange(this);" id="compactingCells">Num. Compacting
+              Cells<br>(<%= String.format("%,1d", totalCompactingCells)%>)
+            </th>
+            <th class="header" onclick="customChange(this);" id="compactedCells">Num. Compacted
+              Cells<br>(<%= String.format("%,1d", totalCompactedCells)%>)
+            </th>
+            <th class="header" onclick="customChange(this);" id="RemainingCells">Remaining
+              Cells<br>(<%= String.format("%,1d", totalCompactingCells - totalCompactedCells)%>)
+            </th>
+            <th class="header" onclick="customChange(this);" id="compactionProgress">Compaction
+              Progress<br>(<%= totalCompactionProgress %>
+              )
+            </th>
+          </tr>
+          </thead>
+          <tbody id="tbody_compactionstate">
+          </tbody>
+        </table>
       </div>
     </div>
-    <h2>Regions by Region Server</h2>
-    <%
-      if (withReplica) {
-    %>
-    <table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th><th>Primary Region Count</th></tr></thead>
-        <%
+    <nav aria-label="Page navigation">
+      <ul class="pagination" id="page" style="float: right;">
+      </ul>
+    </nav>
+  </div>
+  <h2>Regions by Region Server</h2>
+  <%
+    if (withReplica) {
+  %>
+  <table id="regionServerTable" class="tablesorter table table-striped">
+    <thead>
+    <tr>
+      <th>Region Server</th>
+      <th>Region Count</th>
+      <th>Primary Region Count</th>
+    </tr>
+    </thead>
+      <%
 } else {
 %>
       <table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th></tr></thead>
         <tbody>
+      <%
+        }
+      %>
+      <%
+        for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
+          ServerName addr = rdEntry.getKey();
+          String url = "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(
+            addr) + "/rs-status";
+      %>
+      <tr>
+        <td>
+          <a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master
+            .getRegionServerInfoPort(addr) %>
+          </a></td>
+        <td><%= rdEntry.getValue()%>
+        </td>
+        <%
+          if (withReplica) {
+        %>
+        <td><%= primaryRegDistribution.get(addr)%>
+        </td>
         <%
           }
         %>
-        <%
-          for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
-            ServerName addr = rdEntry.getKey();
-            String url = "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
-        %>
-        <tr>
-          <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a></td>
-          <td><%= rdEntry.getValue()%></td>
-          <%
-            if (withReplica) {
-          %>
-          <td><%= primaryRegDistribution.get(addr)%></td>
-          <%
-            }
-          %>
-        </tr>
-        <% } %>
-        </tbody>
-      </table>
-        <% }
+      </tr>
+      <% } %>
+      </tbody>
+    </table>
+      <% }
 } catch(Exception ex) {
   for(StackTraceElement element : ex.getStackTrace()) {
     %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
@@ -836,96 +823,95 @@
 }
 } // end else
 %>
-
-      <h2>Table Stats</h2>
-      <table class="table table-striped">
+    <h2>Table Stats</h2>
+    <table class="table table-striped">
+      <tr>
+        <th>Name</th>
+        <th>Value</th>
+        <th>Description</th>
+      </tr>
+      <tr>
+        <td>Size</td>
+        <td>
+          <%
+            if (totalStoreFileSizeMB > 0) {
+          %>
+          <%= StringUtils.TraditionalBinaryPrefix.
+            long2String(totalStoreFileSizeMB * 1024 * 1024, "B", 2)%>
+        </td>
+        <%
+        } else {
+        %>
+        0 MB </td>
+        <%
+          }
+        %>
+        <td>Total size of store files</td>
+      </tr>
+    </table>
+      <% if (!readOnly) { %>
+    <p><hr/></p>
+    Actions:
+    <p>
+    <center>
+      <table class="table" style="border: 0;" width="95%">
         <tr>
-          <th>Name</th>
-          <th>Value</th>
-          <th>Description</th>
+          <form method="get">
+            <input type="hidden" name="action" value="compact"/>
+            <input type="hidden" name="name" value="<%= escaped_fqtn %>"/>
+            <td class="centered">
+              <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn"/>
+            </td>
+            <td style="text-align: center;">
+              <input type="text" name="key" size="40" placeholder="Row Key (optional)"/>
+            </td>
+            <td>
+              This action will force a compaction of all regions of the table, or,
+              if a key is supplied, only the region containing the
+              given key.
+            </td>
+          </form>
         </tr>
         <tr>
-          <td>Size</td>
-          <td>
-            <%
-              if (totalStoreFileSizeMB > 0) {
-            %>
-            <%= StringUtils.TraditionalBinaryPrefix.
-                    long2String(totalStoreFileSizeMB * 1024 * 1024, "B", 2)%></td>
-          <%
-          } else {
-          %>
-          0 MB </td>
-          <%
-            }
-          %>
-          <td>Total size of store files</td>
+          <form method="get">
+            <input type="hidden" name="action" value="split"/>
+            <input type="hidden" name="name" value="<%= escaped_fqtn %>"/>
+            <td class="centered">
+              <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn"/>
+            </td>
+            <td style="text-align: center;">
+              <input type="text" name="key" size="40" placeholder="Row Key (optional)"/>
+            </td>
+            <td>
+              This action will force a split of all eligible
+              regions of the table, or, if a key is supplied, only the region containing the
+              given key. An eligible region is one that does not contain any references to
+              other regions. Split requests for noneligible regions will be ignored.
+            </td>
+          </form>
+        </tr>
+        <tr>
+          <form method="get">
+            <input type="hidden" name="action" value="merge"/>
+            <input type="hidden" name="name" value="<%= escaped_fqtn %>"/>
+            <td class="centered">
+              <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn"/>
+            </td>
+            <td style="text-align: center;">
+              <input type="text" name="left" size="40" placeholder="Region Key (required)"/>
+              <input type="text" name="right" size="40" placeholder="Region Key (required)"/>
+            </td>
+            <td>
+              This action will merge two regions of the table, Merge requests for
+              noneligible regions will be ignored.
+            </td>
+          </form>
         </tr>
       </table>
-
-        <% if (!readOnly) { %>
-      <p><hr/></p>
-      Actions:
-      <p>
-      <center>
-        <table class="table" style="border: 0;" width="95%" >
-          <tr>
-            <form method="get">
-              <input type="hidden" name="action" value="compact" />
-              <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-              <td class="centered">
-                <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn" />
-              </td>
-              <td style="text-align: center;">
-                <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
-              </td>
-              <td>
-                This action will force a compaction of all regions of the table, or,
-                if a key is supplied, only the region containing the
-                given key.
-              </td>
-            </form>
-          </tr>
-          <tr>
-            <form method="get">
-              <input type="hidden" name="action" value="split" />
-              <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-              <td class="centered">
-                <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn" />
-              </td>
-              <td style="text-align: center;">
-                <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
-              </td>
-              <td>
-                This action will force a split of all eligible
-                regions of the table, or, if a key is supplied, only the region containing the
-                given key. An eligible region is one that does not contain any references to
-                other regions. Split requests for noneligible regions will be ignored.
-              </td>
-            </form>
-          </tr>
-          <tr>
-            <form method="get">
-              <input type="hidden" name="action" value="merge" />
-              <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-              <td class="centered">
-                <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn" />
-              </td>
-              <td style="text-align: center;">
-                <input type="text" name="left" size="40" placeholder="Region Key (required)" />
-                <input type="text" name="right" size="40" placeholder="Region Key (required)" />
-              </td>
-              <td>
-                This action will merge two regions of the table, Merge requests for
-                noneligible regions will be ignored.
-              </td>
-            </form>
-          </tr>
-        </table>
-      </center>
-      </p>
-        <% } %>
-  </div>
+    </center>
+    </p>
+      <% } %>
+</div>
 </div>
 <% }
 } catch(TableNotFoundException e) { %>
@@ -962,20 +948,244 @@ else { // handle the case for fqtn is null or master is not initialized with err
   <jsp:include page="redirect.jsp" />
 </div>
 <% } %>
-
 <jsp:include page="footer.jsp" />
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
-
 <script>
-$(document).ready(function()
-    {
-        $("#regionServerTable").tablesorter();
-        $("#regionServerDetailsTable").tablesorter();
-        $("#tableRegionTable").tablesorter();
-        $("#tableCompactStatsTable").tablesorter();
-        $("#metaTableCompactStatsTable").tablesorter();
+    var jsonArr;
+    var thName;
+    jsonArr = <%= stateJsonStr %>;
+    var pageSize = $('#page-select').val();
+    var totalSize = jsonArr.length;
+    var totalPage = Math.ceil(totalSize / pageSize);
+    var currentPage;
+    var startData;
+    var endData;
+    var tag = window.location.hash;
+    if (tag === "") {
+        tag = "baseStats";
     }
-);
+    tag = tag.replace("#", "");
+    if (totalSize != 0) {
+        initial();
+    }
+
+    function initial() {
+        $('#page').append(`<li class="prePage"><a href="javascript:void(0)" aria-label="Previous"><span aria-hidden="true">«</span></a></li>`);
+        for (let i = 1; i <= totalPage; i++) {
+            $('#page').append('<li class="page-item"><a href="javascript:void(0)">' + i + '</a></li>');
+        }
+        $('#page').append(`<li class="nextPage"><a href="javascript:void(0)" aria-label="Next"><span aria-hidden="true">&raquo;</span></a></li>`);
+        //var tag=$("li[class='active']").get(0).innerText;
+        $('.page-item').eq(0).addClass('active');
+        pageination(1, tag);
+
+        function getActiveState() {
+            if ($('#tab_base').attr("class") == "active") {
+
+                return "baseStats";
+            } else {
+                return "compactStats";
+            }
+
+        }
+
+        $('.page-item').on('click', function () {
+            let index = $(this).index();
+            $(this).addClass('active').siblings().removeClass('active');
+            var type = getActiveState();
+            pageination(index, type);
+        })
+        $('.prePage').click(function () {
+            $('.page-item').find(function () {
+                let index = parseInt($('.active').get(2).innerText) - 1;
+                if (index < 1) {
+                    index = 1;
+                }
+                $('.page-item').eq(index - 1).addClass('active').siblings().removeClass('active');
+                var type = getActiveState();
+                pageination(index, type);
+            })
+        })
+        $('.nextPage').click(function () {
+            $('.page-item').find(function () {
+                let index = parseInt($('.active').get(2).innerText) + 1;
+                if (index > totalPage) {
+                    index = totalPage;
+                }
+                $('.page-item').eq(index - 1).addClass('active').siblings().removeClass('active');
+                var type = getActiveState();
+                pageination(index, type);
+            })
+        })
+    }
+
+    $('#page-select').change(function () {
+        pageSize = $('#page-select').val();
+        if (pageSize == "all") {
+            pageSize = totalSize;
+        }
+        totalPage = Math.ceil(totalSize / pageSize);
+        $('.prePage').remove();
+        $('.page-item').remove();
+        $('.nextPage').remove();
+        initial();
+    })
+
+    $('#tab_compaction').click(function () {
+        $('.page-item').find(function () {
+            $('#page-select').get(0).selectedIndex = 0;
+            pageSize = $('#page-select').val();
+            totalPage = Math.ceil(totalSize / pageSize);
+            $('.prePage').remove();
+            $('.page-item').remove();
+            $('.nextPage').remove();
+            $("thead tr th").removeClass("headerSortDown");
+            $("thead tr th").removeClass("headerSortUp");
+            tag = "compactStats";
+            initial();
+        })
+    })
+
+    $('#tab_base').click(function () {
+        $('.page-item').find(function () {
+            $('#page-select').get(0).selectedIndex = 0;
+            pageSize = $('#page-select').val();
+            totalPage = Math.ceil(totalSize / pageSize);
+            $('.prePage').remove();
+            $('.page-item').remove();
+            $('.nextPage').remove();
+            $("thead tr th").removeClass("headerSortDown");
+            $("thead tr th").removeClass("headerSortUp");
+            tag = "baseStats";
+            initial();
+        })
+    })
+
+    function pageination(i, type) {
+        currentPage = i;
+        startData = (currentPage - 1) * pageSize;
+        endData = currentPage * pageSize - 1;
+        if (endData >= totalSize) {
+            endData = totalSize - 1;
+        }
+        if (type == "baseStats") {
+            $('.tr-item-base').remove();
+            for (let i = startData; i <= endData; i++) {
+                var regionName = jsonArr[i].regionName_base;
+                var regionServerName = jsonArr[i].regionServerName_base;
+                var readReq = jsonArr[i].readReq;
+                var writeReq = jsonArr[i].writeReq;
+                var regionSize = jsonArr[i].regionSize;
+                var fileCount = jsonArr[i].fileCount;
+                var memSize = jsonArr[i].memSize;
+                var locality = jsonArr[i].locality;
+                var startKey = jsonArr[i].startKey;
+                var endKey = jsonArr[i].endKey;
+                var state = jsonArr[i].state;
+                var replicaId = jsonArr[i].replicaId;
+
+                //append basestate data html
+                var htmlStr = '<tr class="tr-item-base">' + '<td>' + regionName + '</td>';
+
+                if (regionServerName == "") {
+                    htmlStr += '<td class="undeployed-region">not deployed</td>';
+                } else if (regionServerName.length != 0) {
+                    var addrSplit = regionServerName.split('##');
+                    htmlStr += '<td>' + '<a href="' + addrSplit[1] + '">' + addrSplit[0] + '</a>' + '</td>';
+                }
+                var htmlStrCompaction = htmlStr;
+
+                htmlStr += '<td>' + readReq + '</td>' +
+                    '<td>' + writeReq + '</td>' +
+                    '<td>' + regionSize + '</td>' +
+                    '<td>' + fileCount + '</td>' +
+                    '<td>' + memSize + '</td>' +
+                    '<td>' + locality + '</td>' +
+                    '<td>' + startKey + '</td>' +
+                    '<td>' + endKey + '</td>' +
+                    '<td>' + state + '</td>';
+
+                if (replicaId != "") {
+                    htmlStr += '<td>' + replicaId + '</td>' + '</tr>';
+                } else {
+                    htmlStr += '</tr>';
+                }
+                $('#tbody_basestate').append(htmlStr);
+
+            }
+        } else {
+            $('.tr-item-compaction').remove();
+            for (let i = startData; i <= endData; i++) {
+                var regionName = jsonArr[i].regionName_compact;
+                var regionServerName = jsonArr[i].regionServerName_compact;
+                var compactingCells = jsonArr[i].compactingCells;
+                var compactedCells = jsonArr[i].compactedCells;
+                var compactionProgress = jsonArr[i].compactionProgress;
+                var RemainingCells = jsonArr[i].RemainingCells;
+
+                //append basestate data html
+                var htmlStrCompaction = '<tr class="tr-item-compaction">' + '<td>' + regionName + '</td>';
+
+                if (regionServerName == "") {
+                    htmlStrCompaction += '<td class="undeployed-region">not deployed</td>';
+                } else if (regionServerName.length != 0) {
+                    var addrSplit = regionServerName.split('##');
+                    htmlStrCompaction += '<td>' + '<a href="' + addrSplit[1] + '">' + addrSplit[0] + '</a>' + '</td>';
+                }
+                htmlStrCompaction += '<td>' + compactingCells + '</td>' +
+                    '<td>' + compactedCells + '</td>' +
+                    '<td>' + RemainingCells + '</td>' +
+                    '<td>' + compactionProgress + '</td>' + '</tr>';
+                $('#tbody_compactionstate').append(htmlStrCompaction);
+
+            }
+        }
+
+    }
+
+
+    function customChange(b) {
+        thName = b.id;
+        var c = $("#" + thName).attr("class");
+        var d = "headerSortUp";
+
+        $('.prePage').remove();
+        $('.page-item').remove();
+        $('.nextPage').remove();
+        if (c == "header headerSortUp") {
+            d = "header headerSortDown";
+            $("thead tr th").removeClass("headerSortUp");
+            jsonArr.sort(customIncSort);
+        } else if (c == "header headerSortDown") {
+            d = "header headerSortUp";
+            $("thead tr th").removeClass("headerSortDown");
+            jsonArr.sort(customDecSort);
+        } else {
+            $("thead tr th").removeClass("headerSortDown");
+            $("thead tr th").removeClass("headerSortUp");
+        }
+        $("#" + thName).addClass(d);
+        initial();
+    }
+
+    //sort
+    function customIncSort(a, b) {
+        return a[thName].localeCompare(b[thName]);
+    }
+
+    function customDecSort(a, b) {
+        return b[thName].localeCompare(a[thName]);
+    }
+
+
+</script>
+<script>
+    $(document).ready(function () {
+            $("#regionServerTable").tablesorter();
+            $("#tableRegionTable").tablesorter();
+            $("#metaTableCompactStatsTable").tablesorter();
+        }
+    );
 </script>
