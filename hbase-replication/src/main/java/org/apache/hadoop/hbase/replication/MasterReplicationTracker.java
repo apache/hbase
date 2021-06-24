@@ -33,6 +33,10 @@ import org.slf4j.LoggerFactory;
 /**
  * A {@link ReplicationTracker} implementation which polls the region servers list periodically from
  * master.
+ * <p/>
+ * FIXME: The current implementation is not enough to make the behavior always correct as the
+ * {@link Admin#getRegionServers()} call can not tell if there is a change comparing to the previous
+ * call. Need to introduce a new Admin method to make this class correct.
  */
 @InterfaceAudience.Private
 class MasterReplicationTracker extends ReplicationTrackerBase {
@@ -84,12 +88,11 @@ class MasterReplicationTracker extends ReplicationTrackerBase {
 
   private void refresh() throws IOException {
     Set<ServerName> newRegionServers = reload();
-    for (ServerName oldRs : regionServers) {
-      if (!newRegionServers.contains(oldRs)) {
-        notifyListeners(oldRs);
-      }
-    }
+    Set<ServerName> oldRegionServers = regionServers;
     this.regionServers = newRegionServers;
+    if (!newRegionServers.equals(oldRegionServers)) {
+      notifyListeners(newRegionServers);
+    }
   }
 
   @Override

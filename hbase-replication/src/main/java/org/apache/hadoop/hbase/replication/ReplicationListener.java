@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.util.Set;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -31,8 +32,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ReplicationListener {
 
   /**
-   * A region server has been removed from the local cluster
-   * @param regionServer the removed region server
+   * Called when region server list is changed.
+   * <p/>
+   * Notice that, you could get a regionServerListChanged call when the given {@code regionServers}
+   * is still the same comparing to the previous call. This is because that the notification is
+   * always asynchronous and then we need to fetch the region server list. And if a region server
+   * goes up and down within the interval, we will see an unchanged region server list. But the call
+   * is still important to let you know that there is a region server list change in the past, and
+   * you need to compare the region server list with the list gotten from other place to determine
+   * the change set.
    */
-  public void regionServerRemoved(ServerName regionServer);
+  public void regionServerListChanged(Set<ServerName> regionServers);
 }

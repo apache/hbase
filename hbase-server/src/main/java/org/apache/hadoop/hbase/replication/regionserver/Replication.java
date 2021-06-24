@@ -102,10 +102,9 @@ public class Replication implements ReplicationSourceService {
       this.replicationPeers =
           ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
-      this.replicationTracker = ReplicationFactory
-        .getReplicationTracker(ReplicationTrackerParams.create(server.getConfiguration(), server)
-          .abortable(server).zookeeper(server.getZooKeeper()).choreService(server.getChoreService())
-          .connection(server.getConnection()));
+      this.replicationTracker = ReplicationFactory.getReplicationTracker(ReplicationTrackerParams
+        .create(server.getConfiguration(), server).zookeeper(server.getZooKeeper())
+        .choreService(server.getChoreService()).connection(server.getConnection()));
     } catch (Exception e) {
       throw new IOException("Failed replication handler create", e);
     }

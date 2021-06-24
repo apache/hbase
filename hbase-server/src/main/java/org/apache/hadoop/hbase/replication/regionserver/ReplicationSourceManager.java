@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationListener;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -79,6 +78,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
  * This class is responsible to manage all the replication sources. There are two classes of
@@ -127,7 +127,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * </ul>
  */
 @InterfaceAudience.Private
-public class ReplicationSourceManager implements ReplicationListener {
+public class ReplicationSourceManager {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceManager.class);
   // all the sources that read this RS's logs and every peer only has one replication source
   private final ConcurrentMap<String, ReplicationSourceInterface> sources;
@@ -230,7 +230,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.clusterId = clusterId;
     this.walFactory = walFactory;
     this.syncReplicationPeerMappingManager = syncReplicationPeerMappingManager;
-    this.replicationTracker.registerListener(this);
+    this.replicationTracker.registerListener(this::adoptAbandonedQueues);
     // It's preferable to failover 1 RS at a time, but with good zk servers
     // more could be processed at the same time.
     int nbWorkers = conf.getInt("replication.executor.workers", 1);
@@ -268,29 +268,20 @@ public class ReplicationSourceManager implements ReplicationListener {
         throwIOExceptionWhenFail(() -> this.queueStorage.addPeerToHFileRefs(id));
       }
     }
-    return this.executor.submit(this::adoptAbandonedQueues);
+    return this.executor.submit(this::adoptAbandonedQueuesAfterIntialization);
   }
 
-  private void adoptAbandonedQueues() {
-    List<ServerName> currentReplicators = null;
+  private void adoptAbandonedQueues(Set<ServerName> liveRegionServers) {
+    List<ServerName> currentReplicators;
     try {
       currentReplicators = queueStorage.getListOfReplicators();
     } catch (ReplicationException e) {
       server.abort("Failed to get all replicators", e);
       return;
     }
-    Set<ServerName> liveRegionServers;
-    try {
-      // must call this method to load the first snapshot of live region servers and initialize
-      // listeners
-      liveRegionServers = replicationTracker.loadLiveRegionServersAndInitializeListeners();
-    } catch (IOException e) {
-      server.abort("Failed load live region server list for replication", e);
-      return;
-    }
     LOG.info("Current list of replicators: {}, live RSes: {}", currentReplicators,
       liveRegionServers);
-    if (currentReplicators == null || currentReplicators.isEmpty()) {
+    if (CollectionUtils.isEmpty(currentReplicators)) {
       return;
     }
 
@@ -300,6 +291,19 @@ public class ReplicationSourceManager implements ReplicationListener {
         transferQueues(rs);
       }
     }
+  }
+
+  private void adoptAbandonedQueuesAfterIntialization() {
+    Set<ServerName> liveRegionServers;
+    try {
+      // must call this method to load the first snapshot of live region servers and initialize
+      // listeners
+      liveRegionServers = replicationTracker.loadLiveRegionServersAndInitializeListeners();
+    } catch (IOException e) {
+      server.abort("Failed load live region server list for replication", e);
+      return;
+    }
+    adoptAbandonedQueues(liveRegionServers);
   }
 
   /**
@@ -838,11 +842,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
   }
 
-  @Override
-  public void regionServerRemoved(ServerName regionserver) {
-    transferQueues(regionserver);
-  }
-
   /**
    * Transfer all the queues of the specified to this region server. First it tries to grab a lock
    * and if it works it will move the old queues and finally will delete the old queues.
@@ -1245,7 +1244,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       // Replication Source so it can start replicating it.
       WAL wal = walProvider.getWAL(regionInfo);
       wal.registerWALActionsListener(listener);
-      crs.enqueueLog(((AbstractFSWAL)wal).getCurrentFileName());
+      crs.enqueueLog(((AbstractFSWAL<?>)wal).getCurrentFileName());
     }
     return crs.startup();
   }

@@ -61,8 +61,7 @@ public class TestZKReplicationTracker extends ReplicationTrackerTestBase {
 
   @Override
   protected ReplicationTrackerParams createParams() {
-    return ReplicationTrackerParams.create(CONF, new WarnOnlyStoppable())
-      .abortable(new WarnOnlyAbortable()).zookeeper(ZKW);
+    return ReplicationTrackerParams.create(CONF, new WarnOnlyStoppable()).zookeeper(ZKW);
   }
 
   @AfterClass

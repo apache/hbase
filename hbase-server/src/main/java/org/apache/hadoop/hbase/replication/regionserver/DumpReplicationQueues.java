@@ -309,9 +309,8 @@ public class DumpReplicationQueues extends Configured implements Tool {
     StringBuilder sb = new StringBuilder();
 
     queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
-    replicationTracker = ReplicationFactory
-      .getReplicationTracker(ReplicationTrackerParams.create(getConf(), new WarnOnlyStoppable())
-        .abortable(new WarnOnlyAbortable()).zookeeper(zkw));
+    replicationTracker = ReplicationFactory.getReplicationTracker(
+      ReplicationTrackerParams.create(getConf(), new WarnOnlyStoppable()).zookeeper(zkw));
     Set<ServerName> liveRegionServers =
       new HashSet<>(replicationTracker.loadLiveRegionServersAndInitializeListeners());
 

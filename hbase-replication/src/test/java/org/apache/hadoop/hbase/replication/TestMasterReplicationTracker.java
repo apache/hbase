@@ -71,8 +71,8 @@ public class TestMasterReplicationTracker extends ReplicationTrackerTestBase {
 
   @Override
   protected ReplicationTrackerParams createParams() {
-    return ReplicationTrackerParams.create(CONF, new WarnOnlyStoppable())
-      .abortable(new WarnOnlyAbortable()).connection(CONN).choreService(CHORE_SERVICE);
+    return ReplicationTrackerParams.create(CONF, new WarnOnlyStoppable()).connection(CONN)
+      .choreService(CHORE_SERVICE);
   }
 
   @Override

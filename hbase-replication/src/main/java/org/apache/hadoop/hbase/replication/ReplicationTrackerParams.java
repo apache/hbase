@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Connection;
@@ -37,8 +36,6 @@ public final class ReplicationTrackerParams {
 
   private ZKWatcher zookeeper;
 
-  private Abortable abortable;
-
   private Connection conn;
 
   private ChoreService choreService;
@@ -50,11 +47,6 @@ public final class ReplicationTrackerParams {
 
   public ReplicationTrackerParams zookeeper(ZKWatcher zookeeper) {
     this.zookeeper = zookeeper;
-    return this;
-  }
-
-  public ReplicationTrackerParams abortable(Abortable abortable) {
-    this.abortable = abortable;
     return this;
   }
 
@@ -78,10 +70,6 @@ public final class ReplicationTrackerParams {
 
   public ZKWatcher zookeeper() {
     return zookeeper;
-  }
-
-  public Abortable abortable() {
-    return abortable;
   }
 
   public Connection connection() {

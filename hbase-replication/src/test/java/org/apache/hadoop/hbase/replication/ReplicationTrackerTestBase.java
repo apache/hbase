@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.Abortable;
+import java.util.Set;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -39,17 +39,14 @@ public abstract class ReplicationTrackerTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationTrackerTestBase.class);
 
   private ReplicationTracker rt;
-
-  private AtomicInteger rsRemovedCount;
-
-  private volatile ServerName rsRemovedData;
+  
+  private volatile Set<ServerName> regionServers;
 
   @Before
   public void setUp() {
     ReplicationTrackerParams params = createParams();
     rt = ReplicationFactory.getReplicationTracker(params);
-    rsRemovedCount = new AtomicInteger(0);
-    rsRemovedData = null;
+    regionServers = null;
   }
 
   protected abstract ReplicationTrackerParams createParams();
@@ -68,17 +65,16 @@ public abstract class ReplicationTrackerTestBase {
     // delete one
     removeServer(sn);
     // wait for event
-    Waiter.waitFor(HBaseConfiguration.create(), 15000, () -> rsRemovedCount.get() >= 1);
-    assertEquals(sn, rsRemovedData);
+    Waiter.waitFor(HBaseConfiguration.create(), 15000, () -> regionServers != null);
+    assertTrue(regionServers.isEmpty());
   }
 
   private class DummyReplicationListener implements ReplicationListener {
 
     @Override
-    public void regionServerRemoved(ServerName regionServer) {
-      rsRemovedData = regionServer;
-      rsRemovedCount.getAndIncrement();
-      LOG.debug("Received regionServerRemoved event: " + regionServer);
+    public void regionServerListChanged(Set<ServerName> rses) {
+      regionServers = rses;
+      LOG.debug("Received regionServerListChanged event: {}", regionServers);
     }
   }
 
@@ -91,19 +87,6 @@ public abstract class ReplicationTrackerTestBase {
 
     @Override
     public boolean isStopped() {
-      return false;
-    }
-  }
-
-  protected static class WarnOnlyAbortable implements Abortable {
-
-    @Override
-    public void abort(String why, Throwable e) {
-      LOG.warn("TestReplicationTracker received abort, ignoring. Reason: " + why);
-    }
-
-    @Override
-    public boolean isAborted() {
       return false;
     }
   }

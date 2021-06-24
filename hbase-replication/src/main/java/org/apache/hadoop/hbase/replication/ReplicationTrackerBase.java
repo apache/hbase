@@ -24,16 +24,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Base implementation class for replication tracker.
  */
 @InterfaceAudience.Private
 abstract class ReplicationTrackerBase implements ReplicationTracker {
-
-  private static final Logger LOG = LoggerFactory.getLogger(ReplicationTrackerBase.class);
 
   // listeners to be notified
   private final List<ReplicationListener> listeners = new CopyOnWriteArrayList<>();
@@ -50,10 +46,9 @@ abstract class ReplicationTrackerBase implements ReplicationTracker {
     listeners.remove(listener);
   }
 
-  protected final void notifyListeners(ServerName regionServer) {
-    LOG.info("{} is dead, triggering replicatorRemoved event", regionServer);
+  protected final void notifyListeners(Set<ServerName> regionServers) {
     for (ReplicationListener listener : listeners) {
-      listener.regionServerRemoved(regionServer);
+      listener.regionServerListChanged(regionServers);
     }
   }
 
