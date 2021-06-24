@@ -7672,6 +7672,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.metricsRegion != null) {
       this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
     }
+    if (rsServices != null) {
+      rsServices.getMetrics().updateReadQueryMeter(getTableDescriptor().getTableName(), 1);
+    }
   }
 
   @Override
