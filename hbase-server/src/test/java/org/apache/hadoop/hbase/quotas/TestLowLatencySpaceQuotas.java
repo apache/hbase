@@ -20,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -265,7 +266,7 @@ public class TestLowLatencySpaceQuotas {
 
     // Compute the size of the file for the Region we'll send to archive
     Region region = Iterables.getOnlyElement(TEST_UTIL.getHBaseCluster().getRegions(tn));
-    List<? extends Store> stores = region.getStores();
+    Collection<? extends Store> stores = region.getStores();
     long summer = 0;
     for (Store store : stores) {
       summer += store.getStorefilesSize();

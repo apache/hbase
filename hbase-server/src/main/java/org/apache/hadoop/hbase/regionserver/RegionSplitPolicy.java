@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -84,7 +85,7 @@ public abstract class RegionSplitPolicy extends Configured {
    * previously returned true.
    */
   protected byte[] getSplitPoint() {
-    List<HStore> stores = region.getStores();
+    Collection<HStore> stores = region.getStores();
 
     byte[] splitPointFromLargestStore = null;
     long largestStoreSize = 0;

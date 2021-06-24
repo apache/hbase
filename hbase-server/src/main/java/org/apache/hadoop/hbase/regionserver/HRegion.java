@@ -6518,8 +6518,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public List<HStore> getStores() {
-    return new ArrayList<>(stores.values());
+  public Collection<HStore> getStores() {
+    return stores.values();
   }
 
   @Override

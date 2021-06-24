@@ -749,7 +749,7 @@ class MetricsRegionServerWrapperImpl
           tempCheckAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
           tempCheckAndMutateChecksPassed += r.getCheckAndMutateChecksPassed();
           tempBlockedRequestsCount += r.getBlockedRequestsCount();
-          List<? extends Store> storeList = r.getStores();
+          Collection<? extends Store> storeList = r.getStores();
           tempNumStores += storeList.size();
           for (Store store : storeList) {
             tempNumStoreFiles += store.getStorefilesCount();

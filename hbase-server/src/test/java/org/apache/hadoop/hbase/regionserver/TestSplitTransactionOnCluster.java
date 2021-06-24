@@ -504,7 +504,7 @@ public class TestSplitTransactionOnCluster {
   private void clearReferences(HRegion region) throws IOException {
     // Presumption.
     assertEquals(1, region.getStores().size());
-    HStore store = region.getStores().get(0);
+    HStore store = new ArrayList<>(region.getStores()).get(0);
     while (store.hasReferences()) {
       // Wait on any current compaction to complete first.
       CompactionProgress progress = store.getCompactionProgress();

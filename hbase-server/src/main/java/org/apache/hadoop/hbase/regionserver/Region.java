@@ -92,7 +92,7 @@ public interface Region extends ConfigurationObserver {
    * <p>Use with caution.  Exposed for use of fixup utilities.
    * @return a list of the Stores managed by this region
    */
-  List<? extends Store> getStores();
+  Collection<? extends Store> getStores();
 
   /**
    * Return the Store for the given family

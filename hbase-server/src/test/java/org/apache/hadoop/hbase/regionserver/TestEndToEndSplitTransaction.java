@@ -128,7 +128,7 @@ public class TestEndToEndSplitTransaction {
 
       List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
       regions.stream()
-        .forEach(r -> r.getStores().get(0).getStorefiles().stream()
+        .forEach(r -> new ArrayList<>(r.getStores()).get(0).getStorefiles().stream()
           .filter(s -> s.isReference() && !scanner.containsKey(r.getRegionInfo().getEncodedName()))
           .forEach(sf -> {
             StoreFileReader reader = ((HStoreFile) sf).getReader();
@@ -147,7 +147,7 @@ public class TestEndToEndSplitTransaction {
       regions.stream()
         .filter(region -> scanner.containsKey(region.getRegionInfo().getEncodedName()))
         .forEach(r -> assertFalse("Contains an open file reference which can be split",
-          r.getStores().get(0).canSplit()));
+          new ArrayList<>(r.getStores()).get(0).canSplit()));
     } finally {
       scanner.values().forEach(s -> {
         try {
@@ -484,7 +484,7 @@ public class TestEndToEndSplitTransaction {
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(hri.getTable());
     regions.stream().forEach(r -> {
       try {
-        r.getStores().get(0).closeAndArchiveCompactedFiles();
+        new ArrayList<>(r.getStores()).get(0).closeAndArchiveCompactedFiles();
       } catch (IOException ioe) {
         LOG.error("failed in removing compacted file", ioe);
       }

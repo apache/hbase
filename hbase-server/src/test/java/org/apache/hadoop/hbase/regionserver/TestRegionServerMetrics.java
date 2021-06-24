@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -465,7 +466,7 @@ public class TestRegionServerMetrics {
       // metrics are reset by the region initialization
       region.initialize();
       // This is how we MOB compact region
-      List<HStore> stores = region.getStores();
+      Collection<HStore> stores = region.getStores();
       for (HStore store: stores) {
         // Force major compaction
         store.triggerMajorCompaction();

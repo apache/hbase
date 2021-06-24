@@ -190,7 +190,7 @@ public class TestAsyncTableGetMultiThreaded {
         }
         LOG.info("====== Compaction on {} finished, close and archive compacted files ======",
           region.getRegionInfo());
-        region.getStores().get(0).closeAndArchiveCompactedFiles();
+        new ArrayList<>(region.getStores()).get(0).closeAndArchiveCompactedFiles();
         LOG.info("====== Close and archive compacted files on {} done ======",
           region.getRegionInfo());
       }

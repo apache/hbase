@@ -22,6 +22,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -87,8 +88,8 @@ public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
     }
 
     @Override
-    public List<HStore> getStores() {
-      List<HStore> list = new ArrayList<>(stores.size());
+    public Collection<HStore> getStores() {
+      Collection<HStore> list = new ArrayList<>(stores.size());
       /*
        * This is used to trigger the custom definition (faulty)
        * of refresh HFiles API.

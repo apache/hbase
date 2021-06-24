@@ -116,7 +116,7 @@ public class TestAtomicOperation {
   @After
   public void teardown() throws IOException {
     if (region != null) {
-      CacheConfig cacheConfig = region.getStores().get(0).getCacheConfig();
+      CacheConfig cacheConfig = new ArrayList<>(region.getStores()).get(0).getCacheConfig();
       region.close();
       WAL wal = region.getWAL();
       if (wal != null) {
