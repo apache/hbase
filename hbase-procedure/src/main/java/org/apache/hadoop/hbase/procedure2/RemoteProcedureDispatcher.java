@@ -310,8 +310,14 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     @Override
     public void run() {
       while (running.get()) {
-        final DelayedWithTimeout task = DelayedUtil.takeWithoutInterrupt(queue);
+        final DelayedWithTimeout task = DelayedUtil.takeWithoutInterrupt(queue,
+          20, TimeUnit.SECONDS);
         if (task == null || task == DelayedUtil.DELAYED_POISON) {
+          if (task == null && queue.size() > 0) {
+            LOG.error("DelayQueue for RemoteProcedureDispatcher is not empty when timed waiting"
+              + " elapsed. If this is repeated consistently, it means no element is getting expired"
+              + " from the queue and it might freeze the system. Queue: {}", queue);
+          }
           // the executor may be shutting down, and the task is just the shutdown request
           continue;
         }
