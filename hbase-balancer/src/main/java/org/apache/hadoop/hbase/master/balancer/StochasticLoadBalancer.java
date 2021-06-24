@@ -286,12 +286,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return false;
   }
 
-  private String getBalanceReason(double total) {
+  private String getBalanceReason(double total, double sumMultiplier) {
     if (total <= 0) {
-      return "(weighted sum of imbalance = " + total + " <= 0";
+      return "(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern) = " + total + " <= 0";
+    } else if (sumMultiplier <= 0) {
+      return "sumMultiplier = " + sumMultiplier + " <= 0";
     } else if ((total / sumMultiplier) < minCostNeedBalance) {
-      return "(weighted average imbalance = " +
-        (total / sumMultiplier) + " < threshold (" + minCostNeedBalance + ")";
+      return "[(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern)]/sumMultiplier = " +
+        (total / sumMultiplier) + " <= minCostNeedBalance(" + minCostNeedBalance + ")";
     } else {
       return "";
     }
@@ -340,7 +342,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     if (balanced) {
       final double calculatedTotal = total;
-      sendRejectionReasonToRingBuffer(() -> getBalanceReason(calculatedTotal), costFunctions);
+      sendRejectionReasonToRingBuffer(() ->
+        getBalanceReason(calculatedTotal, sumMultiplier), costFunctions);
       LOG.info("{} - skipping load balancing because weighted average imbalance={} <= threshold({})."
           + " If you want more aggressive balancing, either lower "
           + "hbase.master.balancer.stochastic.minCostNeedBalance from {} or increase the relative "
