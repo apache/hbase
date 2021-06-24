@@ -240,7 +240,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    * @param family HColumnDescriptor for this column
    * @param confParam configuration object failed.  Can be null.
    */
-  protected HStore(final HRegion region, final ColumnFamilyDescriptor family,
+  public HStore(final HRegion region, final ColumnFamilyDescriptor family,
       final Configuration confParam, boolean warmup) throws IOException {
 
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor

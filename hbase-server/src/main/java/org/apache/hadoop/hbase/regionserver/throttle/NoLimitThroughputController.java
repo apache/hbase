@@ -27,7 +27,7 @@ public class NoLimitThroughputController implements ThroughputController {
   public static final NoLimitThroughputController INSTANCE = new NoLimitThroughputController();
 
   @Override
-  public void setup(RegionServerServices server) {
+  public void setup(ThroughputControllerService server) {
   }
 
   @Override

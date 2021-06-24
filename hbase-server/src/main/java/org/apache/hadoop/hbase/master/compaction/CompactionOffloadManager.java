@@ -164,14 +164,11 @@ public class CompactionOffloadManager {
     return compactionServerList.get((int) index);
   }
 
-  private AsyncCompactionServerService getCsStub(final ServerName sn) throws IOException {
-    AsyncCompactionServerService csStub = this.csStubs.get(sn);
-    if (csStub == null) {
+  private AsyncCompactionServerService getOrCreateCsStub(final ServerName sn) {
+    return csStubs.computeIfAbsent(sn, v -> {
       LOG.debug("New CS stub connection to {}", sn);
-      csStub = this.masterServices.getAsyncClusterConnection().getCompactionServerService(sn);
-      this.csStubs.put(sn, csStub);
-    }
-    return csStub;
+      return this.masterServices.getAsyncClusterConnection().getCompactionServerService(sn);
+    });
   }
 
   public CompactResponse requestCompaction(CompactRequest request) throws ServiceException {
@@ -179,7 +176,7 @@ public class CompactionOffloadManager {
     LOG.info("Receive compaction request from {}, and send to Compaction server:{}",
       ProtobufUtil.toString(request), targetCompactionServer);
     try {
-      FutureUtils.get(getCsStub(targetCompactionServer).requestCompaction(request));
+      FutureUtils.get(getOrCreateCsStub(targetCompactionServer).requestCompaction(request));
     } catch (Throwable t) {
       LOG.error("requestCompaction from master to CS error: {}", t);
     }

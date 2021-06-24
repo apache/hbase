@@ -3503,6 +3503,12 @@ public class HRegionServer extends AbstractServer implements
         .build();
   }
 
+  /**
+   * @return the max compaction pressure of all stores on this regionserver. The value should be
+   *         greater than or equal to 0.0, and any value greater than 1.0 means we enter the
+   *         emergency state that some stores have too many store files.
+   * @see org.apache.hadoop.hbase.regionserver.Store#getCompactionPressure()
+   */
   @Override
   public double getCompactionPressure() {
     double max = 0;
@@ -3540,6 +3546,12 @@ public class HRegionServer extends AbstractServer implements
     return flushThroughputController;
   }
 
+  /**
+   * @return the flush pressure of all stores on this regionserver. The value should be greater than
+   *         or equal to 0.0, and any value greater than 1.0 means we enter the emergency state that
+   *         global memstore size already exceeds lower limit.
+   */
+  @Deprecated
   @Override
   public double getFlushPressure() {
     if (getRegionServerAccounting() == null || cacheFlusher == null) {

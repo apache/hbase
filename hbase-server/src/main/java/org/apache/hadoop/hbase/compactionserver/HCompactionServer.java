@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.compactionserver;
 
 import java.io.IOException;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AbstractServer;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -56,6 +58,9 @@ public class HCompactionServer extends AbstractServer {
   public static final String COMPACTIONSERVER = "compactionserver";
   private static final Logger LOG = LoggerFactory.getLogger(HCompactionServer.class);
 
+  // ChoreService used to schedule tasks that we want to run periodically
+  private ChoreService choreService;
+
   @Override
   protected String getProcessName() {
     return COMPACTIONSERVER;
@@ -68,14 +73,13 @@ public class HCompactionServer extends AbstractServer {
 
   @Override
   public ChoreService getChoreService() {
-    return null;
+    return choreService;
   }
 
   protected final CSRpcServices rpcServices;
 
   // Stub to do compaction server status calls against the master.
   private volatile CompactionServerStatusService.BlockingInterface cssStub;
-
   CompactionThreadManager compactionThreadManager;
   /**
    * Get the current master from ZooKeeper and open the RPC connection to it. To get a fresh
@@ -120,6 +124,7 @@ public class HCompactionServer extends AbstractServer {
     // login the server principal (if using secure Hadoop)
     login(userProvider, this.rpcServices.getIsa().getHostName());
     Superusers.initialize(conf);
+    this.choreService = new ChoreService(getName(), true);
     this.compactionThreadManager = new CompactionThreadManager(conf, this);
     this.rpcServices.start();
   }
@@ -138,16 +143,26 @@ public class HCompactionServer extends AbstractServer {
     long reportEndTime) {
     ClusterStatusProtos.CompactionServerLoad.Builder serverLoad =
       ClusterStatusProtos.CompactionServerLoad.newBuilder();
-    serverLoad.setCompactedCells(0);
-    serverLoad.setCompactingCells(0);
+    Collection<CompactionTask> tasks = compactionThreadManager.getRunningCompactionTasks().values();
+    long compactingCells = 0;
+    long compactedCells = 0;
+    for (CompactionTask compactionTask : tasks) {
+      serverLoad.addCompactionTasks(compactionTask.getTaskName());
+      CompactionProgress progress = compactionTask.getStore().getCompactionProgress();
+      if (progress != null) {
+        compactedCells += progress.getCurrentCompactedKvs();
+        compactingCells += progress.getTotalCompactingKVs();
+      }
+    }
+    serverLoad.setCompactedCells(compactedCells);
+    serverLoad.setCompactingCells(compactingCells);
     serverLoad.setTotalNumberOfRequests(rpcServices.requestCount.sum());
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
     return serverLoad.build();
   }
 
-  private boolean tryCompactionServerReport(long reportStartTime, long reportEndTime)
-      throws IOException {
+  private boolean tryCompactionServerReport(long reportStartTime, long reportEndTime) throws IOException {
     CompactionServerStatusService.BlockingInterface css = cssStub;
     if (css == null) {
       return false;
@@ -231,6 +246,17 @@ public class HCompactionServer extends AbstractServer {
         abort(prefix + t.getMessage(), t);
       }
     }
+    stopChores();
+    if (this.compactionThreadManager != null) {
+      this.compactionThreadManager.waitForStop();
+    }
+
+  }
+
+  private void stopChores() {
+    if (this.choreService != null) {
+      choreService.shutdown();
+    }
   }
 
   @Override
@@ -243,7 +269,6 @@ public class HCompactionServer extends AbstractServer {
     }
     stop(msg);
   }
-
 
   @Override
   public void stop(final String msg) {

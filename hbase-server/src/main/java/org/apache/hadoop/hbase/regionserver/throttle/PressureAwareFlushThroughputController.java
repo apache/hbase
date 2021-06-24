@@ -68,7 +68,7 @@ public class PressureAwareFlushThroughputController extends PressureAwareThrough
       10L * 1024 * 1024;// 10MB
 
   @Override
-  public void setup(final RegionServerServices server) {
+  public void setup(final ThroughputControllerService server) {
     server.getChoreService().scheduleChore(
       new ScheduledChore("FlushThroughputTuner", this, tuningPeriod, this.tuningPeriod) {
 

@@ -80,7 +80,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
   protected final ConcurrentMap<String, ActiveOperation> activeOperations = new ConcurrentHashMap<>();
 
   @Override
-  public abstract void setup(final RegionServerServices server);
+  public abstract void setup(final ThroughputControllerService server);
 
   protected String throughputDesc(long deltaSize, long elapsedTime) {
     return throughputDesc((double) deltaSize / elapsedTime * 1000);

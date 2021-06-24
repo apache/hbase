@@ -19,12 +19,16 @@ package org.apache.hadoop.hbase.compactionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AbstractRpcServices;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.SimpleRpcSchedulerFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -35,6 +39,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
@@ -88,8 +93,18 @@ public class CSRpcServices extends AbstractRpcServices
   public CompactResponse requestCompaction(RpcController controller,
       CompactionProtos.CompactRequest request) {
     requestCount.increment();
+    ServerName rsServerName = ProtobufUtil.toServerName(request.getServer());
+    RegionInfo regionInfo = ProtobufUtil.toRegionInfo(request.getRegionInfo());
+    ColumnFamilyDescriptor cfd = ProtobufUtil.toColumnFamilyDescriptor(request.getFamily());
+    boolean major = request.getMajor();
+    int priority = request.getPriority();
+    List<HBaseProtos.ServerName> favoredNodes = Collections.singletonList(request.getServer());
     LOG.info("Receive compaction request from {}", ProtobufUtil.toString(request));
-    compactionServer.compactionThreadManager.requestCompaction();
+    CompactionTask compactionTask =
+        CompactionTask.newBuilder().setRsServerName(rsServerName).setRegionInfo(regionInfo)
+            .setColumnFamilyDescriptor(cfd).setRequestMajor(major).setPriority(priority)
+            .setFavoredNodes(favoredNodes).setSubmitTime(System.currentTimeMillis()).build();
+    compactionServer.compactionThreadManager.requestCompaction(compactionTask);
     return CompactionProtos.CompactResponse.newBuilder().build();
   }
 
