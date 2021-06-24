@@ -129,8 +129,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   private List<CandidateGenerator> candidateGenerators;
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
-  // To save currently configed sum of multiplier
-  private float sumMultiplier = 0.0f;
+  // To save currently configed sum of multiplier. Defaulted at 1 for cases that carry high cost
+  private float sumMultiplier = 1.0f;
   // to save and report costs to JMX
   private double curOverallCost = 0d;
   private double[] tempFunctionCosts;
@@ -302,19 +302,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   boolean needsBalance(TableName tableName, BalancerClusterState cluster) {
     ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
     if (cs.getNumServers() < MIN_SERVER_BALANCE) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Not running balancer because only " + cs.getNumServers()
+      LOG.info("Not running balancer because only " + cs.getNumServers()
             + " active regionserver(s)");
-      }
       sendRejectionReasonToRingBuffer(() -> "The number of RegionServers " + cs.getNumServers() +
         " < MIN_SERVER_BALANCE(" + MIN_SERVER_BALANCE + ")", null);
       return false;
     }
     if (areSomeRegionReplicasColocated(cluster)) {
+      LOG.info("Running balancer because at least one server hosts replicas of the same region.");
       return true;
     }
 
     if (idleRegionServerExist(cluster)){
+      LOG.info("Running balancer because cluster has idle server(s).");
       return true;
     }
 
@@ -330,19 +330,24 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       total += cost * multiplier;
       sumMultiplier += multiplier;
     }
+    if (sumMultiplier <= 0)
+    {
+      LOG.error("At least one cost function needs a multiplier > 0");
+      return false;
+    }
 
     boolean balanced = (total / sumMultiplier < minCostNeedBalance);
 
     if (balanced) {
       final double calculatedTotal = total;
       sendRejectionReasonToRingBuffer(() -> getBalanceReason(calculatedTotal), costFunctions);
-      LOG.info("{} - skipping load balancing because weighted average imbalance={} > threshold({})."
-          + "functionCost={}."
-          + "If you want more aggressive balancing, either lower minCostNeedbalance {}"
-          + "or increase the relative weight(s) of the specific cost function(s).",
-        isByTable ? "Table specific ("+tableName+")" : "Cluster wide", functionCost(),
-        total / sumMultiplier, minCostNeedBalance);
-    } else {
+      LOG.info("{} - skipping load balancing because weighted average imbalance={} <= threshold({})."
+          + " If you want more aggressive balancing, either lower "
+          + "hbase.master.balancer.stochastic.minCostNeedBalance from {} or increase the relative "
+          + "multiplier(s) of the specific cost function(s). functionCost={}",
+        isByTable ? "Table specific ("+tableName+")" : "Cluster wide", total / sumMultiplier,
+        minCostNeedBalance, minCostNeedBalance, functionCost());
+   } else {
       LOG.info("{} - Calculating plan. may take up to {}ms to complete.",
         isByTable ? "Table specific ("+tableName+")" : "Cluster wide", maxRunningTime);
     }
@@ -417,9 +422,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
             maxSteps);
       }
     }
-    LOG.info("Start StochasticLoadBalancer.balancer, initial weighted average imbalance ="
-      + currentCost / sumMultiplier + ", functionCost=" + functionCost() + " computedMaxSteps: "
-      + computedMaxSteps);
+    LOG.info("Start StochasticLoadBalancer.balancer, initial weighted average imbalance={}, "
+      + "functionCost={} computedMaxSteps={}",
+      currentCost / sumMultiplier, functionCost(), computedMaxSteps);
 
     final String initFunctionTotalCosts = totalCostsPerFunc();
     // Perform a stochastic walk to see if we can get a good fit.
@@ -471,13 +476,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           " to a new imbalance of {}. ",
         endTime - startTime, step, plans.size(), initCost / sumMultiplier, currentCost / sumMultiplier);
       sendRegionPlansToRingBuffer(plans, currentCost, initCost, initFunctionTotalCosts, step);
-      LOG.info("Moving plan submitted. Balancer is going into sleep until next period");
       return plans;
     }
     LOG.info("Could not find a better moving plan.  Tried {} different configurations in " +
         "{} ms, and did not find anything with an imbalance score less than {}", step,
       endTime - startTime, initCost / sumMultiplier);
-    LOG.info("Balancer is going into sleep until next period");
     return null;
   }
 
