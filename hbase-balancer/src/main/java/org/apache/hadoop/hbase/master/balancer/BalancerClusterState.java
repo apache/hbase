@@ -294,7 +294,7 @@ class BalancerClusterState {
     }
 
     numTables = tables.size();
-    LOG.info("number of tables = {}", numTables);
+    LOG.debug("number of tables = {}", numTables);
     numRegionsPerServerPerTable = new int[numServers][numTables];
     numRegionsPerTable = new int[numTables];
 
@@ -325,10 +325,9 @@ class BalancerClusterState {
 
     for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
       for (int tableIdx = 0; tableIdx < aNumRegionsPerServerPerTable.length; tableIdx++) {
-        regionSkewByTable[tableIdx] += Math.abs(aNumRegionsPerServerPerTable[tableIdx]
-          - meanRegionsPerTable[tableIdx]);
+        regionSkewByTable[tableIdx] += Math.abs(aNumRegionsPerServerPerTable[tableIdx] - meanRegionsPerTable[tableIdx]);
       }
-     }
+    }
 
     for (int i = 0; i < regions.length; i++) {
       RegionInfo info = regions[i];

@@ -25,6 +25,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 abstract class CostFunction {
 
+  public static final double COST_EPSILON = 0.0001;
+
   private float multiplier = 0;
 
   protected BalancerClusterState cluster;
@@ -90,10 +92,10 @@ abstract class CostFunction {
    */
   protected static double scale(double min, double max, double value) {
     if (max <= min || value <= min
-      || Math.abs(max - min) <= 0.01 || Math.abs(value - min) <= 0.01) {
+      || Math.abs(max - min) <= COST_EPSILON || Math.abs(value - min) <= COST_EPSILON) {
       return 0;
     }
-    if (max <= min || Math.abs(max - min) <= 0.01) {
+    if (max <= min || Math.abs(max - min) <= COST_EPSILON) {
       return 0;
     }
 
