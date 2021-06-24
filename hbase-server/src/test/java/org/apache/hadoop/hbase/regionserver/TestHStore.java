@@ -1769,6 +1769,15 @@ public class TestHStore {
 
     String oldThreadName = Thread.currentThread().getName();
     try {
+      /**
+       * 1.smallCellThread enters CompactingMemStore.shouldFlushInMemory first, when largeCellThread
+       * enters CompactingMemStore.shouldFlushInMemory, CompactingMemStore.active.getDataSize could
+       * not accommodate cellToAdd and CompactingMemStore.shouldFlushInMemory return true.
+       * <p/>
+       * 2. After largeCellThread finished CompactingMemStore.flushInMemory method, smallCellThread
+       * can add cell to currentActive . That is to say when largeCellThread called flushInMemory
+       * method, CompactingMemStore.active has no cell.
+       */
       Thread.currentThread().setName(MyCompactingMemStore2.LARGE_CELL_THREAD_NAME);
       store.add(largeCell, new NonThreadSafeMemStoreSizing());
       smallCellThread.join();
