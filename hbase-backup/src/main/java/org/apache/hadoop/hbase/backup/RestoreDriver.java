@@ -92,8 +92,6 @@ public class RestoreDriver extends AbstractHBaseTool {
       return -1;
     }
 
-    System.out.println(BackupRestoreConstants.VERIFY_BACKUP);
-
     // enable debug logging
     if (cmd.hasOption(OPTION_DEBUG)) {
       Log4jUtils.setLogLevel("org.apache.hadoop.hbase.backup", "DEBUG");
@@ -269,5 +267,6 @@ public class RestoreDriver extends AbstractHBaseTool {
     helpFormatter.setWidth(100);
     helpFormatter.setSyntaxPrefix("Options:");
     helpFormatter.printHelp(" ", null, options, USAGE_FOOTER);
+    System.out.println(BackupRestoreConstants.VERIFY_BACKUP);
   }
 }
