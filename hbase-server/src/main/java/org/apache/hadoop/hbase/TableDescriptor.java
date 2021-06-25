@@ -96,7 +96,8 @@ public class TableDescriptor {
    * @see #parseFrom(byte[])
    */
   public byte [] toByteArray() {
-    return ProtobufUtil.prependPBMagic(convert().toByteArray());
+    return ProtobufUtil
+        .prependPBMagic(hTableDescriptor.convert().toByteArray());
   }
 
   /**
