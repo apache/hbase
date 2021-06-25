@@ -111,8 +111,8 @@ class CompactionServerStorage {
    * Remove files from selected, called:
    * 1. after the compaction is failed;
    * 2. after the compaction is finished and report to RS failed;
-   * 3. after the compaction is finished and report to RS succeeded
-   * (and will mark these files as compacted).
+   * 3. after the compaction is finished and report to RS succeeded (and will mark these files
+   *    as compacted).
    */
   void removeSelectedFiles(RegionInfo regionInfo, ColumnFamilyDescriptor cfd,
       List<String> selectedFiles) {

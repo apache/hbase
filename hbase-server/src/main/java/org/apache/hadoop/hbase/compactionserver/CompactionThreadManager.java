@@ -75,11 +75,11 @@ public class CompactionThreadManager implements ThroughputControllerService {
   private static Logger LOG = LoggerFactory.getLogger(CompactionThreadManager.class);
   // Configuration key for the large compaction threads.
   private final static String LARGE_COMPACTION_THREADS =
-      "hbase.compactionmanager.thread.compaction.large";
+      "hbase.compaction.server.thread.compaction.large";
   private final static int LARGE_COMPACTION_THREADS_DEFAULT = 10;
   // Configuration key for the small compaction threads.
   private final static String SMALL_COMPACTION_THREADS =
-      "hbase.compactionmanager.thread.compaction.small";
+      "hbase.compaction.server.thread.compaction.small";
   private final static int SMALL_COMPACTION_THREADS_DEFAULT = 50;
 
   private final Configuration conf;
@@ -103,11 +103,11 @@ public class CompactionThreadManager implements ThroughputControllerService {
     try {
       this.fs = new HFileSystem(this.conf, true);
       this.rootDir = CommonFSUtils.getRootDir(this.conf);
+      this.tableDescriptors = new FSTableDescriptors(conf);
       // start compaction resources
       this.throughputController = new PressureAwareCompactionThroughputController();
       this.throughputController.setConf(conf);
       this.throughputController.setup(this);
-      this.tableDescriptors = new FSTableDescriptors(conf);
       startCompactionPool();
     } catch (Throwable t) {
       LOG.error("Failed construction CompactionThreadManager", t);
@@ -170,7 +170,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
     String logStr = compactionTask.toString();
     MonitoredTask status =
         TaskMonitor.get().createStatus("Compacting region: " + regionInfo.getRegionNameAsString()
-            + ", family: " + cfd.getNameAsString() + " in RS: " + rsServerName);
+            + ", family: " + cfd.getNameAsString() + " from RS: " + rsServerName);
     status.enableStatusJournal(false);
     // 1. select compaction and check compaction context is present
     LOG.info("Start select compaction {}", compactionTask);
@@ -424,13 +424,11 @@ public class CompactionThreadManager implements ThroughputControllerService {
           + compactionTask.getCfd().getNameAsString() + "-" + System.currentTimeMillis();
       compactionTask.setTaskName(taskName);
       runningCompactionTasks.put(compactionTask.getTaskName(), compactionTask);
-      throughputController.start(compactionTask.getTaskName());
       doCompaction(compactionTask);
     } catch (Throwable e) {
       LOG.error("Execute compaction task error: {}", compactionTask, e);
     } finally {
       runningCompactionTasks.remove(compactionTask.getTaskName());
-      throughputController.finish(compactionTask.getTaskName());
       if (compactionTask.getStore() != null) {
         try {
           compactionTask.getStore().close();
