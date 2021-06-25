@@ -57,14 +57,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * the code base.
  */
 @InterfaceAudience.Private
-public interface RegionServerServices extends Server, MutableOnlineRegions, FavoredNodesForRegion, ThroughputControllerService {
+public interface RegionServerServices
+    extends Server, MutableOnlineRegions, FavoredNodesForRegion, ThroughputControllerService {
 
-  /** @return the WAL for a particular region. Pass null for getting the
-   * default (common) WAL */
+  /**
+   * @return the WAL for a particular region. Pass null for getting the default (common) WAL
+   */
   WAL getWAL(RegionInfo regionInfo) throws IOException;
 
-  /** @return the List of WALs that are used by this server
-   *  Doesn't include the meta WAL
+  /**
+   * @return the List of WALs that are used by this server Doesn't include the meta WAL
    */
   List<WAL> getWALs() throws IOException;
 

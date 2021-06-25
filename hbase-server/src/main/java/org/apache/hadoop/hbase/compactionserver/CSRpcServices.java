@@ -26,9 +26,9 @@ import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AbstractRpcServices;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.SimpleRpcSchedulerFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -39,10 +39,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactionService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 @InterfaceAudience.Private
 public class CSRpcServices extends AbstractRpcServices

@@ -33,17 +33,15 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
-
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
-
 import org.apache.hadoop.hbase.master.compaction.CompactionOffloadManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -171,9 +169,9 @@ public class TestCompactionServer {
   public void testCompactionWithVersions() throws Exception {
     TEST_UTIL.getAdmin().compactionSwitch(false, new ArrayList<>());
     ColumnFamilyDescriptor cfd =
-    ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).setMaxVersions(3).build();
-    TableDescriptor modifiedtableDescriptor = TableDescriptorBuilder.newBuilder(TABLENAME)
-      .setColumnFamily(cfd).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).setMaxVersions(3).build();
+    TableDescriptor modifiedtableDescriptor =
+        TableDescriptorBuilder.newBuilder(TABLENAME).setColumnFamily(cfd).build();
     TEST_UTIL.getAdmin().modifyTable(modifiedtableDescriptor);
     TEST_UTIL.waitTableAvailable(TABLENAME);
     doFillRecord(1, 500, RandomUtils.nextBytes(20));

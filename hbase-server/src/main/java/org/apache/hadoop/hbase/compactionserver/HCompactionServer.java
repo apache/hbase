@@ -162,7 +162,8 @@ public class HCompactionServer extends AbstractServer {
     return serverLoad.build();
   }
 
-  private boolean tryCompactionServerReport(long reportStartTime, long reportEndTime) throws IOException {
+  private boolean tryCompactionServerReport(long reportStartTime, long reportEndTime)
+      throws IOException {
     CompactionServerStatusService.BlockingInterface css = cssStub;
     if (css == null) {
       return false;

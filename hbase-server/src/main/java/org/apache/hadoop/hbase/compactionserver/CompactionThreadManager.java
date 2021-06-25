@@ -52,9 +52,8 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControllerService;
 import org.apache.hadoop.hbase.regionserver.throttle.PressureAwareCompactionThroughputController;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControllerService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -67,6 +66,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionRequest.Builder;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionResponse;
@@ -208,7 +208,6 @@ public class CompactionThreadManager implements ThroughputControllerService {
   /**
    * Open store, and select compaction context
    * @return Store and CompactionContext
-   * @throws IOException
    */
   private Pair<HStore, Optional<CompactionContext>> selectCompaction(RegionInfo regionInfo,
     ColumnFamilyDescriptor cfd, boolean major, int priority, MonitoredTask status, String logStr)
@@ -239,7 +238,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
     status.setStatus("Convert current compacting and compacted files to store files");
     List<HStoreFile> excludeStoreFiles = convertFileNameToStoreFile(store, excludeFiles);
     LOG.info(
-      "Start select store: {}, excludeFileNames: {}, excludeFiles: {}, compacting: {}, compacted: {}",
+      "Start select store: {}, excludeFileNames: {}, excluded: {}, compacting: {}, compacted: {}",
       logStr, excludeFiles.size(), excludeStoreFiles.size(), compactingFiles.size(),
       compactedFiles.size());
     status.setStatus("Select store files to compaction, major: " + major);
@@ -478,23 +477,26 @@ public class CompactionThreadManager implements ThroughputControllerService {
   }
 
   private static final Comparator<Runnable> COMPACTION_TASK_COMPARATOR =
-      (Runnable r1, Runnable r2) -> {
-        // CompactionRunner first
-        if (r1 instanceof CompactionTaskRunner) {
-          if (!(r2 instanceof CompactionTaskRunner)) {
-            return -1;
-          }
-        } else {
-          if (r2 instanceof CompactionTaskRunner) {
-            return 1;
-          } else {
-            // break the tie based on hash code
-            return System.identityHashCode(r1) - System.identityHashCode(r2);
-          }
+    (Runnable r1, Runnable r2) -> {
+      // CompactionRunner first
+      if (r1 instanceof CompactionTaskRunner) {
+        if (!(r2 instanceof CompactionTaskRunner)) {
+          return -1;
         }
-        CompactionTask o1 = ((CompactionTaskRunner) r1).getCompactionTask();
-        CompactionTask o2 = ((CompactionTaskRunner) r2).getCompactionTask();
-        return o1.compareTo(o2);
-      };
-
+      } else {
+        if (r2 instanceof CompactionTaskRunner) {
+          return 1;
+        } else {
+          // break the tie based on hash code
+          return System.identityHashCode(r1) - System.identityHashCode(r2);
+        }
+      }
+      CompactionTask o1 = ((CompactionTaskRunner) r1).getCompactionTask();
+      CompactionTask o2 = ((CompactionTaskRunner) r2).getCompactionTask();
+      int cmp = Integer.compare(o1.getPriority(), o2.getPriority());
+      if (cmp == 0) {
+        return Long.compare(o1.getSubmitTime(), o2.getSubmitTime());
+      }
+      return cmp;
+    };
 }

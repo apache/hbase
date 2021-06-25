@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class NoLimitThroughputController implements ThroughputController {

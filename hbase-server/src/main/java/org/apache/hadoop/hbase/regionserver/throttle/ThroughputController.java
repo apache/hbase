@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 /**
  * A utility that constrains the total throughput of one or more simultaneous flows by

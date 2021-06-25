@@ -30,17 +30,14 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
@@ -48,19 +45,19 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 public class TestCompactionServerStorage {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionServerStorage.class);
+      HBaseClassTestRule.forClass(TestCompactionServerStorage.class);
   private static TableName tableName = TableName.valueOf("testCompactingFilesStore");
   private static byte[] family = Bytes.toBytes("A");
   private static CompactionServerStorage storage;
   private static RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
-  private static ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(family).build();
-  private static final Logger LOG = LoggerFactory.getLogger(TestCompactionServerStorage.class);
+  private static ColumnFamilyDescriptor cfd =
+      ColumnFamilyDescriptorBuilder.newBuilder(family).build();
 
   private static class TestStorageThread extends Thread {
     List<String> fileNameList;
     boolean flag;
 
-    public TestStorageThread(List<String> files, boolean flag) {
+    TestStorageThread(List<String> files, boolean flag) {
       this.fileNameList = files;
       this.flag = flag;
     }

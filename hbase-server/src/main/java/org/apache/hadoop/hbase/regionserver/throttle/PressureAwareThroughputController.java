@@ -23,12 +23,12 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class PressureAwareThroughputController extends Configured implements
@@ -77,7 +77,8 @@ public abstract class PressureAwareThroughputController extends Configured imple
   private volatile double maxThroughput;
   private volatile double maxThroughputPerOperation;
 
-  protected final ConcurrentMap<String, ActiveOperation> activeOperations = new ConcurrentHashMap<>();
+  protected final ConcurrentMap<String, ActiveOperation> activeOperations =
+      new ConcurrentHashMap<>();
 
   @Override
   public abstract void setup(final ThroughputControllerService server);

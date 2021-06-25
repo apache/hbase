@@ -3550,6 +3550,7 @@ public class HRegionServer extends AbstractServer implements
    * @return the flush pressure of all stores on this regionserver. The value should be greater than
    *         or equal to 0.0, and any value greater than 1.0 means we enter the emergency state that
    *         global memstore size already exceeds lower limit.
+   * @deprecated Since 2.0.0
    */
   @Deprecated
   @Override

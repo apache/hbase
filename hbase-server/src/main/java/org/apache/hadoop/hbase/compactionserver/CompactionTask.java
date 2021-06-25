@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 @InterfaceAudience.Private
-public class CompactionTask implements Comparable<CompactionTask> {
+public final class CompactionTask {
   private ServerName rsServerName;
   private RegionInfo regionInfo;
   private ColumnFamilyDescriptor cfd;
@@ -49,130 +49,121 @@ public class CompactionTask implements Comparable<CompactionTask> {
     return new Builder();
   }
 
-  @Override
-  public int compareTo(CompactionTask task) {
-    int cmp = getPriority() - task.getPriority();
-    if (cmp == 0) {
-      return Long.compare(getSubmitTime(), task.getSubmitTime());
-    }
-    return cmp;
-  }
-
   public static class Builder {
     private CompactionTask compactionTask = new CompactionTask();
 
-    public Builder setRsServerName(ServerName rsServerName) {
+    Builder setRsServerName(ServerName rsServerName) {
       compactionTask.rsServerName = rsServerName;
       return this;
     }
 
-    public Builder setRegionInfo(RegionInfo regionInfo) {
+    Builder setRegionInfo(RegionInfo regionInfo) {
       compactionTask.regionInfo = regionInfo;
       return this;
     }
 
-    public Builder setColumnFamilyDescriptor(ColumnFamilyDescriptor cfd) {
+    Builder setColumnFamilyDescriptor(ColumnFamilyDescriptor cfd) {
       compactionTask.cfd = cfd;
       return this;
     }
 
-    public Builder setRequestMajor(boolean requestMajor) {
+    Builder setRequestMajor(boolean requestMajor) {
       compactionTask.requestMajor = requestMajor;
       return this;
     }
 
-    public Builder setPriority(int priority) {
+    Builder setPriority(int priority) {
       compactionTask.priority = priority;
       return this;
     }
 
-
-    public Builder setFavoredNodes(List<HBaseProtos.ServerName> favoredNodes) {
+    Builder setFavoredNodes(List<HBaseProtos.ServerName> favoredNodes) {
       compactionTask.favoredNodes = favoredNodes;
       return this;
     }
 
-    public Builder setSubmitTime(long submitTime) {
+    Builder setSubmitTime(long submitTime) {
       compactionTask.submitTime = submitTime;
       return this;
     }
-    
-    public CompactionTask build() {
+
+    CompactionTask build() {
       return compactionTask;
     }
   }
 
-  public void setSelectedFileNames(List<String> selectedFileNames) {
+  void setSelectedFileNames(List<String> selectedFileNames) {
     this.selectedFileNames = selectedFileNames;
   }
 
-  public void setMonitoredTask(MonitoredTask status) {
+  void setMonitoredTask(MonitoredTask status) {
     this.status = status;
   }
 
-  public void setCompactionContext(CompactionContext compactionContext) {
+  void setCompactionContext(CompactionContext compactionContext) {
     this.compactionContext = compactionContext;
   }
 
-  public void setHStore(HStore store) {
+  void setHStore(HStore store) {
     this.store = store;
   }
 
-  public ServerName getRsServerName() {
+  ServerName getRsServerName() {
     return rsServerName;
   }
 
-  public RegionInfo getRegionInfo() {
+  RegionInfo getRegionInfo() {
     return regionInfo;
   }
 
-  public ColumnFamilyDescriptor getCfd() {
+  ColumnFamilyDescriptor getCfd() {
     return cfd;
   }
 
-  public CompactionContext getCompactionContext() {
+  CompactionContext getCompactionContext() {
     return compactionContext;
   }
 
-  public HStore getStore() {
+  HStore getStore() {
     return store;
   }
 
-  public List<String> getSelectedFileNames() {
+  List<String> getSelectedFileNames() {
     return selectedFileNames;
   }
 
-  public MonitoredTask getStatus() {
+  MonitoredTask getStatus() {
     return status;
   }
 
-  public void setTaskName(String name) {
+  void setTaskName(String name) {
     this.taskName = name;
   }
 
-  public String getTaskName() {
+  String getTaskName() {
     return taskName;
   }
 
-  public boolean isRequestMajor() {
+  boolean isRequestMajor() {
     return requestMajor;
   }
 
-  public int getPriority() {
+  int getPriority() {
     return priority;
   }
 
-  public List<HBaseProtos.ServerName> getFavoredNodes() {
+  List<HBaseProtos.ServerName> getFavoredNodes() {
     return favoredNodes;
   }
 
-  public long getSubmitTime() {
+  long getSubmitTime() {
     return submitTime;
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return new StringBuilder("RS: ").append(rsServerName).append(", region: ")
-      .append(regionInfo.getRegionNameAsString()).append(", CF: ").append(cfd.getNameAsString())
-      .append(", priority: ").append(priority).toString();
+        .append(regionInfo.getRegionNameAsString()).append(", CF: ").append(cfd.getNameAsString())
+        .append(", priority: ").append(priority).toString();
   }
 }
