@@ -511,6 +511,7 @@ struct TOnlineLogRecord {
  */
 exception TIOError {
   1: optional string message
+  2: optional bool canRetry
 }
 
 /**
