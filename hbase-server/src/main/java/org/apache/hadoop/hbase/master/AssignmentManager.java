@@ -4586,7 +4586,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // Tell our listeners that a region was closed
     sendRegionClosedNotification(regionInfo);
     // also note that all the replicas of the primary should be closed
-    if (force || state != null && state.equals(State.SPLIT)) {
+    if (force || (state != null && state.equals(State.SPLIT))) {
       Collection<HRegionInfo> c = new ArrayList<HRegionInfo>(1);
       c.add(regionInfo);
       Map<ServerName, List<HRegionInfo>> map = regionStates.getRegionAssignments(c);
@@ -4595,7 +4595,7 @@ public class AssignmentManager extends ZooKeeperListener {
         replicasToClose.addAll(list);
       }
     }
-    else if (force || state != null && state.equals(State.MERGED)) {
+    else if (force || (state != null && state.equals(State.MERGED))) {
       Collection<HRegionInfo> c = new ArrayList<HRegionInfo>(1);
       c.add(regionInfo);
       Map<ServerName, List<HRegionInfo>> map = regionStates.getRegionAssignments(c);

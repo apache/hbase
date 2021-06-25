@@ -713,9 +713,9 @@ public class RegionStates {
       regionsInTransition.remove(encodedName);
       ServerName oldServerName = regionAssignments.remove(hri);
       if (oldServerName != null && serverHoldings.containsKey(oldServerName)) {
-        if (force || newState == State.MERGED || newState == State.SPLIT
+        if (force || (newState == State.MERGED || newState == State.SPLIT
             || hri.isMetaRegion() || tableStateManager.isTableState(hri.getTable(),
-            TableState.State.DISABLED, TableState.State.DISABLING)) {
+            TableState.State.DISABLED, TableState.State.DISABLING))) {
           // Offline the region only if it's merged/split, or the table is disabled/disabling.
           // Otherwise, offline it from this server only when it is online on a different server.
           LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);

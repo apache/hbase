@@ -892,9 +892,7 @@ public class TestHBaseFsck {
 
       // wait for all regions to come online.
       while (cluster.countServedRegions() < totalRegions) {
-        try {
-          Thread.sleep(100);
-        } catch (InterruptedException e) {}
+        Thread.sleep(100);
       }
 
       // check again after stopping a region server.
@@ -949,9 +947,7 @@ public class TestHBaseFsck {
 
       // wait for all regions to come online.
       while (cluster.countServedRegions() < totalRegions) {
-        try {
-          Thread.sleep(100);
-        } catch (InterruptedException e) {}
+        Thread.sleep(100);
       }
 
       HBaseFsck hbck3 = doFsck(conf,false);
