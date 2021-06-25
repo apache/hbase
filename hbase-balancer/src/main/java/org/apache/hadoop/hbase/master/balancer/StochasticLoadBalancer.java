@@ -334,7 +334,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
     if (sumMultiplier <= 0)
     {
-      LOG.error("At least one cost function needs a multiplier > 0");
+      LOG.error("At least one cost function needs a multiplier > 0. For example, set "
+        + "hbase.master.balancer.stochastic.regionCountCost to a positive value or default");
       return false;
     }
 
