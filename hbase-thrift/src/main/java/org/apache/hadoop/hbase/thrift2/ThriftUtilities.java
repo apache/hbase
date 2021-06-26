@@ -25,37 +25,57 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Set;
 
 import org.apache.commons.collections.MapUtils;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HRegionLocator;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
+import org.apache.hadoop.hbase.thrift2.generated.TAuthorization;
+import org.apache.hadoop.hbase.thrift2.generated.TBloomFilterType;
+import org.apache.hadoop.hbase.thrift2.generated.TCellVisibility;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
 import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
+import org.apache.hadoop.hbase.thrift2.generated.TCompressionAlgorithm;
 import org.apache.hadoop.hbase.thrift2.generated.TConsistency;
+import org.apache.hadoop.hbase.thrift2.generated.TDataBlockEncoding;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
@@ -63,17 +83,28 @@ import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THRegionInfo;
 import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift2.generated.TKeepDeletedCells;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
+import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
+import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TServerName;
+import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CollectionUtils;
 
 @InterfaceAudience.Private
 public class ThriftUtilities {
+
+  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[]{};
+  private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
+  private final static Result EMPTY_RESULT_STALE = Result.create(EMPTY_CELL_ARRAY, null, true);
+
+
 
   private ThriftUtilities() {
     throw new UnsupportedOperationException("Can't initialize class");
@@ -125,18 +156,32 @@ public class ThriftUtilities {
       out.setReplicaId(in.getTargetReplicaId());
     }
 
-    if (!in.isSetColumns()) {
-      return out;
+    if (in.isSetCacheBlocks()) {
+      out.setCacheBlocks(in.isCacheBlocks());
+    }
+    if (in.isSetStoreLimit()) {
+      out.setMaxResultsPerColumnFamily(in.getStoreLimit());
+    }
+    if (in.isSetStoreOffset()) {
+      out.setRowOffsetPerColumnFamily(in.getStoreOffset());
+    }
+    if (in.isSetExistence_only()) {
+      out.setCheckExistenceOnly(in.isExistence_only());
     }
 
-    for (TColumn column : in.getColumns()) {
-      if (column.isSetQualifier()) {
-        out.addColumn(column.getFamily(), column.getQualifier());
-      } else {
-        out.addFamily(column.getFamily());
+    if (in.isSetColumns()) {
+      for (TColumn column : in.getColumns()) {
+        if (column.isSetQualifier()) {
+          out.addColumn(column.getFamily(), column.getQualifier());
+        } else {
+          out.addFamily(column.getFamily());
+        }
       }
     }
 
+    if (in.isSetFilterBytes()) {
+      out.setFilter(filterFromThrift(in.getFilterBytes()));
+    }
     return out;
   }
 
@@ -151,7 +196,7 @@ public class ThriftUtilities {
    * @see #getFromThrift(TGet)
    */
   public static List<Get> getsFromThrift(List<TGet> in) throws IOException {
-    List<Get> out = new ArrayList<Get>(in.size());
+    List<Get> out = new ArrayList<>(in.size());
     for (TGet get : in) {
       out.add(getFromThrift(get));
     }
@@ -172,21 +217,24 @@ public class ThriftUtilities {
     if (row != null) {
       out.setRow(in.getRow());
     }
-    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    List<TColumnValue> columnValues = new ArrayList<>(raw.length);
     for (Cell kv : raw) {
       TColumnValue col = new TColumnValue();
       col.setFamily(CellUtil.cloneFamily(kv));
       col.setQualifier(CellUtil.cloneQualifier(kv));
       col.setTimestamp(kv.getTimestamp());
       col.setValue(CellUtil.cloneValue(kv));
+      col.setType(kv.getTypeByte());
       if (kv.getTagsLength() > 0) {
-        col.setTags(CellUtil.getTagArray(kv));
+        col.setTags(kv.getTagsArray());
       }
       columnValues.add(col);
     }
     out.setColumnValues(columnValues);
 
     out.setStale(in.isStale());
+
+    out.setPartial(in.mayHaveMoreCellsInRow());
     return out;
   }
 
@@ -200,7 +248,7 @@ public class ThriftUtilities {
    * @see #resultFromHBase(Result)
    */
   public static List<TResult> resultsFromHBase(Result[] in) {
-    List<TResult> out = new ArrayList<TResult>(in.length);
+    List<TResult> out = new ArrayList<>(in.length);
     for (Result result : in) {
       out.add(resultFromHBase(result));
     }
@@ -241,7 +289,7 @@ public class ThriftUtilities {
     if (in.isSetAttributes()) {
       addAttributes(out,in.getAttributes());
     }
-    
+
     if (in.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
     }
@@ -259,7 +307,7 @@ public class ThriftUtilities {
    * @see #putFromThrift(TPut)
    */
   public static List<Put> putsFromThrift(List<TPut> in) {
-    List<Put> out = new ArrayList<Put>(in.size());
+    List<Put> out = new ArrayList<>(in.size());
     for (TPut put : in) {
       out.add(putFromThrift(put));
     }
@@ -279,27 +327,42 @@ public class ThriftUtilities {
     if (in.isSetColumns()) {
       out = new Delete(in.getRow());
       for (TColumn column : in.getColumns()) {
-        if (column.isSetQualifier()) {
-          if (column.isSetTimestamp()) {
-            if (in.isSetDeleteType() &&
-                in.getDeleteType().equals(TDeleteType.DELETE_COLUMNS))
-              out.deleteColumns(column.getFamily(), column.getQualifier(), column.getTimestamp());
-            else
-              out.deleteColumn(column.getFamily(), column.getQualifier(), column.getTimestamp());
-          } else {
-            if (in.isSetDeleteType() &&
-                in.getDeleteType().equals(TDeleteType.DELETE_COLUMNS))
-              out.deleteColumns(column.getFamily(), column.getQualifier());
-            else
-              out.deleteColumn(column.getFamily(), column.getQualifier());
+        if (in.isSetDeleteType()) {
+          switch (in.getDeleteType()) {
+            case DELETE_COLUMN:
+              if (column.isSetTimestamp()) {
+                out.addColumn(column.getFamily(), column.getQualifier(), column.getTimestamp());
+              } else {
+                out.addColumn(column.getFamily(), column.getQualifier());
+              }
+              break;
+            case DELETE_COLUMNS:
+              if (column.isSetTimestamp()) {
+                out.addColumns(column.getFamily(), column.getQualifier(), column.getTimestamp());
+              } else {
+                out.addColumns(column.getFamily(), column.getQualifier());
+              }
+              break;
+            case DELETE_FAMILY:
+              if (column.isSetTimestamp()) {
+                out.addFamily(column.getFamily(), column.getTimestamp());
+              } else {
+                out.addFamily(column.getFamily());
+              }
+              break;
+            case DELETE_FAMILY_VERSION:
+              if (column.isSetTimestamp()) {
+                out.addFamilyVersion(column.getFamily(), column.getTimestamp());
+              } else {
+                throw new IllegalArgumentException(
+                    "Timestamp is required for TDelete with DeleteFamilyVersion type");
+              }
+              break;
+            default:
+              throw new IllegalArgumentException("Unknown DeleteType");
           }
-
         } else {
-          if (column.isSetTimestamp()) {
-            out.deleteFamily(column.getFamily(), column.getTimestamp());
-          } else {
-            out.deleteFamily(column.getFamily());
-          }
+          throw new IllegalArgumentException("DeleteType is required for TDelete");
         }
       }
     } else {
@@ -332,36 +395,61 @@ public class ThriftUtilities {
    */
 
   public static List<Delete> deletesFromThrift(List<TDelete> in) {
-    List<Delete> out = new ArrayList<Delete>(in.size());
+    List<Delete> out = new ArrayList<>(in.size());
     for (TDelete delete : in) {
       out.add(deleteFromThrift(delete));
     }
     return out;
   }
 
+  public static TDeleteType deleteTypeFromHBase(KeyValue.Type type) {
+    switch (type) {
+      case Delete: return TDeleteType.DELETE_COLUMN;
+      case DeleteColumn: return TDeleteType.DELETE_COLUMNS;
+      case DeleteFamily: return TDeleteType.DELETE_FAMILY;
+      case DeleteFamilyVersion: return TDeleteType.DELETE_FAMILY_VERSION;
+      default: throw new IllegalArgumentException("Unknow delete type " + type);
+    }
+  }
+
   public static TDelete deleteFromHBase(Delete in) {
     TDelete out = new TDelete(ByteBuffer.wrap(in.getRow()));
 
-    List<TColumn> columns = new ArrayList<TColumn>();
+    List<TColumn> columns = new ArrayList<>(in.getFamilyCellMap().entrySet().size());
     long rowTimestamp = in.getTimeStamp();
     if (rowTimestamp != HConstants.LATEST_TIMESTAMP) {
       out.setTimestamp(rowTimestamp);
     }
 
-    // Map<family, List<KeyValue>>
-    for (Map.Entry<byte[], List<org.apache.hadoop.hbase.Cell>> familyEntry:
+    for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
+          ByteBuffer.wrap(attribute.getValue()));
+    }
+    if (in.getDurability() != Durability.USE_DEFAULT)  {
+      out.setDurability(durabilityFromHBase(in.getDurability()));
+    }
+    // Delete the whole row
+    if (in.getFamilyCellMap().size() == 0) {
+      return out;
+    }
+    TDeleteType type = null;
+    for (Map.Entry<byte[], List<Cell>> familyEntry:
         in.getFamilyCellMap().entrySet()) {
+      byte[] family = familyEntry.getKey();
       TColumn column = new TColumn(ByteBuffer.wrap(familyEntry.getKey()));
-      for (org.apache.hadoop.hbase.Cell cell: familyEntry.getValue()) {
-        byte[] family = CellUtil.cloneFamily(cell);
+      for (Cell cell: familyEntry.getValue()) {
+        TDeleteType cellDeleteType = deleteTypeFromHBase(
+            KeyValue.Type.codeToType(cell.getTypeByte()));
+        if (type == null) {
+          type = cellDeleteType;
+        } else if (type != cellDeleteType){
+          throw new RuntimeException("Only the same delete type is supported, but two delete type "
+              + "is founded, one is " + type + " the other one is " + cellDeleteType);
+        }
         byte[] qualifier = CellUtil.cloneQualifier(cell);
         long timestamp = cell.getTimestamp();
-        if (family != null) {
-          column.setFamily(family);
-        }
-        if (qualifier != null) {
-          column.setQualifier(qualifier);
-        }
+        column.setFamily(family);
+        column.setQualifier(qualifier);
         if (timestamp != HConstants.LATEST_TIMESTAMP) {
           column.setTimestamp(timestamp);
         }
@@ -369,6 +457,7 @@ public class ThriftUtilities {
       columns.add(column);
     }
     out.setColumns(columns);
+    out.setDeleteType(type);
 
     return out;
   }
@@ -381,8 +470,8 @@ public class ThriftUtilities {
    * @return converted <code>RowMutations</code>
    */
   public static RowMutations rowMutationsFromThrift(TRowMutations in) throws IOException {
-    RowMutations out = new RowMutations(in.getRow());
     List<TMutation> mutations = in.getMutations();
+    RowMutations out = new RowMutations(in.getRow());
     for (TMutation mutation : mutations) {
       if (mutation.isSetPut()) {
         out.add(putFromThrift(mutation.getPut()));
@@ -435,7 +524,7 @@ public class ThriftUtilities {
     if (in.isSetAttributes()) {
       addAttributes(out,in.getAttributes());
     }
-    
+
     if (in.isSetAuthorizations()) {
       out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
     }
@@ -458,8 +547,12 @@ public class ThriftUtilities {
       }
     }
 
-    if (in.isSetSmall()) {
-      out.setSmall(in.isSmall());
+    if (in.isSetReadType()) {
+      out.setReadType(readTypeFromThrift(in.getReadType()));
+    }
+
+    if (in.isSetLimit()) {
+      out.setLimit(in.getLimit());
     }
 
     if (in.isSetConsistency()) {
@@ -470,6 +563,85 @@ public class ThriftUtilities {
       out.setReplicaId(in.getTargetReplicaId());
     }
 
+    if (in.isSetFilterBytes()) {
+      out.setFilter(filterFromThrift(in.getFilterBytes()));
+    }
+
+    return out;
+  }
+
+  public static byte[] filterFromHBase(Filter filter) throws IOException {
+    FilterProtos.Filter filterPB = ProtobufUtil.toFilter(filter);
+    return filterPB.toByteArray();
+  }
+
+  public static Filter filterFromThrift(byte[] filterBytes) throws IOException {
+    FilterProtos.Filter filterPB  = FilterProtos.Filter.parseFrom(filterBytes);
+    return ProtobufUtil.toFilter(filterPB);
+  }
+
+  public static TScan scanFromHBase(Scan in) throws IOException {
+    TScan out = new TScan();
+    out.setStartRow(in.getStartRow());
+    out.setStopRow(in.getStopRow());
+    out.setCaching(in.getCaching());
+    out.setMaxVersions(in.getMaxVersions());
+    for (Map.Entry<byte[], NavigableSet<byte[]>> family : in.getFamilyMap().entrySet()) {
+
+      if (family.getValue() != null && !family.getValue().isEmpty()) {
+        for (byte[] qualifier : family.getValue()) {
+          TColumn column = new TColumn();
+          column.setFamily(family.getKey());
+          column.setQualifier(qualifier);
+          out.addToColumns(column);
+        }
+      } else {
+        TColumn column = new TColumn();
+        column.setFamily(family.getKey());
+        out.addToColumns(column);
+      }
+    }
+    TTimeRange tTimeRange = new TTimeRange();
+    tTimeRange.setMinStamp(in.getTimeRange().getMin()).setMaxStamp(in.getTimeRange().getMax());
+    out.setTimeRange(tTimeRange);
+    out.setBatchSize(in.getBatch());
+
+    for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
+          ByteBuffer.wrap(attribute.getValue()));
+    }
+
+    try {
+      Authorizations authorizations = in.getAuthorizations();
+      if (authorizations != null) {
+        TAuthorization tAuthorization = new TAuthorization();
+        tAuthorization.setLabels(authorizations.getLabels());
+        out.setAuthorizations(tAuthorization);
+      }
+    } catch (DeserializationException e) {
+      throw new RuntimeException(e);
+    }
+
+    out.setReversed(in.isReversed());
+    out.setCacheBlocks(in.getCacheBlocks());
+    out.setReadType(readTypeFromHBase(in.getReadType()));
+    out.setLimit(in.getLimit());
+    out.setConsistency(consistencyFromHBase(in.getConsistency()));
+    out.setTargetReplicaId(in.getReplicaId());
+    for (Map.Entry<byte[], TimeRange> entry : in.getColumnFamilyTimeRange().entrySet()) {
+      if (entry.getValue() != null) {
+        TTimeRange timeRange = new TTimeRange();
+        timeRange.setMinStamp(entry.getValue().getMin()).setMaxStamp(entry.getValue().getMax());
+        out.putToColFamTimeRangeMap(ByteBuffer.wrap(entry.getKey()), timeRange);
+      }
+    }
+    if (in.getFilter() != null) {
+      try {
+        out.setFilterBytes(filterFromHBase(in.getFilter()));
+      } catch (IOException ioE) {
+        throw new RuntimeException(ioE);
+      }
+    }
     return out;
   }
 
@@ -486,9 +658,13 @@ public class ThriftUtilities {
     if (in.isSetDurability()) {
       out.setDurability(durabilityFromThrift(in.getDurability()));
     }
-    
+
     if(in.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
+    }
+
+    if (in.isSetReturnResults()) {
+      out.setReturnResults(in.isReturnResults());
     }
 
     return out;
@@ -507,9 +683,13 @@ public class ThriftUtilities {
     if (append.isSetDurability()) {
       out.setDurability(durabilityFromThrift(append.getDurability()));
     }
-    
+
     if(append.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(append.getCellVisibility().getExpression()));
+    }
+
+    if (append.isSetReturnResults()) {
+      out.setReturnResults(append.isReturnResults());
     }
 
     return out;
@@ -541,7 +721,7 @@ public class ThriftUtilities {
   }
 
   public static List<THRegionLocation> regionLocationsFromHBase(List<HRegionLocation> locations) {
-    List<THRegionLocation> tlocations = new ArrayList<THRegionLocation>(locations.size());
+    List<THRegionLocation> tlocations = new ArrayList<>(locations.size());
     for (HRegionLocation hrl:locations) {
       tlocations.add(regionLocationFromHBase(hrl));
     }
@@ -552,8 +732,8 @@ public class ThriftUtilities {
    * Adds all the attributes into the Operation object
    */
   private static void addAttributes(OperationWithAttributes op,
-                                    Map<ByteBuffer, ByteBuffer> attributes) {
-    if (attributes == null || attributes.size() == 0) {
+      Map<ByteBuffer, ByteBuffer> attributes) {
+    if (attributes == null || attributes.isEmpty()) {
       return;
     }
     for (Map.Entry<ByteBuffer, ByteBuffer> entry : attributes.entrySet()) {
@@ -565,24 +745,43 @@ public class ThriftUtilities {
 
   private static Durability durabilityFromThrift(TDurability tDurability) {
     switch (tDurability.getValue()) {
+      case 0: return Durability.USE_DEFAULT;
       case 1: return Durability.SKIP_WAL;
       case 2: return Durability.ASYNC_WAL;
       case 3: return Durability.SYNC_WAL;
       case 4: return Durability.FSYNC_WAL;
+      default: return Durability.USE_DEFAULT;
+    }
+  }
+
+  public static CompareFilter.CompareOp compareOpFromThrift(TCompareOp tCompareOp) {
+    switch (tCompareOp.getValue()) {
+      case 0: return CompareFilter.CompareOp.LESS;
+      case 1: return CompareFilter.CompareOp.LESS_OR_EQUAL;
+      case 2: return CompareFilter.CompareOp.EQUAL;
+      case 3: return CompareFilter.CompareOp.NOT_EQUAL;
+      case 4: return CompareFilter.CompareOp.GREATER_OR_EQUAL;
+      case 5: return CompareFilter.CompareOp.GREATER;
+      case 6: return CompareFilter.CompareOp.NO_OP;
       default: return null;
     }
   }
 
-  public static CompareOp compareOpFromThrift(TCompareOp tCompareOp) {
-    switch (tCompareOp.getValue()) {
-      case 0: return CompareOp.LESS;
-      case 1: return CompareOp.LESS_OR_EQUAL;
-      case 2: return CompareOp.EQUAL;
-      case 3: return CompareOp.NOT_EQUAL;
-      case 4: return CompareOp.GREATER_OR_EQUAL;
-      case 5: return CompareOp.GREATER;
-      case 6: return CompareOp.NO_OP;
+  private static ReadType readTypeFromThrift(TReadType tReadType) {
+    switch (tReadType.getValue()) {
+      case 1: return ReadType.DEFAULT;
+      case 2: return ReadType.STREAM;
+      case 3: return ReadType.PREAD;
       default: return null;
+    }
+  }
+
+  private static TReadType readTypeFromHBase(ReadType readType) {
+    switch (readType) {
+      case DEFAULT: return TReadType.DEFAULT;
+      case STREAM: return TReadType.STREAM;
+      case PREAD: return TReadType.PREAD;
+      default: return TReadType.DEFAULT;
     }
   }
 
@@ -592,5 +791,506 @@ public class ThriftUtilities {
       case 2: return Consistency.TIMELINE;
       default: return Consistency.STRONG;
     }
+  }
+
+  public static TableName tableNameFromThrift(TTableName tableName) {
+    return TableName.valueOf(tableName.getNs(), tableName.getQualifier());
+  }
+
+  public static TableName[] tableNamesArrayFromThrift(List<TTableName> tableNames) {
+    TableName[] out = new TableName[tableNames.size()];
+    int index = 0;
+    for (TTableName tableName : tableNames) {
+      out[index++] = tableNameFromThrift(tableName);
+    }
+    return out;
+  }
+
+  public static List<TableName> tableNamesFromThrift(List<TTableName> tableNames) {
+    List<TableName> out = new ArrayList<>(tableNames.size());
+    for (TTableName tableName : tableNames) {
+      out.add(tableNameFromThrift(tableName));
+    }
+    return out;
+  }
+
+  public static TTableName tableNameFromHBase(TableName table) {
+    TTableName tableName = new TTableName();
+    tableName.setNs(table.getNamespace());
+    tableName.setQualifier(table.getQualifier());
+    return tableName;
+  }
+
+  public static List<TTableName> tableNamesFromHBase(List<TableName> in) {
+    List<TTableName> out = new ArrayList<>(in.size());
+    for (TableName tableName : in) {
+      out.add(tableNameFromHBase(tableName));
+    }
+    return out;
+  }
+
+  public static List<TTableName> tableNamesFromHBase(TableName[] in) {
+    List<TTableName> out = new ArrayList<>(in.length);
+    for (TableName tableName : in) {
+      out.add(tableNameFromHBase(tableName));
+    }
+    return out;
+  }
+
+  public static byte[][] splitKeyFromThrift(List<ByteBuffer> in) {
+    if (in == null || in.size() == 0) {
+      return null;
+    }
+    byte[][] out = new byte[in.size()][];
+    int index = 0;
+    for (ByteBuffer key : in) {
+      out[index++] = key.array();
+    }
+    return out;
+  }
+
+  public static BloomType bloomFilterFromThrift(TBloomFilterType in) {
+    switch (in.getValue()) {
+      case 0: return BloomType.NONE;
+      case 1: return BloomType.ROW;
+      case 2: return BloomType.ROWCOL;
+      default: return BloomType.ROW;
+    }
+  }
+
+  public static Compression.Algorithm compressionAlgorithmFromThrift(TCompressionAlgorithm in) {
+    switch (in.getValue()) {
+      case 0: return Compression.Algorithm.LZO;
+      case 1: return Compression.Algorithm.GZ;
+      case 2: return Compression.Algorithm.NONE;
+      case 3: return Compression.Algorithm.SNAPPY;
+      case 4: return Compression.Algorithm.LZ4;
+      case 5: return Compression.Algorithm.BZIP2;
+      case 6: return Compression.Algorithm.ZSTD;
+      default: return Compression.Algorithm.NONE;
+    }
+  }
+
+  public static DataBlockEncoding dataBlockEncodingFromThrift(TDataBlockEncoding in) {
+    switch (in.getValue()) {
+      case 0: return DataBlockEncoding.NONE;
+      case 2: return DataBlockEncoding.PREFIX;
+      case 3: return DataBlockEncoding.DIFF;
+      case 4: return DataBlockEncoding.FAST_DIFF;
+      case 7: return DataBlockEncoding.ROW_INDEX_V1;
+      default: return DataBlockEncoding.NONE;
+    }
+  }
+
+  public static KeepDeletedCells keepDeletedCellsFromThrift(TKeepDeletedCells in) {
+    switch (in.getValue()) {
+      case 0: return KeepDeletedCells.FALSE;
+      case 1: return KeepDeletedCells.TRUE;
+      case 2: return KeepDeletedCells.TTL;
+      default: return KeepDeletedCells.FALSE;
+    }
+  }
+
+  public static NamespaceDescriptor namespaceDescriptorFromThrift(TNamespaceDescriptor in) {
+    NamespaceDescriptor.Builder builder = NamespaceDescriptor.create(in.getName());
+    if (in.isSetConfiguration()) {
+      for (Map.Entry<String, String> conf : in.getConfiguration().entrySet()) {
+        builder.addConfiguration(conf.getKey(), conf.getValue());
+      }
+    }
+    return builder.build();
+  }
+
+  public static TNamespaceDescriptor namespaceDescriptorFromHBase(NamespaceDescriptor in) {
+    TNamespaceDescriptor out = new TNamespaceDescriptor();
+    out.setName(in.getName());
+    for (Map.Entry<String, String> conf : in.getConfiguration().entrySet()) {
+      out.putToConfiguration(conf.getKey(), conf.getValue());
+    }
+    return out;
+  }
+
+  public static List<TNamespaceDescriptor> namespaceDescriptorsFromHBase(
+      NamespaceDescriptor[] in) {
+    List<TNamespaceDescriptor> out = new ArrayList<>(in.length);
+    for (NamespaceDescriptor descriptor : in) {
+      out.add(namespaceDescriptorFromHBase(descriptor));
+    }
+    return out;
+  }
+
+  private static TDurability durabilityFromHBase(Durability durability) {
+    switch (durability) {
+      case USE_DEFAULT: return TDurability.USE_DEFAULT;
+      case SKIP_WAL: return TDurability.SKIP_WAL;
+      case ASYNC_WAL: return TDurability.ASYNC_WAL;
+      case SYNC_WAL: return TDurability.SYNC_WAL;
+      case FSYNC_WAL: return TDurability.FSYNC_WAL;
+      default: return null;
+    }
+  }
+
+
+
+  public static TBloomFilterType bloomFilterFromHBase(BloomType in) {
+    switch (in) {
+      case NONE: return TBloomFilterType.NONE;
+      case ROWCOL: return TBloomFilterType.ROWCOL;
+      default: return TBloomFilterType.ROW;
+    }
+  }
+
+  public static TCompressionAlgorithm compressionAlgorithmFromHBase(Compression.Algorithm in) {
+    switch (in) {
+      case LZO: return TCompressionAlgorithm.LZO;
+      case GZ: return TCompressionAlgorithm.GZ;
+      case NONE: return TCompressionAlgorithm.NONE;
+      case SNAPPY: return TCompressionAlgorithm.SNAPPY;
+      case LZ4: return TCompressionAlgorithm.LZ4;
+      case BZIP2: return TCompressionAlgorithm.BZIP2;
+      case ZSTD: return TCompressionAlgorithm.ZSTD;
+      default: return TCompressionAlgorithm.NONE;
+    }
+  }
+
+  public static TDataBlockEncoding dataBlockEncodingFromHBase(DataBlockEncoding in) {
+    switch (in) {
+      case NONE: return TDataBlockEncoding.NONE;
+      case PREFIX: return TDataBlockEncoding.PREFIX;
+      case DIFF: return TDataBlockEncoding.DIFF;
+      case FAST_DIFF: return TDataBlockEncoding.FAST_DIFF;
+      case ROW_INDEX_V1: return TDataBlockEncoding.ROW_INDEX_V1;
+      default: return TDataBlockEncoding.NONE;
+    }
+  }
+
+  public static TKeepDeletedCells keepDeletedCellsFromHBase(KeepDeletedCells in) {
+    switch (in) {
+      case FALSE: return TKeepDeletedCells.FALSE;
+      case TRUE: return TKeepDeletedCells.TRUE;
+      case TTL: return TKeepDeletedCells.TTL;
+      default: return TKeepDeletedCells.FALSE;
+    }
+  }
+
+  private static TConsistency consistencyFromHBase(Consistency consistency) {
+    switch (consistency) {
+      case STRONG: return TConsistency.STRONG;
+      case TIMELINE: return TConsistency.TIMELINE;
+      default: return TConsistency.STRONG;
+    }
+  }
+
+  public static TGet getFromHBase(Get in) {
+    TGet out = new TGet();
+    out.setRow(in.getRow());
+
+    TTimeRange tTimeRange = new TTimeRange();
+    tTimeRange.setMaxStamp(in.getTimeRange().getMax()).setMinStamp(in.getTimeRange().getMin());
+    out.setTimeRange(tTimeRange);
+    out.setMaxVersions(in.getMaxVersions());
+
+    for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
+          ByteBuffer.wrap(attribute.getValue()));
+    }
+    try {
+      Authorizations authorizations = in.getAuthorizations();
+      if (authorizations != null) {
+        TAuthorization tAuthorization = new TAuthorization();
+        tAuthorization.setLabels(authorizations.getLabels());
+        out.setAuthorizations(tAuthorization);
+      }
+    } catch (DeserializationException e) {
+      throw new RuntimeException(e);
+    }
+    out.setConsistency(consistencyFromHBase(in.getConsistency()));
+    out.setTargetReplicaId(in.getReplicaId());
+    out.setCacheBlocks(in.getCacheBlocks());
+    out.setStoreLimit(in.getMaxResultsPerColumnFamily());
+    out.setStoreOffset(in.getRowOffsetPerColumnFamily());
+    out.setExistence_only(in.isCheckExistenceOnly());
+    for (Map.Entry<byte[], NavigableSet<byte[]>> family : in.getFamilyMap().entrySet()) {
+
+      if (family.getValue() != null && !family.getValue().isEmpty()) {
+        for (byte[] qualifier : family.getValue()) {
+          TColumn column = new TColumn();
+          column.setFamily(family.getKey());
+          column.setQualifier(qualifier);
+          out.addToColumns(column);
+        }
+      } else {
+        TColumn column = new TColumn();
+        column.setFamily(family.getKey());
+        out.addToColumns(column);
+      }
+    }
+    if (in.getFilter() != null) {
+      try {
+        out.setFilterBytes(filterFromHBase(in.getFilter()));
+      } catch (IOException ioE) {
+        throw new RuntimeException(ioE);
+      }
+    }
+    return out;
+  }
+
+  public static Cell toCell(byte[] row, TColumnValue columnValue) {
+    return
+        new KeyValue(row, columnValue.getFamily(),
+            columnValue.getQualifier(), columnValue.getTimestamp(),
+            KeyValue.Type.codeToType(columnValue.getType()),
+            columnValue.getValue(), columnValue.getTags());
+  }
+
+  public static Result resultFromThrift(TResult in) {
+    if (in == null) {
+      return null;
+    }
+    if (!in.isSetColumnValues() || in.getColumnValues().isEmpty()){
+      return in.isStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT;
+    }
+    List<Cell> cells = new ArrayList<>(in.getColumnValues().size());
+    for (TColumnValue columnValue : in.getColumnValues()) {
+      cells.add(toCell(in.getRow(), columnValue));
+    }
+    return Result.create(cells, null, in.isStale(), in.isPartial());
+  }
+
+  public static TPut putFromHBase(Put in) {
+    TPut out = new TPut();
+    out.setRow(in.getRow());
+    if (in.getTimeStamp() != HConstants.LATEST_TIMESTAMP) {
+      out.setTimestamp(in.getTimeStamp());
+    }
+    if (in.getDurability() != Durability.USE_DEFAULT) {
+      out.setDurability(durabilityFromHBase(in.getDurability()));
+    }
+    for (Map.Entry<byte [], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
+      byte[] family = entry.getKey();
+      for (Cell cell : entry.getValue()) {
+        TColumnValue columnValue = new TColumnValue();
+        columnValue.setFamily(family)
+            .setQualifier(CellUtil.cloneQualifier(cell))
+            .setType(cell.getTypeByte())
+            .setTimestamp(cell.getTimestamp())
+            .setValue(CellUtil.cloneValue(cell));
+        if (cell.getTagsLength() != 0) {
+          columnValue.setTags(cell.getTagsArray());
+        }
+        out.addToColumnValues(columnValue);
+      }
+    }
+    for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
+          ByteBuffer.wrap(attribute.getValue()));
+    }
+    try {
+      CellVisibility cellVisibility = in.getCellVisibility();
+      if (cellVisibility != null) {
+        TCellVisibility tCellVisibility = new TCellVisibility();
+        tCellVisibility.setExpression(cellVisibility.getExpression());
+        out.setCellVisibility(tCellVisibility);
+      }
+    } catch (DeserializationException e) {
+      throw new RuntimeException(e);
+    }
+    return out;
+  }
+
+  public static List<TPut> putsFromHBase(List<Put> in) {
+    List<TPut> out = new ArrayList<>(in.size());
+    for (Put put : in) {
+      out.add(putFromHBase(put));
+    }
+    return out;
+  }
+
+  public static NamespaceDescriptor[] namespaceDescriptorsFromThrift(
+      List<TNamespaceDescriptor> in) {
+    NamespaceDescriptor[] out = new NamespaceDescriptor[in.size()];
+    int index = 0;
+    for (TNamespaceDescriptor descriptor : in) {
+      out[index++] = namespaceDescriptorFromThrift(descriptor);
+    }
+    return out;
+  }
+
+  public static List<TDelete> deletesFromHBase(List<Delete> in) {
+    List<TDelete> out = new ArrayList<>(in.size());
+    for (Delete delete : in) {
+      out.add(deleteFromHBase(delete));
+    }
+    return out;
+  }
+
+  public static TAppend appendFromHBase(Append in) throws IOException {
+    TAppend out = new TAppend();
+    out.setRow(in.getRow());
+
+    if (in.getDurability() != Durability.USE_DEFAULT) {
+      out.setDurability(durabilityFromHBase(in.getDurability()));
+    }
+    for (Map.Entry<byte [], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
+      byte[] family = entry.getKey();
+      for (Cell cell : entry.getValue()) {
+        TColumnValue columnValue = new TColumnValue();
+        columnValue.setFamily(family)
+            .setQualifier(CellUtil.cloneQualifier(cell))
+            .setType(cell.getTypeByte())
+            .setTimestamp(cell.getTimestamp())
+            .setValue(CellUtil.cloneValue(cell));
+        if (cell.getTagsLength() != 0) {
+          columnValue.setTags(cell.getTagsArray());
+        }
+        out.addToColumns(columnValue);
+      }
+    }
+    for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
+          ByteBuffer.wrap(attribute.getValue()));
+    }
+    try {
+      CellVisibility cellVisibility = in.getCellVisibility();
+      if (cellVisibility != null) {
+        TCellVisibility tCellVisibility = new TCellVisibility();
+        tCellVisibility.setExpression(cellVisibility.getExpression());
+        out.setCellVisibility(tCellVisibility);
+      }
+    } catch (DeserializationException e) {
+      throw new RuntimeException(e);
+    }
+    out.setReturnResults(in.isReturnResults());
+    return out;
+  }
+
+  public static TIncrement incrementFromHBase(Increment in) throws IOException {
+    TIncrement out = new TIncrement();
+    out.setRow(in.getRow());
+
+    if (in.getDurability() != Durability.USE_DEFAULT) {
+      out.setDurability(durabilityFromHBase(in.getDurability()));
+    }
+    for (Map.Entry<byte [], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
+      byte[] family = entry.getKey();
+      for (Cell cell : entry.getValue()) {
+        TColumnIncrement columnValue = new TColumnIncrement();
+        columnValue.setFamily(family).setQualifier(CellUtil.cloneQualifier(cell));
+        columnValue.setAmount(
+            Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+        out.addToColumns(columnValue);
+      }
+    }
+    for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
+          ByteBuffer.wrap(attribute.getValue()));
+    }
+    try {
+      CellVisibility cellVisibility = in.getCellVisibility();
+      if (cellVisibility != null) {
+        TCellVisibility tCellVisibility = new TCellVisibility();
+        tCellVisibility.setExpression(cellVisibility.getExpression());
+        out.setCellVisibility(tCellVisibility);
+      }
+    } catch (DeserializationException e) {
+      throw new RuntimeException(e);
+    }
+    out.setReturnResults(in.isReturnResults());
+    return out;
+  }
+
+  public static TRowMutations rowMutationsFromHBase(RowMutations in) {
+    TRowMutations tRowMutations = new TRowMutations();
+    tRowMutations.setRow(in.getRow());
+    for (Mutation mutation : in.getMutations()) {
+      TMutation tMutation = new TMutation();
+      if (mutation instanceof Put) {
+        tMutation.setPut(ThriftUtilities.putFromHBase((Put)mutation));
+      } else if (mutation instanceof Delete) {
+        tMutation.setDeleteSingle(ThriftUtilities.deleteFromHBase((Delete)mutation));
+      } else {
+        throw new IllegalArgumentException(
+            "Only Put and Delete is supported in mutateRow, but muation=" + mutation);
+      }
+      tRowMutations.addToMutations(tMutation);
+    }
+    return tRowMutations;
+  }
+
+  public static TCompareOp compareOpFromHBase(CompareFilter.CompareOp compareOp) {
+    switch (compareOp) {
+      case LESS: return TCompareOp.LESS;
+      case LESS_OR_EQUAL: return TCompareOp.LESS_OR_EQUAL;
+      case EQUAL: return TCompareOp.EQUAL;
+      case NOT_EQUAL: return TCompareOp.NOT_EQUAL;
+      case GREATER_OR_EQUAL: return TCompareOp.GREATER_OR_EQUAL;
+      case GREATER: return TCompareOp.GREATER;
+      case NO_OP: return TCompareOp.NO_OP;
+      default: return null;
+    }
+  }
+  public static List<ByteBuffer> splitKeyFromHBase(byte[][] in) {
+    if (in == null || in.length == 0) {
+      return null;
+    }
+    List<ByteBuffer> out = new ArrayList<>(in.length);
+    for (byte[] key : in) {
+      out.add(ByteBuffer.wrap(key));
+    }
+    return out;
+  }
+
+  public static Result[] resultsFromThrift(List<TResult> in) {
+    Result[] out = new Result[in.size()];
+    int index = 0;
+    for (TResult tResult : in) {
+      out[index++] = resultFromThrift(tResult);
+    }
+    return out;
+  }
+
+  public static List<TGet> getsFromHBase(List<Get> in) {
+    List<TGet> out = new ArrayList<>(in.size());
+    for (Get get : in) {
+      out.add(getFromHBase(get));
+    }
+    return out;
+  }
+
+  public static TServerName getServerNamesHelper(ServerName serverName) {
+    TServerName tServerName = new TServerName();
+    tServerName.setHostName(serverName.getHostname());
+    tServerName.setPort(serverName.getPort());
+    tServerName.setStartCode(serverName.getStartcode());
+    return tServerName;
+  }
+
+  public static Set<TServerName> getServerNamesFromHBase(Set<ServerName> serverNames) {
+    Set<TServerName> result = new java.util.HashSet<>();
+    if (CollectionUtils.isEmpty(serverNames)) {
+      return result;
+    }
+    for (ServerName serverName: serverNames) {
+      TServerName tServerName = new TServerName();
+      tServerName.setHostName(serverName.getHostname());
+      tServerName.setPort(serverName.getPort());
+      tServerName.setStartCode(serverName.getStartcode());
+      result.add(tServerName);
+    }
+    return result;
+  }
+
+  public static Set<ServerName> getServerNamesFromThrift(Set<TServerName> tServerNames) {
+    Set<ServerName> result = new java.util.HashSet<>();
+    if (CollectionUtils.isEmpty(tServerNames)) {
+      return result;
+    }
+    for (TServerName tServerName: tServerNames) {
+      ServerName serverName = ServerName.valueOf(tServerName.getHostName(),
+          tServerName.getPort(),
+          tServerName.getStartCode());
+      result.add(serverName);
+    }
+    return result;
   }
 }
