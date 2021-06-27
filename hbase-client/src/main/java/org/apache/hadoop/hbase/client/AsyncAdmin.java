@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import com.google.protobuf.RpcChannel;
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,6 +48,8 @@ import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * The asynchronous administrative API for HBase.
@@ -1027,6 +1031,32 @@ public interface AsyncAdmin {
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
     return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME))
         .thenApply(ClusterMetrics::getServersName);
+  }
+
+  default CompletableFuture<Collection<ServerName>> getRegionServers(
+    boolean excludeDecommissionedRS) {
+    CompletableFuture<Collection<ServerName>> future = new CompletableFuture<>();
+    addListener(
+      getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).thenApply(ClusterMetrics::getServersName),
+      (allServers, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          if (!excludeDecommissionedRS) {
+            future.complete(allServers);
+          } else {
+            addListener(listDecommissionedRegionServers(), (decomServers, decomErr) -> {
+              if (decomErr != null) {
+                future.completeExceptionally(decomErr);
+              } else {
+                future.complete(allServers.stream().filter(s -> !decomServers.contains(s))
+                  .collect(ImmutableList.toImmutableList()));
+              }
+            });
+          }
+        }
+      });
+    return future;
   }
 
   /**
