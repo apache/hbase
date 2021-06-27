@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -128,7 +129,7 @@ public class TestEndToEndSplitTransaction {
 
       List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
       regions.stream()
-        .forEach(r -> new ArrayList<>(r.getStores()).get(0).getStorefiles().stream()
+        .forEach(r -> Iterables.getFirst(r.getStores(), null).getStorefiles().stream()
           .filter(s -> s.isReference() && !scanner.containsKey(r.getRegionInfo().getEncodedName()))
           .forEach(sf -> {
             StoreFileReader reader = ((HStoreFile) sf).getReader();
@@ -147,7 +148,7 @@ public class TestEndToEndSplitTransaction {
       regions.stream()
         .filter(region -> scanner.containsKey(region.getRegionInfo().getEncodedName()))
         .forEach(r -> assertFalse("Contains an open file reference which can be split",
-          new ArrayList<>(r.getStores()).get(0).canSplit()));
+          Iterables.getFirst(r.getStores(), null).canSplit()));
     } finally {
       scanner.values().forEach(s -> {
         try {
@@ -484,7 +485,7 @@ public class TestEndToEndSplitTransaction {
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(hri.getTable());
     regions.stream().forEach(r -> {
       try {
-        new ArrayList<>(r.getStores()).get(0).closeAndArchiveCompactedFiles();
+        Iterables.getFirst(r.getStores(),null).closeAndArchiveCompactedFiles();
       } catch (IOException ioe) {
         LOG.error("failed in removing compacted file", ioe);
       }

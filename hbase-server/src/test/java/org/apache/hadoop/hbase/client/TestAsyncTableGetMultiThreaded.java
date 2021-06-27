@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -190,7 +191,7 @@ public class TestAsyncTableGetMultiThreaded {
         }
         LOG.info("====== Compaction on {} finished, close and archive compacted files ======",
           region.getRegionInfo());
-        new ArrayList<>(region.getStores()).get(0).closeAndArchiveCompactedFiles();
+        Iterables.getFirst(region.getStores(), null).closeAndArchiveCompactedFiles();
         LOG.info("====== Close and archive compacted files on {} done ======",
           region.getRegionInfo());
       }

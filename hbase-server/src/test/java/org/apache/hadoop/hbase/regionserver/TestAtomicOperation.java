@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -116,7 +117,7 @@ public class TestAtomicOperation {
   @After
   public void teardown() throws IOException {
     if (region != null) {
-      CacheConfig cacheConfig = new ArrayList<>(region.getStores()).get(0).getCacheConfig();
+      CacheConfig cacheConfig = Iterables.getFirst(region.getStores(), null).getCacheConfig();
       region.close();
       WAL wal = region.getWAL();
       if (wal != null) {
