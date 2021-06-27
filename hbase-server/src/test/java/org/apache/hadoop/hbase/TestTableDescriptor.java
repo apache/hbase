@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -37,7 +35,6 @@ import static org.junit.Assert.assertEquals;
  */
 @Category(SmallTests.class)
 public class TestTableDescriptor {
-  final static Log LOG = LogFactory.getLog(TestTableDescriptor.class);
 
   @Test
   public void testPb() throws DeserializationException, IOException {
@@ -49,9 +46,7 @@ public class TestTableDescriptor {
     htd.setRegionReplication(2);
     TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
     byte[] bytes = td.toByteArray();
-    TableDescriptor deserializedTd = TableDescriptor.parseFrom(bytes);
-    assertEquals(td, deserializedTd);
-    assertEquals(td.getHTableDescriptor(), deserializedTd.getHTableDescriptor());
-    assertEquals(td.getTableState(), deserializedTd.getTableState());
+    HTableDescriptor deserializedTd = HTableDescriptor.parseFrom(bytes);
+    assertEquals(td.getHTableDescriptor(), deserializedTd);
   }
 }
