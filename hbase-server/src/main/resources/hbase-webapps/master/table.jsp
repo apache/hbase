@@ -60,7 +60,8 @@
   import="org.apache.hadoop.hbase.master.webapp.MetaBrowser"
   import="org.apache.hadoop.hbase.master.webapp.RegionReplicaInfo"
   import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
-  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"%>
+  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"
+  import="org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException" %>
 <%@ page import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot" %>
 <%@ page import="org.apache.hadoop.hbase.quotas.ThrottleSettings" %>
 <%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
@@ -265,8 +266,16 @@
               for (int j = 0; j < numMetaReplicas; j++) {
                 RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                         RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-                ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+                //If a metaLocation is null, All of its info would be empty here to be displayed.
+                ServerName metaLocation = null;
+                try {
+                  metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+                } catch (NotAllMetaRegionsOnlineException e) {
+                  //Region in transition state here throw a NotAllMetaRegionsOnlineException causes
+                  //the UI crash.
+                }
                 for (int i = 0; i < 1; i++) {
+                  //If metaLocation is null, default value below would be displayed in UI.
                   String hostAndPort = "";
                   String readReq = "N/A";
                   String writeReq = "N/A";
@@ -340,8 +349,16 @@
               for (int j = 0; j < numMetaReplicas; j++) {
                 RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                         RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-                ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+                //If a metaLocation is null, All of its info would be empty here to be displayed.
+                ServerName metaLocation = null;
+                try {
+                  metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+                } catch (NotAllMetaRegionsOnlineException e) {
+                  //Region in transition state here throw a NotAllMetaRegionsOnlineException causes
+                  //the UI crash.
+                }
                 for (int i = 0; i < 1; i++) {
+                  //If metaLocation is null, default value below would be displayed in UI.
                   String hostAndPort = "";
                   long compactingCells = 0;
                   long compactedCells = 0;
