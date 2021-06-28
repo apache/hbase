@@ -174,6 +174,7 @@ struct TAppend {
  */
 exception IOError {
   1:string message
+  2:bool canRetry
 }
 
 /**

@@ -175,6 +175,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   private TIOError getTIOError(IOException e) {
     TIOError err = new TIOErrorWithCause(e);
     err.setMessage(e.getMessage());
+    err.setCanRetry(!(e instanceof DoNotRetryIOException));
     return err;
   }
 
