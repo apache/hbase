@@ -160,6 +160,10 @@ public final class CompactionTask {
     return submitTime;
   }
 
+  void setPriority(int priority) {
+    this.priority = priority;
+  }
+
   @Override
   public String toString() {
     return new StringBuilder("RS: ").append(rsServerName).append(", region: ")

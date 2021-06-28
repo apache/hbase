@@ -198,6 +198,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
     compactionTask.setCompactionContext(compactionContext);
     compactionTask.setSelectedFileNames(selectedFileNames);
     compactionTask.setMonitoredTask(status);
+    compactionTask.setPriority(compactionContext.getRequest().getPriority());
     // 3. execute a compaction task
     ThreadPoolExecutor pool;
     pool = store.throttleCompaction(compactionContext.getRequest().getSize()) ? longCompactions
@@ -236,7 +237,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
     }
     // Convert files names to store files
     status.setStatus("Convert current compacting and compacted files to store files");
-    List<HStoreFile> excludeStoreFiles = convertFileNameToStoreFile(store, excludeFiles);
+    List<HStoreFile> excludeStoreFiles = getExcludedStoreFiles(store, excludeFiles);
     LOG.info(
       "Start select store: {}, excludeFileNames: {}, excluded: {}, compacting: {}, compacted: {}",
       logStr, excludeFiles.size(), excludeStoreFiles.size(), compactingFiles.size(),
@@ -292,7 +293,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
       for (Path newFile : newFiles) {
         newFileNames.add(newFile.getName());
       }
-      reportCompleteCompaction(compactionTask, newFileNames, status);
+      reportCompactionCompleted(compactionTask, newFileNames, status);
     } finally {
       status.setStatus("Remove selected files");
       LOG.info("Remove selected files: {}", compactionTask);
@@ -304,7 +305,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
    * Report compaction completed to RS
    * @return True if report to RS success, otherwise false
    */
-  private boolean reportCompleteCompaction(CompactionTask task, List<String> newFiles,
+  private boolean reportCompactionCompleted(CompactionTask task, List<String> newFiles,
       MonitoredTask status) throws IOException {
     ServerName rsServerName = task.getRsServerName();
     RegionInfo regionInfo = task.getRegionInfo();
@@ -322,7 +323,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
       builder.addNewFiles(newFile);
     }
     CompleteCompactionRequest completeCompactionRequest = builder.build();
-    AsyncRegionServerAdmin rsAdmin = getOrCreateRsAdmin(rsServerName);
+    AsyncRegionServerAdmin rsAdmin = getRsAdmin(rsServerName);
     try {
       status
           .setStatus("Report complete compaction to RS: " + rsServerName + ", selected file size: "
@@ -336,13 +337,10 @@ public class CompactionThreadManager implements ThroughputControllerService {
         status.markComplete("Report to RS succeeded and RS accepted");
         // move selected files to compacted files
         storage.addCompactedFiles(regionInfo, cfd, selectedFileNames);
-        // storage.removeSelectedFiles(regionInfo, cfd, selectedFileNames);
         LOG.info("Compaction manager request complete compaction success. {}", task);
       } else {
         //TODO: maybe region is move, we need get latest regionserver name and retry
         status.abort("Report to RS succeeded but RS denied");
-        // remove from compacting files because RS refuse to complete this compaction
-        // storage.removeSelectedFiles(regionInfo, cfd, selectedFileNames);
         LOG.warn("Compaction manager request complete compaction fail. {}", task);
       }
       return true;
@@ -354,12 +352,12 @@ public class CompactionThreadManager implements ThroughputControllerService {
     }
   }
 
-  private List<HStoreFile> convertFileNameToStoreFile(HStore store, Set<String> fileNames) {
+  private List<HStoreFile> getExcludedStoreFiles(HStore store, Set<String> excludeFileNames) {
     Collection<HStoreFile> storefiles = store.getStorefiles();
     List<HStoreFile> storeFiles = new ArrayList<>();
     for (HStoreFile storefile : storefiles) {
       String name = storefile.getPath().getName();
-      if (fileNames.contains(name)) {
+      if (excludeFileNames.contains(name)) {
         storeFiles.add(storefile);
       }
     }
@@ -378,11 +376,8 @@ public class CompactionThreadManager implements ThroughputControllerService {
     return store;
   }
 
-  private AsyncRegionServerAdmin getOrCreateRsAdmin(final ServerName sn) {
-    return rsAdmins.computeIfAbsent(sn, v -> {
-      LOG.debug("New RS admin connection to {}", sn);
-      return server.getAsyncClusterConnection().getRegionServerAdmin(sn);
-    });
+  private AsyncRegionServerAdmin getRsAdmin(final ServerName sn) {
+    return server.getAsyncClusterConnection().getRegionServerAdmin(sn);
   }
 
   ConcurrentHashMap<String, CompactionTask> getRunningCompactionTasks() {
@@ -402,18 +397,12 @@ public class CompactionThreadManager implements ThroughputControllerService {
     if (t == null) {
       return;
     }
-    boolean done = false;
-    while (!done) {
-      try {
-        done = t.awaitTermination(60, TimeUnit.SECONDS);
-        LOG.info("Waiting for " + name + " to finish...");
-        if (!done) {
-          t.shutdownNow();
-        }
-      } catch (InterruptedException ie) {
-        LOG.warn("Interrupted waiting for " + name + " to finish...");
-        t.shutdownNow();
-      }
+    try {
+      t.shutdown();
+      t.awaitTermination(60, TimeUnit.SECONDS);
+    } catch (InterruptedException ie) {
+      LOG.warn("Interrupted waiting for " + name + " to finish...");
+      t.shutdownNow();
     }
   }
 
