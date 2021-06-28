@@ -28,10 +28,8 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
@@ -46,25 +44,23 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.CompactThreadControl;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.throttle.PressureAwareCompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControllerService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.StealJobQueue;
+
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompleteCompactionRequest;
@@ -83,19 +79,14 @@ public class CompactionThreadManager implements ThroughputControllerService {
   private final static int SMALL_COMPACTION_THREADS_DEFAULT = 50;
 
   private final Configuration conf;
-  private final ConcurrentMap<ServerName, AsyncRegionServerAdmin> rsAdmins =
-      new ConcurrentHashMap<>();
   private final HCompactionServer server;
   private HFileSystem fs;
   private Path rootDir;
   private FSTableDescriptors tableDescriptors;
-  // compaction pools
-  private volatile ThreadPoolExecutor longCompactions;
-  private volatile ThreadPoolExecutor shortCompactions;
+  private CompactThreadControl compactThreadControl;
   private ConcurrentHashMap<String, CompactionTask> runningCompactionTasks =
       new ConcurrentHashMap<>();
-  private PressureAwareCompactionThroughputController throughputController;
-  private CompactionServerStorage storage = new CompactionServerStorage();
+  private static CompactionServerStorage storage = new CompactionServerStorage();
 
   CompactionThreadManager(final Configuration conf, HCompactionServer server) {
     this.conf = conf;
@@ -104,33 +95,19 @@ public class CompactionThreadManager implements ThroughputControllerService {
       this.fs = new HFileSystem(this.conf, true);
       this.rootDir = CommonFSUtils.getRootDir(this.conf);
       this.tableDescriptors = new FSTableDescriptors(conf);
-      // start compaction resources
-      this.throughputController = new PressureAwareCompactionThroughputController();
-      this.throughputController.setConf(conf);
-      this.throughputController.setup(this);
-      startCompactionPool();
+      int largeThreads =
+          Math.max(1, conf.getInt(LARGE_COMPACTION_THREADS, LARGE_COMPACTION_THREADS_DEFAULT));
+      int smallThreads = conf.getInt(SMALL_COMPACTION_THREADS, SMALL_COMPACTION_THREADS_DEFAULT);
+      compactThreadControl = new CompactThreadControl(this, largeThreads, smallThreads,
+          COMPACTION_TASK_COMPARATOR, REJECTFUN);
     } catch (Throwable t) {
       LOG.error("Failed construction CompactionThreadManager", t);
     }
   }
 
-  private void startCompactionPool() {
-    final String n = Thread.currentThread().getName();
-    // threads pool used to execute short and long compactions
-    int largeThreads =
-        Math.max(1, conf.getInt(LARGE_COMPACTION_THREADS, LARGE_COMPACTION_THREADS_DEFAULT));
-    int smallThreads = conf.getInt(SMALL_COMPACTION_THREADS, SMALL_COMPACTION_THREADS_DEFAULT);
-    StealJobQueue<Runnable> stealJobQueue =
-        new StealJobQueue<>(largeThreads, smallThreads, COMPACTION_TASK_COMPARATOR);
-    this.longCompactions = new ThreadPoolExecutor(largeThreads, largeThreads, 60, TimeUnit.SECONDS,
-        stealJobQueue, new ThreadFactoryBuilder().setNameFormat(n + "-longCompactions-%d")
-            .setDaemon(true).build());
-    this.longCompactions.setRejectedExecutionHandler(new Rejection());
-    this.longCompactions.prestartAllCoreThreads();
-    this.shortCompactions = new ThreadPoolExecutor(smallThreads, smallThreads, 60, TimeUnit.SECONDS,
-        stealJobQueue.getStealFromQueue(), new ThreadFactoryBuilder()
-            .setNameFormat(n + "-shortCompactions-%d").setDaemon(true).build());
-    this.shortCompactions.setRejectedExecutionHandler(new Rejection());
+  @Override
+  public Configuration getConfiguration() {
+    return conf;
   }
 
   @Override
@@ -201,8 +178,9 @@ public class CompactionThreadManager implements ThroughputControllerService {
     compactionTask.setPriority(compactionContext.getRequest().getPriority());
     // 3. execute a compaction task
     ThreadPoolExecutor pool;
-    pool = store.throttleCompaction(compactionContext.getRequest().getSize()) ? longCompactions
-        : shortCompactions;
+    pool = store.throttleCompaction(compactionContext.getRequest().getSize())
+        ? compactThreadControl.getLongCompactions()
+        : compactThreadControl.getShortCompactions();
     pool.submit(new CompactionTaskRunner(compactionTask));
   }
 
@@ -287,7 +265,8 @@ public class CompactionThreadManager implements ThroughputControllerService {
     try {
       LOG.info("Start compact store: {}, cf: {}, compaction context: {}", store, cfd,
         compactionContext);
-      List<Path> newFiles = compactionContext.compact(throughputController, null);
+      List<Path> newFiles =
+          compactionContext.compact(compactThreadControl.getCompactionThroughputController(), null);
       LOG.info("Finish compact store: {}, cf: {}, new files: {}", store, cfd, newFiles);
       List<String> newFileNames = new ArrayList<>();
       for (Path newFile : newFiles) {
@@ -389,21 +368,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
   }
 
   void waitForStop() {
-    waitForPoolStop(longCompactions, "Large Compaction Thread");
-    waitForPoolStop(shortCompactions, "Small Compaction Thread");
-  }
-
-  private void waitForPoolStop(ThreadPoolExecutor t, String name) {
-    if (t == null) {
-      return;
-    }
-    try {
-      t.shutdown();
-      t.awaitTermination(60, TimeUnit.SECONDS);
-    } catch (InterruptedException ie) {
-      LOG.warn("Interrupted waiting for " + name + " to finish...");
-      t.shutdownNow();
-    }
+    compactThreadControl.waitForStop();
   }
 
   private void executeCompaction(CompactionTask compactionTask) {
@@ -431,9 +396,8 @@ public class CompactionThreadManager implements ThroughputControllerService {
   /**
    * Cleanup class to use when rejecting a compaction request from the queue.
    */
-  private class Rejection implements RejectedExecutionHandler {
-    @Override
-    public void rejectedExecution(Runnable runnable, ThreadPoolExecutor pool) {
+  private static BiConsumer<Runnable, ThreadPoolExecutor> REJECTFUN = (runnable, pool) -> {
+    {
       if (runnable instanceof CompactionTaskRunner) {
         CompactionTaskRunner runner = (CompactionTaskRunner) runnable;
         LOG.info("Compaction Rejected: " + runner);
@@ -444,7 +408,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
         }
       }
     }
-  }
+  };
 
   protected class CompactionTaskRunner implements Runnable {
     private CompactionTask compactionTask;

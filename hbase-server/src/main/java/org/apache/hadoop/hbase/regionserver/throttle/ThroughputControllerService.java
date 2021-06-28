@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.throttle;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -26,4 +27,5 @@ public interface ThroughputControllerService {
   double getCompactionPressure();
   @Deprecated
   double getFlushPressure();
+  Configuration getConfiguration();
 }

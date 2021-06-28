@@ -45,7 +45,7 @@ public final class CompactionThroughputControllerFactory {
   private static final String DEPRECATED_NAME_OF_NO_LIMIT_THROUGHPUT_CONTROLLER_CLASS =
     "org.apache.hadoop.hbase.regionserver.compactions.NoLimitThroughputController";
 
-  public static ThroughputController create(RegionServerServices server,
+  public static ThroughputController create(ThroughputControllerService server,
       Configuration conf) {
     Class<? extends ThroughputController> clazz = getThroughputControllerClass(conf);
     ThroughputController controller = ReflectionUtils.newInstance(clazz, conf);
