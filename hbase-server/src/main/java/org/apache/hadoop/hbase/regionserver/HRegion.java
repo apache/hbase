@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
@@ -6517,9 +6518,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         .map(e -> e.getValue()).findFirst().orElse(null);
   }
 
+  /**
+   * Returns a collection of stores. Note: despite the List return type, please treat the return
+   * value as a Collection, and do not perform any List specific operations on it.
+   */
   @Override
-  public Collection<HStore> getStores() {
-    return stores.values();
+  public List<HStore> getStores() {
+    /**
+     * We should return the collection as is, but for backward compatibility reasons, we keep
+     * the List<HStore> return type. HRegion returns a special List subclass CollectionAsList that
+     * throw exceptions when any List specific API is called.
+     */
+    return new CollectionAsList<>(stores.values());
   }
 
   @Override
@@ -8415,5 +8425,132 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public void addWriteRequestsCount(long writeRequestsCount) {
     this.writeRequestsCount.add(writeRequestsCount);
+  }
+
+  /**
+   * This is a helper class that converts a Collection object to a List subclass
+   * that only supports Collection APIs. This way, the conversion cost is minimal.
+   * @param <E> the type of class contained by the Collection.
+   */
+  public static class CollectionAsList<E> implements List<E> {
+    private Collection<E> collection;
+
+    public CollectionAsList(Collection<E> collection) {
+      this.collection = collection;
+    }
+
+    @Override
+    public int size() {
+      return collection.size();
+    }
+
+    @Override
+    public boolean isEmpty() {
+      return collection.isEmpty();
+    }
+
+    @Override
+    public boolean contains(Object o) {
+      return collection.contains(o);
+    }
+
+    @Override
+    public Iterator<E> iterator() {
+      return collection.iterator();
+    }
+
+    @Override
+    public Object[] toArray() {
+      return collection.toArray();
+    }
+
+    @Override public <T> T[] toArray(T[] a) {
+      return collection.toArray(a);
+    }
+
+    @Override
+    public boolean add(E e) {
+      return collection.add(e);
+    }
+
+    @Override
+    public boolean remove(Object o) {
+      return collection.remove(o);
+    }
+
+    @Override
+    public boolean containsAll(Collection<?> c) {
+      return collection.containsAll(c);
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends E> c) {
+      return collection.addAll(c);
+    }
+
+    @Override
+    public boolean addAll(int index, Collection<? extends E> c) {
+      throw new UnsupportedOperationException("Do not support positioned operations");
+    }
+
+    @Override
+    public boolean removeAll(Collection<?> c) {
+      return collection.removeAll(c);
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> c) {
+      return collection.retainAll(c);
+    }
+
+    @Override
+    public void clear() {
+      collection.clear();
+    }
+
+    @Override
+    public E get(int index) {
+      throw new UnsupportedOperationException("Do not support positioned operations");
+    }
+
+    @Override
+    public E set(int index, E element) {
+      throw new UnsupportedOperationException("Do not support positioned operations");
+    }
+
+    @Override
+    public void add(int index, E element) {
+      throw new UnsupportedOperationException("Do not support positioned operations");
+    }
+
+    @Override
+    public E remove(int index) {
+      throw new UnsupportedOperationException("Do not support positioned operations");
+    }
+
+    @Override
+    public int indexOf(Object o) {
+      throw new UnsupportedOperationException("Do not support positioned operations");
+    }
+
+    @Override
+    public int lastIndexOf(Object o) {
+      throw new UnsupportedOperationException("Do not support positioned operations");
+    }
+
+    @Override
+    public ListIterator<E> listIterator() {
+      throw new UnsupportedOperationException("Do not support list operations");
+    }
+
+    @Override
+    public ListIterator<E> listIterator(int index) {
+      throw new UnsupportedOperationException("Do not support list operations");
+    }
+
+    @Override
+    public List<E> subList(int fromIndex, int toIndex) {
+      throw new UnsupportedOperationException("Do not support list operations");
+    }
   }
 }

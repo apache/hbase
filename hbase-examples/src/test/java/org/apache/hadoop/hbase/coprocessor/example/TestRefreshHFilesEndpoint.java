@@ -88,8 +88,8 @@ public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
     }
 
     @Override
-    public Collection<HStore> getStores() {
-      Collection<HStore> list = new ArrayList<>(stores.size());
+    public List<HStore> getStores() {
+      List<HStore> list = new ArrayList<>(stores.size());
       /*
        * This is used to trigger the custom definition (faulty)
        * of refresh HFiles API.
