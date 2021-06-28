@@ -1661,6 +1661,19 @@ public class AssignmentManager extends ZooKeeperListener {
     regionOffline(regionInfo, null);
   }
 
+  /**
+   * Marks the region as offline. In addition whether removing it from
+   * replicas and master in-memory server holding map.
+   * <p>
+   * @param regionInfo - region info.
+   * @param force - setting to true to force this region to be removed from replicas and master
+   *   in-memory server holding map, to make this region not be re-opened on any other region
+   *   servers. The only use case is hbck for now.
+   */
+  public void regionOffline(final HRegionInfo regionInfo, boolean force) {
+    regionOffline(regionInfo, null, force);
+  }
+
   public void offlineDisabledRegion(HRegionInfo regionInfo) {
     if (useZKForAssignment) {
       // Disabling so should not be reassigned, just delete the CLOSED node
@@ -4551,13 +4564,20 @@ public class AssignmentManager extends ZooKeeperListener {
 
   public Map<String, AtomicInteger> getFailedOpenTracker() {return failedOpenTracker;}
 
+  private void regionOffline(final HRegionInfo regionInfo, final State state) {
+    regionOffline(regionInfo, state, false);
+  }
+
   /**
    * A region is offline.  The new state should be the specified one,
    * if not null.  If the specified state is null, the new state is Offline.
    * The specified state can be Split/Merged/Offline/null only.
+   *
+   * If region offline is initiated by rpc call from admin, we force offline it.
    */
-  private void regionOffline(final HRegionInfo regionInfo, final State state) {
-    regionStates.regionOffline(regionInfo, state);
+  private void regionOffline(final HRegionInfo regionInfo, final State state,
+      final boolean force) {
+    regionStates.regionOffline(regionInfo, state, force);
     removeClosedRegion(regionInfo);
     // remove the region plan as well just in case.
     clearRegionPlan(regionInfo);
@@ -4566,7 +4586,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // Tell our listeners that a region was closed
     sendRegionClosedNotification(regionInfo);
     // also note that all the replicas of the primary should be closed
-    if (state != null && state.equals(State.SPLIT)) {
+    if (force || (state != null && state.equals(State.SPLIT))) {
       Collection<HRegionInfo> c = new ArrayList<HRegionInfo>(1);
       c.add(regionInfo);
       Map<ServerName, List<HRegionInfo>> map = regionStates.getRegionAssignments(c);
@@ -4575,7 +4595,7 @@ public class AssignmentManager extends ZooKeeperListener {
         replicasToClose.addAll(list);
       }
     }
-    else if (state != null && state.equals(State.MERGED)) {
+    else if (force || (state != null && state.equals(State.MERGED))) {
       Collection<HRegionInfo> c = new ArrayList<HRegionInfo>(1);
       c.add(regionInfo);
       Map<ServerName, List<HRegionInfo>> map = regionStates.getRegionAssignments(c);

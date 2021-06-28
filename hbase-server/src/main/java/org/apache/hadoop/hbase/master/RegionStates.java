@@ -669,7 +669,7 @@ public class RegionStates {
    * A region is offline, won't be in transition any more.
    */
   public void regionOffline(final HRegionInfo hri) {
-    regionOffline(hri, null);
+    regionOffline(hri, null, false);
   }
 
   /**
@@ -678,7 +678,7 @@ public class RegionStates {
    * Split/Merged/Offline/null(=Offline)/SplittingNew/MergingNew.
    */
   public void regionOffline(
-      final HRegionInfo hri, final State expectedState) {
+      final HRegionInfo hri, final State expectedState, final boolean force) {
     Preconditions.checkArgument(expectedState == null
       || RegionState.isUnassignable(expectedState),
         "Offlined region should not be " + expectedState);
@@ -713,9 +713,9 @@ public class RegionStates {
       regionsInTransition.remove(encodedName);
       ServerName oldServerName = regionAssignments.remove(hri);
       if (oldServerName != null && serverHoldings.containsKey(oldServerName)) {
-        if (newState == State.MERGED || newState == State.SPLIT
+        if (force || (newState == State.MERGED || newState == State.SPLIT
             || hri.isMetaRegion() || tableStateManager.isTableState(hri.getTable(),
-            TableState.State.DISABLED, TableState.State.DISABLING)) {
+            TableState.State.DISABLED, TableState.State.DISABLING))) {
           // Offline the region only if it's merged/split, or the table is disabled/disabling.
           // Otherwise, offline it from this server only when it is online on a different server.
           LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);

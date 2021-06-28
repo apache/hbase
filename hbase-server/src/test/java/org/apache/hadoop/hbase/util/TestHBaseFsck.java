@@ -882,6 +882,76 @@ public class TestHBaseFsck {
       assertNoErrors(hbck2);
       assertEquals(0, hbck2.getOverlapGroups(table).size());
       assertEquals(ROWKEYS.length, countRows());
+
+      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      long totalRegions = cluster.countServedRegions();
+
+      // stop a region servers and run fsck again
+      cluster.stopRegionServer(server);
+      cluster.waitForRegionServerToStop(server, 60);
+
+      // wait for all regions to come online.
+      while (cluster.countServedRegions() < totalRegions) {
+        Thread.sleep(100);
+      }
+
+      // check again after stopping a region server.
+      HBaseFsck hbck3 = doFsck(conf,false);
+      assertNoErrors(hbck3);
+    } finally {
+      cleanupTable(table);
+    }
+  }
+
+  /**
+   * This create and fixes a bad table with regions that have overlap regions.
+   */
+  @Test(timeout=180000)
+  public void testOverlapRegions() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    TableName table =
+        TableName.valueOf("tableOverlapRegions");
+    HRegionInfo hri;
+    ServerName server;
+    try {
+      setupTable(table);
+      assertNoErrors(doFsck(conf, false));
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Now let's mess it up, by adding a region which overlaps with others
+      hri = createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B2"));
+      TEST_UTIL.assignRegion(hri);
+      server = regionStates.getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, server, REGION_ONLINE_TIMEOUT);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
+        ERROR_CODE.OVERLAP_IN_REGION_CHAIN });
+      assertEquals(3, hbck.getOverlapGroups(table).size());
+      assertEquals(ROWKEYS.length, countRows());
+
+      // fix the overlap regions.
+      doFsck(conf, true);
+
+      // check that the overlap regions are gone and no data loss
+      HBaseFsck hbck2 = doFsck(conf,false);
+      assertNoErrors(hbck2);
+      assertEquals(0, hbck2.getOverlapGroups(table).size());
+      assertEquals(ROWKEYS.length, countRows());
+
+      long totalRegions = cluster.countServedRegions();
+
+      // stop a region servers and run fsck again
+      cluster.stopRegionServer(server);
+      cluster.waitForRegionServerToStop(server, 60);
+
+      // wait for all regions to come online.
+      while (cluster.countServedRegions() < totalRegions) {
+        Thread.sleep(100);
+      }
+
+      HBaseFsck hbck3 = doFsck(conf,false);
+      assertNoErrors(hbck3);
     } finally {
       cleanupTable(table);
     }
