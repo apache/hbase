@@ -163,6 +163,28 @@ public class AssignmentManager {
   private final RegionStates regionStates = new RegionStates();
   private final RegionStateStore regionStateStore;
 
+  /**
+   * Min version to consider for moving system tables regions to higher
+   * versioned RS. If RS has higher version than rest of the cluster but that
+   * version is less than this value, we should not move system table regions
+   * to that RS. If RS has higher version than rest of the cluster but that
+   * version is greater than or equal to this value, we should move system
+   * table regions to that RS. This is optional config and default value is
+   * empty string ({@link #DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG}).
+   * For instance, if we do not want meta region to be moved to RS with higher
+   * version until that version is >= 2.0.0, then we can configure
+   * "hbase.min.version.move.system.tables" as "2.0.0".
+   * When operator uses this config, it should be used with care, meaning
+   * we should be confident that even if user table regions come to RS with
+   * higher version (that rest of cluster), it would not cause any
+   * incompatibility issues.
+   */
+  private final String minVersionToMoveSysTables;
+
+  private static final String MIN_VERSION_MOVE_SYS_TABLES_CONFIG =
+    "hbase.min.version.move.system.tables";
+  private static final String DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG = "";
+
   private final Map<ServerName, Set<byte[]>> rsReports = new HashMap<>();
 
   private final boolean shouldAssignRegionsWithFavoredNodes;
@@ -211,6 +233,8 @@ public class AssignmentManager {
     } else {
       this.deadMetricChore = null;
     }
+    minVersionToMoveSysTables = conf.get(MIN_VERSION_MOVE_SYS_TABLES_CONFIG,
+      DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG);
   }
 
   public void start() throws IOException, KeeperException {
@@ -550,7 +574,7 @@ public class AssignmentManager {
           List<RegionPlan> plans = new ArrayList<>();
           // TODO: I don't think this code does a good job if all servers in cluster have same
           // version. It looks like it will schedule unnecessary moves.
-          for (ServerName server : getExcludedServersForSystemTable()) {
+          for (ServerName server : getExcludedServersForSystemTableUnlessAllowed()) {
             if (master.getServerManager().isServerDead(server)) {
               // TODO: See HBASE-18494 and HBASE-18495. Though getExcludedServersForSystemTable()
               // considers only online servers, the server could be queued for dead server
@@ -2297,6 +2321,39 @@ public class AssignmentManager {
         .map(Pair::getFirst)
         .collect(Collectors.toList());
   }
+
+  /**
+   * Get a list of servers that this region can not assign to.
+   * For system table, we must assign them to a server with highest version.
+   * This method is same as {@link #getExcludedServersForSystemTable()} with
+   * the only difference is we can disable this exclusion using config:
+   * "hbase.min.version.move.system.tables".
+   *
+   * @return List of Excluded servers for System table regions.
+   */
+  private List<ServerName> getExcludedServersForSystemTableUnlessAllowed() {
+    List<Pair<ServerName, String>> serverList = master.getServerManager().getOnlineServersList()
+      .stream()
+      .map(s->new Pair<>(s, master.getRegionServerVersion(s)))
+      .collect(Collectors.toList());
+    if (serverList.isEmpty()) {
+      return Collections.emptyList();
+    }
+    String highestVersion = Collections.max(serverList,
+      (o1, o2) -> VersionInfo.compareVersion(o1.getSecond(), o2.getSecond())).getSecond();
+    if (!DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG.equals(minVersionToMoveSysTables)) {
+      int comparedValue =
+        VersionInfo.compareVersion(minVersionToMoveSysTables, highestVersion);
+      if (comparedValue > 0) {
+        return Collections.emptyList();
+      }
+    }
+    return serverList.stream()
+      .filter(pair -> !pair.getSecond().equals(highestVersion))
+      .map(Pair::getFirst)
+      .collect(Collectors.toList());
+  }
+
 
   MasterServices getMaster() {
     return master;
