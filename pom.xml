@@ -637,6 +637,12 @@
       <timezone>0</timezone>
     </developer>
     <developer>
+      <id>weichiu</id>
+      <name>Wei-Chiu Chuang</name>
+      <email>weichiu@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
       <id>xucang</id>
       <name>Xu Cang</name>
       <email>xucang@apache.org</email>
