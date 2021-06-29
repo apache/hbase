@@ -254,6 +254,28 @@ public class AssignmentManager extends ZooKeeperListener {
   private final RegionStateStore regionStateStore;
 
   /**
+   * Min version to consider for moving system tables regions to higher
+   * versioned RS. If RS has higher version than rest of the cluster but that
+   * version is less than this value, we should not move system table regions
+   * to that RS. If RS has higher version than rest of the cluster but that
+   * version is greater than or equal to this value, we should move system
+   * table regions to that RS. This is optional config and default value is
+   * empty string ({@link #DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG}).
+   * For instance, if we do not want meta region to be moved to RS with higher
+   * version until that version is >= 2.0.0, then we can configure
+   * "hbase.min.version.move.system.tables" as "2.0.0".
+   * When operator uses this config, it should be used with care, meaning
+   * we should be confident that even if user table regions come to RS with
+   * higher version (that rest of cluster), it would not cause any
+   * incompatibility issues.
+   */
+  private final String minVersionToMoveSysTables;
+
+  private static final String MIN_VERSION_MOVE_SYS_TABLES_CONFIG =
+      "hbase.min.version.move.system.tables";
+  private static final String DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG = "";
+
+  /**
    * For testing only!  Set to true to skip handling of split and merge.
    */
   private static boolean TEST_SKIP_SPLIT_HANDLING = false;
@@ -348,6 +370,8 @@ public class AssignmentManager extends ZooKeeperListener {
       scheduledThreadPoolExecutor.scheduleWithFixedDelay(new FailedOpenRetryRunnable(),
         failedOpenRetryPeriod, failedOpenRetryPeriod, TimeUnit.MILLISECONDS);
     }
+    minVersionToMoveSysTables = conf.get(MIN_VERSION_MOVE_SYS_TABLES_CONFIG,
+        DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG);
   }
 
   /**
@@ -2564,6 +2588,45 @@ public class AssignmentManager extends ZooKeeperListener {
     return res;
   }
 
+  /**
+   * Get a list of servers that this region can not assign to.
+   * For system table, we must assign them to a server with highest version.
+   * This method is same as {@link #getExcludedServersForSystemTable()} with
+   * the only difference is we can disable this exclusion using config:
+   * "hbase.min.version.move.system.tables".
+   *
+   * @return List of Excluded servers for System table regions.
+   */
+  private List<ServerName> getExcludedServersForSystemTableUnlessAllowed() {
+    List<Pair<ServerName, String>> serverList = new ArrayList<>();
+    for (ServerName s : serverManager.getOnlineServersList()) {
+      serverList.add(new Pair<>(s, server.getRegionServerVersion(s)));
+    }
+    if (serverList.isEmpty()) {
+      return Collections.emptyList();
+    }
+    String highestVersion = Collections.max(serverList,
+        new Comparator<Pair<ServerName, String>>() {
+      @Override
+      public int compare(Pair<ServerName, String> o1, Pair<ServerName, String> o2) {
+        return VersionInfo.compareVersion(o1.getSecond(), o2.getSecond());
+      }
+    }).getSecond();
+    if (!DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG.equals(minVersionToMoveSysTables)) {
+      int comparedValue =
+          VersionInfo.compareVersion(minVersionToMoveSysTables, highestVersion);
+      if (comparedValue > 0) {
+        return Collections.emptyList();
+      }
+    }
+    List<ServerName> res = new ArrayList<>();
+    for (Pair<ServerName, String> pair : serverList) {
+      if (!pair.getSecond().equals(highestVersion)) {
+        res.add(pair.getFirst());
+      }
+    }
+    return res;
+  }
 
   /**
    * @param region the region to assign
@@ -2686,7 +2749,7 @@ public class AssignmentManager extends ZooKeeperListener {
           synchronized (checkIfShouldMoveSystemRegionLock) {
             // RS register on ZK after reports startup on master
             List<HRegionInfo> regionsShouldMove = new ArrayList<>();
-            for (ServerName server : getExcludedServersForSystemTable()) {
+            for (ServerName server : getExcludedServersForSystemTableUnlessAllowed()) {
               regionsShouldMove.addAll(getCarryingSystemTables(server));
             }
             if (!regionsShouldMove.isEmpty()) {
