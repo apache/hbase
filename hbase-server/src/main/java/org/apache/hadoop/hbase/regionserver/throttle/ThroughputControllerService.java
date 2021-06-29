@@ -21,6 +21,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * this Interface is provider of methods the {@link ThroughputController} needs to run
+ */
 @InterfaceAudience.Private
 public interface ThroughputControllerService {
   ChoreService getChoreService();

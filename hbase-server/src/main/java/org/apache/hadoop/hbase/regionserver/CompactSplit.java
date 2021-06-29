@@ -106,7 +106,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     int largeThreads =
       Math.max(1, conf.getInt(LARGE_COMPACTION_THREADS, LARGE_COMPACTION_THREADS_DEFAULT));
     int smallThreads = conf.getInt(SMALL_COMPACTION_THREADS, SMALL_COMPACTION_THREADS_DEFAULT);
-    compactThreadControl = new CompactThreadControl(server, largeThreads, smallThreads, COMPARATOR, REJECTFUN );
+    compactThreadControl =
+        new CompactThreadControl(server, largeThreads, smallThreads, COMPARATOR, REJECTION);
     createSplitExcecutors();
   }
 
@@ -627,8 +628,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   /**
    * Cleanup class to use when rejecting a compaction request from the queue.
    */
-  private static BiConsumer<Runnable, ThreadPoolExecutor> REJECTFUN = (runnable, pool) ->
-  {
+  private static BiConsumer<Runnable, ThreadPoolExecutor> REJECTION = (runnable, pool) -> {
     if (runnable instanceof CompactionRunner) {
       CompactionRunner runner = (CompactionRunner) runnable;
       LOG.debug("Compaction Rejected: " + runner);

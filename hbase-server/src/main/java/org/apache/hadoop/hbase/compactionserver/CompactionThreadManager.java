@@ -99,7 +99,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
           Math.max(1, conf.getInt(LARGE_COMPACTION_THREADS, LARGE_COMPACTION_THREADS_DEFAULT));
       int smallThreads = conf.getInt(SMALL_COMPACTION_THREADS, SMALL_COMPACTION_THREADS_DEFAULT);
       compactThreadControl = new CompactThreadControl(this, largeThreads, smallThreads,
-          COMPACTION_TASK_COMPARATOR, REJECTFUN);
+          COMPACTION_TASK_COMPARATOR, REJECTION);
     } catch (Throwable t) {
       LOG.error("Failed construction CompactionThreadManager", t);
     }
@@ -188,8 +188,8 @@ public class CompactionThreadManager implements ThroughputControllerService {
    * Open store, and select compaction context
    * @return Store and CompactionContext
    */
-  private Pair<HStore, Optional<CompactionContext>> selectCompaction(RegionInfo regionInfo,
-    ColumnFamilyDescriptor cfd, boolean major, int priority, MonitoredTask status, String logStr)
+  Pair<HStore, Optional<CompactionContext>> selectCompaction(RegionInfo regionInfo,
+      ColumnFamilyDescriptor cfd, boolean major, int priority, MonitoredTask status, String logStr)
       throws IOException {
     status.setStatus("Open store");
     tableDescriptors.get(regionInfo.getTable());
@@ -396,7 +396,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
   /**
    * Cleanup class to use when rejecting a compaction request from the queue.
    */
-  private static BiConsumer<Runnable, ThreadPoolExecutor> REJECTFUN = (runnable, pool) -> {
+  private static BiConsumer<Runnable, ThreadPoolExecutor> REJECTION = (runnable, pool) -> {
     {
       if (runnable instanceof CompactionTaskRunner) {
         CompactionTaskRunner runner = (CompactionTaskRunner) runnable;

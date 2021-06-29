@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControllerService;
@@ -27,21 +34,18 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.RejectedExecutionHandler;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
-
+/**
+ * This class help manage compaction thread pools and compaction throughput controller,
+ * @see CompactSplit
+ * @see org.apache.hadoop.hbase.compactionserver.CompactionThreadManager
+ */
 @InterfaceAudience.Private
 public class CompactThreadControl {
   private static final Logger LOG = LoggerFactory.getLogger(CompactThreadControl.class);
   private volatile ThreadPoolExecutor longCompactions;
   private volatile ThreadPoolExecutor shortCompactions;
   private volatile ThroughputController compactionThroughputController;
-  private static BiConsumer<Runnable, ThreadPoolExecutor> rejection = null;
+  private BiConsumer<Runnable, ThreadPoolExecutor> rejection;
 
   public CompactThreadControl(ThroughputControllerService server, int largeThreads,
       int smallThreads, Comparator<Runnable> cmp,
@@ -58,7 +62,7 @@ public class CompactThreadControl {
   /**
    * Cleanup class to use when rejecting a compaction request from the queue.
    */
-  private static class Rejection implements RejectedExecutionHandler {
+  private class Rejection implements RejectedExecutionHandler {
     @Override
     public void rejectedExecution(Runnable runnable, ThreadPoolExecutor pool) {
       rejection.accept(runnable, pool);

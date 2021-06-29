@@ -29,12 +29,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@InterfaceAudience.Private
 /**
  * since we do not maintain StoreFileManager in compaction server(can't refresh when flush). we use
  * external storage(this class) to record compacting files, and initialize a new HStore in
  * {@link CompactionThreadManager#selectCompaction} every time when request compaction
  */
+@InterfaceAudience.Private
 class CompactionServerStorage {
   private static Logger LOG = LoggerFactory.getLogger(CompactionServerStorage.class);
   private final ConcurrentMap<String, ConcurrentMap<String, Set<String>>> selectedFiles =
