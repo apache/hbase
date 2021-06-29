@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -67,6 +68,8 @@ import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
@@ -74,9 +77,12 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
+import org.apache.hadoop.hbase.thrift.generated.TAccessControlEntity;
 import org.apache.hadoop.hbase.thrift.generated.TAppend;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift.generated.TPermissionOps;
+import org.apache.hadoop.hbase.thrift.generated.TPermissionScope;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
@@ -1288,6 +1294,48 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   @Override
   public String getClusterId() throws TException {
     return connectionCache.getClusterId();
+  }
+
+  @Override
+  public boolean performPermissions(TAccessControlEntity info)
+    throws IOError, TException {
+    Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
+    try {
+      if (info.scope == TPermissionScope.NAMESPACE) {
+        performNamespacePermissions(info.op, info.username, info.nsName, actions,
+          connectionCache.getAdmin().getConnection());
+      } else if (info.scope == TPermissionScope.TABLE) {
+        TableName tableName = TableName.valueOf(info.getTableName());
+        performTablePermissions(info.op, tableName, info.username, actions,
+          connectionCache.getAdmin().getConnection());
+      }
+    } catch (Throwable t) {
+      if (t instanceof IOException) {
+        throw getIOError((IOException) t);
+      } else {
+        throw getIOError(new DoNotRetryIOException(t.getMessage()));
+      }
+    }
+    return true;
+
+  }
+
+  private static void performNamespacePermissions(TPermissionOps op, String username,
+    String namespace, Permission.Action[] actions, Connection connection) throws Throwable {
+    if (op == TPermissionOps.GRANT) {
+      AccessControlClient.grant(connection, namespace, username, actions);
+    } else if (op == TPermissionOps.REVOKE) {
+      AccessControlClient.revoke(connection, namespace, username, actions);
+    }
+  }
+
+  private static void performTablePermissions(TPermissionOps op, TableName tableName,
+    String username, Permission.Action[] actions, Connection connection) throws Throwable {
+    if (op == TPermissionOps.GRANT) {
+      AccessControlClient.grant(connection, tableName, username, null, null, actions);
+    } else if (op == TPermissionOps.REVOKE) {
+      AccessControlClient.revoke(connection, tableName, username, null, null, actions);
+    }
   }
 
   private static IOError getIOError(Throwable throwable) {
