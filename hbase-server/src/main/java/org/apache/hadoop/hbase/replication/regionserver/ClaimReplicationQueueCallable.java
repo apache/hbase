@@ -17,35 +17,39 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SwitchRpcThrottleRemoteStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ClaimReplicationQueueRemoteParameter;
 
-/**
- * The callable executed at RS side to switch rpc throttle state. <br/>
- */
 @InterfaceAudience.Private
-public class SwitchRpcThrottleRemoteCallable extends BaseRSProcedureCallable {
+public class ClaimReplicationQueueCallable extends BaseRSProcedureCallable {
 
-  private boolean rpcThrottleEnabled;
+  private ServerName crashedServer;
+
+  private String queue;
+
+  @Override
+  public EventType getEventType() {
+    return EventType.RS_CLAIM_REPLICATION_QUEUE;
+  }
 
   @Override
   protected void doCall() throws Exception {
-    rs.getRegionServerRpcQuotaManager().switchRpcThrottle(rpcThrottleEnabled);
+    PeerProcedureHandler handler = rs.getReplicationSourceService().getPeerProcedureHandler();
+    handler.claimReplicationQueue(crashedServer, queue);
   }
 
   @Override
   protected void initParameter(byte[] parameter) throws InvalidProtocolBufferException {
-    SwitchRpcThrottleRemoteStateData param = SwitchRpcThrottleRemoteStateData.parseFrom(parameter);
-    rpcThrottleEnabled = param.getRpcThrottleEnabled();
-  }
-
-  @Override
-  public EventType getEventType() {
-    return EventType.M_RS_SWITCH_RPC_THROTTLE;
+    ClaimReplicationQueueRemoteParameter param =
+      ClaimReplicationQueueRemoteParameter.parseFrom(parameter);
+    crashedServer = ProtobufUtil.toServerName(param.getCrashedServer());
+    queue = param.getQueue();
   }
 }
