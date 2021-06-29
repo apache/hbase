@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.procedure.CreateNamespaceProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -229,7 +228,7 @@ public class TableNamespaceManager {
     }
 
     // Now check if the table is assigned, if not then fail fast
-    if (isTableAssigned() && isTableEnabled()) {
+    if (isTableAssigned()) {
       try {
         boolean initGoodSofar = true;
         nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
@@ -296,12 +295,6 @@ public class TableNamespaceManager {
       }
     }
     return false;
-  }
-
-  private boolean isTableEnabled() throws IOException {
-    return masterServices.getTableStateManager().getTableState(
-            TableName.NAMESPACE_TABLE_NAME
-    ).equals(TableState.State.ENABLED);
   }
 
   private boolean isTableAssigned() {

@@ -42,9 +42,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -304,8 +302,7 @@ public final class SnapshotManifest {
   private void load() throws IOException {
     switch (getSnapshotFormat(desc)) {
       case SnapshotManifestV1.DESCRIPTOR_VERSION: {
-        this.htd = FSTableDescriptors.getTableDescriptorFromFs(workingDirFs, workingDir)
-            .getHTableDescriptor();
+        this.htd = FSTableDescriptors.getTableDescriptorFromFs(workingDirFs, workingDir);
         ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
         try {
           this.regionManifests =
@@ -410,8 +407,7 @@ public final class SnapshotManifest {
       LOG.info("Using old Snapshot Format");
       // write a copy of descriptor to the snapshot directory
       new FSTableDescriptors(conf, workingDirFs, rootDir)
-        .createTableDescriptorForTableDirectory(workingDir, new TableDescriptor(
-            htd, TableState.State.ENABLED), false);
+        .createTableDescriptorForTableDirectory(workingDir, htd, false);
     } else {
       LOG.debug("Convert to Single Snapshot Manifest for " + this.desc.getName());
       convertToV2SingleManifest();

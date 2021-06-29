@@ -105,9 +105,8 @@ message SplitLogTask {
 
 /**
  * The znode that holds state of table.
- * Deprected, table state is stored in table descriptor on HDFS.
  */
-message DeprecatedTableState {
+message Table {
   // Table's current state
   enum State {
     ENABLED = 0;

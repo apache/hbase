@@ -126,8 +126,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
@@ -1003,7 +1001,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableEnabled(TableName tableName) throws IOException {
-      return getTableState(tableName).inStates(TableState.State.ENABLED);
+      return this.registry.isTableOnlineState(tableName, true);
     }
 
     @Override
@@ -1013,7 +1011,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableDisabled(TableName tableName) throws IOException {
-      return getTableState(tableName).inStates(TableState.State.DISABLED);
+      return this.registry.isTableOnlineState(tableName, false);
     }
 
     @Override
@@ -2139,13 +2137,6 @@ class ConnectionManager {
         }
 
         @Override
-        public GetTableStateResponse getTableState(
-                RpcController controller, GetTableStateRequest request)
-                throws ServiceException {
-          return stub.getTableState(controller, request);
-        }
-
-        @Override
         public void close() {
           release(this.mss);
         }
@@ -2773,19 +2764,6 @@ class ConnectionManager {
     @Override
     public RpcControllerFactory getRpcControllerFactory() {
       return this.rpcControllerFactory;
-    }
-
-    public TableState getTableState(TableName tableName) throws IOException {
-      MasterKeepAliveConnection master = getKeepAliveMasterService();
-      try {
-        GetTableStateResponse resp = master.getTableState(null,
-                RequestConverter.buildGetTableStateRequest(tableName));
-        return TableState.convert(resp.getTableState());
-      } catch (ServiceException se) {
-        throw ProtobufUtil.getRemoteException(se);
-      } finally {
-        master.close();
-      }
     }
   }
 

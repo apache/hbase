@@ -480,6 +480,11 @@ public class TestAsyncProcess {
       }
 
       @Override
+      public boolean isTableOnlineState(TableName tableName, boolean enabled) throws IOException {
+        return false;
+      }
+
+      @Override
       public int getCurrentNrHRS() throws IOException {
         return 1;
       }

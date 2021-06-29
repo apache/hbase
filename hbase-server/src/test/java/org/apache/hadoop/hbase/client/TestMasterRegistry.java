@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -142,6 +143,8 @@ public class TestMasterRegistry {
       });
       assertEquals(registry.getClusterId(), activeMaster.getClusterId());
       assertEquals(registry.getActiveMaster(), activeMaster.getServerName());
+      assertTrue(registry.isTableOnlineState(TableName.META_TABLE_NAME, true));
+      assertFalse(registry.isTableOnlineState(TableName.META_TABLE_NAME, false));
       List<HRegionLocation> metaLocations =
           Arrays.asList(registry.getMetaRegionLocations().getRegionLocations());
       List<HRegionLocation> actualMetaLocations =

@@ -42,12 +42,11 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -126,6 +125,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCleanerChoreEnabledRequest;
@@ -213,6 +214,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -1008,11 +1010,13 @@ public class MasterRpcServices extends RSRpcServices
   public GetTableNamesResponse getTableNames(RpcController controller,
       GetTableNamesRequest req) throws ServiceException {
     try {
-      master.checkServiceStarted();
+      master.checkInitialized();
+
       final String regex = req.hasRegex() ? req.getRegex() : null;
       final String namespace = req.hasNamespace() ? req.getNamespace() : null;
       List<TableName> tableNames = master.listTableNames(namespace, regex,
           req.getIncludeSysTables());
+
       GetTableNamesResponse.Builder builder = GetTableNamesResponse.newBuilder();
       if (tableNames != null && tableNames.size() > 0) {
         // Add the table names to the response
@@ -1020,26 +1024,6 @@ public class MasterRpcServices extends RSRpcServices
           builder.addTableNames(ProtobufUtil.toProtoTableName(table));
         }
       }
-      return builder.build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-  }
-
-  @Override
-  public MasterProtos.GetTableStateResponse getTableState(RpcController controller,
-      MasterProtos.GetTableStateRequest request) throws ServiceException {
-    try {
-      master.checkServiceStarted();
-      TableName tableName = ProtobufUtil.toTableName(request.getTableName());
-      TableState.State state = master.getTableStateManager()
-              .getTableState(tableName);
-      if (state == null) {
-        throw new TableNotFoundException(tableName);
-      }
-      MasterProtos.GetTableStateResponse.Builder builder =
-              MasterProtos.GetTableStateResponse.newBuilder();
-      builder.setTableState(new TableState(tableName, state).convert());
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1895,5 +1879,15 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(ke);
     }
     return response.build();
+  }
+
+  @Override
+  public GetTableStateResponse getTableState(RpcController rpcController,
+    GetTableStateRequest request) throws ServiceException {
+    final TableStateManager tsm = master.getAssignmentManager().getTableStateManager();
+    final TableName table = TableName.valueOf(request.getTableName());
+    final State stateToCheck = request.getIsEnabled() ? State.ENABLED : State.DISABLED;
+    GetTableStateResponse.Builder resp = GetTableStateResponse.newBuilder();
+    return resp.setEnabledOrDisabled(tsm.isTableState(table, stateToCheck)).build();
   }
 }
