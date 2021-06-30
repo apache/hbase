@@ -165,10 +165,22 @@ public class AssignmentManager {
 
   /**
    * When the operator uses this configuration option, any version between
-   * the current version and the new value of
-   * "hbase.min.version.move.system.tables" does not trigger any region movement.
-   * It is assumed that the configured range of versions do not require special
+   * the current cluster version and the value of "hbase.min.version.move.system.tables"
+   * does not trigger any auto-region movement. Auto-region movement here
+   * refers to auto-migration of system table regions to newer server versions.
+   * It is assumed that the configured range of versions does not require special
    * handling of moving system table regions to higher versioned RegionServer.
+   * This auto-migration is done by {@link #checkIfShouldMoveSystemRegionAsync()}.
+   * Example: Let's assume the cluster is on version 1.4.0 and we have
+   * set "hbase.min.version.move.system.tables" as "2.0.0". Now if we upgrade
+   * one RegionServer on 1.4.0 cluster to 1.6.0 (< 2.0.0), then AssignmentManager will
+   * not move hbase:meta, hbase:namespace and other system table regions
+   * to newly brought up RegionServer 1.6.0 as part of auto-migration.
+   * However, if we upgrade one RegionServer on 1.4.0 cluster to 2.2.0 (> 2.0.0),
+   * then AssignmentManager will move all system table regions to newly brought
+   * up RegionServer 2.2.0 as part of auto-migration done by
+   * {@link #checkIfShouldMoveSystemRegionAsync()}.
+   * "hbase.min.version.move.system.tables" is introduced as part of HBASE-22923.
    */
   private final String minVersionToMoveSysTables;
 
@@ -2291,18 +2303,23 @@ public class AssignmentManager {
   }
 
   /**
-   * Get a list of servers that this region cannot be assigned to.
-   * For system tables, we must assign them to a server with highest version.
+   * For a given cluster with mixed versions of servers, get a list of
+   * servers with lower versions, where system table regions should not be
+   * assigned to.
+   * For system table, we must assign regions to a server with highest version.
    */
   public List<ServerName> getExcludedServersForSystemTable() {
     return getExcludedServersForSystemTable(false);
   }
 
   /**
-   * Get a list of servers that this region can not assign to.
-   * For system table, we must assign them to a server with highest version.
-   * We can disable this exclusion using config:
+   * For a given cluster with mixed versions of servers, get a list of
+   * servers with lower versions, where system table regions should not be
+   * assigned to.
+   * For system table, we must assign regions to a server with highest version.
+   * However, we can disable this exclusion using config:
    * "hbase.min.version.move.system.tables" if checkForMinVersion is true.
+   * Detailed explanation available with definition of minVersionToMoveSysTables.
    *
    * @param checkForMinVersion if true, check for minVersionToMoveSysTables
    *   and decide moving system table regions accordingly.
