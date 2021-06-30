@@ -2321,8 +2321,11 @@ public class AssignmentManager {
    * "hbase.min.version.move.system.tables" if checkForMinVersion is true.
    * Detailed explanation available with definition of minVersionToMoveSysTables.
    *
-   * @param checkForMinVersion if true, check for minVersionToMoveSysTables
-   *   and decide moving system table regions accordingly.
+   * @param checkForMinVersion If false, return a list of servers with lower version. If true,
+   *   compare higher version with minVersionToMoveSysTables. Only if higher version is greater
+   *   than minVersionToMoveSysTables, this method returns list of servers with lower version. If
+   *   higher version is less than or equal to minVersionToMoveSysTables, returns empty list.
+   *   An example is provided with definition of minVersionToMoveSysTables.
    * @return List of Excluded servers for System table regions.
    */
   private List<ServerName> getExcludedServersForSystemTable(
