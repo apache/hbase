@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -24,24 +23,18 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationKillMasterRSWithSeparateOldWALs extends TestReplicationKillRS {
+public class TestReplicationKillMasterRSWithSeparateOldWALs extends TestReplicationKillMasterRS {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationKillMasterRSWithSeparateOldWALs.class);
+    HBaseClassTestRule.forClass(TestReplicationKillMasterRSWithSeparateOldWALs.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     CONF1.setBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR, true);
-    TestReplicationBase.setUpBeforeClass();
-  }
-
-  @Test
-  public void killOneMasterRS() throws Exception {
-    loadTableAndKillRS(UTIL1);
+    TestReplicationKillMasterRS.setUpBeforeClass();
   }
 }
