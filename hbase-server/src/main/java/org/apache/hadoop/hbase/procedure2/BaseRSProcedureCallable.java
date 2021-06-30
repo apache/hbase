@@ -15,35 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.procedure;
+package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.procedure2.LockStatus;
-import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-class ServerQueue extends Queue<ServerName> {
+public abstract class BaseRSProcedureCallable implements RSProcedureCallable {
 
-  public ServerQueue(ServerName serverName, int priority, LockStatus serverLock) {
-    super(serverName, priority, serverLock);
+  protected HRegionServer rs;
+
+  private Exception initError;
+
+  @Override
+  public final Void call() throws Exception {
+    if (initError != null) {
+      throw initError;
+    }
+    doCall();
+    return null;
   }
 
   @Override
-  public boolean requireExclusiveLock(Procedure<?> proc) {
-    ServerProcedureInterface spi = (ServerProcedureInterface) proc;
-    switch (spi.getServerOperationType()) {
-      case CRASH_HANDLER:
-        return true;
-      case SWITCH_RPC_THROTTLE:
-      case SPLIT_WAL:
-      case SPLIT_WAL_REMOTE:
-      case CLAIM_REPLICATION_QUEUES:
-      case CLAIM_REPLICATION_QUEUE_REMOTE:
-        return false;
-      default:
-        break;
+  public final void init(byte[] parameter, HRegionServer rs) {
+    this.rs = rs;
+    try {
+      initParameter(parameter);
+    } catch (Exception e) {
+      initError = e;
     }
-    throw new UnsupportedOperationException("unexpected type " + spi.getServerOperationType());
   }
+
+  protected abstract void doCall() throws Exception;
+
+  protected abstract void initParameter(byte[] parameter) throws Exception;
 }

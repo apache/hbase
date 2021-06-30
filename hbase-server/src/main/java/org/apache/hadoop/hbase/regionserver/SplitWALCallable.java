@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.concurrent.locks.Lock;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
+import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
 /**
@@ -43,27 +43,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
  * we switch to procedure-based WAL splitting.
  */
 @InterfaceAudience.Private
-public class SplitWALCallable implements RSProcedureCallable {
-  private static final Logger LOG = LoggerFactory.getLogger(SplitWALCallable.class);
+public class SplitWALCallable extends BaseRSProcedureCallable {
 
   private String walPath;
-  private Exception initError;
-  private HRegionServer rs;
   private final KeyLocker<String> splitWALLocks = new KeyLocker<>();
   private volatile Lock splitWALLock = null;
 
 
   @Override
-  public void init(byte[] parameter, HRegionServer rs) {
-    try {
-      this.rs = rs;
-      MasterProcedureProtos.SplitWALParameter param =
-          MasterProcedureProtos.SplitWALParameter.parseFrom(parameter);
-      this.walPath = param.getWalPath();
-    } catch (InvalidProtocolBufferException e) {
-      LOG.error("Parse proto buffer of split WAL request failed ", e);
-      initError = e;
-    }
+  protected void initParameter(byte[] parameter) throws InvalidProtocolBufferException {
+    MasterProcedureProtos.SplitWALParameter param =
+      MasterProcedureProtos.SplitWALParameter.parseFrom(parameter);
+    this.walPath = param.getWalPath();
   }
 
   @Override
@@ -90,10 +81,7 @@ public class SplitWALCallable implements RSProcedureCallable {
   }
 
   @Override
-  public Void call() throws Exception {
-    if (initError != null) {
-      throw initError;
-    }
+  protected void doCall() throws Exception {
     //grab a lock
     splitWALLock = splitWALLocks.acquireLock(walPath);
     try {
@@ -110,7 +98,6 @@ public class SplitWALCallable implements RSProcedureCallable {
     } finally {
       splitWALLock.unlock();
     }
-    return null;
   }
 
   public String getWalPath() {
