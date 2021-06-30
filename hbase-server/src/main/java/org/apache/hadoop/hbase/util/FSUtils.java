@@ -95,6 +95,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -255,28 +256,14 @@ public final class FSUtils {
   }
 
   /**
-   * We use reflection because {@link DistributedFileSystem#setSafeMode(
-   * HdfsConstants.SafeModeAction action, boolean isChecked)} is not in hadoop 1.1
+   * Inquire the Active NameNode's safe mode status.
    *
-   * @param dfs
+   * @param dfs A DistributedFileSystem object representing the underlying HDFS.
    * @return whether we're in safe mode
    * @throws IOException
    */
   private static boolean isInSafeMode(DistributedFileSystem dfs) throws IOException {
-    boolean inSafeMode = false;
-    try {
-      Method m = DistributedFileSystem.class.getMethod("setSafeMode", new Class<?> []{
-          org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.class, boolean.class});
-      inSafeMode = (Boolean) m.invoke(dfs,
-        org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET, true);
-    } catch (Exception e) {
-      if (e instanceof IOException) throw (IOException) e;
-
-      // Check whether dfs is on safemode.
-      inSafeMode = dfs.setSafeMode(
-        org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET);
-    }
-    return inSafeMode;
+    return dfs.setSafeMode(SAFEMODE_GET, true);
   }
 
   /**
