@@ -1161,8 +1161,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       TableDescriptor metaDescriptor) throws IOException {
     TableDescriptor newMetaDesc =
         TableDescriptorBuilder.newBuilder(metaDescriptor)
-            .setColumnFamily(FSTableDescriptors.getTableFamilyDesc(conf))
-            .setColumnFamily(FSTableDescriptors.getReplBarrierFamilyDesc())
+            .setColumnFamily(FSTableDescriptors.getTableFamilyDescForMeta(conf))
+            .setColumnFamily(FSTableDescriptors.getReplBarrierFamilyDescForMeta())
             .build();
     long pid = this.modifyTable(TableName.META_TABLE_NAME, () -> newMetaDesc,
         0, 0, false);

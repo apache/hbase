@@ -140,7 +140,7 @@ public class FSTableDescriptors implements TableDescriptors {
     }
   }
 
-  public static ColumnFamilyDescriptor getTableFamilyDesc(
+  public static ColumnFamilyDescriptor getTableFamilyDescForMeta(
       final Configuration conf) {
     return ColumnFamilyDescriptorBuilder
       .newBuilder(HConstants.TABLE_FAMILY)
@@ -154,7 +154,7 @@ public class FSTableDescriptors implements TableDescriptors {
       .build();
   }
 
-  public static ColumnFamilyDescriptor getReplBarrierFamilyDesc() {
+  public static ColumnFamilyDescriptor getReplBarrierFamilyDescForMeta() {
     return ColumnFamilyDescriptorBuilder
       .newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
       .setMaxVersions(HConstants.ALL_VERSIONS)
@@ -181,8 +181,8 @@ public class FSTableDescriptors implements TableDescriptors {
         .setBloomFilterType(BloomType.ROWCOL)
         .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
         .build())
-      .setColumnFamily(getTableFamilyDesc(conf))
-      .setColumnFamily(getReplBarrierFamilyDesc())
+      .setColumnFamily(getTableFamilyDescForMeta(conf))
+      .setColumnFamily(getReplBarrierFamilyDescForMeta())
       .setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(HConstants.NAMESPACE_FAMILY)
         .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
