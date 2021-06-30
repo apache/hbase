@@ -30,9 +30,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * since we do not maintain StoreFileManager in compaction server(can't refresh when flush). we use
- * external storage(this class) to record compacting files, and initialize a new HStore in
- * {@link CompactionThreadManager#selectCompaction} every time when request compaction
+ * Since we do not maintain StoreFileManager in compaction server(can't refresh when flush). we use
+ * external storage(this class) to record compacting and compacted files. This storage is in memory
+ * and only used by CompactionServer,(RegionServer not use it).This storage never do hfile movement
+ * or deletion. RS does file movement still.
  */
 @InterfaceAudience.Private
 class CompactionServerStorage {

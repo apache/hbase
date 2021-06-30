@@ -195,6 +195,9 @@ public class CompactionThreadManager implements ThroughputControllerService {
     tableDescriptors.get(regionInfo.getTable());
     HStore store = getStore(conf, fs, rootDir, tableDescriptors.get(regionInfo.getTable()),
       regionInfo, cfd.getNameAsString());
+
+    // CompactedHFilesDischarger only run on regionserver, so compactionserver does not have
+    // opportunity to clean compacted file at that time, we clean compacted files here
     storage.cleanupCompactedFiles(regionInfo, cfd,
       store.getStorefiles().stream().map(sf -> sf.getPath().getName()).collect(Collectors.toSet()));
     if (major) {
@@ -361,10 +364,6 @@ public class CompactionThreadManager implements ThroughputControllerService {
 
   ConcurrentHashMap<String, CompactionTask> getRunningCompactionTasks() {
     return runningCompactionTasks;
-  }
-
-  public CompactionServerStorage getStorage() {
-    return storage;
   }
 
   void waitForStop() {

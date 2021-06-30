@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.CompactionServerMetrics;
@@ -59,8 +57,6 @@ public class CompactionOffloadManager {
   private CompactionOffloadSwitchStorage compactionOffloadSwitchStorage;
   private static final Logger LOG =
       LoggerFactory.getLogger(CompactionOffloadManager.class.getName());
-  private final ConcurrentMap<ServerName, AsyncCompactionServerService> csStubs =
-      new ConcurrentHashMap<>();
 
   public CompactionOffloadManager(final MasterServices master) {
     this.masterServices = master;
@@ -164,11 +160,8 @@ public class CompactionOffloadManager {
     return compactionServerList.get((int) index);
   }
 
-  private AsyncCompactionServerService getOrCreateCsStub(final ServerName sn) {
-    return csStubs.computeIfAbsent(sn, v -> {
-      LOG.debug("New CS stub connection to {}", sn);
-      return this.masterServices.getAsyncClusterConnection().getCompactionServerService(sn);
-    });
+  private AsyncCompactionServerService getCsStub(final ServerName sn) {
+    return this.masterServices.getAsyncClusterConnection().getCompactionServerService(sn);
   }
 
   public CompactResponse requestCompaction(CompactRequest request) throws ServiceException {
@@ -176,7 +169,7 @@ public class CompactionOffloadManager {
     LOG.info("Receive compaction request from {}, and send to Compaction server:{}",
       ProtobufUtil.toString(request), targetCompactionServer);
     try {
-      FutureUtils.get(getOrCreateCsStub(targetCompactionServer).requestCompaction(request));
+      FutureUtils.get(getCsStub(targetCompactionServer).requestCompaction(request));
     } catch (Throwable t) {
       LOG.error("requestCompaction from master to CS error: {}", t);
     }

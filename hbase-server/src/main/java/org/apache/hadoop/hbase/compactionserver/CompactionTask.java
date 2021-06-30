@@ -27,6 +27,9 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
+/**
+ * This class hold {@link CompactionContext} relate to CompactionRequest
+ */
 @InterfaceAudience.Private
 public final class CompactionTask {
   private ServerName rsServerName;
