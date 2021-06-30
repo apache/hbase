@@ -30,7 +30,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -196,68 +195,6 @@ public class Threads {
     t.setUncaughtExceptionHandler(LOGGING_EXCEPTION_HANDLER);
   }
 
-  private interface PrintThreadInfoHelper {
-
-    void printThreadInfo(PrintStream stream, String title);
-
-  }
-
-  private static class PrintThreadInfoLazyHolder {
-
-    public static final PrintThreadInfoHelper HELPER = initHelper();
-
-    private static PrintThreadInfoHelper initHelper() {
-      Method method = null;
-      try {
-        // Hadoop 2.7+ declares printThreadInfo(PrintStream, String)
-        method = ReflectionUtils.class.getMethod("printThreadInfo", PrintStream.class,
-          String.class);
-        method.setAccessible(true);
-        final Method hadoop27Method = method;
-        return new PrintThreadInfoHelper() {
-
-          @Override
-          public void printThreadInfo(PrintStream stream, String title) {
-            try {
-              hadoop27Method.invoke(null, stream, title);
-            } catch (IllegalAccessException | IllegalArgumentException e) {
-              throw new RuntimeException(e);
-            } catch (InvocationTargetException e) {
-              throw new RuntimeException(e.getCause());
-            }
-          }
-        };
-      } catch (NoSuchMethodException e) {
-        LOG.info(
-          "Can not find hadoop 2.7+ printThreadInfo method, try hadoop hadoop 2.6 and earlier", e);
-      }
-      try {
-        // Hadoop 2.6 and earlier declares printThreadInfo(PrintWriter, String)
-        method = ReflectionUtils.class.getMethod("printThreadInfo", PrintWriter.class,
-          String.class);
-        method.setAccessible(true);
-        final Method hadoop26Method = method;
-        return new PrintThreadInfoHelper() {
-
-          @Override
-          public void printThreadInfo(PrintStream stream, String title) {
-            try {
-              hadoop26Method.invoke(null, new PrintWriter(
-                  new OutputStreamWriter(stream, StandardCharsets.UTF_8)), title);
-            } catch (IllegalAccessException | IllegalArgumentException e) {
-              throw new RuntimeException(e);
-            } catch (InvocationTargetException e) {
-              throw new RuntimeException(e.getCause());
-            }
-          }
-        };
-      } catch (NoSuchMethodException e) {
-        LOG.warn("Cannot find printThreadInfo method. Check hadoop jars linked", e);
-      }
-      return null;
-    }
-  }
-
   /**
    * Print all of the thread's information and stack traces. Wrapper around Hadoop's method.
    *
@@ -265,7 +202,6 @@ public class Threads {
    * @param title a string title for the stack trace
    */
   public static void printThreadInfo(PrintStream stream, String title) {
-    Preconditions.checkNotNull(PrintThreadInfoLazyHolder.HELPER,
-      "Cannot find method. Check hadoop jars linked").printThreadInfo(stream, title);
+    ReflectionUtils.printThreadInfo(stream, title);
   }
 }

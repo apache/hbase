@@ -147,7 +147,7 @@ public class ReflectionUtils {
    * @param stream the stream to
    * @param title a string title for the stack trace
    */
-  private static void printThreadInfo(PrintStream stream,
+  static void printThreadInfo(PrintStream stream,
                                      String title) {
     final int STACK_DEPTH = 20;
     boolean contention = threadBean.isThreadContentionMonitoringEnabled();
