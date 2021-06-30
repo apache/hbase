@@ -255,20 +255,11 @@ public class AssignmentManager extends ZooKeeperListener {
   private final RegionStateStore regionStateStore;
 
   /**
-   * Min version to consider for moving system tables regions to higher
-   * versioned RS. If RS has higher version than rest of the cluster but that
-   * version is less than this value, we should not move system table regions
-   * to that RS. If RS has higher version than rest of the cluster but that
-   * version is greater than or equal to this value, we should move system
-   * table regions to that RS. This is optional config and default value is
-   * empty string ({@link #DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG}).
-   * For instance, if we do not want meta region to be moved to RS with higher
-   * version until that version is >= 2.0.0, then we can configure
-   * "hbase.min.version.move.system.tables" as "2.0.0".
-   * When operator uses this config, it should be used with care, meaning
-   * we should be confident that even if user table regions come to RS with
-   * higher version (that rest of cluster), it would not cause any
-   * incompatibility issues.
+   * When the operator uses this configuration option, any version between
+   * the current version and the new value of
+   * "hbase.min.version.move.system.tables" does not trigger any region movement.
+   * It is assumed that the configured range of versions do not require special
+   * handling of moving system table regions to higher versioned RegionServer.
    */
   private final String minVersionToMoveSysTables;
 
@@ -2575,38 +2566,21 @@ public class AssignmentManager extends ZooKeeperListener {
    * know the version. So in fact we will never assign a system region to a RS without registering on zk.
    */
   public List<ServerName> getExcludedServersForSystemTable() {
-    List<Pair<ServerName, String>> serverList = new ArrayList<>();
-    for (ServerName s : serverManager.getOnlineServersList()) {
-      serverList.add(new Pair<>(s, server.getRegionServerVersion(s)));
-    }
-    if (serverList.isEmpty()) {
-      return new ArrayList<>();
-    }
-    String highestVersion = Collections.max(serverList, new Comparator<Pair<ServerName, String>>() {
-      @Override
-      public int compare(Pair<ServerName, String> o1, Pair<ServerName, String> o2) {
-        return VersionInfo.compareVersion(o1.getSecond(), o2.getSecond());
-      }
-    }).getSecond();
-    List<ServerName> res = new ArrayList<>();
-    for (Pair<ServerName, String> pair : serverList) {
-      if (!pair.getSecond().equals(highestVersion)) {
-        res.add(pair.getFirst());
-      }
-    }
-    return res;
+    return getExcludedServersForSystemTable(false);
   }
 
   /**
    * Get a list of servers that this region can not assign to.
    * For system table, we must assign them to a server with highest version.
-   * This method is same as {@link #getExcludedServersForSystemTable()} with
-   * the only difference is we can disable this exclusion using config:
-   * "hbase.min.version.move.system.tables".
+   * We can disable this exclusion using config:
+   * "hbase.min.version.move.system.tables" if checkForMinVersion is true.
    *
+   * @param checkForMinVersion if true, check for minVersionToMoveSysTables
+   *   and decide moving system table regions accordingly.
    * @return List of Excluded servers for System table regions.
    */
-  private List<ServerName> getExcludedServersForSystemTableUnlessAllowed() {
+  private List<ServerName> getExcludedServersForSystemTable(
+      boolean checkForMinVersion) {
     List<Pair<ServerName, String>> serverList = new ArrayList<>();
     for (ServerName s : serverManager.getOnlineServersList()) {
       serverList.add(new Pair<>(s, server.getRegionServerVersion(s)));
@@ -2621,11 +2595,13 @@ public class AssignmentManager extends ZooKeeperListener {
         return VersionInfo.compareVersion(o1.getSecond(), o2.getSecond());
       }
     }).getSecond();
-    if (!DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG.equals(minVersionToMoveSysTables)) {
-      int comparedValue =
-          VersionInfo.compareVersion(minVersionToMoveSysTables, highestVersion);
-      if (comparedValue > 0) {
-        return Collections.emptyList();
+    if (checkForMinVersion) {
+      if (!DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG.equals(minVersionToMoveSysTables)) {
+        int comparedValue = VersionInfo
+            .compareVersion(minVersionToMoveSysTables, highestVersion);
+        if (comparedValue > 0) {
+          return Collections.emptyList();
+        }
       }
     }
     List<ServerName> res = new ArrayList<>();
@@ -2758,7 +2734,7 @@ public class AssignmentManager extends ZooKeeperListener {
           synchronized (checkIfShouldMoveSystemRegionLock) {
             // RS register on ZK after reports startup on master
             List<HRegionInfo> regionsShouldMove = new ArrayList<>();
-            for (ServerName server : getExcludedServersForSystemTableUnlessAllowed()) {
+            for (ServerName server : getExcludedServersForSystemTable(true)) {
               regionsShouldMove.addAll(getCarryingSystemTables(server));
             }
             if (!regionsShouldMove.isEmpty()) {
