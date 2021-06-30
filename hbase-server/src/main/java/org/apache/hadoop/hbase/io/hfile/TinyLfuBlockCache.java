@@ -62,15 +62,15 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
   private static final int STAT_THREAD_PERIOD_SECONDS = 5 * 60;
 
-  private final Eviction<BlockCacheKey, Cacheable> policy;
-  private final ScheduledExecutorService statsThreadPool;
+  private transient final Eviction<BlockCacheKey, Cacheable> policy;
+  private transient final ScheduledExecutorService statsThreadPool;
   private final long maxBlockSize;
   private final CacheStats stats;
 
-  private BlockCache victimCache;
+  private transient BlockCache victimCache;
 
   @VisibleForTesting
-  final Cache<BlockCacheKey, Cacheable> cache;
+  transient final Cache<BlockCacheKey, Cacheable> cache;
 
   /**
    * Creates a block cache.
