@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.TableName;
 
 /**
  * Implementations hold cluster information such as this cluster's id, location of hbase:meta, etc.
@@ -50,6 +51,11 @@ interface ConnectionRegistry {
    * @return Cluster id.
    */
   String getClusterId() throws IOException;
+
+  /**
+   * @param enabled Return true if table is enabled
+   */
+  boolean isTableOnlineState(TableName tableName, boolean enabled) throws IOException;
 
   /**
    * @return Count of 'running' regionservers

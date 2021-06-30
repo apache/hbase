@@ -3395,7 +3395,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
-
   /**
    * Make sure that at least the specified number of region servers
    * are running

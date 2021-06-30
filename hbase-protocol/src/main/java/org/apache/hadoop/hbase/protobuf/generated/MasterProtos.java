@@ -49724,1128 +49724,6 @@ public final class MasterProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.GetTableNamesResponse)
   }
 
-  public interface GetTableStateRequestOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-
-    // required .hbase.pb.TableName table_name = 1;
-    /**
-     * <code>required .hbase.pb.TableName table_name = 1;</code>
-     */
-    boolean hasTableName();
-    /**
-     * <code>required .hbase.pb.TableName table_name = 1;</code>
-     */
-    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName();
-    /**
-     * <code>required .hbase.pb.TableName table_name = 1;</code>
-     */
-    org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder();
-  }
-  /**
-   * Protobuf type {@code hbase.pb.GetTableStateRequest}
-   */
-  public static final class GetTableStateRequest extends
-      com.google.protobuf.GeneratedMessage
-      implements GetTableStateRequestOrBuilder {
-    // Use GetTableStateRequest.newBuilder() to construct.
-    private GetTableStateRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
-    }
-    private GetTableStateRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-    private static final GetTableStateRequest defaultInstance;
-    public static GetTableStateRequest getDefaultInstance() {
-      return defaultInstance;
-    }
-
-    public GetTableStateRequest getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private GetTableStateRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
-                subBuilder = tableName_.toBuilder();
-              }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(tableName_);
-                tableName_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000001;
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateRequest_descriptor;
-    }
-
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.Builder.class);
-    }
-
-    public static com.google.protobuf.Parser<GetTableStateRequest> PARSER =
-        new com.google.protobuf.AbstractParser<GetTableStateRequest>() {
-      public GetTableStateRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new GetTableStateRequest(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<GetTableStateRequest> getParserForType() {
-      return PARSER;
-    }
-
-    private int bitField0_;
-    // required .hbase.pb.TableName table_name = 1;
-    public static final int TABLE_NAME_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_;
-    /**
-     * <code>required .hbase.pb.TableName table_name = 1;</code>
-     */
-    public boolean hasTableName() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    /**
-     * <code>required .hbase.pb.TableName table_name = 1;</code>
-     */
-    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
-      return tableName_;
-    }
-    /**
-     * <code>required .hbase.pb.TableName table_name = 1;</code>
-     */
-    public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
-      return tableName_;
-    }
-
-    private void initFields() {
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-
-      if (!hasTableName()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!getTableName().isInitialized()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, tableName_);
-      }
-      getUnknownFields().writeTo(output);
-    }
-
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, tableName_);
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest) obj;
-
-      boolean result = true;
-      result = result && (hasTableName() == other.hasTableName());
-      if (hasTableName()) {
-        result = result && getTableName()
-            .equals(other.getTableName());
-      }
-      result = result &&
-          getUnknownFields().equals(other.getUnknownFields());
-      return result;
-    }
-
-    private int memoizedHashCode = 0;
-    @java.lang.Override
-    public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasTableName()) {
-        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
-        hash = (53 * hash) + getTableName().hashCode();
-      }
-      hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
-      return hash;
-    }
-
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    /**
-     * Protobuf type {@code hbase.pb.GetTableStateRequest}
-     */
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequestOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateRequest_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.Builder.class);
-      }
-
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getTableNameFieldBuilder();
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-
-      public Builder clear() {
-        super.clear();
-        if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
-        } else {
-          tableNameBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateRequest_descriptor;
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.getDefaultInstance();
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest build() {
-        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        if (tableNameBuilder_ == null) {
-          result.tableName_ = tableName_;
-        } else {
-          result.tableName_ = tableNameBuilder_.build();
-        }
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.getDefaultInstance()) return this;
-        if (other.hasTableName()) {
-          mergeTableName(other.getTableName());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        if (!hasTableName()) {
-          
-          return false;
-        }
-        if (!getTableName().isInitialized()) {
-          
-          return false;
-        }
-        return true;
-      }
-
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int bitField0_;
-
-      // required .hbase.pb.TableName table_name = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> tableNameBuilder_;
-      /**
-       * <code>required .hbase.pb.TableName table_name = 1;</code>
-       */
-      public boolean hasTableName() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 1;</code>
-       */
-      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName getTableName() {
-        if (tableNameBuilder_ == null) {
-          return tableName_;
-        } else {
-          return tableNameBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 1;</code>
-       */
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
-        if (tableNameBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          tableName_ = value;
-          onChanged();
-        } else {
-          tableNameBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 1;</code>
-       */
-      public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder builderForValue) {
-        if (tableNameBuilder_ == null) {
-          tableName_ = builderForValue.build();
-          onChanged();
-        } else {
-          tableNameBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 1;</code>
-       */
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName value) {
-        if (tableNameBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance()) {
-            tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
-          } else {
-            tableName_ = value;
-          }
-          onChanged();
-        } else {
-          tableNameBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 1;</code>
-       */
-      public Builder clearTableName() {
-        if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
-          onChanged();
-        } else {
-          tableNameBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 1;</code>
-       */
-      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder getTableNameBuilder() {
-        bitField0_ |= 0x00000001;
-        onChanged();
-        return getTableNameFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 1;</code>
-       */
-      public org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder getTableNameOrBuilder() {
-        if (tableNameBuilder_ != null) {
-          return tableNameBuilder_.getMessageOrBuilder();
-        } else {
-          return tableName_;
-        }
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 1;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder> 
-          getTableNameFieldBuilder() {
-        if (tableNameBuilder_ == null) {
-          tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableNameOrBuilder>(
-                  tableName_,
-                  getParentForChildren(),
-                  isClean());
-          tableName_ = null;
-        }
-        return tableNameBuilder_;
-      }
-
-      // @@protoc_insertion_point(builder_scope:hbase.pb.GetTableStateRequest)
-    }
-
-    static {
-      defaultInstance = new GetTableStateRequest(true);
-      defaultInstance.initFields();
-    }
-
-    // @@protoc_insertion_point(class_scope:hbase.pb.GetTableStateRequest)
-  }
-
-  public interface GetTableStateResponseOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-
-    // required .hbase.pb.TableState table_state = 1;
-    /**
-     * <code>required .hbase.pb.TableState table_state = 1;</code>
-     */
-    boolean hasTableState();
-    /**
-     * <code>required .hbase.pb.TableState table_state = 1;</code>
-     */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState getTableState();
-    /**
-     * <code>required .hbase.pb.TableState table_state = 1;</code>
-     */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableStateOrBuilder getTableStateOrBuilder();
-  }
-  /**
-   * Protobuf type {@code hbase.pb.GetTableStateResponse}
-   */
-  public static final class GetTableStateResponse extends
-      com.google.protobuf.GeneratedMessage
-      implements GetTableStateResponseOrBuilder {
-    // Use GetTableStateResponse.newBuilder() to construct.
-    private GetTableStateResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
-    }
-    private GetTableStateResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-    private static final GetTableStateResponse defaultInstance;
-    public static GetTableStateResponse getDefaultInstance() {
-      return defaultInstance;
-    }
-
-    public GetTableStateResponse getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private GetTableStateResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
-                subBuilder = tableState_.toBuilder();
-              }
-              tableState_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(tableState_);
-                tableState_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000001;
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateResponse_descriptor;
-    }
-
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.Builder.class);
-    }
-
-    public static com.google.protobuf.Parser<GetTableStateResponse> PARSER =
-        new com.google.protobuf.AbstractParser<GetTableStateResponse>() {
-      public GetTableStateResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new GetTableStateResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<GetTableStateResponse> getParserForType() {
-      return PARSER;
-    }
-
-    private int bitField0_;
-    // required .hbase.pb.TableState table_state = 1;
-    public static final int TABLE_STATE_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState tableState_;
-    /**
-     * <code>required .hbase.pb.TableState table_state = 1;</code>
-     */
-    public boolean hasTableState() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    /**
-     * <code>required .hbase.pb.TableState table_state = 1;</code>
-     */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState getTableState() {
-      return tableState_;
-    }
-    /**
-     * <code>required .hbase.pb.TableState table_state = 1;</code>
-     */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableStateOrBuilder getTableStateOrBuilder() {
-      return tableState_;
-    }
-
-    private void initFields() {
-      tableState_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.getDefaultInstance();
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-
-      if (!hasTableState()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!getTableState().isInitialized()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, tableState_);
-      }
-      getUnknownFields().writeTo(output);
-    }
-
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, tableState_);
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse) obj;
-
-      boolean result = true;
-      result = result && (hasTableState() == other.hasTableState());
-      if (hasTableState()) {
-        result = result && getTableState()
-            .equals(other.getTableState());
-      }
-      result = result &&
-          getUnknownFields().equals(other.getUnknownFields());
-      return result;
-    }
-
-    private int memoizedHashCode = 0;
-    @java.lang.Override
-    public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasTableState()) {
-        hash = (37 * hash) + TABLE_STATE_FIELD_NUMBER;
-        hash = (53 * hash) + getTableState().hashCode();
-      }
-      hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
-      return hash;
-    }
-
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    /**
-     * Protobuf type {@code hbase.pb.GetTableStateResponse}
-     */
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponseOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateResponse_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.Builder.class);
-      }
-
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getTableStateFieldBuilder();
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-
-      public Builder clear() {
-        super.clear();
-        if (tableStateBuilder_ == null) {
-          tableState_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.getDefaultInstance();
-        } else {
-          tableStateBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateResponse_descriptor;
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance();
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse build() {
-        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        if (tableStateBuilder_ == null) {
-          result.tableState_ = tableState_;
-        } else {
-          result.tableState_ = tableStateBuilder_.build();
-        }
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance()) return this;
-        if (other.hasTableState()) {
-          mergeTableState(other.getTableState());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        if (!hasTableState()) {
-          
-          return false;
-        }
-        if (!getTableState().isInitialized()) {
-          
-          return false;
-        }
-        return true;
-      }
-
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int bitField0_;
-
-      // required .hbase.pb.TableState table_state = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState tableState_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableStateOrBuilder> tableStateBuilder_;
-      /**
-       * <code>required .hbase.pb.TableState table_state = 1;</code>
-       */
-      public boolean hasTableState() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      /**
-       * <code>required .hbase.pb.TableState table_state = 1;</code>
-       */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState getTableState() {
-        if (tableStateBuilder_ == null) {
-          return tableState_;
-        } else {
-          return tableStateBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>required .hbase.pb.TableState table_state = 1;</code>
-       */
-      public Builder setTableState(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState value) {
-        if (tableStateBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          tableState_ = value;
-          onChanged();
-        } else {
-          tableStateBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableState table_state = 1;</code>
-       */
-      public Builder setTableState(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.Builder builderForValue) {
-        if (tableStateBuilder_ == null) {
-          tableState_ = builderForValue.build();
-          onChanged();
-        } else {
-          tableStateBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableState table_state = 1;</code>
-       */
-      public Builder mergeTableState(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState value) {
-        if (tableStateBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              tableState_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.getDefaultInstance()) {
-            tableState_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.newBuilder(tableState_).mergeFrom(value).buildPartial();
-          } else {
-            tableState_ = value;
-          }
-          onChanged();
-        } else {
-          tableStateBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableState table_state = 1;</code>
-       */
-      public Builder clearTableState() {
-        if (tableStateBuilder_ == null) {
-          tableState_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.getDefaultInstance();
-          onChanged();
-        } else {
-          tableStateBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableState table_state = 1;</code>
-       */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.Builder getTableStateBuilder() {
-        bitField0_ |= 0x00000001;
-        onChanged();
-        return getTableStateFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>required .hbase.pb.TableState table_state = 1;</code>
-       */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableStateOrBuilder getTableStateOrBuilder() {
-        if (tableStateBuilder_ != null) {
-          return tableStateBuilder_.getMessageOrBuilder();
-        } else {
-          return tableState_;
-        }
-      }
-      /**
-       * <code>required .hbase.pb.TableState table_state = 1;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableStateOrBuilder> 
-          getTableStateFieldBuilder() {
-        if (tableStateBuilder_ == null) {
-          tableStateBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableStateOrBuilder>(
-                  tableState_,
-                  getParentForChildren(),
-                  isClean());
-          tableState_ = null;
-        }
-        return tableStateBuilder_;
-      }
-
-      // @@protoc_insertion_point(builder_scope:hbase.pb.GetTableStateResponse)
-    }
-
-    static {
-      defaultInstance = new GetTableStateResponse(true);
-      defaultInstance.initFields();
-    }
-
-    // @@protoc_insertion_point(class_scope:hbase.pb.GetTableStateResponse)
-  }
-
   public interface GetClusterStatusRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
@@ -71606,6 +70484,1071 @@ public final class MasterProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.GetNumLiveRSResponse)
   }
 
+  public interface GetTableStateRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string table_name = 1;
+    /**
+     * <code>required string table_name = 1;</code>
+     */
+    boolean hasTableName();
+    /**
+     * <code>required string table_name = 1;</code>
+     */
+    java.lang.String getTableName();
+    /**
+     * <code>required string table_name = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getTableNameBytes();
+
+    // required bool is_enabled = 2;
+    /**
+     * <code>required bool is_enabled = 2;</code>
+     */
+    boolean hasIsEnabled();
+    /**
+     * <code>required bool is_enabled = 2;</code>
+     */
+    boolean getIsEnabled();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.GetTableStateRequest}
+   *
+   * <pre>
+   ** Request to check the state of a given table 
+   * </pre>
+   */
+  public static final class GetTableStateRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements GetTableStateRequestOrBuilder {
+    // Use GetTableStateRequest.newBuilder() to construct.
+    private GetTableStateRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private GetTableStateRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final GetTableStateRequest defaultInstance;
+    public static GetTableStateRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public GetTableStateRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private GetTableStateRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              tableName_ = input.readBytes();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              isEnabled_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<GetTableStateRequest> PARSER =
+        new com.google.protobuf.AbstractParser<GetTableStateRequest>() {
+      public GetTableStateRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new GetTableStateRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<GetTableStateRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required string table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
+    private java.lang.Object tableName_;
+    /**
+     * <code>required string table_name = 1;</code>
+     */
+    public boolean hasTableName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string table_name = 1;</code>
+     */
+    public java.lang.String getTableName() {
+      java.lang.Object ref = tableName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          tableName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string table_name = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getTableNameBytes() {
+      java.lang.Object ref = tableName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        tableName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required bool is_enabled = 2;
+    public static final int IS_ENABLED_FIELD_NUMBER = 2;
+    private boolean isEnabled_;
+    /**
+     * <code>required bool is_enabled = 2;</code>
+     */
+    public boolean hasIsEnabled() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required bool is_enabled = 2;</code>
+     */
+    public boolean getIsEnabled() {
+      return isEnabled_;
+    }
+
+    private void initFields() {
+      tableName_ = "";
+      isEnabled_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasTableName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasIsEnabled()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getTableNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBool(2, isEnabled_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getTableNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(2, isEnabled_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest) obj;
+
+      boolean result = true;
+      result = result && (hasTableName() == other.hasTableName());
+      if (hasTableName()) {
+        result = result && getTableName()
+            .equals(other.getTableName());
+      }
+      result = result && (hasIsEnabled() == other.hasIsEnabled());
+      if (hasIsEnabled()) {
+        result = result && (getIsEnabled()
+            == other.getIsEnabled());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasTableName()) {
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getTableName().hashCode();
+      }
+      if (hasIsEnabled()) {
+        hash = (37 * hash) + IS_ENABLED_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getIsEnabled());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.GetTableStateRequest}
+     *
+     * <pre>
+     ** Request to check the state of a given table 
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        tableName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        isEnabled_ = false;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.tableName_ = tableName_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.isEnabled_ = isEnabled_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.getDefaultInstance()) return this;
+        if (other.hasTableName()) {
+          bitField0_ |= 0x00000001;
+          tableName_ = other.tableName_;
+          onChanged();
+        }
+        if (other.hasIsEnabled()) {
+          setIsEnabled(other.getIsEnabled());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasTableName()) {
+          
+          return false;
+        }
+        if (!hasIsEnabled()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string table_name = 1;
+      private java.lang.Object tableName_ = "";
+      /**
+       * <code>required string table_name = 1;</code>
+       */
+      public boolean hasTableName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string table_name = 1;</code>
+       */
+      public java.lang.String getTableName() {
+        java.lang.Object ref = tableName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          tableName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string table_name = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getTableNameBytes() {
+        java.lang.Object ref = tableName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          tableName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string table_name = 1;</code>
+       */
+      public Builder setTableName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        tableName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string table_name = 1;</code>
+       */
+      public Builder clearTableName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        tableName_ = getDefaultInstance().getTableName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string table_name = 1;</code>
+       */
+      public Builder setTableNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        tableName_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required bool is_enabled = 2;
+      private boolean isEnabled_ ;
+      /**
+       * <code>required bool is_enabled = 2;</code>
+       */
+      public boolean hasIsEnabled() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required bool is_enabled = 2;</code>
+       */
+      public boolean getIsEnabled() {
+        return isEnabled_;
+      }
+      /**
+       * <code>required bool is_enabled = 2;</code>
+       */
+      public Builder setIsEnabled(boolean value) {
+        bitField0_ |= 0x00000002;
+        isEnabled_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool is_enabled = 2;</code>
+       */
+      public Builder clearIsEnabled() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        isEnabled_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetTableStateRequest)
+    }
+
+    static {
+      defaultInstance = new GetTableStateRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetTableStateRequest)
+  }
+
+  public interface GetTableStateResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required bool enabled_or_disabled = 1;
+    /**
+     * <code>required bool enabled_or_disabled = 1;</code>
+     */
+    boolean hasEnabledOrDisabled();
+    /**
+     * <code>required bool enabled_or_disabled = 1;</code>
+     */
+    boolean getEnabledOrDisabled();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.GetTableStateResponse}
+   */
+  public static final class GetTableStateResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements GetTableStateResponseOrBuilder {
+    // Use GetTableStateResponse.newBuilder() to construct.
+    private GetTableStateResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private GetTableStateResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final GetTableStateResponse defaultInstance;
+    public static GetTableStateResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public GetTableStateResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private GetTableStateResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              enabledOrDisabled_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<GetTableStateResponse> PARSER =
+        new com.google.protobuf.AbstractParser<GetTableStateResponse>() {
+      public GetTableStateResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new GetTableStateResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<GetTableStateResponse> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required bool enabled_or_disabled = 1;
+    public static final int ENABLED_OR_DISABLED_FIELD_NUMBER = 1;
+    private boolean enabledOrDisabled_;
+    /**
+     * <code>required bool enabled_or_disabled = 1;</code>
+     */
+    public boolean hasEnabledOrDisabled() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required bool enabled_or_disabled = 1;</code>
+     */
+    public boolean getEnabledOrDisabled() {
+      return enabledOrDisabled_;
+    }
+
+    private void initFields() {
+      enabledOrDisabled_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasEnabledOrDisabled()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(1, enabledOrDisabled_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, enabledOrDisabled_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse) obj;
+
+      boolean result = true;
+      result = result && (hasEnabledOrDisabled() == other.hasEnabledOrDisabled());
+      if (hasEnabledOrDisabled()) {
+        result = result && (getEnabledOrDisabled()
+            == other.getEnabledOrDisabled());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasEnabledOrDisabled()) {
+        hash = (37 * hash) + ENABLED_OR_DISABLED_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getEnabledOrDisabled());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.GetTableStateResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        enabledOrDisabled_ = false;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetTableStateResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.enabledOrDisabled_ = enabledOrDisabled_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance()) return this;
+        if (other.hasEnabledOrDisabled()) {
+          setEnabledOrDisabled(other.getEnabledOrDisabled());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasEnabledOrDisabled()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required bool enabled_or_disabled = 1;
+      private boolean enabledOrDisabled_ ;
+      /**
+       * <code>required bool enabled_or_disabled = 1;</code>
+       */
+      public boolean hasEnabledOrDisabled() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required bool enabled_or_disabled = 1;</code>
+       */
+      public boolean getEnabledOrDisabled() {
+        return enabledOrDisabled_;
+      }
+      /**
+       * <code>required bool enabled_or_disabled = 1;</code>
+       */
+      public Builder setEnabledOrDisabled(boolean value) {
+        bitField0_ |= 0x00000001;
+        enabledOrDisabled_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool enabled_or_disabled = 1;</code>
+       */
+      public Builder clearEnabledOrDisabled() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        enabledOrDisabled_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetTableStateResponse)
+    }
+
+    static {
+      defaultInstance = new GetTableStateResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetTableStateResponse)
+  }
+
   /**
    * Protobuf service {@code hbase.pb.MasterService}
    */
@@ -72424,18 +72367,6 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry> done);
 
-      /**
-       * <code>rpc GetTableState(.hbase.pb.GetTableStateRequest) returns (.hbase.pb.GetTableStateResponse);</code>
-       *
-       * <pre>
-       ** returns table state 
-       * </pre>
-       */
-      public abstract void getTableState(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse> done);
-
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -72961,14 +72892,6 @@ public final class MasterProtos {
           impl.getLogEntries(controller, request, done);
         }
 
-        @java.lang.Override
-        public  void getTableState(
-            com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request,
-            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse> done) {
-          impl.getTableState(controller, request, done);
-        }
-
       };
     }
 
@@ -73121,8 +73044,6 @@ public final class MasterProtos {
               return impl.isSnapshotCleanupEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest)request);
             case 64:
               return impl.getLogEntries(controller, (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest)request);
-            case 65:
-              return impl.getTableState(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -73267,8 +73188,6 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.getDefaultInstance();
             case 64:
               return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.getDefaultInstance();
-            case 65:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -73413,8 +73332,6 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.getDefaultInstance();
             case 64:
               return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance();
-            case 65:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -74233,18 +74150,6 @@ public final class MasterProtos {
         org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry> done);
 
-    /**
-     * <code>rpc GetTableState(.hbase.pb.GetTableStateRequest) returns (.hbase.pb.GetTableStateResponse);</code>
-     *
-     * <pre>
-     ** returns table state 
-     * </pre>
-     */
-    public abstract void getTableState(
-        com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request,
-        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse> done);
-
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -74592,11 +74497,6 @@ public final class MasterProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry>specializeCallback(
               done));
           return;
-        case 65:
-          this.getTableState(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest)request,
-            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse>specializeCallback(
-              done));
-          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -74741,8 +74641,6 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.getDefaultInstance();
         case 64:
           return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.getDefaultInstance();
-        case 65:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -74887,8 +74785,6 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.getDefaultInstance();
         case 64:
           return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance();
-        case 65:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -75884,21 +75780,6 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.class,
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance()));
       }
-
-      public  void getTableState(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse> done) {
-        channel.callMethod(
-          getDescriptor().getMethods().get(65),
-          controller,
-          request,
-          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance(),
-          com.google.protobuf.RpcUtil.generalizeCallback(
-            done,
-            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.class,
-            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance()));
-      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -76230,11 +76111,6 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry getLogEntries(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request)
-          throws com.google.protobuf.ServiceException;
-
-      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse getTableState(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -77024,18 +76900,6 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance());
       }
 
-
-      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse getTableState(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request)
-          throws com.google.protobuf.ServiceException {
-        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(65),
-          controller,
-          request,
-          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance());
-      }
-
     }
 
     // @@protoc_insertion_point(class_scope:hbase.pb.MasterService)
@@ -77107,6 +76971,19 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse> done);
 
+      /**
+       * <code>rpc GetTableState(.hbase.pb.GetTableStateRequest) returns (.hbase.pb.GetTableStateResponse);</code>
+       *
+       * <pre>
+       **
+       * Returns the state of the table.
+       * </pre>
+       */
+      public abstract void getTableState(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -77144,6 +77021,14 @@ public final class MasterProtos {
           impl.getNumLiveRS(controller, request, done);
         }
 
+        @java.lang.Override
+        public  void getTableState(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse> done) {
+          impl.getTableState(controller, request, done);
+        }
+
       };
     }
 
@@ -77174,6 +77059,8 @@ public final class MasterProtos {
               return impl.getMetaRegionLocations(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest)request);
             case 3:
               return impl.getNumLiveRS(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest)request);
+            case 4:
+              return impl.getTableState(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -77196,6 +77083,8 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest.getDefaultInstance();
             case 3:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.getDefaultInstance();
+            case 4:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -77218,6 +77107,8 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse.getDefaultInstance();
             case 3:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance();
+            case 4:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -77279,6 +77170,19 @@ public final class MasterProtos {
         org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse> done);
 
+    /**
+     * <code>rpc GetTableState(.hbase.pb.GetTableStateRequest) returns (.hbase.pb.GetTableStateResponse);</code>
+     *
+     * <pre>
+     **
+     * Returns the state of the table.
+     * </pre>
+     */
+    public abstract void getTableState(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse> done);
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -77321,6 +77225,11 @@ public final class MasterProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse>specializeCallback(
               done));
           return;
+        case 4:
+          this.getTableState(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -77343,6 +77252,8 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest.getDefaultInstance();
         case 3:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.getDefaultInstance();
+        case 4:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -77365,6 +77276,8 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse.getDefaultInstance();
         case 3:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance();
+        case 4:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -77445,6 +77358,21 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance()));
       }
+
+      public  void getTableState(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(4),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -77471,6 +77399,11 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse getNumLiveRS(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse getTableState(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -77526,6 +77459,18 @@ public final class MasterProtos {
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse getTableState(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(4),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance());
       }
 
     }
@@ -78014,16 +77959,6 @@ public final class MasterProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_GetTableNamesResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_hbase_pb_GetTableStateRequest_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_hbase_pb_GetTableStateRequest_fieldAccessorTable;
-  private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_hbase_pb_GetTableStateResponse_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_hbase_pb_GetTableStateResponse_fieldAccessorTable;
-  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetClusterStatusRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -78213,6 +78148,16 @@ public final class MasterProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_GetNumLiveRSResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_GetTableStateRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_GetTableStateRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_GetTableStateResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_GetTableStateResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -78375,241 +78320,240 @@ public final class MasterProtos {
       "\t\022!\n\022include_sys_tables\030\002 \001(\010:\005false\022\021\n\t" +
       "namespace\030\003 \001(\t\"A\n\025GetTableNamesResponse" +
       "\022(\n\013table_names\030\001 \003(\0132\023.hbase.pb.TableNa" +
-      "me\"?\n\024GetTableStateRequest\022\'\n\ntable_name" +
-      "\030\001 \002(\0132\023.hbase.pb.TableName\"B\n\025GetTableS" +
-      "tateResponse\022)\n\013table_state\030\001 \002(\0132\024.hbas" +
-      "e.pb.TableState\"\031\n\027GetClusterStatusReque" +
-      "st\"K\n\030GetClusterStatusResponse\022/\n\016cluste" +
-      "r_status\030\001 \002(\0132\027.hbase.pb.ClusterStatus\"" +
-      "\030\n\026IsMasterRunningRequest\"4\n\027IsMasterRun",
-      "ningResponse\022\031\n\021is_master_running\030\001 \002(\010\"" +
-      "I\n\024ExecProcedureRequest\0221\n\tprocedure\030\001 \002" +
-      "(\0132\036.hbase.pb.ProcedureDescription\"F\n\025Ex" +
-      "ecProcedureResponse\022\030\n\020expected_timeout\030" +
-      "\001 \001(\003\022\023\n\013return_data\030\002 \001(\014\"K\n\026IsProcedur" +
-      "eDoneRequest\0221\n\tprocedure\030\001 \001(\0132\036.hbase." +
-      "pb.ProcedureDescription\"`\n\027IsProcedureDo" +
-      "neResponse\022\023\n\004done\030\001 \001(\010:\005false\0220\n\010snaps" +
-      "hot\030\002 \001(\0132\036.hbase.pb.ProcedureDescriptio" +
-      "n\",\n\031GetProcedureResultRequest\022\017\n\007proc_i",
-      "d\030\001 \002(\004\"\371\001\n\032GetProcedureResultResponse\0229" +
-      "\n\005state\030\001 \002(\0162*.hbase.pb.GetProcedureRes" +
-      "ultResponse.State\022\022\n\nstart_time\030\002 \001(\004\022\023\n" +
-      "\013last_update\030\003 \001(\004\022\016\n\006result\030\004 \001(\014\0224\n\tex" +
-      "ception\030\005 \001(\0132!.hbase.pb.ForeignExceptio" +
-      "nMessage\"1\n\005State\022\r\n\tNOT_FOUND\020\000\022\013\n\007RUNN" +
-      "ING\020\001\022\014\n\010FINISHED\020\002\"M\n\025AbortProcedureReq" +
-      "uest\022\017\n\007proc_id\030\001 \002(\004\022#\n\025mayInterruptIfR" +
-      "unning\030\002 \001(\010:\004true\"6\n\026AbortProcedureResp" +
-      "onse\022\034\n\024is_procedure_aborted\030\001 \002(\010\"\027\n\025Li",
-      "stProceduresRequest\"@\n\026ListProceduresRes" +
-      "ponse\022&\n\tprocedure\030\001 \003(\0132\023.hbase.pb.Proc" +
-      "edure\"\315\001\n\017SetQuotaRequest\022\021\n\tuser_name\030\001" +
-      " \001(\t\022\022\n\nuser_group\030\002 \001(\t\022\021\n\tnamespace\030\003 " +
-      "\001(\t\022\'\n\ntable_name\030\004 \001(\0132\023.hbase.pb.Table" +
-      "Name\022\022\n\nremove_all\030\005 \001(\010\022\026\n\016bypass_globa" +
-      "ls\030\006 \001(\010\022+\n\010throttle\030\007 \001(\0132\031.hbase.pb.Th" +
-      "rottleRequest\"\022\n\020SetQuotaResponse\"J\n\037Maj" +
-      "orCompactionTimestampRequest\022\'\n\ntable_na" +
-      "me\030\001 \002(\0132\023.hbase.pb.TableName\"U\n(MajorCo",
-      "mpactionTimestampForRegionRequest\022)\n\006reg" +
-      "ion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\"@\n " +
-      "MajorCompactionTimestampResponse\022\034\n\024comp" +
-      "action_timestamp\030\001 \002(\003\"\035\n\033SecurityCapabi" +
-      "litiesRequest\"\354\001\n\034SecurityCapabilitiesRe" +
-      "sponse\022G\n\014capabilities\030\001 \003(\01621.hbase.pb." +
-      "SecurityCapabilitiesResponse.Capability\"" +
-      "\202\001\n\nCapability\022\031\n\025SIMPLE_AUTHENTICATION\020" +
-      "\000\022\031\n\025SECURE_AUTHENTICATION\020\001\022\021\n\rAUTHORIZ" +
-      "ATION\020\002\022\026\n\022CELL_AUTHORIZATION\020\003\022\023\n\017CELL_",
-      "VISIBILITY\020\004\"D\n\027ClearDeadServersRequest\022" +
-      ")\n\013server_name\030\001 \003(\0132\024.hbase.pb.ServerNa" +
-      "me\"E\n\030ClearDeadServersResponse\022)\n\013server" +
-      "_name\030\001 \003(\0132\024.hbase.pb.ServerName\"A\n\031Set" +
-      "SnapshotCleanupRequest\022\017\n\007enabled\030\001 \002(\010\022" +
-      "\023\n\013synchronous\030\002 \001(\010\";\n\032SetSnapshotClean" +
-      "upResponse\022\035\n\025prev_snapshot_cleanup\030\001 \002(" +
-      "\010\"!\n\037IsSnapshotCleanupEnabledRequest\"3\n " +
-      "IsSnapshotCleanupEnabledResponse\022\017\n\007enab" +
-      "led\030\001 \002(\010\")\n\030BalancerDecisionsRequest\022\r\n",
-      "\005limit\030\001 \001(\r\"R\n\031BalancerDecisionsRespons" +
-      "e\0225\n\021balancer_decision\030\001 \003(\0132\032.hbase.pb." +
-      "BalancerDecision\"\025\n\023GetClusterIdRequest\"" +
-      "*\n\024GetClusterIdResponse\022\022\n\ncluster_id\030\001 " +
-      "\001(\t\"\023\n\021GetMastersRequest\"W\n\027GetMastersRe" +
-      "sponseEntry\022)\n\013server_name\030\001 \002(\0132\024.hbase" +
-      ".pb.ServerName\022\021\n\tis_active\030\002 \002(\010\"O\n\022Get" +
-      "MastersResponse\0229\n\016master_servers\030\001 \003(\0132" +
-      "!.hbase.pb.GetMastersResponseEntry\"\037\n\035Ge" +
-      "tMetaRegionLocationsRequest\"R\n\036GetMetaRe",
-      "gionLocationsResponse\0220\n\016meta_locations\030" +
-      "\001 \003(\0132\030.hbase.pb.RegionLocation\"\025\n\023GetNu" +
-      "mLiveRSRequest\"2\n\024GetNumLiveRSResponse\022\032" +
-      "\n\022num_region_servers\030\001 \002(\005*(\n\020MasterSwit" +
-      "chType\022\t\n\005SPLIT\020\000\022\t\n\005MERGE\020\0012\256/\n\rMasterS" +
-      "ervice\022e\n\024GetSchemaAlterStatus\022%.hbase.p" +
-      "b.GetSchemaAlterStatusRequest\032&.hbase.pb" +
-      ".GetSchemaAlterStatusResponse\022b\n\023GetTabl" +
-      "eDescriptors\022$.hbase.pb.GetTableDescript" +
-      "orsRequest\032%.hbase.pb.GetTableDescriptor",
-      "sResponse\022P\n\rGetTableNames\022\036.hbase.pb.Ge" +
-      "tTableNamesRequest\032\037.hbase.pb.GetTableNa" +
-      "mesResponse\022Y\n\020GetClusterStatus\022!.hbase." +
-      "pb.GetClusterStatusRequest\032\".hbase.pb.Ge" +
-      "tClusterStatusResponse\022V\n\017IsMasterRunnin" +
-      "g\022 .hbase.pb.IsMasterRunningRequest\032!.hb" +
-      "ase.pb.IsMasterRunningResponse\022D\n\tAddCol" +
-      "umn\022\032.hbase.pb.AddColumnRequest\032\033.hbase." +
-      "pb.AddColumnResponse\022M\n\014DeleteColumn\022\035.h" +
-      "base.pb.DeleteColumnRequest\032\036.hbase.pb.D",
-      "eleteColumnResponse\022M\n\014ModifyColumn\022\035.hb" +
-      "ase.pb.ModifyColumnRequest\032\036.hbase.pb.Mo" +
-      "difyColumnResponse\022G\n\nMoveRegion\022\033.hbase" +
-      ".pb.MoveRegionRequest\032\034.hbase.pb.MoveReg" +
-      "ionResponse\022k\n\026DispatchMergingRegions\022\'." +
-      "hbase.pb.DispatchMergingRegionsRequest\032(" +
-      ".hbase.pb.DispatchMergingRegionsResponse" +
-      "\022M\n\014AssignRegion\022\035.hbase.pb.AssignRegion" +
-      "Request\032\036.hbase.pb.AssignRegionResponse\022" +
-      "S\n\016UnassignRegion\022\037.hbase.pb.UnassignReg",
-      "ionRequest\032 .hbase.pb.UnassignRegionResp" +
-      "onse\022P\n\rOfflineRegion\022\036.hbase.pb.Offline" +
-      "RegionRequest\032\037.hbase.pb.OfflineRegionRe" +
-      "sponse\022J\n\013DeleteTable\022\034.hbase.pb.DeleteT" +
-      "ableRequest\032\035.hbase.pb.DeleteTableRespon" +
-      "se\022P\n\rtruncateTable\022\036.hbase.pb.TruncateT" +
-      "ableRequest\032\037.hbase.pb.TruncateTableResp" +
-      "onse\022J\n\013EnableTable\022\034.hbase.pb.EnableTab" +
-      "leRequest\032\035.hbase.pb.EnableTableResponse" +
-      "\022M\n\014DisableTable\022\035.hbase.pb.DisableTable",
-      "Request\032\036.hbase.pb.DisableTableResponse\022" +
-      "J\n\013ModifyTable\022\034.hbase.pb.ModifyTableReq" +
-      "uest\032\035.hbase.pb.ModifyTableResponse\022J\n\013C" +
-      "reateTable\022\034.hbase.pb.CreateTableRequest" +
-      "\032\035.hbase.pb.CreateTableResponse\022A\n\010Shutd" +
-      "own\022\031.hbase.pb.ShutdownRequest\032\032.hbase.p" +
-      "b.ShutdownResponse\022G\n\nStopMaster\022\033.hbase" +
-      ".pb.StopMasterRequest\032\034.hbase.pb.StopMas" +
-      "terResponse\022h\n\031IsMasterInMaintenanceMode" +
-      "\022$.hbase.pb.IsInMaintenanceModeRequest\032%",
-      ".hbase.pb.IsInMaintenanceModeResponse\022>\n" +
-      "\007Balance\022\030.hbase.pb.BalanceRequest\032\031.hba" +
-      "se.pb.BalanceResponse\022_\n\022SetBalancerRunn" +
-      "ing\022#.hbase.pb.SetBalancerRunningRequest" +
-      "\032$.hbase.pb.SetBalancerRunningResponse\022\\" +
-      "\n\021IsBalancerEnabled\022\".hbase.pb.IsBalance" +
-      "rEnabledRequest\032#.hbase.pb.IsBalancerEna" +
-      "bledResponse\022k\n\026SetSplitOrMergeEnabled\022\'" +
-      ".hbase.pb.SetSplitOrMergeEnabledRequest\032" +
-      "(.hbase.pb.SetSplitOrMergeEnabledRespons",
-      "e\022h\n\025IsSplitOrMergeEnabled\022&.hbase.pb.Is" +
-      "SplitOrMergeEnabledRequest\032\'.hbase.pb.Is" +
-      "SplitOrMergeEnabledResponse\022D\n\tNormalize" +
-      "\022\032.hbase.pb.NormalizeRequest\032\033.hbase.pb." +
-      "NormalizeResponse\022e\n\024SetNormalizerRunnin" +
-      "g\022%.hbase.pb.SetNormalizerRunningRequest" +
-      "\032&.hbase.pb.SetNormalizerRunningResponse" +
-      "\022b\n\023IsNormalizerEnabled\022$.hbase.pb.IsNor" +
-      "malizerEnabledRequest\032%.hbase.pb.IsNorma" +
-      "lizerEnabledResponse\022S\n\016RunCatalogScan\022\037",
-      ".hbase.pb.RunCatalogScanRequest\032 .hbase." +
-      "pb.RunCatalogScanResponse\022e\n\024EnableCatal" +
-      "ogJanitor\022%.hbase.pb.EnableCatalogJanito" +
-      "rRequest\032&.hbase.pb.EnableCatalogJanitor" +
-      "Response\022n\n\027IsCatalogJanitorEnabled\022(.hb" +
-      "ase.pb.IsCatalogJanitorEnabledRequest\032)." +
-      "hbase.pb.IsCatalogJanitorEnabledResponse" +
-      "\022V\n\017RunCleanerChore\022 .hbase.pb.RunCleane" +
-      "rChoreRequest\032!.hbase.pb.RunCleanerChore" +
-      "Response\022k\n\026SetCleanerChoreRunning\022\'.hba",
-      "se.pb.SetCleanerChoreRunningRequest\032(.hb" +
-      "ase.pb.SetCleanerChoreRunningResponse\022h\n" +
-      "\025IsCleanerChoreEnabled\022&.hbase.pb.IsClea" +
-      "nerChoreEnabledRequest\032\'.hbase.pb.IsClea" +
-      "nerChoreEnabledResponse\022^\n\021ExecMasterSer" +
-      "vice\022#.hbase.pb.CoprocessorServiceReques" +
-      "t\032$.hbase.pb.CoprocessorServiceResponse\022" +
-      "A\n\010Snapshot\022\031.hbase.pb.SnapshotRequest\032\032" +
-      ".hbase.pb.SnapshotResponse\022h\n\025GetComplet" +
-      "edSnapshots\022&.hbase.pb.GetCompletedSnaps",
-      "hotsRequest\032\'.hbase.pb.GetCompletedSnaps" +
-      "hotsResponse\022S\n\016DeleteSnapshot\022\037.hbase.p" +
-      "b.DeleteSnapshotRequest\032 .hbase.pb.Delet" +
-      "eSnapshotResponse\022S\n\016IsSnapshotDone\022\037.hb" +
-      "ase.pb.IsSnapshotDoneRequest\032 .hbase.pb." +
-      "IsSnapshotDoneResponse\022V\n\017RestoreSnapsho" +
-      "t\022 .hbase.pb.RestoreSnapshotRequest\032!.hb" +
-      "ase.pb.RestoreSnapshotResponse\022h\n\025IsRest" +
-      "oreSnapshotDone\022&.hbase.pb.IsRestoreSnap" +
-      "shotDoneRequest\032\'.hbase.pb.IsRestoreSnap",
-      "shotDoneResponse\022P\n\rExecProcedure\022\036.hbas" +
-      "e.pb.ExecProcedureRequest\032\037.hbase.pb.Exe" +
-      "cProcedureResponse\022W\n\024ExecProcedureWithR" +
-      "et\022\036.hbase.pb.ExecProcedureRequest\032\037.hba" +
-      "se.pb.ExecProcedureResponse\022V\n\017IsProcedu" +
-      "reDone\022 .hbase.pb.IsProcedureDoneRequest" +
-      "\032!.hbase.pb.IsProcedureDoneResponse\022V\n\017M" +
-      "odifyNamespace\022 .hbase.pb.ModifyNamespac" +
-      "eRequest\032!.hbase.pb.ModifyNamespaceRespo" +
-      "nse\022V\n\017CreateNamespace\022 .hbase.pb.Create",
-      "NamespaceRequest\032!.hbase.pb.CreateNamesp" +
-      "aceResponse\022V\n\017DeleteNamespace\022 .hbase.p" +
-      "b.DeleteNamespaceRequest\032!.hbase.pb.Dele" +
-      "teNamespaceResponse\022k\n\026GetNamespaceDescr" +
-      "iptor\022\'.hbase.pb.GetNamespaceDescriptorR" +
-      "equest\032(.hbase.pb.GetNamespaceDescriptor" +
-      "Response\022q\n\030ListNamespaceDescriptors\022).h" +
-      "base.pb.ListNamespaceDescriptorsRequest\032" +
-      "*.hbase.pb.ListNamespaceDescriptorsRespo" +
-      "nse\022\206\001\n\037ListTableDescriptorsByNamespace\022",
-      "0.hbase.pb.ListTableDescriptorsByNamespa" +
-      "ceRequest\0321.hbase.pb.ListTableDescriptor" +
-      "sByNamespaceResponse\022t\n\031ListTableNamesBy" +
-      "Namespace\022*.hbase.pb.ListTableNamesByNam" +
-      "espaceRequest\032+.hbase.pb.ListTableNamesB" +
-      "yNamespaceResponse\022A\n\010SetQuota\022\031.hbase.p" +
-      "b.SetQuotaRequest\032\032.hbase.pb.SetQuotaRes" +
-      "ponse\022x\n\037getLastMajorCompactionTimestamp" +
-      "\022).hbase.pb.MajorCompactionTimestampRequ" +
-      "est\032*.hbase.pb.MajorCompactionTimestampR",
-      "esponse\022\212\001\n(getLastMajorCompactionTimest" +
-      "ampForRegion\0222.hbase.pb.MajorCompactionT" +
-      "imestampForRegionRequest\032*.hbase.pb.Majo" +
-      "rCompactionTimestampResponse\022_\n\022getProce" +
-      "dureResult\022#.hbase.pb.GetProcedureResult" +
-      "Request\032$.hbase.pb.GetProcedureResultRes" +
-      "ponse\022h\n\027getSecurityCapabilities\022%.hbase" +
-      ".pb.SecurityCapabilitiesRequest\032&.hbase." +
-      "pb.SecurityCapabilitiesResponse\022S\n\016Abort" +
-      "Procedure\022\037.hbase.pb.AbortProcedureReque",
-      "st\032 .hbase.pb.AbortProcedureResponse\022S\n\016" +
-      "ListProcedures\022\037.hbase.pb.ListProcedures" +
-      "Request\032 .hbase.pb.ListProceduresRespons" +
-      "e\022Y\n\020ClearDeadServers\022!.hbase.pb.ClearDe" +
-      "adServersRequest\032\".hbase.pb.ClearDeadSer" +
-      "versResponse\022S\n\016ListNamespaces\022\037.hbase.p" +
-      "b.ListNamespacesRequest\032 .hbase.pb.ListN" +
-      "amespacesResponse\022b\n\025SwitchSnapshotClean" +
-      "up\022#.hbase.pb.SetSnapshotCleanupRequest\032" +
-      "$.hbase.pb.SetSnapshotCleanupResponse\022q\n",
-      "\030IsSnapshotCleanupEnabled\022).hbase.pb.IsS" +
-      "napshotCleanupEnabledRequest\032*.hbase.pb." +
-      "IsSnapshotCleanupEnabledResponse\0229\n\rGetL" +
-      "ogEntries\022\024.hbase.pb.LogRequest\032\022.hbase." +
-      "pb.LogEntry\022P\n\rGetTableState\022\036.hbase.pb." +
-      "GetTableStateRequest\032\037.hbase.pb.GetTable" +
-      "StateResponse2\347\002\n\021ClientMetaService\022M\n\014G" +
-      "etClusterId\022\035.hbase.pb.GetClusterIdReque" +
-      "st\032\036.hbase.pb.GetClusterIdResponse\022G\n\nGe" +
-      "tMasters\022\033.hbase.pb.GetMastersRequest\032\034.",
-      "hbase.pb.GetMastersResponse\022k\n\026GetMetaRe" +
-      "gionLocations\022\'.hbase.pb.GetMetaRegionLo" +
-      "cationsRequest\032(.hbase.pb.GetMetaRegionL" +
-      "ocationsResponse\022M\n\014GetNumLiveRS\022\035.hbase" +
-      ".pb.GetNumLiveRSRequest\032\036.hbase.pb.GetNu" +
-      "mLiveRSResponseBB\n*org.apache.hadoop.hba" +
-      "se.protobuf.generatedB\014MasterProtosH\001\210\001\001" +
-      "\240\001\001"
+      "me\"\031\n\027GetClusterStatusRequest\"K\n\030GetClus" +
+      "terStatusResponse\022/\n\016cluster_status\030\001 \002(" +
+      "\0132\027.hbase.pb.ClusterStatus\"\030\n\026IsMasterRu" +
+      "nningRequest\"4\n\027IsMasterRunningResponse\022" +
+      "\031\n\021is_master_running\030\001 \002(\010\"I\n\024ExecProced" +
+      "ureRequest\0221\n\tprocedure\030\001 \002(\0132\036.hbase.pb" +
+      ".ProcedureDescription\"F\n\025ExecProcedureRe",
+      "sponse\022\030\n\020expected_timeout\030\001 \001(\003\022\023\n\013retu" +
+      "rn_data\030\002 \001(\014\"K\n\026IsProcedureDoneRequest\022" +
+      "1\n\tprocedure\030\001 \001(\0132\036.hbase.pb.ProcedureD" +
+      "escription\"`\n\027IsProcedureDoneResponse\022\023\n" +
+      "\004done\030\001 \001(\010:\005false\0220\n\010snapshot\030\002 \001(\0132\036.h" +
+      "base.pb.ProcedureDescription\",\n\031GetProce" +
+      "dureResultRequest\022\017\n\007proc_id\030\001 \002(\004\"\371\001\n\032G" +
+      "etProcedureResultResponse\0229\n\005state\030\001 \002(\016" +
+      "2*.hbase.pb.GetProcedureResultResponse.S" +
+      "tate\022\022\n\nstart_time\030\002 \001(\004\022\023\n\013last_update\030",
+      "\003 \001(\004\022\016\n\006result\030\004 \001(\014\0224\n\texception\030\005 \001(\013" +
+      "2!.hbase.pb.ForeignExceptionMessage\"1\n\005S" +
+      "tate\022\r\n\tNOT_FOUND\020\000\022\013\n\007RUNNING\020\001\022\014\n\010FINI" +
+      "SHED\020\002\"M\n\025AbortProcedureRequest\022\017\n\007proc_" +
+      "id\030\001 \002(\004\022#\n\025mayInterruptIfRunning\030\002 \001(\010:" +
+      "\004true\"6\n\026AbortProcedureResponse\022\034\n\024is_pr" +
+      "ocedure_aborted\030\001 \002(\010\"\027\n\025ListProceduresR" +
+      "equest\"@\n\026ListProceduresResponse\022&\n\tproc" +
+      "edure\030\001 \003(\0132\023.hbase.pb.Procedure\"\315\001\n\017Set" +
+      "QuotaRequest\022\021\n\tuser_name\030\001 \001(\t\022\022\n\nuser_",
+      "group\030\002 \001(\t\022\021\n\tnamespace\030\003 \001(\t\022\'\n\ntable_" +
+      "name\030\004 \001(\0132\023.hbase.pb.TableName\022\022\n\nremov" +
+      "e_all\030\005 \001(\010\022\026\n\016bypass_globals\030\006 \001(\010\022+\n\010t" +
+      "hrottle\030\007 \001(\0132\031.hbase.pb.ThrottleRequest" +
+      "\"\022\n\020SetQuotaResponse\"J\n\037MajorCompactionT" +
+      "imestampRequest\022\'\n\ntable_name\030\001 \002(\0132\023.hb" +
+      "ase.pb.TableName\"U\n(MajorCompactionTimes" +
+      "tampForRegionRequest\022)\n\006region\030\001 \002(\0132\031.h" +
+      "base.pb.RegionSpecifier\"@\n MajorCompacti" +
+      "onTimestampResponse\022\034\n\024compaction_timest",
+      "amp\030\001 \002(\003\"\035\n\033SecurityCapabilitiesRequest" +
+      "\"\354\001\n\034SecurityCapabilitiesResponse\022G\n\014cap" +
+      "abilities\030\001 \003(\01621.hbase.pb.SecurityCapab" +
+      "ilitiesResponse.Capability\"\202\001\n\nCapabilit" +
+      "y\022\031\n\025SIMPLE_AUTHENTICATION\020\000\022\031\n\025SECURE_A" +
+      "UTHENTICATION\020\001\022\021\n\rAUTHORIZATION\020\002\022\026\n\022CE" +
+      "LL_AUTHORIZATION\020\003\022\023\n\017CELL_VISIBILITY\020\004\"" +
+      "D\n\027ClearDeadServersRequest\022)\n\013server_nam" +
+      "e\030\001 \003(\0132\024.hbase.pb.ServerName\"E\n\030ClearDe" +
+      "adServersResponse\022)\n\013server_name\030\001 \003(\0132\024",
+      ".hbase.pb.ServerName\"A\n\031SetSnapshotClean" +
+      "upRequest\022\017\n\007enabled\030\001 \002(\010\022\023\n\013synchronou" +
+      "s\030\002 \001(\010\";\n\032SetSnapshotCleanupResponse\022\035\n" +
+      "\025prev_snapshot_cleanup\030\001 \002(\010\"!\n\037IsSnapsh" +
+      "otCleanupEnabledRequest\"3\n IsSnapshotCle" +
+      "anupEnabledResponse\022\017\n\007enabled\030\001 \002(\010\")\n\030" +
+      "BalancerDecisionsRequest\022\r\n\005limit\030\001 \001(\r\"" +
+      "R\n\031BalancerDecisionsResponse\0225\n\021balancer" +
+      "_decision\030\001 \003(\0132\032.hbase.pb.BalancerDecis" +
+      "ion\"\025\n\023GetClusterIdRequest\"*\n\024GetCluster",
+      "IdResponse\022\022\n\ncluster_id\030\001 \001(\t\"\023\n\021GetMas" +
+      "tersRequest\"W\n\027GetMastersResponseEntry\022)" +
+      "\n\013server_name\030\001 \002(\0132\024.hbase.pb.ServerNam" +
+      "e\022\021\n\tis_active\030\002 \002(\010\"O\n\022GetMastersRespon" +
+      "se\0229\n\016master_servers\030\001 \003(\0132!.hbase.pb.Ge" +
+      "tMastersResponseEntry\"\037\n\035GetMetaRegionLo" +
+      "cationsRequest\"R\n\036GetMetaRegionLocations" +
+      "Response\0220\n\016meta_locations\030\001 \003(\0132\030.hbase" +
+      ".pb.RegionLocation\"\025\n\023GetNumLiveRSReques" +
+      "t\"2\n\024GetNumLiveRSResponse\022\032\n\022num_region_",
+      "servers\030\001 \002(\005\">\n\024GetTableStateRequest\022\022\n" +
+      "\ntable_name\030\001 \002(\t\022\022\n\nis_enabled\030\002 \002(\010\"4\n" +
+      "\025GetTableStateResponse\022\033\n\023enabled_or_dis" +
+      "abled\030\001 \002(\010*(\n\020MasterSwitchType\022\t\n\005SPLIT" +
+      "\020\000\022\t\n\005MERGE\020\0012\334.\n\rMasterService\022e\n\024GetSc" +
+      "hemaAlterStatus\022%.hbase.pb.GetSchemaAlte" +
+      "rStatusRequest\032&.hbase.pb.GetSchemaAlter" +
+      "StatusResponse\022b\n\023GetTableDescriptors\022$." +
+      "hbase.pb.GetTableDescriptorsRequest\032%.hb" +
+      "ase.pb.GetTableDescriptorsResponse\022P\n\rGe",
+      "tTableNames\022\036.hbase.pb.GetTableNamesRequ" +
+      "est\032\037.hbase.pb.GetTableNamesResponse\022Y\n\020" +
+      "GetClusterStatus\022!.hbase.pb.GetClusterSt" +
+      "atusRequest\032\".hbase.pb.GetClusterStatusR" +
+      "esponse\022V\n\017IsMasterRunning\022 .hbase.pb.Is" +
+      "MasterRunningRequest\032!.hbase.pb.IsMaster" +
+      "RunningResponse\022D\n\tAddColumn\022\032.hbase.pb." +
+      "AddColumnRequest\032\033.hbase.pb.AddColumnRes" +
+      "ponse\022M\n\014DeleteColumn\022\035.hbase.pb.DeleteC" +
+      "olumnRequest\032\036.hbase.pb.DeleteColumnResp",
+      "onse\022M\n\014ModifyColumn\022\035.hbase.pb.ModifyCo" +
+      "lumnRequest\032\036.hbase.pb.ModifyColumnRespo" +
+      "nse\022G\n\nMoveRegion\022\033.hbase.pb.MoveRegionR" +
+      "equest\032\034.hbase.pb.MoveRegionResponse\022k\n\026" +
+      "DispatchMergingRegions\022\'.hbase.pb.Dispat" +
+      "chMergingRegionsRequest\032(.hbase.pb.Dispa" +
+      "tchMergingRegionsResponse\022M\n\014AssignRegio" +
+      "n\022\035.hbase.pb.AssignRegionRequest\032\036.hbase" +
+      ".pb.AssignRegionResponse\022S\n\016UnassignRegi" +
+      "on\022\037.hbase.pb.UnassignRegionRequest\032 .hb",
+      "ase.pb.UnassignRegionResponse\022P\n\rOffline" +
+      "Region\022\036.hbase.pb.OfflineRegionRequest\032\037" +
+      ".hbase.pb.OfflineRegionResponse\022J\n\013Delet" +
+      "eTable\022\034.hbase.pb.DeleteTableRequest\032\035.h" +
+      "base.pb.DeleteTableResponse\022P\n\rtruncateT" +
+      "able\022\036.hbase.pb.TruncateTableRequest\032\037.h" +
+      "base.pb.TruncateTableResponse\022J\n\013EnableT" +
+      "able\022\034.hbase.pb.EnableTableRequest\032\035.hba" +
+      "se.pb.EnableTableResponse\022M\n\014DisableTabl" +
+      "e\022\035.hbase.pb.DisableTableRequest\032\036.hbase",
+      ".pb.DisableTableResponse\022J\n\013ModifyTable\022" +
+      "\034.hbase.pb.ModifyTableRequest\032\035.hbase.pb" +
+      ".ModifyTableResponse\022J\n\013CreateTable\022\034.hb" +
+      "ase.pb.CreateTableRequest\032\035.hbase.pb.Cre" +
+      "ateTableResponse\022A\n\010Shutdown\022\031.hbase.pb." +
+      "ShutdownRequest\032\032.hbase.pb.ShutdownRespo" +
+      "nse\022G\n\nStopMaster\022\033.hbase.pb.StopMasterR" +
+      "equest\032\034.hbase.pb.StopMasterResponse\022h\n\031" +
+      "IsMasterInMaintenanceMode\022$.hbase.pb.IsI" +
+      "nMaintenanceModeRequest\032%.hbase.pb.IsInM",
+      "aintenanceModeResponse\022>\n\007Balance\022\030.hbas" +
+      "e.pb.BalanceRequest\032\031.hbase.pb.BalanceRe" +
+      "sponse\022_\n\022SetBalancerRunning\022#.hbase.pb." +
+      "SetBalancerRunningRequest\032$.hbase.pb.Set" +
+      "BalancerRunningResponse\022\\\n\021IsBalancerEna" +
+      "bled\022\".hbase.pb.IsBalancerEnabledRequest" +
+      "\032#.hbase.pb.IsBalancerEnabledResponse\022k\n" +
+      "\026SetSplitOrMergeEnabled\022\'.hbase.pb.SetSp" +
+      "litOrMergeEnabledRequest\032(.hbase.pb.SetS" +
+      "plitOrMergeEnabledResponse\022h\n\025IsSplitOrM",
+      "ergeEnabled\022&.hbase.pb.IsSplitOrMergeEna" +
+      "bledRequest\032\'.hbase.pb.IsSplitOrMergeEna" +
+      "bledResponse\022D\n\tNormalize\022\032.hbase.pb.Nor" +
+      "malizeRequest\032\033.hbase.pb.NormalizeRespon" +
+      "se\022e\n\024SetNormalizerRunning\022%.hbase.pb.Se" +
+      "tNormalizerRunningRequest\032&.hbase.pb.Set" +
+      "NormalizerRunningResponse\022b\n\023IsNormalize" +
+      "rEnabled\022$.hbase.pb.IsNormalizerEnabledR" +
+      "equest\032%.hbase.pb.IsNormalizerEnabledRes" +
+      "ponse\022S\n\016RunCatalogScan\022\037.hbase.pb.RunCa",
+      "talogScanRequest\032 .hbase.pb.RunCatalogSc" +
+      "anResponse\022e\n\024EnableCatalogJanitor\022%.hba" +
+      "se.pb.EnableCatalogJanitorRequest\032&.hbas" +
+      "e.pb.EnableCatalogJanitorResponse\022n\n\027IsC" +
+      "atalogJanitorEnabled\022(.hbase.pb.IsCatalo" +
+      "gJanitorEnabledRequest\032).hbase.pb.IsCata" +
+      "logJanitorEnabledResponse\022V\n\017RunCleanerC" +
+      "hore\022 .hbase.pb.RunCleanerChoreRequest\032!" +
+      ".hbase.pb.RunCleanerChoreResponse\022k\n\026Set" +
+      "CleanerChoreRunning\022\'.hbase.pb.SetCleane",
+      "rChoreRunningRequest\032(.hbase.pb.SetClean" +
+      "erChoreRunningResponse\022h\n\025IsCleanerChore" +
+      "Enabled\022&.hbase.pb.IsCleanerChoreEnabled" +
+      "Request\032\'.hbase.pb.IsCleanerChoreEnabled" +
+      "Response\022^\n\021ExecMasterService\022#.hbase.pb" +
+      ".CoprocessorServiceRequest\032$.hbase.pb.Co" +
+      "processorServiceResponse\022A\n\010Snapshot\022\031.h" +
+      "base.pb.SnapshotRequest\032\032.hbase.pb.Snaps" +
+      "hotResponse\022h\n\025GetCompletedSnapshots\022&.h" +
+      "base.pb.GetCompletedSnapshotsRequest\032\'.h",
+      "base.pb.GetCompletedSnapshotsResponse\022S\n" +
+      "\016DeleteSnapshot\022\037.hbase.pb.DeleteSnapsho" +
+      "tRequest\032 .hbase.pb.DeleteSnapshotRespon" +
+      "se\022S\n\016IsSnapshotDone\022\037.hbase.pb.IsSnapsh" +
+      "otDoneRequest\032 .hbase.pb.IsSnapshotDoneR" +
+      "esponse\022V\n\017RestoreSnapshot\022 .hbase.pb.Re" +
+      "storeSnapshotRequest\032!.hbase.pb.RestoreS" +
+      "napshotResponse\022h\n\025IsRestoreSnapshotDone" +
+      "\022&.hbase.pb.IsRestoreSnapshotDoneRequest" +
+      "\032\'.hbase.pb.IsRestoreSnapshotDoneRespons",
+      "e\022P\n\rExecProcedure\022\036.hbase.pb.ExecProced" +
+      "ureRequest\032\037.hbase.pb.ExecProcedureRespo" +
+      "nse\022W\n\024ExecProcedureWithRet\022\036.hbase.pb.E" +
+      "xecProcedureRequest\032\037.hbase.pb.ExecProce" +
+      "dureResponse\022V\n\017IsProcedureDone\022 .hbase." +
+      "pb.IsProcedureDoneRequest\032!.hbase.pb.IsP" +
+      "rocedureDoneResponse\022V\n\017ModifyNamespace\022" +
+      " .hbase.pb.ModifyNamespaceRequest\032!.hbas" +
+      "e.pb.ModifyNamespaceResponse\022V\n\017CreateNa" +
+      "mespace\022 .hbase.pb.CreateNamespaceReques",
+      "t\032!.hbase.pb.CreateNamespaceResponse\022V\n\017" +
+      "DeleteNamespace\022 .hbase.pb.DeleteNamespa" +
+      "ceRequest\032!.hbase.pb.DeleteNamespaceResp" +
+      "onse\022k\n\026GetNamespaceDescriptor\022\'.hbase.p" +
+      "b.GetNamespaceDescriptorRequest\032(.hbase." +
+      "pb.GetNamespaceDescriptorResponse\022q\n\030Lis" +
+      "tNamespaceDescriptors\022).hbase.pb.ListNam" +
+      "espaceDescriptorsRequest\032*.hbase.pb.List" +
+      "NamespaceDescriptorsResponse\022\206\001\n\037ListTab" +
+      "leDescriptorsByNamespace\0220.hbase.pb.List",
+      "TableDescriptorsByNamespaceRequest\0321.hba" +
+      "se.pb.ListTableDescriptorsByNamespaceRes" +
+      "ponse\022t\n\031ListTableNamesByNamespace\022*.hba" +
+      "se.pb.ListTableNamesByNamespaceRequest\032+" +
+      ".hbase.pb.ListTableNamesByNamespaceRespo" +
+      "nse\022A\n\010SetQuota\022\031.hbase.pb.SetQuotaReque" +
+      "st\032\032.hbase.pb.SetQuotaResponse\022x\n\037getLas" +
+      "tMajorCompactionTimestamp\022).hbase.pb.Maj" +
+      "orCompactionTimestampRequest\032*.hbase.pb." +
+      "MajorCompactionTimestampResponse\022\212\001\n(get",
+      "LastMajorCompactionTimestampForRegion\0222." +
+      "hbase.pb.MajorCompactionTimestampForRegi" +
+      "onRequest\032*.hbase.pb.MajorCompactionTime" +
+      "stampResponse\022_\n\022getProcedureResult\022#.hb" +
+      "ase.pb.GetProcedureResultRequest\032$.hbase" +
+      ".pb.GetProcedureResultResponse\022h\n\027getSec" +
+      "urityCapabilities\022%.hbase.pb.SecurityCap" +
+      "abilitiesRequest\032&.hbase.pb.SecurityCapa" +
+      "bilitiesResponse\022S\n\016AbortProcedure\022\037.hba" +
+      "se.pb.AbortProcedureRequest\032 .hbase.pb.A",
+      "bortProcedureResponse\022S\n\016ListProcedures\022" +
+      "\037.hbase.pb.ListProceduresRequest\032 .hbase" +
+      ".pb.ListProceduresResponse\022Y\n\020ClearDeadS" +
+      "ervers\022!.hbase.pb.ClearDeadServersReques" +
+      "t\032\".hbase.pb.ClearDeadServersResponse\022S\n" +
+      "\016ListNamespaces\022\037.hbase.pb.ListNamespace" +
+      "sRequest\032 .hbase.pb.ListNamespacesRespon" +
+      "se\022b\n\025SwitchSnapshotCleanup\022#.hbase.pb.S" +
+      "etSnapshotCleanupRequest\032$.hbase.pb.SetS" +
+      "napshotCleanupResponse\022q\n\030IsSnapshotClea",
+      "nupEnabled\022).hbase.pb.IsSnapshotCleanupE" +
+      "nabledRequest\032*.hbase.pb.IsSnapshotClean" +
+      "upEnabledResponse\0229\n\rGetLogEntries\022\024.hba" +
+      "se.pb.LogRequest\032\022.hbase.pb.LogEntry2\271\003\n" +
+      "\021ClientMetaService\022M\n\014GetClusterId\022\035.hba" +
+      "se.pb.GetClusterIdRequest\032\036.hbase.pb.Get" +
+      "ClusterIdResponse\022G\n\nGetMasters\022\033.hbase." +
+      "pb.GetMastersRequest\032\034.hbase.pb.GetMaste" +
+      "rsResponse\022k\n\026GetMetaRegionLocations\022\'.h" +
+      "base.pb.GetMetaRegionLocationsRequest\032(.",
+      "hbase.pb.GetMetaRegionLocationsResponse\022" +
+      "M\n\014GetNumLiveRS\022\035.hbase.pb.GetNumLiveRSR" +
+      "equest\032\036.hbase.pb.GetNumLiveRSResponse\022P" +
+      "\n\rGetTableState\022\036.hbase.pb.GetTableState" +
+      "Request\032\037.hbase.pb.GetTableStateResponse" +
+      "BB\n*org.apache.hadoop.hbase.protobuf.gen" +
+      "eratedB\014MasterProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -79192,246 +79136,246 @@ public final class MasterProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetTableNamesResponse_descriptor,
               new java.lang.String[] { "TableNames", });
-          internal_static_hbase_pb_GetTableStateRequest_descriptor =
-            getDescriptor().getMessageTypes().get(96);
-          internal_static_hbase_pb_GetTableStateRequest_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_hbase_pb_GetTableStateRequest_descriptor,
-              new java.lang.String[] { "TableName", });
-          internal_static_hbase_pb_GetTableStateResponse_descriptor =
-            getDescriptor().getMessageTypes().get(97);
-          internal_static_hbase_pb_GetTableStateResponse_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_hbase_pb_GetTableStateResponse_descriptor,
-              new java.lang.String[] { "TableState", });
           internal_static_hbase_pb_GetClusterStatusRequest_descriptor =
-            getDescriptor().getMessageTypes().get(98);
+            getDescriptor().getMessageTypes().get(96);
           internal_static_hbase_pb_GetClusterStatusRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetClusterStatusRequest_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_GetClusterStatusResponse_descriptor =
-            getDescriptor().getMessageTypes().get(99);
+            getDescriptor().getMessageTypes().get(97);
           internal_static_hbase_pb_GetClusterStatusResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetClusterStatusResponse_descriptor,
               new java.lang.String[] { "ClusterStatus", });
           internal_static_hbase_pb_IsMasterRunningRequest_descriptor =
-            getDescriptor().getMessageTypes().get(100);
+            getDescriptor().getMessageTypes().get(98);
           internal_static_hbase_pb_IsMasterRunningRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_IsMasterRunningRequest_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_IsMasterRunningResponse_descriptor =
-            getDescriptor().getMessageTypes().get(101);
+            getDescriptor().getMessageTypes().get(99);
           internal_static_hbase_pb_IsMasterRunningResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_IsMasterRunningResponse_descriptor,
               new java.lang.String[] { "IsMasterRunning", });
           internal_static_hbase_pb_ExecProcedureRequest_descriptor =
-            getDescriptor().getMessageTypes().get(102);
+            getDescriptor().getMessageTypes().get(100);
           internal_static_hbase_pb_ExecProcedureRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ExecProcedureRequest_descriptor,
               new java.lang.String[] { "Procedure", });
           internal_static_hbase_pb_ExecProcedureResponse_descriptor =
-            getDescriptor().getMessageTypes().get(103);
+            getDescriptor().getMessageTypes().get(101);
           internal_static_hbase_pb_ExecProcedureResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ExecProcedureResponse_descriptor,
               new java.lang.String[] { "ExpectedTimeout", "ReturnData", });
           internal_static_hbase_pb_IsProcedureDoneRequest_descriptor =
-            getDescriptor().getMessageTypes().get(104);
+            getDescriptor().getMessageTypes().get(102);
           internal_static_hbase_pb_IsProcedureDoneRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_IsProcedureDoneRequest_descriptor,
               new java.lang.String[] { "Procedure", });
           internal_static_hbase_pb_IsProcedureDoneResponse_descriptor =
-            getDescriptor().getMessageTypes().get(105);
+            getDescriptor().getMessageTypes().get(103);
           internal_static_hbase_pb_IsProcedureDoneResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_IsProcedureDoneResponse_descriptor,
               new java.lang.String[] { "Done", "Snapshot", });
           internal_static_hbase_pb_GetProcedureResultRequest_descriptor =
-            getDescriptor().getMessageTypes().get(106);
+            getDescriptor().getMessageTypes().get(104);
           internal_static_hbase_pb_GetProcedureResultRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetProcedureResultRequest_descriptor,
               new java.lang.String[] { "ProcId", });
           internal_static_hbase_pb_GetProcedureResultResponse_descriptor =
-            getDescriptor().getMessageTypes().get(107);
+            getDescriptor().getMessageTypes().get(105);
           internal_static_hbase_pb_GetProcedureResultResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetProcedureResultResponse_descriptor,
               new java.lang.String[] { "State", "StartTime", "LastUpdate", "Result", "Exception", });
           internal_static_hbase_pb_AbortProcedureRequest_descriptor =
-            getDescriptor().getMessageTypes().get(108);
+            getDescriptor().getMessageTypes().get(106);
           internal_static_hbase_pb_AbortProcedureRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_AbortProcedureRequest_descriptor,
               new java.lang.String[] { "ProcId", "MayInterruptIfRunning", });
           internal_static_hbase_pb_AbortProcedureResponse_descriptor =
-            getDescriptor().getMessageTypes().get(109);
+            getDescriptor().getMessageTypes().get(107);
           internal_static_hbase_pb_AbortProcedureResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_AbortProcedureResponse_descriptor,
               new java.lang.String[] { "IsProcedureAborted", });
           internal_static_hbase_pb_ListProceduresRequest_descriptor =
-            getDescriptor().getMessageTypes().get(110);
+            getDescriptor().getMessageTypes().get(108);
           internal_static_hbase_pb_ListProceduresRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ListProceduresRequest_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_ListProceduresResponse_descriptor =
-            getDescriptor().getMessageTypes().get(111);
+            getDescriptor().getMessageTypes().get(109);
           internal_static_hbase_pb_ListProceduresResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ListProceduresResponse_descriptor,
               new java.lang.String[] { "Procedure", });
           internal_static_hbase_pb_SetQuotaRequest_descriptor =
-            getDescriptor().getMessageTypes().get(112);
+            getDescriptor().getMessageTypes().get(110);
           internal_static_hbase_pb_SetQuotaRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SetQuotaRequest_descriptor,
               new java.lang.String[] { "UserName", "UserGroup", "Namespace", "TableName", "RemoveAll", "BypassGlobals", "Throttle", });
           internal_static_hbase_pb_SetQuotaResponse_descriptor =
-            getDescriptor().getMessageTypes().get(113);
+            getDescriptor().getMessageTypes().get(111);
           internal_static_hbase_pb_SetQuotaResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SetQuotaResponse_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_MajorCompactionTimestampRequest_descriptor =
-            getDescriptor().getMessageTypes().get(114);
+            getDescriptor().getMessageTypes().get(112);
           internal_static_hbase_pb_MajorCompactionTimestampRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_MajorCompactionTimestampRequest_descriptor,
               new java.lang.String[] { "TableName", });
           internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_descriptor =
-            getDescriptor().getMessageTypes().get(115);
+            getDescriptor().getMessageTypes().get(113);
           internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_descriptor,
               new java.lang.String[] { "Region", });
           internal_static_hbase_pb_MajorCompactionTimestampResponse_descriptor =
-            getDescriptor().getMessageTypes().get(116);
+            getDescriptor().getMessageTypes().get(114);
           internal_static_hbase_pb_MajorCompactionTimestampResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_MajorCompactionTimestampResponse_descriptor,
               new java.lang.String[] { "CompactionTimestamp", });
           internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor =
-            getDescriptor().getMessageTypes().get(117);
+            getDescriptor().getMessageTypes().get(115);
           internal_static_hbase_pb_SecurityCapabilitiesRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor =
-            getDescriptor().getMessageTypes().get(118);
+            getDescriptor().getMessageTypes().get(116);
           internal_static_hbase_pb_SecurityCapabilitiesResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor,
               new java.lang.String[] { "Capabilities", });
           internal_static_hbase_pb_ClearDeadServersRequest_descriptor =
-            getDescriptor().getMessageTypes().get(119);
+            getDescriptor().getMessageTypes().get(117);
           internal_static_hbase_pb_ClearDeadServersRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ClearDeadServersRequest_descriptor,
               new java.lang.String[] { "ServerName", });
           internal_static_hbase_pb_ClearDeadServersResponse_descriptor =
-            getDescriptor().getMessageTypes().get(120);
+            getDescriptor().getMessageTypes().get(118);
           internal_static_hbase_pb_ClearDeadServersResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ClearDeadServersResponse_descriptor,
               new java.lang.String[] { "ServerName", });
           internal_static_hbase_pb_SetSnapshotCleanupRequest_descriptor =
-            getDescriptor().getMessageTypes().get(121);
+            getDescriptor().getMessageTypes().get(119);
           internal_static_hbase_pb_SetSnapshotCleanupRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SetSnapshotCleanupRequest_descriptor,
               new java.lang.String[] { "Enabled", "Synchronous", });
           internal_static_hbase_pb_SetSnapshotCleanupResponse_descriptor =
-            getDescriptor().getMessageTypes().get(122);
+            getDescriptor().getMessageTypes().get(120);
           internal_static_hbase_pb_SetSnapshotCleanupResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SetSnapshotCleanupResponse_descriptor,
               new java.lang.String[] { "PrevSnapshotCleanup", });
           internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_descriptor =
-            getDescriptor().getMessageTypes().get(123);
+            getDescriptor().getMessageTypes().get(121);
           internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_descriptor =
-            getDescriptor().getMessageTypes().get(124);
+            getDescriptor().getMessageTypes().get(122);
           internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_descriptor,
               new java.lang.String[] { "Enabled", });
           internal_static_hbase_pb_BalancerDecisionsRequest_descriptor =
-            getDescriptor().getMessageTypes().get(125);
+            getDescriptor().getMessageTypes().get(123);
           internal_static_hbase_pb_BalancerDecisionsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_BalancerDecisionsRequest_descriptor,
               new java.lang.String[] { "Limit", });
           internal_static_hbase_pb_BalancerDecisionsResponse_descriptor =
-            getDescriptor().getMessageTypes().get(126);
+            getDescriptor().getMessageTypes().get(124);
           internal_static_hbase_pb_BalancerDecisionsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_BalancerDecisionsResponse_descriptor,
               new java.lang.String[] { "BalancerDecision", });
           internal_static_hbase_pb_GetClusterIdRequest_descriptor =
-            getDescriptor().getMessageTypes().get(127);
+            getDescriptor().getMessageTypes().get(125);
           internal_static_hbase_pb_GetClusterIdRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetClusterIdRequest_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_GetClusterIdResponse_descriptor =
-            getDescriptor().getMessageTypes().get(128);
+            getDescriptor().getMessageTypes().get(126);
           internal_static_hbase_pb_GetClusterIdResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetClusterIdResponse_descriptor,
               new java.lang.String[] { "ClusterId", });
           internal_static_hbase_pb_GetMastersRequest_descriptor =
-            getDescriptor().getMessageTypes().get(129);
+            getDescriptor().getMessageTypes().get(127);
           internal_static_hbase_pb_GetMastersRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetMastersRequest_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_GetMastersResponseEntry_descriptor =
-            getDescriptor().getMessageTypes().get(130);
+            getDescriptor().getMessageTypes().get(128);
           internal_static_hbase_pb_GetMastersResponseEntry_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetMastersResponseEntry_descriptor,
               new java.lang.String[] { "ServerName", "IsActive", });
           internal_static_hbase_pb_GetMastersResponse_descriptor =
-            getDescriptor().getMessageTypes().get(131);
+            getDescriptor().getMessageTypes().get(129);
           internal_static_hbase_pb_GetMastersResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetMastersResponse_descriptor,
               new java.lang.String[] { "MasterServers", });
           internal_static_hbase_pb_GetMetaRegionLocationsRequest_descriptor =
-            getDescriptor().getMessageTypes().get(132);
+            getDescriptor().getMessageTypes().get(130);
           internal_static_hbase_pb_GetMetaRegionLocationsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetMetaRegionLocationsRequest_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_GetMetaRegionLocationsResponse_descriptor =
-            getDescriptor().getMessageTypes().get(133);
+            getDescriptor().getMessageTypes().get(131);
           internal_static_hbase_pb_GetMetaRegionLocationsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetMetaRegionLocationsResponse_descriptor,
               new java.lang.String[] { "MetaLocations", });
           internal_static_hbase_pb_GetNumLiveRSRequest_descriptor =
-            getDescriptor().getMessageTypes().get(134);
+            getDescriptor().getMessageTypes().get(132);
           internal_static_hbase_pb_GetNumLiveRSRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetNumLiveRSRequest_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_GetNumLiveRSResponse_descriptor =
-            getDescriptor().getMessageTypes().get(135);
+            getDescriptor().getMessageTypes().get(133);
           internal_static_hbase_pb_GetNumLiveRSResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetNumLiveRSResponse_descriptor,
               new java.lang.String[] { "NumRegionServers", });
+          internal_static_hbase_pb_GetTableStateRequest_descriptor =
+            getDescriptor().getMessageTypes().get(134);
+          internal_static_hbase_pb_GetTableStateRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_GetTableStateRequest_descriptor,
+              new java.lang.String[] { "TableName", "IsEnabled", });
+          internal_static_hbase_pb_GetTableStateResponse_descriptor =
+            getDescriptor().getMessageTypes().get(135);
+          internal_static_hbase_pb_GetTableStateResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_GetTableStateResponse_descriptor,
+              new java.lang.String[] { "EnabledOrDisabled", });
           return null;
         }
       };

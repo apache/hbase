@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -70,6 +69,7 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -156,9 +156,10 @@ public class TestAssignmentManagerOnCluster {
           Bytes.toBytes(metaServerName.getServerName()));
         master.assignmentManager.waitUntilNoRegionsInTransition(60000);
       }
-      RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-      assertEquals("Meta should be not in transition",
-          metaState.getState(), RegionState.State.OPEN);
+      RegionState metaState =
+          MetaTableLocator.getMetaRegionState(master.getZooKeeper());
+        assertEquals("Meta should be not in transition",
+            metaState.getState(), RegionState.State.OPEN);
       assertNotEquals("Meta should be moved off master",
         metaServerName, master.getServerName());
       cluster.killRegionServer(metaServerName);
@@ -288,8 +289,7 @@ public class TestAssignmentManagerOnCluster {
     String table = "testAssignRegionOnRestartedServer";
     TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 20);
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0);
-    //restart the master so that conf take into affect
-    TEST_UTIL.getMiniHBaseCluster().startMaster();
+    TEST_UTIL.getMiniHBaseCluster().startMaster(); //restart the master so that conf take into affect
 
     ServerName deadServer = null;
     HMaster master = null;
@@ -888,7 +888,7 @@ public class TestAssignmentManagerOnCluster {
         }
       }
 
-      am.getTableStateManager().setTableState(table, TableState.State.DISABLING);
+      am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLING);
       List<HRegionInfo> toAssignRegions = am.cleanOutCrashedServerReferences(destServerName);
       assertTrue("Regions to be assigned should be empty.", toAssignRegions.isEmpty());
       assertTrue("Regions to be assigned should be empty.", am.getRegionStates()
@@ -897,7 +897,7 @@ public class TestAssignmentManagerOnCluster {
       if (hri != null && serverName != null) {
         am.regionOnline(hri, serverName);
       }
-      am.getTableStateManager().setTableState(table, TableState.State.DISABLED);
+      am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLED);
       TEST_UTIL.deleteTable(table);
     }
   }

@@ -86,7 +86,6 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.http.InfoServer;
@@ -142,6 +141,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
@@ -169,7 +169,6 @@ import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -381,9 +380,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private long splitPlanCount;
   private long mergePlanCount;
-
-  // handle table states
-  private TableStateManager tableStateManager;
 
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
@@ -694,8 +690,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     this.assignmentManager = new AssignmentManager(this, serverManager,
       this.balancer, this.service, this.metricsMaster,
-      this.tableLockManager, tableStateManager);
+      this.tableLockManager);
     zooKeeper.registerListenerFirst(assignmentManager);
+
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
         this.serverManager);
     this.regionServerTracker.start();
@@ -727,14 +724,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.mpmHost.register(new MasterFlushTableProcedureManager());
     this.mpmHost.loadProcedures(conf);
     this.mpmHost.initialize(this, this.metricsMaster);
-
-    // migrating existent table state from zk
-    for (Map.Entry<TableName, TableState.State> entry : ZKDataMigrator
-        .queryForTableStates(getZooKeeper()).entrySet()) {
-      LOG.info("Converting state from zk to new states:" + entry);
-      tableStateManager.setTableState(entry.getKey(), entry.getValue());
-    }
-    ZKUtil.deleteChildrenRecursively(getZooKeeper(), getZooKeeper().tableZNode);
   }
 
   /**
@@ -798,9 +787,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
-
-    this.tableStateManager = new TableStateManager(this);
-    this.tableStateManager.start();
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -1199,8 +1185,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   private void enableMeta(TableName metaTableName) {
-    if (!this.tableStateManager.isTableState(metaTableName,
-            TableState.State.ENABLED)) {
+    if (!this.assignmentManager.getTableStateManager().isTableState(metaTableName,
+        ZooKeeperProtos.Table.State.ENABLED)) {
       this.assignmentManager.setEnabledTable(metaTableName);
     }
   }
@@ -1242,11 +1228,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public TableNamespaceManager getTableNamespaceManager() {
     return tableNamespaceManager;
-  }
-
-  @Override
-  public TableStateManager getTableStateManager() {
-    return tableStateManager;
   }
 
   /*
@@ -1692,8 +1673,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
 
     try {
-      final List<TableName> allEnabledTables = new ArrayList<>(this.assignmentManager
-          .getTableStateManager().getTablesInStates(TableState.State.ENABLED));
+      final List<TableName> allEnabledTables = new ArrayList<>(
+        this.assignmentManager.getTableStateManager().getTablesInStates(
+          ZooKeeperProtos.Table.State.ENABLED));
 
       Collections.shuffle(allEnabledTables);
 
@@ -2542,7 +2524,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throw new TableNotFoundException(tableName);
     }
     if (!getAssignmentManager().getTableStateManager().
-        isTableState(tableName, TableState.State.DISABLED)) {
+        isTableState(tableName, ZooKeeperProtos.Table.State.DISABLED)) {
       throw new TableNotDisabledException(tableName);
     }
   }

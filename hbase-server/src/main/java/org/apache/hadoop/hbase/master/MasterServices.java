@@ -84,11 +84,6 @@ public interface MasterServices extends Server {
   TableLockManager getTableLockManager();
 
   /**
-   * @return Master's instance of {@link TableStateManager}
-   */
-  TableStateManager getTableStateManager();
-
-  /**
    * @return Master's instance of {@link MasterCoprocessorHost}
    */
   MasterCoprocessorHost getMasterCoprocessorHost();
