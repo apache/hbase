@@ -1862,6 +1862,11 @@ public class TestThriftHBaseServiceHandler {
     try (Admin admin = tu.getAdmin()) {
       admin.createNamespace(nameSpaceDescriptor);
     }
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
+    try (Admin admin = tu.getAdmin()) {
+      admin.createTable(tableDescriptor);
+    }
     // initialize fake objects.
     String fakeUser = "user";
     TAccessControlEntity tce = new TAccessControlEntity();
