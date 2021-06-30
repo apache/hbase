@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -35,11 +34,5 @@ public final class ReplicationFactory {
 
   public static ReplicationPeers getReplicationPeers(ZKWatcher zk, Configuration conf) {
     return new ReplicationPeers(zk, conf);
-  }
-
-  public static ReplicationTracker getReplicationTracker(ReplicationTrackerParams params) {
-    Class<? extends ReplicationTracker> clazz = params.conf().getClass(REPLICATION_TRACKER_IMPL,
-      ZKReplicationTracker.class, ReplicationTracker.class);
-    return ReflectionUtils.newInstance(clazz, params);
   }
 }
