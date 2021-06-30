@@ -78,7 +78,7 @@ public class TestReplicationBase {
   protected static Configuration CONF2 = UTIL2.getConfiguration();
 
   protected static int NUM_SLAVES1 = 1;
-  protected static final int NUM_SLAVES2 = 1;
+  protected static int NUM_SLAVES2 = 1;
   protected static final int NB_ROWS_IN_BATCH = 100;
   protected static final int NB_ROWS_IN_BIG_BATCH =
       NB_ROWS_IN_BATCH * 10;
