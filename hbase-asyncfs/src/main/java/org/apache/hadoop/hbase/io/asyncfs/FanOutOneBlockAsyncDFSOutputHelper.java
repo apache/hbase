@@ -173,11 +173,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static final FileCreator FILE_CREATOR;
 
-  // CreateFlag.SHOULD_REPLICATE is to make OutputStream on a EC directory support hflush/hsync, but
-  // EC is introduced in hadoop 3.x so we do not have this enum on 2.x, that's why we need to
-  // indirectly reference it through reflection.
-  private static final CreateFlag SHOULD_REPLICATE_FLAG;
-
   private static DFSClientAdaptor createDFSClientAdaptor() throws NoSuchMethodException {
     Method isClientRunningMethod = DFSClient.class.getDeclaredMethod("isClientRunning");
     isClientRunningMethod.setAccessible(true);
@@ -273,15 +268,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return createFileCreator2();
   }
 
-  private static CreateFlag loadShouldReplicateFlag() {
-    try {
-      return CreateFlag.valueOf("SHOULD_REPLICATE");
-    } catch (IllegalArgumentException e) {
-      LOG.debug("can not find SHOULD_REPLICATE flag, should be hadoop 2.x", e);
-      return null;
-    }
-  }
-
   // cancel the processing if DFSClient is already closed.
   static final class CancelOnClose implements CancelableProgressable {
 
@@ -302,7 +288,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       LEASE_MANAGER = createLeaseManager();
       DFS_CLIENT_ADAPTOR = createDFSClientAdaptor();
       FILE_CREATOR = createFileCreator();
-      SHOULD_REPLICATE_FLAG = loadShouldReplicateFlag();
     } catch (Exception e) {
       String msg = "Couldn't properly initialize access to HDFS internals. Please " +
           "update your WAL Provider to not make use of the 'asyncfs' provider. See " +
@@ -503,9 +488,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     if (overwrite) {
       flags.add(CreateFlag.OVERWRITE);
     }
-    if (SHOULD_REPLICATE_FLAG != null) {
-      flags.add(SHOULD_REPLICATE_FLAG);
-    }
+    flags.add(CreateFlag.SHOULD_REPLICATE);
     return new EnumSetWritable<>(EnumSet.copyOf(flags));
   }
 
