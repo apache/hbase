@@ -29,8 +29,6 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoordinatedStateException;
-import org.apache.hadoop.hbase.TableDescriptor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -38,15 +36,16 @@ import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.BulkReOpen;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -138,7 +137,7 @@ public abstract class TableEventHandler extends EventHandler {
       handleTableOperation(hris);
       if (eventType.isOnlineSchemaChangeSupported() && this.masterServices.
           getAssignmentManager().getTableStateManager().isTableState(
-          tableName, TableState.State.ENABLED)) {
+          tableName, ZooKeeperProtos.Table.State.ENABLED)) {
         if (reOpenAllRegions(hris)) {
           LOG.info("Completed table operation " + eventType + " on table " +
               tableName);
@@ -237,10 +236,10 @@ public abstract class TableEventHandler extends EventHandler {
    * @throws FileNotFoundException
    * @throws IOException
    */
-  public TableDescriptor getTableDescriptor()
+  public HTableDescriptor getTableDescriptor()
   throws FileNotFoundException, IOException {
-    TableDescriptor htd =
-      this.masterServices.getTableDescriptors().getDescriptor(tableName);
+    HTableDescriptor htd =
+      this.masterServices.getTableDescriptors().get(tableName);
     if (htd == null) {
       throw new IOException("HTableDescriptor missing for " + tableName);
     }

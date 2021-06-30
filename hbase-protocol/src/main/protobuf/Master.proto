@@ -457,14 +457,6 @@ message GetTableNamesResponse {
   repeated TableName table_names = 1;
 }
 
-message GetTableStateRequest {
-  required TableName table_name = 1;
-}
-
-message GetTableStateResponse {
-  required TableState table_state = 1;
-}
-
 message GetClusterStatusRequest {
 }
 
@@ -934,10 +926,6 @@ service MasterService {
 
   rpc GetLogEntries(LogRequest)
     returns(LogEntry);
-
-  /** returns table state */
-  rpc GetTableState(GetTableStateRequest)
-    returns(GetTableStateResponse);
 }
 
 /** Request and response to get the clusterID for this cluster */
@@ -974,6 +962,16 @@ message GetNumLiveRSResponse {
   required int32 num_region_servers = 1;
 }
 
+/** Request to check the state of a given table */
+message GetTableStateRequest {
+  required string table_name = 1;
+  required bool is_enabled = 2;
+}
+
+message GetTableStateResponse {
+ required bool enabled_or_disabled = 1;
+}
+
 /**
  * Implements all the RPCs needed by clients to look up cluster meta information needed for connection establishment.
  */
@@ -998,4 +996,9 @@ service ClientMetaService {
    * Get number of live region servers.
    */
   rpc GetNumLiveRS(GetNumLiveRSRequest) returns(GetNumLiveRSResponse);
+
+  /**
+   * Returns the state of the table.
+   */
+  rpc GetTableState(GetTableStateRequest) returns(GetTableStateResponse);
 }

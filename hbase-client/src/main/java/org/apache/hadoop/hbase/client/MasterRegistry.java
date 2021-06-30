@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
@@ -62,6 +63,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLoca
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse;
 
 /**
  * Master based registry implementation. Makes RPCs to the configured master addresses from config
@@ -207,6 +210,22 @@ public class MasterRegistry implements ConnectionRegistry {
   }
 
   @Override
+  public boolean isTableOnlineState(TableName tableName, boolean enabled) throws IOException {
+    final GetTableStateRequest request = GetTableStateRequest.newBuilder().setTableName(
+      tableName.getNameAsString()).setIsEnabled(enabled).build();
+    GetTableStateResponse resp = doCall(new Callable<GetTableStateResponse>() {
+      @Override
+      public GetTableStateResponse call(ClientMetaService.Interface stub, RpcController controller)
+          throws IOException {
+        BlockingRpcCallback<GetTableStateResponse> cb = new BlockingRpcCallback<>();
+        stub.getTableState(controller, request, cb);
+        return cb.get();
+      }
+    });
+    return resp.getEnabledOrDisabled();
+  }
+
+  @Override
   public void close() {
     if (rpcClient != null) {
       rpcClient.close();
@@ -262,5 +281,4 @@ public class MasterRegistry implements ConnectionRegistry {
   ImmutableSet<String> getParsedMasterServers() {
     return masterAddr2Stub.keySet();
   }
-
 }

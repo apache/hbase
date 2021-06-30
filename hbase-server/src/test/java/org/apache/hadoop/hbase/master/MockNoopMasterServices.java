@@ -71,11 +71,6 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
-  public TableStateManager getTableStateManager() {
-    return null;
-  }
-
-  @Override
   public MasterCoprocessorHost getMasterCoprocessorHost() {
     return null;
   }
