@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -146,6 +147,31 @@ public class FSTableDescriptors implements TableDescriptors {
     }
   }
 
+  public static ColumnFamilyDescriptor getTableFamilyDescForMeta(
+      final Configuration conf) {
+    return ColumnFamilyDescriptorBuilder
+        .newBuilder(HConstants.TABLE_FAMILY)
+        .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+            HConstants.DEFAULT_HBASE_META_VERSIONS))
+        .setInMemory(true)
+        .setBlocksize(8 * 1024)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+        .setBloomFilterType(BloomType.NONE)
+        .build();
+  }
+
+  public static ColumnFamilyDescriptor getReplBarrierFamilyDescForMeta() {
+    return ColumnFamilyDescriptorBuilder
+        .newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
+        .setMaxVersions(HConstants.ALL_VERSIONS)
+        .setInMemory(true)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+        .setBloomFilterType(BloomType.NONE)
+        .build();
+  }
+
   @VisibleForTesting
   public static TableDescriptorBuilder createMetaTableDescriptorBuilder(final Configuration conf)
     throws IOException {
@@ -163,23 +189,8 @@ public class FSTableDescriptors implements TableDescriptors {
         // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
         .setBloomFilterType(BloomType.NONE)
         .build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.TABLE_FAMILY)
-        .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
-          HConstants.DEFAULT_HBASE_META_VERSIONS))
-        .setInMemory(true)
-        .setBlocksize(8 * 1024)
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-        .setBloomFilterType(BloomType.NONE)
-        .build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
-        .setMaxVersions(HConstants.ALL_VERSIONS)
-        .setInMemory(true)
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-        .setBloomFilterType(BloomType.NONE)
-        .build())
+      .setColumnFamily(getTableFamilyDescForMeta(conf))
+      .setColumnFamily(getReplBarrierFamilyDescForMeta())
       .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(
         MultiRowMutationEndpoint.class.getName())
         .setPriority(Coprocessor.PRIORITY_SYSTEM)
