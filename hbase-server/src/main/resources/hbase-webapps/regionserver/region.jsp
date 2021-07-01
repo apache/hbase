@@ -53,7 +53,7 @@
     </div>
 
 <% if(region != null) { //
-     Collection<? extends Store> stores = region.getStores();
+     List<? extends Store> stores = region.getStores();
      for (Store store : stores) {
        String cf = store.getColumnFamilyName();
        Collection<? extends StoreFile> storeFiles = store.getStorefiles(); %>

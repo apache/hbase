@@ -1746,7 +1746,7 @@ public class HRegionServer extends Thread implements
     int totalStaticBloomSizeKB = 0;
     long totalCompactingKVs = 0;
     long currentCompactedKVs = 0;
-    Collection<HStore> storeList = r.getStores();
+    List<HStore> storeList = r.getStores();
     stores += storeList.size();
     for (HStore store : storeList) {
       storefiles += store.getStorefilesCount();
