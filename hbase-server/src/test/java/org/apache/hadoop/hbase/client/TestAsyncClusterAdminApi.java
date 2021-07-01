@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -260,6 +261,26 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
       ServerMetrics serverLoad = clusterStatus.getLiveServerMetrics().get(serverName);
 
     }
+  }
+
+  @Test
+  public void testGetRegionServers() throws Exception{
+    List<ServerName> serverNames = new ArrayList<>(admin.getRegionServers(true).get());
+    assertEquals(2, serverNames.size());
+
+    List<ServerName> serversToDecom = new ArrayList<>();
+    ServerName serverToDecommission = serverNames.get(0);
+
+    serversToDecom.add(serverToDecommission);
+    admin.decommissionRegionServers(serversToDecom, false).join();
+
+    assertEquals(1, admin.getRegionServers(true).get().size());
+    assertEquals(2, admin.getRegionServers(false).get().size());
+
+    admin.recommissionRegionServer(serverToDecommission, Collections.emptyList()).join();
+
+    assertEquals(2, admin.getRegionServers(true).get().size());
+    assertEquals(2, admin.getRegionServers(false).get().size());
   }
 
   private void compareRegionLoads(Collection<RegionMetrics> regionLoadCluster,

@@ -312,8 +312,9 @@ enum ServerCrashState {
   SERVER_CRASH_WAIT_ON_ASSIGN = 9;
   SERVER_CRASH_SPLIT_META_LOGS = 10;
   SERVER_CRASH_ASSIGN_META = 11;
-  SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR=12;
-  SERVER_CRASH_DELETE_SPLIT_WALS_DIR=13;
+  SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR = 12;
+  SERVER_CRASH_DELETE_SPLIT_WALS_DIR = 13;
+  SERVER_CRASH_CLAIM_REPLICATION_QUEUES = 14;
   SERVER_CRASH_HANDLE_RIT2 = 20[deprecated=true];
   SERVER_CRASH_FINISH = 100;
 }
@@ -623,4 +624,24 @@ enum SplitWALState{
   ACQUIRE_SPLIT_WAL_WORKER = 1;
   DISPATCH_WAL_TO_WORKER = 2;
   RELEASE_SPLIT_WORKER = 3;
+}
+
+message ClaimReplicationQueuesStateData {
+  required ServerName crashed_server = 1;
+}
+
+message ClaimReplicationQueueRemoteStateData {
+  required ServerName crashed_server = 1;
+  required string queue = 2;
+  required ServerName target_server = 3;
+}
+
+message ClaimReplicationQueueRemoteParameter {
+  required ServerName crashed_server = 1;
+  required string queue = 2;
+}
+
+enum ClaimReplicationQueuesState {
+  CLAIM_REPLICATION_QUEUES_DISPATCH = 1;
+  CLAIM_REPLICATION_QUEUES_FINISH = 2;
 }

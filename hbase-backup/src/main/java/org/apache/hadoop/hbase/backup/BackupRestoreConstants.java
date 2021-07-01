@@ -105,13 +105,13 @@ public interface BackupRestoreConstants {
           + "org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager\n"
           + "hbase.coprocessor.region.classes=YOUR_CLASSES,"
           + "org.apache.hadoop.hbase.backup.BackupObserver\n"
-          + "and restart the cluster\n";
+          + "and restart the cluster\n"
+          + "For more information please see http://hbase.apache.org/book.html#backuprestore\n";
   String ENABLE_BACKUP = "Backup is not enabled. To enable backup, "+
       "in hbase-site.xml, set:\n "
       + BACKUP_CONFIG_STRING;
 
-  String VERIFY_BACKUP = "Please make sure that backup is enabled on the cluster. To enable "
-          + "backup, in hbase-site.xml, set:\n " + BACKUP_CONFIG_STRING;
+  String VERIFY_BACKUP = "To enable backup, in hbase-site.xml, set:\n " + BACKUP_CONFIG_STRING;
 
   /*
    *  Delimiter in table name list in restore command

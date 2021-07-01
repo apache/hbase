@@ -85,8 +85,6 @@ public class BackupDriver extends AbstractHBaseTool {
       return -1;
     }
 
-    System.out.println(BackupRestoreConstants.VERIFY_BACKUP);
-
     String cmd = null;
     String[] remainArgs = null;
     if (args == null || args.length == 0) {
@@ -210,5 +208,6 @@ public class BackupDriver extends AbstractHBaseTool {
 
   protected void printToolUsage() throws IOException {
     System.out.println(BackupCommands.USAGE);
+    System.out.println(BackupRestoreConstants.VERIFY_BACKUP);
   }
 }
