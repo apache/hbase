@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -30,7 +28,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -54,7 +51,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * <a href="https://issues.apache.org/jira/browse/HBASE-20838">HBASE-20838</a> for more details.
  */
 @InterfaceAudience.Private
-public final class CommonFSUtils {
+public final class
+CommonFSUtils {
   private static final Logger LOG = LoggerFactory.getLogger(CommonFSUtils.class);
 
   /** Parameter name for HBase WAL directory */
