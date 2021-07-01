@@ -180,13 +180,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     if (!(source instanceof MetricsRegionSourceImpl)) {
       return -1;
     }
-
-    MetricsRegionSourceImpl impl = (MetricsRegionSourceImpl) source;
-    if (impl == null) {
-      return -1;
-    }
-
-    return Long.compare(hashCode, impl.hashCode);
+    return Long.compare(hashCode, ((MetricsRegionSourceImpl) source).hashCode);
   }
 
   void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
