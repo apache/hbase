@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.MetricsReplicationSourceRefresherChore;
+import org.apache.hadoop.hbase.regionserver.MetricsSourceRefresherChore;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
@@ -57,6 +59,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
+import org.apache.hadoop.hbase.replication.regionserver.Replication.ReplicationStatisticsChore;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -223,7 +226,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     this.abortOnError = this.conf.getBoolean("replication.source.regionserver.abort",
       true);
-
+    int duration = this.conf.getInt(MetricsReplicationSourceRefresherChore.DURATION,
+	    	MetricsReplicationSourceRefresherChore.DEFAULT_DURATION);
+    this.server.getChoreService().scheduleChore(new MetricsReplicationSourceRefresherChore(duration, server, this));
     LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
       replicationPeer.getId(), this.currentBandwidth);
   }
@@ -259,7 +264,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
   }
 
-  @Override
+  @InterfaceAudience.Private
   public Map<String, PriorityBlockingQueue<Path>> getQueues() {
     return logQueue.getQueues();
   }
@@ -810,7 +815,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public ReplicationQueueStorage getReplicationQueueStorage() {
     return queueStorage;
   }
-
+  
   void removeWorker(ReplicationSourceShipper worker) {
     workerThreads.remove(worker.walGroupId, worker);
   }
