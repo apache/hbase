@@ -1148,7 +1148,15 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   @Override
   public void waitUntilDone() throws InterruptedIOException {
     try {
-      waitUntilDone(Long.MAX_VALUE);
+      if (this.operationTimeout > 0) {
+        // the worker thread maybe over by some exception without decrement the actionsInProgress,
+        // then the guarantee of operationTimeout will be broken, so we should set cutoff to avoid
+        // stuck here forever
+        long cutoff = (EnvironmentEdgeManager.currentTime() + this.operationTimeout) * 1000L;
+        waitUntilDone(cutoff);
+      } else {
+        waitUntilDone(Long.MAX_VALUE);
+      }
     } catch (InterruptedException iex) {
       throw new InterruptedIOException(iex.getMessage());
     } finally {
