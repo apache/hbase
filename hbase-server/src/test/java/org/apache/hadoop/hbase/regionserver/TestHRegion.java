@@ -6917,6 +6917,7 @@ public class TestHRegion {
     final byte[] q2 = Bytes.toBytes("q2");
     final byte[] q3 = Bytes.toBytes("q3");
     final byte[] q4 = Bytes.toBytes("q4");
+    final byte[] q5 = Bytes.toBytes("q5");
 
     // 10 seconds
     TableDescriptor tableDescriptor =
@@ -6946,6 +6947,11 @@ public class TestHRegion {
         new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(5000L)) })));
     // Add a cell that will expire in 20 seconds via family setting
     region.put(new Put(row).addColumn(fam1, q4, now + 10000 - 1, HConstants.EMPTY_BYTE_ARRAY));
+    // Add a cell that will expire after 10 seconds via family setting
+    region.put(new Put(row).add(new KeyValue(row, fam1, q5, now,
+      HConstants.EMPTY_BYTE_ARRAY, new ArrayBackedTag[] {
+      // TTL tags specify ts in milliseconds
+      new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(-1L)) })));
 
     // Flush so we are sure store scanning gets this right
     region.flush(true);
@@ -6956,6 +6962,7 @@ public class TestHRegion {
     assertNotNull(r.getValue(fam1, q2));
     assertNotNull(r.getValue(fam1, q3));
     assertNotNull(r.getValue(fam1, q4));
+    assertNotNull(r.getValue(fam1, q5));
 
     // Increment time to T+5 seconds
     edge.incrementTime(5000);
@@ -6965,6 +6972,7 @@ public class TestHRegion {
     assertNotNull(r.getValue(fam1, q2));
     assertNotNull(r.getValue(fam1, q3));
     assertNotNull(r.getValue(fam1, q4));
+    assertNotNull(r.getValue(fam1, q5));
 
     // Increment time to T+10 seconds
     edge.incrementTime(5000);
@@ -6974,6 +6982,7 @@ public class TestHRegion {
     assertNull(r.getValue(fam1, q2));
     assertNotNull(r.getValue(fam1, q3));
     assertNotNull(r.getValue(fam1, q4));
+    assertNull(r.getValue(fam1, q5));
 
     // Increment time to T+15 seconds
     edge.incrementTime(5000);
@@ -6983,6 +6992,7 @@ public class TestHRegion {
     assertNull(r.getValue(fam1, q2));
     assertNull(r.getValue(fam1, q3));
     assertNotNull(r.getValue(fam1, q4));
+    assertNull(r.getValue(fam1, q5));
 
     // Increment time to T+20 seconds
     edge.incrementTime(10000);
@@ -6992,6 +7002,7 @@ public class TestHRegion {
     assertNull(r.getValue(fam1, q2));
     assertNull(r.getValue(fam1, q3));
     assertNull(r.getValue(fam1, q4));
+    assertNull(r.getValue(fam1, q5));
 
     // Fun with disappearing increments
 

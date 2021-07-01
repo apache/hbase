@@ -158,7 +158,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
         long ts = cell.getTimestamp();
         assert t.getValueLength() == Bytes.SIZEOF_LONG;
         long ttl = Tag.getValueAsLong(t);
-        if (ts + ttl < now) {
+        if (ts + ttl < now && ttl != -1) {
           return true;
         }
         // Per cell TTLs cannot extend lifetime beyond family settings, so
