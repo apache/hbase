@@ -1931,7 +1931,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     removeUnneededFiles();
 
     if (region.getRegionServerServices() != null
-        && region.getRegionServerServices().isCompactionOffloadEnabled()) {
+        && region.getRegionServerServices().isCompactionOffloadEnabled()
+        && region.getTableDescriptor().isCompactionOffloadEnabled()) {
       if (!requestToCompactionManager(forceMajor, priority)) {
         // if request to cm error, do local compaction or retry
         return selectCompaction(priority, tracker, user, filesCompacting);

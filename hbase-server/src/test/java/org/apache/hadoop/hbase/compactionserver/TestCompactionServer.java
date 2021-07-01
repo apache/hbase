@@ -268,4 +268,29 @@ public class TestCompactionServer {
       () -> initialNum == compactionOffloadManager.getOnlineServersList().size());
     assertNull(compactionOffloadManager.getLoad(compactionServerName));
   }
+
+  @Test
+  public void testCompactionOffloadTableDescriptor() throws Exception {
+    CompactionOffloadManager compactionOffloadManager = MASTER.getCompactionOffloadManager();
+    TEST_UTIL.waitFor(6000, () -> !compactionOffloadManager.getOnlineServers().isEmpty()
+        && null != compactionOffloadManager.getOnlineServers().get(COMPACTION_SERVER_NAME));
+
+    TableDescriptor htd =
+        TableDescriptorBuilder.newBuilder(TEST_UTIL.getAdmin().getDescriptor(TABLENAME))
+            .setCompactionOffloadEnabled(true).build();
+    TEST_UTIL.getAdmin().modifyTable(htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TABLENAME);
+    // invoke compact
+    TEST_UTIL.compact(TABLENAME, false);
+    TEST_UTIL.waitFor(6000, () -> COMPACTION_SERVER.requestCount.sum() > 0);
+    long requestCount = COMPACTION_SERVER.requestCount.sum();
+
+    htd = TableDescriptorBuilder.newBuilder(TEST_UTIL.getAdmin().getDescriptor(TABLENAME))
+        .setCompactionOffloadEnabled(false).build();
+    TEST_UTIL.getAdmin().modifyTable(htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TABLENAME);
+    // invoke compact
+    TEST_UTIL.compact(TABLENAME, false);
+    TEST_UTIL.waitFor(6000, () -> COMPACTION_SERVER.requestCount.sum() == requestCount);
+  }
 }

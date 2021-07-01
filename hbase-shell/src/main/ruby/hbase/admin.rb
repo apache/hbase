@@ -1488,6 +1488,7 @@ module Hbase
       tdb.setMaxFileSize(arg.delete(TableDescriptorBuilder::MAX_FILESIZE)) if arg.include?(TableDescriptorBuilder::MAX_FILESIZE)
       tdb.setReadOnly(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::READONLY))) if arg.include?(TableDescriptorBuilder::READONLY)
       tdb.setCompactionEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::COMPACTION_ENABLED))) if arg.include?(TableDescriptorBuilder::COMPACTION_ENABLED)
+      tdb.setCompactionOffloadEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::COMPACTION_OFFLOAD_ENABLED))) if arg.include?(TableDescriptorBuilder::COMPACTION_OFFLOAD_ENABLED)
       tdb.setSplitEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::SPLIT_ENABLED))) if arg.include?(TableDescriptorBuilder::SPLIT_ENABLED)
       tdb.setMergeEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::MERGE_ENABLED))) if arg.include?(TableDescriptorBuilder::MERGE_ENABLED)
       tdb.setNormalizationEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZATION_ENABLED))) if arg.include?(TableDescriptorBuilder::NORMALIZATION_ENABLED)
