@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET;
+
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -79,7 +81,6 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Progressable;
@@ -95,7 +96,6 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos;
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET;
 
 /**
  * Utility methods for interacting with the underlying file system.
