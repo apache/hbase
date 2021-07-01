@@ -255,6 +255,31 @@ public class AssignmentManager extends ZooKeeperListener {
   private final RegionStateStore regionStateStore;
 
   /**
+   * When the operator uses this configuration option, any version between
+   * the current cluster version and the value of "hbase.min.version.move.system.tables"
+   * does not trigger any auto-region movement. Auto-region movement here
+   * refers to auto-migration of system table regions to newer server versions.
+   * It is assumed that the configured range of versions does not require special
+   * handling of moving system table regions to higher versioned RegionServer.
+   * This auto-migration is done by {@link #checkIfShouldMoveSystemRegionAsync()}.
+   * Example: Let's assume the cluster is on version 1.4.0 and we have
+   * set "hbase.min.version.move.system.tables" as "2.0.0". Now if we upgrade
+   * one RegionServer on 1.4.0 cluster to 1.6.0 (< 2.0.0), then AssignmentManager will
+   * not move hbase:meta, hbase:namespace and other system table regions
+   * to newly brought up RegionServer 1.6.0 as part of auto-migration.
+   * However, if we upgrade one RegionServer on 1.4.0 cluster to 2.2.0 (> 2.0.0),
+   * then AssignmentManager will move all system table regions to newly brought
+   * up RegionServer 2.2.0 as part of auto-migration done by
+   * {@link #checkIfShouldMoveSystemRegionAsync()}.
+   * "hbase.min.version.move.system.tables" is introduced as part of HBASE-22923.
+   */
+  private final String minVersionToMoveSysTables;
+
+  private static final String MIN_VERSION_MOVE_SYS_TABLES_CONFIG =
+      "hbase.min.version.move.system.tables";
+  private static final String DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG = "";
+
+  /**
    * For testing only!  Set to true to skip handling of split and merge.
    */
   private static boolean TEST_SKIP_SPLIT_HANDLING = false;
@@ -358,6 +383,8 @@ public class AssignmentManager extends ZooKeeperListener {
       scheduledThreadPoolExecutor.scheduleWithFixedDelay(new FailedOpenRetryRunnable(),
         failedOpenRetryPeriod, failedOpenRetryPeriod, TimeUnit.MILLISECONDS);
     }
+    minVersionToMoveSysTables = conf.get(MIN_VERSION_MOVE_SYS_TABLES_CONFIG,
+        DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG);
   }
 
   /**
@@ -2545,25 +2572,58 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Get a list of servers that this region can not assign to.
-   * For system table, we must assign them to a server with highest version.
+   * For a given cluster with mixed versions of servers, get a list of
+   * servers with lower versions, where system table regions should not be
+   * assigned to.
+   * For system table, we must assign regions to a server with highest version.
    * RS will report to master before register on zk, and only when RS have registered on zk we can
    * know the version. So in fact we will never assign a system region to a RS without registering on zk.
    */
   public List<ServerName> getExcludedServersForSystemTable() {
+    return getExcludedServersForSystemTable(false);
+  }
+
+  /**
+   * For a given cluster with mixed versions of servers, get a list of
+   * servers with lower versions, where system table regions should not be
+   * assigned to.
+   * For system table, we must assign regions to a server with highest version.
+   * However, we can disable this exclusion using config:
+   * "hbase.min.version.move.system.tables" if checkForMinVersion is true.
+   * Detailed explanation available with definition of minVersionToMoveSysTables.
+   *
+   * @param checkForMinVersion If false, return a list of servers with lower version. If true,
+   *   compare higher version with minVersionToMoveSysTables. Only if higher version is greater
+   *   than minVersionToMoveSysTables, this method returns list of servers with lower version. If
+   *   higher version is less than or equal to minVersionToMoveSysTables, returns empty list.
+   *   An example is provided with definition of minVersionToMoveSysTables.
+   * @return List of Excluded servers for System table regions.
+   */
+  private List<ServerName> getExcludedServersForSystemTable(
+      boolean checkForMinVersion) {
     List<Pair<ServerName, String>> serverList = new ArrayList<>();
     for (ServerName s : serverManager.getOnlineServersList()) {
       serverList.add(new Pair<>(s, server.getRegionServerVersion(s)));
     }
     if (serverList.isEmpty()) {
-      return new ArrayList<>();
+      return Collections.emptyList();
     }
-    String highestVersion = Collections.max(serverList, new Comparator<Pair<ServerName, String>>() {
+    String highestVersion = Collections.max(serverList,
+        new Comparator<Pair<ServerName, String>>() {
       @Override
       public int compare(Pair<ServerName, String> o1, Pair<ServerName, String> o2) {
         return VersionInfo.compareVersion(o1.getSecond(), o2.getSecond());
       }
     }).getSecond();
+    if (checkForMinVersion) {
+      if (!DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG.equals(minVersionToMoveSysTables)) {
+        int comparedValue = VersionInfo
+            .compareVersion(minVersionToMoveSysTables, highestVersion);
+        if (comparedValue > 0) {
+          return Collections.emptyList();
+        }
+      }
+    }
     List<ServerName> res = new ArrayList<>();
     for (Pair<ServerName, String> pair : serverList) {
       if (!pair.getSecond().equals(highestVersion)) {
@@ -2572,7 +2632,6 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     return res;
   }
-
 
   /**
    * @param region the region to assign
@@ -2695,7 +2754,7 @@ public class AssignmentManager extends ZooKeeperListener {
           synchronized (checkIfShouldMoveSystemRegionLock) {
             // RS register on ZK after reports startup on master
             List<HRegionInfo> regionsShouldMove = new ArrayList<>();
-            for (ServerName server : getExcludedServersForSystemTable()) {
+            for (ServerName server : getExcludedServersForSystemTable(true)) {
               regionsShouldMove.addAll(getCarryingSystemTables(server));
             }
             if (!regionsShouldMove.isEmpty()) {
