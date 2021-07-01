@@ -615,7 +615,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public void createTable(TTableDescriptor desc, List<ByteBuffer> splitKeys)
-    throws TIOError, TException {
+      throws TIOError, TException {
     try {
       HTableDescriptor descriptor = tableDescriptorFromThrift(desc);
       byte[][] split = splitKeyFromThrift(splitKeys);
@@ -637,7 +637,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public void truncateTable(TTableName tableName, boolean preserveSplits)
-    throws TIOError, TException {
+      throws TIOError, TException {
     try {
       TableName table = tableNameFromThrift(tableName);
       connectionCache.getAdmin().truncateTable(table, preserveSplits);
@@ -722,7 +722,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public void deleteColumnFamily(TTableName tableName, ByteBuffer column)
-    throws TIOError, TException {
+      throws TIOError, TException {
     try {
       TableName table = tableNameFromThrift(tableName);
       connectionCache.getAdmin().deleteColumn(table, column.array());
@@ -733,7 +733,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public void modifyColumnFamily(TTableName tableName, TColumnFamilyDescriptor column)
-    throws TIOError, TException {
+      throws TIOError, TException {
     try {
       TableName table = tableNameFromThrift(tableName);
       HColumnDescriptor columnFamilyDescriptor = columnDescriptorFromThrift(column);
@@ -755,7 +755,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public void createNamespace(TNamespaceDescriptor namespaceDesc)
-    throws TIOError, TException {
+      throws TIOError, TException {
     try {
       NamespaceDescriptor descriptor = namespaceDescriptorFromThrift(namespaceDesc);
       connectionCache.getAdmin().createNamespace(descriptor);
