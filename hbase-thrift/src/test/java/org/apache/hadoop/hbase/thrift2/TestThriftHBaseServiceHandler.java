@@ -1883,6 +1883,7 @@ public class TestThriftHBaseServiceHandler {
 
     List<UserPermission> permissionList = AccessControlClient.getUserPermissions(tu.getConnection(),
       "@" + nsName, fakeUser);
+
     // we only grant one R permission
     assertEquals(permissionList.size(), 1);
 
