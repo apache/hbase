@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.PriorityBlockingQueue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -222,6 +221,4 @@ public interface ReplicationSourceInterface {
   default void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
     getSourceManager().logPositionAndCleanOldLogs(this, entryBatch);
   }
-  
-  public Map<String, PriorityBlockingQueue<Path>> getQueues();
 }

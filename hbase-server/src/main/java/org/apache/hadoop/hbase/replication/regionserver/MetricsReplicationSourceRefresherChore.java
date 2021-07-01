@@ -1,4 +1,4 @@
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.Map;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -6,8 +6,6 @@ import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -16,16 +14,16 @@ import org.apache.yetus.audience.InterfaceAudience;
  * The Class MetricsSourceRefresherChore for refreshing source metrics
  */
 @InterfaceAudience.Private
-public class MetricsSourceRefresherChore extends ScheduledChore{
+public class MetricsReplicationSourceRefresherChore extends ScheduledChore {
 
-	private ReplicationSourceInterface replicationSource;
+	private ReplicationSource replicationSource;
 
 	private MetricsSource metrics;
 	
-	public static final String DURATION = "hbase.metrics.source.refresher.duration";
+	public static final String DURATION = "hbase.metrics.replication.source.refresher.duration";
 	public static final int DEFAULT_DURATION = 60000;
 	
-	public MetricsSourceRefresherChore(int duration, Stoppable stopper, ReplicationSourceInterface replicationSource) {
+	public MetricsReplicationSourceRefresherChore(int duration, Stoppable stopper, ReplicationSource replicationSource) {
 	    super("MetricsSourceRefresherChore", stopper, duration);
 	    this.replicationSource = replicationSource;
 	    this.metrics = this.replicationSource.getSourceMetrics();
