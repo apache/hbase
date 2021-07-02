@@ -6950,8 +6950,8 @@ public class TestHRegion {
     // Add a cell that will expire after 10 seconds via family setting
     region.put(new Put(row).add(new KeyValue(row, fam1, q5, now,
       HConstants.EMPTY_BYTE_ARRAY, new ArrayBackedTag[] {
-      // TTL tags specify ts in milliseconds
-      new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(-1L)) })));
+        // TTL tags specify ts in milliseconds
+        new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(-1L)) })));
 
     // Flush so we are sure store scanning gets this right
     region.flush(true);
