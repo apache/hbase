@@ -248,7 +248,7 @@ def compare_tool_results_count(tool_results, check, issue_type, known_count):
     """
     # logging.info("known_count=%s, check key=%s, tool_results=%s, issue_type=%s",
     #        str(known_count), str(check), str(tool_results), str(issue_type))
-   return tool_results[check][issue_type] > known_count
+    return tool_results[check][issue_type] > known_count
 
 def process_java_acc_output(output):
     """ Process the output string to find the problems and warnings in both the
