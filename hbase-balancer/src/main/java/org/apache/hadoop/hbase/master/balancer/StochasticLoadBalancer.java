@@ -221,7 +221,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
     regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
-    
     costFunctions = new ArrayList<>();
     addCostFunction(new RegionCountSkewCostFunction(conf));
     addCostFunction(new PrimaryRegionCountSkewCostFunction(conf));
@@ -332,8 +331,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       total += cost * multiplier;
       sumMultiplier += multiplier;
     }
-    if (sumMultiplier <= 0)
-    {
+    if (sumMultiplier <= 0) {
       LOG.error("At least one cost function needs a multiplier > 0. For example, set "
         + "hbase.master.balancer.stochastic.regionCountCost to a positive value or default");
       return false;
@@ -345,13 +343,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       final double calculatedTotal = total;
       sendRejectionReasonToRingBuffer(() ->
         getBalanceReason(calculatedTotal, sumMultiplier), costFunctions);
-      LOG.info("{} - skipping load balancing because weighted average imbalance={} <= threshold({})."
-          + " If you want more aggressive balancing, either lower "
+      LOG.info("{} - skipping load balancing because weighted average imbalance={} <= "
+          + "threshold({}). If you want more aggressive balancing, either lower "
           + "hbase.master.balancer.stochastic.minCostNeedBalance from {} or increase the relative "
           + "multiplier(s) of the specific cost function(s). functionCost={}",
         isByTable ? "Table specific ("+tableName+")" : "Cluster wide", total / sumMultiplier,
         minCostNeedBalance, minCostNeedBalance, functionCost());
-   } else {
+    } else {
       LOG.info("{} - Calculating plan. may take up to {}ms to complete.",
         isByTable ? "Table specific ("+tableName+")" : "Cluster wide", maxRunningTime);
     }
@@ -478,7 +476,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           " to try {} different iterations.  Found a solution that moves " +
           "{} regions; Going from a computed imbalance of {}" +
           " to a new imbalance of {}. ",
-        endTime - startTime, step, plans.size(), initCost / sumMultiplier, currentCost / sumMultiplier);
+        endTime - startTime, step, plans.size(),
+        initCost / sumMultiplier, currentCost / sumMultiplier);
       sendRegionPlansToRingBuffer(plans, currentCost, initCost, initFunctionTotalCosts, step);
       return plans;
     }
@@ -494,7 +493,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       BalancerRejection.Builder builder = new BalancerRejection.Builder().setReason(reason.get());
       if (costFunctions != null) {
         for (CostFunction c : costFunctions) {
-          float multiplier = c.getMultiplier();
           if (!c.isNeeded()) {
             continue;
           }
@@ -561,7 +559,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       builder.append(c.getClass().getSimpleName());
       builder.append(" : (");
       if (c.isNeeded()) {
-          builder.append("multiplier=" + c.getMultiplier());
+        builder.append("multiplier=" + c.getMultiplier());
         builder.append(", ");
         double cost = c.cost();
         builder.append("imbalance=" + cost);
