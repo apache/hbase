@@ -205,9 +205,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
   private Path entryptionTestDirOnTestFs;
 
   private void createEncryptionZone() throws Exception {
-    Method method =
-      DistributedFileSystem.class.getMethod("createEncryptionZone", Path.class, String.class);
-    method.invoke(FS, entryptionTestDirOnTestFs, TEST_KEY_NAME);
+    FS.createEncryptionZone(entryptionTestDirOnTestFs, TEST_KEY_NAME);
   }
 
   @Before
