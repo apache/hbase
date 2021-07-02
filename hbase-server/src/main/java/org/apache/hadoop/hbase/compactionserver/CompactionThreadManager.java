@@ -92,7 +92,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
   private CompactThreadControl compactThreadControl;
   private ConcurrentHashMap<String, CompactionTask> runningCompactionTasks =
       new ConcurrentHashMap<>();
-  private static CompactionServerStorage storage = new CompactionServerStorage();
+  private static CompactionFilesCache compactionFilesCache = new CompactionFilesCache();
 
   CompactionThreadManager(final Configuration conf, HCompactionServer server) {
     this.conf = conf;
@@ -158,25 +158,34 @@ public class CompactionThreadManager implements ThroughputControllerService {
     // 1. select compaction and check compaction context is present
     LOG.info("Start select compaction {}", compactionTask);
     status.setStatus("Start select compaction");
-    Pair<HStore, Optional<CompactionContext>> pair = selectCompaction(regionInfo, cfd,
-      compactionTask.isRequestMajor(), compactionTask.getPriority(), status, logStr);
-    HStore store = pair.getFirst();
-    Optional<CompactionContext> compaction = pair.getSecond();
-    if (!compaction.isPresent()) {
+    HStore store;
+    CompactionContext compactionContext;
+    Pair<Boolean, List<String>> updateSelectedFilesCacheResult;
+    // the synchronized ensure file in store, selected files in cache, compacted files in cache,
+    // the three has consistent state, we need this condition to guarantee correct selection
+    synchronized (compactionFilesCache.getCompactedStoreFilesAsLock(regionInfo, cfd)) {
+      synchronized (compactionFilesCache.getSelectedStoreFilesAsLock(regionInfo, cfd)) {
+        Pair<HStore, Optional<CompactionContext>> pair = selectCompaction(regionInfo, cfd,
+          compactionTask.isRequestMajor(), compactionTask.getPriority(), status, logStr);
+        store = pair.getFirst();
+        Optional<CompactionContext> compaction = pair.getSecond();
+        if (!compaction.isPresent()) {
+          store.close();
+          LOG.info("Compaction context is empty: {}", compactionTask);
+          status.abort("Compaction context is empty and return");
+          return;
+        }
+        compactionContext = compaction.get();
+        // 2. update compactionFilesCache
+        updateSelectedFilesCacheResult =
+            updateStorageAfterSelectCompaction(regionInfo, cfd, compactionContext, status, logStr);
+      } // end of synchronized selected files
+    } // end of synchronized compacted files
+    if (!updateSelectedFilesCacheResult.getFirst()) {
       store.close();
-      LOG.info("Compaction context is empty: {}", compactionTask);
-      status.abort("Compaction context is empty and return");
       return;
     }
-    CompactionContext compactionContext = compaction.get();
-    // 2. update storage
-    Pair<Boolean, List<String>> updateStoreResult =
-        updateStorageAfterSelectCompaction(regionInfo, cfd, compactionContext, status, logStr);
-    if (!updateStoreResult.getFirst()) {
-      store.close();
-      return;
-    }
-    List<String> selectedFileNames = updateStoreResult.getSecond();
+    List<String> selectedFileNames = updateSelectedFilesCacheResult.getSecond();
     compactionTask.setHStore(store);
     compactionTask.setCompactionContext(compactionContext);
     compactionTask.setSelectedFileNames(selectedFileNames);
@@ -204,7 +213,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
 
     // CompactedHFilesDischarger only run on regionserver, so compactionserver does not have
     // opportunity to clean compacted file at that time, we clean compacted files here
-    storage.cleanupCompactedFiles(regionInfo, cfd,
+    compactionFilesCache.cleanupCompactedFiles(regionInfo, cfd,
       store.getStorefiles().stream().map(sf -> sf.getPath().getName()).collect(Collectors.toSet()));
     if (major) {
       status.setStatus("Trigger major compaction");
@@ -212,16 +221,11 @@ public class CompactionThreadManager implements ThroughputControllerService {
     }
     // get current compacting and compacted files, NOTE: these files are file names only, don't
     // include paths.
-    status.setStatus("Get current compacting and compacted files from storage");
-    Set<String> excludeFiles = new HashSet<>();
-    Set<String> compactingFiles = storage.getSelectedStoreFiles(regionInfo, cfd);
-    synchronized (compactingFiles) {
-      excludeFiles.addAll(compactingFiles);
-    }
-    Set<String> compactedFiles = storage.getCompactedStoreFiles(regionInfo, cfd);
-    synchronized (compactedFiles) {
-      excludeFiles.addAll(compactedFiles);
-    }
+    status.setStatus("Get current compacting and compacted files from compactionFilesCache");
+    Set<String> compactingFiles = compactionFilesCache.getSelectedStoreFiles(regionInfo, cfd);
+    Set<String> compactedFiles = compactionFilesCache.getCompactedStoreFiles(regionInfo, cfd);
+    Set<String> excludeFiles = new HashSet<>(compactingFiles);
+    excludeFiles.addAll(compactedFiles);
     // Convert files names to store files
     status.setStatus("Convert current compacting and compacted files to store files");
     List<HStoreFile> excludeStoreFiles = getExcludedStoreFiles(store, excludeFiles);
@@ -238,25 +242,26 @@ public class CompactionThreadManager implements ThroughputControllerService {
   }
 
   /**
-   * Mark files in compaction context as selected in storage
-   * @return True if success, otherwise if files are already in selected storage
+   * Mark files in compaction context as selected in compactionFilesCache
+   * @return True if success, otherwise if files are already in selected compactionFilesCache
    */
   private Pair<Boolean, List<String>> updateStorageAfterSelectCompaction(RegionInfo regionInfo,
       ColumnFamilyDescriptor cfd, CompactionContext compactionContext, MonitoredTask status,
       String logStr) {
-    LOG.info("Start update storage after select compaction: {}", logStr);
-    // save selected files to storage
+    LOG.info("Start update compactionFilesCache after select compaction: {}", logStr);
+    // save selected files to compactionFilesCache
     List<String> selectedFilesNames = new ArrayList<>();
     for (HStoreFile selectFile : compactionContext.getRequest().getFiles()) {
       selectedFilesNames.add(selectFile.getFileInfo().getPath().getName());
     }
-    if (storage.addSelectedFiles(regionInfo, cfd, selectedFilesNames)) {
-      LOG.info("Update storage after select compaction success: {}", logStr);
-      status.setStatus("Update storage after select compaction success");
+    if (compactionFilesCache.addSelectedFiles(regionInfo, cfd, selectedFilesNames)) {
+      LOG.info("Update compactionFilesCache after select compaction success: {}", logStr);
+      status.setStatus("Update compactionFilesCache after select compaction success");
       return new Pair<>(Boolean.TRUE, selectedFilesNames);
     } else {
+      //should not happen
       LOG.info("selected files are already in store and return: {}", logStr);
-      status.abort("Selected files are already in storage and return");
+      status.abort("Selected files are already in compactionFilesCache and return");
       return new Pair<>(Boolean.FALSE, Collections.EMPTY_LIST);
     }
   }
@@ -285,7 +290,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
     } finally {
       status.setStatus("Remove selected files");
       LOG.info("Remove selected files: {}", compactionTask);
-      storage.removeSelectedFiles(regionInfo, cfd, selectedFileNames);
+      compactionFilesCache.removeSelectedFiles(regionInfo, cfd, selectedFileNames);
     }
   }
 
@@ -324,7 +329,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
       if (completeCompactionResponse.getSuccess()) {
         status.markComplete("Report to RS succeeded and RS accepted");
         // move selected files to compacted files
-        storage.addCompactedFiles(regionInfo, cfd, selectedFileNames);
+        compactionFilesCache.addCompactedFiles(regionInfo, cfd, selectedFileNames);
         LOG.info("Compaction manager request complete compaction success. {}", task);
       } else {
         //TODO: maybe region is move, we need get latest regionserver name and retry
@@ -408,7 +413,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
         LOG.info("Compaction Rejected: " + runner);
         CompactionTask task = runner.getCompactionTask();
         if (task != null) {
-          storage.removeSelectedFiles(task.getRegionInfo(), task.getCfd(),
+          compactionFilesCache.removeSelectedFiles(task.getRegionInfo(), task.getCfd(),
             task.getSelectedFileNames());
         }
       }

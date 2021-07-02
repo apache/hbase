@@ -29,6 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+
 /**
  * Since we do not maintain StoreFileManager in compaction server(can't refresh when flush). we use
  * external storage(this class) to record compacting and compacted files. This storage is in memory
@@ -36,8 +38,8 @@ import org.slf4j.LoggerFactory;
  * or deletion. RS does file movement still.
  */
 @InterfaceAudience.Private
-class CompactionServerStorage {
-  private static Logger LOG = LoggerFactory.getLogger(CompactionServerStorage.class);
+class CompactionFilesCache {
+  private static Logger LOG = LoggerFactory.getLogger(CompactionFilesCache.class);
   private final ConcurrentMap<String, ConcurrentMap<String, Set<String>>> selectedFiles =
       new ConcurrentHashMap<>();
   private final ConcurrentMap<String, ConcurrentMap<String, Set<String>>> compactedFiles =
@@ -48,7 +50,7 @@ class CompactionServerStorage {
    */
   boolean addCompactedFiles(RegionInfo regionInfo, ColumnFamilyDescriptor cfd,
       List<String> compactedFiles) {
-    Set<String> compactedFileSet = getCompactedStoreFiles(regionInfo, cfd);
+    Set<String> compactedFileSet = getCompactedStoreFilesInternal(regionInfo, cfd);
     synchronized (compactedFileSet) {
       compactedFileSet.addAll(compactedFiles);
       if (LOG.isDebugEnabled()) {
@@ -66,7 +68,7 @@ class CompactionServerStorage {
    */
   boolean addSelectedFiles(RegionInfo regionInfo, ColumnFamilyDescriptor cfd,
       List<String> selectedFiles) {
-    Set<String> selectedFileSet = getSelectedStoreFiles(regionInfo, cfd);
+    Set<String> selectedFileSet = getSelectedStoreFilesInternal(regionInfo, cfd);
     synchronized (selectedFileSet) {
       for (String selectedFile : selectedFiles) {
         if (selectedFileSet.contains(selectedFile)) {
@@ -83,18 +85,58 @@ class CompactionServerStorage {
   }
 
   /**
-   * Get files which are compacted, called before select files to do compaction.
+   * Get files which are compacted, called before select files to do compaction. Thread-safe
    * @return The files which are compacted
    */
   Set<String> getCompactedStoreFiles(RegionInfo regionInfo, ColumnFamilyDescriptor cfd) {
+    Set<String> compactedFiles = getStoreFiles(this.compactedFiles, regionInfo, cfd);
+    synchronized (compactedFiles) {
+      return ImmutableSet.copyOf(compactedFiles);
+    }
+  }
+
+  /**
+   * Get files which are compacting, called before select files to do compaction. Thread-safe
+   * @return The files which are compacting
+   */
+  Set<String> getSelectedStoreFiles(RegionInfo regionInfo, ColumnFamilyDescriptor cfd) {
+    Set<String> selectedFiles = getStoreFiles(this.selectedFiles, regionInfo, cfd);
+    synchronized (selectedFiles) {
+      return ImmutableSet.copyOf(selectedFiles);
+    }
+  }
+
+  /**
+   * Get files which are compacted, we use this return object as lock
+   * @return The files which are compacted as lock object
+   */
+  Object getCompactedStoreFilesAsLock(RegionInfo regionInfo, ColumnFamilyDescriptor cfd) {
+    return getCompactedStoreFilesInternal(regionInfo, cfd);
+  }
+
+  /**
+   * Get files which are compacting, we use this return object as lock
+   * @return The files which are compacting as lock object
+   */
+  Object getSelectedStoreFilesAsLock(RegionInfo regionInfo, ColumnFamilyDescriptor cfd) {
+    return getSelectedStoreFilesInternal(regionInfo, cfd);
+  }
+
+  /**
+   * Get files which are compacted, called before select files to do compaction. No-thread-safe
+   * @return The files which are compacted
+   */
+  private Set<String> getCompactedStoreFilesInternal(RegionInfo regionInfo,
+      ColumnFamilyDescriptor cfd) {
     return getStoreFiles(this.compactedFiles, regionInfo, cfd);
   }
 
   /**
-   * Get files which are compacting, called before select files to do compaction.
+   * Get files which are compacting, called before select files to do compaction. No-thread-safe
    * @return The files which are compacting
    */
-  Set<String> getSelectedStoreFiles(RegionInfo regionInfo, ColumnFamilyDescriptor cfd) {
+  private Set<String> getSelectedStoreFilesInternal(RegionInfo regionInfo,
+      ColumnFamilyDescriptor cfd) {
     return getStoreFiles(this.selectedFiles, regionInfo, cfd);
   }
 
@@ -117,7 +159,7 @@ class CompactionServerStorage {
    */
   void removeSelectedFiles(RegionInfo regionInfo, ColumnFamilyDescriptor cfd,
       List<String> selectedFiles) {
-    Set<String> selectedFileSet = getSelectedStoreFiles(regionInfo, cfd);
+    Set<String> selectedFileSet = getSelectedStoreFilesInternal(regionInfo, cfd);
     synchronized (selectedFileSet) {
       selectedFileSet.removeAll(selectedFiles);
       if (LOG.isDebugEnabled()) {
@@ -132,7 +174,7 @@ class CompactionServerStorage {
    */
   void cleanupCompactedFiles(RegionInfo regionInfo, ColumnFamilyDescriptor cfd,
       Set<String> storeFileNames) {
-    Set<String> compactedFileSet = getCompactedStoreFiles(regionInfo, cfd);
+    Set<String> compactedFileSet = getCompactedStoreFilesInternal(regionInfo, cfd);
     synchronized (compactedFileSet) {
       compactedFileSet.retainAll(storeFileNames);
     }

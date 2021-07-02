@@ -42,13 +42,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category(SmallTests.class)
-public class TestCompactionServerStorage {
+public class TestCompactionFilesCache {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactionServerStorage.class);
-  private static TableName tableName = TableName.valueOf("testCompactingFilesStore");
+      HBaseClassTestRule.forClass(TestCompactionFilesCache.class);
+  private static TableName tableName = TableName.valueOf("testCompactionFilesCache");
   private static byte[] family = Bytes.toBytes("A");
-  private static CompactionServerStorage storage;
+  private static CompactionFilesCache storage;
   private static RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
   private static ColumnFamilyDescriptor cfd =
       ColumnFamilyDescriptorBuilder.newBuilder(family).build();
@@ -74,7 +74,7 @@ public class TestCompactionServerStorage {
 
   @Before
   public void cleanUpStorage() {
-    storage = new CompactionServerStorage();
+    storage = new CompactionFilesCache();
   }
 
   @Test
@@ -112,6 +112,7 @@ public class TestCompactionServerStorage {
 
     Set<String> storeFileNames = Sets.newHashSet("3");
     storage.cleanupCompactedFiles(regionInfo, cfd, storeFileNames);
+    compactedFiles = storage.getCompactedStoreFiles(regionInfo, cfd);
     Assert.assertEquals(1, compactedFiles.size());
   }
 
