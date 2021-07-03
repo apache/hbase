@@ -57,6 +57,8 @@ if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
 hrootdir=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.rootdir`
 if [ "$hrootdir" == "null" ]; then hrootdir="file:///tmp/hbase-${USER}/hbase"; fi
 
+hbasewaldir=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.wal.dir`
+
 check_for_znodes() {
   command=$1;
   case $command in
@@ -102,10 +104,16 @@ clean_up() {
     ;;
   --cleanHdfs)
     execute_hdfs_command "-rm -R ${hrootdir}"
+    if [ "${hbasewaldir}" != "null" ]; then
+      execute_hdfs_command "-rm -R ${hbasewaldir}"
+    fi
     ;;
   --cleanAll)
     execute_zk_command "rmr ${zparent}";
     execute_hdfs_command "-rm -R ${hrootdir}"
+    if [ "${hbasewaldir}" != "null" ]; then
+      execute_hdfs_command "-rm -R ${hbasewaldir}"
+    fi
     ;;
   --cleanAcls)
     execute_clean_acls;
