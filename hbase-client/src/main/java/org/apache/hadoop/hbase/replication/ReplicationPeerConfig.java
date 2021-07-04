@@ -184,7 +184,7 @@ public class ReplicationPeerConfig {
 
     @Override
     public ReplicationPeerConfigBuilder setClusterKey(String clusterKey) {
-      this.clusterKey = Objects.requireNonNull(clusterKey).trim();
+      this.clusterKey = clusterKey == null ? clusterKey : clusterKey.trim();
       return this;
     }
 
