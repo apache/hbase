@@ -542,14 +542,10 @@ public class TestStripeStoreFileManager {
   }
 
   private void verifyInvalidCompactionScenario(StripeStoreFileManager manager,
-      ArrayList<HStoreFile> filesToCompact, ArrayList<HStoreFile> filesToInsert) throws Exception {
+    ArrayList<HStoreFile> filesToCompact, ArrayList<HStoreFile> filesToInsert) throws Exception {
     Collection<HStoreFile> allFiles = manager.getStorefiles();
-    try {
-      manager.addCompactionResults(filesToCompact, filesToInsert);
-      fail("Should have thrown");
-    } catch (IOException ex) {
-      // Ignore it.
-    }
+    manager.addCompactionResults(filesToCompact, filesToInsert);
+    fail("Should have thrown");
     verifyAllFiles(manager, allFiles); // must have the same files.
   }
 
