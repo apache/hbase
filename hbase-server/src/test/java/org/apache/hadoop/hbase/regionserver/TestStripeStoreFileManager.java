@@ -21,8 +21,9 @@ import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_K
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -544,8 +545,8 @@ public class TestStripeStoreFileManager {
   private void verifyInvalidCompactionScenario(StripeStoreFileManager manager,
     ArrayList<HStoreFile> filesToCompact, ArrayList<HStoreFile> filesToInsert) throws Exception {
     Collection<HStoreFile> allFiles = manager.getStorefiles();
-    manager.addCompactionResults(filesToCompact, filesToInsert);
-    fail("Should have thrown");
+    assertThrows(IllegalStateException.class,
+      () -> manager.addCompactionResults(filesToCompact, filesToInsert));
     verifyAllFiles(manager, allFiles); // must have the same files.
   }
 
