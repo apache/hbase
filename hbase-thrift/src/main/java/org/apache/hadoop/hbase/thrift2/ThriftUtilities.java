@@ -31,9 +31,11 @@ import java.util.Set;
 import org.apache.commons.collections.MapUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -57,6 +59,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -70,6 +73,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TAuthorization;
 import org.apache.hadoop.hbase.thrift2.generated.TBloomFilterType;
 import org.apache.hadoop.hbase.thrift2.generated.TCellVisibility;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
+import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
 import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
@@ -92,6 +96,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TServerName;
+import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -103,8 +108,6 @@ public class ThriftUtilities {
   private final static Cell[] EMPTY_CELL_ARRAY = new Cell[]{};
   private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
   private final static Result EMPTY_RESULT_STALE = Result.create(EMPTY_CELL_ARRAY, null, true);
-
-
 
   private ThriftUtilities() {
     throw new UnsupportedOperationException("Can't initialize class");
@@ -930,8 +933,6 @@ public class ThriftUtilities {
     }
   }
 
-
-
   public static TBloomFilterType bloomFilterFromHBase(BloomType in) {
     switch (in) {
       case NONE: return TBloomFilterType.NONE;
@@ -1292,5 +1293,139 @@ public class ThriftUtilities {
       result.add(serverName);
     }
     return result;
+  }
+
+  public static HColumnDescriptor columnDescriptorFromThrift(TColumnFamilyDescriptor in) {
+    HColumnDescriptor out = new HColumnDescriptor(in.getName());
+    if (in.isSetAttributes()) {
+      for (Map.Entry<ByteBuffer, ByteBuffer> attribute : in.getAttributes().entrySet()) {
+        out.setValue(attribute.getKey().array(), attribute.getValue().array());
+      }
+    }
+    if (in.isSetConfiguration()) {
+      for (Map.Entry<String, String> conf : in.getConfiguration().entrySet()) {
+        out.setConfiguration(conf.getKey(), conf.getValue());
+      }
+    }
+    if (in.isSetBlockSize()) {
+      out.setBlocksize(in.getBlockSize());
+    }
+    if (in.isSetBloomnFilterType()) {
+      out.setBloomFilterType(bloomFilterFromThrift(in.getBloomnFilterType()));
+    }
+    if (in.isSetCompressionType()) {
+      out.setCompressionType(compressionAlgorithmFromThrift(in.getCompressionType()));
+    }
+    if (in.isSetDfsReplication()) {
+      out.setDFSReplication(in.getDfsReplication());
+    }
+    if (in.isSetDataBlockEncoding()) {
+      out.setDataBlockEncoding(dataBlockEncodingFromThrift(in.getDataBlockEncoding()));
+    }
+    if (in.isSetKeepDeletedCells()) {
+      out.setKeepDeletedCells(keepDeletedCellsFromThrift(in.getKeepDeletedCells()));
+    }
+    if (in.isSetMaxVersions()) {
+      out.setMaxVersions(in.getMaxVersions());
+    }
+    if (in.isSetMinVersions()) {
+      out.setMinVersions(in.getMinVersions());
+    }
+    if (in.isSetScope()) {
+      out.setScope(in.getScope());
+    }
+    if (in.isSetTimeToLive()) {
+      out.setTimeToLive(in.getTimeToLive());
+    }
+    if (in.isSetBlockCacheEnabled()) {
+      out.setBlockCacheEnabled(in.isBlockCacheEnabled());
+    }
+    if (in.isSetCacheBloomsOnWrite()) {
+      out.setCacheBloomsOnWrite(in.isCacheBloomsOnWrite());
+    }
+    if (in.isSetCacheDataOnWrite()) {
+      out.setCacheDataOnWrite(in.isCacheDataOnWrite());
+    }
+    if (in.isSetCacheIndexesOnWrite()) {
+      out.setCacheIndexesOnWrite(in.isCacheIndexesOnWrite());
+    }
+    if (in.isSetCompressTags()) {
+      out.setCompressTags(in.isCompressTags());
+    }
+    if (in.isSetEvictBlocksOnClose()) {
+      out.setEvictBlocksOnClose(in.isEvictBlocksOnClose());
+    }
+    if (in.isSetInMemory()) {
+      out.setInMemory(in.isInMemory());
+    }
+    return out;
+  }
+
+  public static TColumnFamilyDescriptor columnDescriptorFromHBase(HColumnDescriptor in) {
+    TColumnFamilyDescriptor out = new TColumnFamilyDescriptor();
+    out.setName(in.getName());
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> attribute :
+      in.getValues().entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(attribute.getKey().get()),
+        ByteBuffer.wrap(attribute.getValue().get()));
+    }
+    for (Map.Entry<String, String> conf : in.getConfiguration().entrySet()) {
+      out.putToConfiguration(conf.getKey(), conf.getValue());
+    }
+    out.setBlockSize(in.getBlocksize());
+    out.setBloomnFilterType(bloomFilterFromHBase(in.getBloomFilterType()));
+    out.setCompressionType(compressionAlgorithmFromHBase(in.getCompressionType()));
+    out.setDfsReplication(in.getDFSReplication());
+    out.setDataBlockEncoding(dataBlockEncodingFromHBase(in.getDataBlockEncoding()));
+    out.setKeepDeletedCells(keepDeletedCellsFromHBase(in.getKeepDeletedCells()));
+    out.setMaxVersions(in.getMaxVersions());
+    out.setMinVersions(in.getMinVersions());
+    out.setScope(in.getScope());
+    out.setTimeToLive(in.getTimeToLive());
+    out.setBlockCacheEnabled(in.isBlockCacheEnabled());
+    out.setCacheBloomsOnWrite(in.isCacheBloomsOnWrite());
+    out.setCacheDataOnWrite(in.isCacheDataOnWrite());
+    out.setCacheIndexesOnWrite(in.isCacheIndexesOnWrite());
+    out.setCompressTags(in.isCompressTags());
+    out.setEvictBlocksOnClose(in.isEvictBlocksOnClose());
+    out.setInMemory(in.isInMemory());
+    return out;
+  }
+
+  public static HTableDescriptor tableDescriptorFromThrift(TTableDescriptor in) {
+    HTableDescriptor out = new HTableDescriptor(tableNameFromThrift(in.getTableName()));
+    for (TColumnFamilyDescriptor col : in.getColumns()) {
+      out.addFamily(columnDescriptorFromThrift(col));
+    }
+
+    Map<ByteBuffer, ByteBuffer> map = in.getAttributes();
+    for (Map.Entry<ByteBuffer, ByteBuffer> e : map.entrySet()) {
+      out.setValue(e.getKey().array(), e.getValue().array());
+    }
+    return out;
+  }
+
+  public static TTableDescriptor tableDescriptorFromHBase(HTableDescriptor in) {
+    TTableDescriptor out = new TTableDescriptor();
+    out.setTableName(tableNameFromHBase(in.getTableName()));
+    Map<ImmutableBytesWritable, ImmutableBytesWritable> attributes = in.getValues();
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> attribute
+      : attributes.entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(attribute.getKey().get()),
+        ByteBuffer.wrap(attribute.getValue().get()));
+    }
+    for (HColumnDescriptor column : in.getColumnFamilies()) {
+      out.addToColumns(columnDescriptorFromHBase(column));
+    }
+    out.setDurability(durabilityFromHBase(in.getDurability()));
+    return out;
+  }
+
+  public static List<TTableDescriptor> tableDescriptorsFromHBase(List<HTableDescriptor> in) {
+    List<TTableDescriptor> out = new ArrayList<>(in.size());
+    for (HTableDescriptor descriptor : in) {
+      out.add(tableDescriptorFromHBase(descriptor));
+    }
+    return out;
   }
 }
