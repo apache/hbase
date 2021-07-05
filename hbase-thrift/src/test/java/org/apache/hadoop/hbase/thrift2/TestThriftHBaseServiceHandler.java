@@ -209,6 +209,20 @@ public class TestThriftHBaseServiceHandler {
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
     UTIL.getConfiguration().setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
+
+    UTIL.getConfiguration().set("hbase.client.retries.number", "3");
+    UTIL.getConfiguration().setBoolean("hbase.security.authorization", true);
+    UTIL.getConfiguration().set("hbase.coprocessor.master.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+    UTIL.getConfiguration().set("hbase.coprocessor.region.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+    UTIL.getConfiguration().set("hbase.coprocessor.regionserver.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+
+    // as we opened access control, we need to start as a superuser. Otherwise, we will not have
+    // sufficient permission to do operations.
+    UTIL.getConfiguration().set("hbase.superuser", System.getProperty("user.name"));
+
     UTIL.startMiniCluster();
     TableDescriptor tableDescriptor = TableDescriptorBuilder
       .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
@@ -1784,26 +1798,6 @@ public class TestThriftHBaseServiceHandler {
 
   @Test
   public void testPerformTablePermissions() throws Throwable {
-    // need to open AccessControl so we start a new mini-cluster here.
-    HBaseTestingUtility tu = new HBaseTestingUtility();
-    tu.getConfiguration().set("hbase.client.retries.number", "3");
-    tu.getConfiguration().setBoolean("hbase.security.authorization", true);
-    tu.getConfiguration().set("hbase.coprocessor.master.classes",
-      "org.apache.hadoop.hbase.security.access.AccessController");
-    tu.getConfiguration().set("hbase.coprocessor.region.classes",
-      "org.apache.hadoop.hbase.security.access.AccessController");
-    tu.getConfiguration().set("hbase.coprocessor.regionserver.classes",
-      "org.apache.hadoop.hbase.security.access.AccessController");
-
-    // as we opened access control, we need to start as a superuser. Otherwise, we will not have
-    // sufficient permission to do operations.
-    tu.getConfiguration().set("hbase.superuser", System.getProperty("user.name"));
-    tu.startMiniCluster();
-    TableDescriptor tableDescriptor = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
-    try (Admin admin = tu.getAdmin()) {
-      admin.createTable(tableDescriptor);
-    }
     // initialize fake objects.
     String fakeUser = "user";
     TAccessControlEntity tce = new TAccessControlEntity();
@@ -1813,12 +1807,10 @@ public class TestThriftHBaseServiceHandler {
     tce.setUsername(fakeUser);
     tce.setOp(TPermissionOps.GRANT);
 
-    Configuration conf = tu.getConfiguration();
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler(conf,
-        UserProvider.instantiate(conf));
+    ThriftHBaseServiceHandler handler = createHandler();
     handler.performPermissions(tce);
 
-    List<UserPermission> permissionList = AccessControlClient.getUserPermissions(tu.getConnection(),
+    List<UserPermission> permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
         Bytes.toString(tableAname), fakeUser);
     // we only grant one R permission
     assertEquals(permissionList.size(), 1);
@@ -1830,59 +1822,31 @@ public class TestThriftHBaseServiceHandler {
     // than revoke the permission
     tce.setOp(TPermissionOps.REVOKE);
     handler.performPermissions(tce);
-    permissionList = AccessControlClient.getUserPermissions(tu.getConnection(),
+    permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
       Bytes.toString(tableAname), fakeUser);
 
     // it should return an empty list
     assertEquals(0, permissionList.size());
-    tu.shutdownMiniCluster();
   }
 
 
   @Test
   public void testPerformNamespacePermissions() throws Throwable {
-    // need to open AccessControl so we start a new mini-cluster here.
-    HBaseTestingUtility tu = new HBaseTestingUtility();
-    tu.getConfiguration().set("hbase.client.retries.number", "3");
-    tu.getConfiguration().setBoolean("hbase.security.authorization", true);
-    tu.getConfiguration().set("hbase.coprocessor.master.classes",
-      "org.apache.hadoop.hbase.security.access.AccessController");
-    tu.getConfiguration().set("hbase.coprocessor.region.classes",
-      "org.apache.hadoop.hbase.security.access.AccessController");
-    tu.getConfiguration().set("hbase.coprocessor.regionserver.classes",
-      "org.apache.hadoop.hbase.security.access.AccessController");
-
-    // as we opened access control, we need to start as a superuser. Otherwise, we will not have
-    // sufficient permission to do operations.
-    tu.getConfiguration().set("hbase.superuser", System.getProperty("user.name"));
-    tu.startMiniCluster();
-    String nsName = "nsname";
-    org.apache.hadoop.hbase.NamespaceDescriptor nameSpaceDescriptor =
-      org.apache.hadoop.hbase.NamespaceDescriptor.create(nsName).build();
-    try (Admin admin = tu.getAdmin()) {
-      admin.createNamespace(nameSpaceDescriptor);
-    }
-    TableDescriptor tableDescriptor = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
-    try (Admin admin = tu.getAdmin()) {
-      admin.createTable(tableDescriptor);
-    }
-    // initialize fake objects.
+    // initialize fake objects. We test the permission grant and revoke on default NS.
     String fakeUser = "user";
+    String defaultNameSpace = "default";
     TAccessControlEntity tce = new TAccessControlEntity();
     tce.setActions("R");
-    tce.setNsName(nsName);
+    tce.setNsName(defaultNameSpace);
     tce.setScope(TPermissionScope.NAMESPACE);
     tce.setUsername(fakeUser);
     tce.setOp(TPermissionOps.GRANT);
 
-    Configuration conf = tu.getConfiguration();
-    ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler(conf,
-      UserProvider.instantiate(conf));
+    ThriftHBaseServiceHandler handler = createHandler();
     handler.performPermissions(tce);
 
-    List<UserPermission> permissionList = AccessControlClient.getUserPermissions(tu.getConnection(),
-      "@" + nsName, fakeUser);
+    List<UserPermission> permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      "@" + defaultNameSpace, fakeUser);
 
     // we only grant one R permission
     assertEquals(permissionList.size(), 1);
@@ -1891,15 +1855,14 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(actions.length, 1);
     assertEquals(actions[0], Permission.Action.READ);
 
-    // than revoke the permission
+    // revoke the permission
     tce.setOp(TPermissionOps.REVOKE);
     handler.performPermissions(tce);
-    permissionList = AccessControlClient.getUserPermissions(tu.getConnection(),
-      "@" + nsName, fakeUser);
+    permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      "@" + defaultNameSpace, fakeUser);
 
     // it should return an empty list
     assertEquals(0, permissionList.size());
-    tu.shutdownMiniCluster();
   }
 
   public static class DelayingRegionObserver implements RegionCoprocessor, RegionObserver {
