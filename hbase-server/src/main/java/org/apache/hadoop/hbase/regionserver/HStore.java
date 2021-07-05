@@ -228,12 +228,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private long blockingFileCount;
   private int compactionCheckMultiplier;
 
-  public Encryption.Context getCryptoContext() {
-    return cryptoContext;
-  }
-
-  protected Encryption.Context cryptoContext = Encryption.Context.NONE;
-
   AtomicLong flushedCellsCount = new AtomicLong();
   private AtomicLong compactedCellsCount = new AtomicLong();
   private AtomicLong majorCompactedCellsCount = new AtomicLong();

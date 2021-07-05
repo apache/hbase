@@ -292,7 +292,7 @@ public abstract class Compactor<T extends CellSink> {
    */
   protected StoreFileWriter initWriter(FileDetails fd, boolean shouldDropBehind, boolean major)
     throws IOException {
-    return this.createTmpWriter(fd, shouldDropBehind, major);
+    return createTmpWriter(fd, shouldDropBehind, major);
   }
 
   protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind,

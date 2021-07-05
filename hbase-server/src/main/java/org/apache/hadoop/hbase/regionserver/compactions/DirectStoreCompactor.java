@@ -31,24 +31,39 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Alternative Compactor implementation, this class extends <code>DefaultCompactor</code> class,
+ * modifying original behaviour of <code>initWriter</code> and <code>createFileInStoreDir</code>
+ * methods to create compacted files in the final store directory, rather than temp, avoid the
+ * need to perform renames at compaction commit time.
+ */
 @InterfaceAudience.Private
 public class DirectStoreCompactor extends DefaultCompactor {
   public DirectStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
 
+  /**
+   * Overrides <code>Compactor</code> original implementation to create the resulting file directly
+   * in the store dir, rather than temp, in order to avoid the need for rename at commit time.
+   * @param fd the file details.
+   * @param shouldDropBehind boolean for the drop-behind output stream cache settings.
+   * @param major if compaction is major.
+   * @return
+   * @throws IOException
+   */
   @Override
   protected StoreFileWriter initWriter(FileDetails fd, boolean shouldDropBehind, boolean major)
     throws IOException {
     // When all MVCC readpoints are 0, don't write them.
     // See HBASE-8166, HBASE-12600, and HBASE-13389.
-    return createWriterInFamilyDir(fd.maxKeyCount,
+    return createWriterInStoreDir(fd.maxKeyCount,
       major ? majorCompactionCompression : minorCompactionCompression,
       fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0,
       shouldDropBehind, fd.totalCompactedFilesSize);
   }
 
-  private StoreFileWriter createWriterInFamilyDir(long maxKeyCount,
+  private StoreFileWriter createWriterInStoreDir(long maxKeyCount,
       Compression.Algorithm compression, boolean includeMVCCReadpoint, boolean includesTag,
         boolean shouldDropBehind, long totalCompactedFilesSize) throws IOException {
     final CacheConfig writerCacheConf;
@@ -56,7 +71,7 @@ public class DirectStoreCompactor extends DefaultCompactor {
     writerCacheConf.enableCacheOnWriteForCompactions(totalCompactedFilesSize);
     InetSocketAddress[] favoredNodes = store.getStoreContext().getFavoredNodes();
     HFileContext hFileContext = store.createFileContext(compression, includeMVCCReadpoint,
-      includesTag, store.getCryptoContext());
+      includesTag, store.getStoreContext().getEncryptionContext());
     Path familyDir = new Path(store.getRegionFileSystem().getRegionDir(),
       store.getColumnFamilyDescriptor().getNameAsString());
     StoreFileWriter.Builder builder = new StoreFileWriter.Builder(conf, writerCacheConf,
