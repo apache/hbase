@@ -1170,7 +1170,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     } else {
       final boolean shouldCacheDataOnWrite = cacheConf.shouldCacheDataOnWrite();
       if (shouldCacheDataOnWrite) {
-        writerCacheConf.enableCacheOnWriteForCompactions();
+        writerCacheConf.enableCacheOnWrite();
         if (!cacheOnWriteLogged) {
           LOG.info("For {} , cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
             "Index blocks and Bloom filter blocks", this);

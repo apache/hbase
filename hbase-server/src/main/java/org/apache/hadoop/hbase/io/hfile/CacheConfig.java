@@ -291,7 +291,7 @@ public class CacheConfig {
    * cacheIndexesOnWrite
    * cacheBloomsOnWrite
    */
-  public void enableCacheOnWriteForCompactions() {
+  public void enableCacheOnWrite() {
     this.cacheDataOnWrite = true;
     this.cacheIndexesOnWrite = true;
     this.cacheBloomsOnWrite = true;
@@ -313,7 +313,7 @@ public class CacheConfig {
   public boolean enableCacheOnWriteForCompactions(long totalCompactedFilesSize) {
     if (shouldCacheCompactedBlocksOnWrite() && totalCompactedFilesSize <=
       getCacheCompactedBlocksOnWriteThreshold()) {
-      enableCacheOnWriteForCompactions();
+      enableCacheOnWrite();
       return true;
     } else {
       setCacheDataOnWrite(false);
