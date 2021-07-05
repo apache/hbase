@@ -28,7 +28,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ThroughputControllerService {
   ChoreService getChoreService();
   double getCompactionPressure();
-  @Deprecated
   double getFlushPressure();
   Configuration getConfiguration();
 }

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AbstractRpcServices;
@@ -37,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos;
@@ -51,8 +51,6 @@ public class CSRpcServices extends AbstractRpcServices
 
   private final HCompactionServer compactionServer;
 
-  // Request counter.
-  final LongAdder requestCount = new LongAdder();
   /** RPC scheduler to use for the compaction server. */
   public static final String COMPACTION_SERVER_RPC_SCHEDULER_FACTORY_CLASS =
       "hbase.compaction.server.rpc.scheduler.factory.class";
@@ -91,8 +89,8 @@ public class CSRpcServices extends AbstractRpcServices
    */
   @Override
   public CompactResponse requestCompaction(RpcController controller,
-      CompactionProtos.CompactRequest request) {
-    requestCount.increment();
+      CompactionProtos.CompactRequest request) throws ServiceException {
+    compactionServer.requestCount.increment();
     ServerName rsServerName = ProtobufUtil.toServerName(request.getServer());
     RegionInfo regionInfo = ProtobufUtil.toRegionInfo(request.getRegionInfo());
     ColumnFamilyDescriptor cfd = ProtobufUtil.toColumnFamilyDescriptor(request.getFamily());
@@ -104,8 +102,12 @@ public class CSRpcServices extends AbstractRpcServices
         CompactionTask.newBuilder().setRsServerName(rsServerName).setRegionInfo(regionInfo)
             .setColumnFamilyDescriptor(cfd).setRequestMajor(major).setPriority(priority)
             .setFavoredNodes(favoredNodes).setSubmitTime(System.currentTimeMillis()).build();
-    compactionServer.compactionThreadManager.requestCompaction(compactionTask);
-    return CompactionProtos.CompactResponse.newBuilder().build();
+    try {
+      compactionServer.compactionThreadManager.requestCompaction(compactionTask);
+      return CompactionProtos.CompactResponse.newBuilder().build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
   }
 
 }

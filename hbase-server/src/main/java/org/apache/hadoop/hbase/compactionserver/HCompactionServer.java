@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.compactionserver;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AbstractServer;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.security.SecurityConstants;
@@ -57,7 +59,9 @@ public class HCompactionServer extends AbstractServer {
   /** compaction server process name */
   public static final String COMPACTIONSERVER = "compactionserver";
   private static final Logger LOG = LoggerFactory.getLogger(HCompactionServer.class);
-
+  // Request counter.
+  final LongAdder requestCount = new LongAdder();
+  final LongAdder requestFailedCount = new LongAdder();
   // ChoreService used to schedule tasks that we want to run periodically
   private ChoreService choreService;
 
@@ -124,13 +128,14 @@ public class HCompactionServer extends AbstractServer {
     // login the server principal (if using secure Hadoop)
     login(userProvider, this.rpcServices.getIsa().getHostName());
     Superusers.initialize(conf);
+    this.dataFs = new HFileSystem(this.conf, true);
     this.choreService = new ChoreService(getName(), true);
     this.compactionThreadManager = new CompactionThreadManager(conf, this);
     this.rpcServices.start();
   }
 
   @Override
-  protected CSRpcServices getRpcService(){
+  protected CSRpcServices getRpcService() {
     return rpcServices;
   }
 
@@ -156,7 +161,7 @@ public class HCompactionServer extends AbstractServer {
     }
     serverLoad.setCompactedCells(compactedCells);
     serverLoad.setCompactingCells(compactingCells);
-    serverLoad.setTotalNumberOfRequests(rpcServices.requestCount.sum());
+    serverLoad.setTotalNumberOfRequests(requestCount.sum());
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
     return serverLoad.build();
@@ -225,7 +230,7 @@ public class HCompactionServer extends AbstractServer {
       // We registered with the Master. Go into run mode.
       long lastMsg = System.currentTimeMillis();
       // The main run loop.
-      while (!isStopped()) {
+      while (!isStopped() && this.dataFsOk) {
         long now = System.currentTimeMillis();
         if ((now - lastMsg) >= msgInterval) {
           if (tryCompactionServerReport(lastMsg, now) && !online.get()) {
@@ -251,7 +256,6 @@ public class HCompactionServer extends AbstractServer {
     if (this.compactionThreadManager != null) {
       this.compactionThreadManager.waitForStop();
     }
-
   }
 
   private void stopChores() {

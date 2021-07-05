@@ -126,8 +126,7 @@ public class CompactThreadControl {
     return shortCompactions;
   }
 
-  public void
-      setCompactionThroughputController(ThroughputController compactionThroughputController) {
+  void setCompactionThroughputController(ThroughputController compactionThroughputController) {
     this.compactionThroughputController = compactionThroughputController;
   }
 
@@ -149,6 +148,7 @@ public class CompactThreadControl {
       t.awaitTermination(60, TimeUnit.SECONDS);
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted waiting for " + name + " to finish...");
+      Thread.currentThread().interrupt();
       t.shutdownNow();
     }
   }

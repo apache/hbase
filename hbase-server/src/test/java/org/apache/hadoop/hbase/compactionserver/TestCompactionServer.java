@@ -154,9 +154,8 @@ public class TestCompactionServer {
     TEST_UTIL.compact(TABLENAME, true);
     Thread.sleep(5000);
     TEST_UTIL.waitFor(60000,
-      () -> COMPACTION_SERVER.rpcServices.requestCount.sum() > 0
-        && COMPACTION_SERVER.compactionThreadManager.getRunningCompactionTasks().values()
-        .size() == 0);
+      () -> COMPACTION_SERVER.requestCount.sum() > 0 && COMPACTION_SERVER.compactionThreadManager
+          .getRunningCompactionTasks().values().size() == 0);
     hFileCount = 0;
     for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
       hFileCount += region.getStore(Bytes.toBytes(FAMILY)).getStorefilesCount();
@@ -239,13 +238,13 @@ public class TestCompactionServer {
   public void testCompactionServerReport() throws Exception {
     CompactionOffloadManager compactionOffloadManager = MASTER.getCompactionOffloadManager();
     TEST_UTIL.waitFor(60000, () -> !compactionOffloadManager.getOnlineServers().isEmpty()
-      && null != compactionOffloadManager.getOnlineServers().get(COMPACTION_SERVER_NAME));
+        && null != compactionOffloadManager.getOnlineServers().get(COMPACTION_SERVER_NAME));
     // invoke compact
     TEST_UTIL.compact(TABLENAME, false);
     TEST_UTIL.waitFor(60000,
-      () -> COMPACTION_SERVER.rpcServices.requestCount.sum() > 0
-        && COMPACTION_SERVER.rpcServices.requestCount.sum() == compactionOffloadManager
-        .getOnlineServers().get(COMPACTION_SERVER_NAME).getTotalNumberOfRequests());
+      () -> COMPACTION_SERVER.requestCount.sum() > 0
+          && COMPACTION_SERVER.requestCount.sum() == compactionOffloadManager.getOnlineServers()
+              .get(COMPACTION_SERVER_NAME).getTotalNumberOfRequests());
   }
 
   @Test

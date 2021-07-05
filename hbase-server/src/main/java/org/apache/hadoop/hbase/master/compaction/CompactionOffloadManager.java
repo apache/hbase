@@ -170,9 +170,10 @@ public class CompactionOffloadManager {
       ProtobufUtil.toString(request), targetCompactionServer);
     try {
       FutureUtils.get(getCsStub(targetCompactionServer).requestCompaction(request));
+      return CompactResponse.newBuilder().build();
     } catch (Throwable t) {
       LOG.error("requestCompaction from master to CS error: {}", t);
+      throw new ServiceException(t);
     }
-    return null;
   }
 }

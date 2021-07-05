@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.CompactThreadControl;
@@ -86,7 +85,6 @@ public class CompactionThreadManager implements ThroughputControllerService {
 
   private final Configuration conf;
   private final HCompactionServer server;
-  private HFileSystem fs;
   private Path rootDir;
   private FSTableDescriptors tableDescriptors;
   private CompactThreadControl compactThreadControl;
@@ -98,7 +96,6 @@ public class CompactionThreadManager implements ThroughputControllerService {
     this.conf = conf;
     this.server = server;
     try {
-      this.fs = new HFileSystem(this.conf, true);
       this.rootDir = CommonFSUtils.getRootDir(this.conf);
       this.tableDescriptors = new FSTableDescriptors(conf);
       int largeThreads =
@@ -138,11 +135,15 @@ public class CompactionThreadManager implements ThroughputControllerService {
     return 0;
   }
 
-  public void requestCompaction(CompactionTask compactionTask) {
+  public void requestCompaction(CompactionTask compactionTask) throws IOException {
     try {
       selectFileAndExecuteTask(compactionTask);
     } catch (Throwable e) {
       LOG.error("Failed requestCompaction {}", compactionTask, e);
+      server.checkFileSystem();
+      // count the failed during selectFile
+      server.requestFailedCount.increment();
+      throw new IOException(e);
     }
   }
 
@@ -208,8 +209,8 @@ public class CompactionThreadManager implements ThroughputControllerService {
       throws IOException {
     status.setStatus("Open store");
     tableDescriptors.get(regionInfo.getTable());
-    HStore store = getStore(conf, fs, rootDir, tableDescriptors.get(regionInfo.getTable()),
-      regionInfo, cfd.getNameAsString());
+    HStore store = getStore(conf, server.getFileSystem(), rootDir,
+      tableDescriptors.get(regionInfo.getTable()), regionInfo, cfd.getNameAsString());
 
     // CompactedHFilesDischarger only run on regionserver, so compactionserver does not have
     // opportunity to clean compacted file at that time, we clean compacted files here
@@ -296,10 +297,9 @@ public class CompactionThreadManager implements ThroughputControllerService {
 
   /**
    * Report compaction completed to RS
-   * @return True if report to RS success, otherwise false
    */
-  private boolean reportCompactionCompleted(CompactionTask task, List<String> newFiles,
-      MonitoredTask status) throws IOException {
+  private void reportCompactionCompleted(CompactionTask task, List<String> newFiles,
+      MonitoredTask status) {
     ServerName rsServerName = task.getRsServerName();
     RegionInfo regionInfo = task.getRegionInfo();
     ColumnFamilyDescriptor cfd = task.getCfd();
@@ -336,12 +336,10 @@ public class CompactionThreadManager implements ThroughputControllerService {
         status.abort("Report to RS succeeded but RS denied");
         LOG.warn("Compaction manager request complete compaction fail. {}", task);
       }
-      return true;
     } catch (IOException e) {
       //TODO: rpc call broken, add retry
       status.abort("Report to RS failed");
       LOG.error("Compaction manager request complete compaction error. {}", task, e);
-      return false;
     }
   }
 
@@ -391,6 +389,9 @@ public class CompactionThreadManager implements ThroughputControllerService {
       doCompaction(compactionTask);
     } catch (Throwable e) {
       LOG.error("Execute compaction task error: {}", compactionTask, e);
+      server.checkFileSystem();
+      //count the failed during do compaction
+      server.requestFailedCount.increment();
     } finally {
       runningCompactionTasks.remove(compactionTask.getTaskName());
       if (compactionTask.getStore() != null) {
