@@ -88,9 +88,9 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
+  public void insertNewFiles(Collection<HStoreFile> sfs) {
     this.storefiles =
-        ImmutableList.sortedCopyOf(storeFileComparator, Iterables.concat(this.storefiles, sfs));
+      ImmutableList.sortedCopyOf(storeFileComparator, Iterables.concat(this.storefiles, sfs));
   }
 
   @Override
@@ -132,11 +132,10 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public void removeCompactedFiles(Collection<HStoreFile> removedCompactedfiles)
-      throws IOException {
+  public void removeCompactedFiles(Collection<HStoreFile> removedCompactedfiles) {
     this.compactedfiles =
-        this.compactedfiles.stream().filter(sf -> !removedCompactedfiles.contains(sf))
-            .sorted(storeFileComparator).collect(ImmutableList.toImmutableList());
+      this.compactedfiles.stream().filter(sf -> !removedCompactedfiles.contains(sf))
+        .sorted(storeFileComparator).collect(ImmutableList.toImmutableList());
   }
 
   @Override
