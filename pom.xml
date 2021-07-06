@@ -39,7 +39,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>3.0.0-SNAPSHOT</version>
+  <version>3.0.0-alpha-1</version>
   <name>Apache HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
@@ -635,6 +635,12 @@
       <name>Wellington Chevreuil</name>
       <email>wchevreuil@apache.org</email>
       <timezone>0</timezone>
+    </developer>
+    <developer>
+      <id>weichiu</id>
+      <name>Wei-Chiu Chuang</name>
+      <email>weichiu@apache.org</email>
+      <timezone>-8</timezone>
     </developer>
     <developer>
       <id>xucang</id>

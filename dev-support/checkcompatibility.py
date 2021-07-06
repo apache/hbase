@@ -136,6 +136,8 @@ def get_repo_name(remote_name="origin"):
 def build_tree(java_path, verbose):
     """ Run the Java build within 'path'. """
     logging.info("Building in %s ", java_path)
+    # special hack for comparing with rel/2.0.0, see HBASE-26063 for more details
+    subprocess.check_call(["sed", "-i", "2148s/3.0.0/3.0.4/g", "pom.xml"], cwd=java_path)
     mvn_cmd = ["mvn", "--batch-mode", "-DskipTests",
                "-Dmaven.javadoc.skip=true", "package"]
     if not verbose:
@@ -172,7 +174,7 @@ def checkout_java_acc(force):
 
 def find_jars(path):
     """ Return a list of jars within 'path' to be checked for compatibility. """
-    all_jars = set(check_output(["find", path, "-name", "*.jar"]).splitlines())
+    all_jars = set(check_output(["find", path, "-type", "f", "-name", "*.jar"]).splitlines())
 
     return [j for j in all_jars if (
         "-tests" not in j and
@@ -248,7 +250,7 @@ def compare_tool_results_count(tool_results, check, issue_type, known_count):
     """
     # logging.info("known_count=%s, check key=%s, tool_results=%s, issue_type=%s",
     #        str(known_count), str(check), str(tool_results), str(issue_type))
-   return tool_results[check][issue_type] > known_count
+    return tool_results[check][issue_type] > known_count
 
 def process_java_acc_output(output):
     """ Process the output string to find the problems and warnings in both the

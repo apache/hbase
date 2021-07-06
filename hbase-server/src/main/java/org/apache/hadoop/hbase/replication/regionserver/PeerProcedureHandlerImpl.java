@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.concurrent.locks.Lock;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -220,5 +221,11 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
     } finally {
       peerLock.unlock();
     }
+  }
+
+  @Override
+  public void claimReplicationQueue(ServerName crashedServer, String queue)
+    throws ReplicationException, IOException {
+    replicationSourceManager.claimQueue(crashedServer, queue);
   }
 }

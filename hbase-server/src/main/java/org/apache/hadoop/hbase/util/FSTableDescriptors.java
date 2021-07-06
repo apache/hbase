@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -139,6 +140,31 @@ public class FSTableDescriptors implements TableDescriptors {
     }
   }
 
+  public static ColumnFamilyDescriptor getTableFamilyDescForMeta(
+      final Configuration conf) {
+    return ColumnFamilyDescriptorBuilder
+      .newBuilder(HConstants.TABLE_FAMILY)
+      .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+        HConstants.DEFAULT_HBASE_META_VERSIONS))
+      .setInMemory(true)
+      .setBlocksize(8 * 1024)
+      .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+      .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
+      .setBloomFilterType(BloomType.ROWCOL)
+      .build();
+  }
+
+  public static ColumnFamilyDescriptor getReplBarrierFamilyDescForMeta() {
+    return ColumnFamilyDescriptorBuilder
+      .newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
+      .setMaxVersions(HConstants.ALL_VERSIONS)
+      .setInMemory(true)
+      .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+      .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
+      .setBloomFilterType(BloomType.ROWCOL)
+      .build();
+  }
+
   private static TableDescriptorBuilder createMetaTableDescriptorBuilder(final Configuration conf)
     throws IOException {
     // TODO We used to set CacheDataInL1 for META table. When we have BucketCache in file mode, now
@@ -155,23 +181,8 @@ public class FSTableDescriptors implements TableDescriptors {
         .setBloomFilterType(BloomType.ROWCOL)
         .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
         .build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.TABLE_FAMILY)
-        .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
-            HConstants.DEFAULT_HBASE_META_VERSIONS))
-        .setInMemory(true)
-        .setBlocksize(8 * 1024)
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
-        .setBloomFilterType(BloomType.ROWCOL)
-        .build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
-        .setMaxVersions(HConstants.ALL_VERSIONS)
-        .setInMemory(true)
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
-        .setBloomFilterType(BloomType.ROWCOL)
-        .build())
+      .setColumnFamily(getTableFamilyDescForMeta(conf))
+      .setColumnFamily(getReplBarrierFamilyDescForMeta())
       .setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(HConstants.NAMESPACE_FAMILY)
         .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,

@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.PleaseRestartMasterException;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -176,6 +177,7 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifier;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifierFactory;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
@@ -196,6 +198,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -965,6 +968,14 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (!waitForMetaOnline()) {
       return;
     }
+
+    TableDescriptor metaDescriptor =
+      tableDescriptors.get(TableName.META_TABLE_NAME);
+    final ColumnFamilyDescriptor tableFamilyDesc =
+      metaDescriptor.getColumnFamily(HConstants.TABLE_FAMILY);
+    final ColumnFamilyDescriptor replBarrierFamilyDesc =
+      metaDescriptor.getColumnFamily(HConstants.REPLICATION_BARRIER_FAMILY);
+
     this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
     this.assignmentManager.processOfflineRegions();
@@ -1032,7 +1043,17 @@ public class HMaster extends HRegionServer implements MasterServices {
       return;
     }
     status.setStatus("Starting cluster schema service");
-    initClusterSchemaService();
+    try {
+      initClusterSchemaService();
+    } catch (IllegalStateException e) {
+      if (e.getCause() != null && e.getCause() instanceof NoSuchColumnFamilyException
+          && tableFamilyDesc == null && replBarrierFamilyDesc == null) {
+        LOG.info("ClusterSchema service could not be initialized. This is "
+            + "expected during HBase 1 to 2 upgrade", e);
+      } else {
+        throw e;
+      }
+    }
 
     if (this.cpHost != null) {
       try {
@@ -1053,6 +1074,29 @@ public class HMaster extends HRegionServer implements MasterServices {
     configurationManager.registerObserver(this.regionsRecoveryConfigManager);
     // Set master as 'initialized'.
     setInitialized(true);
+
+    if (tableFamilyDesc == null && replBarrierFamilyDesc == null) {
+      // create missing CFs in meta table after master is set to 'initialized'.
+      createMissingCFsInMetaDuringUpgrade(metaDescriptor);
+
+      // Throwing this Exception to abort active master is painful but this
+      // seems the only way to add missing CFs in meta while upgrading from
+      // HBase 1 to 2 (where HBase 2 has HBASE-23055 & HBASE-23782 checked-in).
+      // So, why do we abort active master after adding missing CFs in meta?
+      // When we reach here, we would have already bypassed NoSuchColumnFamilyException
+      // in initClusterSchemaService(), meaning ClusterSchemaService is not
+      // correctly initialized but we bypassed it. Similarly, we bypassed
+      // tableStateManager.start() as well. Hence, we should better abort
+      // current active master because our main task - adding missing CFs
+      // in meta table is done (possible only after master state is set as
+      // initialized) at the expense of bypassing few important tasks as part
+      // of active master init routine. So now we abort active master so that
+      // next active master init will not face any issues and all mandatory
+      // services will be started during master init phase.
+      throw new PleaseRestartMasterException("Aborting active master after missing"
+          + " CFs are successfully added in meta. Subsequent active master "
+          + "initialization should be uninterrupted");
+    }
 
     if (maintenanceMode) {
       LOG.info("Detected repair mode, skipping final initialization steps.");
@@ -1110,6 +1154,38 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Balancer post startup initialization complete, took " + (
           (EnvironmentEdgeManager.currentTime() - start) / 1000) + " seconds");
+    }
+  }
+
+  private void createMissingCFsInMetaDuringUpgrade(
+      TableDescriptor metaDescriptor) throws IOException {
+    TableDescriptor newMetaDesc =
+        TableDescriptorBuilder.newBuilder(metaDescriptor)
+            .setColumnFamily(FSTableDescriptors.getTableFamilyDescForMeta(conf))
+            .setColumnFamily(FSTableDescriptors.getReplBarrierFamilyDescForMeta())
+            .build();
+    long pid = this.modifyTable(TableName.META_TABLE_NAME, () -> newMetaDesc,
+        0, 0, false);
+    int tries = 30;
+    while (!(getMasterProcedureExecutor().isFinished(pid))
+        && getMasterProcedureExecutor().isRunning() && tries > 0) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        throw new IOException("Wait interrupted", e);
+      }
+      tries--;
+    }
+    if (tries <= 0) {
+      throw new HBaseIOException(
+          "Failed to add table and rep_barrier CFs to meta in a given time.");
+    } else {
+      Procedure<?> result = getMasterProcedureExecutor().getResult(pid);
+      if (result != null && result.isFailed()) {
+        throw new IOException(
+            "Failed to add table and rep_barrier CFs to meta. "
+                + MasterProcedureUtil.unwrapRemoteIOException(result));
+      }
     }
   }
 

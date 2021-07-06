@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
@@ -1291,6 +1292,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
 
   private static IOError getIOError(Throwable throwable) {
     IOError error = new IOErrorWithCause(throwable);
+    error.setCanRetry(!(throwable instanceof DoNotRetryIOException));
     error.setMessage(Throwables.getStackTraceAsString(throwable));
     return error;
   }

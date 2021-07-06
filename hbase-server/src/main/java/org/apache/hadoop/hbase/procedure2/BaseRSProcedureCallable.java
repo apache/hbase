@@ -15,33 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.replication.regionserver;
+package org.apache.hadoop.hbase.procedure2;
 
-import java.io.IOException;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * A handler for modifying replication peer in peer procedures.
- */
 @InterfaceAudience.Private
-public interface PeerProcedureHandler {
+public abstract class BaseRSProcedureCallable implements RSProcedureCallable {
 
-  void addPeer(String peerId) throws ReplicationException, IOException;
+  protected HRegionServer rs;
 
-  void removePeer(String peerId) throws ReplicationException, IOException;
+  private Exception initError;
 
-  void disablePeer(String peerId) throws ReplicationException, IOException;
+  @Override
+  public final Void call() throws Exception {
+    if (initError != null) {
+      throw initError;
+    }
+    doCall();
+    return null;
+  }
 
-  void enablePeer(String peerId) throws ReplicationException, IOException;
+  @Override
+  public final void init(byte[] parameter, HRegionServer rs) {
+    this.rs = rs;
+    try {
+      initParameter(parameter);
+    } catch (Exception e) {
+      initError = e;
+    }
+  }
 
-  void updatePeerConfig(String peerId) throws ReplicationException, IOException;
+  protected abstract void doCall() throws Exception;
 
-  void transitSyncReplicationPeerState(String peerId, int stage, HRegionServer rs)
-      throws ReplicationException, IOException;
-
-  void claimReplicationQueue(ServerName crashedServer, String queue)
-    throws ReplicationException, IOException;
+  protected abstract void initParameter(byte[] parameter) throws Exception;
 }
