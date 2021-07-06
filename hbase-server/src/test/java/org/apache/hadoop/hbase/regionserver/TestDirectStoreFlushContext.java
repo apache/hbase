@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -38,14 +37,14 @@ import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
 
 /**
- * Test class for the TestPersistedStoreFlushContext
+ * Test class for DirectStoreFlushContext
  */
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestPersistedStoreFlushContext {
+public class TestDirectStoreFlushContext {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPersistedStoreFlushContext.class);
+    HBaseClassTestRule.forClass(TestDirectStoreFlushContext.class);
 
   @Rule
   public TestName name = new TestName();
@@ -63,7 +62,7 @@ public class TestPersistedStoreFlushContext {
     HStoreFile mockStoreFile = mock(HStoreFile.class);
     when(mockStoreFile.getReader()).thenReturn(mock(StoreFileReader.class));
     when(mockStore.createStoreFileAndReader(captor.capture())).thenReturn(mockStoreFile);
-    PersistedStoreFlushContext context = new PersistedStoreFlushContext(mockStore,
+    DirectStoreFlushContext context = new DirectStoreFlushContext(mockStore,
       0L, FlushLifeCycleTracker.DUMMY);
     context.tempFiles = new ArrayList<>();
     context.tempFiles.add(filePath);

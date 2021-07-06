@@ -53,14 +53,14 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test class for the TestPersistedStoreFlushContext
+ * Test class for DirectStoreFlusher
  */
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestPersistedEngineStoreFlusher {
+public class TestDirectStoreFlusher {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPersistedEngineStoreFlusher.class);
+    HBaseClassTestRule.forClass(TestDirectStoreFlusher.class);
 
   @Rule
   public TestName name = new TestName();
@@ -115,7 +115,7 @@ public class TestPersistedEngineStoreFlusher {
 
   @Test
   public void testCreateWriter() throws Exception {
-    PersistedEngineStoreFlusher flusher = new PersistedEngineStoreFlusher(config, mockStore);
+    DirectStoreFlusher flusher = new DirectStoreFlusher(config, mockStore);
     List<Path> files = flusher.flushSnapshot(mockSnapshot, 0, mock(MonitoredTask.class),
       null, FlushLifeCycleTracker.DUMMY);
     assertEquals(1, files.size());

@@ -431,7 +431,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return ttl;
   }
 
-  StoreContext getStoreContext() {
+  public StoreContext getStoreContext() {
     return storeContext;
   }
 
@@ -694,7 +694,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     refreshStoreSizeAndTotalBytes();
   }
 
-  protected HStoreFile createStoreFileAndReader(final Path p) throws IOException {
+  public HStoreFile createStoreFileAndReader(final Path p) throws IOException {
     StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(),
         p, isPrimaryReplicaStore());
     return createStoreFileAndReader(info);
@@ -1145,16 +1145,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       // if data blocks are to be cached on write
       // during compaction, we should forcefully
       // cache index and bloom blocks as well
-      if (cacheCompactedBlocksOnWrite && totalCompactedFilesSize <= cacheConf
-        .getCacheCompactedBlocksOnWriteThreshold()) {
-        writerCacheConf.enableCacheOnWrite();
+      if (writerCacheConf.enableCacheOnWriteForCompactions(totalCompactedFilesSize)) {
         if (!cacheOnWriteLogged) {
           LOG.info("For {} , cacheCompactedBlocksOnWrite is true, hence enabled " +
               "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks", this);
           cacheOnWriteLogged = true;
         }
       } else {
-        writerCacheConf.setCacheDataOnWrite(false);
         if (totalCompactedFilesSize > cacheConf.getCacheCompactedBlocksOnWriteThreshold()) {
           // checking condition once again for logging
           LOG.debug(
@@ -1192,7 +1189,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return builder.build();
   }
 
-  HFileContext createFileContext(Compression.Algorithm compression,
+  public HFileContext createFileContext(Compression.Algorithm compression,
     boolean includeMVCCReadpoint, boolean includesTag, Encryption.Context encryptionContext) {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
@@ -1508,7 +1505,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       List<Path> newFiles) throws IOException {
     // Do the steps necessary to complete the compaction.
     setStoragePolicyFromFileName(newFiles);
-    List<HStoreFile> sfs = moveCompactedFilesIntoPlace(cr, newFiles, user);
+    List<HStoreFile> sfs = this.storeEngine.compactor.commitCompaction(cr, newFiles, user);
     writeCompactionWalRecord(filesToCompact, sfs);
     replaceStoreFiles(filesToCompact, sfs);
     if (cr.isMajor()) {
@@ -1547,21 +1544,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
             newFile.getParent().getName().substring(prefix.length()));
       }
     }
-  }
-
-  private List<HStoreFile> moveCompactedFilesIntoPlace(CompactionRequestImpl cr,
-      List<Path> newFiles, User user) throws IOException {
-    List<HStoreFile> sfs = new ArrayList<>(newFiles.size());
-    for (Path newFile : newFiles) {
-      assert newFile != null;
-      HStoreFile sf = moveFileIntoPlace(newFile);
-      if (this.getCoprocessorHost() != null) {
-        getCoprocessorHost().postCompact(this, sf, cr.getTracker(), cr, user);
-      }
-      assert sf != null;
-      sfs.add(sf);
-    }
-    return sfs;
   }
 
   // Package-visible for tests
@@ -2014,7 +1996,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    * operation.
    * @param path the path to the store file
    */
-  private void validateStoreFile(Path path) throws IOException {
+  public void validateStoreFile(Path path) throws IOException {
     HStoreFile storeFile = null;
     try {
       storeFile = createStoreFileAndReader(path);
