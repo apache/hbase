@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -86,6 +87,8 @@ public class TestDirectStoreCompactor {
     when(mockStore.createFileContext(isNull(), anyBoolean(),
       anyBoolean(), isNull())).thenReturn(mockFileContext);
     when(mockStore.getHRegion()).thenReturn(mock(HRegion.class));
+    when(mockStore.getStoreContext()).thenReturn(new StoreContext.Builder().
+      withFavoredNodesSupplier(()-> null).build());
     ColumnFamilyDescriptor mockDesc = mock(ColumnFamilyDescriptor.class);
     when(mockDesc.getBloomFilterType()).thenReturn(BloomType.NONE);
     when(mockDesc.getNameAsString()).thenReturn(cfName);
