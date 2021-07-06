@@ -244,6 +244,14 @@ public interface TableDescriptor {
   boolean isCompactionEnabled();
 
   /**
+   * Check if the compaction offload enable flag of the table is true. If flag is true then
+   * compaction will be done with offload strategy(run on CompactionServer). Otherwise, with
+   * embedded strategy (run on RegionServer)
+   * @return true if table compaction offload enabled
+   */
+  boolean isCompactionOffloadEnabled();
+
+  /**
    * Check if the split enable flag of the table is true. If flag is false
    * then no region split will be done.
    *
