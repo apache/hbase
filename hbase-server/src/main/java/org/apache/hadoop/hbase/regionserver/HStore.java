@@ -1747,64 +1747,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
   }
 
-  /**
-   * This method tries to compact N recent files for testing.
-   * Note that because compacting "recent" files only makes sense for some policies,
-   * e.g. the default one, it assumes default policy is used. It doesn't use policy,
-   * but instead makes a compaction candidate list by itself.
-   * @param N Number of files.
-   */
-  public void compactRecentForTestingAssumingDefaultPolicy(int N) throws IOException {
-    List<HStoreFile> filesToCompact;
-    boolean isMajor;
-
-    this.lock.readLock().lock();
-    try {
-      synchronized (filesCompacting) {
-        filesToCompact = Lists.newArrayList(storeEngine.getStoreFileManager().getStorefiles());
-        if (!filesCompacting.isEmpty()) {
-          // exclude all files older than the newest file we're currently
-          // compacting. this allows us to preserve contiguity (HBASE-2856)
-          HStoreFile last = filesCompacting.get(filesCompacting.size() - 1);
-          int idx = filesToCompact.indexOf(last);
-          Preconditions.checkArgument(idx != -1);
-          filesToCompact.subList(0, idx + 1).clear();
-        }
-        int count = filesToCompact.size();
-        if (N > count) {
-          throw new RuntimeException("Not enough files");
-        }
-
-        filesToCompact = filesToCompact.subList(count - N, count);
-        isMajor = (filesToCompact.size() == storeEngine.getStoreFileManager().getStorefileCount());
-        filesCompacting.addAll(filesToCompact);
-        Collections.sort(filesCompacting, storeEngine.getStoreFileManager()
-            .getStoreFileComparator());
-      }
-    } finally {
-      this.lock.readLock().unlock();
-    }
-
-    try {
-      // Ready to go. Have list of files to compact.
-      List<Path> newFiles = ((DefaultCompactor)this.storeEngine.getCompactor())
-          .compactForTesting(filesToCompact, isMajor);
-      for (Path newFile: newFiles) {
-        // Move the compaction into place.
-        HStoreFile sf = moveFileIntoPlace(newFile);
-        if (this.getCoprocessorHost() != null) {
-          this.getCoprocessorHost().postCompact(this, sf, null, null, null);
-        }
-        replaceStoreFiles(filesToCompact, Collections.singletonList(sf));
-        refreshStoreSizeAndTotalBytes();
-      }
-    } finally {
-      synchronized (filesCompacting) {
-        filesCompacting.removeAll(filesToCompact);
-      }
-    }
-  }
-
   @Override
   public boolean hasReferences() {
     // Grab the read lock here, because we need to ensure that: only when the atomic
