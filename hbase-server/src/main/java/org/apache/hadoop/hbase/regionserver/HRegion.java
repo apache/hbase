@@ -4069,11 +4069,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           Cell newCell;
           if (mutation instanceof Increment) {
             long deltaAmount = getLongValue(delta);
-            final long newValue = currentValue == null ? deltaAmount : getLongValue(currentValue) + deltaAmount;
-            newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation, (oldCell) -> Bytes.toBytes(newValue));
+            final long newValue = currentValue == null ? deltaAmount :
+              getLongValue(currentValue) + deltaAmount;
+            newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation,
+              (oldCell) -> Bytes.toBytes(newValue));
           } else {
             newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation,
-              (oldCell) -> ByteBuffer.wrap(new byte[delta.getValueLength() + oldCell.getValueLength()])
+              (oldCell) -> ByteBuffer.wrap(new byte[delta.getValueLength() +
+                oldCell.getValueLength()])
                 .put(oldCell.getValueArray(), oldCell.getValueOffset(), oldCell.getValueLength())
                 .put(delta.getValueArray(), delta.getValueOffset(), delta.getValueLength())
                 .array());
@@ -4082,7 +4085,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             int newCellSize = PrivateCellUtil.estimatedSerializedSizeOf(newCell);
             if (newCellSize > region.maxCellSize) {
               String msg =
-                "Cell with size " + newCellSize + " exceeds limit of " + region.maxCellSize + " bytes in region " + this;
+                "Cell with size " + newCellSize + " exceeds limit of " + region.maxCellSize +
+                  " bytes in region " + this;
               LOG.debug(msg);
               throw new DoNotRetryIOException(msg);
             }
@@ -7550,9 +7554,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       () -> createRegionSpan("Region.get"));
   }
 
-  /**
-   * This method will return onheap cells, for more details, please see HBASE-26036.
-   */
   private List<Cell> getInternal(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
     throws IOException {
     List<Cell> results = new ArrayList<>();
@@ -7572,7 +7573,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try (RegionScanner scanner = getScanner(scan, null, nonceGroup, nonce)) {
       List<Cell> tmp = new ArrayList<>();
       scanner.next(tmp);
-      // copy EC to heap, then close the scanner
+      // Copy EC to heap, then close the scanner.
+      // This can be an EXPENSIVE call. It may make an extra copy from offheap to onheap buffers.
+      // See more details in HBASE-26036.
       for (Cell cell : tmp) {
         results.add(cell instanceof ByteBufferExtendedCell ?
           ((ByteBufferExtendedCell) cell).deepClone(): cell);

@@ -409,7 +409,8 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
         return;
       }
       if (result.size() > get.getMaxVersions()) {
-        throw new RuntimeException("Unexpected size: " + result.size() + ". Results more than the max versions obtained.");
+        throw new RuntimeException("Unexpected size: " + result.size() +
+          ". Results more than the max versions obtained.");
       }
       Cell getCell = result.get(get.getMaxVersions() - 1);
       PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
