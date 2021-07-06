@@ -182,6 +182,7 @@
                           <include>FS.proto</include>
                           <include>Filter.proto</include>
                           <include>HBase.proto</include>
+                          <include>HBase-1.7-TableSerialization-Compatibility.proto</include>
                           <include>HFile.proto</include>
                           <include>LoadBalancer.proto</include>
                           <include>MapReduce.proto</include>

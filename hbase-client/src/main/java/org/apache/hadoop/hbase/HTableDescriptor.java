@@ -1707,11 +1707,15 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     try {
       ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
       ts = builder.build();
-    } catch (IOException e) {
+      return convert(ts);
+    } catch (IOException | IllegalArgumentException e) {
+      // Deserialization may not fail but can return garbage that fails eventual validations and
+      // hence IAE.
       throw new DeserializationException(e);
     }
-    return convert(ts);
   }
+
+
 
   /**
    * @return Convert the current {@link HTableDescriptor} into a pb TableSchema instance.
