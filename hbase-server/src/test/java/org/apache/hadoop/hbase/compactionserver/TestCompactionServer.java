@@ -17,22 +17,38 @@
  */
 package org.apache.hadoop.hbase.compactionserver;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.compaction.CompactionOffloadManager;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.CompactionServerTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -42,6 +58,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 @Category({CompactionServerTests.class, MediumTests.class})
 public class TestCompactionServer {
@@ -87,18 +104,147 @@ public class TestCompactionServer {
     TEST_UTIL.deleteTableIfAny(TABLENAME);
   }
 
+  private void doPutRecord(int start, int end, boolean flush) throws Exception {
+    Table h = TEST_UTIL.getConnection().getTable(TABLENAME);
+    for (int i = start; i <= end; i++) {
+      Put p = new Put(Bytes.toBytes(i));
+      p.addColumn(Bytes.toBytes(FAMILY), Bytes.toBytes(COL), Bytes.toBytes(i));
+      h.put(p);
+      if (i % 100 == 0 && flush) {
+        TEST_UTIL.flush(TABLENAME);
+      }
+    }
+    h.close();
+  }
+
+  private void doFillRecord(int start, int end, byte[] value) throws Exception {
+    Table h = TEST_UTIL.getConnection().getTable(TABLENAME);
+    for (int i = start; i <= end; i++) {
+      Put p = new Put(Bytes.toBytes(i));
+      p.addColumn(Bytes.toBytes(FAMILY), Bytes.toBytes(COL), value);
+      h.put(p);
+    }
+    h.close();
+  }
+
+  private void verifyRecord(int start, int end, boolean exist) throws Exception {
+    Table h = TEST_UTIL.getConnection().getTable(TABLENAME);
+    for (int i = start; i <= end; i++) {
+      Get get = new Get(Bytes.toBytes(i));
+      Result r = h.get(get);
+      if (exist) {
+        assertArrayEquals(Bytes.toBytes(i), r.getValue(Bytes.toBytes(FAMILY), Bytes.toBytes(COL)));
+      } else {
+        assertNull(r.getValue(Bytes.toBytes(FAMILY), Bytes.toBytes(COL)));
+      }
+    }
+    h.close();
+  }
+
+  @Test
+  public void testCompaction() throws Exception {
+    TEST_UTIL.getAdmin().compactionSwitch(false, new ArrayList<>());
+    doPutRecord(1, 1000, true);
+    int hFileCount = 0;
+    for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
+      hFileCount += region.getStore(Bytes.toBytes(FAMILY)).getStorefilesCount();
+    }
+    assertEquals(10, hFileCount);
+    TEST_UTIL.getAdmin().compactionSwitch(true, new ArrayList<>());
+    TEST_UTIL.compact(TABLENAME, true);
+    Thread.sleep(5000);
+    TEST_UTIL.waitFor(60000,
+      () -> COMPACTION_SERVER.requestCount.sum() > 0 && COMPACTION_SERVER.compactionThreadManager
+          .getRunningCompactionTasks().values().size() == 0);
+    hFileCount = 0;
+    for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
+      hFileCount += region.getStore(Bytes.toBytes(FAMILY)).getStorefilesCount();
+    }
+    assertEquals(1, hFileCount);
+    verifyRecord(1, 1000, true);
+  }
+
+  @Test
+  public void testCompactionWithVersions() throws Exception {
+    TEST_UTIL.getAdmin().compactionSwitch(false, new ArrayList<>());
+    ColumnFamilyDescriptor cfd =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).setMaxVersions(3).build();
+    TableDescriptor modifiedtableDescriptor =
+        TableDescriptorBuilder.newBuilder(TABLENAME).setColumnFamily(cfd).build();
+    TEST_UTIL.getAdmin().modifyTable(modifiedtableDescriptor);
+    TEST_UTIL.waitTableAvailable(TABLENAME);
+    doFillRecord(1, 500, RandomUtils.nextBytes(20));
+    doFillRecord(1, 500, RandomUtils.nextBytes(20));
+    doFillRecord(1, 500, RandomUtils.nextBytes(20));
+    TEST_UTIL.flush(TABLENAME);
+    doPutRecord(1, 500, true);
+
+    int kVCount = 0;
+    for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
+      for (HStoreFile hStoreFile : region.getStore(Bytes.toBytes(FAMILY)).getStorefiles()) {
+        kVCount += hStoreFile.getReader().getHFileReader().getTrailer().getEntryCount();
+      }
+    }
+    assertEquals(2000, kVCount);
+    TEST_UTIL.getAdmin().compactionSwitch(true, new ArrayList<>());
+    TEST_UTIL.compact(TABLENAME, true);
+
+    TEST_UTIL.waitFor(60000, () -> {
+      int hFileCount = 0;
+      for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
+        hFileCount += region.getStore(Bytes.toBytes(FAMILY)).getStorefilesCount();
+
+      }
+      return hFileCount == 1;
+    });
+
+    kVCount = 0;
+    for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
+      for (HStoreFile hStoreFile : region.getStore(Bytes.toBytes(FAMILY)).getStorefiles()) {
+        kVCount += hStoreFile.getReader().getHFileReader().getTrailer().getEntryCount();
+      }
+    }
+    assertEquals(1500, kVCount);
+    verifyRecord(1, 500, true);
+  }
+
+
+  @Test
+  public void testCompactionServerDown() throws Exception {
+    TEST_UTIL.getAdmin().compactionSwitch(false, new ArrayList<>());
+    COMPACTION_SERVER.stop("test");
+    TEST_UTIL.waitFor(60000,
+      () -> MASTER.getCompactionOffloadManager().getOnlineServersList().size() == 0);
+    doPutRecord(1, 1000, true);
+    int hFileCount = 0;
+    for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
+      hFileCount += region.getStore(Bytes.toBytes(FAMILY)).getStorefilesCount();
+    }
+    assertEquals(10, hFileCount);
+    TEST_UTIL.getAdmin().compactionSwitch(true, new ArrayList<>());
+    TEST_UTIL.compact(TABLENAME, true);
+    Thread.sleep(5000);
+    TEST_UTIL.waitFor(60000, () -> {
+      int hFile = 0;
+      for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
+        hFile += region.getStore(Bytes.toBytes(FAMILY)).getStorefilesCount();
+      }
+      return hFile == 1;
+    });
+    verifyRecord(1, 1000, true);
+  }
 
   @Test
   public void testCompactionServerReport() throws Exception {
     CompactionOffloadManager compactionOffloadManager = MASTER.getCompactionOffloadManager();
     TEST_UTIL.waitFor(60000, () -> !compactionOffloadManager.getOnlineServers().isEmpty()
-      && null != compactionOffloadManager.getOnlineServers().get(COMPACTION_SERVER_NAME));
+        && null != compactionOffloadManager.getOnlineServers().get(COMPACTION_SERVER_NAME));
     // invoke compact
     TEST_UTIL.compact(TABLENAME, false);
     TEST_UTIL.waitFor(60000,
-      () -> COMPACTION_SERVER.rpcServices.requestCount.sum() > 0
-        && COMPACTION_SERVER.rpcServices.requestCount.sum() == compactionOffloadManager
-        .getOnlineServers().get(COMPACTION_SERVER_NAME).getTotalNumberOfRequests());
+      () -> COMPACTION_SERVER.requestCount.sum() > 0
+          && COMPACTION_SERVER.requestCount.sum() == compactionOffloadManager.getOnlineServers()
+              .get(COMPACTION_SERVER_NAME).getTotalNumberOfRequests());
   }
 
   @Test

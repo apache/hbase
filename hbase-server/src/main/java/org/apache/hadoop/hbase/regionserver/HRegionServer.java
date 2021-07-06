@@ -327,8 +327,6 @@ public class HRegionServer extends AbstractServer implements
   // Instance of the hbase executor executorService.
   protected ExecutorService executorService;
 
-  private volatile boolean dataFsOk;
-  private HFileSystem dataFs;
   private HFileSystem walFs;
 
   // Go down hard. Used if file system becomes unavailable and also in
@@ -345,7 +343,6 @@ public class HRegionServer extends AbstractServer implements
   private boolean stopping = false;
   private volatile boolean killed = false;
   private volatile boolean shutDown = false;
-
 
   private Path dataRootDir;
   private Path walRootDir;
@@ -533,7 +530,6 @@ public class HRegionServer extends AbstractServer implements
     super(conf, "RegionServer"); // thread name
     TraceUtil.initTracer(conf);
     try {
-      this.dataFsOk = true;
       this.eventLoopGroupConfig = setupNetty(this.conf);
       MemorySizeUtil.checkForClusterFreeHeapMemoryLimit(this.conf);
       HFile.checkHFileVersion(this.conf);
@@ -2836,11 +2832,6 @@ public class HRegionServer extends AbstractServer implements
     return dataRootDir;
   }
 
-  @Override
-  public FileSystem getFileSystem() {
-    return dataFs;
-  }
-
   /**
    * @return {@code true} when the data file system is available, {@code false} otherwise.
    */
@@ -3279,24 +3270,6 @@ public class HRegionServer extends AbstractServer implements
         || msg.length() == 0 ? new IOException(t) : new IOException(msg, t));
   }
 
-  /**
-   * Checks to see if the file system is still accessible. If not, sets
-   * abortRequested and stopRequested
-   *
-   * @return false if file system is not available
-   */
-  boolean checkFileSystem() {
-    if (this.dataFsOk && this.dataFs != null) {
-      try {
-        FSUtils.checkFileSystemAvailable(this.dataFs);
-      } catch (IOException e) {
-        abort("File System not available", e);
-        this.dataFsOk = false;
-      }
-    }
-    return this.dataFsOk;
-  }
-
   @Override
   public void updateRegionFavoredNodesMapping(String encodedRegionName,
       List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
@@ -3503,6 +3476,12 @@ public class HRegionServer extends AbstractServer implements
         .build();
   }
 
+  /**
+   * @return the max compaction pressure of all stores on this regionserver. The value should be
+   *         greater than or equal to 0.0, and any value greater than 1.0 means we enter the
+   *         emergency state that some stores have too many store files.
+   * @see org.apache.hadoop.hbase.regionserver.Store#getCompactionPressure()
+   */
   @Override
   public double getCompactionPressure() {
     double max = 0;
@@ -3540,6 +3519,11 @@ public class HRegionServer extends AbstractServer implements
     return flushThroughputController;
   }
 
+  /**
+   * @return the flush pressure of all stores on this regionserver. The value should be greater than
+   *         or equal to 0.0, and any value greater than 1.0 means we enter the emergency state that
+   *         global memstore size already exceeds lower limit.
+   */
   @Override
   public double getFlushPressure() {
     if (getRegionServerAccounting() == null || cacheFlusher == null) {

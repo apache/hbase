@@ -19,11 +19,10 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.util.ReflectionUtils;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public final class CompactionThroughputControllerFactory {
@@ -45,7 +44,7 @@ public final class CompactionThroughputControllerFactory {
   private static final String DEPRECATED_NAME_OF_NO_LIMIT_THROUGHPUT_CONTROLLER_CLASS =
     "org.apache.hadoop.hbase.regionserver.compactions.NoLimitThroughputController";
 
-  public static ThroughputController create(RegionServerServices server,
+  public static ThroughputController create(ThroughputControllerService server,
       Configuration conf) {
     Class<? extends ThroughputController> clazz = getThroughputControllerClass(conf);
     ThroughputController controller = ReflectionUtils.newInstance(clazz, conf);

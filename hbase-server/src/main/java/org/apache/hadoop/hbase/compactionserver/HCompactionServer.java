@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.compactionserver;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AbstractServer;
@@ -27,7 +29,9 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -55,6 +59,11 @@ public class HCompactionServer extends AbstractServer {
   /** compaction server process name */
   public static final String COMPACTIONSERVER = "compactionserver";
   private static final Logger LOG = LoggerFactory.getLogger(HCompactionServer.class);
+  // Request counter.
+  final LongAdder requestCount = new LongAdder();
+  final LongAdder requestFailedCount = new LongAdder();
+  // ChoreService used to schedule tasks that we want to run periodically
+  private ChoreService choreService;
 
   @Override
   protected String getProcessName() {
@@ -68,14 +77,13 @@ public class HCompactionServer extends AbstractServer {
 
   @Override
   public ChoreService getChoreService() {
-    return null;
+    return choreService;
   }
 
   protected final CSRpcServices rpcServices;
 
   // Stub to do compaction server status calls against the master.
   private volatile CompactionServerStatusService.BlockingInterface cssStub;
-
   CompactionThreadManager compactionThreadManager;
   /**
    * Get the current master from ZooKeeper and open the RPC connection to it. To get a fresh
@@ -120,12 +128,14 @@ public class HCompactionServer extends AbstractServer {
     // login the server principal (if using secure Hadoop)
     login(userProvider, this.rpcServices.getIsa().getHostName());
     Superusers.initialize(conf);
+    this.dataFs = new HFileSystem(this.conf, true);
+    this.choreService = new ChoreService(getName(), true);
     this.compactionThreadManager = new CompactionThreadManager(conf, this);
     this.rpcServices.start();
   }
 
   @Override
-  protected CSRpcServices getRpcService(){
+  protected CSRpcServices getRpcService() {
     return rpcServices;
   }
 
@@ -138,9 +148,20 @@ public class HCompactionServer extends AbstractServer {
     long reportEndTime) {
     ClusterStatusProtos.CompactionServerLoad.Builder serverLoad =
       ClusterStatusProtos.CompactionServerLoad.newBuilder();
-    serverLoad.setCompactedCells(0);
-    serverLoad.setCompactingCells(0);
-    serverLoad.setTotalNumberOfRequests(rpcServices.requestCount.sum());
+    Collection<CompactionTask> tasks = compactionThreadManager.getRunningCompactionTasks().values();
+    long compactingCells = 0;
+    long compactedCells = 0;
+    for (CompactionTask compactionTask : tasks) {
+      serverLoad.addCompactionTasks(compactionTask.getTaskName());
+      CompactionProgress progress = compactionTask.getStore().getCompactionProgress();
+      if (progress != null) {
+        compactedCells += progress.getCurrentCompactedKvs();
+        compactingCells += progress.getTotalCompactingKVs();
+      }
+    }
+    serverLoad.setCompactedCells(compactedCells);
+    serverLoad.setCompactingCells(compactingCells);
+    serverLoad.setTotalNumberOfRequests(requestCount.sum());
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
     return serverLoad.build();
@@ -209,7 +230,7 @@ public class HCompactionServer extends AbstractServer {
       // We registered with the Master. Go into run mode.
       long lastMsg = System.currentTimeMillis();
       // The main run loop.
-      while (!isStopped()) {
+      while (!isStopped() && this.dataFsOk) {
         long now = System.currentTimeMillis();
         if ((now - lastMsg) >= msgInterval) {
           if (tryCompactionServerReport(lastMsg, now) && !online.get()) {
@@ -231,6 +252,16 @@ public class HCompactionServer extends AbstractServer {
         abort(prefix + t.getMessage(), t);
       }
     }
+    stopChores();
+    if (this.compactionThreadManager != null) {
+      this.compactionThreadManager.waitForStop();
+    }
+  }
+
+  private void stopChores() {
+    if (this.choreService != null) {
+      choreService.shutdown();
+    }
   }
 
   @Override
@@ -243,7 +274,6 @@ public class HCompactionServer extends AbstractServer {
     }
     stop(msg);
   }
-
 
   @Override
   public void stop(final String msg) {
