@@ -3031,6 +3031,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         && (opts.getCmdName().equals(RANDOM_READ) || opts.getCmdName().equals(RANDOM_SEEK_SCAN)))
         && opts.size != DEFAULT_OPTS.size
         && opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {
+	  //if rowsPerGB * opts.size exceed the max of int, throw RuntimeException
       if(Integer.MAX_VALUE / rowsPerGB < opts.size) {
         throw new RuntimeException("totalRows is larger than maximum of int");
       }
@@ -3045,6 +3046,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       opts.totalRows = (int) opts.size * rowsPerGB;
       opts.perClientRunRows = opts.totalRows / opts.numClientThreads;
     } else {
+	  //if opts.numClientThreads * opts.perClientRunRows exceed the max of int, throw RuntimeException
       if(Integer.MAX_VALUE / opts.numClientThreads < opts.perClientRunRows) {
         throw new RuntimeException("totalRows is larger than maximum of int");
       }
