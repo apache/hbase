@@ -51,7 +51,8 @@ public class TestBytes extends TestCase {
   private static void setUnsafe(boolean value) throws Exception {
     Field field = Bytes.class.getDeclaredField("UNSAFE_UNALIGNED");
     field.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
+
+    Field modifiersField = ReflectionUtils.getModifiersField();
     modifiersField.setAccessible(true);
     int oldModifiers = field.getModifiers();
     modifiersField.setInt(field, oldModifiers & ~Modifier.FINAL);
