@@ -85,6 +85,8 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test compaction framework and common functions
@@ -94,9 +96,12 @@ public class TestCompaction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompaction.class);
+    HBaseClassTestRule.forClass(TestCompaction.class);
 
-  @Rule public TestName name = new TestName();
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompaction.class);
+
+  @Rule
+  public TestName name = new TestName();
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected Configuration conf = UTIL.getConfiguration();
 
@@ -154,7 +159,6 @@ public class TestCompaction {
   /**
    * Verify that you can stop a long-running compaction
    * (used during RS shutdown)
-   * @throws Exception
    */
   @Test
   public void testInterruptCompactionBySize() throws Exception {
@@ -180,7 +184,7 @@ public class TestCompaction {
       }
 
       HRegion spyR = spy(r);
-      doAnswer(new Answer() {
+      doAnswer(new Answer<Object>() {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
           r.writestate.writesEnabled = false;
@@ -256,7 +260,7 @@ public class TestCompaction {
       }
 
       HRegion spyR = spy(r);
-      doAnswer(new Answer() {
+      doAnswer(new Answer<Object>() {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
           r.writestate.writesEnabled = false;
@@ -311,15 +315,14 @@ public class TestCompaction {
 
   private int count() throws IOException {
     int count = 0;
-    for (HStoreFile f: this.r.stores.
-        get(COLUMN_FAMILY_TEXT).getStorefiles()) {
+    for (HStoreFile f : this.r.stores.get(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       if (!scanner.seekTo()) {
         continue;
       }
       do {
         count++;
-      } while(scanner.next());
+      } while (scanner.next());
     }
     return count;
   }
@@ -344,7 +347,8 @@ public class TestCompaction {
 
     Collection<HStoreFile> storeFiles = store.getStorefiles();
     DefaultCompactor tool = (DefaultCompactor)store.storeEngine.getCompactor();
-    tool.compactForTesting(storeFiles, false);
+    CompactionRequestImpl request = new CompactionRequestImpl(storeFiles);
+    tool.compact(request, NoLimitThroughputController.INSTANCE, null);
 
     // Now lets corrupt the compacted file.
     FileSystem fs = store.getFileSystem();
@@ -363,7 +367,7 @@ public class TestCompaction {
       // in the 'tmp' directory;
       assertTrue(fs.exists(origPath));
       assertFalse(fs.exists(dstPath));
-      System.out.println("testCompactionWithCorruptResult Passed");
+      LOG.info("testCompactionWithCorruptResult Passed");
       return;
     }
     fail("testCompactionWithCorruptResult failed since no exception was" +
@@ -418,28 +422,27 @@ public class TestCompaction {
     Mockito.when(mockRegion.checkSplit()).
       thenThrow(new RuntimeException("Thrown intentionally by test!"));
 
-    MetricsRegionWrapper metricsWrapper = new MetricsRegionWrapperImpl(r);
+    try (MetricsRegionWrapperImpl metricsWrapper = new MetricsRegionWrapperImpl(r)) {
 
-    long preCompletedCount = metricsWrapper.getNumCompactionsCompleted();
-    long preFailedCount = metricsWrapper.getNumCompactionsFailed();
+      long preCompletedCount = metricsWrapper.getNumCompactionsCompleted();
+      long preFailedCount = metricsWrapper.getNumCompactionsFailed();
 
-    CountDownLatch latch = new CountDownLatch(1);
-    Tracker tracker = new Tracker(latch);
-    thread.requestCompaction(mockRegion, store, "test custom comapction", PRIORITY_USER,
-      tracker, null);
-    // wait for the latch to complete.
-    latch.await(120, TimeUnit.SECONDS);
+      CountDownLatch latch = new CountDownLatch(1);
+      Tracker tracker = new Tracker(latch);
+      thread.requestCompaction(mockRegion, store, "test custom comapction", PRIORITY_USER, tracker,
+        null);
+      // wait for the latch to complete.
+      latch.await(120, TimeUnit.SECONDS);
 
-    // compaction should have completed and been marked as failed due to error in split request
-    long postCompletedCount = metricsWrapper.getNumCompactionsCompleted();
-    long postFailedCount = metricsWrapper.getNumCompactionsFailed();
+      // compaction should have completed and been marked as failed due to error in split request
+      long postCompletedCount = metricsWrapper.getNumCompactionsCompleted();
+      long postFailedCount = metricsWrapper.getNumCompactionsFailed();
 
-    assertTrue("Completed count should have increased (pre=" + preCompletedCount +
-        ", post="+postCompletedCount+")",
-        postCompletedCount > preCompletedCount);
-    assertTrue("Failed count should have increased (pre=" + preFailedCount +
-        ", post=" + postFailedCount + ")",
-        postFailedCount > preFailedCount);
+      assertTrue("Completed count should have increased (pre=" + preCompletedCount + ", post=" +
+        postCompletedCount + ")", postCompletedCount > preCompletedCount);
+      assertTrue("Failed count should have increased (pre=" + preFailedCount + ", post=" +
+        postFailedCount + ")", postFailedCount > preFailedCount);
+    }
   }
 
   /**
