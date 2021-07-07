@@ -128,6 +128,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -2667,7 +2668,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       logDirField = TaskLog.class.getDeclaredField("LOG_DIR");
       logDirField.setAccessible(true);
 
-      Field modifiersField = Field.class.getDeclaredField("modifiers");
+      Field modifiersField = ReflectionUtils.getModifiersField();
       modifiersField.setAccessible(true);
       modifiersField.setInt(logDirField, logDirField.getModifiers() & ~Modifier.FINAL);
 
