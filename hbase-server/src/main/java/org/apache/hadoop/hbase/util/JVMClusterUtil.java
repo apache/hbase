@@ -294,12 +294,62 @@ public class JVMClusterUtil {
 
   }
 
+  private static <T extends Thread> boolean shutdown(final List<T> servers,
+      boolean wasInterrupted) {
+    final long maxTime = System.currentTimeMillis() + 30 * 1000;
+    // first try nicely.
+    for (Thread t : servers) {
+      long now = System.currentTimeMillis();
+      if (t.isAlive() && !wasInterrupted && now < maxTime) {
+        try {
+          t.join(maxTime - now);
+        } catch (InterruptedException e) {
+          LOG.info(
+            "Got InterruptedException on shutdown - " + "not waiting anymore on region server ends",
+            e);
+          wasInterrupted = true; // someone wants us to speed up.
+        }
+      }
+    }
+
+    // Let's try to interrupt the remaining threads if any.
+    for (int i = 0; i < 100; ++i) {
+      boolean atLeastOneLiveServer = false;
+      for (Thread t : servers) {
+        if (t.isAlive()) {
+          atLeastOneLiveServer = true;
+          try {
+            LOG.warn("{} remaining, give one more chance before interrupting",
+              t.getClass().getSimpleName());
+            t.join(1000);
+          } catch (InterruptedException e) {
+            wasInterrupted = true;
+          }
+        }
+      }
+      if (!atLeastOneLiveServer) break;
+      for (Thread t : servers) {
+        if (t.isAlive()) {
+          LOG.warn(
+            "{} taking too long to stop, interrupting; thread dump " + "if > 3 attempts: i=" + i,
+            t.getClass().getSimpleName());
+          if (i > 3) {
+            Threads.printThreadInfo(System.out, "Thread dump " + t.getName());
+          }
+          t.interrupt();
+        }
+      }
+    }
+    return wasInterrupted;
+  }
+
   /**
    * @param masters
    * @param regionservers
    */
   public static void shutdown(final List<MasterThread> masters,
-      final List<RegionServerThread> regionservers) {
+      final List<RegionServerThread> regionservers,
+      final List<CompactionServerThread> compactionServers) {
     LOG.debug("Shutting down HBase Cluster");
     if (masters != null) {
       // Do backups first.
@@ -335,51 +385,18 @@ public class JVMClusterUtil {
       }
     }
     boolean wasInterrupted = false;
-    final long maxTime = System.currentTimeMillis() + 30 * 1000;
     if (regionservers != null) {
-      // first try nicely.
       for (RegionServerThread t : regionservers) {
         t.getRegionServer().stop("Shutdown requested");
       }
-      for (RegionServerThread t : regionservers) {
-        long now = System.currentTimeMillis();
-        if (t.isAlive() && !wasInterrupted && now < maxTime) {
-          try {
-            t.join(maxTime - now);
-          } catch (InterruptedException e) {
-            LOG.info("Got InterruptedException on shutdown - " +
-                "not waiting anymore on region server ends", e);
-            wasInterrupted = true; // someone wants us to speed up.
-          }
-        }
+      wasInterrupted = shutdown(regionservers, wasInterrupted);
+    }
+    if (compactionServers != null) {
+      // first try nicely.
+      for (CompactionServerThread t : compactionServers) {
+        t.getCompactionServer().stop("Shutdown requested");
       }
-
-      // Let's try to interrupt the remaining threads if any.
-      for (int i = 0; i < 100; ++i) {
-        boolean atLeastOneLiveServer = false;
-        for (RegionServerThread t : regionservers) {
-          if (t.isAlive()) {
-            atLeastOneLiveServer = true;
-            try {
-              LOG.warn("RegionServerThreads remaining, give one more chance before interrupting");
-              t.join(1000);
-            } catch (InterruptedException e) {
-              wasInterrupted = true;
-            }
-          }
-        }
-        if (!atLeastOneLiveServer) break;
-        for (RegionServerThread t : regionservers) {
-          if (t.isAlive()) {
-            LOG.warn("RegionServerThreads taking too long to stop, interrupting; thread dump "  +
-              "if > 3 attempts: i=" + i);
-            if (i > 3) {
-              Threads.printThreadInfo(System.out, "Thread dump " + t.getName());
-            }
-            t.interrupt();
-          }
-        }
-      }
+      wasInterrupted = shutdown(compactionServers, wasInterrupted);
     }
 
     if (masters != null) {
@@ -398,12 +415,14 @@ public class JVMClusterUtil {
         }
       }
     }
-    LOG.info("Shutdown of " +
-      ((masters != null) ? masters.size() : "0") + " master(s) and " +
-      ((regionservers != null) ? regionservers.size() : "0") +
-      " regionserver(s) " + (wasInterrupted ? "interrupted" : "complete"));
+    LOG.info("Shutdown of " + ((masters != null) ? masters.size() : "0") + " master(s) and "
+        + ((regionservers != null) ? regionservers.size() : "0") + " regionserver(s) "
+        + ((compactionServers != null) ? compactionServers.size() : "0") + " compactionServer(s) "
+        + (wasInterrupted ? "interrupted" : "complete")
 
-    if (wasInterrupted){
+    );
+
+    if (wasInterrupted) {
       Thread.currentThread().interrupt();
     }
   }

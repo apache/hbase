@@ -95,8 +95,12 @@ public class TestCompactionServer {
 
   @Before
   public void before() throws Exception {
-    TEST_UTIL.createTable(TABLENAME, FAMILY);
+    TableDescriptor tableDescriptor =
+        TableDescriptorBuilder.newBuilder(TABLENAME).setCompactionOffloadEnabled(true).build();
+    TEST_UTIL.createTable(tableDescriptor, Bytes.toByteArrays(FAMILY),
+      TEST_UTIL.getConfiguration());
     TEST_UTIL.waitTableAvailable(TABLENAME);
+    COMPACTION_SERVER.requestCount.reset();
   }
 
   @After
@@ -169,9 +173,9 @@ public class TestCompactionServer {
     TEST_UTIL.getAdmin().compactionSwitch(false, new ArrayList<>());
     ColumnFamilyDescriptor cfd =
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).setMaxVersions(3).build();
-    TableDescriptor modifiedtableDescriptor =
-        TableDescriptorBuilder.newBuilder(TABLENAME).setColumnFamily(cfd).build();
-    TEST_UTIL.getAdmin().modifyTable(modifiedtableDescriptor);
+    TableDescriptor modifiedTableDescriptor = TableDescriptorBuilder.newBuilder(TABLENAME)
+        .setColumnFamily(cfd).setCompactionOffloadEnabled(true).build();
+    TEST_UTIL.getAdmin().modifyTable(modifiedTableDescriptor);
     TEST_UTIL.waitTableAvailable(TABLENAME);
     doFillRecord(1, 500, RandomUtils.nextBytes(20));
     doFillRecord(1, 500, RandomUtils.nextBytes(20));
@@ -198,6 +202,8 @@ public class TestCompactionServer {
       return hFileCount == 1;
     });
 
+    // To ensure do compaction on compaction server
+    TEST_UTIL.waitFor(60000, () -> COMPACTION_SERVER.requestCount.sum() > 0);
     kVCount = 0;
     for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
       for (HStoreFile hStoreFile : region.getStore(Bytes.toBytes(FAMILY)).getStorefiles()) {
@@ -208,11 +214,11 @@ public class TestCompactionServer {
     verifyRecord(1, 500, true);
   }
 
-
   @Test
   public void testCompactionServerDown() throws Exception {
     TEST_UTIL.getAdmin().compactionSwitch(false, new ArrayList<>());
-    COMPACTION_SERVER.stop("test");
+    TEST_UTIL.getHBaseCluster().stopCompactionServer(0);
+    TEST_UTIL.getHBaseCluster().waitOnCompactionServer(0);
     TEST_UTIL.waitFor(60000,
       () -> MASTER.getCompactionOffloadManager().getOnlineServersList().size() == 0);
     doPutRecord(1, 1000, true);
@@ -232,6 +238,12 @@ public class TestCompactionServer {
       return hFile == 1;
     });
     verifyRecord(1, 1000, true);
+    TEST_UTIL.getHBaseCluster().startCompactionServer();
+    COMPACTION_SERVER = TEST_UTIL.getMiniHBaseCluster().getCompactionServerThreads().get(0)
+      .getCompactionServer();
+    COMPACTION_SERVER_NAME = COMPACTION_SERVER.getServerName();
+    TEST_UTIL.waitFor(60000,
+      () -> MASTER.getCompactionOffloadManager().getOnlineServersList().size() == 1);
   }
 
   @Test
@@ -277,20 +289,20 @@ public class TestCompactionServer {
 
     TableDescriptor htd =
         TableDescriptorBuilder.newBuilder(TEST_UTIL.getAdmin().getDescriptor(TABLENAME))
-            .setCompactionOffloadEnabled(true).build();
+            .setCompactionOffloadEnabled(false).build();
+    TEST_UTIL.getAdmin().modifyTable(htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TABLENAME);
+    // invoke compact
+    TEST_UTIL.compact(TABLENAME, false);
+    Thread.sleep(1000);
+    TEST_UTIL.waitFor(6000, () -> COMPACTION_SERVER.requestCount.sum() == 0);
+
+    htd = TableDescriptorBuilder.newBuilder(TEST_UTIL.getAdmin().getDescriptor(TABLENAME))
+        .setCompactionOffloadEnabled(true).build();
     TEST_UTIL.getAdmin().modifyTable(htd);
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLENAME);
     // invoke compact
     TEST_UTIL.compact(TABLENAME, false);
     TEST_UTIL.waitFor(6000, () -> COMPACTION_SERVER.requestCount.sum() > 0);
-    long requestCount = COMPACTION_SERVER.requestCount.sum();
-
-    htd = TableDescriptorBuilder.newBuilder(TEST_UTIL.getAdmin().getDescriptor(TABLENAME))
-        .setCompactionOffloadEnabled(false).build();
-    TEST_UTIL.getAdmin().modifyTable(htd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(TABLENAME);
-    // invoke compact
-    TEST_UTIL.compact(TABLENAME, false);
-    TEST_UTIL.waitFor(6000, () -> COMPACTION_SERVER.requestCount.sum() == requestCount);
   }
 }
