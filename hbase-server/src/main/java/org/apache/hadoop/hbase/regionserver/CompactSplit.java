@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Optional;
@@ -794,11 +795,27 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   }
 
   public void clearLongCompactionsQueue() {
-    longCompactions.getQueue().clear();
+    removeFromFilesCompacting(longCompactions);
   }
 
   public void clearShortCompactionsQueue() {
-    shortCompactions.getQueue().clear();
+    removeFromFilesCompacting(shortCompactions);
+  }
+
+  private void removeFromFilesCompacting(ThreadPoolExecutor compactor) {
+    Iterator<Runnable> iter = compactor.getQueue().iterator();
+    while (iter.hasNext()) {
+      Runnable runnable = iter.next();
+      if (!(runnable instanceof CompactionRunner)) {
+        continue;
+      }
+      CompactionRunner runner = (CompactionRunner) runnable;
+      if (runner.compaction != null && runner.compaction.hasSelection()) {
+        Collection<HStoreFile> files = runner.compaction.getRequest().getFiles();
+        runner.store.removeFromCompactingFiles(files);
+        iter.remove();
+      }
+    }
   }
 
   public boolean isCompactionsEnabled() {
