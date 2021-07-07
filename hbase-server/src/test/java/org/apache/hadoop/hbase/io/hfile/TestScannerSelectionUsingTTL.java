@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -82,25 +81,18 @@ public class TestScannerSelectionUsingTTL {
 
   public final int numFreshFiles, totalNumFiles;
 
-  /** Whether we are specifying the exact files to compact */
-  private final boolean explicitCompaction;
-
   @Parameters
   public static Collection<Object[]> parameters() {
     List<Object[]> params = new ArrayList<>();
     for (int numFreshFiles = 1; numFreshFiles <= 3; ++numFreshFiles) {
-      for (boolean explicitCompaction : new boolean[] { false, true }) {
-        params.add(new Object[] { numFreshFiles, explicitCompaction });
-      }
+      params.add(new Object[] { numFreshFiles });
     }
     return params;
   }
 
-  public TestScannerSelectionUsingTTL(int numFreshFiles,
-      boolean explicitCompaction) {
+  public TestScannerSelectionUsingTTL(int numFreshFiles) {
     this.numFreshFiles = numFreshFiles;
     this.totalNumFiles = numFreshFiles + NUM_EXPIRED_FILES;
-    this.explicitCompaction = explicitCompaction;
   }
 
   @Test
@@ -152,13 +144,7 @@ public class TestScannerSelectionUsingTTL {
     Set<String> accessedFiles = cache.getCachedFileNamesForTest();
     LOG.debug("Files accessed during scan: " + accessedFiles);
 
-    // Exercise both compaction codepaths.
-    if (explicitCompaction) {
-      HStore store = region.getStore(FAMILY_BYTES);
-      store.compactRecentForTestingAssumingDefaultPolicy(totalNumFiles);
-    } else {
-      region.compact(false);
-    }
+    region.compact(false);
 
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
