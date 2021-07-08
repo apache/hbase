@@ -471,10 +471,10 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testClusterKeyWithTrailingSpace() throws Exception {
-      admin.addReplicationPeer(ID_ONE,
-        ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE + " ").build()).get();
-      String clusterKey = admin.getReplicationPeerConfig(ID_ONE).get().getClusterKey();
-      assertEquals(KEY_ONE, clusterKey);
+    admin.addReplicationPeer(ID_ONE,
+      ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE + " ").build()).get();
+    String clusterKey = admin.getReplicationPeerConfig(ID_ONE).get().getClusterKey();
+    assertEquals(KEY_ONE, clusterKey);
   }
 
   @Test
