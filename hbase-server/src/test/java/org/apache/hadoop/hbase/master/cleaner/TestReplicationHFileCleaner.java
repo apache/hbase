@@ -26,7 +26,6 @@ import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -122,6 +121,8 @@ public class TestReplicationHFileCleaner {
     } catch (IOException e) {
       LOG.warn("Failed to delete files recursively from path " + root);
     }
+    // Remove all HFileRefs (if any)
+    rq.removeHFileRefs(peerId, rq.getReplicableHFiles(peerId));
     rp.getPeerStorage().removePeer(peerId);
   }
 
@@ -147,7 +148,6 @@ public class TestReplicationHFileCleaner {
     assertFalse("Cleaner should not allow to delete this file as there is a hfile reference node "
         + "for it in the queue.",
       cleaner.isFileDeletable(fs.getFileStatus(file)));
-    rq.removeHFileRefs(peerId, Arrays.asList("testIsFileDeletableWithNoHFileRefs"));
   }
 
   @Test
