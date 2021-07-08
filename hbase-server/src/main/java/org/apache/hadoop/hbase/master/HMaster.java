@@ -163,6 +163,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EncryptionTest;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -760,11 +761,19 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
      * below after we determine if cluster startup or failover.
      */
 
+    // Repair any table descriptors from 1.7.0, if any. See HBASE-26021 for context.
+    // This should be done before Master FS init as the system tables could be with faulty
+    // serialization.
+    if (tableDescriptors instanceof FSTableDescriptors) {
+      ((FSTableDescriptors)tableDescriptors).repairHBase170TableDescriptors(zooKeeper);
+    }
+
     status.setStatus("Initializing Master file system");
 
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this, this);
+
 
     // enable table descriptors cache
     this.tableDescriptors.setCacheOn();

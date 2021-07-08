@@ -1,0 +1,56 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package hbase.pb;
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "HBase170CompatibilityProtos";
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+import "HBase.proto";
+import "Table.proto";
+
+/**
+  See HBASE-26021 for context. This exists because of an incompatible change committed to
+  HBase 1.7.0 release. This change was reverted in 1.7.1 but in order to provide an upgrade path
+  for the users who installed 1.7.0, we need to be able to read the serialized TableState
+  definitions from TableDescriptor objects and convert them in HBase 1.7.1 compatible definitions
+  for a smooth upgrade. Other than this use case, these proto definitions are not expected to be
+  used anywhere in the code.
+ */
+
+/** Denotes state of the table */
+message TableState {
+  // Table's current state
+  enum State {
+    ENABLED = 0;
+    DISABLED = 1;
+    DISABLING = 2;
+    ENABLING = 3;
+  }
+  // This is the table's state.
+  required State state = 1;
+  required TableName table = 2;
+  optional uint64 timestamp = 3;
+}
+
+/** On HDFS representation of table state. */
+message TableDescriptor {
+  required TableSchema schema = 1;
+  optional TableState.State state = 2 [ default = ENABLED ];
+}

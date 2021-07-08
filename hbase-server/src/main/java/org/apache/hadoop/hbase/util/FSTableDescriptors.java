@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.DeprecatedTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -45,6 +46,10 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Implementation of {@link TableDescriptors} that reads descriptors from the
@@ -500,16 +505,20 @@ public class FSTableDescriptors implements TableDescriptors {
    * @throws TableInfoMissingException if there is no descriptor
    */
   public static HTableDescriptor getTableDescriptorFromFs(FileSystem fs, Path tableDir,
-    boolean rewritePb)
-  throws IOException {
+    boolean rewritePb) throws IOException {
     FileStatus status = getTableInfoPath(fs, tableDir, false);
     if (status == null) {
       throw new TableInfoMissingException("No table descriptor file under " + tableDir);
     }
-    return readTableDescriptor(fs, status, rewritePb);
+    return readTableDescriptor(fs, status, rewritePb).first;
   }
 
-  private static HTableDescriptor readTableDescriptor(FileSystem fs, FileStatus status,
+  /**
+   * Reads the HTableDescriptor from FS. This handles any deprecated TableDescriptor objects from
+   * HBase 1.7.0's faulty serialization and rewrites them on fs. Returns the corresponding
+   * table's State so that caller can populate it back in ZK if needed.
+   */
+  private static Pair<HTableDescriptor, Table> readTableDescriptor(FileSystem fs, FileStatus status,
       boolean rewritePb) throws IOException {
     int len = Ints.checkedCast(status.getLen());
     byte [] content = new byte[len];
@@ -520,16 +529,23 @@ public class FSTableDescriptors implements TableDescriptors {
       fsDataInputStream.close();
     }
     HTableDescriptor htd = null;
+    // From deprecated TableDescriptor, if any. Null otherwise.
+    Table tableState = null;
     try {
       htd = HTableDescriptor.parseFrom(content);
     } catch (DeserializationException e) {
       // we have old HTableDescriptor here
       try {
-        HTableDescriptor ohtd = HTableDescriptor.parseFrom(content);
-        LOG.warn("Found old table descriptor, converting to new format for table " +
-          ohtd.getTableName());
-        htd = new HTableDescriptor(ohtd);
-        if (rewritePb) rewriteTableDescriptor(fs, status, htd);
+        DeprecatedTableDescriptor dtd = DeprecatedTableDescriptor.parseFrom(content);
+        htd = dtd.getHTableDescriptor();
+        tableState = dtd.getTableState();
+        LOG.warn("Found incompatible table descriptor from 1.7.0 version: "
+          + dtd.getHTableDescriptor().getTableName() + " state: " + tableState.getState().name());
+        if (rewritePb) {
+          LOG.warn("converting to new format for table " + htd.getTableName());
+          rewriteTableDescriptor(fs, status, htd);
+          rewritePb = false; // already rewritten
+        }
       } catch (DeserializationException e1) {
         throw new IOException("content=" + Bytes.toShort(content), e1);
       }
@@ -538,12 +554,11 @@ public class FSTableDescriptors implements TableDescriptors {
       // Convert the file over to be pb before leaving here.
       rewriteTableDescriptor(fs, status, htd);
     }
-    return htd;
+    return new Pair<>(htd, tableState);
   }
 
   private static void rewriteTableDescriptor(final FileSystem fs, final FileStatus status,
-    final HTableDescriptor td)
-  throws IOException {
+    final HTableDescriptor td) throws IOException {
     Path tableInfoDir = status.getPath().getParent();
     Path tableDir = tableInfoDir.getParent();
     writeTableDescriptor(fs, td, tableDir, status);
@@ -724,7 +739,7 @@ public class FSTableDescriptors implements TableDescriptors {
       LOG.debug("Current tableInfoPath = " + status.getPath());
       if (!forceCreation) {
         if (fs.exists(status.getPath()) && status.getLen() > 0) {
-          if (readTableDescriptor(fs, status, false).equals(htd)) {
+          if (readTableDescriptor(fs, status, false).first.equals(htd)) {
             LOG.debug("TableInfo already exists.. Skipping creation");
             return false;
           }
@@ -735,5 +750,41 @@ public class FSTableDescriptors implements TableDescriptors {
     return p != null;
   }
 
+  /**
+   * Reads all the table descriptors fs and populates any missing TableStates. Should be called once
+   * at HMaster bootstrap before calling any other FSDescriptors methods as they can potentially
+   * overwrite the descriptors states. Not thread safe.
+   */
+  public void repairHBase170TableDescriptors(final ZooKeeperWatcher zkw)
+      throws IOException, KeeperException {
+    LOG.info("Attempting to repair HBase 1.7.0 tables, if any.");
+    for (Path tableDir : FSUtils.getTableDirs(fs, rootdir)) {
+      FileStatus status = getTableInfoPath(fs, tableDir, false);
+      if (status == null) {
+        LOG.warn("No table descriptor file under " + tableDir);
+        continue;
+      }
+      // Read and rewrite the table descriptors from FS, if any.
+      Pair<HTableDescriptor, Table> result = readTableDescriptor(fs, status, true);
+      if (result.second == null) {
+        // No deprecated TableDescriptor
+        continue;
+      }
+      TableName tableName = result.first.getTableName();
+      Table tableState = result.second;
+      LOG.warn("Rewriting ZK Table state for table " + tableName);
+      // Tricky to plumb TSM here, so instead assume ZK based TSM as default and overwrite table
+      // state Znodes.
+      String znode = ZKUtil.joinZNode(zkw.tableZNode, tableName.getNameAsString());
+      if (ZKUtil.checkExists(zkw, znode) != -1) {
+        LOG.warn("Table state znode already exists for table: " + tableName + ". Ignoring.");
+        continue;
+      }
+      ZKUtil.createAndFailSilent(zkw, znode);
+      byte [] data = ProtobufUtil.prependPBMagic(tableState.toByteArray());
+      ZKUtil.setData(zkw, znode, data);
+      LOG.info("Repaired ZK table state for table: " + tableName);
+    }
+  }
 }
 
