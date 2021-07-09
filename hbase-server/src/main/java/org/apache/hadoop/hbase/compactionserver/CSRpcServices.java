@@ -96,12 +96,11 @@ public class CSRpcServices extends AbstractRpcServices
     ColumnFamilyDescriptor cfd = ProtobufUtil.toColumnFamilyDescriptor(request.getFamily());
     boolean major = request.getMajor();
     int priority = request.getPriority();
-    List<HBaseProtos.ServerName> favoredNodes = Collections.singletonList(request.getServer());
     LOG.info("Receive compaction request from {}", ProtobufUtil.toString(request));
-    CompactionTask compactionTask =
-        CompactionTask.newBuilder().setRsServerName(rsServerName).setRegionInfo(regionInfo)
-            .setColumnFamilyDescriptor(cfd).setRequestMajor(major).setPriority(priority)
-            .setFavoredNodes(favoredNodes).setSubmitTime(System.currentTimeMillis()).build();
+    CompactionTask compactionTask = CompactionTask.newBuilder().setRsServerName(rsServerName)
+        .setRegionInfo(regionInfo).setColumnFamilyDescriptor(cfd).setRequestMajor(major)
+        .setPriority(priority).setFavoredNodes(request.getFavoredNodesList())
+        .setSubmitTime(System.currentTimeMillis()).build();
     try {
       compactionServer.compactionThreadManager.requestCompaction(compactionTask);
       return CompactionProtos.CompactResponse.newBuilder().build();

@@ -344,12 +344,25 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   private InetSocketAddress[] getFavoredNodes() {
-    InetSocketAddress[] favoredNodes = null;
     if (region.getRegionServerServices() != null) {
-      favoredNodes = region.getRegionServerServices().getFavoredNodesForRegion(
-          region.getRegionInfo().getEncodedName());
+      return region.getRegionServerServices()
+          .getFavoredNodesForRegion(region.getRegionInfo().getEncodedName());
     }
     return favoredNodes;
+  }
+
+  // Favored nodes used by compaction offload
+  private InetSocketAddress[] favoredNodes = null;
+
+  public void setFavoredNodes(
+      List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
+    if (favoredNodes != null && favoredNodes.size() > 0) {
+      this.favoredNodes = new InetSocketAddress[favoredNodes.size()];
+      for (int i = 0; i < favoredNodes.size(); i++) {
+        this.favoredNodes[i] = InetSocketAddress.createUnresolved(favoredNodes.get(i).getHostName(),
+          favoredNodes.get(i).getPort());
+      }
+    }
   }
 
   /**
