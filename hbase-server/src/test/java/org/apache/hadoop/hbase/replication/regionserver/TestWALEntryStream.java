@@ -941,7 +941,7 @@ public class TestWALEntryStream {
       // Get the archived dir path for the first wal.
       Path archivePath = entryStream.getArchivedLog(emptyLogFile);
       // Make sure that the wal path is not the same as archived Dir path.
-      assertTrue(!emptyLogFile.toString().equals(archivePath.toString()));
+      assertNotEquals(emptyLogFile.toString(), archivePath.toString());
       assertTrue(fs.exists(archivePath));
       fs.truncate(archivePath, 0);
       // make sure the size of the wal file is 0.
