@@ -312,7 +312,7 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
     return false;
   }
 
-  private Path getArchivedLog(Path path) throws IOException {
+  Path getArchivedLog(Path path) throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
     Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     Path archivedLogLocation = new Path(oldLogDir, path.getName());

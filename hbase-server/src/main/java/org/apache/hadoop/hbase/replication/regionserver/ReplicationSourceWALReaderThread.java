@@ -309,9 +309,14 @@ public class ReplicationSourceWALReaderThread extends Thread {
     if (e.getCause() instanceof EOFException && (isRecoveredSource || queue.size() > 1)
         && conf.getBoolean("replication.source.eof.autorecovery", false)) {
       try {
-        if (fs.getFileStatus(queue.peek()).getLen() == 0) {
-          LOG.warn("Forcing removal of 0 length log in queue: " + queue.peek());
-          lastReadPath = queue.peek();
+        Path path = queue.peek();
+        if (!fs.exists(path)) {
+          // There is a chance that wal has moved to oldWALs directory, so look there also.
+          path = entryStream.getArchivedLog(path);
+        }
+        if (fs.getFileStatus(path).getLen() == 0) {
+          LOG.warn("Forcing removal of 0 length log in queue: " + path);
+          lastReadPath = path;
           logQueue.remove(walGroupId);
           lastReadPosition = 0;
 
