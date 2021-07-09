@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
@@ -916,5 +917,53 @@ public class TestWALEntryStream {
       assertNotNull(entryStream.next());
       assertEquals(0, logQueue.getMetrics().getUncleanlyClosedWALs());
     }
+  }
+
+  /**
+   * Tests that we handle EOFException properly if the wal has moved to oldWALs directory.
+   * @throws Exception exception
+   */
+  @Test
+  public void testEOFExceptionInOldWALsDirectory() throws Exception {
+    assertEquals(1, logQueue.getQueueSize(fakeWalGroupId));
+    FSHLog fsLog = (FSHLog)log;
+    Path emptyLogFile = fsLog.getCurrentFileName();
+    log.rollWriter(true);
+    // There will 2 logs in the queue.
+    assertEquals(2, logQueue.getQueueSize(fakeWalGroupId));
+
+    Configuration localConf = new Configuration(conf);
+    localConf.setInt("replication.source.maxretriesmultiplier", 1);
+    localConf.setBoolean("replication.source.eof.autorecovery", true);
+
+    try (WALEntryStream entryStream =
+      new WALEntryStream(logQueue, fs, localConf, logQueue.getMetrics(), fakeWalGroupId)) {
+      // Get the archived dir path for the first wal.
+      Path archivePath = entryStream.getArchivedLog(emptyLogFile);
+      // Make sure that the wal path is not the same as archived Dir path.
+      assertNotEquals(emptyLogFile.toString(), archivePath.toString());
+      assertTrue(fs.exists(archivePath));
+      fs.truncate(archivePath, 0);
+      // make sure the size of the wal file is 0.
+      assertEquals(0, fs.getFileStatus(archivePath).getLen());
+    }
+
+    ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    when(source.isPeerEnabled()).thenReturn(true);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
+
+    // Start the reader thread.
+    ReplicationSourceWALReaderThread readerThread =
+      new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), logQueue, 0,
+        fs, localConf, getDummyFilter(), logQueue.getMetrics(), source, fakeWalGroupId);
+    readerThread.start();
+    // Wait for the replication queue size to be 1. This means that we have handled
+    // 0 length wal from oldWALs directory.
+    Waiter.waitFor(conf, 10000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return logQueue.getQueueSize(fakeWalGroupId) == 1;
+      }
+    });
   }
 }

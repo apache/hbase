@@ -308,10 +308,15 @@ public class ReplicationSourceWALReaderThread extends Thread {
     // add current log to recovered source queue so it is safe to remove.
     if (e.getCause() instanceof EOFException && (isRecoveredSource || queue.size() > 1)
         && conf.getBoolean("replication.source.eof.autorecovery", false)) {
+      Path path = queue.peek();
       try {
-        if (fs.getFileStatus(queue.peek()).getLen() == 0) {
-          LOG.warn("Forcing removal of 0 length log in queue: " + queue.peek());
-          lastReadPath = queue.peek();
+        if (!fs.exists(path)) {
+          // There is a chance that wal has moved to oldWALs directory, so look there also.
+          path = entryStream.getArchivedLog(path);
+        }
+        if (fs.getFileStatus(path).getLen() == 0) {
+          LOG.warn("Forcing removal of 0 length log in queue: " + path);
+          lastReadPath = path;
           logQueue.remove(walGroupId);
           lastReadPosition = 0;
 
@@ -325,7 +330,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
           return true;
         }
       } catch (IOException ioe) {
-        LOG.warn("Couldn't get file length information about log " + queue.peek());
+        LOG.warn("Couldn't get file length information about log " + path, ioe);
       }
     }
 
