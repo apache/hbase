@@ -128,6 +128,13 @@ Previously, we tried to maintain dependency compatibility for the underly Hadoop
 |Operational Compatibility | N |N |Y
 |===
 
+[IMPORTANT]
+======
+HBase 1.7.0 release violated client-server wire compatibility guarantees and was subsequently
+withdrawn after the incompatibilities were reported and fixed in 1.7.1. If you are considering an
+upgrade to 1.7.x line, see <<upgrade1.7.x>>.
+======
+
 [[hbase.client.api.surface]]
 ==== HBase API Surface
 
@@ -798,6 +805,21 @@ To upgrade an existing HBase 1.x cluster, you should:
 * Upgrade Master roles first
 * Upgrade RegionServers
 * (Eventually) Upgrade Clients
+
+[[upgrade1.7.x]]
+=== Upgrading to 1.7.1+
+HBase release 1.7.0 introduced an incompatible table metadata serialization format that broke the
+minor release compatibility guarantees. The issue was reported in https://issues.apache.org/jira/browse/HBASE-26021[HBASE-26021] and the problematic serialization patch was reverted in
+HBase 1.7.1. Some important notes about 1.7.x upgrades below.
+
+* If you are considering an upgrade to 1.7.x version, skip 1.7.0 completely and upgrade to 1.7.1+
+version. 1.7.0 was withdrawn and removed from the Apache sites.
+* If you already installed a 1.7.0 cluster from scratch and are looking to migrate to 1.7.1+, you
+cannot follow the regular rolling upgrade procedures due to broken compatibility contracts.
+Instead shutdown the cluster and reboot with 1.7.1+ binaries. Newer versions detect any existing
+tables with incompatible serialization and rewrite them using the correct format at bootstrap.
+* If you are already on 1.7.1+ version, everything is good and no additional steps need to be
+performed.
 
 [[upgrade1.4]]
 === Upgrading from pre-1.4 to 1.4+
