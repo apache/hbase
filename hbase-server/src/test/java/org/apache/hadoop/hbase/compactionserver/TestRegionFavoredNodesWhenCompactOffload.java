@@ -16,6 +16,11 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.compactionserver;
+
+import java.net.InetSocketAddress;
+
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -26,16 +31,18 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-
-import java.net.InetSocketAddress;
 
 @Category({ CompactionServerTests.class, MediumTests.class })
 public class TestRegionFavoredNodesWhenCompactOffload extends TestRegionFavoredNodes {
   private static HCompactionServer COMPACTION_SERVER;
   private static final int FLUSHES = 10;
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestRegionFavoredNodesWhenCompactOffload.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
