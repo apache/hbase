@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * instead of 16000.
  *
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class LocalHBaseCluster {
   private static final Logger LOG = LoggerFactory.getLogger(LocalHBaseCluster.class);
   private final List<JVMClusterUtil.MasterThread> masterThreads = new CopyOnWriteArrayList<>();
