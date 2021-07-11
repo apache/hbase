@@ -325,7 +325,8 @@ class BalancerClusterState {
 
     for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
       for (int tableIdx = 0; tableIdx < aNumRegionsPerServerPerTable.length; tableIdx++) {
-        regionSkewByTable[tableIdx] += Math.abs(aNumRegionsPerServerPerTable[tableIdx] - meanRegionsPerTable[tableIdx]);
+        regionSkewByTable[tableIdx] += Math.abs(aNumRegionsPerServerPerTable[tableIdx]
+          - meanRegionsPerTable[tableIdx]);
       }
     }
 
