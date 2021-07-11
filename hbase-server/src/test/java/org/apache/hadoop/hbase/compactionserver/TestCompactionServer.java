@@ -294,7 +294,6 @@ public class TestCompactionServer {
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLENAME);
     // invoke compact
     TEST_UTIL.compact(TABLENAME, false);
-    Thread.sleep(1000);
     TEST_UTIL.waitFor(6000, () -> COMPACTION_SERVER.requestCount.sum() == 0);
 
     htd = TableDescriptorBuilder.newBuilder(TEST_UTIL.getAdmin().getDescriptor(TABLENAME))

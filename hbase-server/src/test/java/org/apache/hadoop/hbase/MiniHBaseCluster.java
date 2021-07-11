@@ -438,8 +438,6 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Starts a compaction server thread running
-   *
-   * @throws IOException
    * @return New CompactionServerThread
    */
   public JVMClusterUtil.CompactionServerThread startCompactionServer() throws IOException {
@@ -595,7 +593,6 @@ public class MiniHBaseCluster extends HBaseCluster {
   /**
    * Wait for the specified compaction server to stop. Removes this thread from list
    * of running threads.
-   * @param serverNumber
    * @return Name of compaction server that just went down.
    */
   public String waitOnCompactionServer(final int serverNumber) {

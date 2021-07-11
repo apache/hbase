@@ -175,9 +175,9 @@ public class LocalHBaseCluster {
       }
       // treat info ports special; expressly don't change '-1' (keep off)
       // in case we make that the default behavior.
-      if (conf.getInt(HConstants.COMPACTION_SERVER_INFO_PORT, 0) != -1 &&
-        conf.getInt(HConstants.COMPACTION_SERVER_INFO_PORT, HConstants.DEFAULT_COMPACTION_SERVER_INFOPORT)
-          == HConstants.DEFAULT_COMPACTION_SERVER_INFOPORT) {
+      if (conf.getInt(HConstants.COMPACTION_SERVER_INFO_PORT, 0) != -1 && conf.getInt(
+        HConstants.COMPACTION_SERVER_INFO_PORT, HConstants.DEFAULT_COMPACTION_SERVER_INFOPORT)
+        == HConstants.DEFAULT_COMPACTION_SERVER_INFOPORT) {
         LOG.debug("Setting CS InfoServer Port to random.");
         conf.set(HConstants.COMPACTION_SERVER_INFO_PORT, "0");
       }

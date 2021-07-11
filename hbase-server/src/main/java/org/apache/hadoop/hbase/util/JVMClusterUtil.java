@@ -327,7 +327,9 @@ public class JVMClusterUtil {
           }
         }
       }
-      if (!atLeastOneLiveServer) break;
+      if (!atLeastOneLiveServer) {
+        break;
+      }
       for (Thread t : servers) {
         if (t.isAlive()) {
           LOG.warn(
