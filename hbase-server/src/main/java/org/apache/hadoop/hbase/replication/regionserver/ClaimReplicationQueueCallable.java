@@ -17,63 +17,39 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerModificationType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RefreshPeerParameter;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ClaimReplicationQueueRemoteParameter;
 
-/**
- * The callable executed at RS side to refresh the peer config/state. <br/>
- */
 @InterfaceAudience.Private
-public class RefreshPeerCallable extends BaseRSProcedureCallable {
+public class ClaimReplicationQueueCallable extends BaseRSProcedureCallable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(RefreshPeerCallable.class);
+  private ServerName crashedServer;
 
-  private String peerId;
+  private String queue;
 
-  private PeerModificationType type;
+  @Override
+  public EventType getEventType() {
+    return EventType.RS_CLAIM_REPLICATION_QUEUE;
+  }
 
   @Override
   protected void doCall() throws Exception {
-    LOG.info("Received a peer change event, peerId=" + peerId + ", type=" + type);
     PeerProcedureHandler handler = rs.getReplicationSourceService().getPeerProcedureHandler();
-    switch (type) {
-      case ADD_PEER:
-        handler.addPeer(this.peerId);
-        break;
-      case REMOVE_PEER:
-        handler.removePeer(this.peerId);
-        break;
-      case ENABLE_PEER:
-        handler.enablePeer(this.peerId);
-        break;
-      case DISABLE_PEER:
-        handler.disablePeer(this.peerId);
-        break;
-      case UPDATE_PEER_CONFIG:
-        handler.updatePeerConfig(this.peerId);
-        break;
-      default:
-        throw new IllegalArgumentException("Unknown peer modification type: " + type);
-    }
+    handler.claimReplicationQueue(crashedServer, queue);
   }
 
   @Override
   protected void initParameter(byte[] parameter) throws InvalidProtocolBufferException {
-    RefreshPeerParameter param = RefreshPeerParameter.parseFrom(parameter);
-    this.peerId = param.getPeerId();
-    this.type = param.getType();
-  }
-
-  @Override
-  public EventType getEventType() {
-    return EventType.RS_REFRESH_PEER;
+    ClaimReplicationQueueRemoteParameter param =
+      ClaimReplicationQueueRemoteParameter.parseFrom(parameter);
+    crashedServer = ProtobufUtil.toServerName(param.getCrashedServer());
+    queue = param.getQueue();
   }
 }

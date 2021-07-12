@@ -2092,6 +2092,10 @@ public class HRegionServer extends Thread implements
         conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1);
     executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
         ExecutorType.RS_SWITCH_RPC_THROTTLE).setCorePoolSize(switchRpcThrottleThreads));
+    final int claimReplicationQueueThreads =
+      conf.getInt("hbase.regionserver.executor.claim.replication.queue.threads", 1);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_CLAIM_REPLICATION_QUEUE).setCorePoolSize(claimReplicationQueueThreads));
 
     Threads
       .setDaemonThreadRunning(this.walRoller, getName() + ".logRoller", uncaughtExceptionHandler);

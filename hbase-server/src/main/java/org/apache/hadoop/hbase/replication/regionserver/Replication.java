@@ -38,8 +38,6 @@ import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
-import org.apache.hadoop.hbase.replication.ReplicationTracker;
-import org.apache.hadoop.hbase.replication.ReplicationTrackerParams;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -64,7 +62,6 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   private ReplicationSourceManager replicationManager;
   private ReplicationQueueStorage queueStorage;
   private ReplicationPeers replicationPeers;
-  private ReplicationTracker replicationTracker;
   private Configuration conf;
   private ReplicationSink replicationSink;
   // Hosting server
@@ -111,10 +108,6 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
       this.replicationPeers =
           ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
-      this.replicationTracker = ReplicationFactory
-        .getReplicationTracker(ReplicationTrackerParams.create(server.getConfiguration(), server)
-          .abortable(server).zookeeper(server.getZooKeeper()).choreService(server.getChoreService())
-          .connection(server.getConnection()));
     } catch (Exception e) {
       throw new IOException("Failed replication handler create", e);
     }
@@ -126,9 +119,8 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     }
     this.globalMetricsSource = CompatibilitySingletonFactory
         .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
-    this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers,
-        replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId, walFactory,
-      globalMetricsSource);
+    this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers, conf,
+      this.server, fs, logDir, oldLogDir, clusterId, walFactory, globalMetricsSource);
     // Get the user-space WAL provider
     WALProvider walProvider = walFactory != null? walFactory.getWALProvider(): null;
     if (walProvider != null) {

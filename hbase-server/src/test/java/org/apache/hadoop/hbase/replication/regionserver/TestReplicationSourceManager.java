@@ -72,7 +72,6 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ZKReplicationPeerStorage;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -393,9 +392,7 @@ public abstract class TestReplicationSourceManager {
     ReplicationPeers rp1 =
         ReplicationFactory.getReplicationPeers(s1.getZooKeeper(), s1.getConfiguration());
     rp1.init();
-    NodeFailoverWorker w1 =
-        manager.new NodeFailoverWorker(server.getServerName());
-    w1.run();
+    manager.claimQueue(server.getServerName(), "1");
     assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
     String id = "1-" + server.getServerName().getServerName();
     assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id).get(group));
@@ -415,8 +412,7 @@ public abstract class TestReplicationSourceManager {
     rq.addWAL(server.getServerName(), "2", group + ".log1");
     rq.addWAL(server.getServerName(), "2", group + ".log2");
 
-    NodeFailoverWorker w1 = manager.new NodeFailoverWorker(server.getServerName());
-    w1.run();
+    manager.claimQueue(server.getServerName(), "2");
 
     // The log of the unknown peer should be removed from zk
     for (String peer : manager.getAllQueues()) {

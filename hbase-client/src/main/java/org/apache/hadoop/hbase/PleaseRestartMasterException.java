@@ -1,4 +1,5 @@
-/**
+/*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,24 +16,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+package org.apache.hadoop.hbase;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A factory class for instantiating replication objects that deal with replication state.
+ * Thrown if the master requires restart.
  */
-@InterfaceAudience.Private
-public final class ReplicationFactory {
+@InterfaceAudience.Public
+public class PleaseRestartMasterException extends HBaseIOException {
 
-  public static final String REPLICATION_TRACKER_IMPL = "hbase.replication.tracker.impl";
-
-  private ReplicationFactory() {
+  public PleaseRestartMasterException(final String s) {
+    super(s);
   }
 
-  public static ReplicationPeers getReplicationPeers(ZKWatcher zk, Configuration conf) {
-    return new ReplicationPeers(zk, conf);
-  }
 }

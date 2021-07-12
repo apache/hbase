@@ -22,12 +22,8 @@
   import="java.util.List"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.Admin"
-  import="org.apache.hadoop.hbase.client.SnapshotDescription"
-  import="org.apache.hadoop.hbase.http.InfoServer"
   import="org.apache.hadoop.hbase.master.HMaster"
-  import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
   import="org.apache.hadoop.util.StringUtils"
-  import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.client.ServerType"
   import="org.apache.hadoop.hbase.client.LogEntry"
   import="org.apache.hadoop.hbase.client.BalancerRejection"
@@ -55,7 +51,9 @@
 <div class="container-fluid content">
   <div class="row">
     <div class="page-header">
-    <h2>Named Queues</h2>
+    <h2>Operations Details</h2>
+    <p>HBase uses some fixed-size ring buffers to maintain rolling window history of specific server-side operation details.
+    This page list all operation details retrieve from these ring buffers</p>
     </div>
     </div>
 <div class="tabbable">
@@ -69,6 +67,7 @@
   </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
       <div class="tab-pane active" id="tab_named_queue1">
+      <p>Balancer Rejection explain why balancer is skipping runs and explain all factors considered</p>
         <table class="table table-striped">
           <tr>
             <th>Reason</th>
@@ -95,6 +94,7 @@
           </table>
       </div>
       <div class="tab-pane" id="tab_named_queue2">
+      <p>Balancer Decision displayed the history of decision(factor details and weights and costs) made by LoadBalancers</p>
           <table class="table table-striped">
             <tr>
               <th>Initial Function Costs</th>

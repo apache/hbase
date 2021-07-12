@@ -18,41 +18,30 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SwitchRpcThrottleRemoteStateData;
 
 /**
  * The callable executed at RS side to switch rpc throttle state. <br/>
  */
 @InterfaceAudience.Private
-public class SwitchRpcThrottleRemoteCallable implements RSProcedureCallable {
-  private HRegionServer rs;
+public class SwitchRpcThrottleRemoteCallable extends BaseRSProcedureCallable {
+
   private boolean rpcThrottleEnabled;
-  private Exception initError;
 
   @Override
-  public Void call() throws Exception {
-    if (initError != null) {
-      throw initError;
-    }
+  protected void doCall() throws Exception {
     rs.getRegionServerRpcQuotaManager().switchRpcThrottle(rpcThrottleEnabled);
-    return null;
   }
 
   @Override
-  public void init(byte[] parameter, HRegionServer rs) {
-    this.rs = rs;
-    try {
-      SwitchRpcThrottleRemoteStateData param =
-          SwitchRpcThrottleRemoteStateData.parseFrom(parameter);
-      rpcThrottleEnabled = param.getRpcThrottleEnabled();
-    } catch (InvalidProtocolBufferException e) {
-      initError = e;
-    }
+  protected void initParameter(byte[] parameter) throws InvalidProtocolBufferException {
+    SwitchRpcThrottleRemoteStateData param = SwitchRpcThrottleRemoteStateData.parseFrom(parameter);
+    rpcThrottleEnabled = param.getRpcThrottleEnabled();
   }
 
   @Override

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.fail;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Connection;
@@ -28,20 +27,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationKillRS extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationKillRS.class);
+public abstract class TestReplicationKillRS extends TestReplicationBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationKillRS.class);
 
@@ -49,7 +39,7 @@ public class TestReplicationKillRS extends TestReplicationBase {
    * Load up 1 tables over 2 region servers and kill a source during the upload. The failover
    * happens internally. WARNING this test sometimes fails because of HBASE-3515
    */
-  public void loadTableAndKillRS(HBaseTestingUtility util) throws Exception {
+  protected void loadTableAndKillRS(HBaseTestingUtility util) throws Exception {
     // killing the RS with hbase:meta can result into failed puts until we solve
     // IO fencing
     int rsToKill1 = util.getHBaseCluster().getServerWithMeta() == 0 ? 1 : 0;

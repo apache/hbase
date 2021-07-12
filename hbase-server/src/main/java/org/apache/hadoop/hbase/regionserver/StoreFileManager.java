@@ -32,12 +32,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
 
 /**
- * Manages the store files and basic metadata about that that determines the logical structure
- * (e.g. what files to return for scan, how to determine split point, and such).
- * Does NOT affect the physical structure of files in HDFS.
- * Example alternative structures - the default list of files by seqNum; levelDB one sorted
- * by level and seqNum.
- *
+ * Manages the store files and basic metadata about that that determines the logical structure (e.g.
+ * what files to return for scan, how to determine split point, and such). Does NOT affect the
+ * physical structure of files in HDFS. Example alternative structures - the default list of files
+ * by seqNum; levelDB one sorted by level and seqNum.
+ * <p/>
+ * Notice that, all the states are only in memory, we do not persist anything here. The only place
+ * where we throw an {@link IOException} is the {@link #getSplitPoint()} method, where we need to
+ * read startKey, endKey etc, which may lead to an {@link IOException}.
+ * <p/>
  * Implementations are assumed to be not thread safe.
  */
 @InterfaceAudience.Private
@@ -52,22 +55,20 @@ public interface StoreFileManager {
    * Adds new files, either for from MemStore flush or bulk insert, into the structure.
    * @param sfs New store files.
    */
-  void insertNewFiles(Collection<HStoreFile> sfs) throws IOException;
+  void insertNewFiles(Collection<HStoreFile> sfs);
 
   /**
    * Adds only the new compaction results into the structure.
    * @param compactedFiles The input files for the compaction.
    * @param results The resulting files for the compaction.
    */
-  void addCompactionResults(
-      Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results) throws IOException;
+  void addCompactionResults(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results);
 
   /**
    * Remove the compacted files
    * @param compactedFiles the list of compacted files
-   * @throws IOException
    */
-  void removeCompactedFiles(Collection<HStoreFile> compactedFiles) throws IOException;
+  void removeCompactedFiles(Collection<HStoreFile> compactedFiles);
 
   /**
    * Clears all the files currently in use and returns them.
@@ -145,7 +146,6 @@ public interface StoreFileManager {
   /**
    * Gets the split point for the split of this set of store files (approx. middle).
    * @return The mid-point if possible.
-   * @throws IOException
    */
   Optional<byte[]> getSplitPoint() throws IOException;
 

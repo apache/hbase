@@ -53,6 +53,7 @@
             <li><a href="/rs-status">Home</a></li>
             <li><a href="/processRS.jsp">Process Metrics</a></li>
             <li><a href="/logs/">Local Logs</a></li>
+            <li><a href="/rsOperationDetails.jsp">Operation Details</a></li>
             <li><a href="/logLevel">Log Level</a></li>
             <li><a href="/dump">Debug Dump</a></li>
             <li><a href="/jmx">Metrics Dump</a></li>

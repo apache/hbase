@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,35 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.replication;
+package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.FSHLogProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Runs the TestReplicationKillRS test and selects the RS to kill in the slave cluster Do not add
- * other tests in this class.
+ * TestBasicWALEntryStream with {@link FSHLogProvider} as the WAL provider.
  */
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationKillSlaveRS extends TestReplicationKillRS {
+@Category({ ReplicationTests.class, MediumTests.class })
+public class TestBasicWALEntryStreamFSHLog extends TestBasicWALEntryStream {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationKillSlaveRS.class);
+    HBaseClassTestRule.forClass(TestBasicWALEntryStreamFSHLog.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    NUM_SLAVES2 = 2;
-    TestReplicationBase.setUpBeforeClass();
-  }
-
-  @Test
-  public void killOneSlaveRS() throws Exception {
-    loadTableAndKillRS(UTIL2);
+    TEST_UTIL.getConfiguration().setClass(WALFactory.WAL_PROVIDER, FSHLogProvider.class,
+      AbstractFSWALProvider.class);
+    startCluster();
   }
 }

@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -38,4 +38,7 @@ public interface PeerProcedureHandler {
   public void enablePeer(String peerId) throws ReplicationException, IOException;
 
   public void updatePeerConfig(String peerId) throws ReplicationException, IOException;
+
+  void claimReplicationQueue(ServerName crashedServer, String queue)
+    throws ReplicationException, IOException;
 }
