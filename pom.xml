@@ -667,6 +667,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>zhaobaiqiang</id>
+      <name>Baiqiang Zhao</name>
+      <email>zhaobaiqiang@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>zjushch</id>
       <name>Chunhui Shen</name>
       <email>zjushch@apache.org</email>
