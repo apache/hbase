@@ -74,6 +74,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  *
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+  justification="Complaint is about isByTable not being synchronized; we don't modify often")
 public abstract class BaseLoadBalancer implements LoadBalancer {
 
   public static final String BALANCER_DECISION_BUFFER_ENABLED =
