@@ -75,7 +75,6 @@ public class BalancerTestBase {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
     loadBalancer = new StochasticLoadBalancer();
     MasterServices services = mock(MasterServices.class);
     when(services.getConfiguration()).thenReturn(conf);
