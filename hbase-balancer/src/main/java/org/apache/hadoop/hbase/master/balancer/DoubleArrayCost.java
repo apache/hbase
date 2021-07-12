@@ -91,6 +91,7 @@ final class DoubleArrayCost {
 
   /**
    * Return the min skew of distribution
+   * @param total is total number of regions
    */
   public static double getMinSkew(double total, double numServers) {
     double mean = total / numServers;

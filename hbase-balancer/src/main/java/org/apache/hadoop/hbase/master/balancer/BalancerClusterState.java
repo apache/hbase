@@ -294,7 +294,7 @@ class BalancerClusterState {
     }
 
     numTables = tables.size();
-    LOG.debug("number of tables = {}", numTables);
+    LOG.debug("Number of tables={}", numTables);
     numRegionsPerServerPerTable = new int[numServers][numTables];
     numRegionsPerTable = new int[numTables];
 
@@ -325,8 +325,8 @@ class BalancerClusterState {
 
     for (int[] aNumRegionsPerServerPerTable : numRegionsPerServerPerTable) {
       for (int tableIdx = 0; tableIdx < aNumRegionsPerServerPerTable.length; tableIdx++) {
-        regionSkewByTable[tableIdx] += Math.abs(aNumRegionsPerServerPerTable[tableIdx]
-          - meanRegionsPerTable[tableIdx]);
+        regionSkewByTable[tableIdx] += Math.abs(aNumRegionsPerServerPerTable[tableIdx] -
+          meanRegionsPerTable[tableIdx]);
       }
     }
 
@@ -689,20 +689,12 @@ class BalancerClusterState {
     if (oldServer >= 0) {
       numRegionsPerServerPerTable[oldServer][tableIndex]--;
       // update regionSkewPerTable for the move from old server
-      regionSkewByTable[tableIndex] +=
-        Math.abs(numRegionsPerServerPerTable[oldServer][tableIndex]
-          - meanRegionsPerTable[tableIndex])
-          - Math.abs(numRegionsPerServerPerTable[oldServer][tableIndex] + 1
-          - meanRegionsPerTable[tableIndex]);
+      regionSkewByTable[tableIndex] += getSkewChangeFor(oldServer, tableIndex, -1);
     }
     numRegionsPerServerPerTable[newServer][tableIndex]++;
 
     // update regionSkewPerTable for the move to new server
-    regionSkewByTable[tableIndex] +=
-      Math.abs(numRegionsPerServerPerTable[newServer][tableIndex]
-        - meanRegionsPerTable[tableIndex])
-        - Math.abs(numRegionsPerServerPerTable[newServer][tableIndex] - 1
-        - meanRegionsPerTable[tableIndex]);
+    regionSkewByTable[tableIndex] += getSkewChangeFor(newServer, tableIndex, 1);
 
     // update for servers
     int primary = regionIndexToPrimaryIndex[region];
@@ -877,5 +869,13 @@ class BalancerClusterState {
       .append(", numTables=").append(numTables).append(", numMovedRegions=").append(numMovedRegions)
       .append('}');
     return desc.toString();
+  }
+
+  private double getSkewChangeFor(int serverIndex, int tableIndex, int regionCountChange) {
+    double curSkew = Math.abs(numRegionsPerServerPerTable[serverIndex][tableIndex] -
+      meanRegionsPerTable[tableIndex]);
+    double oldSkew = Math.abs(numRegionsPerServerPerTable[serverIndex][tableIndex] -
+      regionCountChange - meanRegionsPerTable[tableIndex]);
+    return curSkew - oldSkew;
   }
 }
