@@ -93,7 +93,6 @@ public class TestBlockCacheReporting {
 
   @Test
   public void testLruBlockCache() throws IOException {
-
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(cc.isBlockCacheEnabled());
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
