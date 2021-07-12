@@ -131,6 +131,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   protected static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Logger LOG = LoggerFactory.getLogger(StochasticLoadBalancer.class);
+  public static final double COST_EPSILON = 0.0001;
 
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
@@ -140,7 +141,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private int stepsPerRegion = 800;
   private long maxRunningTime = 30 * 1000 * 1; // 30 seconds.
   private int numRegionLoadsToRemember = 15;
-  private float minCostNeedBalance = 0.05f;
+  private float minCostNeedBalance = 0.025f;
 
   private List<CandidateGenerator> candidateGenerators;
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
@@ -215,9 +216,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     curFunctionCosts = new double[costFunctions.size()];
     tempFunctionCosts = new double[costFunctions.size()];
 
-    LOG.info("Loaded config; maxSteps=" + maxSteps + ", stepsPerRegion=" + stepsPerRegion +
-            ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable + ", CostFunctions=" +
-            Arrays.toString(getCostFunctionNames()) + " etc.");
+    LOG.info(
+      "Loaded config; maxSteps=" + maxSteps + ", runMaxSteps=" + runMaxSteps +
+        ", stepsPerRegion=" + stepsPerRegion +
+        ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable
+        + ", CostFunctions=" + Arrays.toString(getCostFunctionNames()) + " etc.");
   }
 
   private void loadCustomCostFunctions(Configuration conf) {
@@ -706,7 +709,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Base class of StochasticLoadBalancer's Cost Functions.
    */
   public abstract static class CostFunction {
-
     private float multiplier = 0;
 
     protected Cluster cluster;
@@ -761,24 +763,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     protected abstract double cost();
-  }
-
-  /**
-   * Scale the value between 0 and 1.
-   * @param min Min value
-   * @param max The Max value
-   * @param value The value to be scaled.
-   * @return The scaled value.
-   */
-  static double scale(double min, double max, double value) {
-    if (max <= min || value <= min) {
-      return 0;
-    }
-    if ((max - min) == 0) {
-      return 0;
-    }
-
-    return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
   }
 
   /**
@@ -970,15 +954,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     @Override
     protected double cost() {
-      double max = cluster.numRegions;
-      double min = ((double) cluster.numRegions) / cluster.numServers;
-      double value = 0;
-
-      for (int i = 0; i < cluster.numMaxRegionsPerTable.length; i++) {
-        value += cluster.numMaxRegionsPerTable[i];
+      double cost = 0;
+      for (int tableIdx = 0; tableIdx < cluster.numTables; tableIdx++) {
+        cost += scale(cluster.minRegionSkewByTable[tableIdx],
+          cluster.maxRegionSkewByTable[tableIdx], cluster.regionSkewByTable[tableIdx]);
       }
-
-      return scale(min, max, value);
+      return cost;
     }
   }
 
@@ -1424,5 +1405,25 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   public static String composeAttributeName(String tableName, String costFunctionName) {
     return tableName + TABLE_FUNCTION_SEP + costFunctionName;
+  }
+
+  /**
+   * Scale the value between 0 and 1.
+   * @param min Min value
+   * @param max The Max value
+   * @param value The value to be scaled.
+   * @return The scaled value.
+   * TBD: To be refactored to CostFunction when cost funtion is refactored out
+   */
+  static double scale(double min, double max, double value) {
+    if (max <= min || value <= min
+      || Math.abs(max - min) <= COST_EPSILON || Math.abs(value - min) <= COST_EPSILON) {
+      return 0;
+    }
+    if (max <= min || Math.abs(max - min) <= COST_EPSILON) {
+      return 0;
+    }
+
+    return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
   }
 }
