@@ -113,8 +113,12 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
       .bufferSize(bufferSize)
       .replication(replication)
       .blockSize(blockSize);
-    // TODO: fix it when we support non-HDFS WAL dir
-    this.output = ((DistributedFileSystem.HdfsDataOutputStreamBuilder)builder).replicate().build();
+    if (builder instanceof DistributedFileSystem.HdfsDataOutputStreamBuilder) {
+      this.output = ((DistributedFileSystem.HdfsDataOutputStreamBuilder) builder)
+        .replicate().build();
+    } else {
+      this.output = builder.build();
+    }
 
     if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true)) {
       if (!output.hasCapability(StreamCapabilities.HFLUSH)) {

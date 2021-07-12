@@ -1073,8 +1073,12 @@ public class WALProcedureStore extends ProcedureStoreBase {
     newLogFile = getLogFilePath(logId);
     try {
       FSDataOutputStreamBuilder<?, ?> builder = fs.createFile(newLogFile).overwrite(false);
-      // TODO: fix it when we support non-HDFS WAL dir
-      newStream = ((DistributedFileSystem.HdfsDataOutputStreamBuilder)builder).replicate().build();
+      if (builder instanceof DistributedFileSystem.HdfsDataOutputStreamBuilder) {
+        newStream = ((DistributedFileSystem.HdfsDataOutputStreamBuilder) builder)
+          .replicate().build();
+      } else {
+        newStream = builder.build();
+      }
     } catch (FileAlreadyExistsException e) {
       LOG.error("Log file with id={} already exists", logId, e);
       return false;
