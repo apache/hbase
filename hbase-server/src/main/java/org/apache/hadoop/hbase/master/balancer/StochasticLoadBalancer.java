@@ -127,7 +127,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private int stepsPerRegion = 800;
   private long maxRunningTime = 30 * 1000 * 1; // 30 seconds.
   private int numRegionLoadsToRemember = 15;
-  private float minCostNeedBalance = 0.05f;
+  private float minCostNeedBalance = 0.025f;
   private boolean isBalancerDecisionRecording = false;
   private boolean isBalancerRejectionRecording = false;
 
@@ -259,7 +259,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       this.namedQueueRecorder = NamedQueueRecorder.getInstance(conf);
     }
 
-    LOG.info("Loaded config; maxSteps=" + maxSteps + ", stepsPerRegion=" + stepsPerRegion +
+    LOG.info("Loaded config; maxSteps=" + maxSteps + ", runMaxSteps=" + runMaxSteps +
+      ", stepsPerRegion=" + stepsPerRegion +
       ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable + ", CostFunctions=" +
       Arrays.toString(getCostFunctionNames()) + " etc.");
   }
