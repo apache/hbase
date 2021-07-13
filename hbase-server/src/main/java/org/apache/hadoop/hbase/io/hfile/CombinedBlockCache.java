@@ -78,7 +78,12 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     // we end up calling l2Cache.getBlock.
     // We are not in a position to exactly look at LRU cache or BC as BlockType may not be getting
     // passed always.
-    return l1Cache.containsBlock(cacheKey)?
+    boolean existInL1 = l1Cache.containsBlock(cacheKey);
+    if (!existInL1) {
+      // If the block does not exist in L1, the containsBlock should be counted as one miss.
+      l1Cache.getStats().miss(false, cacheKey.isPrimary(), cacheKey.getBlockType());
+    }
+    return existInL1?
         l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics):
         l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
