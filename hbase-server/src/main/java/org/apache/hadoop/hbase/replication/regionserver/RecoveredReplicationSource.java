@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -51,11 +52,11 @@ public class RecoveredReplicationSource extends ReplicationSource {
   @Override
   public void init(Configuration conf, FileSystem fs, Path walDir,
     ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
-    ReplicationPeer replicationPeer, Server server, ServerName producer, String queueId,
+    ReplicationPeer replicationPeer, Server server, ReplicationQueueInfo queueInfo,
     UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
     throws IOException {
-    super.init(conf, fs, walDir, overallController, queueStorage, replicationPeer, server, producer,
-      queueId, clusterId, walFileLengthProvider, metrics);
+    super.init(conf, fs, walDir, overallController, queueStorage, replicationPeer, server,
+      queueInfo, clusterId, walFileLengthProvider, metrics);
     this.actualPeerId = this.replicationQueueInfo.getPeerId();
   }
 
