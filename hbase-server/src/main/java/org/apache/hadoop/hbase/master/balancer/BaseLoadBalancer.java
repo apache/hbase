@@ -163,7 +163,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     double[] regionSkewByTable;       // skew on RS per by table
     double[] minRegionSkewByTable;       // min skew on RS per by table
     double[] maxRegionSkewByTable;       // max skew on RS per by table
-    int[]   numMaxRegionsPerTable;       //tableIndex -> max number of regions in a single RS
     int[]   regionIndexToPrimaryIndex;   //regionIndex -> regionIndex of the primary
     boolean hasRegionReplicas = false;   //whether there is regions with replicas
 
@@ -1028,10 +1027,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
 
     private double getSkewChangeFor(int serverIndex, int tableIndex, double regionCountChange) {
-      double curSkew = Math
-        .abs(numRegionsPerServerPerTable[serverIndex][tableIndex] - meanRegionsPerTable[tableIndex]);
-      double oldSkew = Math.abs(
-        numRegionsPerServerPerTable[serverIndex][tableIndex] - regionCountChange - meanRegionsPerTable[tableIndex]);
+      double curSkew = Math.abs(numRegionsPerServerPerTable[serverIndex][tableIndex] -
+        meanRegionsPerTable[tableIndex]);
+      double oldSkew = Math.abs(numRegionsPerServerPerTable[serverIndex][tableIndex] -
+        regionCountChange - meanRegionsPerTable[tableIndex]);
       return curSkew - oldSkew;
     }
   }
