@@ -297,6 +297,44 @@ message ServerLoad {
   optional uint64 write_requests_count = 14;
 }
 
+message ReplicationServerLoad {
+  /** Number of requests since last report. */
+  optional uint64 number_of_requests = 1;
+
+  /** Total Number of requests from the start of the replication server. */
+  optional uint64 total_number_of_requests = 2;
+  /**
+   * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
+   * time is measured as the difference, measured in milliseconds, between the current time
+   * and midnight, January 1, 1970 UTC.
+   */
+  optional uint64 report_start_time = 3;
+
+  /**
+   * Time when report was generated.
+   * time is measured as the difference, measured in milliseconds, between the current time
+   * and midnight, January 1, 1970 UTC.
+   */
+  optional uint64 report_end_time = 4;
+
+  /**
+   * The port number that this replication server is hosing an info server on.
+   */
+  optional uint32 info_server_port = 5;
+  /**
+   * The replicationLoadSource for the replication Source status of this replication server.
+   */
+  repeated ReplicationLoadSource replLoadSource = 6;
+
+  /**
+   * The replicationLoadSink for the replication Sink status of this replication server.
+   */
+  optional ReplicationLoadSink replLoadSink = 7;
+
+  /** The replication queues which this replication server is responsible for. */
+  repeated string queue_node = 8;
+}
+
 message LiveServerInfo {
   required ServerName server = 1;
   required ServerLoad server_load = 2;

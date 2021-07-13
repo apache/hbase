@@ -223,4 +223,13 @@ public interface ReplicationSourceInterface {
    * @param inclusive whether we should also remove the given WAL
    */
   void cleanOldWALs(String walName, boolean inclusive);
+
+  /**
+   * The queue only be hold by one region server. This will return the region server which
+   * hold this queue.
+   * @return the region server which hold this queue.
+   */
+  default ServerName getQueueOwner() {
+    return this.getReplicationQueueInfo().getOwner();
+  }
 }

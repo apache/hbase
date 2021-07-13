@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
-import java.lang.management.MemoryUsage;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
@@ -29,20 +30,23 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.ReplicationService;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.replicationserver.ReplicationServerSourceManager;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
@@ -64,8 +68,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.ReplicationServerLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatusProtos.ReplicationServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatusProtos.ReplicationServerStatusService;
 
 /**
@@ -126,6 +130,11 @@ public class HReplicationServer extends Thread implements Server {
   // master address tracker
   private final MasterAddressTracker masterAddressTracker;
 
+  private ServerName masterServerName;
+
+  // Stub to do replication server status calls against the master.
+  private volatile ReplicationServerStatusService.BlockingInterface rssStub;
+
   /**
    * The asynchronous cluster connection to be shared by services.
    */
@@ -135,15 +144,22 @@ public class HReplicationServer extends Thread implements Server {
 
   final ReplicationServerRpcServices rpcServices;
 
-  // Stub to do region server status calls against the master.
-  private volatile ReplicationServerStatusService.BlockingInterface rssStub;
-
-  // RPC client. Used to make the stub above that does region server status checking.
+  // RPC client. Used to make the stub above that does replication server status checking.
   private RpcClient rpcClient;
 
   private ReplicationSinkService replicationSinkService;
 
   private ReplicationServerSourceManager sourceManager;
+
+  private final int statsPeriodInSecond;
+
+  // ReplicationLoad to access replication metrics
+  private ReplicationLoad replicationLoad;
+
+  // Info server. Default access so can be used by unit tests. REPLICATION_SERVER
+  // is name of the webapp and the attribute name used stuffing this instance
+  // into web context.
+  protected InfoServer infoServer;
 
   public HReplicationServer(final Configuration conf) throws Exception {
     try {
@@ -173,6 +189,7 @@ public class HReplicationServer extends Thread implements Server {
 
       this.shortOperationTimeout = conf.getInt(HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
+      this.statsPeriodInSecond = conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
 
       initializeFileSystem();
       this.choreService = new ChoreService(getName(), true);
@@ -233,12 +250,14 @@ public class HReplicationServer extends Thread implements Server {
       online.set(true);
 
       long lastMsg = System.currentTimeMillis();
+      long lastReportedTime = System.currentTimeMillis();
       // The main run loop.
       while (!isStopped()) {
         long now = System.currentTimeMillis();
         if ((now - lastMsg) >= msgInterval) {
-          tryReplicationServerReport(lastMsg, now);
-          lastMsg = System.currentTimeMillis();
+          if (tryReplicationServerReport(lastReportedTime, now)) {
+            lastReportedTime = now;
+          }
         }
         if (!isStopped() && !isAborted()) {
           this.sleeper.sleep();
@@ -373,6 +392,10 @@ public class HReplicationServer extends Thread implements Server {
     return choreService;
   }
 
+  public ReplicationServerRpcServices getReplicationServerRpcServices() {
+    return rpcServices;
+  }
+
   @Override
   public void abort(String why, Throwable cause) {
     if (!setAbortRequested()) {
@@ -464,6 +487,7 @@ public class HReplicationServer extends Thread implements Server {
    * Start up replication source and sink handlers.
    */
   private void startReplicationService() throws IOException, ReplicationException {
+    this.replicationLoad = new ReplicationLoad();
     Path oldWalDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     this.sourceManager = new ReplicationServerSourceManager(this, walFs, walRootDir,
       oldWalDir, clusterId);
@@ -471,6 +495,9 @@ public class HReplicationServer extends Thread implements Server {
     if (this.replicationSinkService != null) {
       this.replicationSinkService.startReplicationService();
     }
+    this.choreService.scheduleChore(
+      new ReplicationStatisticsChore("ReplicationSourceStatistics", this,
+        (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
   }
 
   /**
@@ -508,54 +535,72 @@ public class HReplicationServer extends Thread implements Server {
     return abortRequested.compareAndSet(false, true);
   }
 
-  private void tryReplicationServerReport(long reportStartTime, long reportEndTime)
-      throws IOException {
-    ReplicationServerStatusService.BlockingInterface rss = rssStub;
-    if (rss == null) {
-      ServerName masterServerName = createReplicationServerStatusStub(true);
-      rss = rssStub;
-      if (masterServerName == null || rss == null) {
-        return;
-      }
+  /**
+   * @return True if report to master successfully.
+   */
+  private boolean tryReplicationServerReport(long reportStartTime, long reportEndTime)
+    throws YouAreDeadException {
+    ServerName newMasterServerName = masterAddressTracker.getMasterAddress(true);
+    if (newMasterServerName == null) {
+      LOG.warn("No master found. Will retry report next time.");
+      return false;
     }
-    ClusterStatusProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
+    if (masterServerName == null || !ServerName
+      .isSameAddress(masterServerName, newMasterServerName)) {
+      ReplicationServerStatusService.BlockingInterface intRssStub =
+        createReplicationServerStatusStub(newMasterServerName);
+      if (intRssStub == null) {
+        return false;
+      }
+      masterServerName = newMasterServerName;
+      rssStub = intRssStub;
+    }
+
     try {
-      RegionServerReportRequest.Builder request = RegionServerReportRequest
-          .newBuilder();
-      request.setServer(ProtobufUtil.toServerName(this.serverName));
-      request.setLoad(sl);
-      rss.replicationServerReport(null, request.build());
+      rssStub.replicationServerReport(null, buildReportRequest(reportStartTime, reportEndTime));
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {
-        // This will be caught and handled as a fatal error in run()
-        throw ioe;
+        throw (YouAreDeadException) ioe;
       }
-      if (rssStub == rss) {
-        rssStub = null;
-      }
-      // Couldn't connect to the master, get location from zk and reconnect
-      // Method blocks until new master is found or we are stopped
-      createReplicationServerStatusStub(true);
+      LOG.warn("Failed to report to master {}", masterServerName, ioe);
+      return false;
     }
+    return true;
   }
 
-  private ClusterStatusProtos.ServerLoad buildServerLoad(long reportStartTime, long reportEndTime) {
-    long usedMemory = -1L;
-    long maxMemory = -1L;
-    final MemoryUsage usage = MemorySizeUtil.safeGetHeapMemoryUsage();
-    if (usage != null) {
-      usedMemory = usage.getUsed();
-      maxMemory = usage.getMax();
+  private ReplicationServerStatusService.BlockingInterface createReplicationServerStatusStub(
+    ServerName sm) {
+    try {
+      BlockingRpcChannel channel = this.rpcClient
+        .createBlockingRpcChannel(sm, userProvider.getCurrent(), shortOperationTimeout);
+      return ReplicationServerStatusService.newBlockingStub(channel);
+    } catch (IOException e) {
+      e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
+      if (e instanceof ServerNotRunningYetException) {
+        LOG.info("Master {} isn't available yet. Will retry report next time.", sm);
+      } else {
+        LOG.warn("Unable to connect to master {}. Will retry report next time.", sm, e);
+      }
     }
+    return null;
+  }
 
-    ClusterStatusProtos.ServerLoad.Builder serverLoad = ClusterStatusProtos.ServerLoad.newBuilder();
+  private ReplicationServerReportRequest buildReportRequest(long reportStartTime,
+    long reportEndTime) {
+    ReplicationServerReportRequest.Builder request = ReplicationServerReportRequest
+      .newBuilder();
+    request.setServer(ProtobufUtil.toServerName(this.serverName));
+
+    ReplicationServerLoad.Builder serverLoad = ReplicationServerLoad.newBuilder();
     serverLoad.setTotalNumberOfRequests(rpcServices.requestCount.sum());
-    serverLoad.setUsedHeapMB((int) (usedMemory / 1024 / 1024));
-    serverLoad.setMaxHeapMB((int) (maxMemory / 1024 / 1024));
-
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
+    if (this.infoServer != null) {
+      serverLoad.setInfoServerPort(this.infoServer.getPort());
+    } else {
+      serverLoad.setInfoServerPort(-1);
+    }
 
     // for the replicationLoad purpose. Only need to get from one executorService
     // either source or sink will get the same info
@@ -563,78 +608,18 @@ public class HReplicationServer extends Thread implements Server {
 
     if (sinks != null) {
       // always refresh first to get the latest value
-      ReplicationLoad rLoad = sinks.refreshAndGetReplicationLoad();
-      if (rLoad != null) {
-        serverLoad.setReplLoadSink(rLoad.getReplicationLoadSink());
+      ReplicationLoad sinksLoad = sinks.refreshAndGetReplicationLoad();
+      if (sinksLoad != null) {
+        serverLoad.setReplLoadSink(sinksLoad.getReplicationLoadSink());
       }
     }
-    return serverLoad.build();
-  }
-
-  /**
-   * Get the current master from ZooKeeper and open the RPC connection to it. To get a fresh
-   * connection, the current rssStub must be null. Method will block until a master is available.
-   * You can break from this block by requesting the server stop.
-   * @param refresh If true then master address will be read from ZK, otherwise use cached data
-   * @return master + port, or null if server has been stopped
-   */
-  private synchronized ServerName createReplicationServerStatusStub(boolean refresh) {
-    if (rssStub != null) {
-      return masterAddressTracker.getMasterAddress();
-    }
-    ServerName sn = null;
-    long previousLogTime = 0;
-    ReplicationServerStatusService.BlockingInterface intRssStub = null;
-    boolean interrupted = false;
-    try {
-      while (keepLooping()) {
-        sn = this.masterAddressTracker.getMasterAddress(refresh);
-        if (sn == null) {
-          if (!keepLooping()) {
-            // give up with no connection.
-            LOG.debug("No master found and cluster is stopped; bailing out");
-            return null;
-          }
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
-            LOG.debug("No master found; retry");
-            previousLogTime = System.currentTimeMillis();
-          }
-          refresh = true; // let's try pull it from ZK directly
-          if (sleepInterrupted(200)) {
-            interrupted = true;
-          }
-          continue;
-        }
-
-        try {
-          BlockingRpcChannel channel =
-              this.rpcClient.createBlockingRpcChannel(sn, userProvider.getCurrent(),
-                  shortOperationTimeout);
-          intRssStub = ReplicationServerStatusService.newBlockingStub(channel);
-          break;
-        } catch (IOException e) {
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
-            e = e instanceof RemoteException ?
-                ((RemoteException)e).unwrapRemoteException() : e;
-            if (e instanceof ServerNotRunningYetException) {
-              LOG.info("Master isn't available yet, retrying");
-            } else {
-              LOG.warn("Unable to connect to master. Retrying. Error was:", e);
-            }
-            previousLogTime = System.currentTimeMillis();
-          }
-          if (sleepInterrupted(200)) {
-            interrupted = true;
-          }
-        }
-      }
-    } finally {
-      if (interrupted) {
-        Thread.currentThread().interrupt();
-      }
-    }
-    this.rssStub = intRssStub;
-    return sn;
+    List<ReplicationSourceInterface> sources = this.sourceManager.getSources();
+    this.replicationLoad.buildReplicationLoad(sources, null);
+    this.replicationLoad.getReplicationLoadSourceEntries().forEach(serverLoad::addReplLoadSource);
+    sources.forEach(src -> serverLoad.addQueueNode(
+      sourceManager.getZkQueueStorage().getQueueNode(src.getQueueOwner(), src.getQueueId())));
+    request.setLoad(serverLoad.build());
+    return request.build();
   }
 
   /**
@@ -660,5 +645,43 @@ public class HReplicationServer extends Thread implements Server {
     throws IOException, ReplicationException {
     LOG.info("Start replication source, owner: {}, queueId: {}", owner, queueId);
     this.sourceManager.startReplicationSource(owner, queueId);
+  }
+
+  /**
+   * Get a string representation of all the sources' metrics
+   */
+  private String getStats() {
+    StringBuilder stats = new StringBuilder();
+    // Print stats that apply across all Replication Sources
+    stats.append("Global stats: ");
+    stats.append("WAL Edits Buffer Used=").append(this.sourceManager.getTotalBufferUsed().get())
+      .append("B, Limit=").append(this.sourceManager.getTotalBufferLimit()).append("B\n");
+    for (ReplicationSourceInterface source : this.sourceManager.getSources()) {
+      if (source.isRecovered()) {
+        stats.append("Recovered source for cluster/machine(s) ");
+      } else {
+        stats.append("Normal source for cluster ");
+      }
+      stats.append(source.getQueueId()).append(": ").append(source.getStats()).append("\n");
+    }
+    return stats.toString();
+  }
+
+  private final class ReplicationStatisticsChore extends ScheduledChore {
+
+    ReplicationStatisticsChore(String name, Stoppable stopper, int period) {
+      super(name, stopper, period);
+    }
+
+    @Override
+    protected void chore() {
+      printStats(getStats());
+    }
+
+    private void printStats(String stats) {
+      if (!stats.isEmpty()) {
+        LOG.info(stats);
+      }
+    }
   }
 }
