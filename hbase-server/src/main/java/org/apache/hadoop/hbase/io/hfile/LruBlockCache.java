@@ -557,7 +557,13 @@ public class LruBlockCache implements FirstLevelBlockCache {
    */
   @Override
   public boolean containsBlock(BlockCacheKey cacheKey) {
-    return map.containsKey(cacheKey);
+    boolean result = map.containsKey(cacheKey);
+    // If this block is not in LRU, this check time should be counted as a miss.
+    // Here is ugly, but the metric will be correct. :D
+    if (!result) {
+      stats.miss(false, cacheKey.isPrimary(), cacheKey.getBlockType());
+    }
+    return result;
   }
 
   @Override
