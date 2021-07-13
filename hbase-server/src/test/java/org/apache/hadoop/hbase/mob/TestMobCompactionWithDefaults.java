@@ -95,7 +95,7 @@ public class TestMobCompactionWithDefaults {
   @Rule
   public TestName test = new TestName();
   protected TableDescriptor tableDescriptor;
-  private ColumnFamilyDescriptor familyDescriptor;
+  protected ColumnFamilyDescriptor familyDescriptor;
   protected Admin admin;
   protected TableName table = null;
   protected int numRegions = 20;
@@ -103,10 +103,7 @@ public class TestMobCompactionWithDefaults {
 
   protected MobFileCleanerChore cleanerChore;
 
-  @BeforeClass
-  public static void htuStart() throws Exception {
-    HTU = new HBaseTestingUtility();
-    conf = HTU.getConfiguration();
+  protected static void setMobTestConf() {
     conf.setInt("hfile.format.version", 3);
     // Disable automatic MOB compaction
     conf.setLong(MobConstants.MOB_COMPACTION_CHORE_PERIOD, 0);
@@ -115,8 +112,15 @@ public class TestMobCompactionWithDefaults {
     // Set minimum age to archive to 10 sec
     conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, minAgeToArchive);
     // Set compacted file discharger interval to a half minAgeToArchive
-    conf.setLong("hbase.hfile.compaction.discharger.interval", minAgeToArchive/2);
+    conf.setLong("hbase.hfile.compaction.discharger.interval", minAgeToArchive / 2);
     conf.setBoolean("hbase.regionserver.compaction.enabled", false);
+  }
+
+  @BeforeClass
+  public static void htuStart() throws Exception {
+    HTU = new HBaseTestingUtility();
+    conf = HTU.getConfiguration();
+    setMobTestConf();
     HTU.startMiniCluster();
   }
 
