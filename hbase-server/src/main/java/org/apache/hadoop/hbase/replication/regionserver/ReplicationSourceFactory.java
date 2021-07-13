@@ -36,8 +36,7 @@ public final class ReplicationSourceFactory {
   private ReplicationSourceFactory() {}
 
   public static ReplicationSourceInterface create(Configuration conf, String queueId) {
-    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);
-    boolean isQueueRecovered = replicationQueueInfo.isQueueRecovered();
+    boolean isQueueRecovered = ReplicationQueueInfo.isQueueRecovered(queueId);
     ReplicationSourceInterface src;
     try {
       String defaultReplicationSourceImpl =

@@ -112,8 +112,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private UUID clusterId;
   // total number of edits we replicated
   private AtomicLong totalReplicatedEdits = new AtomicLong(0);
-  // The znode we currently play with
-  protected String queueId;
   // Maximum number of retries before taking bold actions
   private int maxRetriesMultiplier;
   // Indicates if this particular source is running
@@ -190,7 +188,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   @Override
   public void init(Configuration conf, FileSystem fs, Path walDir,
     ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
-    ReplicationPeer replicationPeer, Server server, ServerName producer, String queueId,
+    ReplicationPeer replicationPeer, Server server, ReplicationQueueInfo queueInfo,
     UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
     throws IOException {
     this.server = server;
@@ -212,8 +210,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.metrics = metrics;
     this.clusterId = clusterId;
 
-    this.queueId = queueId;
-    this.replicationQueueInfo = new ReplicationQueueInfo(queueId);
+    this.replicationQueueInfo = queueInfo;
 
     // A defaultBandwidth of '0' means no bandwidth; i.e. no throttling.
     defaultBandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
@@ -229,15 +226,15 @@ public class ReplicationSource implements ReplicationSourceInterface {
       if (queueStorage instanceof ZKReplicationQueueStorage) {
         ZKReplicationQueueStorage zkQueueStorage = (ZKReplicationQueueStorage) queueStorage;
         zkQueueStorage.getZookeeper().registerListener(
-          new ReplicationQueueListener(this, zkQueueStorage, producer, queueId, walDir));
+          new ReplicationQueueListener(this, zkQueueStorage, queueInfo, walDir));
         LOG.info("Register a ZKListener to track the WALs from {}'s replication queue, queueId={}",
-          producer, queueId);
+          queueInfo.getOwner(), queueInfo.getQueueId());
       } else {
         throw new UnsupportedOperationException(
           "hbase.replication.offload.enabled=true only support ZKReplicationQueueStorage");
       }
     }
-    LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
+    LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", getQueueId(),
       replicationPeer.getId(), this.currentBandwidth);
   }
 
@@ -346,7 +343,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
             createNewWALReader(walGroupId, worker.getStartPosition());
         Threads.setDaemonThreadRunning(
             walReader, Thread.currentThread().getName()
-            + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
+            + ".replicationSource.wal-reader." + walGroupId + "," + getQueueId(),
           (t,e) -> this.uncaughtException(t, e, null, this.getPeerId()));
         worker.setWALReader(walReader);
         worker.startup((t,e) -> this.uncaughtException(t, e, null, this.getPeerId()));
@@ -594,7 +591,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     setSourceStartupStatus(true);
     initThread = new Thread(this::initialize);
     Threads.setDaemonThreadRunning(initThread,
-      Thread.currentThread().getName() + ".replicationSource," + this.queueId,
+      Thread.currentThread().getName() + ".replicationSource," + getQueueId(),
       (t,e) -> {
         //if first initialization attempt failed, and abortOnError is false, we will
         //keep looping in this thread until initialize eventually succeeds,
@@ -638,10 +635,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public void terminate(String reason, Exception cause, boolean clearMetrics,
       boolean join) {
     if (cause == null) {
-      LOG.info("{} Closing source {} because: {}", logPeerId(), this.queueId, reason);
+      LOG.info("{} Closing source {} because: {}", logPeerId(), getQueueId(), reason);
     } else {
       LOG.error(String.format("%s Closing source %s because an error occurred: %s",
-        logPeerId(), this.queueId, reason), cause);
+        logPeerId(), getQueueId(), reason), cause);
     }
     this.sourceRunning = false;
     if (initThread != null && Thread.currentThread() != initThread) {
@@ -698,7 +695,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
             TimeUnit.MILLISECONDS);
         } catch (TimeoutException te) {
           LOG.warn("{} Got exception while waiting for endpoint to shutdown "
-            + "for replication source : {}", logPeerId(), this.queueId, te);
+            + "for replication source : {}", logPeerId(), getQueueId(), te);
         }
       }
     }
@@ -708,11 +705,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
         this.metrics.clear();
       }
     }
-  }
-
-  @Override
-  public String getQueueId() {
-    return this.queueId;
   }
 
   @Override
@@ -957,10 +949,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
     private final Path walDir;
 
     public ReplicationQueueListener(ReplicationSource source,
-      ZKReplicationQueueStorage zkQueueStorage, ServerName producer, String queueId, Path walDir) {
+      ZKReplicationQueueStorage zkQueueStorage, ReplicationQueueInfo queueInfo, Path walDir) {
       super(zkQueueStorage.getZookeeper());
       this.source = source;
-      this.queueNode = zkQueueStorage.getQueueNode(producer, queueId);
+      this.queueNode = zkQueueStorage.getQueueNode(queueInfo.getOwner(), queueInfo.getQueueId());
       this.walDir = walDir;
     }
 
