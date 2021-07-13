@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -139,7 +140,8 @@ public class TestReplicationSource {
     String queueId = "qid";
     RegionServerServices rss =
       TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
-    rs.init(conf, null, null, manager, null, mockPeer, rss, rss.getServerName(), queueId, null,
+    rs.init(conf, null, null, manager, null, mockPeer, rss,
+      new ReplicationQueueInfo(rss.getServerName(), queueId), null,
       p -> OptionalLong.empty(), new MetricsSource(queueId));
     try {
       rs.startup();
@@ -177,7 +179,8 @@ public class TestReplicationSource {
     String queueId = "qid";
     RegionServerServices rss =
       TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
-    rs.init(conf, null, null, manager, null, mockPeer, rss, rss.getServerName(), queueId, uuid,
+    rs.init(conf, null, null, manager, null, mockPeer, rss,
+      new ReplicationQueueInfo(rss.getServerName(), queueId), uuid,
       p -> OptionalLong.empty(), new MetricsSource(queueId));
     try {
       rs.startup();
@@ -265,8 +268,8 @@ public class TestReplicationSource {
       testConf.setInt("replication.source.maxretriesmultiplier", 1);
       ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
       Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
-      source.init(testConf, null, null, manager, null, mockPeer, null, null, "testPeer", null,
-        p -> OptionalLong.empty(), null);
+      source.init(testConf, null, null, manager, null, mockPeer, null,
+        new ReplicationQueueInfo(null, "testPeer"), null, p -> OptionalLong.empty(), null);
       ExecutorService executor = Executors.newSingleThreadExecutor();
       Future<?> future = executor.submit(
         () -> source.terminate("testing source termination"));
@@ -289,8 +292,9 @@ public class TestReplicationSource {
     ReplicationPeer mockPeer = mock(ReplicationPeer.class);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
     Configuration testConf = HBaseConfiguration.create();
-    source.init(testConf, null, null, mockManager, null, mockPeer, null, null,
-      "testPeer", null, p -> OptionalLong.empty(), mock(MetricsSource.class));
+    source.init(testConf, null, null, mockManager, null, mockPeer, null,
+      new ReplicationQueueInfo(null, "testPeer"), null, p -> OptionalLong.empty(),
+      mock(MetricsSource.class));
     ReplicationSourceWALReader reader = new ReplicationSourceWALReader(null,
       conf, null, 0, null, source, null);
     ReplicationSourceShipper shipper =
@@ -536,7 +540,8 @@ public class TestReplicationSource {
     String queueId = "qid";
     RegionServerServices rss =
       TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
-    rs.init(conf, null, null, manager, null, mockPeer, rss, rss.getServerName(), queueId, null,
+    rs.init(conf, null, null, manager, null, mockPeer, rss,
+      new ReplicationQueueInfo(rss.getServerName(), queueId), null,
       p -> OptionalLong.empty(), new MetricsSource(queueId));
     return rss;
   }
@@ -655,7 +660,8 @@ public class TestReplicationSource {
         TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
 
       ReplicationSource source = new ReplicationSource();
-      source.init(conf, null, null, manager, null, mockPeer, rss, rss.getServerName(), id, null,
+      source.init(conf, null, null, manager, null, mockPeer, rss,
+        new ReplicationQueueInfo(rss.getServerName(), id), null,
         p -> OptionalLong.empty(), metrics);
 
       final Path log1 = new Path(logDir, "log-walgroup-a.8");

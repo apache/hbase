@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 public class ReplicationQueueInfo {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationQueueInfo.class);
 
+  private final ServerName owner;
   private final String peerId;
   private final String queueId;
   private boolean queueRecovered;
@@ -46,7 +47,8 @@ public class ReplicationQueueInfo {
    * The passed queueId will be either the id of the peer or the handling story of that queue
    * in the form of id-servername-*
    */
-  public ReplicationQueueInfo(String queueId) {
+  public ReplicationQueueInfo(ServerName owner, String queueId) {
+    this.owner = owner;
     this.queueId = queueId;
     String[] parts = queueId.split("-", 2);
     this.queueRecovered = parts.length != 1;
@@ -55,6 +57,22 @@ public class ReplicationQueueInfo {
       // extract dead servers
       extractDeadServersFromZNodeString(parts[1], this.deadRegionServers);
     }
+  }
+
+  /**
+   * A util method to parse the peerId from queueId.
+   */
+  public static String parsePeerId(String queueId) {
+    String[] parts = queueId.split("-", 2);
+    return parts.length != 1 ? parts[0] : queueId;
+  }
+
+  /**
+   * A util method to check whether a queue is recovered.
+   */
+  public static boolean isQueueRecovered(String queueId) {
+    String[] parts = queueId.split("-", 2);
+    return parts.length != 1;
   }
 
   /**
@@ -112,6 +130,10 @@ public class ReplicationQueueInfo {
 
   public List<ServerName> getDeadRegionServers() {
     return Collections.unmodifiableList(this.deadRegionServers);
+  }
+
+  public ServerName getOwner() {
+    return this.owner;
   }
 
   public String getPeerId() {

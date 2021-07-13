@@ -298,14 +298,15 @@ public class ReplicationSourceManager implements ReplicationSourceController {
   private ReplicationSourceInterface createSource(String queueId, ReplicationPeer replicationPeer)
       throws IOException {
     ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
+    ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(server.getServerName(), queueId);
     // Init the just created replication source. Pass the default walProvider's wal file length
     // provider. Presumption is we replicate user-space Tables only. For hbase:meta region replica
     // replication, see #createCatalogReplicationSource().
     WALFileLengthProvider walFileLengthProvider =
       this.walFactory.getWALProvider() != null?
         this.walFactory.getWALProvider().getWALFileLengthProvider() : p -> OptionalLong.empty();
-    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, server.getServerName(),
-      queueId, clusterId, walFileLengthProvider, new MetricsSource(queueId));
+    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, queueInfo,
+      clusterId, walFileLengthProvider, new MetricsSource(queueId));
     return src;
   }
 
@@ -587,7 +588,7 @@ public class ReplicationSourceManager implements ReplicationSourceController {
     // a copy of the replication peer first to decide whether we should start the
     // RecoveredReplicationSource. If the latest peer is not the old peer, we should also skip to
     // start the RecoveredReplicationSource, Otherwise the rs will abort (See HBASE-20475).
-    String peerId = new ReplicationQueueInfo(queue).getPeerId();
+    String peerId = ReplicationQueueInfo.parsePeerId(queue);
     ReplicationPeerImpl oldPeer = replicationPeers.getPeer(peerId);
     if (oldPeer == null) {
       LOG.info("Not transferring queue since the replication peer {} for queue {} does not exist",
@@ -926,8 +927,8 @@ public class ReplicationSourceManager implements ReplicationSourceController {
       this.clusterId.toString());
     final ReplicationSourceInterface crs = new CatalogReplicationSource();
     crs.init(conf, fs, logDir, this, new NoopReplicationQueueStorage(), peer, server,
-      server.getServerName(), peer.getId(), clusterId, walProvider.getWALFileLengthProvider(),
-      new MetricsSource(peer.getId()));
+      new ReplicationQueueInfo(server.getServerName(), peer.getId()), clusterId,
+      walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
     // Add listener on the provider so we can pick up the WAL to replicate on roll.
     WALActionsListener listener = new WALActionsListener() {
       @Override public void postLogRoll(Path oldPath, Path newPath) throws IOException {
