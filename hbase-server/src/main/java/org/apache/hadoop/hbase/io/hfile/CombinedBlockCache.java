@@ -78,7 +78,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     // we end up calling l2Cache.getBlock.
     // We are not in a position to exactly look at LRU cache or BC as BlockType may not be getting
     // passed always.
-    return cacheKey.getBlockType().getCategory() == BlockCategory.DATA?
+    return cacheKey.getBlockType().getCategory() != BlockCategory.DATA?
         l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics):
         l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
