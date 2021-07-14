@@ -168,6 +168,19 @@ public class LocalHBaseCluster {
         LOG.debug("Setting RS InfoServer Port to random.");
         conf.set(HConstants.REGIONSERVER_INFO_PORT, "0");
       }
+      if (conf.getInt(HConstants.COMPACTION_SERVER_PORT, HConstants.DEFAULT_COMPACTION_SERVER_PORT)
+        == HConstants.DEFAULT_COMPACTION_SERVER_PORT) {
+        LOG.debug("Setting CompactionServer Port to random.");
+        conf.set(HConstants.COMPACTION_SERVER_PORT, "0");
+      }
+      // treat info ports special; expressly don't change '-1' (keep off)
+      // in case we make that the default behavior.
+      if (conf.getInt(HConstants.COMPACTION_SERVER_INFO_PORT, 0) != -1 && conf.getInt(
+        HConstants.COMPACTION_SERVER_INFO_PORT, HConstants.DEFAULT_COMPACTION_SERVER_INFOPORT)
+        == HConstants.DEFAULT_COMPACTION_SERVER_INFOPORT) {
+        LOG.debug("Setting CS InfoServer Port to random.");
+        conf.set(HConstants.COMPACTION_SERVER_INFO_PORT, "0");
+      }
       if (conf.getInt(HConstants.MASTER_INFO_PORT, 0) != -1 &&
           conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT)
           == HConstants.DEFAULT_MASTER_INFOPORT) {
@@ -309,6 +322,17 @@ public class LocalHBaseCluster {
   }
 
   /**
+   * Wait for the specified compaction server to stop. Removes this thread from list of running
+   * threads.
+   * @return Name of compaction server that just went down.
+   */
+  public String waitOnCompactionServer(int serverNumber) {
+    JVMClusterUtil.CompactionServerThread regionServerThread =
+        this.compactionServerThreads.get(serverNumber);
+    return waitOnCompactionServer(regionServerThread);
+  }
+
+  /**
    * Wait for the specified region server to stop. Removes this thread from list of running threads.
    * @return Name of region server that just went down.
    */
@@ -324,6 +348,25 @@ public class LocalHBaseCluster {
     }
     regionThreads.remove(rst);
     return rst.getName();
+  }
+
+  /**
+   * Wait for the specified compaction server to stop. Removes this thread from list of running
+   * threads.
+   * @return Name of compaction server that just went down.
+   */
+  public String waitOnCompactionServer(JVMClusterUtil.CompactionServerThread cst) {
+    while (cst.isAlive()) {
+      try {
+        LOG.info("Waiting on " + cst.getCompactionServer().toString());
+        cst.join();
+      } catch (InterruptedException e) {
+        LOG.error("Interrupted while waiting for {} to finish. Retrying join", cst.getName(), e);
+        Thread.currentThread().interrupt();
+      }
+    }
+    compactionServerThreads.remove(cst);
+    return cst.getName();
   }
 
   /**
@@ -427,6 +470,18 @@ public class LocalHBaseCluster {
         }
       }
     }
+    if (this.compactionServerThreads != null) {
+      for(Thread t: this.compactionServerThreads) {
+        if (t.isAlive()) {
+          try {
+            Threads.threadDumpingIsAlive(t);
+          } catch (InterruptedException e) {
+            LOG.debug("Interrupted", e);
+          }
+        }
+      }
+    }
+
   }
 
   @SuppressWarnings("unchecked")
@@ -491,7 +546,7 @@ public class LocalHBaseCluster {
    * Shut down the mini HBase cluster
    */
   public void shutdown() {
-    JVMClusterUtil.shutdown(this.masterThreads, this.regionThreads);
+    JVMClusterUtil.shutdown(this.masterThreads, this.regionThreads, this.compactionServerThreads);
   }
 
   /**

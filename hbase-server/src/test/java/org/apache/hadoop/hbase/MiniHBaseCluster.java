@@ -436,6 +436,25 @@ public class MiniHBaseCluster extends HBaseCluster {
     return startRegionServer(newConf);
   }
 
+  /**
+   * Starts a compaction server thread running
+   * @return New CompactionServerThread
+   */
+  public JVMClusterUtil.CompactionServerThread startCompactionServer() throws IOException {
+    final Configuration configuration = HBaseConfiguration.create(conf);
+    User rsUser = HBaseTestingUtility.getDifferentUser(configuration, ".hfs." + index++);
+    JVMClusterUtil.CompactionServerThread t = null;
+    try {
+      t = hbaseCluster.addCompactionServer(configuration,
+        hbaseCluster.getCompactionServers().size(), rsUser);
+      t.start();
+      t.waitForServerOnline();
+    } catch (InterruptedException ie) {
+      throw new IOException("Interrupted adding compactionserver to cluster", ie);
+    }
+    return t;
+  }
+
   private JVMClusterUtil.RegionServerThread startRegionServer(Configuration configuration)
       throws IOException {
     User rsUser =
@@ -503,6 +522,20 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
+   * Shut down the specified compaction server cleanly
+   *
+   * @param serverNumber  Used as index into a list.
+   * @return the compaction server that was stopped
+   */
+  public JVMClusterUtil.CompactionServerThread stopCompactionServer(int serverNumber) {
+    JVMClusterUtil.CompactionServerThread server =
+      hbaseCluster.getCompactionServers().get(serverNumber);
+    LOG.info("Stopping " + server.toString());
+    server.getCompactionServer().stop("Stopping rs " + serverNumber);
+    return server;
+  }
+
+  /**
    * Shut down the specified region server cleanly
    *
    * @param serverNumber  Used as index into a list.
@@ -557,6 +590,14 @@ public class MiniHBaseCluster extends HBaseCluster {
     return this.hbaseCluster.waitOnRegionServer(serverNumber);
   }
 
+  /**
+   * Wait for the specified compaction server to stop. Removes this thread from list
+   * of running threads.
+   * @return Name of compaction server that just went down.
+   */
+  public String waitOnCompactionServer(final int serverNumber) {
+    return this.hbaseCluster.waitOnCompactionServer(serverNumber);
+  }
 
   /**
    * Starts a master thread running
