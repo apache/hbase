@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.TagType.VISIBILITY_TAG_TYPE;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_FAMILY;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityUtils.SYSTEM_LABEL;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -31,7 +30,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -49,10 +47,12 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
@@ -164,33 +164,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     assert (labelsRegion != null || systemCall);
     List<String> auths = new ArrayList<>();
     Get get = new Get(user);
-    List<Cell> cells = null;
-    if (labelsRegion == null) {
-      Table table = null;
-      Connection connection = null;
-      try {
-        connection = ConnectionFactory.createConnection(conf);
-        table = connection.getTable(VisibilityConstants.LABELS_TABLE_NAME);
-        Result result = table.get(get);
-        cells = result.listCells();
-      } finally {
-        if (table != null) {
-          table.close();
-        }
-        if (connection != null){
-          connection.close();
-        }
-      }
-    } else {
-      cells = this.labelsRegion.get(get, false);
-    }
-    if (cells != null) {
-      for (Cell cell : cells) {
-        String auth = Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(),
-          cell.getQualifierLength());
-        auths.add(auth);
-      }
-    }
+    getAuths(get, auths);
     return auths;
   }
 
@@ -201,34 +175,48 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     if (groups != null && groups.length > 0) {
       for (String group : groups) {
         Get get = new Get(Bytes.toBytes(AuthUtil.toGroupEntry(group)));
-        List<Cell> cells = null;
-        if (labelsRegion == null) {
-          Table table = null;
-          Connection connection = null;
-          try {
-            connection = ConnectionFactory.createConnection(conf);
-            table = connection.getTable(VisibilityConstants.LABELS_TABLE_NAME);
-            Result result = table.get(get);
-            cells = result.listCells();
-          } finally {
-            if (table != null) {
-              table.close();
-              connection.close();
-            }
-          }
-        } else {
-          cells = this.labelsRegion.get(get, false);
-        }
-        if (cells != null) {
-          for (Cell cell : cells) {
-            String auth = Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(),
-              cell.getQualifierLength());
-            auths.add(auth);
-          }
-        }
+        getAuths(get, auths);
       }
     }
     return auths;
+  }
+
+  private void getAuths(Get get, List<String> auths) throws IOException {
+    List<Cell> cells = new ArrayList<>();
+    RegionScanner scanner = null;
+    try {
+      if (labelsRegion == null) {
+        Table table = null;
+        Connection connection = null;
+        try {
+          connection = ConnectionFactory.createConnection(conf);
+          table = connection.getTable(VisibilityConstants.LABELS_TABLE_NAME);
+          Result result = table.get(get);
+          cells = result.listCells();
+        } finally {
+          if (table != null) {
+            table.close();
+          }
+          if (connection != null) {
+            connection.close();
+          }
+        }
+      } else {
+        // NOTE: Please don't use HRegion.get() instead,
+        // because it will copy cells to heap. See HBASE-26036
+        scanner = this.labelsRegion.getScanner(new Scan(get));
+        scanner.next(cells);
+      }
+      for (Cell cell : cells) {
+        String auth = Bytes
+          .toString(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+        auths.add(auth);
+      }
+    } finally {
+      if (scanner != null) {
+        scanner.close();
+      }
+    }
   }
 
   @Override
