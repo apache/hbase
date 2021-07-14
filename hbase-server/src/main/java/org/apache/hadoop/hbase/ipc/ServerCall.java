@@ -97,11 +97,13 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   private long exceptionSize = 0;
   private final boolean retryImmediatelySupported;
 
-  // This is a dirty hack to address HBASE-22539. The lowest bit is for normal rpc cleanup, and the
-  // second bit is for WAL reference. We can only call release if both of them are zero. The reason
-  // why we can not use a general reference counting is that, we may call cleanup multiple times in
-  // the current implementation. We should fix this in the future.
-  private final AtomicInteger reference = new AtomicInteger(0b01);
+  // This is a dirty hack to address HBASE-22539. The highest bit is for rpc ref and cleanup, and
+  // the rest of the bits are for WAL reference count. We can only call release if all of them are
+  // zero. The reason why we can not use a general reference counting is that, we may call cleanup
+  // multiple times in the current implementation. We should fix this in the future.
+  // The refCount here will start as 0x80000000 and increment with every WAL reference and decrement
+  // from WAL side on release
+  private final AtomicInteger reference = new AtomicInteger(0x80000000);
 
   private final Span span;
 
@@ -157,13 +159,14 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     span.end();
   }
 
-  private void release(int mask) {
+  @Override
+  public void cleanup() {
     for (;;) {
       int ref = reference.get();
-      if ((ref & mask) == 0) {
+      if ((ref & 0x80000000) == 0) {
         return;
       }
-      int nextRef = ref & (~mask);
+      int nextRef = ref & 0x7fffffff;
       if (reference.compareAndSet(ref, nextRef)) {
         if (nextRef == 0) {
           if (this.reqCleanup != null) {
@@ -175,23 +178,17 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     }
   }
 
-  @Override
-  public void cleanup() {
-    release(0b01);
-  }
-
   public void retainByWAL() {
-    for (;;) {
-      int ref = reference.get();
-      int nextRef = ref | 0b10;
-      if (reference.compareAndSet(ref, nextRef)) {
-        return;
-      }
-    }
+    reference.incrementAndGet();
   }
 
   public void releaseByWAL() {
-    release(0b10);
+    if (reference.decrementAndGet() == 0) {
+      if (this.reqCleanup != null) {
+        this.reqCleanup.run();
+      }
+    }
+
   }
 
   @Override
