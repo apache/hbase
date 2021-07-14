@@ -311,7 +311,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   protected boolean needsBalance(TableName tableName, Cluster cluster) {
     ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
     if (cs.getNumServers() < MIN_SERVER_BALANCE) {
-      LOG.info("Not running balancer because only " + cs.getNumServers() + " active regionserver(s)");
+      LOG.info("Not running balancer because only " + cs.getNumServers() +
+        " active regionserver(s)");
       return false;
     }
     if (areSomeRegionReplicasColocated(cluster)) {
@@ -346,7 +347,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (balanced) {
       String reason = "";
       if (total <= 0) {
-        reason = "(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern) = " + total + " <= 0";
+        reason = "(cost1*multiplier1)+(cost2*multiplier2)+...+(costn*multipliern) = " + total +
+          " <= 0";
       } else if (sumMultiplier <= 0) {
         reason = "sumMultiplier = " + sumMultiplier + " <= 0";
       } else if ((total / sumMultiplier) < minCostNeedBalance) {
@@ -355,13 +357,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
             total / sumMultiplier) + " <= minCostNeedBalance(" + minCostNeedBalance + ")";
       }
 
-      LOG.info("{} - skipping load balancing because weighted average imbalance={} <= " + "threshold({}). If you want more aggressive balancing, either lower "
-          + "hbase.master.balancer.stochastic.minCostNeedBalance from {} or increase the relative " + "multiplier(s) of the specific cost function(s). functionCost={}",
+      LOG.info("{} - skipping load balancing because weighted average imbalance={} <= " +
+          "threshold({}). If you want more aggressive balancing, either lower " +
+          "hbase.master.balancer.stochastic.minCostNeedBalance from {} or increase the relative" +
+          " multiplier(s) of the specific cost function(s). functionCost={}",
         isByTable ? "Table specific (" + tableName + ")" : "Cluster wide", total / sumMultiplier,
         minCostNeedBalance, minCostNeedBalance, functionCost());
     } else {
       LOG.info("{} - Calculating plan. may take up to {}ms to complete.",
-      isByTable ? "Table specific ("+tableName+")" : "Cluster wide", maxRunningTime);
+        isByTable ? "Table specific ("+tableName+")" : "Cluster wide", maxRunningTime);
     }
     return !balanced;
   }
@@ -484,13 +488,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
     if (initCost > currentCost) {
       plans = createRegionPlans(cluster);
-        LOG.info("Finished computing new moving plan. Computation took {} ms" +
+      LOG.info("Finished computing new moving plan. Computation took {} ms" +
           " to try {} different iterations.  Found a solution that moves " +
-          "{} regions; Going from a computed imbalance of {}" +
-          " to a new imbalance of {}. ",
-        endTime - startTime, step, plans.size(),
-        initCost / sumMultiplier, currentCost / sumMultiplier);
-        return plans;
+          "{} regions; Going from a computed imbalance of {}" + " to a new imbalance of {}. ",
+        endTime - startTime, step, plans.size(), initCost / sumMultiplier,
+        currentCost / sumMultiplier);
+      return plans;
     }
     LOG.info("Could not find a better moving plan.  Tried {} different configurations in " +
         "{} ms, and did not find anything with an imbalance score less than {}", step,

@@ -51,7 +51,7 @@ public class TestStochasticLoadBalancerBalanceCluster extends BalancerTestBase {
    */
   @Test
   public void testBalanceCluster() throws Exception {
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 3 * 60 * 1000); // 800 sec
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 3 * 60 * 1000); // 3 min
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 20000000L);
     loadBalancer.setConf(conf);
