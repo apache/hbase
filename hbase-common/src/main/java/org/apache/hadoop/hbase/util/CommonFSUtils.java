@@ -51,8 +51,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * <a href="https://issues.apache.org/jira/browse/HBASE-20838">HBASE-20838</a> for more details.
  */
 @InterfaceAudience.Private
-public final class
-CommonFSUtils {
+public final class CommonFSUtils {
   private static final Logger LOG = LoggerFactory.getLogger(CommonFSUtils.class);
 
   /** Parameter name for HBase WAL directory */
