@@ -1508,7 +1508,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @param max The Max value
    * @param value The value to be scaled.
    * @return The scaled value.
-   * TBD: To be refactored to CostFunction when cost funtion is refactored out
    */
   static double scale(double min, double max, double value) {
     if (max <= min || value <= min
