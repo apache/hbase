@@ -2137,6 +2137,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public int loadTable(final Table t, final byte[][] f, byte[] value,
       boolean writeToWAL) throws IOException {
+    final int BATCH_SIZE = 1000;
     List<Put> puts = new ArrayList<>();
     for (byte[] row : HBaseTestingUtility.ROWS) {
       Put put = new Put(row);
@@ -2146,9 +2147,13 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         put.addColumn(f[i], f[i], value1);
       }
       puts.add(put);
+      if (puts.size() > BATCH_SIZE) {
+        t.put(puts);
+        puts.clear();
+      }
     }
     t.put(puts);
-    return puts.size();
+    return HBaseTestingUtility.ROWS.length;
   }
 
   /** A tracker for tracking and validating table rows

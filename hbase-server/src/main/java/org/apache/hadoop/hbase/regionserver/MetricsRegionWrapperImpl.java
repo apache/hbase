@@ -246,6 +246,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     return mixedReadsOnStore;
   }
 
+  @Override
+  public long getRowSequencingYields() {
+    return region.getRowSequencingYields();
+  }
+
   public class HRegionMetricsWrapperRunnable implements Runnable {
 
     @Override

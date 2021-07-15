@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -61,9 +62,12 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -222,6 +226,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
  */
 @SuppressWarnings("deprecation")
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+    justification="Intentional")
 public class HRegion implements HeapSize, PropagatingConfigurationObserver, Region {
   private static final Logger LOG = LoggerFactory.getLogger(HRegion.class);
 
@@ -688,6 +694,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private final MultiVersionConcurrencyControl mvcc;
 
+  private final RowCommitSequencer rowCommitSequencer;
+
   // Coprocessor host
   private RegionCoprocessorHost coprocessorHost;
 
@@ -765,6 +773,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.wal = wal;
     this.fs = fs;
     this.mvcc = new MultiVersionConcurrencyControl(getRegionInfo().getShortNameToLog());
+    this.rowCommitSequencer = new RowCommitSequencer();
 
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
@@ -4459,6 +4468,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     @Override
     public void checkAndPrepare() throws IOException {
+      // TODO: Currently validation is done with current time before acquiring locks and
+      // updates are done with different timestamps after acquiring locks. This behavior is
+      // inherited from the code prior to this change. Can this be changed?
       long now = EnvironmentEdgeManager.currentTime();
       visitBatchOperations(true, this.size(), (int index) -> {
         checkAndPrepareMutation(index, now);
@@ -4623,6 +4635,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         return;
       }
 
+      // Use the row commit sequencer to ensure that only operations that mutate disjoint
+      // sets of rows are committed within the same clock tick.
+      // Do this before we take the updatesLock because the sequencer may decide the operation
+      // will yield.
+      long now = rowCommitSequencer.getRowSequence(acquiredRowLocks);
+
       // Check for thread interrupt status in case we have been signaled from
       // #interruptRegionOperation. Do it before we take the lock and disable interrupts for
       // the WAL append.
@@ -4631,15 +4649,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       lock(this.updatesLock.readLock(), miniBatchOp.getReadyToWriteCount());
       locked = true;
 
-      // From this point until memstore update this operation should not be interrupted.
-      disableInterrupts();
-
       // STEP 2. Update mini batch of all operations in progress with LATEST_TIMESTAMP timestamp
       // We should record the timestamp only after we have acquired the rowLock,
       // otherwise, newer puts/deletes/increment/append are not guaranteed to have a newer
       // timestamp
 
-      long now = EnvironmentEdgeManager.currentTime();
+      // From this point until memstore update this operation should not be interrupted.
+      disableInterrupts();
+
+      // Prepare the batch, making any timestamp substitutions as needed
       batchOp.prepareMiniBatchOperations(miniBatchOp, now, acquiredRowLocks);
 
       // STEP 3. Build WAL edit
@@ -4896,11 +4914,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         // If matches, perform the mutation or the rowMutations
         if (matches) {
-          // We have acquired the row lock already. If the system clock is NOT monotonically
-          // non-decreasing (see HBASE-14070) we should make sure that the mutation has a
-          // larger timestamp than what was observed via Get. doBatchMutate already does this, but
-          // there is no way to pass the cellTs. See HBASE-14054.
-          long now = EnvironmentEdgeManager.currentTime();
+
+          // Use the row commit sequencer to ensure that only operations that mutate disjoint
+          // sets of rows are committed within the same clock tick.
+          // Even if we yield it is safe to do this conditionally. The thread will yield but
+          // the row will remain locked. It will not be possible for any other thread to update
+          // the value. We don't need to re-read.
+          long now = rowCommitSequencer.getRowSequence(rowLock);
+
           long ts = Math.max(now, cellTs); // ensure write is not eclipsed
           byte[] byteTs = Bytes.toBytes(ts);
           if (mutation != null) {
@@ -6797,6 +6818,157 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
+   * Sequences the commit of rows such that more than one mutation to a given row will never be
+   * committed in the same clock tick.
+   * <p>
+   * Callers will first acquire row locks for the row(s) the pending mutation will mutate.
+   * Then they will use RowCommitSequencer.getRowSequence to ensure that the set of rows about
+   * to be mutated are disjoint with respect to all other pending mutations in the current clock
+   * tick. If an overlap is found, getRowSequence will yield and loop until there is no longer
+   * an overlap and the caller's pending mutation can proceed.
+   * <p>
+   * <b>Note: This should all be REMOVED once we use a hybrid logical clock for timekeeping.</b>
+   */
+  public static class RowCommitSequencer {
+
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition condition = lock.newCondition();
+    private final LongAdder yieldCount = new LongAdder();
+    // LinkedHashSet is O(1) insert and O(1) contains, this is important
+    private volatile LinkedHashSet<HashedBytes> rowSet = new LinkedHashSet<>();
+    private volatile long sequence = EnvironmentEdgeManager.currentTime();
+
+    /**
+     * Update the current time and take the sequencer lock to prepare for row set updates.
+     * @param now the current time
+     */
+    // Visible for testing
+    void updateCurrentTimeAndLock(long now) throws IOException {
+      try {
+        lock.lockInterruptibly();
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException().initCause(e);
+      }
+      if (sequence != now) {
+        sequence = now;
+        // Time changed, reset the row set and signal any waiters
+        rowSet = new LinkedHashSet<>();
+        condition.signalAll();
+      }
+    }
+
+    /**
+     * Release the sequencer lock.
+     */
+    // Visible for testing
+    void unlock() {
+      lock.unlock();
+    }
+
+    /**
+     * Check if one or more of the rows we have acquired locks for would overlap with a commit
+     * made to a row in the same clock tick.
+     * @param rowLocks the list of rows locked for the current operation
+     * @return false if one or more rows overlap with an operation in progress, true otherwise
+     */
+    // Visible for testing
+    boolean checkAndAddRows(Collection<RowLock> rowLocks) throws IOException {
+      boolean overlap = false;
+      // For each row, test if the set already contains the row. If there is no mutation
+      // and the current operation will be allowed to go forward, then add all of its rows
+      // to the set.
+      // This operation is going to be O(N*2) number of row locks, so the underlying set
+      // should have O(1) add and O(1) contains, like LinkedHashSet.
+      for (RowLock l: rowLocks) {
+        HashedBytes row = ((RowLockImpl)l).context.row;
+        if (rowSet.contains(row)) {
+          overlap = true;
+          break;
+        }
+      }
+      if (!overlap) {
+        for (RowLock l: rowLocks) {
+          HashedBytes row = ((RowLockImpl)l).context.row;
+          rowSet.add(row);
+        }
+      }
+      return overlap;
+    }
+
+    /**
+     * Get the timestamp to use for substitution as cell timestamps for the current operation
+     * in progress.
+     * <p>
+     * This method may block if one or more of the rows we have acquired locks for would
+     * overlap with a commit made to a row in the same clock tick, until the system time
+     * advances.
+     * @param rowLocks list of row locks accumulated for a batch mutation
+     * @return the timestamp to use for the current operation
+     */
+    public long getRowSequence(List<RowLock> rowLocks) throws IOException {
+      while (true) {
+        updateCurrentTimeAndLock(EnvironmentEdgeManager.currentTime());
+        try {
+          // Now we can check for collisions.
+          if (!checkAndAddRows(rowLocks)) {
+            // No collision detected, proceed.
+            return sequence;
+          }
+          // Collision, get in line.
+          yieldCount.increment();
+          try {
+            // The typical clock resolution on a modern system is ~1ms. Wait times less than
+            // this may be rounded up to at least the time for one clock tick on some platforms.
+            if (!condition.await(1, TimeUnit.MILLISECONDS)) {
+              continue;
+            }
+          } catch (InterruptedException e) {
+            throw (IOException) new InterruptedIOException().initCause(e);
+          }
+        } finally {
+          unlock();
+        }
+      }
+    }
+
+    /**
+     * Get the timestamp to use for substitution as cell timestamps for the current operation
+     * in progress.
+     * <p>
+     * This method may block if one or more of the rows we have acquired locks for would
+     * overlap with a commit made to a row in the same clock tick, until the system time
+     * advances.
+     * @param rowLock row lock
+     * @return the timestamp to use for the current operation
+     */
+    public long getRowSequence(RowLock rowLock) throws IOException {
+      List<RowLock> list = new ArrayList<RowLock>(1);
+      list.add(rowLock);
+      return getRowSequence(list);
+    }
+
+    /**
+     * @return the number of times the row sequencer yielded the current threads
+     */
+    public long getYieldCount() {
+      return yieldCount.sum();
+    }
+
+  }
+
+  // Visible for testing
+  RowCommitSequencer getRowCommitSequencer() {
+    return this.rowCommitSequencer;
+  }
+
+  /**
+   * @return the number of times the row sequencer yielded the current threads
+   */
+  public long getRowSequencingYields() {
+    return rowCommitSequencer.getYieldCount();
+  }
+
+  /**
    * Determines whether multiple column families are present
    * Precondition: familyPaths is not null
    *
@@ -7737,6 +7909,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * @return writeEntry associated with this append
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification="Findbugs doesn't know about Preconditions")
   private WriteEntry doWALAppend(WALEdit walEdit, Durability durability, List<UUID> clusterIds,
       long now, long nonceGroup, long nonce, long origLogSeqNum) throws IOException {
     Preconditions.checkArgument(walEdit != null && !walEdit.isEmpty(),
@@ -8437,4 +8611,5 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void addWriteRequestsCount(long writeRequestsCount) {
     this.writeRequestsCount.add(writeRequestsCount);
   }
+
 }

@@ -38,6 +38,7 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
   String NUM_FILES_COMPACTED_COUNT = "numFilesCompactedCount";
   String FLUSHES_QUEUED_COUNT = "flushesQueuedCount";
   String MAX_FLUSH_QUEUE_SIZE = "maxFlushQueueSize";
+  String ROW_SEQUENCING_YIELDS = "rowSequencingYields";
   String COMPACTIONS_COMPLETED_DESC = "Number of compactions that have completed.";
   String COMPACTIONS_FAILED_DESC = "Number of compactions that have failed.";
   String LAST_MAJOR_COMPACTION_DESC = "Age of the last major compaction in milliseconds.";
@@ -57,6 +58,7 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
   String ROW_READS_ONLY_ON_MEMSTORE_DESC = "Row reads happening completely out of memstore";
   String MIXED_ROW_READS = "mixedRowReadsCount";
   String MIXED_ROW_READS_ON_STORE_DESC = "Row reads happening out of files and memstore on store";
+  String ROW_SEQUENCING_YIELDS_DESC = "Number of yields taken to sequence row commits";
 
   /**
    * Close the region's metrics as this region is closing.
@@ -99,5 +101,9 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
    */
   MetricsRegionAggregateSource getAggregateSource();
 
+  /**
+   * Update count of row sequencing yields.
+   */
+  void updateRowSequencingYields();
 
 }
