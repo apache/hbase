@@ -62,6 +62,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -6832,19 +6834,26 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public class RowCommitSequencer {
 
-    private final boolean enabled;
-    private ReentrantLock lock;
-    private volatile long sequence;
-    // LinkedHashSet is O(1) insert and O(1) contains, this is important
-    private volatile LinkedHashSet<HashedBytes> rowSet;
+    class RowSet {
+      ReentrantLock lock;
+      // LinkedHashSet is O(1) insert and O(1) contains, this is important
+      LinkedHashSet<HashedBytes> set;
+      public RowSet() {
+        lock = new ReentrantLock();
+        set = new LinkedHashSet<>();
+      }
+    }
+
+    private AtomicReference<RowSet> rowSet;
+    private AtomicLong sequence;
     private LongAdder yieldCount;
+    private final boolean enabled;
 
     public RowCommitSequencer() {
       this.enabled = conf.getBoolean("hbase.hregion.commit.sequencer.enabled", true);
       if (this.enabled) {
-        this.lock = new ReentrantLock();
-        this.sequence = EnvironmentEdgeManager.currentTime();
-        this.rowSet = new LinkedHashSet<>();
+        this.sequence = new AtomicLong(EnvironmentEdgeManager.currentTime());
+        this.rowSet = new AtomicReference<>(new RowSet());
         this.yieldCount = new LongAdder();
       }
     }
@@ -6854,25 +6863,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * @param now the current time
      */
     // Visible for testing
-    void lockAndUpdateTime(long now) throws IOException {
-      try {
-        lock.lockInterruptibly();
-      } catch (InterruptedException e) {
-        throw (IOException) new InterruptedIOException().initCause(e);
-      }
-      if (sequence != now) {
-        sequence = now;
-        // Time changed, reset the row set.
-        rowSet = new LinkedHashSet<>();
-      }
-    }
-
-    /**
-     * Release the sequencer lock.
-     */
-    // Visible for testing
-    void unlock() {
-      lock.unlock();
+    void updateTime(final long now) throws IOException {
+      sequence.updateAndGet(x -> {
+        if (x != now) {
+          // Time changed, reset the row set.
+          rowSet.set(new RowSet());
+        }
+        return now;
+      });
     }
 
     /**
@@ -6888,17 +6886,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // to the set.
       // This operation is going to be O(N*2) number of row locks, so the underlying set
       // should have O(1) add and O(1) contains, like LinkedHashSet.
-      for (RowLock l: rowLocks) {
-        HashedBytes row = ((RowLockImpl)l).context.row;
-        if (rowSet.contains(row)) {
-          return false;
+      RowSet thisSet = rowSet.get();
+      try {
+        thisSet.lock.lockInterruptibly();
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException().initCause(e);
+      }
+      try {
+        for (RowLock l: rowLocks) {
+          HashedBytes row = ((RowLockImpl)l).context.row;
+          if (thisSet.set.contains(row)) {
+            return false;
+          }
         }
+        for (RowLock l: rowLocks) {
+          HashedBytes row = ((RowLockImpl)l).context.row;
+          thisSet.set.add(row);
+        }
+        return true;
+      } finally {
+        thisSet.lock.unlock();
       }
-      for (RowLock l: rowLocks) {
-        HashedBytes row = ((RowLockImpl)l).context.row;
-        rowSet.add(row);
-      }
-      return true;
     }
 
     /**
@@ -6909,12 +6917,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      */
     // Visible for testing
     boolean checkAndAddRow(RowLock lock) throws IOException {
-      HashedBytes row = ((RowLockImpl)lock).context.row;
-      if (rowSet.contains(row)) {
-        return false;
+      RowSet thisSet = rowSet.get();
+      try {
+        thisSet.lock.lockInterruptibly();
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException().initCause(e);
       }
-      rowSet.add(row);
-      return true;
+      try {
+        HashedBytes row = ((RowLockImpl)lock).context.row;
+        if (thisSet.set.contains(row)) {
+          return false;
+        }
+        thisSet.set.add(row);
+        return true;
+      } finally {
+        thisSet.lock.unlock();
+      }
     }
 
     /**
@@ -6933,15 +6951,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (!enabled) {
           return now;
         }
-        lockAndUpdateTime(now);
-        try {
-          // Now we can check for collisions.
-          if (checkAndAddRows(rowLocks)) {
-            // No collision detected, proceed.
-            return now;
-          }
-        } finally {
-          unlock();
+        updateTime(now);
+        // Now we can check for collisions.
+        if (checkAndAddRows(rowLocks)) {
+          // No collision detected, proceed.
+          return now;
         }
         try {
           // The typical clock resolution on a modern system is ~1ms. Wait times less than
@@ -6970,15 +6984,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (!enabled) {
           return now;
         }
-        lockAndUpdateTime(now);
-        try {
-          // Now we can check for collisions.
-          if (checkAndAddRow(rowLock)) {
-            // No collision detected, proceed.
-            return now;
-          }
-        } finally {
-          unlock();
+        updateTime(now);
+        // Now we can check for collisions.
+        if (checkAndAddRow(rowLock)) {
+          // No collision detected, proceed.
+          return now;
         }
         try {
           // The typical clock resolution on a modern system is ~1ms. Wait times less than
