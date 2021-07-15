@@ -304,4 +304,50 @@ public class TestCompactionServer {
     TEST_UTIL.compact(TABLENAME, false);
     TEST_UTIL.waitFor(6000, () -> COMPACTION_SERVER.requestCount.sum() > 0);
   }
+
+  @Test
+  public void testCompactionWithTTL() throws Exception {
+    TEST_UTIL.getAdmin().compactionSwitch(false, new ArrayList<>());
+    ColumnFamilyDescriptor cfd =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).setTimeToLive(10).build();
+    TableDescriptor modifiedTableDescriptor = TableDescriptorBuilder.newBuilder(TABLENAME)
+      .setColumnFamily(cfd).setCompactionOffloadEnabled(true).build();
+    TEST_UTIL.getAdmin().modifyTable(modifiedTableDescriptor);
+    TEST_UTIL.waitTableAvailable(TABLENAME);
+    // generate hfile all kv are expired
+    doPutRecord(1, 500, true);
+    int kVCount = 0;
+    for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
+      for (HStoreFile hStoreFile : region.getStore(Bytes.toBytes(FAMILY)).getStorefiles()) {
+        kVCount += hStoreFile.getReader().getHFileReader().getTrailer().getEntryCount();
+      }
+    }
+    assertEquals(500, kVCount);
+    // generate hfile mixed with expired and valid KV
+    doPutRecord(1, 500, false);
+    Thread.sleep(10000);
+    doPutRecord(501, 1000, true);
+
+    TEST_UTIL.getAdmin().compactionSwitch(true, new ArrayList<>());
+    TEST_UTIL.compact(TABLENAME, true);
+    TEST_UTIL.waitFor(60000, () -> {
+      int hFileCount = 0;
+      for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
+        hFileCount += region.getStore(Bytes.toBytes(FAMILY)).getStorefilesCount();
+      }
+      return hFileCount == 1;
+    });
+    kVCount = 0;
+    for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLENAME)) {
+      for (HStoreFile hStoreFile : region.getStore(Bytes.toBytes(FAMILY)).getStorefiles()) {
+        kVCount += hStoreFile.getReader().getHFileReader().getTrailer().getEntryCount();
+      }
+    }
+    // To ensure do compaction on compaction server
+    TEST_UTIL.waitFor(60000, () -> COMPACTION_SERVER.requestCount.sum() > 0);
+
+    assertEquals(500, kVCount);
+    verifyRecord(1,500, false);
+    verifyRecord(501,1000, true);
+  }
 }
