@@ -85,7 +85,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
       combinedCacheStats.lruCacheStats
         .miss(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
     }
-    return existInL1?
+    return existInL1 ?
         lruCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics):
         l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
