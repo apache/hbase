@@ -1,5 +1,33 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.7.1 07/15/2021
+
+** Sub-task
+    * [HBASE-26070] Rewrite 1.7.0 faulty table descriptors at bootstrap
+
+** Bug
+    * [HBASE-26075] Replication is stuck due to zero length wal file in oldWALs dir
+    * [HBASE-22923] Consider minVersionToMoveSysTables while moving region and creating regionPlan (ADDENDUM)
+    * [HBASE-22923] min version of RegionServer to move system table regions
+    * [HBASE-26021] Undo the incompatible serialization change in HBASE-7767
+    * [HBASE-25130] Fix master in-memory server holding map after hbck fixes
+    * [HBASE-26013] Get operations readRows metrics becomes zero after HBASE-25677
+    * [HBASE-26004] port HBASE-26001 (cell level tags invisible in atomic operations when access control is on) to branch-1
+    * [HBASE-25984] Avoid premature reuse of sync futures in FSHLog
+    * [HBASE-25924] Re-compute size of WAL file while removing from WALEntryStream
+
+* Improvement
+    * [HBASE-26025] Add a flag to mark if the IOError can be solved by retry in thrift IOError
+
+** Test
+    * [HBASE-26074] Fix testLogLevelByHttps/testLogLevelByHttpsWithSpnego
+    * [HBASE-25910] Fix port assignment test
+
+* Task
+    * [HBASE-26033] complement the admin operations in thrift2 after HBASE-21674
+    * [HBASE-21674] Port HBASE-21652 (Refactor ThriftServer making thrift2 server inherited from thrift1 server) to branch-1
+
+
 Release Notes - HBase - Version 1.7.0 07/04/2021
 
 ** Sub-task
