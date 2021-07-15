@@ -8009,7 +8009,6 @@ public class TestHRegion {
     assertTrue (checkForOverlap(AAE));
     assertTrue (checkForOverlap(AAF));
     assertTrue (checkForOverlap(AAG));
-
   }
 
   @Test
@@ -8030,7 +8029,7 @@ public class TestHRegion {
           LOG.info("Set time to {}", i);
           mee.setValue(i);
           try {
-            Thread.sleep(100);
+            Thread.sleep(HRegion.RowCommitSequencer.ROW_SEQUENCER_SLEEP_TIME * 10);
           } catch (InterruptedException e) {
             LOG.info("Interrupted while ticking");
             return;
@@ -8038,7 +8037,7 @@ public class TestHRegion {
         }
       });
       Thread committer = new Thread(() -> {
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 100; i++) {
           try {
             region.put(putAAA);
             LOG.info("Put {}", putAAA);
@@ -8057,8 +8056,8 @@ public class TestHRegion {
     }
 
     LOG.info("rowSequencingYields: {}", region.getRowSequencingYields());
-    // There should be at least 9 yields (there will probably be many more...)
-    assertTrue(region.getRowSequencingYields() >= 9);
+    // There should be at least 99 yields (there will probably be many more...)
+    assertTrue(region.getRowSequencingYields() >= 99);
   }
 
 }

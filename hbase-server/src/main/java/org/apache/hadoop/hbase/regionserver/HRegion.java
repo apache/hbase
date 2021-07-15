@@ -1580,6 +1580,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String CLOSE_WAIT_INTERVAL = "hbase.regionserver.close.wait.interval.ms";
   public static final long DEFAULT_CLOSE_WAIT_INTERVAL = 10000; // 10 seconds
 
+  public static final String COMMIT_SEQUENCER_ENABLED_KEY = "hbase.hregion.commit.sequencer.enabled";
+  public static final boolean COMMIT_SEQUENCER_ENABLED_DEFAULT = true;
+
   public Map<byte[], List<HStoreFile>> close(boolean abort) throws IOException {
     return close(abort, false);
   }
@@ -6834,7 +6837,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public class RowCommitSequencer {
 
-    class RowSet {
+    public static final int ROW_SEQUENCER_SLEEP_TIME = 1;
+
+    private class RowSet {
       ReentrantLock lock;
       // LinkedHashSet is O(1) insert and O(1) contains, this is important
       LinkedHashSet<HashedBytes> set;
@@ -6850,7 +6855,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     private final boolean enabled;
 
     public RowCommitSequencer() {
-      this.enabled = conf.getBoolean("hbase.hregion.commit.sequencer.enabled", true);
+      this.enabled = conf.getBoolean(COMMIT_SEQUENCER_ENABLED_KEY, true);
       if (this.enabled) {
         this.sequence = new AtomicLong(EnvironmentEdgeManager.currentTime());
         this.rowSet = new AtomicReference<>(new RowSet());
@@ -6961,7 +6966,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // The typical clock resolution on a modern system is ~1ms. Wait times less than
           // this may be rounded up to at least the time for one clock tick on some platforms.
           yieldCount.increment();
-          Thread.sleep(1,0);
+          Thread.sleep(ROW_SEQUENCER_SLEEP_TIME, 0);
         } catch (InterruptedException e) {
           throw (IOException) new InterruptedIOException().initCause(e);
         }
