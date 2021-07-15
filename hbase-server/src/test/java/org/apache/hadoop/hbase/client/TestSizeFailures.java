@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -137,7 +138,7 @@ public class TestSizeFailures {
     Connection conn = TEST_UTIL.getConnection();
     try (Table table = conn.getTable(TABLENAME)) {
       Scan s = new Scan();
-      s.setSmall(true);
+      s.setReadType(ReadType.PREAD);
       s.addFamily(FAMILY);
       s.setMaxResultSize(-1);
       s.setBatch(-1);

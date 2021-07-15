@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -34,16 +35,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
-public class TestSmallReversedScanner {
+public class TestPreadReversedScanner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSmallReversedScanner.class);
+      HBaseClassTestRule.forClass(TestPreadReversedScanner.class);
 
-  public static final Logger LOG = LoggerFactory.getLogger(TestSmallReversedScanner.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestPreadReversedScanner.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static final TableName TABLE_NAME = TableName.valueOf("testReversedSmall");
+  private static final TableName TABLE_NAME = TableName.valueOf("testPreadSmall");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("columnFamily");
 
   private static Table htable = null;
@@ -74,10 +75,9 @@ public class TestSmallReversedScanner {
 
   /**
    * all rowKeys are fit in the last region.
-   * @throws IOException
    */
   @Test
-  public void testSmallReversedScan01() throws IOException {
+  public void testPreadReversedScan01() throws IOException {
     String[][] keysCases = new String[][] {
       { "d0", "d1", "d2", "d3" }, // all rowKeys fit in the last region.
       { "a0", "a1", "a2", "a3" }, // all rowKeys fit in the first region.
@@ -85,12 +85,12 @@ public class TestSmallReversedScanner {
     };
 
     for (int caseIndex = 0; caseIndex < keysCases.length; caseIndex++) {
-      testSmallReversedScanInternal(keysCases[caseIndex]);
+      testPreadReversedScanInternal(keysCases[caseIndex]);
       TEST_UTIL.truncateTable(TABLE_NAME);
     }
   }
 
-  private void testSmallReversedScanInternal(String[] inputRowKeys) throws IOException {
+  private void testPreadReversedScanInternal(String[] inputRowKeys) throws IOException {
     int rowCount = inputRowKeys.length;
 
     for (int i = 0; i < rowCount; i++) {
@@ -101,7 +101,7 @@ public class TestSmallReversedScanner {
 
     Scan scan = new Scan();
     scan.setReversed(true);
-    scan.setSmall(true);
+    scan.setReadType(ReadType.PREAD);
 
     ResultScanner scanner = htable.getScanner(scan);
     Result r;
@@ -116,9 +116,10 @@ public class TestSmallReversedScanner {
 
   /**
    * Corner case:
-   *  HBase has 4 regions, (-oo,b),[b,c),[c,d),[d,+oo), and only rowKey with byte[]={0x00} locate in region (-oo,b) .
-   *  test whether reversed small scanner will return infinity results with RowKey={0x00}.
-   * @throws IOException
+   * <p/>
+   * HBase has 4 regions, (-oo,b),[b,c),[c,d),[d,+oo), and only rowKey with byte[]={0x00} locate in
+   * region (-oo,b) . test whether reversed pread scanner will return infinity results with
+   * RowKey={0x00}.
    */
   @Test
   public void testSmallReversedScan02() throws IOException {
@@ -129,7 +130,7 @@ public class TestSmallReversedScanner {
     Scan scan = new Scan();
     scan.setCaching(1);
     scan.setReversed(true);
-    scan.setSmall(true);
+    scan.setReadType(ReadType.PREAD);
 
     ResultScanner scanner = htable.getScanner(scan);
     Result r;
