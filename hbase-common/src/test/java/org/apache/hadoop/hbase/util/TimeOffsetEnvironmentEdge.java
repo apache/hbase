@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class TimeOffsetEnvironmentEdge implements EnvironmentEdge {
+public class TimeOffsetEnvironmentEdge extends BaseEnvironmentEdge {
   private long offset;
   
   public TimeOffsetEnvironmentEdge() {
@@ -33,16 +33,7 @@ public class TimeOffsetEnvironmentEdge implements EnvironmentEdge {
   
   @Override
   public long currentTime() {
-    return System.currentTimeMillis() + offset;
+    return super.currentTime() + offset;
   }
 
-  @Override
-  public Clock getClock(HashedBytes name) {
-    return null;
-  }
-
-  @Override
-  public boolean removeClock(Clock clock) {
-    return false;
-  }
 }

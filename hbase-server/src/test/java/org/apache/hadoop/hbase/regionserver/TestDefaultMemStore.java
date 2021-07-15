@@ -56,11 +56,10 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.BaseEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -993,7 +992,7 @@ public class TestDefaultMemStore {
     meta.put(new Put(row, HConstants.LATEST_TIMESTAMP, familyMap));
   }
 
-  private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {
+  private class EnvironmentEdgeForMemstoreTest extends BaseEnvironmentEdge {
     long t = 1234;
     @Override
     public long currentTime() {
@@ -1001,14 +1000,6 @@ public class TestDefaultMemStore {
     }
     public void setCurrentTimeMillis(long t) {
       this.t = t;
-    }
-    @Override
-    public Clock getClock(HashedBytes name) {
-      return null;
-    }
-    @Override
-    public boolean removeClock(Clock clock) {
-      return false;
     }
   }
 
