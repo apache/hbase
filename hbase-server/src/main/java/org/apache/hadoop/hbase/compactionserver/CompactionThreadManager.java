@@ -149,6 +149,26 @@ public class CompactionThreadManager implements ThroughputControllerService {
     }
   }
 
+  /**
+   * Open store, and clean stale compacted file in cache
+   */
+  private HStore openStore(RegionInfo regionInfo, ColumnFamilyDescriptor cfd, boolean major,
+      MonitoredTask status) throws IOException {
+    status.setStatus("Open store");
+    HStore store = getStore(conf, server.getFileSystem(), rootDir,
+      tableDescriptors.get(regionInfo.getTable()), regionInfo, cfd.getNameAsString());
+
+    // CompactedHFilesDischarger only run on regionserver, so compactionserver does not have
+    // opportunity to clean compacted file at that time, we clean compacted files here
+    compactionFilesCache.cleanupCompactedFiles(regionInfo, cfd,
+      store.getStorefiles().stream().map(sf -> sf.getPath().getName()).collect(Collectors.toSet()));
+    if (major) {
+      status.setStatus("Trigger major compaction");
+      store.triggerMajorCompaction();
+    }
+    return store;
+  }
+
   private void selectFileAndExecuteTask(CompactionTask compactionTask) throws IOException {
     ServerName rsServerName = compactionTask.getRsServerName();
     RegionInfo regionInfo = compactionTask.getRegionInfo();
@@ -168,10 +188,10 @@ public class CompactionThreadManager implements ThroughputControllerService {
     // the three has consistent state, we need this condition to guarantee correct selection
     synchronized (compactionFilesCache.getCompactedStoreFilesAsLock(regionInfo, cfd)) {
       synchronized (compactionFilesCache.getSelectedStoreFilesAsLock(regionInfo, cfd)) {
-        Pair<HStore, Optional<CompactionContext>> pair = selectCompaction(regionInfo, cfd,
+        store = openStore(regionInfo, cfd, compactionTask.isRequestMajor(), status);
+        store.setFavoredNodes(compactionTask.getFavoredNodes());
+        Optional<CompactionContext> compaction = selectCompaction(store, regionInfo, cfd,
           compactionTask.isRequestMajor(), compactionTask.getPriority(), status, logStr);
-        store = pair.getFirst();
-        Optional<CompactionContext> compaction = pair.getSecond();
         if (!compaction.isPresent()) {
           store.close();
           LOG.info("Compaction context is empty: {}", compactionTask);
@@ -203,25 +223,12 @@ public class CompactionThreadManager implements ThroughputControllerService {
   }
 
   /**
-   * Open store, and select compaction context
-   * @return Store and CompactionContext
+   * select compaction context
+   * @return CompactionContext
    */
-  Pair<HStore, Optional<CompactionContext>> selectCompaction(RegionInfo regionInfo,
+  Optional<CompactionContext> selectCompaction(HStore store, RegionInfo regionInfo,
       ColumnFamilyDescriptor cfd, boolean major, int priority, MonitoredTask status, String logStr)
       throws IOException {
-    status.setStatus("Open store");
-    tableDescriptors.get(regionInfo.getTable());
-    HStore store = getStore(conf, server.getFileSystem(), rootDir,
-      tableDescriptors.get(regionInfo.getTable()), regionInfo, cfd.getNameAsString());
-
-    // CompactedHFilesDischarger only run on regionserver, so compactionserver does not have
-    // opportunity to clean compacted file at that time, we clean compacted files here
-    compactionFilesCache.cleanupCompactedFiles(regionInfo, cfd,
-      store.getStorefiles().stream().map(sf -> sf.getPath().getName()).collect(Collectors.toSet()));
-    if (major) {
-      status.setStatus("Trigger major compaction");
-      store.triggerMajorCompaction();
-    }
     // get current compacting and compacted files, NOTE: these files are file names only, don't
     // include paths.
     status.setStatus("Get current compacting and compacted files from compactionFilesCache");
@@ -241,7 +248,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
       CompactionLifeCycleTracker.DUMMY, null, excludeStoreFiles);
     LOG.info("After select store: {}, if compaction context is present: {}", logStr,
       compaction.isPresent());
-    return new Pair<>(store, compaction);
+    return compaction;
   }
 
   /**

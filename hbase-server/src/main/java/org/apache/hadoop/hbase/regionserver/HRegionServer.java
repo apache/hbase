@@ -3758,16 +3758,18 @@ public class HRegionServer extends AbstractServer implements
     }
     CompactionService.BlockingInterface cms = cmsStub;
     InetSocketAddress[] favoredNodesForRegion =
-      getFavoredNodesForRegion(regionInfo.getEncodedName());
-    CompactRequest.Builder builder =
-      CompactRequest.newBuilder().setServer(ProtobufUtil.toServerName(getServerName()))
+        getFavoredNodesForRegion(regionInfo.getEncodedName());
+    CompactRequest.Builder builder = CompactRequest.newBuilder()
+        .setServer(ProtobufUtil.toServerName(getServerName()))
         .setRegionInfo(ProtobufUtil.toRegionInfo(regionInfo))
         .setFamily(ProtobufUtil.toColumnFamilySchema(cfd)).setMajor(major).setPriority(priority);
-    if (favoredNodesForRegion != null) {
+    if (favoredNodesForRegion != null && favoredNodesForRegion.length > 0) {
       for (InetSocketAddress address : favoredNodesForRegion) {
         builder.addFavoredNodes(ProtobufUtil
-          .toServerName(ServerName.valueOf(address.getHostName(), address.getPort(), 0L)));
+            .toServerName(ServerName.valueOf(address.getHostName(), address.getPort(), 0L)));
       }
+    } else {
+      builder.addFavoredNodes(ProtobufUtil.toServerName(getServerName()));
     }
     CompactRequest compactRequest = builder.build();
     try {
