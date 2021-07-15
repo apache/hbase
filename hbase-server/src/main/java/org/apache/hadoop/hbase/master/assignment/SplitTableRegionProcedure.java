@@ -619,9 +619,7 @@ public class SplitTableRegionProcedure
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
       env.getMasterConfiguration(), fs, tabledir, getParentRegion(), false);
     regionFs.createSplitsDir(daughterOneRI, daughterTwoRI);
-
     Pair<Integer, Integer> expectedReferences = splitStoreFiles(env, regionFs);
-
     assertReferenceFileCount(fs, expectedReferences.getFirst(),
       regionFs.getSplitsDir(daughterOneRI));
     //Move the files from the temporary .splits to the final /table/region directory
