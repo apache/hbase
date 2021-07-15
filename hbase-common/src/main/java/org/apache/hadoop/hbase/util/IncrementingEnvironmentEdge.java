@@ -24,7 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Uses an incrementing algorithm instead of the default.
  */
 @InterfaceAudience.Private
-public class IncrementingEnvironmentEdge implements EnvironmentEdge {
+public class IncrementingEnvironmentEdge extends BaseEnvironmentEdge {
 
   private long timeIncrement;
 
@@ -62,4 +62,5 @@ public class IncrementingEnvironmentEdge implements EnvironmentEdge {
     timeIncrement += amount;
     return timeIncrement;
   }
+
 }

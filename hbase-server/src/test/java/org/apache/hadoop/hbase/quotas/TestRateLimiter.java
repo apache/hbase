@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -131,10 +132,17 @@ public class TestRateLimiter {
     // fix the current time in order to get the precise value of interval
     EnvironmentEdge edge = new EnvironmentEdge() {
       private final long ts = EnvironmentEdgeManager.currentTime();
-
       @Override
       public long currentTime() {
         return ts;
+      }
+      @Override
+      public Clock getClock(HashedBytes name) {
+        return null;
+      }
+      @Override
+      public boolean removeClock(Clock clock) {
+        return false;
       }
     };
     EnvironmentEdgeManager.injectEdge(edge);
