@@ -734,17 +734,17 @@ public class HRegionFileSystem {
 
   /**
    * Write out a merge reference under the given merges directory.
-   * @param mergingRegion {@link RegionInfo} of the region being merged
+   * @param mergedRegion {@link RegionInfo} of the region being merged
    * @param familyName Column Family Name
    * @param f File to create reference.
    * @param mergedDir the resulting merged region directory where the reference must be created.
    * @return Path to created reference.
    * @throws IOException
    */
-  public Path mergeStoreFile(RegionInfo mergingRegion, String familyName, HStoreFile f,
+  public Path mergeStoreFile(RegionInfo mergedRegion, String familyName, HStoreFile f,
       Path mergedDir) throws IOException {
     return writeStrategy.
-      mergeStoreFile(mergingRegion, regionInfoForFs, familyName, f, mergedDir, fs);
+      mergeStoreFile(regionInfoForFs, mergedRegion, familyName, f, mergedDir, fs);
   }
 
   /**

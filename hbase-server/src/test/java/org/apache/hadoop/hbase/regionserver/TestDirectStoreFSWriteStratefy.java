@@ -175,13 +175,20 @@ public class TestDirectStoreFSWriteStratefy {
     HRegion first = regions.get(0);
     HRegion second = regions.get(1);
     HRegionFileSystem regionFS = first.getRegionFileSystem();
-    DirectStoreFSWriteStrategy writeStrategy = new DirectStoreFSWriteStrategy(regionFS);
+
     RegionInfo mergeResult = RegionInfoBuilder.newBuilder(table)
       .setStartKey(first.getRegionInfo().getStartKey())
       .setEndKey(second.getRegionInfo().getEndKey())
       .setSplit(false)
       .setRegionId(first.getRegionInfo().getRegionId() + EnvironmentEdgeManager.currentTime())
       .build();
+
+    HRegionFileSystem mergeRegionFs = HRegionFileSystem.createRegionOnFileSystem(
+      UTIL.getHBaseCluster().getMaster().getConfiguration(),
+      regionFS.getFileSystem(), regionFS.getTableDir(), mergeResult);
+
+    DirectStoreFSWriteStrategy writeStrategy = new DirectStoreFSWriteStrategy(mergeRegionFs);
+
     //merge file from first region
     HStoreFile file = (HStoreFile) first.getStore(cf).getStorefiles().toArray()[0];
     mergeFileFromRegion(writeStrategy, first, mergeResult, file);
@@ -264,13 +271,20 @@ public class TestDirectStoreFSWriteStratefy {
     HRegion first = regions.get(0);
     HRegion second = regions.get(1);
     HRegionFileSystem regionFS = first.getRegionFileSystem();
-    DirectStoreFSWriteStrategy writeStrategy = new DirectStoreFSWriteStrategy(regionFS);
+
     RegionInfo mergeResult = RegionInfoBuilder.newBuilder(table)
       .setStartKey(first.getRegionInfo().getStartKey())
       .setEndKey(second.getRegionInfo().getEndKey())
       .setSplit(false)
       .setRegionId(first.getRegionInfo().getRegionId() + EnvironmentEdgeManager.currentTime())
       .build();
+
+    HRegionFileSystem mergeRegionFs = HRegionFileSystem.createRegionOnFileSystem(
+      UTIL.getHBaseCluster().getMaster().getConfiguration(),
+      regionFS.getFileSystem(), regionFS.getTableDir(), mergeResult);
+
+    DirectStoreFSWriteStrategy writeStrategy = new DirectStoreFSWriteStrategy(mergeRegionFs);
+
     //merge file from first region
     HStoreFile file = (HStoreFile) first.getStore(cf).getStorefiles().toArray()[0];
     StoreFileTrackingUtils.init(UTIL.getHBaseCluster().getMaster());

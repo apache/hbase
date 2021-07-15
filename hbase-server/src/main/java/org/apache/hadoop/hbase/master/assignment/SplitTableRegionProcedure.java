@@ -679,7 +679,6 @@ public class SplitTableRegionProcedure
       }
     }
     if (nbFiles == 0) {
-      LOG.info(">>>> no file to split...");
       // no file needs to be splitted.
       return new Pair<Integer, Integer>(0, 0);
     }

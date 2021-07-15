@@ -175,7 +175,12 @@ public class DirectStoreFSWriteStrategy extends HRegionFileSystemWriteStrategy {
   @Override
   public Path mergeStoreFile(RegionInfo regionToMerge, RegionInfo mergedRegion, String familyName,
       HStoreFile f, Path mergedDir, FileSystem fs) throws IOException {
-    Path path = super.mergeStoreFile(regionToMerge, mergedRegion, familyName, f, mergedDir, fs);
+//    Path path = super.mergeStoreFile(regionToMerge, mergedRegion, familyName, f, mergedDir, fs);
+
+    Path path = (this.fileSystem.regionInfoForFs.equals(regionToMerge)) ?
+      super.mergeStoreFile(mergedRegion, regionToMerge, familyName, f, mergedDir, fs)
+      : super.mergeStoreFile(regionToMerge, mergedRegion, familyName, f, mergedDir, fs);
+
     List<Path> referenceFiles = mergeReferences.get(familyName);
     if(referenceFiles==null){
       referenceFiles = new ArrayList<>();
