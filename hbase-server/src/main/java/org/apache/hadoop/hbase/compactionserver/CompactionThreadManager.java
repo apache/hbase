@@ -41,9 +41,11 @@ import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.CompactThreadControl;
+import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -360,7 +362,14 @@ public class CompactionThreadManager implements ThroughputControllerService {
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs,
         CommonFSUtils.getTableDir(rootDir, htd.getTableName()), hri);
     HRegion region = new HRegion(regionFs, null, conf, htd, null);
-    HStore store = new HStore(region, htd.getColumnFamily(Bytes.toBytes(familyName)), conf, false);
+    ColumnFamilyDescriptor columnFamilyDescriptor = htd.getColumnFamily(Bytes.toBytes(familyName));
+    HStore store;
+    if (columnFamilyDescriptor.isMobEnabled()) {
+      region.setMobFileCache(new MobFileCache(conf));
+      store = new HMobStore(region, columnFamilyDescriptor, conf, false);
+    } else {
+      store = new HStore(region, columnFamilyDescriptor, conf, false);
+    }
     OptionalLong maxSequenceId = store.getMaxSequenceId();
     LOG.info("store max sequence id: {}", maxSequenceId.orElse(0));
     region.getMVCC().advanceTo(maxSequenceId.orElse(0));
