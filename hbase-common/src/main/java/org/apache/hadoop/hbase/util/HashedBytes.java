@@ -36,7 +36,12 @@ public class HashedBytes {
 
   public HashedBytes(byte[] bytes) {
     this.bytes = bytes;
-    hashCode = Bytes.hashCode(bytes);
+    hashCode = Bytes.hashCode(this.bytes);
+  }
+
+  public HashedBytes(byte[]... bytes) {
+    this.bytes = Bytes.add(bytes);
+    hashCode = Bytes.hashCode(this.bytes);
   }
 
   public byte[] getBytes() {
@@ -50,10 +55,12 @@ public class HashedBytes {
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj)
+    if (this == obj) {
       return true;
-    if (obj == null || getClass() != obj.getClass())
+    }
+    if (obj == null || getClass() != obj.getClass()) {
       return false;
+    }
     HashedBytes other = (HashedBytes) obj;
     return (hashCode == other.hashCode) && Arrays.equals(bytes, other.bytes);
   }

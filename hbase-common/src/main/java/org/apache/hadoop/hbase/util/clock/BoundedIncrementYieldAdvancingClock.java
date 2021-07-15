@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class BoundedIncrementYieldAdvancingClock extends IncrementAdvancingClock {
 
-  static final int MAX_ADVANCE = 1000; // one second in milliseconds
+  static final int MAX_ADVANCE = 1000;
 
   protected AtomicLong currentAdvance = new AtomicLong(0);
 

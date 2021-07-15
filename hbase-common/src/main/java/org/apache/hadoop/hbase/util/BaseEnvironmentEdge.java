@@ -60,7 +60,8 @@ public abstract class BaseEnvironmentEdge implements EnvironmentEdge {
     }
     @Override
     public long currentTimeAdvancing() {
-      throw new UnsupportedOperationException("Default clock does not implement currentTimeAdvancing()");
+      throw new UnsupportedOperationException(
+        "Default clock does not implement currentTimeAdvancing()");
     }
     @Override
     public void get() {

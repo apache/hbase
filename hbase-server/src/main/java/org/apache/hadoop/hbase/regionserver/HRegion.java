@@ -416,8 +416,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private final CellComparator cellComparator;
 
-  private EnvironmentEdge.Clock clock;
-
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
    * region. Writes older than this readPoint, are included in every
@@ -691,6 +689,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private final MultiVersionConcurrencyControl mvcc;
 
+  private final EnvironmentEdge.Clock clock;
+
   // Coprocessor host
   private RegionCoprocessorHost coprocessorHost;
 
@@ -768,8 +768,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.wal = wal;
     this.fs = fs;
     this.mvcc = new MultiVersionConcurrencyControl(getRegionInfo().getShortNameToLog());
-
-    // Get a clock instance. We will use it to enforce the HBASE-24440 invariant.
     this.clock = EnvironmentEdgeManager.getDelegate()
       .getClock(new HashedBytes(getRegionInfo().getEncodedNameAsBytes()));
 
@@ -1049,7 +1047,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Initialize flush policy
     this.flushPolicy = FlushPolicyFactory.create(this, conf);
 
-    long lastFlushTime = getCurrentTime();
+    long lastFlushTime = clock.currentTime();
     for (HStore store: stores.values()) {
       this.lastStoreFlushTimeMap.put(store, lastFlushTime);
     }
@@ -1611,15 +1609,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         return doClose(abort, status);
       }
     } finally {
+      EnvironmentEdgeManager.getDelegate().removeClock(clock);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Region close journal for {}:\n{}", this.getRegionInfo().getEncodedName(),
           status.prettyPrintJournal());
       }
       status.cleanup();
-      // No more operations requiring current time from here.
-      if (this.clock != null) {
-        EnvironmentEdgeManager.getDelegate().removeClock(this.clock);
-      }
     }
   }
 
@@ -1639,25 +1634,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     assert timeoutForWriteLock >= 0;
     this.timeoutForWriteLock = timeoutForWriteLock;
   }
-
-  ////
-  // Because we typically need an advancing time from the clock in the mini batch mutation
-  // code path, which involves multiple rows, we can't manage time at the row scope, it
-  // has to be the region scope. Unfortunately it means all concurrent updates to the region
-  // are in scope, so the clock type should block as infrequently as possible, i.e.
-  // BoundedIncrementYieldAdvancingClock. On the upside, we can simply manage this clock
-  // as part of region state and harmonize all timekeeping for region actions through that
-  // clock instance. (current time won't ever seem to go backwards wrt advancing time)
-
-  private long getCurrentTime() {
-    return this.clock.currentTime();
-  }
-
-  private long getCurrentTimeAdvancing() throws InterruptedException {
-    return this.clock.currentTimeAdvancing();
-  }
-
-  ////
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UL_UNRELEASED_LOCK_EXCEPTION_PATH",
       justification="I think FindBugs is confused")
@@ -1738,7 +1714,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       boolean acquired = false;
       do {
-        long start = getCurrentTime();
+        long start = clock.currentTime();
         try {
           acquired = lock.writeLock().tryLock(Math.min(remainingWaitTime, closeWaitInterval),
             TimeUnit.MILLISECONDS);
@@ -1751,7 +1727,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           LOG.warn(msg, e);
           throw (InterruptedIOException) new InterruptedIOException(msg).initCause(e);
         }
-        long elapsed = getCurrentTime() - start;
+        long elapsed = clock.currentTime() - start;
         elapsedWaitTime += elapsed;
         remainingWaitTime -= elapsed;
         if (canAbort && !acquired && remainingWaitTime > 0) {
@@ -1783,9 +1759,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     } else {
 
-      long start = getCurrentTime();
+      long start = clock.currentTime();
       lock.writeLock().lock();
-      elapsedWaitTime = getCurrentTime() - start;
+      elapsedWaitTime = clock.currentTime() - start;
 
     }
 
@@ -1974,7 +1950,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         return true;
       }
       if (!writestate.flushing) return true;
-      long start = getCurrentTime();
+      long start = clock.currentTime();
       long duration = 0;
       boolean interrupted = false;
       LOG.debug("waiting for cache flush to complete for region " + this);
@@ -1990,7 +1966,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             interrupted = true;
             break;
           } finally {
-            duration = getCurrentTime() - start;
+            duration = clock.currentTime() - start;
           }
         }
       } finally {
@@ -2645,7 +2621,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.flushCheckInterval <= 0) {
       return false;
     }
-    long now = getCurrentTime();
+    long now = clock.currentTime();
     if (store.timeOfOldestEdit() < now - this.flushCheckInterval) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Flush column family: " + store.getColumnFamilyName() + " of " +
@@ -2676,7 +2652,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (modifiedFlushCheckInterval <= 0) { //disabled
       return false;
     }
-    long now = getCurrentTime();
+    long now = clock.currentTime();
     //if we flushed in the recent past, we don't need to do again now
     if ((now - getEarliestFlushTimeForAllStores() < modifiedFlushCheckInterval)) {
       return false;
@@ -2750,7 +2726,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Don't flush when server aborting, it's unsafe
       throw new IOException("Aborting flush because server is aborted...");
     }
-    final long startTime = getCurrentTime();
+    final long startTime = clock.currentTime();
     // If nothing to flush, return, but return with a valid unused sequenceId.
     // Its needed by bulk upload IIRC. It flushes until no edits in memory so it can insert a
     // bulk loaded file between memory and existing hfiles. It wants a good seqeunceId that belongs
@@ -3102,7 +3078,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       notifyAll(); // FindBugs NN_NAKED_NOTIFY
     }
 
-    long time = getCurrentTime() - startTime;
+    long time = clock.currentTime() - startTime;
     MemStoreSize mss = prepareResult.totalFlushableSize.getMemStoreSize();
     long memstoresize = this.memStoreSizing.getMemStoreSize().getDataSize();
     String msg = "Finished flush of"
@@ -4679,9 +4655,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Use getCurrentTimeAdvancing() to ensure our notion of current time has advanced
       // since the last clock read. This enforces the HBASE-24440 invariant on any timestamp
       // substitutions we might make.
+
       long now;
       try {
-        now = getCurrentTimeAdvancing();
+        now = clock.currentTimeAdvancing();
       } catch (InterruptedException e) {
         // Should not happen, but handle in any case
         throw (IOException) new InterruptedIOException().initCause(e);
@@ -4948,7 +4925,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // substitutions we might make.
           long now;
           try {
-            now = getCurrentTimeAdvancing();
+            now = clock.currentTimeAdvancing();
           } catch (InterruptedException e) {
             throw (IOException) new InterruptedIOException().initCause(e);
           }
@@ -5490,7 +5467,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         int interval = this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
         // How often to send a progress report (default 1/2 master timeout)
         int period = this.conf.getInt("hbase.hstore.report.period", 300000);
-        long lastReport = getCurrentTime();
+        long lastReport = clock.currentTime();
 
         if (coprocessorHost != null) {
           coprocessorHost.preReplayWALs(this.getRegionInfo(), edits);
@@ -5509,7 +5486,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             if (intervalEdits >= interval) {
               // Number of edits interval reached
               intervalEdits = 0;
-              long cur = getCurrentTime();
+              long cur = clock.currentTime();
               if (lastReport + period <= cur) {
                 status.setStatus("Replaying edits..." +
                     " skipped=" + skippedEdits +
@@ -6023,7 +6000,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       List<String> flushFiles = storeFlush.getFlushOutputList();
       StoreFlushContext ctx = null;
-      long startTime = getCurrentTime();
+      long startTime = clock.currentTime();
       if (prepareFlushResult == null || prepareFlushResult.storeFlushCtxs == null) {
         ctx = store.createFlushContext(flush.getFlushSequenceNumber(), FlushLifeCycleTracker.DUMMY);
       } else {
@@ -6245,7 +6222,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
           if (store.getMaxSequenceId().orElse(0L) != storeSeqId) {
             // Record latest flush time if we picked up new files
-            lastStoreFlushTimeMap.put(store, getCurrentTime());
+            lastStoreFlushTimeMap.put(store, clock.currentTime());
           }
 
           if (writestate.flushing) {
@@ -6685,7 +6662,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (call.isPresent()) {
         long deadline = call.get().getDeadline();
         if (deadline < Long.MAX_VALUE) {
-          int timeToDeadline = (int) (deadline - getCurrentTime());
+          int timeToDeadline = (int) (deadline - clock.currentTime());
           if (timeToDeadline <= this.rowLockWaitDuration) {
             reachDeadlineFirst = true;
             timeout = timeToDeadline;
@@ -6762,6 +6739,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     RowLockContext(HashedBytes row) {
       this.row = row;
+    }
+
+    public byte[] getRow() {
+      return this.row.getBytes();
     }
 
     RowLockImpl newWriteLock() {
@@ -7608,7 +7589,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private List<Cell> getInternal(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
     throws IOException {
     List<Cell> results = new ArrayList<>();
-    long before = getCurrentTime();
+    long before = clock.currentTime();
 
     // pre-get CP hook
     if (withCoprocessor && (coprocessorHost != null)) {
@@ -7645,7 +7626,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   void metricsUpdateForGet(List<Cell> results, long before) {
     if (this.metricsRegion != null) {
-      this.metricsRegion.updateGet(getCurrentTime() - before);
+      this.metricsRegion.updateGet(clock.currentTime() - before);
     }
     if (this.rsServices != null && this.rsServices.getMetrics() != null) {
       rsServices.getMetrics().updateReadQueryMeter(getRegionInfo().getTable(), 1);

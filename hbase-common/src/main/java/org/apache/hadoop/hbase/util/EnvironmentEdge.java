@@ -41,13 +41,13 @@ public interface EnvironmentEdge {
   /**
    * Get the clock associated with the given identifier.
    * @param name clock identifier
-   * @returns the clock instance for the given identifier
+   * @return the clock instance for the given identifier
    */
   Clock getClock(HashedBytes name);
 
   /**
-   * Remove the clock with the given identifier.
-   * @param clockId clock identifier
+   * Release the reference to and possible remove this clock.
+   * @param clock the clock
    * @return true if the clock was removed, false if it did not exist
    */
   boolean removeClock(Clock clock);
@@ -64,7 +64,6 @@ public interface EnvironmentEdge {
 
     /**
      * Returns the current time using a named clock.
-     * @param clockId clock identifier
      * @return The current time, according to the given named clock.
      */
     long currentTime();
@@ -74,7 +73,6 @@ public interface EnvironmentEdge {
      * at least one tick before returning.
      * <p>
      * This method may block the current thread's execution or cause it to yield.
-     * @param clockId clock identifier
      * @return The current time, according to the given named clock.
      * @throws InterruptedException if interrupted while waiting for the clock to advance
      */
