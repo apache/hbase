@@ -53,7 +53,6 @@ public class TestStochasticLoadBalancerBalanceCluster extends BalancerTestBase {
   public void testBalanceCluster() throws Exception {
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 300 * 1000); // 300 sec
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
-    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 20000000L);
     loadBalancer.setConf(conf);
     for (int[] mockCluster : clusterStateMocks) {
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
