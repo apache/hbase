@@ -62,9 +62,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -773,11 +771,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.wal = wal;
     this.fs = fs;
     this.mvcc = new MultiVersionConcurrencyControl(getRegionInfo().getShortNameToLog());
-    this.rowCommitSequencer = new RowCommitSequencer();
 
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
     this.conf = new CompoundConfiguration().add(confParam).addBytesMap(htd.getValues());
+
+    // rowCommitSequencer depends on this.conf
+    this.rowCommitSequencer = new RowCommitSequencer();
+
     this.cellComparator = htd.isMetaTable() ||
       conf.getBoolean(USE_META_CELL_COMPARATOR, DEFAULT_USE_META_CELL_COMPARATOR) ?
         MetaCellComparator.META_COMPARATOR : CellComparatorImpl.COMPARATOR;
@@ -6829,21 +6830,31 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * <p>
    * <b>Note: This should all be REMOVED once we use a hybrid logical clock for timekeeping.</b>
    */
-  public static class RowCommitSequencer {
+  public class RowCommitSequencer {
 
-    private final ReentrantLock lock = new ReentrantLock();
-    private final Condition condition = lock.newCondition();
-    private final LongAdder yieldCount = new LongAdder();
+    private final boolean enabled;
+    private ReentrantLock lock;
+    private volatile long sequence;
     // LinkedHashSet is O(1) insert and O(1) contains, this is important
-    private volatile LinkedHashSet<HashedBytes> rowSet = new LinkedHashSet<>();
-    private volatile long sequence = EnvironmentEdgeManager.currentTime();
+    private volatile LinkedHashSet<HashedBytes> rowSet;
+    private LongAdder yieldCount;
+
+    public RowCommitSequencer() {
+      this.enabled = conf.getBoolean("hbase.hregion.commit.sequencer.enabled", true);
+      if (this.enabled) {
+        this.lock = new ReentrantLock();
+        this.sequence = EnvironmentEdgeManager.currentTime();
+        this.rowSet = new LinkedHashSet<>();
+        this.yieldCount = new LongAdder();
+      }
+    }
 
     /**
      * Update the current time and take the sequencer lock to prepare for row set updates.
      * @param now the current time
      */
     // Visible for testing
-    void updateCurrentTimeAndLock(long now) throws IOException {
+    void lockAndUpdateTime(long now) throws IOException {
       try {
         lock.lockInterruptibly();
       } catch (InterruptedException e) {
@@ -6851,9 +6862,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       if (sequence != now) {
         sequence = now;
-        // Time changed, reset the row set and signal any waiters
+        // Time changed, reset the row set.
         rowSet = new LinkedHashSet<>();
-        condition.signalAll();
       }
     }
 
@@ -6873,7 +6883,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      */
     // Visible for testing
     boolean checkAndAddRows(Collection<RowLock> rowLocks) throws IOException {
-      boolean overlap = false;
       // For each row, test if the set already contains the row. If there is no mutation
       // and the current operation will be allowed to go forward, then add all of its rows
       // to the set.
@@ -6882,51 +6891,65 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (RowLock l: rowLocks) {
         HashedBytes row = ((RowLockImpl)l).context.row;
         if (rowSet.contains(row)) {
-          overlap = true;
-          break;
+          return false;
         }
       }
-      if (!overlap) {
-        for (RowLock l: rowLocks) {
-          HashedBytes row = ((RowLockImpl)l).context.row;
-          rowSet.add(row);
-        }
+      for (RowLock l: rowLocks) {
+        HashedBytes row = ((RowLockImpl)l).context.row;
+        rowSet.add(row);
       }
-      return overlap;
+      return true;
+    }
+
+    /**
+     * Check if the row we have acquired a lock for would overlap with a commit made in the same
+     * clock tick.
+     * @param lock the row locked for the current operation
+     * @return false if the row overlaps with an operation in progress, true otherwise
+     */
+    // Visible for testing
+    boolean checkAndAddRow(RowLock lock) throws IOException {
+      HashedBytes row = ((RowLockImpl)lock).context.row;
+      if (rowSet.contains(row)) {
+        return false;
+      }
+      rowSet.add(row);
+      return true;
     }
 
     /**
      * Get the timestamp to use for substitution as cell timestamps for the current operation
      * in progress.
      * <p>
-     * This method may block if one or more of the rows we have acquired locks for would
-     * overlap with a commit made to a row in the same clock tick, until the system time
+     * This method may yield the thread if one or more of the rows we have acquired locks for
+     * would overlap with a commit made to a row in the same clock tick, until the system time
      * advances.
      * @param rowLocks list of row locks accumulated for a batch mutation
      * @return the timestamp to use for the current operation
      */
     public long getRowSequence(List<RowLock> rowLocks) throws IOException {
       while (true) {
-        updateCurrentTimeAndLock(EnvironmentEdgeManager.currentTime());
+        long now = EnvironmentEdgeManager.currentTime();
+        if (!enabled) {
+          return now;
+        }
+        lockAndUpdateTime(now);
         try {
           // Now we can check for collisions.
-          if (!checkAndAddRows(rowLocks)) {
+          if (checkAndAddRows(rowLocks)) {
             // No collision detected, proceed.
-            return sequence;
-          }
-          // Collision, get in line.
-          yieldCount.increment();
-          try {
-            // The typical clock resolution on a modern system is ~1ms. Wait times less than
-            // this may be rounded up to at least the time for one clock tick on some platforms.
-            if (!condition.await(1, TimeUnit.MILLISECONDS)) {
-              continue;
-            }
-          } catch (InterruptedException e) {
-            throw (IOException) new InterruptedIOException().initCause(e);
+            return now;
           }
         } finally {
           unlock();
+        }
+        try {
+          // The typical clock resolution on a modern system is ~1ms. Wait times less than
+          // this may be rounded up to at least the time for one clock tick on some platforms.
+          yieldCount.increment();
+          Thread.sleep(1,0);
+        } catch (InterruptedException e) {
+          throw (IOException) new InterruptedIOException().initCause(e);
         }
       }
     }
@@ -6942,9 +6965,30 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * @return the timestamp to use for the current operation
      */
     public long getRowSequence(RowLock rowLock) throws IOException {
-      List<RowLock> list = new ArrayList<RowLock>(1);
-      list.add(rowLock);
-      return getRowSequence(list);
+      while (true) {
+        long now = EnvironmentEdgeManager.currentTime();
+        if (!enabled) {
+          return now;
+        }
+        lockAndUpdateTime(now);
+        try {
+          // Now we can check for collisions.
+          if (checkAndAddRow(rowLock)) {
+            // No collision detected, proceed.
+            return now;
+          }
+        } finally {
+          unlock();
+        }
+        try {
+          // The typical clock resolution on a modern system is ~1ms. Wait times less than
+          // this may be rounded up to at least the time for one clock tick on some platforms.
+          yieldCount.increment();
+          Thread.sleep(1,0);
+        } catch (InterruptedException e) {
+          throw (IOException) new InterruptedIOException().initCause(e);
+        }
+      }
     }
 
     /**

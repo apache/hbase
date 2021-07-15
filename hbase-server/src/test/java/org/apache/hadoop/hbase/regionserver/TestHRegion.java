@@ -7910,62 +7910,62 @@ public class TestHRegion {
 
     // Tick 1
 
-    sequencer.updateCurrentTimeAndLock(1);
+    sequencer.lockAndUpdateTime(1);
     try {
-      assertFalse(checkForOverlap(AAA, AAB, AAC));
-      assertTrue(checkForOverlap(AAA));
+      assertTrue (checkForOverlap(AAA, AAB, AAC));
+      assertFalse(checkForOverlap(AAA));
     } finally {
       sequencer.unlock();
     }
 
     // Tick 2
 
-    sequencer.updateCurrentTimeAndLock(2);
+    sequencer.lockAndUpdateTime(2);
     try {
-      assertFalse(checkForOverlap(AAA));
+      assertTrue (checkForOverlap(AAA));
     } finally {
       sequencer.unlock();
     }
 
     // Tick 3
 
-    sequencer.updateCurrentTimeAndLock(3);
+    sequencer.lockAndUpdateTime(3);
     try {
       // Two disjoint batches allowed
-      assertFalse(checkForOverlap(AAA, AAB, AAC));
-      assertFalse(checkForOverlap(AAD, AAE, AAF));
+      assertTrue (checkForOverlap(AAA, AAB, AAC));
+      assertTrue (checkForOverlap(AAD, AAE, AAF));
       // Single row mutations that conflict with the batches are disallowed
-      assertTrue(checkForOverlap(AAA));
-      assertTrue(checkForOverlap(AAB));
-      assertTrue(checkForOverlap(AAC));
-      assertTrue(checkForOverlap(AAD));
-      assertTrue(checkForOverlap(AAE));
-      assertTrue(checkForOverlap(AAF));
+      assertFalse(checkForOverlap(AAA));
+      assertFalse(checkForOverlap(AAB));
+      assertFalse(checkForOverlap(AAC));
+      assertFalse(checkForOverlap(AAD));
+      assertFalse(checkForOverlap(AAE));
+      assertFalse(checkForOverlap(AAF));
       // Single row mutation that does not conflict is fine
-      assertFalse(checkForOverlap(AAG));
+      assertTrue (checkForOverlap(AAG));
     } finally {
       sequencer.unlock();
     }
 
     // Tick 4
 
-    sequencer.updateCurrentTimeAndLock(4);
+    sequencer.lockAndUpdateTime(4);
     try {
       // Two single row mutations allowed
-      assertFalse(checkForOverlap(AAA));
-      assertFalse(checkForOverlap(AAD));
+      assertTrue (checkForOverlap(AAA));
+      assertTrue (checkForOverlap(AAD));
       // A batch with a conflicting row disallowed
-      assertTrue(checkForOverlap(AAA, AAB, AAC));
+      assertFalse(checkForOverlap(AAA, AAB, AAC));
       // Single row mutations in the batch that do not conflict are allowed on their own
       // This tests that the check does not add rows which are not going to pass the filter.
-      assertFalse(checkForOverlap(AAB));
-      assertFalse(checkForOverlap(AAC));
+      assertTrue (checkForOverlap(AAB));
+      assertTrue (checkForOverlap(AAC));
       // Another batch with a conflicting row disallowed
-      assertTrue(checkForOverlap(AAD, AAE, AAF));
+      assertFalse(checkForOverlap(AAD, AAE, AAF));
       // More row mutations in the batch that do not conflict are allowed on their own
       // This tests that the check does not add rows which are not going to pass the filter.
-      assertFalse(checkForOverlap(AAE));
-      assertFalse(checkForOverlap(AAF));
+      assertTrue (checkForOverlap(AAE));
+      assertTrue (checkForOverlap(AAF));
     } finally {
       sequencer.unlock();
     }
@@ -7973,10 +7973,10 @@ public class TestHRegion {
     // Time jumps forward
     // Tick 10
 
-    sequencer.updateCurrentTimeAndLock(10);
+    sequencer.lockAndUpdateTime(10);
     try {
       // A batch with a previosuly conflicting row now allowed
-      assertFalse(checkForOverlap(AAA, AAB, AAC));
+      assertTrue (checkForOverlap(AAA, AAB, AAC));
     } finally {
       sequencer.unlock();
     }
@@ -7984,10 +7984,10 @@ public class TestHRegion {
     // Time jumps backwards
     // Tick 7
 
-    sequencer.updateCurrentTimeAndLock(7);
+    sequencer.lockAndUpdateTime(7);
     try {
       // Same check
-      assertFalse(checkForOverlap(AAA, AAB, AAC));
+      assertTrue (checkForOverlap(AAA, AAB, AAC));
     } finally {
       sequencer.unlock();
     }
@@ -7995,10 +7995,10 @@ public class TestHRegion {
     // Time jumps backwards again
     // Tick 6
 
-    sequencer.updateCurrentTimeAndLock(6);
+    sequencer.lockAndUpdateTime(6);
     try {
       // Same check
-      assertFalse(checkForOverlap(AAA, AAB, AAC));
+      assertTrue (checkForOverlap(AAA, AAB, AAC));
     } finally {
       sequencer.unlock();
     }
@@ -8006,31 +8006,46 @@ public class TestHRegion {
     // Tick 11
 
     // Some interleaving
-    sequencer.updateCurrentTimeAndLock(11);
+    sequencer.lockAndUpdateTime(11);
     try {
-      assertFalse(checkForOverlap(AAA, AAB));
-      assertTrue (checkForOverlap(AAB, AAC));
-      assertFalse(checkForOverlap(AAC, AAD));
-      assertTrue (checkForOverlap(AAD, AAE));
-      assertFalse(checkForOverlap(AAE, AAF));
-      assertTrue (checkForOverlap(AAF, AAG));
-      assertFalse(checkForOverlap(AAG));
+      assertTrue (checkForOverlap(AAA, AAB));
+      assertFalse(checkForOverlap(AAB, AAC));
+      assertTrue (checkForOverlap(AAC, AAD));
+      assertFalse(checkForOverlap(AAD, AAE));
+      assertTrue (checkForOverlap(AAE, AAF));
+      assertFalse(checkForOverlap(AAF, AAG));
+      assertTrue (checkForOverlap(AAG));
     } finally {
       sequencer.unlock();
     }
 
     // Tick 12
 
-    sequencer.updateCurrentTimeAndLock(12);
+    sequencer.lockAndUpdateTime(12);
     try {
-      assertFalse(checkForOverlap(AAA, AAB, AAC, AAD, AAE, AAF, AAG));
-      assertTrue(checkForOverlap(AAA));
-      assertTrue(checkForOverlap(AAB));
-      assertTrue(checkForOverlap(AAC));
-      assertTrue(checkForOverlap(AAD));
-      assertTrue(checkForOverlap(AAE));
-      assertTrue(checkForOverlap(AAF));
-      assertTrue(checkForOverlap(AAG));
+      assertTrue (checkForOverlap(AAA, AAB, AAC, AAD, AAE, AAF, AAG));
+      assertFalse(checkForOverlap(AAA));
+      assertFalse(checkForOverlap(AAB));
+      assertFalse(checkForOverlap(AAC));
+      assertFalse(checkForOverlap(AAD));
+      assertFalse(checkForOverlap(AAE));
+      assertFalse(checkForOverlap(AAF));
+      assertFalse(checkForOverlap(AAG));
+    } finally {
+      sequencer.unlock();
+    }
+
+    // Tick 13
+
+    sequencer.lockAndUpdateTime(13);
+    try {
+      assertTrue (checkForOverlap(AAA));
+      assertTrue (checkForOverlap(AAB));
+      assertTrue (checkForOverlap(AAC));
+      assertTrue (checkForOverlap(AAD));
+      assertTrue (checkForOverlap(AAE));
+      assertTrue (checkForOverlap(AAF));
+      assertTrue (checkForOverlap(AAG));
     } finally {
       sequencer.unlock();
     }
@@ -8083,7 +8098,7 @@ public class TestHRegion {
 
     LOG.info("rowSequencingYields: {}", region.getRowSequencingYields());
     // There should be at least 9 yields (there will probably be many more...)
-    assertTrue(region.getRowSequencingYields() > 9);
+    assertTrue(region.getRowSequencingYields() >= 9);
   }
 
 }
