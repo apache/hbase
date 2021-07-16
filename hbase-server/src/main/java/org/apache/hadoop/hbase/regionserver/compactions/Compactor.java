@@ -398,16 +398,16 @@ public abstract class Compactor<T extends CellSink> {
   protected boolean performCompaction(InternalScanner scanner, CellSink writer,
       long smallestReadPoint, boolean cleanSeqId,
       ThroughputController throughputController) throws IOException {
-    long bytesWritten = 0;
     long bytesWrittenProgress = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
     List<Cell> cells = new ArrayList<Cell>();
-    long closeCheckInterval = HStore.getCloseCheckInterval();
+    long currentTime = EnvironmentEdgeManager.currentTime();
     long lastMillis = 0;
     if (LOG.isDebugEnabled()) {
-      lastMillis = EnvironmentEdgeManager.currentTime();
+      lastMillis = currentTime;
     }
+    CloseChecker closeChecker = new CloseChecker(conf, currentTime);
     String compactionName = ThroughputControlUtil.getNameForThrottling(store, "compaction");
     long now = 0;
     boolean hasMore;
@@ -418,8 +418,13 @@ public abstract class Compactor<T extends CellSink> {
     try {
       do {
         hasMore = scanner.next(cells, scannerContext);
+        currentTime = EnvironmentEdgeManager.currentTime();
         if (LOG.isDebugEnabled()) {
-          now = EnvironmentEdgeManager.currentTime();
+          now = currentTime;
+        }
+        if (closeChecker.isTimeLimit(store, currentTime)) {
+          progress.cancel();
+          return false;
         }
         // output to writer:
         Cell lastCleanCell = null;
@@ -441,16 +446,9 @@ public abstract class Compactor<T extends CellSink> {
             bytesWrittenProgress += len;
           }
           throughputController.control(compactionName, len);
-          // check periodically to see if a system stop is requested
-          if (closeCheckInterval > 0) {
-            bytesWritten += len;
-            if (bytesWritten > closeCheckInterval) {
-              bytesWritten = 0;
-              if (!store.areWritesEnabled()) {
-                progress.cancel();
-                return false;
-              }
-            }
+          if (closeChecker.isSizeLimit(store, len)) {
+            progress.cancel();
+            return false;
           }
         }
         if (lastCleanCell != null) {
