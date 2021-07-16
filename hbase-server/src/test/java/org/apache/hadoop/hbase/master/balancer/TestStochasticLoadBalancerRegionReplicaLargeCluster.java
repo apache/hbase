@@ -38,6 +38,7 @@ public class TestStochasticLoadBalancerRegionReplicaLargeCluster extends Balance
     int numRegionsPerServer = 19; // all servers except one
     int numTables = 100;
     int replication = 3;
+    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 20000000L);
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 }
