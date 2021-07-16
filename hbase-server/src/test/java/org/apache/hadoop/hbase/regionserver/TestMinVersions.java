@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,7 +62,8 @@ public class TestMinVersions {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMinVersions.class);
 
-  HBaseTestingUtility hbu = new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
   private final byte[] T0 = Bytes.toBytes("0");
   private final byte[] T1 = Bytes.toBytes("1");
   private final byte[] T2 = Bytes.toBytes("2");
@@ -72,6 +74,12 @@ public class TestMinVersions {
   private final byte[] c0 = COLUMNS[0];
 
   @Rule public TestName name = new TestName();
+
+  @BeforeClass
+  public static void setUpBeforeClass() {
+    // Row commit sequencer won't work because this test uses ManualEnvironmentEdge
+    TEST_UTIL.getConfiguration().setBoolean(HRegion.COMMIT_SEQUENCER_ENABLED_KEY, false);
+  }
 
   /**
    * Verify behavior of getClosestBefore(...)
@@ -86,7 +94,7 @@ public class TestMinVersions {
 
     TableDescriptor htd = TableDescriptorBuilder.
       newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamily(cfd).build();
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
     try {
 
       // 2s in the past
@@ -107,20 +115,20 @@ public class TestMinVersions {
       // now make sure that getClosestBefore(...) get can
       // rows that would be expired without minVersion.
       // also make sure it gets the latest version
-      Result r = hbu.getClosestRowBefore(region, T1, c0);
+      Result r = TEST_UTIL.getClosestRowBefore(region, T1, c0);
       checkResult(r, c0, T4);
 
-      r = hbu.getClosestRowBefore(region, T2, c0);
+      r = TEST_UTIL.getClosestRowBefore(region, T2, c0);
       checkResult(r, c0, T4);
 
       // now flush/compact
       region.flush(true);
       region.compact(true);
 
-      r = hbu.getClosestRowBefore(region, T1, c0);
+      r = TEST_UTIL.getClosestRowBefore(region, T1, c0);
       checkResult(r, c0, T4);
 
-      r = hbu.getClosestRowBefore(region, T2, c0);
+      r = TEST_UTIL.getClosestRowBefore(region, T2, c0);
       checkResult(r, c0, T4);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(region);
@@ -143,7 +151,7 @@ public class TestMinVersions {
     TableDescriptor htd = TableDescriptorBuilder.
       newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamily(cfd).build();
 
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
 
@@ -204,7 +212,7 @@ public class TestMinVersions {
     TableDescriptor htd = TableDescriptorBuilder.
       newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamily(cfd).build();
 
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
@@ -268,7 +276,7 @@ public class TestMinVersions {
 
     TableDescriptor htd = TableDescriptorBuilder.
       newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamily(cfd).build();
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
@@ -349,7 +357,7 @@ public class TestMinVersions {
 
     TableDescriptor htd = TableDescriptorBuilder.
       newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamily(cfd).build();
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
     try {
 
       // 2s in the past
@@ -455,7 +463,7 @@ public class TestMinVersions {
 
     TableDescriptor htd = TableDescriptorBuilder.
       newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamilies(cfdList).build();
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
@@ -547,7 +555,7 @@ public class TestMinVersions {
     TableDescriptor htd = TableDescriptorBuilder.
       newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamily(cfd).build();
 
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
 
     try {
       long startTS = EnvironmentEdgeManager.currentTime();

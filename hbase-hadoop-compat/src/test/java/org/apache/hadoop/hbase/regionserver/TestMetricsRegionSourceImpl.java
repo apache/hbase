@@ -233,5 +233,10 @@ public class TestMetricsRegionSourceImpl {
       map.put("info", 0L);
       return map;
     }
+
+    @Override
+    public long getRowSequencingYields() {
+      return 0;
+    }
   }
 }

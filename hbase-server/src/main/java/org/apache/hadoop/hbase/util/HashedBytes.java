@@ -29,7 +29,7 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-public class HashedBytes {
+public class HashedBytes implements Comparable<HashedBytes> {
 
   private final byte[] bytes;
   private final int hashCode;
@@ -59,7 +59,13 @@ public class HashedBytes {
   }
 
   @Override
+  public int compareTo(HashedBytes that) {
+    return Bytes.compareTo(this.bytes, that.bytes);
+  }
+
+  @Override
   public String toString() {
     return Bytes.toStringBinary(bytes);
   }
+
 }
