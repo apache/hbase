@@ -556,9 +556,9 @@ function hadoopcheck_rebuild
   elif [[ "${PATCH_BRANCH}" = branch-1 ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-1 rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.8.5 2.9.2"
+      hbase_hadoop2_versions="2.10.0"
     else
-      hbase_hadoop2_versions="2.8.5 2.9.2"
+      hbase_hadoop2_versions="2.10.0"
     fi
   elif [[ "${PATCH_BRANCH}" = branch-2.0 ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-2.0 rules."
