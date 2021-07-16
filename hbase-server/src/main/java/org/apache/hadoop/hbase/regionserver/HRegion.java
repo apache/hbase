@@ -157,6 +157,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
@@ -688,6 +689,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private final MultiVersionConcurrencyControl mvcc;
 
+  private final EnvironmentEdge.Clock clock;
+
   // Coprocessor host
   private RegionCoprocessorHost coprocessorHost;
 
@@ -765,6 +768,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.wal = wal;
     this.fs = fs;
     this.mvcc = new MultiVersionConcurrencyControl(getRegionInfo().getShortNameToLog());
+    this.clock = EnvironmentEdgeManager.getDelegate()
+      .getClock(new HashedBytes(getRegionInfo().getEncodedNameAsBytes()));
 
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
@@ -828,7 +833,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     /*
      * timestamp.slop provides a server-side constraint on the timestamp. This
-     * assumes that you base your TS around EnvironmentEdgeManager.currentTime(). In this case,
+     * assumes that you base your TS is around the current time. In this case,
      * throw an error to the user if the user-specified TS is newer than now +
      * slop. LATEST_TIMESTAMP == don't use this functionality
      */
@@ -1042,7 +1047,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Initialize flush policy
     this.flushPolicy = FlushPolicyFactory.create(this, conf);
 
-    long lastFlushTime = EnvironmentEdgeManager.currentTime();
+    long lastFlushTime = clock.currentTime();
     for (HStore store: stores.values()) {
       this.lastStoreFlushTimeMap.put(store, lastFlushTime);
     }
@@ -1604,6 +1609,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         return doClose(abort, status);
       }
     } finally {
+      EnvironmentEdgeManager.getDelegate().removeClock(clock);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Region close journal for {}:\n{}", this.getRegionInfo().getEncodedName(),
           status.prettyPrintJournal());
@@ -1708,7 +1714,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       boolean acquired = false;
       do {
-        long start = EnvironmentEdgeManager.currentTime();
+        long start = clock.currentTime();
         try {
           acquired = lock.writeLock().tryLock(Math.min(remainingWaitTime, closeWaitInterval),
             TimeUnit.MILLISECONDS);
@@ -1721,7 +1727,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           LOG.warn(msg, e);
           throw (InterruptedIOException) new InterruptedIOException(msg).initCause(e);
         }
-        long elapsed = EnvironmentEdgeManager.currentTime() - start;
+        long elapsed = clock.currentTime() - start;
         elapsedWaitTime += elapsed;
         remainingWaitTime -= elapsed;
         if (canAbort && !acquired && remainingWaitTime > 0) {
@@ -1753,9 +1759,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     } else {
 
-      long start = EnvironmentEdgeManager.currentTime();
+      long start = clock.currentTime();
       lock.writeLock().lock();
-      elapsedWaitTime = EnvironmentEdgeManager.currentTime() - start;
+      elapsedWaitTime = clock.currentTime() - start;
 
     }
 
@@ -1872,6 +1878,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       this.closed.set(true);
+
       if (!canFlush) {
         decrMemStoreSize(this.memStoreSizing.getMemStoreSize());
       } else if (this.memStoreSizing.getDataSize() != 0) {
@@ -1943,7 +1950,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         return true;
       }
       if (!writestate.flushing) return true;
-      long start = EnvironmentEdgeManager.currentTime();
+      long start = clock.currentTime();
       long duration = 0;
       boolean interrupted = false;
       LOG.debug("waiting for cache flush to complete for region " + this);
@@ -1959,7 +1966,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             interrupted = true;
             break;
           } finally {
-            duration = EnvironmentEdgeManager.currentTime() - start;
+            duration = clock.currentTime() - start;
           }
         }
       } finally {
@@ -2614,7 +2621,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.flushCheckInterval <= 0) {
       return false;
     }
-    long now = EnvironmentEdgeManager.currentTime();
+    long now = clock.currentTime();
     if (store.timeOfOldestEdit() < now - this.flushCheckInterval) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Flush column family: " + store.getColumnFamilyName() + " of " +
@@ -2645,7 +2652,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (modifiedFlushCheckInterval <= 0) { //disabled
       return false;
     }
-    long now = EnvironmentEdgeManager.currentTime();
+    long now = clock.currentTime();
     //if we flushed in the recent past, we don't need to do again now
     if ((now - getEarliestFlushTimeForAllStores() < modifiedFlushCheckInterval)) {
       return false;
@@ -2719,7 +2726,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Don't flush when server aborting, it's unsafe
       throw new IOException("Aborting flush because server is aborted...");
     }
-    final long startTime = EnvironmentEdgeManager.currentTime();
+    final long startTime = clock.currentTime();
     // If nothing to flush, return, but return with a valid unused sequenceId.
     // Its needed by bulk upload IIRC. It flushes until no edits in memory so it can insert a
     // bulk loaded file between memory and existing hfiles. It wants a good seqeunceId that belongs
@@ -3071,7 +3078,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       notifyAll(); // FindBugs NN_NAKED_NOTIFY
     }
 
-    long time = EnvironmentEdgeManager.currentTime() - startTime;
+    long time = clock.currentTime() - startTime;
     MemStoreSize mss = prepareResult.totalFlushableSize.getMemStoreSize();
     long memstoresize = this.memStoreSizing.getMemStoreSize().getDataSize();
     String msg = "Finished flush of"
@@ -3793,6 +3800,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // index 0: puts, index 1: deletes, index 2: increments, index 3: append
       final int[] metrics = {0, 0, 0, 0};
 
+      // TODO: Currently validation is done with system time before acquiring locks and
+      // updates are done with different timestamps after acquiring locks. This behavior is
+      // inherited from the code prior to this change. Should be fine, but this is due for
+      // a rewrite.
+
       visitBatchOperations(true, this.size(), new Visitor() {
         private long now = EnvironmentEdgeManager.currentTime();
         private WALEdit walEdit;
@@ -3810,9 +3822,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             }
           }
           if (isOperationPending(index)) {
-            // TODO: Currently validation is done with current time before acquiring locks and
-            // updates are done with different timestamps after acquiring locks. This behavior is
-            // inherited from the code prior to this change. Can this be changed?
             checkAndPrepareMutation(index, now);
           }
           return true;
@@ -4459,6 +4468,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     @Override
     public void checkAndPrepare() throws IOException {
+      // TODO: Currently validation is done with system time before acquiring locks and
+      // updates are done with different timestamps after acquiring locks. This behavior is
+      // inherited from the code prior to this change. Should be fine, but this is due for
+      // a rewrite.
       long now = EnvironmentEdgeManager.currentTime();
       visitBatchOperations(true, this.size(), (int index) -> {
         checkAndPrepareMutation(index, now);
@@ -4639,7 +4652,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // otherwise, newer puts/deletes/increment/append are not guaranteed to have a newer
       // timestamp
 
-      long now = EnvironmentEdgeManager.currentTime();
+      // Use getCurrentTimeAdvancing() to ensure our notion of current time has advanced
+      // since the last clock read. This enforces the HBASE-24440 invariant on any timestamp
+      // substitutions we might make.
+
+      long now;
+      try {
+        now = clock.currentTimeAdvancing();
+      } catch (InterruptedException e) {
+        // Should not happen, but handle in any case
+        throw (IOException) new InterruptedIOException().initCause(e);
+      }
+
       batchOp.prepareMiniBatchOperations(miniBatchOp, now, acquiredRowLocks);
 
       // STEP 3. Build WAL edit
@@ -4896,11 +4920,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         // If matches, perform the mutation or the rowMutations
         if (matches) {
-          // We have acquired the row lock already. If the system clock is NOT monotonically
-          // non-decreasing (see HBASE-14070) we should make sure that the mutation has a
-          // larger timestamp than what was observed via Get. doBatchMutate already does this, but
-          // there is no way to pass the cellTs. See HBASE-14054.
-          long now = EnvironmentEdgeManager.currentTime();
+          // Use getCurrentTimeAdvancing() to ensure our notion of current time has advanced
+          // since the last clock read. This enforces the HBASE-24440 invariant on any timestamp
+          // substitutions we might make.
+          long now;
+          try {
+            now = clock.currentTimeAdvancing();
+          } catch (InterruptedException e) {
+            throw (IOException) new InterruptedIOException().initCause(e);
+          }
           long ts = Math.max(now, cellTs); // ensure write is not eclipsed
           byte[] byteTs = Bytes.toBytes(ts);
           if (mutation != null) {
@@ -5439,7 +5467,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         int interval = this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
         // How often to send a progress report (default 1/2 master timeout)
         int period = this.conf.getInt("hbase.hstore.report.period", 300000);
-        long lastReport = EnvironmentEdgeManager.currentTime();
+        long lastReport = clock.currentTime();
 
         if (coprocessorHost != null) {
           coprocessorHost.preReplayWALs(this.getRegionInfo(), edits);
@@ -5458,7 +5486,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             if (intervalEdits >= interval) {
               // Number of edits interval reached
               intervalEdits = 0;
-              long cur = EnvironmentEdgeManager.currentTime();
+              long cur = clock.currentTime();
               if (lastReport + period <= cur) {
                 status.setStatus("Replaying edits..." +
                     " skipped=" + skippedEdits +
@@ -5972,7 +6000,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       List<String> flushFiles = storeFlush.getFlushOutputList();
       StoreFlushContext ctx = null;
-      long startTime = EnvironmentEdgeManager.currentTime();
+      long startTime = clock.currentTime();
       if (prepareFlushResult == null || prepareFlushResult.storeFlushCtxs == null) {
         ctx = store.createFlushContext(flush.getFlushSequenceNumber(), FlushLifeCycleTracker.DUMMY);
       } else {
@@ -6194,7 +6222,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
           if (store.getMaxSequenceId().orElse(0L) != storeSeqId) {
             // Record latest flush time if we picked up new files
-            lastStoreFlushTimeMap.put(store, EnvironmentEdgeManager.currentTime());
+            lastStoreFlushTimeMap.put(store, clock.currentTime());
           }
 
           if (writestate.flushing) {
@@ -6634,7 +6662,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (call.isPresent()) {
         long deadline = call.get().getDeadline();
         if (deadline < Long.MAX_VALUE) {
-          int timeToDeadline = (int) (deadline - EnvironmentEdgeManager.currentTime());
+          int timeToDeadline = (int) (deadline - clock.currentTime());
           if (timeToDeadline <= this.rowLockWaitDuration) {
             reachDeadlineFirst = true;
             timeout = timeToDeadline;
@@ -6711,6 +6739,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     RowLockContext(HashedBytes row) {
       this.row = row;
+    }
+
+    public byte[] getRow() {
+      return this.row.getBytes();
     }
 
     RowLockImpl newWriteLock() {
@@ -7557,7 +7589,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private List<Cell> getInternal(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
     throws IOException {
     List<Cell> results = new ArrayList<>();
-    long before = EnvironmentEdgeManager.currentTime();
+    long before = clock.currentTime();
 
     // pre-get CP hook
     if (withCoprocessor && (coprocessorHost != null)) {
@@ -7594,7 +7626,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   void metricsUpdateForGet(List<Cell> results, long before) {
     if (this.metricsRegion != null) {
-      this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
+      this.metricsRegion.updateGet(clock.currentTime() - before);
     }
     if (this.rsServices != null && this.rsServices.getMetrics() != null) {
       rsServices.getMetrics().updateReadQueryMeter(getRegionInfo().getTable(), 1);

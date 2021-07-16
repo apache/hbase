@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,50 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.util.clock;
 
-import java.util.Arrays;
+import java.util.concurrent.atomic.LongAdder;
 
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * This class encapsulates a byte array and overrides hashCode and equals so
- * that it's identity is based on the data rather than the array instance.
- */
 @InterfaceAudience.Private
-@InterfaceStability.Stable
-public class HashedBytes {
+public class InstrumentedYieldAdvancingClock extends YieldAdvancingClock {
 
-  private final byte[] bytes;
-  private final int hashCode;
+  static final Logger LOG = LoggerFactory.getLogger(InstrumentedYieldAdvancingClock.class);
+  final LongAdder countOk = new LongAdder();
+  final LongAdder countYields = new LongAdder();
 
-  public HashedBytes(byte[] bytes) {
-    this.bytes = bytes;
-    hashCode = Bytes.hashCode(bytes);
-  }
-
-  public byte[] getBytes() {
-    return bytes;
+  public InstrumentedYieldAdvancingClock(HashedBytes name) {
+    super(name);
   }
 
   @Override
-  public int hashCode() {
-    return hashCode;
+  protected void spin() throws InterruptedException {
+    countYields.increment();
+    super.spin();
   }
 
   @Override
-  public boolean equals(Object obj) {
-    if (this == obj)
-      return true;
-    if (obj == null || getClass() != obj.getClass())
-      return false;
-    HashedBytes other = (HashedBytes) obj;
-    return (hashCode == other.hashCode) && Arrays.equals(bytes, other.bytes);
+  protected long update(long now) {
+    countOk.increment();
+    return super.update(now);
   }
 
   @Override
-  public String toString() {
-    return Bytes.toStringBinary(bytes);
+  public boolean remove() {
+    boolean result = super.remove();
+    LOG.debug("{}: ok={}, yields={}", getName(), countOk.longValue(), countYields.longValue());
+    return result;
   }
+
 }

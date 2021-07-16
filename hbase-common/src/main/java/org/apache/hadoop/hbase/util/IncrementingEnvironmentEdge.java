@@ -24,7 +24,41 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Uses an incrementing algorithm instead of the default.
  */
 @InterfaceAudience.Private
-public class IncrementingEnvironmentEdge implements EnvironmentEdge {
+public class IncrementingEnvironmentEdge extends BaseEnvironmentEdge {
+
+  class ManualIncrementingClock implements EnvironmentEdge.Clock {
+
+    private HashedBytes name;
+
+    public ManualIncrementingClock(HashedBytes name) {
+      this.name = name;
+    }
+
+    @Override
+    public HashedBytes getName() {
+      return name;
+    }
+
+    @Override
+    public long currentTime() {
+      return System.currentTimeMillis() + timeIncrement;
+    }
+
+    @Override
+    public long currentTimeAdvancing() {
+      return System.currentTimeMillis() + timeIncrement;
+    }
+
+    @Override
+    public void get() {
+    }
+
+    @Override
+    public boolean remove() {
+      return true;
+    }
+
+  }
 
   private long timeIncrement;
 
@@ -62,4 +96,15 @@ public class IncrementingEnvironmentEdge implements EnvironmentEdge {
     timeIncrement += amount;
     return timeIncrement;
   }
+
+  @Override
+  public Clock getClock(HashedBytes name) {
+    return new ManualIncrementingClock(name);
+  }
+
+  @Override
+  public boolean removeClock(Clock clock) {
+    return true;
+  }
+
 }

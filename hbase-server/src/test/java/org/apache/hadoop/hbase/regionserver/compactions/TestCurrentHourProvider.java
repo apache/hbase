@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -59,7 +60,7 @@ public class TestCurrentHourProvider {
       // set a time represent hour 11
       long deltaFor11 = TimeZone.getDefault().getRawOffset() - 28800000;
       long timeFor11 = 1597895561000L - deltaFor11;
-      EnvironmentEdgeManager.injectEdge(() -> timeFor11);
+      EnvironmentEdgeManager.injectEdge(new ManualEnvironmentEdge(timeFor11));
       CurrentHourProvider.advanceTick();
       int hour11 = CurrentHourProvider.getCurrentHour();
       if (TimeZone.getDefault().inDaylightTime(new Date(timeFor11))) {
@@ -70,7 +71,7 @@ public class TestCurrentHourProvider {
       // set a time represent hour 15
       long deltaFor15 = TimeZone.getDefault().getRawOffset() - 28800000;
       long timeFor15 = 1597907081000L - deltaFor15;
-      EnvironmentEdgeManager.injectEdge(() -> timeFor15);
+      EnvironmentEdgeManager.injectEdge(new ManualEnvironmentEdge(timeFor15));
       CurrentHourProvider.advanceTick();
       int hour15 = CurrentHourProvider.getCurrentHour();
       if (TimeZone.getDefault().inDaylightTime(new Date(timeFor15))) {

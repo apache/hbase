@@ -25,10 +25,52 @@ import org.apache.yetus.audience.InterfaceAudience;
  * happen in the same millisecond.
  */
 @InterfaceAudience.Private
-public class ManualEnvironmentEdge implements EnvironmentEdge {
+public class ManualEnvironmentEdge extends BaseEnvironmentEdge {
 
-  // Sometimes 0 ts might have a special value, so lets start with 1
-  protected long value = 1L;
+  class ManualFixedClock implements EnvironmentEdge.Clock {
+
+    private HashedBytes name;
+
+    public ManualFixedClock(HashedBytes name) {
+      this.name = name;
+    }
+
+    @Override
+    public HashedBytes getName() {
+      return name;
+    }
+
+    @Override
+    public long currentTime() {
+      return value;
+    }
+
+    @Override
+    public long currentTimeAdvancing() {
+      return value;
+    }
+
+    @Override
+    public void get() {
+    }
+
+    @Override
+    public boolean remove() {
+      return true;
+    }
+
+  }
+
+  protected long value;
+
+  public ManualEnvironmentEdge() {
+    // Sometimes 0 ts might have a special value, so lets start with 1
+    this(1L);
+  }
+
+  public ManualEnvironmentEdge(long value) {
+    this.value = value;
+  }
 
   public void setValue(long newValue) {
     value = newValue;
@@ -42,4 +84,15 @@ public class ManualEnvironmentEdge implements EnvironmentEdge {
   public long currentTime() {
     return this.value;
   }
+
+  @Override
+  public Clock getClock(HashedBytes name) {
+    return new ManualFixedClock(name);
+  }
+
+  @Override
+  public boolean removeClock(Clock clock) {
+    return true;
+  }
+
 }
