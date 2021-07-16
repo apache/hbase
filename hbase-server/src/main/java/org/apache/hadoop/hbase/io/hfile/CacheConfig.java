@@ -783,9 +783,9 @@ public class CacheConfig {
           // background eviction thread runs, blocks evicted from L1 will go to L2 AND when we get
           // a block from the L1 cache, if not in L1, we will search L2.
           GLOBAL_BLOCK_CACHE_INSTANCE = l1;
+          l1.setVictimCache(l2);
         }
       }
-      l1.setVictimCache(l2);
     }
     return GLOBAL_BLOCK_CACHE_INSTANCE;
   }
