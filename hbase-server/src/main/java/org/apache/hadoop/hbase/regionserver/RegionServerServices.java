@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorService;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -57,8 +58,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * the code base.
  */
 @InterfaceAudience.Private
-public interface RegionServerServices
-    extends Server, MutableOnlineRegions, FavoredNodesForRegion, ThroughputControllerService {
+public interface RegionServerServices extends Server, MutableOnlineRegions, FavoredNodesForRegion,
+    ThroughputControllerService, RegionCoprocessorService {
 
   /**
    * @return the WAL for a particular region. Pass null for getting the default (common) WAL

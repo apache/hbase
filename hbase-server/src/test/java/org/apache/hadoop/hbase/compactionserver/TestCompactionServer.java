@@ -17,133 +17,35 @@
  */
 package org.apache.hadoop.hbase.compactionserver;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-import java.io.IOException;
 import java.util.ArrayList;
-
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.compaction.CompactionOffloadManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.CompactionServerTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 @Category({CompactionServerTests.class, MediumTests.class})
-public class TestCompactionServer {
+public class TestCompactionServer extends TestCompactionServerBase{
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCompactionServer.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestCompactionServer.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static Configuration CONF = TEST_UTIL.getConfiguration();
-  private static HMaster MASTER;
-  private static HCompactionServer COMPACTION_SERVER;
-  private static ServerName COMPACTION_SERVER_NAME;
-  private static TableName TABLENAME = TableName.valueOf("t");
-  private static String FAMILY = "C";
-  private static String COL ="c0";
-
-  @BeforeClass
-  public static void beforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(StartMiniClusterOption.builder().numCompactionServers(1).build());
-    TEST_UTIL.getAdmin().switchCompactionOffload(true);
-    MASTER = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster();
-    COMPACTION_SERVER = TEST_UTIL.getMiniHBaseCluster().getCompactionServerThreads().get(0)
-      .getCompactionServer();
-    COMPACTION_SERVER_NAME = COMPACTION_SERVER.getServerName();
-  }
-
-  @AfterClass
-  public static void afterClass() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Before
-  public void before() throws Exception {
-    TableDescriptor tableDescriptor =
-        TableDescriptorBuilder.newBuilder(TABLENAME).setCompactionOffloadEnabled(true).build();
-    TEST_UTIL.createTable(tableDescriptor, Bytes.toByteArrays(FAMILY),
-      TEST_UTIL.getConfiguration());
-    TEST_UTIL.waitTableAvailable(TABLENAME);
-    COMPACTION_SERVER.requestCount.reset();
-  }
-
-  @After
-  public void after() throws IOException {
-    TEST_UTIL.deleteTableIfAny(TABLENAME);
-  }
-
-  private void doPutRecord(int start, int end, boolean flush) throws Exception {
-    Table h = TEST_UTIL.getConnection().getTable(TABLENAME);
-    for (int i = start; i <= end; i++) {
-      Put p = new Put(Bytes.toBytes(i));
-      p.addColumn(Bytes.toBytes(FAMILY), Bytes.toBytes(COL), Bytes.toBytes(i));
-      h.put(p);
-      if (i % 100 == 0 && flush) {
-        TEST_UTIL.flush(TABLENAME);
-      }
-    }
-    h.close();
-  }
-
-  private void doFillRecord(int start, int end, byte[] value) throws Exception {
-    Table h = TEST_UTIL.getConnection().getTable(TABLENAME);
-    for (int i = start; i <= end; i++) {
-      Put p = new Put(Bytes.toBytes(i));
-      p.addColumn(Bytes.toBytes(FAMILY), Bytes.toBytes(COL), value);
-      h.put(p);
-    }
-    h.close();
-  }
-
-  private void verifyRecord(int start, int end, boolean exist) throws Exception {
-    Table h = TEST_UTIL.getConnection().getTable(TABLENAME);
-    for (int i = start; i <= end; i++) {
-      Get get = new Get(Bytes.toBytes(i));
-      Result r = h.get(get);
-      if (exist) {
-        assertArrayEquals(Bytes.toBytes(i), r.getValue(Bytes.toBytes(FAMILY), Bytes.toBytes(COL)));
-      } else {
-        assertNull(r.getValue(Bytes.toBytes(FAMILY), Bytes.toBytes(COL)));
-      }
-    }
-    h.close();
-  }
 
   @Test
   public void testCompaction() throws Exception {

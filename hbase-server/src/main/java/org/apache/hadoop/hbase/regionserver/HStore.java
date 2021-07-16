@@ -1525,8 +1525,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
   }
 
-  protected boolean completeCompaction(CompactionRequestImpl cr, List<String> filesToCompact,
-    User user, List<String> newFiles) throws IOException {
+  protected boolean completeCompaction(List<String> filesToCompact, User user,
+      List<String> newFiles) throws IOException {
     Collection<HStoreFile> selectedStoreFiles = new ArrayList<>();
     for (String selectedFile : filesToCompact) {
       HStoreFile storeFile = getStoreFileBasedOnFileName(selectedFile);
@@ -1543,6 +1543,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     for (String newFile : newFiles) {
       newFilePaths.add(new Path(storeTmpDir, newFile));
     }
+    CompactionRequestImpl cr = new CompactionRequestImpl(selectedStoreFiles);
+    cr.setIsMajor(getForceMajor(), getForceMajor());
     completeCompaction(cr, selectedStoreFiles, user, newFilePaths);
     return true;
   }
@@ -1558,17 +1560,19 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return null;
   }
 
-  private HStoreFile getStoreFile(Path path) {
-    for (HStoreFile storefile : getStorefiles()) {
-      if (storefile.getPath().equals(path)) {
-        return storefile;
+  public List<HStoreFile> getStoreFilesBaseOnFileNames(Collection<String> fileNames) {
+    List<HStoreFile> storeFiles = new ArrayList<>();
+    for (HStoreFile storeFile : getStorefiles()) {
+      String name = storeFile.getPath().getName();
+      if (fileNames.contains(name)) {
+        storeFiles.add(storeFile);
       }
     }
-    return null;
+    return storeFiles;
   }
 
   private synchronized List<HStoreFile> completeCompaction(CompactionRequestImpl cr,
-    Collection<HStoreFile> filesToCompact, User user, List<Path> newFiles) throws IOException {
+      Collection<HStoreFile> filesToCompact, User user, List<Path> newFiles) throws IOException {
     // TODO check store contains files to compact
     // Do the steps necessary to complete the compaction.
     setStoragePolicyFromFileName(newFiles);

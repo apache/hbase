@@ -99,7 +99,8 @@ public class CompactionThreadManager implements ThroughputControllerService {
     this.server = server;
     try {
       this.rootDir = CommonFSUtils.getRootDir(this.conf);
-      this.tableDescriptors = new FSTableDescriptors(conf);
+      this.tableDescriptors = new FSTableDescriptors(CommonFSUtils.getCurrentFileSystem(conf),
+          CommonFSUtils.getRootDir(conf), true, false);
       int largeThreads =
           Math.max(1, conf.getInt(LARGE_COMPACTION_THREADS, LARGE_COMPACTION_THREADS_DEFAULT));
       int smallThreads = conf.getInt(SMALL_COMPACTION_THREADS, SMALL_COMPACTION_THREADS_DEFAULT);
@@ -231,7 +232,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
     excludeFiles.addAll(compactedFiles);
     // Convert files names to store files
     status.setStatus("Convert current compacting and compacted files to store files");
-    List<HStoreFile> excludeStoreFiles = getExcludedStoreFiles(store, excludeFiles);
+    List<HStoreFile> excludeStoreFiles = store.getStoreFilesBaseOnFileNames(excludeFiles);
     LOG.info(
       "Start select store: {}, excludeFileNames: {}, excluded: {}, compacting: {}, compacted: {}",
       logStr, excludeFiles.size(), excludeStoreFiles.size(), compactingFiles.size(),
@@ -345,23 +346,11 @@ public class CompactionThreadManager implements ThroughputControllerService {
     }
   }
 
-  private List<HStoreFile> getExcludedStoreFiles(HStore store, Set<String> excludeFileNames) {
-    Collection<HStoreFile> storefiles = store.getStorefiles();
-    List<HStoreFile> storeFiles = new ArrayList<>();
-    for (HStoreFile storefile : storefiles) {
-      String name = storefile.getPath().getName();
-      if (excludeFileNames.contains(name)) {
-        storeFiles.add(storefile);
-      }
-    }
-    return storeFiles;
-  }
-
   private HStore getStore(final Configuration conf, final FileSystem fs, final Path rootDir,
       final TableDescriptor htd, final RegionInfo hri, final String familyName) throws IOException {
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs,
         CommonFSUtils.getTableDir(rootDir, htd.getTableName()), hri);
-    HRegion region = new HRegion(regionFs, null, conf, htd, null);
+    HRegion region = new HRegion(regionFs, conf, htd, server);
     ColumnFamilyDescriptor columnFamilyDescriptor = htd.getColumnFamily(Bytes.toBytes(familyName));
     HStore store;
     if (columnFamilyDescriptor.isMobEnabled()) {

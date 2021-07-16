@@ -255,7 +255,9 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   public void load(Class<? extends C> implClass, int priority, Configuration conf)
       throws IOException {
     E env = checkAndLoadInstance(implClass, priority, conf);
-    coprocEnvironments.add(env);
+    if (env != null) {
+      coprocEnvironments.add(env);
+    }
   }
 
   /**
@@ -279,11 +281,13 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
     // create the environment
     E env = createEnvironment(impl, priority, loadSequence.incrementAndGet(), conf);
-    assert env instanceof BaseEnvironment;
-    ((BaseEnvironment<C>) env).startup();
-    // HBASE-4014: maintain list of loaded coprocessors for later crash analysis
-    // if server (master or regionserver) aborts.
-    coprocessorNames.add(implClass.getName());
+    if (env != null) {
+      assert env instanceof BaseEnvironment;
+      ((BaseEnvironment<C>) env).startup();
+      // HBASE-4014: maintain list of loaded coprocessors for later crash analysis
+      // if server (master or regionserver) aborts.
+      coprocessorNames.add(implClass.getName());
+    }
     return env;
   }
 
