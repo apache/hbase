@@ -63,12 +63,6 @@ public final class ImmutableScan extends Scan {
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimeRange");
   }
 
-  @Deprecated
-  @Override
-  public Scan setTimeStamp(long timestamp) {
-    throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimeStamp");
-  }
-
   @Override
   public Scan setTimestamp(long timestamp) {
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimestamp");
@@ -181,12 +175,6 @@ public final class ImmutableScan extends Scan {
   @Override
   public Scan setRaw(boolean raw) {
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setRaw");
-  }
-
-  @Override
-  @Deprecated
-  public Scan setSmall(boolean small) {
-    throw new UnsupportedOperationException("ImmutableScan does not allow access to setSmall");
   }
 
   @Override
@@ -410,12 +398,6 @@ public final class ImmutableScan extends Scan {
   @Override
   public boolean isRaw() {
     return this.delegateScan.isRaw();
-  }
-
-  @Override
-  @Deprecated
-  public boolean isSmall() {
-    return this.delegateScan.isSmall();
   }
 
   @Override

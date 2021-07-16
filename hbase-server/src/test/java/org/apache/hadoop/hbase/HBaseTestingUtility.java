@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -4234,7 +4235,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public Result getClosestRowBefore(Region r, byte[] row, byte[] family) throws IOException {
     Scan scan = new Scan().withStartRow(row);
-    scan.setSmall(true);
+    scan.setReadType(ReadType.PREAD);
     scan.setCaching(1);
     scan.setReversed(true);
     scan.addFamily(family);

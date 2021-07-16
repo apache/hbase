@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -39,8 +42,6 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
 
 /**
  * Small tests for ImmutableScan
@@ -85,7 +86,6 @@ public class TestImmutableScan {
       .setRowOffsetPerColumnFamily(5)
       .setRowPrefixFilter(Bytes.toBytes("row_"))
       .setScanMetricsEnabled(true)
-      .setSmall(true)
       .setReadType(Scan.ReadType.STREAM)
       .withStartRow(Bytes.toBytes("row_1"))
       .withStopRow(Bytes.toBytes("row_2"))

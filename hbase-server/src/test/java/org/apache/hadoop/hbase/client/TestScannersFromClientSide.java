@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
@@ -338,7 +339,7 @@ public class TestScannersFromClientSide {
       Table table, boolean reversed, int rows, int columns) throws Exception {
     Scan baseScan = new Scan();
     baseScan.setReversed(reversed);
-    baseScan.setSmall(true);
+    baseScan.setReadType(ReadType.PREAD);
 
     Scan scan = new Scan(baseScan);
     verifyExpectedCounts(table, scan, rows, columns);
