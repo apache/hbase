@@ -86,6 +86,18 @@ public class MetricsHBaseServer {
     source.queuedAndProcessedCall(totalTime);
   }
 
+  void addCallToResponseQueue() {
+    source.addCallToResponseQueue();
+  }
+
+  void removeCallFromResponseQueue() {
+    source.removeCallFromResponseQueue();
+  }
+
+  void updateResponseQueueSize(long size) {
+    source.updateResponseQueueSize(size);
+  }
+
   public void exception(Throwable throwable) {
     source.exception();
 

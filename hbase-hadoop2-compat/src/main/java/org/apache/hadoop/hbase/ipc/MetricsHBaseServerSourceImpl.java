@@ -20,13 +20,13 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
@@ -41,7 +41,8 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   private final MutableFastCounter authenticationFallbacks;
   private final MutableFastCounter sentBytes;
   private final MutableFastCounter receivedBytes;
-
+  private final MutableGaugeLong numCallsInResponseQueue;
+  private final MutableGaugeLong sizeOfResponseQueue;
 
   private MetricHistogram queueCallTime;
   private MetricHistogram processCallTime;
@@ -81,6 +82,10 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
         REQUEST_SIZE_DESC);
     this.responseSize = this.getMetricsRegistry().newSizeHistogram(RESPONSE_SIZE_NAME,
               RESPONSE_SIZE_DESC);
+    this.numCallsInResponseQueue = this.getMetricsRegistry().newGauge(NUM_CALL_RESPONSE_QUEUE_NAME,
+        NUM_CALL_RESPONSE_QUEUE_DESC, 0L);
+    this.sizeOfResponseQueue = this.getMetricsRegistry().newGauge(SIZE_RESPONSE_QUEUE_NAME,
+        SIZE_RESPONSE_QUEUE_DESC, 0L);
   }
 
   @Override
@@ -137,6 +142,21 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   @Override
   public void queuedAndProcessedCall(int totalTime) {
     totalCallTime.add(totalTime);
+  }
+
+  @Override
+  public void addCallToResponseQueue() {
+    numCallsInResponseQueue.incr();
+  }
+
+  @Override
+  public void removeCallFromResponseQueue() {
+    numCallsInResponseQueue.decr();
+  }
+
+  @Override
+  public void updateResponseQueueSize(long size) {
+    sizeOfResponseQueue.incr(size);
   }
 
   @Override

@@ -67,6 +67,10 @@ class BufferChain {
     return remaining > 0;
   }
 
+  int getRemaining() {
+    return remaining;
+  }
+
   /**
    * Write out our chain of buffers in chunks
    * @param channel Where to write
