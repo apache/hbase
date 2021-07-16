@@ -20,7 +20,6 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -131,7 +130,7 @@ public class TestAtomicOperation {
     a.setReturnResults(false);
     a.add(fam1, qual1, Bytes.toBytes(v1));
     a.add(fam1, qual2, Bytes.toBytes(v2));
-    assertNull(region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE));
+    assertTrue(region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE).isEmpty());
     a = new Append(row);
     a.add(fam1, qual1, Bytes.toBytes(v2));
     a.add(fam1, qual2, Bytes.toBytes(v1));
@@ -151,7 +150,7 @@ public class TestAtomicOperation {
     a.setReturnResults(false);
     a.add(fam1, qual1, Bytes.toBytes(v1));
     a.add(fam2, qual2, Bytes.toBytes(v2));
-    assertNull(region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE));
+    assertTrue(region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE).isEmpty());
 
     a = new Append(row);
     a.add(fam2, qual2, Bytes.toBytes(v1));
