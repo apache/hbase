@@ -419,7 +419,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final CellComparator cellComparator;
 
   /**
-   * @return The smallest mvcc readPoint across all the scanners in this
+   * Get the smallest mvcc readPoint across all the scanners in this
    * region. Writes older than this readPoint, are included in every
    * read operation.
    */
@@ -5193,9 +5193,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Check the collection of families for valid timestamps
-   * @param familyMap
    * @param now current timestamp
-   * @throws FailedSanityCheckException
    */
   public void checkTimestamps(final Map<byte[], List<Cell>> familyMap, long now)
       throws FailedSanityCheckException {

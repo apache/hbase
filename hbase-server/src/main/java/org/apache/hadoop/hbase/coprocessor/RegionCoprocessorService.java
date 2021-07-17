@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.OnlineRegions;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public interface RegionCoprocessorService extends Server, OnlineRegions {
 }

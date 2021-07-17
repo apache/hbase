@@ -17,6 +17,15 @@
  */
 package org.apache.hadoop.hbase.compactionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -42,9 +51,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.CompactionServerTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -53,15 +61,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 /**
  * use verify table test {@link RegionCoprocessorHost.RegionEnvironment#getConnection()} and record
  * coprocessor method invoke {@link RegionObserver#preCompactSelection},

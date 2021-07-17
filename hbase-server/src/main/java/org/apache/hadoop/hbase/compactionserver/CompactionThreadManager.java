@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.compactionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;

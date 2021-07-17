@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.compactionserver;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNull;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -35,9 +38,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertNull;
 
 public class TestCompactionServerBase {
   protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
