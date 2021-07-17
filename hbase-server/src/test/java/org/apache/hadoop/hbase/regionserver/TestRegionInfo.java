@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -257,6 +258,39 @@ public class TestRegionInfo {
     // Degenerate range
     try {
       hri.containsRange(Bytes.toBytes("z"), Bytes.toBytes("a"));
+      fail("Invalid range did not throw IAE");
+    } catch (IllegalArgumentException iae) {
+    }
+  }
+
+  @Test
+  public void testContainsRangeForMetaTable() {
+    TableDescriptor tableDesc =
+        TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableDesc.getTableName()).build();
+    byte[] startRow = HConstants.EMPTY_START_ROW;
+    byte[] row1 = Bytes.toBytes("a,a,0");
+    byte[] row2 = Bytes.toBytes("aaaaa,,1");
+    byte[] row3 = Bytes.toBytes("aaaaa,\u0000\u0000,2");
+    byte[] row4 = Bytes.toBytes("aaaaa,\u0001,3");
+    byte[] row5 = Bytes.toBytes("aaaaa,a,4");
+    byte[] row6 = Bytes.toBytes("aaaaa,\u1000,5");
+
+    // Single row range at start of region
+    assertTrue(hri.containsRange(startRow, startRow));
+    // Fully contained range
+    assertTrue(hri.containsRange(row1, row2));
+    assertTrue(hri.containsRange(row2, row3));
+    assertTrue(hri.containsRange(row3, row4));
+    assertTrue(hri.containsRange(row4, row5));
+    assertTrue(hri.containsRange(row5, row6));
+    // Range overlapping start of region
+    assertTrue(hri.containsRange(startRow, row2));
+    // Fully contained single-row range
+    assertTrue(hri.containsRange(row1, row1));
+    // Degenerate range
+    try {
+      hri.containsRange(row3, row2);
       fail("Invalid range did not throw IAE");
     } catch (IllegalArgumentException iae) {
     }
