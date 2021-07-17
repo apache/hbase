@@ -155,7 +155,7 @@ public class HMobStore extends HStore {
    * Creates the mob store engine.
    */
   @Override
-  protected StoreEngine<?, ?, ?, ?> createStoreEngine(HStore store, Configuration conf,
+  protected StoreEngine<?, ?, ?, ?, ?> createStoreEngine(HStore store, Configuration conf,
       CellComparator cellComparator) throws IOException {
     MobStoreEngine engine = new MobStoreEngine();
     engine.createComponents(conf, store, cellComparator);

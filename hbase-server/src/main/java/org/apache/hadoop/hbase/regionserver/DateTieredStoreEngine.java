@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactor;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 
@@ -41,7 +42,7 @@ import org.apache.hadoop.hbase.security.User;
  */
 @InterfaceAudience.Private
 public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
-  DateTieredCompactionPolicy, DateTieredCompactor, DefaultStoreFileManager> {
+  DateTieredCompactionPolicy, DateTieredCompactor, DefaultStoreFileManager, StoreFileTracker> {
   @Override
   public boolean needsCompaction(List<HStoreFile> filesCompacting) {
     return compactionPolicy.needsCompaction(storeFileManager.getStorefiles(),
@@ -62,6 +63,7 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
             compactionPolicy.getConf());
     this.storeFlusher = new DefaultStoreFlusher(conf, store);
     this.compactor = new DateTieredCompactor(conf, store);
+    this.storeFileTracker = createStoreFileTracker(store);
   }
 
   private final class DateTieredCompactionContext extends CompactionContext {
