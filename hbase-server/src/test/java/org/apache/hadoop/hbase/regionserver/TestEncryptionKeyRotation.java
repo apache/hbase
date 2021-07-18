@@ -30,7 +30,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -66,7 +66,7 @@ public class TestEncryptionKeyRotation {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestEncryptionKeyRotation.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
   private static final Key initialCFKey;
   private static final Key secondCFKey;

@@ -28,7 +28,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -82,7 +82,7 @@ public class TestLockProcedure {
   private static final int LOCAL_LOCKS_TIMEOUT = 4000;
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLockProcedure.class);
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static MasterRpcServices masterRpcService;
   private static ProcedureExecutor<MasterProcedureEnv> procExec;
 

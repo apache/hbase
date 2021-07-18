@@ -48,7 +48,7 @@ public class TestHBaseConfiguration {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHBaseConfiguration.class);
 
-  private static HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  private static HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   @AfterClass
   public static void tearDown() throws IOException {

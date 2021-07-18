@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -32,7 +32,7 @@ import org.junit.rules.TestName;
 
 public class TestAdminBase {
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static Admin ADMIN;
 
   @Rule

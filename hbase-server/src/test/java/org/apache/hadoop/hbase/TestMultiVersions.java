@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions
- * from old testing framework to {@link HBaseTestingUtility}.
+ * from old testing framework to {@link HBaseTestingUtil}.
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestMultiVersions {
@@ -64,7 +64,7 @@ public class TestMultiVersions {
       HBaseClassTestRule.forClass(TestMultiVersions.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiVersions.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private Admin admin;
 
   private static final int NUM_SLAVES = 3;
@@ -155,7 +155,7 @@ public class TestMultiVersions {
     table.close();
     UTIL.shutdownMiniHBaseCluster();
     LOG.debug("HBase cluster shut down -- restarting");
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numRegionServers(NUM_SLAVES).build();
     UTIL.startMiniHBaseCluster(option);
     // Make a new connection.

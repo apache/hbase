@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -58,7 +58,7 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
   protected static final String PRIVATE = "PRIVATE";
   protected static final String CONFIDENTIAL = "CONFIDENTIAL";
   protected static final String SECRET = "SECRET";
-  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static final byte[] row1 = Bytes.toBytes("row1");
   protected static final byte[] row2 = Bytes.toBytes("row2");
   protected final static byte[] fam = Bytes.toBytes("info");

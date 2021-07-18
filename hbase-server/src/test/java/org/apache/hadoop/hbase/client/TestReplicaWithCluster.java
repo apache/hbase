@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -71,10 +71,10 @@ public class TestReplicaWithCluster {
 
   private static final int NB_SERVERS = 3;
   private static final byte[] row = Bytes.toBytes(TestReplicaWithCluster.class.getName());
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   // second minicluster used in testing of replication
-  private static HBaseTestingUtility HTU2;
+  private static HBaseTestingUtil HTU2;
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   private final static int REFRESH_PERIOD = 1000;
@@ -261,7 +261,7 @@ public class TestReplicaWithCluster {
 
     HTU.startMiniCluster(NB_SERVERS);
     // Enable meta replica at server side
-    HBaseTestingUtility.setReplicas(HTU.getAdmin(), TableName.META_TABLE_NAME, 2);
+    HBaseTestingUtil.setReplicas(HTU.getAdmin(), TableName.META_TABLE_NAME, 2);
 
     HTU.getHBaseCluster().startMaster();
   }
@@ -380,18 +380,18 @@ public class TestReplicaWithCluster {
 
     builder.setCoprocessor(SlowMeCopro.class.getName());
     TableDescriptor tableDescriptor = builder.build();
-    HTU.getAdmin().createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    HTU.getAdmin().createTable(tableDescriptor, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
 
     Configuration conf2 = HBaseConfiguration.create(HTU.getConfiguration());
     conf2.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     MiniZooKeeperCluster miniZK = HTU.getZkCluster();
 
-    HTU2 = new HBaseTestingUtility(conf2);
+    HTU2 = new HBaseTestingUtil(conf2);
     HTU2.setZkCluster(miniZK);
     HTU2.startMiniCluster(NB_SERVERS);
     LOG.info("Setup second Zk");
-    HTU2.getAdmin().createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    HTU2.getAdmin().createTable(tableDescriptor, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
 
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
       Admin admin = connection.getAdmin()) {

@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Before;
@@ -47,7 +47,7 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends Stochastic
   public TestName name = new TestName();
 
   private HeterogeneousRegionCountCostFunction costFunction;
-  private static final HBaseCommonTestingUtility HTU = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil HTU = new HBaseCommonTestingUtil();
 
   /**
    * Make a file for rules that is inside a temporary test dir named for the method so it doesn't

@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -52,7 +52,7 @@ public class TestExportSnapshotV1NoCluster {
       HBaseClassTestRule.forClass(TestExportSnapshotV1NoCluster.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotV1NoCluster.class);
 
-  private HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
+  private HBaseCommonTestingUtil testUtil = new HBaseCommonTestingUtil();
   private Path testDir;
   private FileSystem fs;
 
@@ -70,7 +70,7 @@ public class TestExportSnapshotV1NoCluster {
    * Setup for test. Returns path to test data dir. Sets configuration into the passed
    * hctu.getConfiguration.
    */
-  static Path setup(FileSystem fs, HBaseCommonTestingUtility hctu) throws IOException {
+  static Path setup(FileSystem fs, HBaseCommonTestingUtil hctu) throws IOException {
     Path testDir = hctu.getDataTestDir().makeQualified(fs.getUri(), fs.getWorkingDirectory());
     hctu.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     hctu.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
@@ -99,7 +99,7 @@ public class TestExportSnapshotV1NoCluster {
    * and then it will run the export and verification.
    */
   static void testSnapshotWithRefsExportFileSystemState(FileSystem fs,
-     SnapshotMock.SnapshotBuilder builder, HBaseCommonTestingUtility testUtil, Path testDir)
+     SnapshotMock.SnapshotBuilder builder, HBaseCommonTestingUtil testUtil, Path testDir)
         throws Exception {
     Path[] r1Files = builder.addRegion();
     Path[] r2Files = builder.addRegion();
@@ -112,7 +112,7 @@ public class TestExportSnapshotV1NoCluster {
       testDir, getDestinationDir(fs, testUtil, testDir), false, null, true);
   }
 
-  static Path getDestinationDir(FileSystem fs, HBaseCommonTestingUtility hctu, Path testDir)
+  static Path getDestinationDir(FileSystem fs, HBaseCommonTestingUtil hctu, Path testDir)
       throws IOException {
     Path path = new Path(new Path(testDir, "export-test"),
       "export-" + EnvironmentEdgeManager.currentTime()).makeQualified(fs.getUri(),

@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -66,7 +66,7 @@ public class TestMajorCompactionRequest {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMajorCompactionRequest.class);
 
-  protected static final HBaseTestingUtility UTILITY = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTILITY = new HBaseTestingUtil();
   protected static final String FAMILY = "a";
   protected Path rootRegionDir;
   protected Path regionStoreDir;
@@ -98,7 +98,7 @@ public class TestMajorCompactionRequest {
     TableDescriptor htd = UTILITY.createTableDescriptor(table, Bytes.toBytes(FAMILY));
     RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     HRegion region =
-        HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, UTILITY.getConfiguration(), htd);
+        HBaseTestingUtil.createRegionAndWAL(hri, rootRegionDir, UTILITY.getConfiguration(), htd);
 
     Configuration configuration = mock(Configuration.class);
     // the reference file timestamp is newer

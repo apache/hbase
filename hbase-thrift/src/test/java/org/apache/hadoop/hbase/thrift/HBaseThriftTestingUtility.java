@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics.ThriftServerType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,11 +49,11 @@ public class HBaseThriftTestingUtility {
    */
   public void startThriftServer(Configuration conf, ThriftServerType type) throws Exception {
     List<String> args = new ArrayList<>();
-    port = HBaseTestingUtility.randomFreePort();
+    port = HBaseTestingUtil.randomFreePort();
     args.add("-" + Constants.PORT_OPTION);
     args.add(String.valueOf(port));
     args.add("-" + INFOPORT_OPTION);
-    int infoPort = HBaseTestingUtility.randomFreePort();
+    int infoPort = HBaseTestingUtil.randomFreePort();
     args.add(String.valueOf(infoPort));
 
     LOG.info("Starting Thrift Server {} on port: {} ", type, port);

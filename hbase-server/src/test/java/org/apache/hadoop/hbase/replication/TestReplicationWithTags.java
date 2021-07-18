@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -90,8 +90,8 @@ public class TestReplicationWithTags {
   private static Table htable1;
   private static Table htable2;
 
-  private static HBaseTestingUtility utility1;
-  private static HBaseTestingUtility utility2;
+  private static HBaseTestingUtil utility1;
+  private static HBaseTestingUtil utility2;
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 10;
 
@@ -116,7 +116,7 @@ public class TestReplicationWithTags {
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         TestCoprocessorForTagsAtSource.class.getName());
 
-    utility1 = new HBaseTestingUtility(conf1);
+    utility1 = new HBaseTestingUtil(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     // Have to reget conf1 in case zk cluster location different
@@ -134,7 +134,7 @@ public class TestReplicationWithTags {
     conf2.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
             TestCoprocessorForTagsAtSink.class.getName());
 
-    utility2 = new HBaseTestingUtility(conf2);
+    utility2 = new HBaseTestingUtil(conf2);
     utility2.setZkCluster(miniZK);
 
     LOG.info("Setup second Zk");
@@ -153,11 +153,11 @@ public class TestReplicationWithTags {
       .build();
     try (Connection conn = ConnectionFactory.createConnection(conf1);
         Admin admin = conn.getAdmin()) {
-      admin.createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin.createTable(tableDescriptor, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     }
     try (Connection conn = ConnectionFactory.createConnection(conf2);
         Admin admin = conn.getAdmin()) {
-      admin.createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin.createTable(tableDescriptor, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     }
     htable1 = utility1.getConnection().getTable(TABLE_NAME);
     htable2 = utility2.getConnection().getTable(TABLE_NAME);

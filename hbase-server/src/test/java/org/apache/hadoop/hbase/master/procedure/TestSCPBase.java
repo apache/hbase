@@ -21,9 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaTestHelper;
@@ -41,7 +41,7 @@ public class TestSCPBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestSCPBase.class);
   static final int RS_COUNT = 3;
 
-  protected HBaseTestingUtility util;
+  protected HBaseTestingUtil util;
 
   protected void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -49,7 +49,7 @@ public class TestSCPBase {
 
   @Before
   public void setup() throws Exception {
-    this.util = new HBaseTestingUtility();
+    this.util = new HBaseTestingUtil();
     setupConf(this.util.getConfiguration());
     startMiniCluster();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(
@@ -62,7 +62,7 @@ public class TestSCPBase {
 
   @After
   public void tearDown() throws Exception {
-    MiniHBaseCluster cluster = this.util.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = this.util.getHBaseCluster();
     HMaster master = cluster == null ? null : cluster.getMaster();
     if (master != null && master.getMasterProcedureExecutor() != null) {
       ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(master.getMasterProcedureExecutor(),
@@ -81,8 +81,8 @@ public class TestSCPBase {
       carryingMeta + "-doubleExecution-" + doubleExecution);
     try (Table t = createTable(tableName)) {
       // Load the table with a bit of data so some logs to split and some edits in each region.
-      this.util.loadTable(t, HBaseTestingUtility.COLUMNS[0]);
-      final int count = HBaseTestingUtility.countRows(t);
+      this.util.loadTable(t, HBaseTestingUtil.COLUMNS[0]);
+      final int count = HBaseTestingUtil.countRows(t);
       assertTrue("expected some rows", count > 0);
       final String checksum = util.checksumRows(t);
       // Run the procedure executor outside the master so we can mess with it. Need to disable
@@ -118,7 +118,7 @@ public class TestSCPBase {
         ProcedureTestingUtility.waitProcedure(procExec, procId);
       }
       RegionReplicaTestHelper.assertReplicaDistributed(util, t);
-      assertEquals(count, HBaseTestingUtility.countRows(t));
+      assertEquals(count, HBaseTestingUtil.countRows(t));
       assertEquals(checksum, util.checksumRows(t));
     }
   }
@@ -129,8 +129,8 @@ public class TestSCPBase {
   }
 
   protected Table createTable(final TableName tableName) throws IOException {
-    final Table t = this.util.createTable(tableName, HBaseTestingUtility.COLUMNS,
-      HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE, getRegionReplication());
+    final Table t = this.util.createTable(tableName, HBaseTestingUtil.COLUMNS,
+      HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE, getRegionReplication());
     return t;
   }
 

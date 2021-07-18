@@ -23,7 +23,7 @@ import java.net.InetAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.AuthUtil;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -159,7 +159,7 @@ public final class HBaseKerberosUtils {
    * @param clazz the caller test class.
    * @throws Exception if unable to set up SSL configuration
    */
-  public static void setSSLConfiguration(HBaseCommonTestingUtility utility, Class<?> clazz)
+  public static void setSSLConfiguration(HBaseCommonTestingUtil utility, Class<?> clazz)
     throws Exception {
     Configuration conf = utility.getConfiguration();
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());

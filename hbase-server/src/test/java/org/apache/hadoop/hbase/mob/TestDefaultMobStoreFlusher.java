@@ -21,7 +21,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -49,7 +49,7 @@ public class TestDefaultMobStoreFlusher {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestDefaultMobStoreFlusher.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte[] row1 = Bytes.toBytes("row1");
   private final static byte[] row2 = Bytes.toBytes("row2");
   private final static byte[] family = Bytes.toBytes("family");

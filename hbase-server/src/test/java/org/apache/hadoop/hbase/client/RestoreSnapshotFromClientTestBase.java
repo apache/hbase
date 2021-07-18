@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -37,7 +37,7 @@ import org.junit.rules.TestName;
  * Base class for testing restore snapshot
  */
 public class RestoreSnapshotFromClientTestBase {
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected final byte[] FAMILY = Bytes.toBytes("cf");
   protected final byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
@@ -134,7 +134,7 @@ public class RestoreSnapshotFromClientTestBase {
     return TEST_UTIL.countRows(table, families);
   }
 
-  protected void verifyRowCount(HBaseTestingUtility util, TableName tableName, long expectedRows)
+  protected void verifyRowCount(HBaseTestingUtil util, TableName tableName, long expectedRows)
       throws IOException {
     SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
   }

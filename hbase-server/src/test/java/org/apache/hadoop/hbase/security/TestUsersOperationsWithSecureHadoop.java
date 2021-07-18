@@ -33,7 +33,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -51,7 +51,7 @@ public class TestUsersOperationsWithSecureHadoop {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestUsersOperationsWithSecureHadoop.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final File KEYTAB_FILE = new File(TEST_UTIL.getDataTestDir("keytab").toUri()
       .getPath());
 

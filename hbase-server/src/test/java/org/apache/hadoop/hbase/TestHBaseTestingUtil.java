@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.io.File;
 import java.util.List;
 import java.util.Random;
@@ -57,16 +58,16 @@ import org.slf4j.LoggerFactory;
  * Test our testing utility class
  */
 @Category({MiscTests.class, LargeTests.class})
-public class TestHBaseTestingUtility {
+public class TestHBaseTestingUtil {
   private static final int NUMTABLES = 1;
   private static final int NUMROWS = 100;
   private static final int NUMREGIONS = 10;
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseTestingUtility.class);
+      HBaseClassTestRule.forClass(TestHBaseTestingUtil.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseTestingUtility.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseTestingUtil.class);
 
   @Rule
   public TestName name = new TestName();
@@ -82,13 +83,13 @@ public class TestHBaseTestingUtility {
     // Create three clusters
 
     // Cluster 1.
-    HBaseTestingUtility htu1 = new HBaseTestingUtility();
+    HBaseTestingUtil htu1 = new HBaseTestingUtil();
     // Set a different zk path for each cluster
     htu1.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     htu1.startMiniZKCluster();
 
     // Cluster 2
-    HBaseTestingUtility htu2 = new HBaseTestingUtility();
+    HBaseTestingUtil htu2 = new HBaseTestingUtil();
     htu2.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     htu2.getConfiguration().set(HConstants.ZOOKEEPER_CLIENT_PORT,
       htu1.getConfiguration().get(HConstants.ZOOKEEPER_CLIENT_PORT, "-1"));
@@ -97,7 +98,7 @@ public class TestHBaseTestingUtility {
     // Cluster 3; seed it with the conf from htu1 so we pickup the 'right'
     // zk cluster config; it is set back into the config. as part of the
     // start of minizkcluster.
-    HBaseTestingUtility htu3 = new HBaseTestingUtility();
+    HBaseTestingUtil htu3 = new HBaseTestingUtil();
     htu3.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/3");
     htu3.getConfiguration().set(HConstants.ZOOKEEPER_CLIENT_PORT,
       htu1.getConfiguration().get(HConstants.ZOOKEEPER_CLIENT_PORT, "-1"));
@@ -140,9 +141,9 @@ public class TestHBaseTestingUtility {
   }
 
   @Test public void testMiniCluster() throws Exception {
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    HBaseTestingUtil hbt = new HBaseTestingUtil();
 
-    MiniHBaseCluster cluster = hbt.startMiniCluster();
+    SingleProcessHBaseCluster cluster = hbt.startMiniCluster();
     try {
       assertEquals(1, cluster.getLiveRegionServerThreads().size());
     } finally {
@@ -152,9 +153,9 @@ public class TestHBaseTestingUtility {
 
   @Test
   public void testMiniClusterBindToWildcard() throws Exception {
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    HBaseTestingUtil hbt = new HBaseTestingUtil();
     hbt.getConfiguration().set("hbase.regionserver.ipc.address", "0.0.0.0");
-    MiniHBaseCluster cluster = hbt.startMiniCluster();
+    SingleProcessHBaseCluster cluster = hbt.startMiniCluster();
     try {
       assertEquals(1, cluster.getLiveRegionServerThreads().size());
     } finally {
@@ -165,11 +166,11 @@ public class TestHBaseTestingUtility {
   @Test
   public void testMiniClusterWithSSLOn() throws Exception {
     final String BASEDIR = System.getProperty("test.build.dir",
-        "target/test-dir") + "/" + TestHBaseTestingUtility.class.getSimpleName();
-    String sslConfDir = KeyStoreTestUtil.getClasspathDir(TestHBaseTestingUtility.class);
+        "target/test-dir") + "/" + TestHBaseTestingUtil.class.getSimpleName();
+    String sslConfDir = KeyStoreTestUtil.getClasspathDir(TestHBaseTestingUtil.class);
     String keystoresDir = new File(BASEDIR).getAbsolutePath();
 
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    HBaseTestingUtil hbt = new HBaseTestingUtil();
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     base.mkdirs();
@@ -180,7 +181,7 @@ public class TestHBaseTestingUtility {
     hbt.getConfiguration().addResource(hbt.getConfiguration().get(SSLFactory.SSL_CLIENT_CONF_KEY));
     hbt.getConfiguration().addResource(hbt.getConfiguration().get(SSLFactory.SSL_SERVER_CONF_KEY));
 
-    MiniHBaseCluster cluster = hbt.startMiniCluster();
+    SingleProcessHBaseCluster cluster = hbt.startMiniCluster();
     try {
       assertEquals(1, cluster.getLiveRegionServerThreads().size());
     } finally {
@@ -193,7 +194,7 @@ public class TestHBaseTestingUtility {
    *   with the same HBaseTestingUtility.
    */
   @Test public void testMultipleStartStop() throws Exception{
-    HBaseTestingUtility htu1 = new HBaseTestingUtility();
+    HBaseTestingUtil htu1 = new HBaseTestingUtil();
     Path foo = new Path("foo");
 
     htu1.startMiniCluster();
@@ -210,7 +211,7 @@ public class TestHBaseTestingUtility {
 
   @Test
   public void testMiniZooKeeperWithOneServer() throws Exception {
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    HBaseTestingUtil hbt = new HBaseTestingUtil();
     MiniZooKeeperCluster cluster1 = hbt.startMiniZKCluster();
     try {
       assertEquals(0, cluster1.getBackupZooKeeperServerNum());
@@ -222,7 +223,7 @@ public class TestHBaseTestingUtility {
 
   @Test
   public void testMiniZooKeeperWithMultipleServers() throws Exception {
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    HBaseTestingUtil hbt = new HBaseTestingUtil();
     // set up zookeeper cluster with 5 zk servers
     MiniZooKeeperCluster cluster2 = hbt.startMiniZKCluster(5);
     int defaultClientPort = 21818;
@@ -266,7 +267,7 @@ public class TestHBaseTestingUtility {
   public void testMiniZooKeeperWithMultipleClientPorts() throws Exception {
     int defaultClientPort = 8888;
     int i, j;
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    HBaseTestingUtil hbt = new HBaseTestingUtil();
 
     // Test 1 - set up zookeeper cluster with same number of ZK servers and specified client ports
     int [] clientPortList1 = {1111, 1112, 1113};
@@ -370,7 +371,7 @@ public class TestHBaseTestingUtility {
   }
 
   @Test public void testMiniDFSCluster() throws Exception {
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    HBaseTestingUtil hbt = new HBaseTestingUtil();
     MiniDFSCluster cluster = hbt.startMiniDFSCluster(null);
     FileSystem dfs = cluster.getFileSystem();
     Path dir = new Path("dir");
@@ -383,7 +384,7 @@ public class TestHBaseTestingUtility {
   }
 
   @Test public void testSetupClusterTestBuildDir() throws Exception {
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    HBaseTestingUtil hbt = new HBaseTestingUtil();
     Path testdir = hbt.getClusterTestDir();
     LOG.info("uuid-subdir=" + testdir);
     FileSystem fs = hbt.getTestFileSystem();
@@ -398,7 +399,7 @@ public class TestHBaseTestingUtility {
   }
 
   @Test public void testTestDir() throws Exception {
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    HBaseTestingUtil hbt = new HBaseTestingUtil();
     Path testdir = hbt.getDataTestDir();
     LOG.info("testdir=" + testdir);
     FileSystem fs = hbt.getTestFileSystem();
@@ -423,12 +424,12 @@ public class TestHBaseTestingUtility {
         }
       });
 
-    HBaseTestingUtility.PortAllocator.AvailablePortChecker portChecker =
-      mock(HBaseTestingUtility.PortAllocator.AvailablePortChecker.class);
+    HBaseTestingUtil.PortAllocator.AvailablePortChecker portChecker =
+      mock(HBaseTestingUtil.PortAllocator.AvailablePortChecker.class);
     when(portChecker.available(anyInt())).thenReturn(true);
 
-    HBaseTestingUtility.PortAllocator portAllocator =
-      new HBaseTestingUtility.PortAllocator(random, portChecker);
+    HBaseTestingUtil.PortAllocator portAllocator =
+      new HBaseTestingUtil.PortAllocator(random, portChecker);
 
     int port1 = portAllocator.randomFreePort();
     int port2 = portAllocator.randomFreePort();
@@ -444,9 +445,9 @@ public class TestHBaseTestingUtility {
     defaultConfig.setInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);
     defaultConfig.setInt(HConstants.REGIONSERVER_INFO_PORT,
         HConstants.DEFAULT_REGIONSERVER_INFOPORT);
-    HBaseTestingUtility htu = new HBaseTestingUtility(defaultConfig);
+    HBaseTestingUtil htu = new HBaseTestingUtil(defaultConfig);
     try {
-      MiniHBaseCluster defaultCluster = htu.startMiniCluster();
+      SingleProcessHBaseCluster defaultCluster = htu.startMiniCluster();
       final String masterHostPort =
           defaultCluster.getMaster().getServerName().getAddress().toString();
       assertNotEquals(HConstants.DEFAULT_MASTER_INFOPORT,
@@ -465,9 +466,9 @@ public class TestHBaseTestingUtility {
     final int nonDefaultRegionServerPort = 4444;
     altConfig.setInt(HConstants.MASTER_INFO_PORT, nonDefaultMasterInfoPort);
     altConfig.setInt(HConstants.REGIONSERVER_INFO_PORT, nonDefaultRegionServerPort);
-    htu = new HBaseTestingUtility(altConfig);
+    htu = new HBaseTestingUtil(altConfig);
     try {
-      MiniHBaseCluster customCluster = htu.startMiniCluster();
+      SingleProcessHBaseCluster customCluster = htu.startMiniCluster();
       final String masterHostPort =
           customCluster.getMaster().getServerName().getAddress().toString();
       assertEquals(nonDefaultMasterInfoPort,
@@ -486,7 +487,7 @@ public class TestHBaseTestingUtility {
   @Test
   public void testKillMiniHBaseCluster() throws Exception {
 
-    HBaseTestingUtility htu = new HBaseTestingUtility();
+    HBaseTestingUtil htu = new HBaseTestingUtil();
     htu.startMiniZKCluster();
 
     try {

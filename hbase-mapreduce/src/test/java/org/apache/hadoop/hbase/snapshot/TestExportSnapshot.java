@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -73,7 +73,7 @@ public class TestExportSnapshot {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshot.class);
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected final static byte[] FAMILY = Bytes.toBytes("cf");
 
@@ -334,7 +334,7 @@ public class TestExportSnapshot {
     return path;
   }
 
-  static Path getLocalDestinationDir(HBaseTestingUtility htu) {
+  static Path getLocalDestinationDir(HBaseTestingUtil htu) {
     Path path = htu.getDataTestDir("local-export-" + EnvironmentEdgeManager.currentTime());
     try {
       FileSystem fs = FileSystem.getLocal(htu.getConfiguration());

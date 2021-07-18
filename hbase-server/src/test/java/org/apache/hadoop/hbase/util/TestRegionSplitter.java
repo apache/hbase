@@ -28,7 +28,7 @@ import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -62,7 +62,7 @@ public class TestRegionSplitter {
       HBaseClassTestRule.forClass(TestRegionSplitter.class);
 
     private final static Logger LOG = LoggerFactory.getLogger(TestRegionSplitter.class);
-    private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+    private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
     private final static String CF_NAME = "SPLIT_TEST_CF";
     private final static byte xFF = (byte) 0xff;
 

@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
@@ -46,8 +46,8 @@ public class TestHelloHBase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHelloHBase.class);
 
-  private static final HBaseTestingUtility TEST_UTIL
-          = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL
+          = new HBaseTestingUtil();
 
   @BeforeClass
   public static void beforeClass() throws Exception {

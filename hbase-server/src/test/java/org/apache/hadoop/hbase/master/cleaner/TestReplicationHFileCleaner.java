@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -77,7 +77,7 @@ public class TestReplicationHFileCleaner {
       HBaseClassTestRule.forClass(TestReplicationHFileCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationHFileCleaner.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Server server;
   private static ReplicationQueueStorage rq;
   private static ReplicationPeers rp;

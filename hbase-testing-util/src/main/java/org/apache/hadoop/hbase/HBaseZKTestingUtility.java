@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -29,8 +28,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Helpers for testing HBase that do not depend on specific server/etc. things. The main difference
  * from {@link HBaseCommonTestingUtility} is that we can start a zookeeper cluster.
+ * @deprecated since 3.0.0, will be removed in 4.0.0. Use
+ *             {@link org.apache.hadoop.hbase.testing.TestingHBaseCluster} instead.
  */
 @InterfaceAudience.Public
+@Deprecated
 public class HBaseZKTestingUtility extends HBaseCommonTestingUtility {
   private MiniZooKeeperCluster zkCluster;
 

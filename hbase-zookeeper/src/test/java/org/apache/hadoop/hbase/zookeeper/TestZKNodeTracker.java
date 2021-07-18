@@ -28,7 +28,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -53,7 +53,7 @@ public class TestZKNodeTracker {
       HBaseClassTestRule.forClass(TestZKNodeTracker.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKNodeTracker.class);
-  private final static HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
+  private final static HBaseZKTestingUtil TEST_UTIL = new HBaseZKTestingUtil();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

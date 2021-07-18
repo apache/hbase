@@ -25,7 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -48,7 +48,7 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
   private static final String COLUMN_FAMILY = "MyCF";
   private static final byte[] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private Configuration conf;
   private String dir;
   @Rule
@@ -107,7 +107,7 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
       assertTrue(getSyncFlag(wal));
       assertTrue(getWriterSyncFlag(wal));
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
 
     // global hbase.wal.hsync true, no override in put call
@@ -144,7 +144,7 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
       assertFalse(getSyncFlag(wal));
       assertFalse(getWriterSyncFlag(wal));
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 
@@ -153,7 +153,7 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
   }
 
   /**
-   * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
+   * @return A region on which you must call {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)}
    *         when done.
    */
   public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,

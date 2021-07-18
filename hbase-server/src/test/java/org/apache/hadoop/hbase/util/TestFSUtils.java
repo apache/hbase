@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -72,13 +72,13 @@ public class TestFSUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSUtils.class);
 
-  private HBaseTestingUtility htu;
+  private HBaseTestingUtil htu;
   private FileSystem fs;
   private Configuration conf;
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseTestingUtility();
+    htu = new HBaseTestingUtil();
     fs = htu.getTestFileSystem();
     conf = htu.getConfiguration();
   }

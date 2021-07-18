@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.slf4j.Logger;
@@ -51,7 +51,7 @@ public class SplitAllRegionOfTableAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
+    HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
     // Don't try the split if we're stopping
     if (context.isStopping()) {

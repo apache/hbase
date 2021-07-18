@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
@@ -94,7 +94,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
   private static final int NB_SERVERS = 2;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -236,7 +236,7 @@ public class TestRegionReplicaReplicationEndpoint {
     TableName tableNameNoReplicas =
         TableName.valueOf("testRegionReplicaReplicationWithReplicas_NO_REPLICAS");
     HTU.deleteTableIfAny(tableNameNoReplicas);
-    HTU.createTable(tableNameNoReplicas, HBaseTestingUtility.fam1);
+    HTU.createTable(tableNameNoReplicas, HBaseTestingUtil.fam1);
 
     Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
     Table table = connection.getTable(tableName);
@@ -244,10 +244,10 @@ public class TestRegionReplicaReplicationEndpoint {
 
     try {
       // load some data to the non-replicated table
-      HTU.loadNumericRows(tableNoReplicas, HBaseTestingUtility.fam1, 6000, 7000);
+      HTU.loadNumericRows(tableNoReplicas, HBaseTestingUtil.fam1, 6000, 7000);
 
       // load the data to the table
-      HTU.loadNumericRows(table, HBaseTestingUtility.fam1, 0, 1000);
+      HTU.loadNumericRows(table, HBaseTestingUtil.fam1, 0, 1000);
 
       verifyReplication(tableName, regionReplication, 0, 1000);
 
@@ -289,7 +289,7 @@ public class TestRegionReplicaReplicationEndpoint {
         public boolean evaluate() throws Exception {
           LOG.info("verifying replication for region replica:" + region.getRegionInfo());
           try {
-            HTU.verifyNumericRows(region, HBaseTestingUtility.fam1, startRow, endRow, present);
+            HTU.verifyNumericRows(region, HBaseTestingUtil.fam1, startRow, endRow, present);
           } catch(Throwable ex) {
             LOG.warn("Verification from secondary region is not complete yet", ex);
             // still wait
@@ -332,7 +332,7 @@ public class TestRegionReplicaReplicationEndpoint {
         final int startRow = i * STEP;
         final int endRow = (i + 1) * STEP;
         LOG.info("Writing data from " + startRow + " to " + endRow);
-        HTU.loadNumericRows(table, HBaseTestingUtility.fam1, startRow, endRow);
+        HTU.loadNumericRows(table, HBaseTestingUtil.fam1, startRow, endRow);
         verifyReplication(tableName, regionReplication, startRow, endRow, false);
 
         // Flush the table, now the data should show up in the replicas
@@ -365,7 +365,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
       for (int i = 0; i < 6000; i += 1000) {
         LOG.info("Writing data from " + i + " to " + (i+1000));
-        HTU.loadNumericRows(table, HBaseTestingUtility.fam1, i, i+1000);
+        HTU.loadNumericRows(table, HBaseTestingUtil.fam1, i, i+1000);
         LOG.info("flushing table");
         HTU.flush(tableName);
         LOG.info("compacting table");
@@ -427,7 +427,7 @@ public class TestRegionReplicaReplicationEndpoint {
     Table table = connection.getTable(tableName);
     Table tableToBeDisabled = connection.getTable(toBeDisabledTable);
 
-    HTU.loadNumericRows(tableToBeDisabled, HBaseTestingUtility.fam1, 6000, 7000);
+    HTU.loadNumericRows(tableToBeDisabled, HBaseTestingUtil.fam1, 6000, 7000);
 
     RegionLocator rl = connection.getRegionLocator(toBeDisabledTable);
     HRegionLocation hrl = rl.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY);
@@ -476,7 +476,7 @@ public class TestRegionReplicaReplicationEndpoint {
     try {
       // load some data to the to-be-dropped table
       // load the data to the table
-      HTU.loadNumericRows(table, HBaseTestingUtility.fam1, 0, 1000);
+      HTU.loadNumericRows(table, HBaseTestingUtil.fam1, 0, 1000);
 
       // now enable the replication
       HTU.getAdmin().enableReplicationPeer(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);

@@ -57,7 +57,7 @@ public class TestMetaUpdatesGoToPriorityQueue {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMetaUpdatesGoToPriorityQueue.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -111,7 +111,7 @@ public class TestMetaUpdatesGoToPriorityQueue {
       .setEndKey(parent.getEndKey()).setSplit(false).setRegionId(rid).build();
 
     // find the meta server
-    MiniHBaseCluster cluster = UTIL.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getMiniHBaseCluster();
     int rsIndex = cluster.getServerWithMeta();
     HRegionServer rs;
     if (rsIndex >= 0) {

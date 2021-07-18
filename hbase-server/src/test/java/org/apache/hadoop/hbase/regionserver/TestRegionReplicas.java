@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TestMetaTableAccessor;
@@ -86,7 +86,7 @@ public class TestRegionReplicas {
   private static RegionInfo hriPrimary;
   private static RegionInfo hriSecondary;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   @BeforeClass
@@ -133,7 +133,7 @@ public class TestRegionReplicas {
       HTU.loadNumericRows(table, f, 0, 1000);
 
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HBaseTestingUtility.countRows(table));
+      Assert.assertEquals(1000, HBaseTestingUtil.countRows(table));
     } finally {
       HTU.deleteNumericRows(table, f, 0, 1000);
       closeRegion(HTU, getRS(), hriSecondary);
@@ -163,7 +163,7 @@ public class TestRegionReplicas {
       //load some data to primary
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HBaseTestingUtility.countRows(table));
+      Assert.assertEquals(1000, HBaseTestingUtil.countRows(table));
       // flush so that region replica can read
       HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
@@ -187,7 +187,7 @@ public class TestRegionReplicas {
       //load some data to primary
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HBaseTestingUtility.countRows(table));
+      Assert.assertEquals(1000, HBaseTestingUtil.countRows(table));
       // flush so that region replica can read
       HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
@@ -256,7 +256,7 @@ public class TestRegionReplicas {
       LOG.info("Loading data to primary region");
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HBaseTestingUtility.countRows(table));
+      Assert.assertEquals(1000, HBaseTestingUtil.countRows(table));
       // flush so that region replica can read
       LOG.info("Flushing primary region");
       HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());

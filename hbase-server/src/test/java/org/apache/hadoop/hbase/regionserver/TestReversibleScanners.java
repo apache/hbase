@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -81,7 +81,7 @@ public class TestReversibleScanners {
       HBaseClassTestRule.forClass(TestReversibleScanners.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReversibleScanners.class);
-  HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static byte[] FAMILYNAME = Bytes.toBytes("testCf");
   private static long TS = EnvironmentEdgeManager.currentTime();

@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -58,7 +58,7 @@ public class TestCoreRegionCoprocessor {
       HBaseClassTestRule.forClass(TestCoreRegionCoprocessor.class);
 
   @Rule public TestName name = new TestName();
-  HBaseTestingUtility HTU = new HBaseTestingUtility();
+  HBaseTestingUtil HTU = new HBaseTestingUtil();
   private HRegion region = null;
   private RegionServerServices rss;
 

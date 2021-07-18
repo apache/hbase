@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -38,7 +38,7 @@ public class TestShutdownWithNoRegionServer {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestShutdownWithNoRegionServer.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUp() throws Exception {

@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.mob;
 
 import java.util.Random;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -47,7 +47,7 @@ public class TestMobDataBlockEncoding {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobDataBlockEncoding.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte [] row1 = Bytes.toBytes("row1");
   private final static byte [] family = Bytes.toBytes("family");
   private final static byte [] qf1 = Bytes.toBytes("qualifier1");

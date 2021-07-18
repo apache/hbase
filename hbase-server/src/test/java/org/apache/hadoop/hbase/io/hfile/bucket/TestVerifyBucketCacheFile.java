@@ -31,7 +31,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -84,7 +84,7 @@ public class TestVerifyBucketCacheFile {
    */
   @Test
   public void testRetrieveFromFile() throws Exception {
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
 
@@ -153,7 +153,7 @@ public class TestVerifyBucketCacheFile {
    */
   @Test
   public void testModifiedBucketCacheFileData() throws Exception {
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
 
@@ -200,7 +200,7 @@ public class TestVerifyBucketCacheFile {
    */
   @Test
   public void testModifiedBucketCacheFileTime() throws Exception {
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
 

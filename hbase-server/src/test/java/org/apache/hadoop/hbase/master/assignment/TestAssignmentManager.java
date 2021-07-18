@@ -25,7 +25,7 @@ import java.util.Collections;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -229,7 +229,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
   public void testAssignMetaAndCrashBeforeResponse() throws Exception {
     tearDown();
     // See setUp(), start HBase until set up meta
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     this.executor = Executors.newSingleThreadScheduledExecutor();
     setupConfiguration(util.getConfiguration());
     master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);

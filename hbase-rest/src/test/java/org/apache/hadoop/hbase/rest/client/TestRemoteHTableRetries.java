@@ -31,7 +31,7 @@ import java.util.Arrays;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -59,7 +59,7 @@ public class TestRemoteHTableRetries {
   private static final int RETRIES = 3;
   private static final long MAX_TIME = SLEEP_TIME * (RETRIES - 1);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final byte[] ROW_1 = Bytes.toBytes("testrow1");
   private static final byte[] COLUMN_1 = Bytes.toBytes("a");

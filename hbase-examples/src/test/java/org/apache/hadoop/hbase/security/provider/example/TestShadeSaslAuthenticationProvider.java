@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -96,7 +96,7 @@ public class TestShadeSaslAuthenticationProvider {
 
   private static final char[] USER1_PASSWORD = "foobarbaz".toCharArray();
 
-  static LocalHBaseCluster createCluster(HBaseTestingUtility util, File keytabFile,
+  static LocalHBaseCluster createCluster(HBaseTestingUtil util, File keytabFile,
       MiniKdc kdc, Map<String,char[]> userDatabase) throws Exception {
     String servicePrincipal = "hbase/localhost";
     String spnegoPrincipal = "HTTP/localhost";
@@ -140,7 +140,7 @@ public class TestShadeSaslAuthenticationProvider {
     }
   }
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Configuration CONF = UTIL.getConfiguration();
   private static LocalHBaseCluster CLUSTER;
   private static File KEYTAB_FILE;

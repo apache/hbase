@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -127,11 +127,11 @@ public class TestSeekOptimizations {
 
   private long totalSeekDiligent, totalSeekLazy;
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Parameters
   public static final Collection<Object[]> parameters() {
-    return HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS;
+    return HBaseTestingUtil.BLOOM_AND_COMPRESSION_COMBINATIONS;
   }
 
   public TestSeekOptimizations(Compression.Algorithm comprAlgo,
@@ -449,7 +449,7 @@ public class TestSeekOptimizations {
   @After
   public void tearDown() throws IOException {
     if (region != null) {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
 
     // We have to re-set the lazy seek flag back to the default so that other
@@ -482,8 +482,8 @@ public class TestSeekOptimizations {
     if (eLen != aLen || i != minLen) {
       throw new AssertionError(
           "Expected and actual KV arrays differ at position " + i + ": " +
-          HBaseTestingUtility.safeGetAsStr(expected, i) + " (length " + eLen +") vs. " +
-          HBaseTestingUtility.safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
+          HBaseTestingUtil.safeGetAsStr(expected, i) + " (length " + eLen +") vs. " +
+          HBaseTestingUtil.safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
     }
   }
 }

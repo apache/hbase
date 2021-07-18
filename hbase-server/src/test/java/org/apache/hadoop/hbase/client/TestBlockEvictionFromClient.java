@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -83,7 +83,7 @@ public class TestBlockEvictionFromClient {
       HBaseClassTestRule.forClass(TestBlockEvictionFromClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBlockEvictionFromClient.class);
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static byte[][] ROWS = new byte[2][];
   private static int NO_OF_THREADS = 3;
   private static byte[] ROW = Bytes.toBytes("testRow");

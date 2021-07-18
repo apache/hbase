@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -34,7 +34,7 @@ public class TestHMasterCommandLine {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHMasterCommandLine.class);
 
-  private static final HBaseTestingUtility TESTING_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TESTING_UTIL = new HBaseTestingUtil();
   @Test
   public void testRun() throws Exception {
     HMasterCommandLine masterCommandLine = new HMasterCommandLine(HMaster.class);

@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -69,7 +69,7 @@ public class TestSpaceQuotasWithSnapshots {
       HBaseClassTestRule.forClass(TestSpaceQuotasWithSnapshots.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotasWithSnapshots.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   // Global for all tests in the class
   private static final AtomicLong COUNTER = new AtomicLong(0);
   private static final long FUDGE_FOR_TABLE_SIZE = 500L * SpaceQuotaHelperForTests.ONE_KILOBYTE;

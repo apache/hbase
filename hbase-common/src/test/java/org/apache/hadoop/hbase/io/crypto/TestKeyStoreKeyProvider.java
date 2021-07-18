@@ -29,7 +29,7 @@ import java.security.MessageDigest;
 import java.util.Properties;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,7 +48,7 @@ public class TestKeyStoreKeyProvider {
       HBaseClassTestRule.forClass(TestKeyStoreKeyProvider.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestKeyStoreKeyProvider.class);
-  static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
+  static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
   static final String ALIAS = "test";
   static final String PASSWORD = "password";
 

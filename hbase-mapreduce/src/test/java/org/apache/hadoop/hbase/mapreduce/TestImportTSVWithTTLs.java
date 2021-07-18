@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -64,7 +64,7 @@ public class TestImportTSVWithTTLs implements Configurable {
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestImportTSVWithTTLs.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
-  protected static HBaseTestingUtility util = new HBaseTestingUtility();
+  protected static HBaseTestingUtil util = new HBaseTestingUtil();
 
   /**
    * Delete the tmp directory after running doMROnTableTest. Boolean. Default is
@@ -124,7 +124,7 @@ public class TestImportTSVWithTTLs implements Configurable {
     util.deleteTable(tableName);
   }
 
-  protected static Tool doMROnTableTest(HBaseTestingUtility util, String family, String data,
+  protected static Tool doMROnTableTest(HBaseTestingUtil util, String family, String data,
       String[] args, int valueMultiplier) throws Exception {
     TableName table = TableName.valueOf(args[args.length - 1]);
     Configuration conf = new Configuration(util.getConfiguration());

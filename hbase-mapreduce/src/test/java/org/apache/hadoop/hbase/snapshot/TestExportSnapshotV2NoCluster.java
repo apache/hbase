@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -44,7 +44,7 @@ public class TestExportSnapshotV2NoCluster {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotV2NoCluster.class);
 
-  private HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
+  private HBaseCommonTestingUtil testUtil = new HBaseCommonTestingUtil();
   private Path testDir;
   private FileSystem fs;
 

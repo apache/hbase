@@ -25,8 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -57,7 +56,7 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
   private static final Logger LOG =
       LoggerFactory.getLogger(LoadBalancerPerformanceEvaluation.class.getName());
 
-  protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  protected static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   private static final int DEFAULT_NUM_REGIONS = 1000000;
   private static Option NUM_REGIONS_OPT = new Option("regions", true,

@@ -54,7 +54,7 @@ public class TestColumnFamilyDescriptorDefaultVersions {
 
   @Rule
   public TestName name = new TestName();
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static TableName TABLE_NAME = null;
   private static final byte[] FAMILY = Bytes.toBytes("cf0");
 

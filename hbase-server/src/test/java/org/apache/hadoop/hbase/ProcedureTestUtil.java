@@ -38,7 +38,7 @@ public final class ProcedureTestUtil {
   private ProcedureTestUtil() {
   }
 
-  private static Optional<JsonObject> getProcedure(HBaseTestingUtility util,
+  private static Optional<JsonObject> getProcedure(HBaseTestingUtil util,
       Class<? extends Procedure<?>> clazz, JsonParser parser) throws IOException {
     JsonArray array = parser.parse(util.getAdmin().getProcedures()).getAsJsonArray();
     Iterator<JsonElement> iterator = array.iterator();
@@ -53,7 +53,7 @@ public final class ProcedureTestUtil {
     return Optional.empty();
   }
 
-  public static void waitUntilProcedureWaitingTimeout(HBaseTestingUtility util,
+  public static void waitUntilProcedureWaitingTimeout(HBaseTestingUtil util,
       Class<? extends Procedure<?>> clazz, long timeout) throws IOException {
     JsonParser parser = new JsonParser();
     util.waitFor(timeout,
@@ -62,7 +62,7 @@ public final class ProcedureTestUtil {
         .isPresent());
   }
 
-  public static void waitUntilProcedureTimeoutIncrease(HBaseTestingUtility util,
+  public static void waitUntilProcedureTimeoutIncrease(HBaseTestingUtil util,
       Class<? extends Procedure<?>> clazz, int times) throws IOException, InterruptedException {
     JsonParser parser = new JsonParser();
     long oldTimeout = 0;

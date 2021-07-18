@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
@@ -60,7 +60,7 @@ public class TestScannerWithCorruptHFile {
 
   @Rule public TestName name = new TestName();
   private static final byte[] FAMILY_NAME = Bytes.toBytes("f");
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
 
   @BeforeClass

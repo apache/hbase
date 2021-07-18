@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -51,7 +51,7 @@ public class TestNettyRpcServer {
 
   @Rule
   public TestName name = new TestName();
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
 
   private static TableName TABLE;
   private static byte[] FAMILY = Bytes.toBytes("f1");
@@ -65,7 +65,7 @@ public class TestNettyRpcServer {
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.getConfiguration().set(
         RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
         NettyRpcServer.class.getName());

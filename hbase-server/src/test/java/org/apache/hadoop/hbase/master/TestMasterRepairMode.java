@@ -27,9 +27,9 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Connection;
@@ -65,11 +65,11 @@ public class TestMasterRepairMode {
 
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
   }
 
   @After
@@ -88,7 +88,7 @@ public class TestMasterRepairMode {
     enableMaintenanceMode();
 
     TEST_UTIL.startMiniCluster(
-      StartMiniClusterOption.builder().numRegionServers(0).numDataNodes(3).build());
+      StartTestingClusterOption.builder().numRegionServers(0).numDataNodes(3).build());
 
     Connection conn = TEST_UTIL.getConnection();
     assertTrue(conn.getAdmin().isMasterInMaintenanceMode());
@@ -115,7 +115,7 @@ public class TestMasterRepairMode {
 
     enableMaintenanceMode();
     TEST_UTIL.startMiniHBaseCluster(
-      StartMiniClusterOption.builder().numRegionServers(0).createRootDir(false).build());
+      StartTestingClusterOption.builder().numRegionServers(0).createRootDir(false).build());
 
     Connection conn = TEST_UTIL.getConnection();
     assertTrue(conn.getAdmin().isMasterInMaintenanceMode());

@@ -217,7 +217,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     LOG.info("Creating table {} with {} splits.", tableName,
       regionsCountPerServer * regionServerCount);
     startTime = EnvironmentEdgeManager.currentTime();
-    HBaseTestingUtility.createPreSplitLoadTestTable(util.getConfiguration(), desc, columns,
+    HBaseTestingUtil.createPreSplitLoadTestTable(util.getConfiguration(), desc, columns,
       regionsCountPerServer);
     util.waitTableAvailable(tableName);
     endTime = EnvironmentEdgeManager.currentTime();

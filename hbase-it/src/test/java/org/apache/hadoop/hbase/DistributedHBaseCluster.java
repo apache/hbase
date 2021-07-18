@@ -37,13 +37,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Manages the interactions with an already deployed distributed cluster (as opposed to
- * a pseudo-distributed, or mini/local cluster). This is used by integration and system tests.
+ * Manages the interactions with an already deployed distributed cluster (as opposed to a
+ * pseudo-distributed, or mini/local cluster). This is used by integration and system tests.
  */
 @InterfaceAudience.Private
-public class DistributedHBaseCluster extends HBaseCluster {
+public class DistributedHBaseCluster extends HBaseClusterInterface {
+
+  private static final Logger LOG = LoggerFactory.getLogger(DistributedHBaseCluster.class);
+
   private Admin admin;
   private final Connection connection;
 

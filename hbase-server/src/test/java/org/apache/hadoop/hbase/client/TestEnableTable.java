@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -53,7 +53,7 @@ public class TestEnableTable {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestEnableTable.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestEnableTable.class);
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
 
@@ -85,7 +85,7 @@ public class TestEnableTable {
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYNAME)).build();
     try {
-      createTable(TEST_UTIL, tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      createTable(TEST_UTIL, tableDescriptor, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     } catch (Exception e) {
       LOG.error("", e);
       fail("Got an exception while creating " + tableName);
@@ -158,7 +158,7 @@ public class TestEnableTable {
     }
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, TableDescriptor tableDescriptor,
+  public static void createTable(HBaseTestingUtil testUtil, TableDescriptor tableDescriptor,
     byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
@@ -176,7 +176,7 @@ public class TestEnableTable {
     testUtil.waitUntilAllRegionsAssigned(tableDescriptor.getTableName());
   }
 
-  public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
+  public static void deleteTable(HBaseTestingUtil testUtil, TableName tableName)
   throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.

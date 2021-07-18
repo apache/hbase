@@ -42,14 +42,14 @@ public class TestClusterBootOrder {
   private static final long SLEEP_INTERVAL = 1000;
   private static final long SLEEP_TIME = 4000;
 
-  private HBaseTestingUtility testUtil;
+  private HBaseTestingUtil testUtil;
   private LocalHBaseCluster cluster;
   private RegionServerThread rs;
   private MasterThread master;
 
   @Before
   public void setUp() throws Exception {
-    testUtil = new HBaseTestingUtility();
+    testUtil = new HBaseTestingUtil();
     testUtil.startMiniDFSCluster(1);
     testUtil.startMiniZKCluster(1);
     testUtil.createRootDir(); //manually setup hbase dir to point to minidfscluster

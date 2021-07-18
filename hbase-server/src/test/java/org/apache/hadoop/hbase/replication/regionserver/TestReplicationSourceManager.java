@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
@@ -125,7 +125,7 @@ public abstract class TestReplicationSourceManager {
 
   protected static Configuration conf;
 
-  protected static HBaseTestingUtility utility;
+  protected static HBaseTestingUtil utility;
 
   protected static Replication replication;
 

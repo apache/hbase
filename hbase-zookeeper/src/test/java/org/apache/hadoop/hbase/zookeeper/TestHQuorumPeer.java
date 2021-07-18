@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
@@ -46,7 +46,7 @@ public class TestHQuorumPeer {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHQuorumPeer.class);
 
-  private static final HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
+  private static final HBaseZKTestingUtil TEST_UTIL = new HBaseZKTestingUtil();
   private static int PORT_NO = 21818;
   private Path dataDir;
 

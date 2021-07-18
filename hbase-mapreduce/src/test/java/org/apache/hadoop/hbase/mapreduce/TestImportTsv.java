@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -80,7 +80,7 @@ public class TestImportTsv implements Configurable {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestImportTsv.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
-  protected static HBaseTestingUtility util = new HBaseTestingUtility();
+  protected static HBaseTestingUtil util = new HBaseTestingUtil();
 
   // Delete the tmp directory after running doMROnTableTest. Boolean. Default is true.
   protected static final String DELETE_AFTER_LOAD_CONF = NAME + ".deleteAfterLoad";
@@ -385,7 +385,7 @@ public class TestImportTsv implements Configurable {
     return doMROnTableTest(util, tn, FAMILY, data, args, valueMultiplier,-1);
   }
 
-  protected static Tool doMROnTableTest(HBaseTestingUtility util, TableName table,
+  protected static Tool doMROnTableTest(HBaseTestingUtil util, TableName table,
       String family, String data, Map<String, String> args) throws Exception {
     return doMROnTableTest(util, table, family, data, args, 1,-1);
   }
@@ -398,7 +398,7 @@ public class TestImportTsv implements Configurable {
    * @param args Any arguments to pass BEFORE inputFile path is appended.
    * @return The Tool instance used to run the test.
    */
-  protected static Tool doMROnTableTest(HBaseTestingUtility util, TableName table,
+  protected static Tool doMROnTableTest(HBaseTestingUtil util, TableName table,
       String family, String data, Map<String, String> args, int valueMultiplier,int expectedKVCount)
   throws Exception {
     Configuration conf = new Configuration(util.getConfiguration());

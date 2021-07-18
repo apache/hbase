@@ -36,8 +36,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -77,9 +77,9 @@ public class TestMasterRegionOnTwoFileSystems {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMasterRegionOnTwoFileSystems.class);
 
-  private static final HBaseCommonTestingUtility HFILE_UTIL = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil HFILE_UTIL = new HBaseCommonTestingUtil();
 
-  private static final HBaseTestingUtility WAL_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil WAL_UTIL = new HBaseTestingUtil();
 
   private static byte[] CF = Bytes.toBytes("f");
 

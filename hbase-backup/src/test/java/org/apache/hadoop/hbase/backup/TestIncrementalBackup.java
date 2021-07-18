@@ -23,8 +23,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -103,7 +103,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       // #2 - insert some data to table
       Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
       LOG.debug("writing " + ADD_ROWS + " rows to " + table1);
-      Assert.assertEquals(HBaseTestingUtility.countRows(t1),
+      Assert.assertEquals(HBaseTestingUtil.countRows(t1),
               NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_FAM3);
       LOG.debug("written " + ADD_ROWS + " rows to " + table1);
       // additionally, insert rows to MOB cf
@@ -111,7 +111,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       insertIntoTable(conn, table1, mobName, 3, NB_ROWS_MOB);
       LOG.debug("written " + NB_ROWS_MOB + " rows to " + table1 + " to Mob enabled CF");
       t1.close();
-      Assert.assertEquals(HBaseTestingUtility.countRows(t1),
+      Assert.assertEquals(HBaseTestingUtil.countRows(t1),
               NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_MOB);
       Table t2 = conn.getTable(table2);
       Put p2;
@@ -120,11 +120,11 @@ public class TestIncrementalBackup extends TestBackupBase {
         p2.addColumn(famName, qualName, Bytes.toBytes("val" + i));
         t2.put(p2);
       }
-      Assert.assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtility.countRows(t2));
+      Assert.assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtil.countRows(t2));
       t2.close();
       LOG.debug("written " + 5 + " rows to " + table2);
       // split table1
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       List<HRegion> regions = cluster.getRegions(table1);
       byte[] name = regions.get(0).getRegionInfo().getRegionName();
       long startSplitTime = EnvironmentEdgeManager.currentTime();
@@ -184,11 +184,11 @@ public class TestIncrementalBackup extends TestBackupBase {
 
       // #6.2 - checking row count of tables for full restore
       Table hTable = conn.getTable(table1_restore);
-      Assert.assertEquals(HBaseTestingUtility.countRows(hTable), NB_ROWS_IN_BATCH + NB_ROWS_FAM3);
+      Assert.assertEquals(HBaseTestingUtil.countRows(hTable), NB_ROWS_IN_BATCH + NB_ROWS_FAM3);
       hTable.close();
 
       hTable = conn.getTable(table2_restore);
-      Assert.assertEquals(NB_ROWS_IN_BATCH, HBaseTestingUtility.countRows(hTable));
+      Assert.assertEquals(NB_ROWS_IN_BATCH, HBaseTestingUtil.countRows(hTable));
       hTable.close();
 
       // #7 - restore incremental backup for multiple tables, with overwrite
@@ -213,7 +213,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       hTable.close();
 
       hTable = conn.getTable(table2_restore);
-      Assert.assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtility.countRows(hTable));
+      Assert.assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtil.countRows(hTable));
       hTable.close();
       admin.close();
     }

@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -64,7 +64,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
 
   private final static String ID_SECOND = "2";
 
-  private static HBaseTestingUtility TEST_UTIL2;
+  private static HBaseTestingUtil TEST_UTIL2;
   private static Configuration conf2;
   private static AsyncAdmin admin2;
   private static AsyncConnection connection;
@@ -80,7 +80,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
 
     conf2 = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
-    TEST_UTIL2 = new HBaseTestingUtility(conf2);
+    TEST_UTIL2 = new HBaseTestingUtil(conf2);
     TEST_UTIL2.startMiniCluster();
 
     connection =

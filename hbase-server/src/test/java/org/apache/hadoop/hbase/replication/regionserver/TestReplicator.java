@@ -25,7 +25,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -165,7 +165,7 @@ public class TestReplicator extends TestReplicationBase {
     TestReplicationBase.tearDownAfterClass();
   }
 
-  private void truncateTable(HBaseTestingUtility util, TableName tablename) throws IOException {
+  private void truncateTable(HBaseTestingUtil util, TableName tablename) throws IOException {
     Admin admin = util.getAdmin();
     admin.disableTable(tableName);
     admin.truncateTable(tablename, false);

@@ -34,11 +34,11 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Connection;
@@ -80,7 +80,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestMetaRegionReplicaReplicationEndpoint.class);
   private static final int NB_SERVERS = 4;
-  private final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private int numOfMetaReplica = NB_SERVERS - 1;
   private static byte[] VALUE = Bytes.toBytes("value");
 
@@ -108,7 +108,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
     // conf.setInt(HConstants.META_REPLICAS_NUM, numOfMetaReplica);
     HTU.startMiniCluster(NB_SERVERS);
     // Enable hbase:meta replication.
-    HBaseTestingUtility.setReplicas(HTU.getAdmin(), TableName.META_TABLE_NAME, numOfMetaReplica);
+    HBaseTestingUtil.setReplicas(HTU.getAdmin(), TableName.META_TABLE_NAME, numOfMetaReplica);
 
     HTU.waitFor(30000,
       () -> HTU.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size()
@@ -125,7 +125,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
    */
   @Test
   public void testHBaseMetaReplicationSourceCreatedOnOpen() throws Exception {
-    MiniHBaseCluster cluster = HTU.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = HTU.getMiniHBaseCluster();
     HRegionServer hrs = cluster.getRegionServer(cluster.getServerHoldingMeta());
     // Replicate a row to prove all working.
     testHBaseMetaReplicatesOneRow(0);
@@ -192,12 +192,12 @@ public class TestMetaRegionReplicaReplicationEndpoint {
   public void testHBaseMetaReplicates() throws Exception {
     try (Table table = HTU
       .createTable(TableName.valueOf(this.name.getMethodName() + "_0"), HConstants.CATALOG_FAMILY,
-        Arrays.copyOfRange(HBaseTestingUtility.KEYS, 1, HBaseTestingUtility.KEYS.length))) {
+        Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length))) {
       verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
     }
     try (Table table = HTU
       .createTable(TableName.valueOf(this.name.getMethodName() + "_1"), HConstants.CATALOG_FAMILY,
-        Arrays.copyOfRange(HBaseTestingUtility.KEYS, 1, HBaseTestingUtility.KEYS.length))) {
+        Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length))) {
       verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
       // Try delete.
       HTU.deleteTableIfAny(table.getName());
@@ -232,7 +232,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
 
   @Test
   public void testCatalogReplicaReplicationWithReplicaMoved() throws Exception {
-    MiniHBaseCluster cluster = HTU.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = HTU.getMiniHBaseCluster();
     HRegionServer hrs = cluster.getRegionServer(cluster.getServerHoldingMeta());
 
     HRegionServer hrsMetaReplica = null;
@@ -534,7 +534,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
     HRegionServer destRs = null;
 
     try (Table table = HTU.createTable(tn, HConstants.CATALOG_FAMILY,
-      Arrays.copyOfRange(HBaseTestingUtility.KEYS, 1, HBaseTestingUtility.KEYS.length))) {
+      Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length))) {
       verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
       // load different values
       HTU.loadTable(table, new byte[][] { HConstants.CATALOG_FAMILY }, VALUE);
@@ -559,10 +559,10 @@ public class TestMetaRegionReplicaReplicationEndpoint {
       c.set(LOCATOR_META_REPLICAS_MODE, "LoadBalance");
       Connection connection = ConnectionFactory.createConnection(c);
       Table tableForGet = connection.getTable(tn);
-      byte[][] getRows = new byte[HBaseTestingUtility.KEYS.length][];
+      byte[][] getRows = new byte[HBaseTestingUtil.KEYS.length][];
 
       int i = 0;
-      for (byte[] key : HBaseTestingUtility.KEYS) {
+      for (byte[] key : HBaseTestingUtil.KEYS) {
         getRows[i] = key;
         i++;
       }

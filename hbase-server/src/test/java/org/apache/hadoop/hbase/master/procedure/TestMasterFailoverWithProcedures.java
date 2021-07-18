@@ -22,8 +22,8 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -59,7 +59,7 @@ public class TestMasterFailoverWithProcedures {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterFailoverWithProcedures.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static void setupConf(Configuration conf) {
     // don't waste time retrying with the roll, the test is already slow enough.
@@ -74,7 +74,7 @@ public class TestMasterFailoverWithProcedures {
   public void setup() throws Exception {
     setupConf(UTIL.getConfiguration());
     // Set master number and use default values for other options.
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(2).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(2).build();
     UTIL.startMiniCluster(option);
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -299,7 +299,7 @@ public class TestMasterFailoverWithProcedures {
   // ==========================================================================
   //  Test Helpers
   // ==========================================================================
-  public static void testRecoveryAndDoubleExecution(final HBaseTestingUtility testUtil,
+  public static void testRecoveryAndDoubleExecution(final HBaseTestingUtil testUtil,
       final long procId, final int lastStepBeforeFailover) throws Exception {
     ProcedureExecutor<MasterProcedureEnv> procExec =
         testUtil.getHBaseCluster().getMaster().getMasterProcedureExecutor();

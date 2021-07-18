@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
@@ -54,7 +54,7 @@ public class MoveRandomRegionOfTableAction extends Action {
       Thread.sleep(sleepTime);
     }
 
-    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
+    HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
 
     getLogger().info("Performing action: Move random region of table " + tableName);

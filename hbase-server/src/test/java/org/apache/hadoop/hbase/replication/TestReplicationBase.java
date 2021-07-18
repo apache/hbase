@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -79,8 +79,8 @@ public class TestReplicationBase {
   protected static Table htable1;
   protected static Table htable2;
 
-  protected static final HBaseTestingUtility UTIL1 = new HBaseTestingUtility();
-  protected static final HBaseTestingUtility UTIL2 = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
   protected static Configuration CONF1 = UTIL1.getConfiguration();
   protected static Configuration CONF2 = UTIL2.getConfiguration();
 
@@ -186,7 +186,7 @@ public class TestReplicationBase {
     htable1.put(puts);
   }
 
-  protected static void setupConfig(HBaseTestingUtility util, String znodeParent) {
+  protected static void setupConfig(HBaseTestingUtil util, String znodeParent) {
     Configuration conf = util.getConfiguration();
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, znodeParent);
     // We don't want too many edits per batch sent to the ReplicationEndpoint to trigger
@@ -209,8 +209,8 @@ public class TestReplicationBase {
     conf.setLong("hbase.serial.replication.waiting.ms", 100);
   }
 
-  static void configureClusters(HBaseTestingUtility util1,
-      HBaseTestingUtility util2) {
+  static void configureClusters(HBaseTestingUtil util1,
+      HBaseTestingUtil util2) {
     setupConfig(util1, "/1");
     setupConfig(util2, "/2");
 
@@ -246,8 +246,8 @@ public class TestReplicationBase {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
         .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
-    UTIL1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
-    UTIL2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    UTIL1.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
+    UTIL2.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     UTIL1.waitUntilAllRegionsAssigned(tableName);
     UTIL2.waitUntilAllRegionsAssigned(tableName);
   }

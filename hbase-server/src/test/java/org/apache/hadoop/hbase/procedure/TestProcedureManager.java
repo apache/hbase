@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -42,7 +42,7 @@ public class TestProcedureManager {
       HBaseClassTestRule.forClass(TestProcedureManager.class);
 
   private static final int NUM_RS = 2;
-  private static HBaseTestingUtility util = new HBaseTestingUtility();
+  private static HBaseTestingUtil util = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
