@@ -72,6 +72,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
       TableDescriptorBuilder.NORMALIZER_TARGET_REGION_COUNT;
   public static final String NORMALIZER_TARGET_REGION_SIZE =
       TableDescriptorBuilder.NORMALIZER_TARGET_REGION_SIZE;
+  public static final String NORMALIZER_TARGET_REGION_SIZE_MB =
+      TableDescriptorBuilder.NORMALIZER_TARGET_REGION_SIZE_MB;
   public static final String PRIORITY = TableDescriptorBuilder.PRIORITY;
   public static final boolean DEFAULT_READONLY = TableDescriptorBuilder.DEFAULT_READONLY;
   public static final boolean DEFAULT_COMPACTION_ENABLED = TableDescriptorBuilder.DEFAULT_COMPACTION_ENABLED;
