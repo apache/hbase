@@ -94,8 +94,8 @@ public class TestCloseAnOpeningRegion {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY, 60000);
-    UTIL.startMiniCluster(
-      StartTestingClusterOption.builder().numRegionServers(2).masterClass(MockHMaster.class).build());
+    UTIL.startMiniCluster(StartTestingClusterOption.builder().numRegionServers(2)
+      .masterClass(MockHMaster.class).build());
     UTIL.createTable(TABLE_NAME, CF);
     UTIL.getAdmin().balancerSwitch(false, true);
   }

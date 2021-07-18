@@ -107,7 +107,8 @@ public class TestMasterMetrics {
     }
   }
 
-  public static class MyRegionServer extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
+  public static class MyRegionServer
+    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
 
     public MyRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
@@ -123,8 +124,8 @@ public class TestMasterMetrics {
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
     // Set master class and use default values for other options.
-    StartTestingClusterOption option = StartTestingClusterOption.builder().masterClass(MyMaster.class)
-      .rsClass(MyRegionServer.class).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
+      .masterClass(MyMaster.class).rsClass(MyRegionServer.class).build();
     TEST_UTIL.startMiniCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");

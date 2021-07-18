@@ -763,12 +763,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Start up a minicluster of hbase, dfs, and zookeeper where WAL's walDir is created separately.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * All other options will use default values, defined in
+   * {@link StartTestingClusterOption.Builder}.
    * @param createWALDir Whether to create a new WAL directory.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -780,14 +781,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs, and zookeeper. All other options will use default values,
+   * defined in {@link StartTestingClusterOption.Builder}.
    * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
    * @param createRootDir Whether to create a new root or data directory path.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -800,15 +801,15 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs, and zookeeper. All other options will use default values,
+   * defined in {@link StartTestingClusterOption.Builder}.
    * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
    * @param createRootDir Whether to create a new root or data directory path.
    * @param createWALDir Whether to create a new WAL directory.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -822,15 +823,15 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs, and zookeeper. All other options will use default values,
+   * defined in {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
    * @param createRootDir Whether to create a new root or data directory path.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *  {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -844,14 +845,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs, and zookeeper. All other options will use default values,
+   * defined in {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -863,17 +864,17 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs, and zookeeper. All other options will use default values,
+   * defined in {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
    * @param dataNodeHosts The hostnames of DataNodes to run on. If not null, its size will overwrite
-   *                      HDFS data node number.
+   *          HDFS data node number.
    * @param createRootDir Whether to create a new root or data directory path.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -887,16 +888,16 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs, and zookeeper. All other options will use default values,
+   * defined in {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
    * @param dataNodeHosts The hostnames of DataNodes to run on. If not null, its size will overwrite
-   *                      HDFS data node number.
+   *          HDFS data node number.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -910,15 +911,15 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs, and zookeeper. All other options will use default values,
+   * defined in {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numRegionServers Number of region servers.
    * @param numDataNodes Number of datanodes.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -932,18 +933,18 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs, and zookeeper. All other options will use default values,
+   * defined in {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
    * @param dataNodeHosts The hostnames of DataNodes to run on. If not null, its size will overwrite
-   *                      HDFS data node number.
+   *          HDFS data node number.
    * @param masterClass The class to use as HMaster, or null for default.
    * @param rsClass The class to use as HRegionServer, or null for default.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -961,19 +962,19 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs, and zookeeper. All other options will use default values,
+   * defined in {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numRegionServers Number of region servers.
    * @param numDataNodes Number of datanodes.
    * @param dataNodeHosts The hostnames of DataNodes to run on. If not null, its size will overwrite
-   *                      HDFS data node number.
+   *          HDFS data node number.
    * @param masterClass The class to use as HMaster, or null for default.
    * @param rsClass The class to use as HRegionServer, or null for default.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -991,13 +992,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs, and zookeeper. All other options will use default values,
+   * defined in {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numRegionServers Number of region servers.
    * @param numDataNodes Number of datanodes.
    * @param dataNodeHosts The hostnames of DataNodes to run on. If not null, its size will overwrite
-   *                      HDFS data node number.
+   *          HDFS data node number.
    * @param masterClass The class to use as HMaster, or null for default.
    * @param rsClass The class to use as HRegionServer, or null for default.
    * @param createRootDir Whether to create a new root or data directory path.
@@ -1005,7 +1006,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniCluster(StartTestingClusterOption)} instead.
    * @see #startMiniCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -1024,8 +1025,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Start up a minicluster of hbase, dfs and zookeeper clusters with given slave node number.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Start up a minicluster of hbase, dfs and zookeeper clusters with given slave node number. All
+   * other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
    * @param numSlaves slave node number, for both HBase region server and HDFS data node.
    * @see #startMiniCluster(StartTestingClusterOption option)
    * @see #shutdownMiniDFSCluster()
@@ -1146,15 +1147,15 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Starts up mini hbase cluster.
-   * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Starts up mini hbase cluster. Usually you won't want this. You'll usually want
+   * {@link #startMiniCluster()}. All other options will use default values, defined in
+   * {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numRegionServers Number of region servers.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniHBaseCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniHBaseCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniHBaseCluster(StartTestingClusterOption)} instead.
    * @see #startMiniHBaseCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -1167,16 +1168,16 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Starts up mini hbase cluster.
-   * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Starts up mini hbase cluster. Usually you won't want this. You'll usually want
+   * {@link #startMiniCluster()}. All other options will use default values, defined in
+   * {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numRegionServers Number of region servers.
    * @param rsPorts Ports that RegionServer should use.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniHBaseCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniHBaseCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniHBaseCluster(StartTestingClusterOption)} instead.
    * @see #startMiniHBaseCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -1189,9 +1190,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Starts up mini hbase cluster.
-   * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
-   * All other options will use default values, defined in {@link StartTestingClusterOption.Builder}.
+   * Starts up mini hbase cluster. Usually you won't want this. You'll usually want
+   * {@link #startMiniCluster()}. All other options will use default values, defined in
+   * {@link StartTestingClusterOption.Builder}.
    * @param numMasters Master node number.
    * @param numRegionServers Number of region servers.
    * @param rsPorts Ports that RegionServer should use.
@@ -1202,7 +1203,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @return The mini HBase cluster created.
    * @see #shutdownMiniHBaseCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
-   *   {@link #startMiniHBaseCluster(StartTestingClusterOption)} instead.
+   *             {@link #startMiniHBaseCluster(StartTestingClusterOption)} instead.
    * @see #startMiniHBaseCluster(StartTestingClusterOption)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
@@ -1236,12 +1237,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public void restartHBaseCluster(StartTestingClusterOption option)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     closeConnection();
-    this.hbaseCluster =
-        new SingleProcessHBaseCluster(this.conf, option.getNumMasters(), option.getNumAlwaysStandByMasters(),
-            option.getNumRegionServers(), option.getRsPorts(), option.getMasterClass(),
-            option.getRsClass());
+    this.hbaseCluster = new SingleProcessHBaseCluster(this.conf, option.getNumMasters(),
+      option.getNumAlwaysStandByMasters(), option.getNumRegionServers(), option.getRsPorts(),
+      option.getMasterClass(), option.getRsClass());
     // Don't leave here till we've done a successful scan of the hbase:meta
     Connection conn = ConnectionFactory.createConnection(this.conf);
     Table t = conn.getTable(TableName.META_TABLE_NAME);

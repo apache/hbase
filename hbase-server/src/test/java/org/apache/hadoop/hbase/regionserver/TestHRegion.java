@@ -4702,7 +4702,7 @@ public class TestHRegion {
       }
 
       try {
-          HBaseTestingUtil.closeRegionAndWAL(this.region);
+        HBaseTestingUtil.closeRegionAndWAL(this.region);
       } catch (DroppedSnapshotException dse) {
         // We could get this on way out because we interrupt the background flusher and it could
         // fail anywhere causing a DSE over in the background flusher... only it is not properly

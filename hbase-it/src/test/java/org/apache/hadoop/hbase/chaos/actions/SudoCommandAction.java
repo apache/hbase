@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClusterInterface;
 import org.apache.hadoop.hbase.DistributedHBaseCluster;
+import org.apache.hadoop.hbase.HBaseClusterInterface;
 import org.apache.hadoop.hbase.HBaseClusterManager;
 
 /**

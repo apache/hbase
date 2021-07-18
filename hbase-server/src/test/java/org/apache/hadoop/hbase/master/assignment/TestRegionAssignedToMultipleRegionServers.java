@@ -134,8 +134,8 @@ public class TestRegionAssignedToMultipleRegionServers {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
-    UTIL
-      .startMiniCluster(StartTestingClusterOption.builder().numMasters(2).numRegionServers(2).build());
+    UTIL.startMiniCluster(
+      StartTestingClusterOption.builder().numMasters(2).numRegionServers(2).build());
     UTIL.createTable(NAME, CF);
     UTIL.waitTableAvailable(NAME);
     UTIL.getAdmin().balancerSwitch(false, true);

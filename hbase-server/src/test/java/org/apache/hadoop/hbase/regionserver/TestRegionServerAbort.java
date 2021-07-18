@@ -107,7 +107,8 @@ public class TestRegionServerAbort {
 
     testUtil.startMiniZKCluster();
     dfsCluster = testUtil.startMiniDFSCluster(2);
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numRegionServers(2).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(2).build();
     cluster = testUtil.startMiniHBaseCluster(option);
   }
 

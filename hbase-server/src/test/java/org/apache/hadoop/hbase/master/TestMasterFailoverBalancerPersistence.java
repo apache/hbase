@@ -111,7 +111,8 @@ public class TestMasterFailoverBalancerPersistence {
    * @throws org.apache.hadoop.hbase.MasterNotRunningException
    *          if no active master found
    */
-  private int getActiveMasterIndex(SingleProcessHBaseCluster cluster) throws MasterNotRunningException {
+  private int getActiveMasterIndex(SingleProcessHBaseCluster cluster)
+    throws MasterNotRunningException {
     // get all the master threads
     List<JVMClusterUtil.MasterThread> masterThreads = cluster.getMasterThreads();
 

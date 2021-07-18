@@ -77,7 +77,7 @@ public class TestRegionSplit {
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     StartTestingClusterOption option =
-        StartTestingClusterOption.builder().numMasters(1).numRegionServers(3).numDataNodes(3).build();
+      StartTestingClusterOption.builder().numMasters(1).numRegionServers(3).numDataNodes(3).build();
     UTIL.startMiniCluster(option);
   }
 

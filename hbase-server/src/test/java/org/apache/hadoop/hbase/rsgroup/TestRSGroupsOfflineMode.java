@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-import org.apache.hadoop.hbase.HBaseClusterInterface;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseClusterInterface;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -162,7 +162,8 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
     });
 
     // Get groupInfoManager from the new active master.
-    RSGroupInfoManager groupMgr = ((SingleProcessHBaseCluster) cluster).getMaster().getRSGroupInfoManager();
+    RSGroupInfoManager groupMgr =
+      ((SingleProcessHBaseCluster) cluster).getMaster().getRSGroupInfoManager();
     // Make sure balancer is in offline mode, since this is what we're testing.
     assertFalse(groupMgr.isOnline());
     // Kill final regionserver to see the failover happens for all tables except GROUP table since

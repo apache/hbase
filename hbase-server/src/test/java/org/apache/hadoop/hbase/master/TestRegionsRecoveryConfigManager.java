@@ -60,8 +60,8 @@ public class TestRegionsRecoveryConfigManager {
     conf = HBASE_TESTING_UTILITY.getConfiguration();
     conf.unset("hbase.regions.recovery.store.file.ref.count");
     conf.unset("hbase.master.regions.recovery.check.interval");
-    StartTestingClusterOption option = StartTestingClusterOption.builder().masterClass(TestHMaster.class)
-      .numRegionServers(1).numDataNodes(1).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
+      .masterClass(TestHMaster.class).numRegionServers(1).numDataNodes(1).build();
     HBASE_TESTING_UTILITY.startMiniCluster(option);
     cluster = HBASE_TESTING_UTILITY.getMiniHBaseCluster();
   }

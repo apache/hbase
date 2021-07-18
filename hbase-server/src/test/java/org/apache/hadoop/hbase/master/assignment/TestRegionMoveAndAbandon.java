@@ -69,7 +69,8 @@ public class TestRegionMoveAndAbandon {
   public void setup() throws Exception {
     UTIL = new HBaseTestingUtil();
     zkCluster = UTIL.startMiniZKCluster();
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numRegionServers(2).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(2).build();
     cluster = UTIL.startMiniHBaseCluster(option);
     rs1 = cluster.getRegionServer(0);
     rs2 = cluster.getRegionServer(1);

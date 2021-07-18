@@ -80,11 +80,12 @@ public class TestRegionServerAbortTimeout {
     // Will schedule a abort timeout task after SLEEP_TIME_WHEN_CLOSE_REGION ms
     conf.setLong(HRegionServer.ABORT_TIMEOUT, SLEEP_TIME_WHEN_CLOSE_REGION);
     conf.set(HRegionServer.ABORT_TIMEOUT_TASK, TestAbortTimeoutTask.class.getName());
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numRegionServers(2).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(2).build();
     UTIL.startMiniCluster(option);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-        .setCoprocessor(SleepWhenCloseCoprocessor.class.getName())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build();
+      .setCoprocessor(SleepWhenCloseCoprocessor.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build();
     UTIL.getAdmin().createTable(td, Bytes.toBytes("0"), Bytes.toBytes("9"), REGIONS_NUM);
   }
 

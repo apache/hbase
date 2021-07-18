@@ -144,8 +144,8 @@ public class TestOpenRegionProcedureHang {
     // make sure we do not timeout when caling reportRegionStateTransition
     conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 10 * 60 * 1000);
     conf.setInt(HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY, 10 * 60 * 1000);
-    UTIL
-      .startMiniCluster(StartTestingClusterOption.builder().numMasters(2).numRegionServers(3).build());
+    UTIL.startMiniCluster(
+      StartTestingClusterOption.builder().numMasters(2).numRegionServers(3).build());
     UTIL.createTable(NAME, CF);
     UTIL.waitTableAvailable(NAME);
     UTIL.getAdmin().balancerSwitch(false, true);

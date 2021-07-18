@@ -293,9 +293,10 @@ public class SecureTestUtil {
     return result;
   }
 
-  private static Map<AccessController,Long> getAuthManagerMTimes(SingleProcessHBaseCluster cluster) {
-    Map<AccessController,Long> result = Maps.newHashMap();
-    for (AccessController ac: getAccessControllers(cluster)) {
+  private static Map<AccessController, Long>
+    getAuthManagerMTimes(SingleProcessHBaseCluster cluster) {
+    Map<AccessController, Long> result = Maps.newHashMap();
+    for (AccessController ac : getAccessControllers(cluster)) {
       result.put(ac, ac.getAuthManager().getMTime());
     }
     return result;

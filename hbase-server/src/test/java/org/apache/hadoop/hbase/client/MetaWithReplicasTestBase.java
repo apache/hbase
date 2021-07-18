@@ -58,8 +58,8 @@ public class MetaWithReplicasTestBase {
     TEST_UTIL.getConfiguration().setInt("zookeeper.session.timeout", 30000);
     TEST_UTIL.getConfiguration()
       .setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numAlwaysStandByMasters(1)
-      .numMasters(1).numRegionServers(REGIONSERVERS_COUNT).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
+      .numAlwaysStandByMasters(1).numMasters(1).numRegionServers(REGIONSERVERS_COUNT).build();
     TEST_UTIL.startMiniCluster(option);
     Admin admin = TEST_UTIL.getAdmin();
     HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 3);

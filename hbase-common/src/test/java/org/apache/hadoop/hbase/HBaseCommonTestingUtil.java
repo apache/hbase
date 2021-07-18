@@ -106,8 +106,8 @@ public class HBaseCommonTestingUtil {
   private File dataTestDir = null;
 
   /**
-   * @return Where to write test data on local filesystem, specific to the test. Useful for tests
-   *    that do not use a cluster. Creates it if it does not exist already.
+   * Returns Where to write test data on local filesystem, specific to the test. Useful for tests
+   * that do not use a cluster. Creates it if it does not exist already.
    */
   public Path getDataTestDir() {
     if (this.dataTestDir == null) {
@@ -117,9 +117,9 @@ public class HBaseCommonTestingUtil {
   }
 
   /**
+   * Returns the path to a subdirectory or file named {code subdirName} under
+   * {@link #getDataTestDir()}. Does *NOT* create the directory or file if it does not exist.
    * @param name the name of a subdirectory or file in the test data directory
-   * @return Path to a subdirectory or file named {code subdirName} under
-   *  {@link #getDataTestDir()}. Does *NOT* create the directory or file if it does not exist.
    */
   public Path getDataTestDir(final String name) {
     return new Path(getDataTestDir(), name);
@@ -151,7 +151,7 @@ public class HBaseCommonTestingUtil {
   }
 
   /**
-   * @return A dir with a random (uuid) name under the test dir
+   * Returns A dir with a random (uuid) name under the test dir
    * @see #getBaseTestDir()
    */
   public Path getRandomDir() {
@@ -175,7 +175,7 @@ public class HBaseCommonTestingUtil {
   }
 
   /**
-   * @return True if we should delete testing dirs on exit.
+   * Returns true if we should delete testing dirs on exit.
    */
   boolean deleteOnExit() {
     String v = System.getProperty("hbase.testing.preserve.testdir");
@@ -184,7 +184,7 @@ public class HBaseCommonTestingUtil {
   }
 
   /**
-   * @return True if we removed the test dirs
+   * Returns true if we removed the test dirs
    */
   public boolean cleanupTestDir() {
     if (deleteDir(this.dataTestDir)) {
@@ -195,8 +195,8 @@ public class HBaseCommonTestingUtil {
   }
 
   /**
+   * Returns true if we removed the test dir
    * @param subdir Test subdir name.
-   * @return True if we removed the test dir
    */
   public boolean cleanupTestDir(final String subdir) {
     if (this.dataTestDir == null) {
@@ -206,10 +206,9 @@ public class HBaseCommonTestingUtil {
   }
 
   /**
-   * @return Where to write test data on local filesystem; usually
-   *    {@link #DEFAULT_BASE_TEST_DIRECTORY}
-   *    Should not be used by the unit tests, hence its's private.
-   *    Unit test will use a subdirectory of this directory.
+   * Returns Where to write test data on local filesystem; usually
+   * {@link #DEFAULT_BASE_TEST_DIRECTORY} Should not be used by the unit tests, hence its's private.
+   * Unit test will use a subdirectory of this directory.
    * @see #setupDataTestDir()
    */
   private Path getBaseTestDir() {
@@ -220,8 +219,8 @@ public class HBaseCommonTestingUtil {
   }
 
   /**
+   * Returns true if we deleted it.
    * @param dir Directory to delete
-   * @return True if we deleted it.
    */
   boolean deleteDir(final File dir) {
     if (dir == null || !dir.exists()) {

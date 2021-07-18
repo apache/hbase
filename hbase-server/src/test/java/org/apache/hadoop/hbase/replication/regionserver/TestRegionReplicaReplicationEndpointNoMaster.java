@@ -116,8 +116,8 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     }
     HTU.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
       walCoprocs);
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numAlwaysStandByMasters(1).
-        numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
+      .numAlwaysStandByMasters(1).numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
     HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.

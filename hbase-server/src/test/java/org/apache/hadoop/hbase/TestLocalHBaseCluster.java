@@ -86,7 +86,8 @@ public class TestLocalHBaseCluster {
   /**
    * A private regionserver class with a dummy method for testing casts
    */
-  public static class MyHRegionServer extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
+  public static class MyHRegionServer
+    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
 
     public MyHRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);

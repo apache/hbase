@@ -196,9 +196,9 @@ public class TestRSKilledWhenInitializing {
    * the response to a reportForDuty. When it dies, it clears its ephemeral znode which the master
    * notices and so removes the region from its set of online regionservers.
    */
-  static class RegisterAndDieRegionServer extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
-    public RegisterAndDieRegionServer(Configuration conf)
-    throws IOException, InterruptedException {
+  static class RegisterAndDieRegionServer
+    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
+    public RegisterAndDieRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
     }
 

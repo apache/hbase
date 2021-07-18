@@ -62,8 +62,9 @@ public class TestFailedMetaReplicaAssigment {
     // this test can be removed once we remove the HConstants.META_REPLICAS_NUM config.
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.META_REPLICAS_NUM, 3);
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numAlwaysStandByMasters(1)
-      .numMasters(1).numRegionServers(1).masterClass(BrokenMetaReplicaMaster.class).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numAlwaysStandByMasters(1).numMasters(1)
+        .numRegionServers(1).masterClass(BrokenMetaReplicaMaster.class).build();
     TEST_UTIL.startMiniCluster(option);
   }
 

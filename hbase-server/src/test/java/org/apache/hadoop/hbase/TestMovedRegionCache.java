@@ -60,7 +60,8 @@ public class TestMovedRegionCache {
   public void setup() throws Exception {
     UTIL = new HBaseTestingUtil();
     zkCluster = UTIL.startMiniZKCluster();
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numRegionServers(2).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(2).build();
     SingleProcessHBaseCluster cluster = UTIL.startMiniHBaseCluster(option);
     source = cluster.getRegionServer(0);
     dest = cluster.getRegionServer(1);

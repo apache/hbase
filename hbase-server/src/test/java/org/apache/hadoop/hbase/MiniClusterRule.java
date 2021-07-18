@@ -28,22 +28,25 @@ import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
 /**
- * A {@link TestRule} that manages an instance of the {@link SingleProcessHBaseCluster}. Can be used in
- * either the {@link Rule} or {@link ClassRule} positions. Built on top of an instance of
+ * A {@link TestRule} that manages an instance of the {@link SingleProcessHBaseCluster}. Can be used
+ * in either the {@link Rule} or {@link ClassRule} positions. Built on top of an instance of
  * {@link HBaseTestingUtil}, so be weary of intermixing direct use of that class with this Rule.
  * </p>
  * Use in combination with {@link ConnectionRule}, for example:
  *
- * <pre>{@code
+ * <pre>
+ * {
+ *   &#64;code
  *   public class TestMyClass {
- *     @ClassRule
+ *     &#64;ClassRule
  *     public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *
- *     @Rule
+ *     &#64;Rule
  *     public final ConnectionRule connectionRule =
  *       new ConnectionRule(miniClusterRule::createConnection);
  *   }
- * }</pre>
+ * }
+ * </pre>
  */
 public final class MiniClusterRule extends ExternalResource {
 
@@ -56,7 +59,8 @@ public final class MiniClusterRule extends ExternalResource {
     private Configuration conf;
 
     /**
-     * Use the provided {@link StartTestingClusterOption} to construct the {@link SingleProcessHBaseCluster}.
+     * Use the provided {@link StartTestingClusterOption} to construct the
+     * {@link SingleProcessHBaseCluster}.
      */
     public Builder setMiniClusterOption(final StartTestingClusterOption miniClusterOption) {
       this.miniClusterOption = miniClusterOption;
@@ -72,11 +76,8 @@ public final class MiniClusterRule extends ExternalResource {
     }
 
     public MiniClusterRule build() {
-      return new MiniClusterRule(
-        conf,
-        miniClusterOption != null
-          ? miniClusterOption
-          : StartTestingClusterOption.builder().build());
+      return new MiniClusterRule(conf, miniClusterOption != null ? miniClusterOption :
+        StartTestingClusterOption.builder().build());
     }
   }
 
@@ -103,8 +104,8 @@ public final class MiniClusterRule extends ExternalResource {
   }
 
   /**
-   * Create a {@link AsyncConnection} to the managed {@link SingleProcessHBaseCluster}. It's up to the caller
-   * to {@link AsyncConnection#close() close()} the connection when finished.
+   * Create a {@link AsyncConnection} to the managed {@link SingleProcessHBaseCluster}. It's up to
+   * the caller to {@link AsyncConnection#close() close()} the connection when finished.
    */
   public CompletableFuture<AsyncConnection> createConnection() {
     if (miniCluster == null) {

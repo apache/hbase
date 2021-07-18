@@ -21,19 +21,19 @@ package org.apache.hadoop.hbase;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.SingleProcessHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Options for starting up a testing cluster (including an hbase, dfs and zookeeper clusters) in test.
- * The options include HDFS options to build mini dfs cluster, Zookeeper options to build mini zk
- * cluster, and mostly HBase options to build mini hbase cluster.
- *
+ * Options for starting up a testing cluster (including an hbase, dfs and zookeeper clusters) in
+ * test. The options include HDFS options to build mini dfs cluster, Zookeeper options to build mini
+ * zk cluster, and mostly HBase options to build mini hbase cluster.
+ * <p/>
  * To create an object, use a {@link Builder}.
+ * <p/>
  * Example usage:
+ *
  * <pre>
  *    StartTestingClusterOption option = StartTestingClusterOption.builder().
  *        .numMasters(3).rsClass(MyRegionServer.class).createWALDir(true).build();
@@ -111,9 +111,10 @@ public final class StartTestingClusterOption {
    * Private constructor. Use {@link Builder#build()}.
    */
   private StartTestingClusterOption(int numMasters, int numAlwaysStandByMasters,
-      Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
-      Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass, int numDataNodes,
-      String[] dataNodeHosts, int numZkServers, boolean createRootDir, boolean createWALDir) {
+    Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
+    Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
+    int numDataNodes, String[] dataNodeHosts, int numZkServers, boolean createRootDir,
+    boolean createWALDir) {
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
     this.masterClass = masterClass;
@@ -243,7 +244,8 @@ public final class StartTestingClusterOption {
       return this;
     }
 
-    public Builder rsClass(Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass) {
+    public Builder
+      rsClass(Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass) {
       this.rsClass = rsClass;
       return this;
     }

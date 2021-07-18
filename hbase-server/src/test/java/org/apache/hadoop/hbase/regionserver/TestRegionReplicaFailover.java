@@ -70,8 +70,8 @@ public class TestRegionReplicaFailover {
 
   private static final int NB_SERVERS = 3;
 
-  protected final byte[][] families = new byte[][] {HBaseTestingUtil.fam1,
-      HBaseTestingUtil.fam2, HBaseTestingUtil.fam3};
+  protected final byte[][] families =
+    new byte[][] { HBaseTestingUtil.fam1, HBaseTestingUtil.fam2, HBaseTestingUtil.fam3 };
   protected final byte[] fam = HBaseTestingUtil.fam1;
   protected final byte[] qual1 = Bytes.toBytes("qual1");
   protected final byte[] value1 = Bytes.toBytes("value1");
