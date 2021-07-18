@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
@@ -43,6 +44,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  */
 @InterfaceAudience.Private
 class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnable {
+  public static final String HBASE_TABLE_NORMALIZATION_ENABLED =
+      "hbase.table.normalization.enabled";
   private static final Logger LOG = LoggerFactory.getLogger(RegionNormalizerWorker.class);
 
   static final String RATE_LIMIT_BYTES_PER_SEC_KEY =
@@ -55,6 +58,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   private final RateLimiter rateLimiter;
 
   private final long[] skippedCount;
+  private final boolean defaultNormalizerTableLevel;
   private long splitPlanCount;
   private long mergePlanCount;
 
@@ -71,6 +75,12 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
     this.splitPlanCount = 0;
     this.mergePlanCount = 0;
     this.rateLimiter = loadRateLimiter(configuration);
+    this.defaultNormalizerTableLevel = extractDefaultNormalizerValue(configuration);
+  }
+
+  private boolean extractDefaultNormalizerValue(final Configuration configuration) {
+    String s = configuration.get(HBASE_TABLE_NORMALIZATION_ENABLED);
+    return Boolean.parseBoolean(s);
   }
 
   @Override
@@ -181,10 +191,20 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
     final TableDescriptor tblDesc;
     try {
       tblDesc = masterServices.getTableDescriptors().get(tableName);
-      if (tblDesc != null && !tblDesc.isNormalizationEnabled()) {
-        LOG.debug("Skipping table {} because normalization is disabled in its table properties.",
-          tableName);
-        return Collections.emptyList();
+      boolean normalizationEnabled;
+      if (tblDesc != null) {
+        String defined = tblDesc.getValue(TableDescriptorBuilder.NORMALIZATION_ENABLED);
+        if(defined != null) {
+          normalizationEnabled = tblDesc.isNormalizationEnabled();
+        } else {
+          normalizationEnabled = this.defaultNormalizerTableLevel;
+        }
+        if (!normalizationEnabled) {
+          LOG.debug("Skipping table {} because normalization is disabled in its table properties " +
+              "and normalization is also disabled at table level by default",
+            tableName);
+          return Collections.emptyList();
+        }
       }
     } catch (IOException e) {
       LOG.debug("Skipping table {} because unable to access its table descriptor.", tableName, e);
