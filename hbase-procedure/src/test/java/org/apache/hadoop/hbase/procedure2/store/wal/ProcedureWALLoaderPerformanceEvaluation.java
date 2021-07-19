@@ -27,7 +27,7 @@ import java.util.Set;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
@@ -39,7 +39,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
-  protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  protected static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   // Command line options and defaults.
   public static int DEFAULT_NUM_PROCS = 1000000;  // 1M

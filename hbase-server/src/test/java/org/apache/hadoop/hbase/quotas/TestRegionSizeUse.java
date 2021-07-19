@@ -27,8 +27,8 @@ import java.util.Map.Entry;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -65,9 +65,9 @@ public class TestRegionSizeUse {
   private static final int SIZE_PER_VALUE = 256;
   private static final int NUM_SPLITS = 10;
   private static final String F1 = "f1";
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private MiniHBaseCluster cluster;
+  private SingleProcessHBaseCluster cluster;
 
   @Rule
   public TestName testName = new TestName();

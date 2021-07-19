@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.countRows;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
 import static org.apache.hadoop.hbase.replication.TestReplicationBase.NB_RETRIES;
 import static org.apache.hadoop.hbase.replication.TestReplicationBase.NB_ROWS_IN_BATCH;
 import static org.apache.hadoop.hbase.replication.TestReplicationBase.SLEEP_TIME;

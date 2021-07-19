@@ -32,7 +32,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -86,7 +86,7 @@ public class TestSimpleRegionNormalizerOnCluster {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSimpleRegionNormalizerOnCluster.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILY_NAME = Bytes.toBytes("fam");
 
   private static AsyncAdmin admin;

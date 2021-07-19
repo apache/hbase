@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
@@ -59,7 +59,7 @@ public class TestRegionObserverBypass {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionObserverBypass.class);
 
-  private static HBaseTestingUtility util;
+  private static HBaseTestingUtil util;
   private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] dummy = Bytes.toBytes("dummy");
   private static final byte[] row1 = Bytes.toBytes("r1");
@@ -75,7 +75,7 @@ public class TestRegionObserverBypass {
         new String [] {TestCoprocessor.class.getName(),
           TestCoprocessor2.class.getName(),
           TestCoprocessor3.class.getName()});
-    util = new HBaseTestingUtility(conf);
+    util = new HBaseTestingUtil(conf);
     util.startMiniCluster();
   }
 

@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -58,7 +58,7 @@ import org.slf4j.LoggerFactory;
 public abstract class TestTableInputFormatScanBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableInputFormatScanBase.class);
-  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   static final TableName TABLE_NAME = TableName.valueOf("scantest");
   static final byte[][] INPUT_FAMILYS = {Bytes.toBytes("content1"), Bytes.toBytes("content2")};

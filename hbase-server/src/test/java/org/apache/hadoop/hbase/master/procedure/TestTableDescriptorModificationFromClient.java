@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.Set;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -60,7 +60,7 @@ public class TestTableDescriptorModificationFromClient {
       HBaseClassTestRule.forClass(TestTableDescriptorModificationFromClient.class);
 
   @Rule public TestName name = new TestName();
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static TableName TABLE_NAME = null;
   private static final byte[] FAMILY_0 = Bytes.toBytes("cf0");
   private static final byte[] FAMILY_1 = Bytes.toBytes("cf1");

@@ -39,16 +39,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
@@ -86,7 +87,7 @@ public class TestScannersFromClientSide {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScannersFromClientSide.class);
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
@@ -144,14 +145,14 @@ public class TestScannersFromClientSide {
       // We reached the end of a parameterized run, clean up the cluster.
       TEST_UTIL.shutdownMiniCluster();
     }
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 10 * 1024 * 1024);
     conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, registryImpl,
         ConnectionRegistry.class);
     Preconditions.checkArgument(numHedgedReqs > 0);
     conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
-    StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
+    StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
     // Multiple masters needed only when hedged reads for master registry are enabled.
     builder.numMasters(numHedgedReqs > 1 ? 3 : 1).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
@@ -338,7 +339,7 @@ public class TestScannersFromClientSide {
       Table table, boolean reversed, int rows, int columns) throws Exception {
     Scan baseScan = new Scan();
     baseScan.setReversed(reversed);
-    baseScan.setSmall(true);
+    baseScan.setReadType(ReadType.PREAD);
 
     Scan scan = new Scan(baseScan);
     verifyExpectedCounts(table, scan, rows, columns);
@@ -692,7 +693,7 @@ public class TestScannersFromClientSide {
       loc = locator.getRegionLocation(ROW);
     }
     RegionInfo hri = loc.getRegion();
-    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     byte[] regionName = hri.getRegionName();
     int i = cluster.getServerWith(regionName);
     HRegionServer rs = cluster.getRegionServer(i);

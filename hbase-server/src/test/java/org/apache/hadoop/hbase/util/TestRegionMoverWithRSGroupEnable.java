@@ -23,7 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -59,7 +59,7 @@ public class TestRegionMoverWithRSGroupEnable {
     HBaseClassTestRule.forClass(TestRegionMoverWithRSGroupEnable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMoverWithRSGroupEnable.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String TEST_RSGROUP = "test";
 
 

@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -263,7 +263,7 @@ public class TestHFileSeek extends TestCase {
     int minWordLen = 5;
     int maxWordLen = 20;
 
-    private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    private HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     String rootDir =
       TEST_UTIL.getDataTestDir("TestTFileSeek").toString();
     String file = "TestTFileSeek";

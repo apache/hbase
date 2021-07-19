@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -51,7 +51,7 @@ public class TestRowTooBig {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRowTooBig.class);
 
-  private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private final static HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static Path rootRegionDir;
   private static final TableDescriptor TEST_TD = TableDescriptorBuilder
     .newBuilder(TableName.valueOf(TestRowTooBig.class.getSimpleName())).build();
@@ -88,7 +88,7 @@ public class TestRowTooBig {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
 
     final RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir,
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(hri, rootRegionDir,
       HTU.getConfiguration(), tableDescriptor);
     try {
       // Add 5 cells to memstore
@@ -104,7 +104,7 @@ public class TestRowTooBig {
       Get get = new Get(row1);
       region.get(get);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 
@@ -128,7 +128,7 @@ public class TestRowTooBig {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
 
     final RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir,
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(hri, rootRegionDir,
       HTU.getConfiguration(), tableDescriptor);
     try {
       // Add to memstore
@@ -146,7 +146,7 @@ public class TestRowTooBig {
       Get get = new Get(row1);
       region.get(get);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 }

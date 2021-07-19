@@ -114,7 +114,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
   protected static final int DEFAULT_NUM_REGIONS = 50; // number of regions in pre-split tables
 
   private boolean keepObjectsAtTheEnd = false;
-  protected HBaseCluster cluster;
+  protected HBaseClusterInterface cluster;
 
   protected Connection connection;
 

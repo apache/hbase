@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -63,31 +64,22 @@ public class TestHBaseWalOnEC {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestHBaseWalOnEC.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    try {
-      MiniDFSCluster cluster = UTIL.startMiniDFSCluster(3); // Need 3 DNs for RS-3-2 policy
-      DistributedFileSystem fs = cluster.getFileSystem();
+    MiniDFSCluster cluster = UTIL.startMiniDFSCluster(3); // Need 3 DNs for RS-3-2 policy
+    DistributedFileSystem fs = cluster.getFileSystem();
 
-      Method enableAllECPolicies =
-        DFSTestUtil.class.getMethod("enableAllECPolicies", DistributedFileSystem.class);
-      enableAllECPolicies.invoke(null, fs);
+    DFSTestUtil.enableAllECPolicies(fs);
 
-      DFSClient client = fs.getClient();
-      Method setErasureCodingPolicy =
-        DFSClient.class.getMethod("setErasureCodingPolicy", String.class, String.class);
-      setErasureCodingPolicy.invoke(client, "/", "RS-3-2-1024k"); // try a built-in policy
+    HdfsAdmin hdfsAdmin = new HdfsAdmin(fs.getUri(), UTIL.getConfiguration());
+    hdfsAdmin.setErasureCodingPolicy(new Path("/"), "RS-3-2-1024k");
 
-      try (FSDataOutputStream out = fs.create(new Path("/canary"))) {
-        // If this comes back as having hflush then some test setup assumption is wrong.
-        // Fail the test so that a developer has to look and triage
-        assertFalse("Did not enable EC!", out.hasCapability(StreamCapabilities.HFLUSH));
-      }
-    } catch (NoSuchMethodException e) {
-      // We're not testing anything interesting if EC is not available, so skip the rest of the test
-      Assume.assumeNoException("Using an older version of hadoop; EC not available.", e);
+    try (FSDataOutputStream out = fs.create(new Path("/canary"))) {
+      // If this comes back as having hflush then some test setup assumption is wrong.
+      // Fail the test so that a developer has to look and triage
+      assertFalse("Did not enable EC!", out.hasCapability(StreamCapabilities.HFLUSH));
     }
 
     UTIL.getConfiguration().setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true);

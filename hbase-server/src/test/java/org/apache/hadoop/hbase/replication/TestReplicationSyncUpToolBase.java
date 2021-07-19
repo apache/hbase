@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_GLOBAL;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -39,8 +39,8 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 public abstract class TestReplicationSyncUpToolBase {
 
-  protected static final HBaseTestingUtility UTIL1 = new HBaseTestingUtility();
-  protected static final HBaseTestingUtility UTIL2 = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
 
   protected static final TableName TN1 = TableName.valueOf("t1_syncup");
   protected static final TableName TN2 = TableName.valueOf("t2_syncup");
@@ -135,7 +135,7 @@ public abstract class TestReplicationSyncUpToolBase {
     admin1.addReplicationPeer("1", rpc);
   }
 
-  final void syncUp(HBaseTestingUtility util) throws Exception {
+  final void syncUp(HBaseTestingUtil util) throws Exception {
     ToolRunner.run(util.getConfiguration(), new ReplicationSyncUp(), new String[0]);
   }
 

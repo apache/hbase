@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -59,7 +59,7 @@ public class TestResettingCounters {
 
   @Test
   public void testResettingCounters() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
+    HBaseTestingUtil htu = new HBaseTestingUtil();
     Configuration conf = htu.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
     byte [] table = Bytes.toBytes(name.getMethodName());
@@ -90,7 +90,7 @@ public class TestResettingCounters {
         throw new IOException("Failed delete of " + path);
       }
     }
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, path, conf, tableDescriptor);
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(hri, path, conf, tableDescriptor);
     try {
       Increment odd = new Increment(rows[0]);
       odd.setDurability(Durability.SKIP_WAL);
@@ -121,9 +121,9 @@ public class TestResettingCounters {
         assertEquals(6, Bytes.toLong(CellUtil.cloneValue(kvs[i])));
       }
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
 }

@@ -397,20 +397,24 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     }
     get.setFilter(new DeleteVersionVisibilityExpressionFilter(visibilityTags,
         VisibilityConstants.SORTED_ORDINAL_SERIALIZATION_FORMAT));
-    List<Cell> result = ctx.getEnvironment().getRegion().get(get, false);
+    try (RegionScanner scanner = ctx.getEnvironment().getRegion().getScanner(new Scan(get))) {
+      // NOTE: Please don't use HRegion.get() instead,
+      // because it will copy cells to heap. See HBASE-26036
+      List<Cell> result = new ArrayList<>();
+      scanner.next(result);
 
-    if (result.size() < get.getMaxVersions()) {
-      // Nothing to delete
-      PrivateCellUtil.updateLatestStamp(cell, byteNow);
-      return;
+      if (result.size() < get.getMaxVersions()) {
+        // Nothing to delete
+        PrivateCellUtil.updateLatestStamp(cell, byteNow);
+        return;
+      }
+      if (result.size() > get.getMaxVersions()) {
+        throw new RuntimeException("Unexpected size: " + result.size() +
+          ". Results more than the max versions obtained.");
+      }
+      Cell getCell = result.get(get.getMaxVersions() - 1);
+      PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
     }
-    if (result.size() > get.getMaxVersions()) {
-      throw new RuntimeException("Unexpected size: " + result.size()
-          + ". Results more than the max versions obtained.");
-    }
-    Cell getCell = result.get(get.getMaxVersions() - 1);
-    PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
-
     // We are bypassing here because in the HRegion.updateDeleteLatestVersionTimeStamp we would
     // update with the current timestamp after again doing a get. As the hook as already determined
     // the needed timestamp we need to bypass here.

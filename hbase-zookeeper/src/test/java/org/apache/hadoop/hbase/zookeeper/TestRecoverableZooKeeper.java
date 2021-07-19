@@ -24,7 +24,7 @@ import java.lang.reflect.Field;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
@@ -47,7 +47,7 @@ public class TestRecoverableZooKeeper {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRecoverableZooKeeper.class);
 
-  private final static HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
+  private final static HBaseZKTestingUtil TEST_UTIL = new HBaseZKTestingUtil();
 
   private Abortable abortable = new Abortable() {
     @Override

@@ -32,7 +32,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.net.BoundSocketMaker;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -81,8 +81,8 @@ public class TestThriftServerCmdLine {
   protected boolean specifyBindIP;
   protected boolean specifyCompact;
 
-  protected static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL =
+      new HBaseTestingUtil();
 
   @Parameters
   public static Collection<Object[]> getParameters() {
@@ -145,7 +145,7 @@ public class TestThriftServerCmdLine {
   }
 
   static int getRandomPort() {
-    return HBaseTestingUtility.randomFreePort();
+    return HBaseTestingUtil.randomFreePort();
   }
 
   protected Supplier<ThriftServer> getThriftServerSupplier() {

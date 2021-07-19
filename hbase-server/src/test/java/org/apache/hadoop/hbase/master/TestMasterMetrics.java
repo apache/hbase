@@ -23,11 +23,11 @@ import java.util.HashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
@@ -63,9 +63,9 @@ public class TestMasterMetrics {
   private static final MetricsAssertHelper metricsHelper =
     CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
-  private static MiniHBaseCluster cluster;
+  private static SingleProcessHBaseCluster cluster;
   private static HMaster master;
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   public static class MyMaster extends HMaster {
 
@@ -107,7 +107,8 @@ public class TestMasterMetrics {
     }
   }
 
-  public static class MyRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
+  public static class MyRegionServer
+    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
 
     public MyRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
@@ -123,8 +124,8 @@ public class TestMasterMetrics {
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
     // Set master class and use default values for other options.
-    StartMiniClusterOption option = StartMiniClusterOption.builder().masterClass(MyMaster.class)
-      .rsClass(MyRegionServer.class).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
+      .masterClass(MyMaster.class).rsClass(MyRegionServer.class).build();
     TEST_UTIL.startMiniCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");

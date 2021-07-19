@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
@@ -157,14 +157,9 @@ public class TestHStore {
   long id = EnvironmentEdgeManager.currentTime();
   Get get = new Get(row);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestStore").toString();
 
-
-  /**
-   * Setup
-   * @throws IOException
-   */
   @Before
   public void setUp() throws IOException {
     qualifiers.clear();
@@ -244,7 +239,6 @@ public class TestHStore {
   /**
    * Test we do not lose data if we fail a flush and then close.
    * Part of HBase-10466
-   * @throws Exception
    */
   @Test
   public void testFlushSizeSizing() throws Exception {
@@ -346,7 +340,7 @@ public class TestHStore {
     testDeleteExpiredStoreFiles(1);
   }
 
-  /*
+  /**
    * @param minVersions the MIN_VERSIONS for the column family
    */
   public void testDeleteExpiredStoreFiles(int minVersions) throws Exception {
@@ -471,9 +465,9 @@ public class TestHStore {
   //////////////////////////////////////////////////////////////////////////////
 
   private static final int BLOCKSIZE_SMALL = 8192;
+
   /**
    * Test for hbase-1686.
-   * @throws IOException
    */
   @Test
   public void testEmptyStoreFile() throws IOException {
@@ -503,7 +497,7 @@ public class TestHStore {
         new HStore(this.store.getHRegion(), this.store.getColumnFamilyDescriptor(), c, false);
     assertEquals(2, this.store.getStorefilesCount());
 
-    result = HBaseTestingUtility.getFromStoreFile(store,
+    result = HBaseTestingUtil.getFromStoreFile(store,
         get.getRow(),
         qualifiers);
     assertEquals(1, result.size());
@@ -511,7 +505,6 @@ public class TestHStore {
 
   /**
    * Getting data from memstore only
-   * @throws IOException
    */
   @Test
   public void testGet_FromMemStoreOnly() throws IOException {
@@ -526,7 +519,7 @@ public class TestHStore {
     this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null), null);
 
     //Get
-    result = HBaseTestingUtility.getFromStoreFile(store,
+    result = HBaseTestingUtil.getFromStoreFile(store,
         get.getRow(), qualifiers);
 
     //Compare
@@ -566,7 +559,6 @@ public class TestHStore {
 
   /**
    * Getting data from files only
-   * @throws IOException
    */
   @Test
   public void testGet_FromFilesOnly() throws IOException {
@@ -591,7 +583,7 @@ public class TestHStore {
     flush(3);
 
     //Get
-    result = HBaseTestingUtility.getFromStoreFile(store,
+    result = HBaseTestingUtil.getFromStoreFile(store,
         get.getRow(),
         qualifiers);
     //this.store.get(get, qualifiers, result);
@@ -605,7 +597,6 @@ public class TestHStore {
 
   /**
    * Getting data from memstore and files
-   * @throws IOException
    */
   @Test
   public void testGet_FromMemStoreAndFiles() throws IOException {
@@ -628,7 +619,7 @@ public class TestHStore {
     this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null), null);
 
     //Get
-    result = HBaseTestingUtility.getFromStoreFile(store,
+    result = HBaseTestingUtil.getFromStoreFile(store,
         get.getRow(), qualifiers);
 
     //Need to sort the result since multiple files
@@ -734,7 +725,7 @@ public class TestHStore {
 
     public FaultyFileSystem() {
       super(new LocalFileSystem());
-      System.err.println("Creating faulty!");
+      LOG.info("Creating faulty!");
     }
 
     @Override
@@ -773,7 +764,7 @@ public class TestHStore {
 
     @Override
     public synchronized void write(byte[] buf, int offset, int length) throws IOException {
-      System.err.println("faulty stream write at pos " + getPos());
+      LOG.info("faulty stream write at pos " + getPos());
       injectFault();
       super.write(buf, offset, length);
     }
@@ -794,13 +785,9 @@ public class TestHStore {
 
   /**
    * Generate a list of KeyValues for testing based on given parameters
-   * @param timestamps
-   * @param numRows
-   * @param qualifier
-   * @param family
    * @return the rows key-value list
    */
-  List<Cell> getKeyValueSet(long[] timestamps, int numRows,
+  private List<Cell> getKeyValueSet(long[] timestamps, int numRows,
       byte[] qualifier, byte[] family) {
     List<Cell> kvList = new ArrayList<>();
     for (int i=1;i<=numRows;i++) {
@@ -842,27 +829,27 @@ public class TestHStore {
     get.addColumn(family,qf1);
 
     get.setTimeRange(0,15);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(40,90);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(10,45);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(80,145);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(1,2);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(90,200);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()==0);
   }
 
@@ -1027,7 +1014,7 @@ public class TestHStore {
     assertEquals(0, this.store.getStorefilesCount());
 
     // add some data, flush
-    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null), null);
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), null);
     flush(1);
     // add one more file
     addStoreFile();
@@ -1042,17 +1029,16 @@ public class TestHStore {
     // call second time
     spiedStore.refreshStoreFiles();
 
-    //ensure that replaceStoreFiles is not called if files are not refreshed
-    verify(spiedStore, times(0)).replaceStoreFiles(null, null);
+    // ensure that replaceStoreFiles is not called, i.e, the times does not change, if files are not
+    // refreshed,
+    verify(spiedStore, times(1)).replaceStoreFiles(any(), any());
   }
 
   private long countMemStoreScanner(StoreScanner scanner) {
     if (scanner.currentScanners == null) {
       return 0;
     }
-    return scanner.currentScanners.stream()
-            .filter(s -> !s.isFileScanner())
-            .count();
+    return scanner.currentScanners.stream().filter(s -> !s.isFileScanner()).count();
   }
 
   @Test
@@ -1468,8 +1454,6 @@ public class TestHStore {
    * may change the versionedList. And the first InMemoryFlushRunnable will use the chagned
    * versionedList to remove the corresponding segments.
    * In short, there will be some segements which isn't in merge are removed.
-   * @throws IOException
-   * @throws InterruptedException
    */
   @Test
   public void testRunDoubleMemStoreCompactors() throws IOException, InterruptedException {

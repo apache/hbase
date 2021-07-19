@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -66,7 +66,7 @@ public class TestMobFlushSnapshotFromClient extends TestFlushSnapshotFromClient 
   }
 
   @Override
-  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+  protected void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
       long expectedRows) throws IOException {
     MobSnapshotTestingUtils.verifyMobRowCount(util, tableName, expectedRows);
   }

@@ -38,7 +38,7 @@ public class TestDoubleArrayCost {
     DoubleArrayCost cost = new DoubleArrayCost();
 
     cost.prepare(100);
-    cost.setCosts(costs -> {
+    cost.applyCostsChange(costs -> {
       for (int i = 0; i < 100; i++) {
         costs[i] = 10;
       }
@@ -46,7 +46,7 @@ public class TestDoubleArrayCost {
     assertEquals(0, cost.cost(), 0.01);
 
     cost.prepare(101);
-    cost.setCosts(costs -> {
+    cost.applyCostsChange(costs -> {
       for (int i = 0; i < 100; i++) {
         costs[i] = 0;
       }
@@ -55,7 +55,7 @@ public class TestDoubleArrayCost {
     assertEquals(1, cost.cost(), 0.01);
 
     cost.prepare(200);
-    cost.setCosts(costs -> {
+    cost.applyCostsChange(costs -> {
       for (int i = 0; i < 100; i++) {
         costs[i] = 0;
         costs[i + 100] = 100;

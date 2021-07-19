@@ -23,7 +23,6 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -43,7 +42,7 @@ public class TestHBaseTestingUtilSpinup {
       HBaseClassTestRule.forClass(TestHBaseTestingUtilSpinup.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHBaseTestingUtilSpinup.class);
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void beforeClass() throws Exception {

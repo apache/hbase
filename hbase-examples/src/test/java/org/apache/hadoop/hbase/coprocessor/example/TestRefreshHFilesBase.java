@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.coprocessor.example;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 
 public class TestRefreshHFilesBase {
   protected static final Logger LOG = LoggerFactory.getLogger(TestRefreshHFilesBase.class);
-  protected static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   protected static final int NUM_RS = 2;
   protected static final TableName TABLE_NAME = TableName.valueOf("testRefreshRegionHFilesEP");
   protected static final byte[] FAMILY = Bytes.toBytes("family");
@@ -47,7 +47,7 @@ public class TestRefreshHFilesBase {
   protected static final String HFILE_NAME = "123abcdef";
 
   protected static Configuration CONF = HTU.getConfiguration();
-  protected static MiniHBaseCluster cluster;
+  protected static SingleProcessHBaseCluster cluster;
   protected static Table table;
 
   public static void setUp(String regionImpl) {

@@ -26,8 +26,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -47,7 +47,7 @@ public class TestReadAndWriteRegionInfoFile {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReadAndWriteRegionInfoFile.class);
 
-  private static final HBaseCommonTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseCommonTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final Configuration CONF = UTIL.getConfiguration();
 
@@ -72,11 +72,11 @@ public class TestReadAndWriteRegionInfoFile {
     // Create a region. That'll write the .regioninfo file.
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(FS, ROOT_DIR);
     FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(CONF, FS, ROOT_DIR);
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(ri, ROOT_DIR, CONF,
+    HRegion r = HBaseTestingUtil.createRegionAndWAL(ri, ROOT_DIR, CONF,
       fsTableDescriptors.get(TableName.META_TABLE_NAME));
     // Get modtime on the file.
     long modtime = getModTime(r);
-    HBaseTestingUtility.closeRegionAndWAL(r);
+    HBaseTestingUtil.closeRegionAndWAL(r);
     Thread.sleep(1001);
     r = HRegion.openHRegion(ROOT_DIR, ri, fsTableDescriptors.get(TableName.META_TABLE_NAME), null,
       CONF);
@@ -86,7 +86,7 @@ public class TestReadAndWriteRegionInfoFile {
     // Now load the file.
     HRegionFileSystem.loadRegionInfoFileContent(r.getRegionFileSystem().getFileSystem(),
       r.getRegionFileSystem().getRegionDir());
-    HBaseTestingUtility.closeRegionAndWAL(r);
+    HBaseTestingUtil.closeRegionAndWAL(r);
   }
 
   private long getModTime(final HRegion r) throws IOException {

@@ -35,7 +35,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -61,7 +61,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
   private static final Logger LOG =
     LoggerFactory.getLogger(TestStochasticLoadBalancerHeterogeneousCost.class);
   private static final double ALLOWED_WINDOW = 1.20;
-  private static final HBaseCommonTestingUtility HTU = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil HTU = new HBaseCommonTestingUtil();
   private static String RULES_FILE;
 
   @BeforeClass
@@ -70,7 +70,6 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
     conf.setFloat("hbase.master.balancer.stochastic.regionCountCost", 0);
     conf.setFloat("hbase.master.balancer.stochastic.primaryRegionCountCost", 0);
     conf.setFloat("hbase.master.balancer.stochastic.tableSkewCost", 0);
-    conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
     conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY,
       HeterogeneousRegionCountCostFunction.class.getName());
     // Need to ensure test dir has been created.

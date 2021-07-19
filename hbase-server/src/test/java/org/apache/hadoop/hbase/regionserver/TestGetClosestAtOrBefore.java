@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -83,7 +83,7 @@ public class TestGetClosestAtOrBefore {
   private static final byte[] T35 = Bytes.toBytes("035");
   private static final byte[] T40 = Bytes.toBytes("040");
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Configuration conf = UTIL.getConfiguration();
 
   @Test
@@ -94,7 +94,7 @@ public class TestGetClosestAtOrBefore {
     FSTableDescriptors.tryUpdateMetaTableDescriptor(UTIL.getConfiguration());
     TableDescriptor td = tds.get(TableName.META_TABLE_NAME);
     td = TableDescriptorBuilder.newBuilder(td).setMemStoreFlushSize(64 * 1024 * 1024).build();
-    HRegion mr = HBaseTestingUtility.createRegionAndWAL(RegionInfoBuilder.FIRST_META_REGIONINFO,
+    HRegion mr = HBaseTestingUtil.createRegionAndWAL(RegionInfoBuilder.FIRST_META_REGIONINFO,
       rootdir, conf, td);
     try {
       // Write rows for three tables 'A', 'B', and 'C'.
@@ -159,7 +159,7 @@ public class TestGetClosestAtOrBefore {
       findRow(mr, 'C', 46, -1);
       findRow(mr, 'C', 43, -1);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(mr);
+      HBaseTestingUtil.closeRegionAndWAL(mr);
     }
   }
 
@@ -200,8 +200,8 @@ public class TestGetClosestAtOrBefore {
   @Test
   public void testGetClosestRowBefore3() throws IOException {
     HRegion region = null;
-    byte[] c0 = HBaseTestingUtility.COLUMNS[0];
-    byte[] c1 = HBaseTestingUtility.COLUMNS[1];
+    byte[] c0 = HBaseTestingUtil.COLUMNS[0];
+    byte[] c1 = HBaseTestingUtil.COLUMNS[1];
     try {
       TableName tn = TableName.valueOf(testName.getMethodName());
       TableDescriptor htd = UTIL.createTableDescriptor(tn);
@@ -311,7 +311,7 @@ public class TestGetClosestAtOrBefore {
   @Test
   public void testGetClosestRowBefore2() throws IOException {
     HRegion region = null;
-    byte[] c0 = HBaseTestingUtility.COLUMNS[0];
+    byte[] c0 = HBaseTestingUtil.COLUMNS[0];
     try {
       TableName tn = TableName.valueOf(testName.getMethodName());
       TableDescriptor htd = UTIL.createTableDescriptor(tn);

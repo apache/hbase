@@ -22,7 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 
 /**
@@ -39,7 +39,7 @@ public abstract class AbstractTestUpdateConfiguration {
   private static Path overrideConfigFileUnderTestDataDir;
   private static Path backupConfigFileUnderTestDataDir;
 
-  protected static void setUpConfigurationFiles(final HBaseTestingUtility testUtil)
+  protected static void setUpConfigurationFiles(final HBaseTestingUtil testUtil)
     throws Exception {
     // Before this change, the test will update hbase-site.xml under target/test-classes and
     // trigger a config reload. Since target/test-classes/hbase-site.xml is being used by
@@ -74,7 +74,7 @@ public abstract class AbstractTestUpdateConfiguration {
     testUtil.getConfiguration().addResource(testUtil.getDataTestDir(SERVER_CONFIG));
   }
 
-  protected static void addResourceToRegionServerConfiguration(final HBaseTestingUtility testUtil) {
+  protected static void addResourceToRegionServerConfiguration(final HBaseTestingUtil testUtil) {
     // When RegionServer is created in MiniHBaseCluster, it uses HBaseConfiguration.create(conf) of
     // the master Configuration. The create() just copies config params over, it does not do
     // a clone for a historic reason. Properties such as resources are lost during this process.

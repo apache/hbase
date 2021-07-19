@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -52,7 +52,7 @@ import static org.junit.Assert.fail;
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestWALConfiguration {
   private static final Logger LOG = LoggerFactory.getLogger(TestWALConfiguration.class);
-  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWALConfiguration.class);

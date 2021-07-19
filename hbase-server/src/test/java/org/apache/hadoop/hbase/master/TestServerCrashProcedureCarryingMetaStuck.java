@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncConnection;
@@ -47,7 +47,7 @@ public class TestServerCrashProcedureCarryingMetaStuck {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestServerCrashProcedureCarryingMetaStuck.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUp() throws Exception {

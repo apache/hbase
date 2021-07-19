@@ -76,7 +76,7 @@ public class TestRegionRebalancing {
 
   private static final byte[] FAMILY_NAME = Bytes.toBytes("col");
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionRebalancing.class);
-  private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private RegionLocator regionLocator;
   private TableDescriptor tableDescriptor;
   private String balancerName;
@@ -112,14 +112,14 @@ public class TestRegionRebalancing {
   throws IOException, InterruptedException {
     try(Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
         Admin admin = connection.getAdmin()) {
-      admin.createTable(this.tableDescriptor, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
-          1, HBaseTestingUtility.KEYS.length));
+      admin.createTable(this.tableDescriptor, Arrays.copyOfRange(HBaseTestingUtil.KEYS,
+          1, HBaseTestingUtil.KEYS.length));
       this.regionLocator = connection.getRegionLocator(this.tableDescriptor.getTableName());
 
       MetaTableAccessor.fullScanMetaAndPrint(admin.getConnection());
 
       assertEquals("Test table should have right number of regions",
-        HBaseTestingUtility.KEYS.length,
+        HBaseTestingUtil.KEYS.length,
         this.regionLocator.getStartKeys().length);
 
       // verify that the region assignments are balanced to start out
@@ -264,7 +264,7 @@ public class TestRegionRebalancing {
    * Wait until all the regions are assigned.
    */
   private void waitForAllRegionsAssigned() throws IOException {
-    int totalRegions = HBaseTestingUtility.KEYS.length;
+    int totalRegions = HBaseTestingUtil.KEYS.length;
     try {
         Thread.sleep(200);
     } catch (InterruptedException e) {

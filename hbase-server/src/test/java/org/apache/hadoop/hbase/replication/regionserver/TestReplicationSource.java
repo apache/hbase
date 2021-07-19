@@ -42,12 +42,12 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -86,10 +86,10 @@ public class TestReplicationSource {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestReplicationSource.class);
-  private final static HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
-  private final static HBaseTestingUtility TEST_UTIL_PEER =
-      new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL =
+      new HBaseTestingUtil();
+  private final static HBaseTestingUtil TEST_UTIL_PEER =
+      new HBaseTestingUtil();
   private static FileSystem FS;
   private static Path oldLogDir;
   private static Path logDir;
@@ -330,7 +330,7 @@ public class TestReplicationSource {
       conf.setInt("replication.sleep.before.failover", 2000);
       // Introduces a delay in regionserver shutdown to give the race condition a chance to kick in.
       conf.set(HConstants.REGION_SERVER_IMPL, ShutdownDelayRegionServer.class.getName());
-      MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster(2);
+      SingleProcessHBaseCluster cluster = TEST_UTIL.startMiniCluster(2);
       TEST_UTIL_PEER.startMiniCluster(1);
 
       HRegionServer serverA = cluster.getRegionServer(0);

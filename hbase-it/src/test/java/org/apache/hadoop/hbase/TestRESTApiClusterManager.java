@@ -46,12 +46,12 @@ public class TestRESTApiClusterManager {
   @Rule
   public final TestName testName = new TestName();
 
-  private static HBaseCommonTestingUtility testingUtility;
+  private static HBaseCommonTestingUtil testingUtility;
   private ClusterManager clusterManager;
 
   @BeforeClass
   public static void beforeClass() {
-    testingUtility = new HBaseCommonTestingUtility();
+    testingUtility = new HBaseCommonTestingUtil();
     configureClusterManager(testingUtility.getConfiguration());
   }
 

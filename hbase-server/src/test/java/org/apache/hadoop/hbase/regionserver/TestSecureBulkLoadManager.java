@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -85,7 +85,7 @@ public class TestSecureBulkLoadManager {
   private Thread ealierBulkload;
   private Thread laterBulkload;
 
-  protected final static HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil testUtil = new HBaseTestingUtil();
   private static Configuration conf = testUtil.getConfiguration();
 
   @BeforeClass

@@ -23,7 +23,7 @@ import static org.junit.Assert.fail;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -56,7 +56,7 @@ public class TestMasterMetricsWrapper {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterMetricsWrapper.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final int NUM_RS = 4;
 
   @BeforeClass

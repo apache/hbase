@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -61,7 +61,7 @@ public class TestColumnSeeking {
       HBaseClassTestRule.forClass(TestColumnSeeking.class);
 
   @Rule public TestName name = new TestName();
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestColumnSeeking.class);
 
@@ -171,10 +171,10 @@ public class TestColumnSeeking {
         assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));
       }
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @SuppressWarnings("unchecked")
@@ -286,7 +286,7 @@ public class TestColumnSeeking {
       assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));
     }
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {

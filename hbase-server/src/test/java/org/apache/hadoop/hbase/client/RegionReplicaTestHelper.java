@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -43,7 +43,7 @@ public final class RegionReplicaTestHelper {
   }
 
   // waits for all replicas to have region location
-  static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtility util,
+  static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtil util,
     ConnectionRegistry registry) throws IOException {
     Configuration conf = util.getConfiguration();
     int regionReplicaCount =
@@ -81,7 +81,7 @@ public final class RegionReplicaTestHelper {
       });
   }
 
-  static Optional<ServerName> getRSCarryingReplica(HBaseTestingUtility util, TableName tableName,
+  static Optional<ServerName> getRSCarryingReplica(HBaseTestingUtil util, TableName tableName,
       int replicaId) {
     return util.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
       .filter(rs -> rs.getRegions(tableName).stream()
@@ -92,7 +92,7 @@ public final class RegionReplicaTestHelper {
   /**
    * Return the new location.
    */
-  static ServerName moveRegion(HBaseTestingUtility util, HRegionLocation currentLoc)
+  static ServerName moveRegion(HBaseTestingUtil util, HRegionLocation currentLoc)
       throws Exception {
     ServerName serverName = currentLoc.getServerName();
     RegionInfo regionInfo = currentLoc.getRegion();
@@ -125,7 +125,7 @@ public final class RegionReplicaTestHelper {
     void updateCachedLocationOnError(HRegionLocation loc, Throwable error) throws Exception;
   }
 
-  static void testLocator(HBaseTestingUtility util, TableName tableName, Locator locator)
+  static void testLocator(HBaseTestingUtil util, TableName tableName, Locator locator)
       throws Exception {
     RegionLocations locs =
       locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, false);
@@ -185,7 +185,7 @@ public final class RegionReplicaTestHelper {
       locator.getRegionLocations(tableName, 2, false).getRegionLocation(2).getServerName());
   }
 
-  public static void assertReplicaDistributed(HBaseTestingUtility util, Table t)
+  public static void assertReplicaDistributed(HBaseTestingUtil util, Table t)
     throws IOException {
     if (t.getDescriptor().getRegionReplication() <= 1) {
       return;

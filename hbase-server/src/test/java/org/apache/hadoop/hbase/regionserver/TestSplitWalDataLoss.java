@@ -28,7 +28,7 @@ import java.util.Map;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -70,7 +70,7 @@ public class TestSplitWalDataLoss {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitWalDataLoss.class);
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
 
   private NamespaceDescriptor namespace = NamespaceDescriptor.create(getClass().getSimpleName())
       .build();

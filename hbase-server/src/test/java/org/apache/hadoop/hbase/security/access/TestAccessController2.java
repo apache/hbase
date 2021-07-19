@@ -28,7 +28,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -81,7 +81,7 @@ public class TestAccessController2 extends SecureTestUtil {
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("q");
   private static final byte[] TEST_VALUE = Bytes.toBytes("value");
 
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
 
   /** The systemUserConnection created here is tied to the system user. In case, you are planning

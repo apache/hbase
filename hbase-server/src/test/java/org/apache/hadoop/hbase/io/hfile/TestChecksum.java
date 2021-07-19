@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -69,8 +69,8 @@ public class TestChecksum {
   static final int[] BYTES_PER_CHECKSUM = {
       50, 500, 688, 16*1024, (16*1024+980), 64 * 1024};
 
-  private static final HBaseTestingUtility TEST_UTIL =
-    new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL =
+    new HBaseTestingUtil();
   private FileSystem fs;
   private HFileSystem hfs;
 

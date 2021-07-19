@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -53,7 +53,7 @@ public class TestFilterListOnMini {
       HBaseClassTestRule.forClass(TestFilterListOnMini.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFilterListOnMini.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();

@@ -33,7 +33,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -79,9 +79,9 @@ public class TestPerTableCFReplication {
   private static Configuration conf2;
   private static Configuration conf3;
 
-  private static HBaseTestingUtility utility1;
-  private static HBaseTestingUtility utility2;
-  private static HBaseTestingUtility utility3;
+  private static HBaseTestingUtil utility1;
+  private static HBaseTestingUtil utility2;
+  private static HBaseTestingUtil utility3;
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 100;
 
@@ -121,7 +121,7 @@ public class TestPerTableCFReplication {
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         "org.apache.hadoop.hbase.replication.TestMasterReplication$CoprocessorCounter");
 
-    utility1 = new HBaseTestingUtility(conf1);
+    utility1 = new HBaseTestingUtil(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     new ZKWatcher(conf1, "cluster1", null, true);
@@ -132,11 +132,11 @@ public class TestPerTableCFReplication {
     conf3 = new Configuration(conf1);
     conf3.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/3");
 
-    utility2 = new HBaseTestingUtility(conf2);
+    utility2 = new HBaseTestingUtil(conf2);
     utility2.setZkCluster(miniZK);
     new ZKWatcher(conf2, "cluster3", null, true);
 
-    utility3 = new HBaseTestingUtility(conf3);
+    utility3 = new HBaseTestingUtil(conf3);
     utility3.setZkCluster(miniZK);
     new ZKWatcher(conf3, "cluster3", null, true);
 

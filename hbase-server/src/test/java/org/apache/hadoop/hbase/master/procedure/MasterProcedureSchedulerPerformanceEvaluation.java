@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -42,7 +42,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
  * Number of tables, regions and operations can be set using cli args.
  */
 public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBaseTool {
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   // Command line options and defaults.
   public static final int DEFAULT_NUM_TABLES = 5;

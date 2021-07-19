@@ -329,11 +329,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     new ConcurrentSkipListMap<>(LOG_NAME_COMPARATOR);
 
   /**
-   * Map of {@link SyncFuture}s owned by Thread objects. Used so we reuse SyncFutures.
-   * Thread local is used so JVM can GC the terminated thread for us. See HBASE-21228
-   * <p>
+   * A cache of sync futures reused by threads.
    */
-  private final ThreadLocal<SyncFuture> cachedSyncFutures;
+  protected final SyncFutureCache syncFutureCache;
 
   /**
    * The class name of the runtime implementation, used as prefix for logging/tracing.
@@ -503,12 +501,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       DEFAULT_SLOW_SYNC_ROLL_INTERVAL_MS);
     this.walSyncTimeoutNs = TimeUnit.MILLISECONDS.toNanos(conf.getLong(WAL_SYNC_TIMEOUT_MS,
       DEFAULT_WAL_SYNC_TIMEOUT_MS));
-    this.cachedSyncFutures = new ThreadLocal<SyncFuture>() {
-      @Override
-      protected SyncFuture initialValue() {
-        return new SyncFuture();
-      }
-    };
+    this.syncFutureCache = new SyncFutureCache(conf);
     this.implClassName = getClass().getSimpleName();
     this.walTooOldNs = TimeUnit.SECONDS.toNanos(conf.getInt(
             SURVIVED_TOO_LONG_SEC_KEY, SURVIVED_TOO_LONG_SEC_DEFAULT));
@@ -895,10 +888,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         }
       }
     } catch (TimeoutIOException tioe) {
-      // SyncFuture reuse by thread, if TimeoutIOException happens, ringbuffer
-      // still refer to it, so if this thread use it next time may get a wrong
-      // result.
-      this.cachedSyncFutures.remove();
       throw tioe;
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted", ie);
@@ -1007,6 +996,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         if (rollWriterLock.tryLock(walShutdownTimeout, TimeUnit.SECONDS)) {
           try {
             doShutdown();
+            if (syncFutureCache != null) {
+              syncFutureCache.clear();
+            }
           } finally {
             rollWriterLock.unlock();
           }
@@ -1084,7 +1076,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   protected final SyncFuture getSyncFuture(long sequence, boolean forceSync) {
-    return cachedSyncFutures.get().reset(sequence).setForceSync(forceSync);
+    return syncFutureCache.getIfPresentOrNew().reset(sequence, forceSync);
   }
 
   protected boolean isLogRollRequested() {

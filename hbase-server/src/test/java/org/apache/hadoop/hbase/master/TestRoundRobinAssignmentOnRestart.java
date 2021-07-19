@@ -25,8 +25,8 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -74,7 +74,7 @@ public class TestRoundRobinAssignmentOnRestart extends AbstractTestRestartCluste
     }
     UTIL.waitUntilNoRegionsInTransition(60000);
 
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> threads = cluster.getLiveRegionServerThreads();
     assertEquals(2, threads.size());
 

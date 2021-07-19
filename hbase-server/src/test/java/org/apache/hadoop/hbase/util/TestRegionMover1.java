@@ -29,10 +29,10 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -72,7 +72,7 @@ public class TestRegionMover1 {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover1.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -104,7 +104,7 @@ public class TestRegionMover1 {
 
   @Test
   public void testWithAck() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getAddress().toString();
     int numRegions = regionServer.getNumberOfOnlineRegions();
@@ -127,7 +127,7 @@ public class TestRegionMover1 {
    */
   @Test
   public void testWithoutAck() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getAddress().toString();
     int numRegions = regionServer.getNumberOfOnlineRegions();
@@ -161,7 +161,7 @@ public class TestRegionMover1 {
    */
   @Test
   public void testExclude() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     File excludeFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(), "exclude_file");
     FileWriter fos = new FileWriter(excludeFile);
     HRegionServer excludeServer = cluster.getRegionServer(1);
@@ -189,7 +189,7 @@ public class TestRegionMover1 {
 
   @Test
   public void testDesignatedFile() throws Exception{
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     File designatedFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(),
       "designated_file");
     HRegionServer designatedServer = cluster.getRegionServer(0);
@@ -220,7 +220,7 @@ public class TestRegionMover1 {
 
   @Test
   public void testExcludeAndDesignated() throws Exception{
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     // create designated file
     File designatedFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(),
       "designated_file");
@@ -268,7 +268,7 @@ public class TestRegionMover1 {
 
   @Test
   public void testRegionServerPort() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getHostname();
 
@@ -334,7 +334,7 @@ public class TestRegionMover1 {
 
   @Test
   public void testDecomServerExclusionWithAck() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer excludeServer = cluster.getRegionServer(1);
     List<HRegion> regions = excludeServer.getRegions();
     int regionsExcludeServer = excludeServer.getNumberOfOnlineRegions();
@@ -390,7 +390,7 @@ public class TestRegionMover1 {
 
   @Test
   public void testDecomServerExclusion() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer excludeServer = cluster.getRegionServer(0);
     List<HRegion> regions = excludeServer.getRegions();
     int regionsExcludeServer = excludeServer.getNumberOfOnlineRegions();
@@ -432,7 +432,7 @@ public class TestRegionMover1 {
 
   @Test
   public void testExcludeAndDecomServers() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     File excludeFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(), "exclude_file");
     FileWriter fos = new FileWriter(excludeFile);
     HRegionServer excludeServer = cluster.getRegionServer(1);

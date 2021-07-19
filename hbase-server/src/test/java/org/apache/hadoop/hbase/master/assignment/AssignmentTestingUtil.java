@@ -22,7 +22,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.util.Set;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -47,14 +47,14 @@ public final class AssignmentTestingUtil {
 
   private AssignmentTestingUtil() {}
 
-  public static void waitForRegionToBeInTransition(final HBaseTestingUtility util,
+  public static void waitForRegionToBeInTransition(final HBaseTestingUtil util,
       final RegionInfo hri) throws Exception {
     while (!getMaster(util).getAssignmentManager().getRegionStates().isRegionInTransition(hri)) {
       Threads.sleep(10);
     }
   }
 
-  public static void waitForRsToBeDead(final HBaseTestingUtility util,
+  public static void waitForRsToBeDead(final HBaseTestingUtil util,
       final ServerName serverName) throws Exception {
     util.waitFor(60000, new ExplainingPredicate<Exception>() {
       @Override
@@ -69,21 +69,21 @@ public final class AssignmentTestingUtil {
     });
   }
 
-  public static void stopRs(final HBaseTestingUtility util, final ServerName serverName)
+  public static void stopRs(final HBaseTestingUtil util, final ServerName serverName)
       throws Exception {
     LOG.info("STOP REGION SERVER " + serverName);
     util.getMiniHBaseCluster().stopRegionServer(serverName);
     waitForRsToBeDead(util, serverName);
   }
 
-  public static void killRs(final HBaseTestingUtility util, final ServerName serverName)
+  public static void killRs(final HBaseTestingUtil util, final ServerName serverName)
       throws Exception {
     LOG.info("KILL REGION SERVER " + serverName);
     util.getMiniHBaseCluster().killRegionServer(serverName);
     waitForRsToBeDead(util, serverName);
   }
 
-  public static void crashRs(final HBaseTestingUtility util, final ServerName serverName,
+  public static void crashRs(final HBaseTestingUtil util, final ServerName serverName,
       final boolean kill) throws Exception {
     if (kill) {
       killRs(util, serverName);
@@ -92,14 +92,14 @@ public final class AssignmentTestingUtil {
     }
   }
 
-  public static ServerName crashRsWithRegion(final HBaseTestingUtility util,
+  public static ServerName crashRsWithRegion(final HBaseTestingUtil util,
       final RegionInfo hri, final boolean kill) throws Exception {
     ServerName serverName = getServerHoldingRegion(util, hri);
     crashRs(util, serverName, kill);
     return serverName;
   }
 
-  public static ServerName getServerHoldingRegion(final HBaseTestingUtility util,
+  public static ServerName getServerHoldingRegion(final HBaseTestingUtil util,
       final RegionInfo hri) throws Exception {
     ServerName serverName = util.getMiniHBaseCluster().getServerHoldingRegion(
       hri.getTable(), hri.getRegionName());
@@ -113,7 +113,7 @@ public final class AssignmentTestingUtil {
     return serverName;
   }
 
-  public static boolean isServerHoldingMeta(final HBaseTestingUtility util,
+  public static boolean isServerHoldingMeta(final HBaseTestingUtil util,
       final ServerName serverName) throws Exception {
     for (RegionInfo hri: getMetaRegions(util)) {
       if (serverName.equals(getServerHoldingRegion(util, hri))) {
@@ -123,11 +123,11 @@ public final class AssignmentTestingUtil {
     return false;
   }
 
-  public static Set<RegionInfo> getMetaRegions(final HBaseTestingUtility util) {
+  public static Set<RegionInfo> getMetaRegions(final HBaseTestingUtil util) {
     return getMaster(util).getAssignmentManager().getMetaRegionSet();
   }
 
-  private static HMaster getMaster(final HBaseTestingUtility util) {
+  private static HMaster getMaster(final HBaseTestingUtil util) {
     return util.getMiniHBaseCluster().getMaster();
   }
 
@@ -157,7 +157,7 @@ public final class AssignmentTestingUtil {
     return true;
   }
 
-  public static void insertData(final HBaseTestingUtility UTIL, final TableName tableName,
+  public static void insertData(final HBaseTestingUtil UTIL, final TableName tableName,
     int rowCount, int startRowNum, String... cfs) throws IOException {
     Table t = UTIL.getConnection().getTable(tableName);
     Put p;

@@ -24,7 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -49,7 +49,7 @@ public class TestRegionNormalizerManagerConfigurationObserver {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionNormalizerManagerConfigurationObserver.class);
 
-  private static final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private static final HBaseTestingUtil testUtil = new HBaseTestingUtil();
   private static final Pattern rateLimitPattern =
     Pattern.compile("RateLimiter\\[stableRate=(?<rate>.+)qps]");
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -55,6 +56,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -68,8 +70,8 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
  */
 public class TestReplicationBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
-  private static Connection connection1;
-  private static Connection connection2;
+  protected static Connection connection1;
+  protected static Connection connection2;
   protected static Configuration CONF_WITH_LOCALFS;
 
   protected static Admin hbaseAdmin;
@@ -77,13 +79,13 @@ public class TestReplicationBase {
   protected static Table htable1;
   protected static Table htable2;
 
-  protected static final HBaseTestingUtility UTIL1 = new HBaseTestingUtility();
-  protected static final HBaseTestingUtility UTIL2 = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
   protected static Configuration CONF1 = UTIL1.getConfiguration();
   protected static Configuration CONF2 = UTIL2.getConfiguration();
 
   protected static int NUM_SLAVES1 = 1;
-  protected static final int NUM_SLAVES2 = 1;
+  protected static int NUM_SLAVES2 = 1;
   protected static final int NB_ROWS_IN_BATCH = 100;
   protected static final int NB_ROWS_IN_BIG_BATCH =
       NB_ROWS_IN_BATCH * 10;
@@ -147,19 +149,22 @@ public class TestReplicationBase {
     waitForReplication(htable2, expectedRows, retries);
   }
 
-  protected static void waitForReplication(Table htable2, int expectedRows, int retries)
-      throws IOException, InterruptedException {
+  protected static void waitForReplication(Table table, int expectedRows, int retries)
+    throws IOException, InterruptedException {
     Scan scan;
     for (int i = 0; i < retries; i++) {
       scan = new Scan();
-      if (i== retries -1) {
+      if (i == retries - 1) {
         fail("Waited too much time for normal batch replication");
       }
-      ResultScanner scanner = htable2.getScanner(scan);
-      Result[] res = scanner.next(expectedRows);
-      scanner.close();
-      if (res.length != expectedRows) {
-        LOG.info("Only got " + res.length + " rows");
+      int count = 0;
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        while (scanner.next() != null) {
+          count++;
+        }
+      }
+      if (count != expectedRows) {
+        LOG.info("Only got " + count + " rows");
         Thread.sleep(SLEEP_TIME);
       } else {
         break;
@@ -181,7 +186,7 @@ public class TestReplicationBase {
     htable1.put(puts);
   }
 
-  protected static void setupConfig(HBaseTestingUtility util, String znodeParent) {
+  protected static void setupConfig(HBaseTestingUtil util, String znodeParent) {
     Configuration conf = util.getConfiguration();
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, znodeParent);
     // We don't want too many edits per batch sent to the ReplicationEndpoint to trigger
@@ -204,8 +209,8 @@ public class TestReplicationBase {
     conf.setLong("hbase.serial.replication.waiting.ms", 100);
   }
 
-  static void configureClusters(HBaseTestingUtility util1,
-      HBaseTestingUtility util2) {
+  static void configureClusters(HBaseTestingUtil util1,
+      HBaseTestingUtil util2) {
     setupConfig(util1, "/1");
     setupConfig(util2, "/2");
 
@@ -235,6 +240,18 @@ public class TestReplicationBase {
     htable2 = UTIL2.getConnection().getTable(tableName);
   }
 
+  protected static void createTable(TableName tableName)
+    throws IOException {
+    TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+    UTIL1.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
+    UTIL2.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
+    UTIL1.waitUntilAllRegionsAssigned(tableName);
+    UTIL2.waitUntilAllRegionsAssigned(tableName);
+  }
+
   private static void startClusters() throws Exception {
     UTIL1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = UTIL1.getZkCluster();
@@ -253,22 +270,9 @@ public class TestReplicationBase {
     connection2 = ConnectionFactory.createConnection(CONF2);
     hbaseAdmin = connection1.getAdmin();
 
-    TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
-            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
-
-    try (
-      Admin admin1 = connection1.getAdmin();
-      Admin admin2 = connection2.getAdmin()) {
-      admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
-      admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
-      UTIL1.waitUntilAllRegionsAssigned(tableName);
-      htable1 = connection1.getTable(tableName);
-      UTIL2.waitUntilAllRegionsAssigned(tableName);
-      htable2 = connection2.getTable(tableName);
-    }
-
+    createTable(tableName);
+    htable1 = connection1.getTable(tableName);
+    htable2 = connection2.getTable(tableName);
   }
 
   @BeforeClass
@@ -281,12 +285,11 @@ public class TestReplicationBase {
     return hbaseAdmin.listReplicationPeers().stream().anyMatch(p -> peerId.equals(p.getPeerId()));
   }
 
-  @Before
-  public void setUpBase() throws Exception {
-    if (!peerExist(PEER_ID2)) {
+  protected final void addPeer(String peerId, TableName tableName) throws Exception {
+    if (!peerExist(peerId)) {
       ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer()).setReplicationEndpointImpl(
-          ReplicationEndpointTest.class.getName());
+        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer())
+        .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName());
       if (isSyncPeer()) {
         FileSystem fs2 = UTIL2.getTestFileSystem();
         // The remote wal dir is not important as we do not use it in DA state, here we only need to
@@ -297,15 +300,24 @@ public class TestReplicationBase {
           .setRemoteWALDir(new Path("/RemoteWAL")
             .makeQualified(fs2.getUri(), fs2.getWorkingDirectory()).toUri().toString());
       }
-      hbaseAdmin.addReplicationPeer(PEER_ID2, builder.build());
+      hbaseAdmin.addReplicationPeer(peerId, builder.build());
+    }
+  }
+
+  @Before
+  public void setUpBase() throws Exception {
+    addPeer(PEER_ID2, tableName);
+  }
+
+  protected final void removePeer(String peerId) throws Exception {
+    if (peerExist(peerId)) {
+      hbaseAdmin.removeReplicationPeer(peerId);
     }
   }
 
   @After
   public void tearDownBase() throws Exception {
-    if (peerExist(PEER_ID2)) {
-      hbaseAdmin.removeReplicationPeer(PEER_ID2);
-    }
+    removePeer(PEER_ID2);
   }
 
   protected static void runSimplePutDeleteTest() throws IOException, InterruptedException {

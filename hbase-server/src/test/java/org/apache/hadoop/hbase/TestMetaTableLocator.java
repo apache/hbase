@@ -59,7 +59,7 @@ public class TestMetaTableLocator {
     HBaseClassTestRule.forClass(TestMetaTableLocator.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableLocator.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final ServerName SN =
     ServerName.valueOf("example.org", 1234, EnvironmentEdgeManager.currentTime());
   private ZKWatcher watcher;

@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -85,7 +85,7 @@ public class TestScanWithBloomError {
   private FileSystem fs;
   private Configuration conf;
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Parameters
   public static final Collection<Object[]> parameters() {
@@ -121,7 +121,7 @@ public class TestScanWithBloomError {
     createStoreFile(new int[] {1, 9});
     scanColSet(new int[]{1, 4, 6, 7}, new int[]{1, 6, 7});
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   private void scanColSet(int[] colSet, int[] expectedResultCols)

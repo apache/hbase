@@ -61,7 +61,7 @@
             <% if (master.isActiveMaster()){ %>
               <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
               <li><a href="/hbck.jsp">HBCK Report</a></li>
-              <li><a href="/namedQueueLog.jsp">Named Queue Logs</a></li>
+              <li><a href="/operationDetails.jsp">Operation Details</a></li>
               <% if (master.getConfiguration().getBoolean(QuotaUtil.QUOTA_CONF_KEY, false)) { %>
                 <li><a href="/quotas.jsp">Quotas</a></li>
               <% }%>

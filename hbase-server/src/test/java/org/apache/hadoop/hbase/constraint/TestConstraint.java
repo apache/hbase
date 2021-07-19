@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -53,7 +53,7 @@ public class TestConstraint {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestConstraint.class);
 
-  private static HBaseTestingUtility util;
+  private static HBaseTestingUtil util;
   private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] dummy = Bytes.toBytes("dummy");
   private static final byte[] row1 = Bytes.toBytes("r1");
@@ -61,7 +61,7 @@ public class TestConstraint {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     util.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
     util.startMiniCluster();
   }

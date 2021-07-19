@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -51,11 +51,11 @@ public class TestProcedureInMemoryChore {
   private NoopProcedureStore procStore;
   private ProcedureExecutor<TestProcEnv> procExecutor;
 
-  private HBaseCommonTestingUtility htu;
+  private HBaseCommonTestingUtil htu;
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
 
     procEnv = new TestProcEnv();
     procStore = new NoopProcedureStore();

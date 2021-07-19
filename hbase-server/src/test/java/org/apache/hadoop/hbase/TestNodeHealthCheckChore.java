@@ -47,7 +47,7 @@ public class TestNodeHealthCheckChore {
       HBaseClassTestRule.forClass(TestNodeHealthCheckChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNodeHealthCheckChore.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final int SCRIPT_TIMEOUT = 5000;
   private File healthScriptFile;
   private String eol = System.getProperty("line.separator");

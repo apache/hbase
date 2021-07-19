@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -47,7 +47,7 @@ public class TestReadWriteSeqIdFiles {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReadWriteSeqIdFiles.class);
 
-  private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   private static FileSystem walFS;
 

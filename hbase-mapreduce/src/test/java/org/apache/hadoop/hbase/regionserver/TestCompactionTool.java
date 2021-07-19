@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -46,7 +46,7 @@ public class TestCompactionTool {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCompactionTool.class);
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
 
   private HRegion region;
   private final static byte[] qualifier = Bytes.toBytes("qf");
@@ -56,7 +56,7 @@ public class TestCompactionTool {
   @Before
   public void setUp() throws Exception {
     this.testUtil.startMiniCluster();
-    testUtil.createTable(tableName, HBaseTestingUtility.fam1);
+    testUtil.createTable(tableName, HBaseTestingUtil.fam1);
     rootDir = testUtil.getDefaultRootDirPath();
     this.region = testUtil.getMiniHBaseCluster().getRegions(tableName).get(0);
   }
@@ -72,12 +72,12 @@ public class TestCompactionTool {
     for (int i = 0; i < 10; i++) {
       this.putAndFlush(i);
     }
-    HStore store = region.getStore(HBaseTestingUtility.fam1);
+    HStore store = region.getStore(HBaseTestingUtil.fam1);
     assertEquals(10, store.getStorefilesCount());
     Path tableDir = CommonFSUtils.getTableDir(rootDir, region.getRegionInfo().getTable());
     FileSystem fs = store.getFileSystem();
     String storePath = tableDir + "/" + region.getRegionInfo().getEncodedName() + "/"
-      + Bytes.toString(HBaseTestingUtility.fam1);
+      + Bytes.toString(HBaseTestingUtil.fam1);
     FileStatus[] regionDirFiles = fs.listStatus(new Path(storePath));
     assertEquals(10, regionDirFiles.length);
     String defaultFS = testUtil.getMiniHBaseCluster().getConfiguration().get("fs.defaultFS");
@@ -92,7 +92,7 @@ public class TestCompactionTool {
 
   private void putAndFlush(int key) throws Exception{
     Put put = new Put(Bytes.toBytes(key));
-    put.addColumn(HBaseTestingUtility.fam1, qualifier, Bytes.toBytes("val" + key));
+    put.addColumn(HBaseTestingUtil.fam1, qualifier, Bytes.toBytes("val" + key));
     region.put(put);
     region.flush(true);
   }

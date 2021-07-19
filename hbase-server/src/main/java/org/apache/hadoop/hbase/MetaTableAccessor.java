@@ -455,7 +455,7 @@ public final class MetaTableAccessor {
    * @param maxRows maximum rows to return
    * @param visitor Visitor invoked against each row.
    */
-  static void scanMeta(Connection connection, @Nullable final byte[] startRow,
+  public static void scanMeta(Connection connection, @Nullable final byte[] startRow,
     @Nullable final byte[] stopRow, QueryType type, int maxRows,
     final ClientMetaTableAccessor.Visitor visitor) throws IOException {
     scanMeta(connection, startRow, stopRow, type, null, maxRows, visitor);

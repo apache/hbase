@@ -26,7 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
@@ -55,7 +55,7 @@ public class TestStressWALProcedureStore {
 
   private WALProcedureStore procStore;
 
-  private HBaseCommonTestingUtility htu;
+  private HBaseCommonTestingUtil htu;
   private FileSystem fs;
   private Path testDir;
   private Path logDir;
@@ -68,7 +68,7 @@ public class TestStressWALProcedureStore {
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
     setupConfiguration(htu.getConfiguration());
 
     testDir = htu.getDataTestDir();

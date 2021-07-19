@@ -28,9 +28,9 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
@@ -93,7 +93,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
   public void testRetainAssignmentOnClusterRestart() throws Exception {
     setupCluster();
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> threads = cluster.getLiveRegionServerThreads();
     assertEquals(NUM_OF_RS, threads.size());
     int[] rsPorts = new int[NUM_OF_RS];
@@ -160,7 +160,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
   public void testRetainAssignmentOnSingleRSRestart() throws Exception {
     setupCluster();
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> threads = cluster.getLiveRegionServerThreads();
     assertEquals(NUM_OF_RS, threads.size());
     int[] rsPorts = new int[NUM_OF_RS];
@@ -234,7 +234,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
       HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     // Enable retain assignment during ServerCrashProcedure
     UTIL.getConfiguration().setBoolean(ServerCrashProcedure.MASTER_SCP_RETAIN_ASSIGNMENT, true);
-    UTIL.startMiniCluster(StartMiniClusterOption.builder().masterClass(HMasterForTest.class)
+    UTIL.startMiniCluster(StartTestingClusterOption.builder().masterClass(HMasterForTest.class)
       .numRegionServers(NUM_OF_RS).build());
 
     // Turn off balancer

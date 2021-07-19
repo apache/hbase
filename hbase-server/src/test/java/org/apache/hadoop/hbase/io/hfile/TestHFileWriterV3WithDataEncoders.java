@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
@@ -74,8 +74,8 @@ public class TestHFileWriterV3WithDataEncoders {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestHFileWriterV3WithDataEncoders.class);
 
-  private static final HBaseTestingUtility TEST_UTIL =
-    new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL =
+    new HBaseTestingUtil();
 
   private Configuration conf;
   private FileSystem fs;

@@ -221,7 +221,7 @@ public class TestIOFencing {
     }
   }
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static TableName TABLE_NAME =
       TableName.valueOf("tabletest");
   private final static byte[] FAMILY = Bytes.toBytes("family");
@@ -365,7 +365,7 @@ public class TestIOFencing {
       int count;
       for (int i = 0;; i++) {
         try {
-          count = HBaseTestingUtility.countRows(table);
+          count = HBaseTestingUtil.countRows(table);
           break;
         } catch (DoNotRetryIOException e) {
           // wait up to 30s

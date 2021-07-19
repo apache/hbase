@@ -36,7 +36,7 @@ public class TestLocalHBaseCluster {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestLocalHBaseCluster.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   /**
    * Check that we can start a local HBase cluster specifying a custom master
@@ -48,7 +48,7 @@ public class TestLocalHBaseCluster {
   @Test
   public void testLocalHBaseCluster() throws Exception {
     // Set Master class and RegionServer class, and use default values for other options.
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .masterClass(MyHMaster.class).rsClass(MyHRegionServer.class).build();
     TEST_UTIL.startMiniCluster(option);
     // Can we cast back to our master class?
@@ -86,7 +86,8 @@ public class TestLocalHBaseCluster {
   /**
    * A private regionserver class with a dummy method for testing casts
    */
-  public static class MyHRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
+  public static class MyHRegionServer
+    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
 
     public MyHRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);

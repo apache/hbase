@@ -41,6 +41,7 @@ message MutateRowsRequest {
 }
 
 message MutateRowsResponse {
+  optional bool processed = 1;
 }
 
 service MultiRowMutationService {

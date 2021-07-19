@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -77,7 +77,7 @@ public class TestFilter {
 
   private final static Logger LOG = LoggerFactory.getLogger(TestFilter.class);
   private HRegion region;
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -161,7 +161,7 @@ public class TestFilter {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NEW_FAMILIES[0]))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NEW_FAMILIES[1])).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+    this.region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), tableDescriptor);
 
     // Insert first half
@@ -236,7 +236,7 @@ public class TestFilter {
 
   @After
   public void tearDown() throws Exception {
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @Test
@@ -1516,7 +1516,7 @@ public class TestFilter {
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+    HRegion testRegion = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
       TEST_UTIL.getConfiguration(), tableDescriptor);
 
     for(int i=0; i<5; i++) {
@@ -2287,7 +2287,7 @@ public class TestFilter {
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILIES[0])).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+    HRegion testRegion = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), tableDescriptor);
     for(int i=0; i<10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));

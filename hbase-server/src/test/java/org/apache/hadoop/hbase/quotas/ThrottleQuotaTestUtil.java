@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.Objects;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -102,32 +102,32 @@ public final class ThrottleQuotaTestUtil {
     return count;
   }
 
-  static void triggerUserCacheRefresh(HBaseTestingUtility testUtil, boolean bypass,
+  static void triggerUserCacheRefresh(HBaseTestingUtil testUtil, boolean bypass,
       TableName... tables) throws Exception {
     triggerCacheRefresh(testUtil, bypass, true, false, false, false, false, tables);
   }
 
-  static void triggerTableCacheRefresh(HBaseTestingUtility testUtil, boolean bypass,
+  static void triggerTableCacheRefresh(HBaseTestingUtil testUtil, boolean bypass,
       TableName... tables) throws Exception {
     triggerCacheRefresh(testUtil, bypass, false, true, false, false, false, tables);
   }
 
-  static void triggerNamespaceCacheRefresh(HBaseTestingUtility testUtil, boolean bypass,
+  static void triggerNamespaceCacheRefresh(HBaseTestingUtil testUtil, boolean bypass,
       TableName... tables) throws Exception {
     triggerCacheRefresh(testUtil, bypass, false, false, true, false, false, tables);
   }
 
-  static void triggerRegionServerCacheRefresh(HBaseTestingUtility testUtil, boolean bypass)
+  static void triggerRegionServerCacheRefresh(HBaseTestingUtil testUtil, boolean bypass)
       throws Exception {
     triggerCacheRefresh(testUtil, bypass, false, false, false, true, false);
   }
 
-  static void triggerExceedThrottleQuotaCacheRefresh(HBaseTestingUtility testUtil,
+  static void triggerExceedThrottleQuotaCacheRefresh(HBaseTestingUtil testUtil,
       boolean exceedEnabled) throws Exception {
     triggerCacheRefresh(testUtil, exceedEnabled, false, false, false, false, true);
   }
 
-  private static void triggerCacheRefresh(HBaseTestingUtility testUtil, boolean bypass,
+  private static void triggerCacheRefresh(HBaseTestingUtil testUtil, boolean bypass,
       boolean userLimiter, boolean tableLimiter, boolean nsLimiter, boolean rsLimiter,
       boolean exceedThrottleQuota, final TableName... tables) throws Exception {
     envEdge.incValue(2 * REFRESH_TIME);
@@ -193,7 +193,7 @@ public final class ThrottleQuotaTestUtil {
     envEdge.incValue(70000);
   }
 
-  static void clearQuotaCache(HBaseTestingUtility testUtil) {
+  static void clearQuotaCache(HBaseTestingUtil testUtil) {
     for (RegionServerThread rst : testUtil.getMiniHBaseCluster().getRegionServerThreads()) {
       RegionServerRpcQuotaManager quotaManager =
           rst.getRegionServer().getRegionServerRpcQuotaManager();

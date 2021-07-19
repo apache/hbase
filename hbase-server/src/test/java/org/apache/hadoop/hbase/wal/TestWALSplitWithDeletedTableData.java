@@ -29,9 +29,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -55,7 +55,7 @@ public class TestWALSplitWithDeletedTableData {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
       .forClass(TestWALSplitWithDeletedTableData.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -90,7 +90,7 @@ public class TestWALSplitWithDeletedTableData {
     }
     tab1.put(puts);
     tab2.put(puts);
-    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     TEST_UTIL.deleteTable(t1);
     Path tableDir = CommonFSUtils.getWALTableDir(TEST_UTIL.getConfiguration(), t1);
     // Dropping table 't1' removed the table directory from the WAL FS completely

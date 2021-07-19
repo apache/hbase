@@ -29,7 +29,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -571,7 +571,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       durability = Durability.ASYNC_WAL;
     }
 
-    HBaseTestingUtility.createPreSplitLoadTestTable(conf, tableName,
+    HBaseTestingUtil.createPreSplitLoadTestTable(conf, tableName,
       getColumnFamilies(), compressAlgo, dataBlockEncodingAlgo, numRegionsPerServer,
         regionReplication, durability);
     applyColumnFamilyOptions(tableName, getColumnFamilies());

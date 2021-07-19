@@ -32,12 +32,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
@@ -130,9 +130,9 @@ public class MasterProcedureTestingUtility {
   // ==========================================================================
   //  Master failover utils
   // ==========================================================================
-  public static void masterFailover(final HBaseTestingUtility testUtil)
+  public static void masterFailover(final HBaseTestingUtil testUtil)
       throws Exception {
-    MiniHBaseCluster cluster = testUtil.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = testUtil.getMiniHBaseCluster();
 
     // Kill the master
     HMaster oldMaster = cluster.getMaster();
@@ -142,9 +142,9 @@ public class MasterProcedureTestingUtility {
     waitBackupMaster(testUtil, oldMaster);
   }
 
-  public static void waitBackupMaster(final HBaseTestingUtility testUtil,
+  public static void waitBackupMaster(final HBaseTestingUtil testUtil,
       final HMaster oldMaster) throws Exception {
-    MiniHBaseCluster cluster = testUtil.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = testUtil.getMiniHBaseCluster();
 
     HMaster newMaster = cluster.getMaster();
     while (newMaster == null || newMaster == oldMaster) {

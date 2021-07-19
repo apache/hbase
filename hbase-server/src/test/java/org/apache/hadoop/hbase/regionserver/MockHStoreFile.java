@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,7 +52,7 @@ public class MockHStoreFile extends HStoreFile {
   long modificationTime;
   boolean compactedAway;
 
-  MockHStoreFile(HBaseTestingUtility testUtil, Path testPath,
+  MockHStoreFile(HBaseTestingUtil testUtil, Path testPath,
       long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
     super(testUtil.getTestFileSystem(), testPath, testUtil.getConfiguration(),
         new CacheConfig(testUtil.getConfiguration()), BloomType.NONE, true);

@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
@@ -83,7 +83,7 @@ public class TestRSGroupsCPHookCalled extends TestRSGroupsBase {
 
   @Test
   public void testGetRSGroupInfoOfServerCPHookCalled() throws Exception {
-    ServerName masterServerName = ((MiniHBaseCluster) CLUSTER).getMaster().getServerName();
+    ServerName masterServerName = ((SingleProcessHBaseCluster) CLUSTER).getMaster().getServerName();
     ADMIN.getRSGroup(masterServerName.getAddress());
     assertTrue(OBSERVER.preGetRSGroupInfoOfServerCalled);
     assertTrue(OBSERVER.postGetRSGroupInfoOfServerCalled);

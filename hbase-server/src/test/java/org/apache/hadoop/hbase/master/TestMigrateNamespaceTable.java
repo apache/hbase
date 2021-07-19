@@ -22,9 +22,9 @@ import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -52,11 +52,11 @@ public class TestMigrateNamespaceTable {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMigrateNamespaceTable.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUp() throws Exception {
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(1).
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(1).
         numAlwaysStandByMasters(1).numRegionServers(1).build();
     UTIL.startMiniCluster(option);
   }

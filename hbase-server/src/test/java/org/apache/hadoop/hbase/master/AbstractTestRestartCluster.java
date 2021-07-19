@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -30,7 +30,7 @@ public abstract class AbstractTestRestartCluster {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractTestRestartCluster.class);
 
-  protected HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   protected static final TableName[] TABLES = { TableName.valueOf("restartTableOne"),
     TableName.valueOf("restartTableTwo"), TableName.valueOf("restartTableThree") };

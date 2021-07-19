@@ -60,7 +60,7 @@ public class TestClassFinder {
   private static final Logger LOG = LoggerFactory.getLogger(TestClassFinder.class);
 
   @Rule public TestName name = new TestName();
-  private static final HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil testUtil = new HBaseCommonTestingUtil();
   private static final String BASEPKG = "tfcpkg";
   private static final String PREFIX = "Prefix";
 

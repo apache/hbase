@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
@@ -52,7 +52,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
   private static final Logger LOG = LoggerFactory.getLogger(
     TestCatalogReplicaLoadBalanceSimpleSelector.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final int NB_SERVERS = 4;
   private static int numOfMetaReplica = NB_SERVERS - 1;
@@ -71,7 +71,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
     admin.balancerSwitch(false, true);
 
     // Enable hbase:meta replication.
-    HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, numOfMetaReplica);
+    HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, numOfMetaReplica);
     TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getRegions(
       TableName.META_TABLE_NAME).size() >= numOfMetaReplica);
 
@@ -110,7 +110,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
       RegionReplicaUtil.DEFAULT_REPLICA_ID);
 
     // Change to No meta replica
-    HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 1);
+    HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 1);
     TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getRegions(
       TableName.META_TABLE_NAME).size() == 1);
 

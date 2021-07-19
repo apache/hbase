@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
@@ -44,12 +44,12 @@ final class TestHDFSAclHelper {
   private TestHDFSAclHelper() {
   }
 
-  static void grantOnTable(HBaseTestingUtility util, String user, TableName tableName,
+  static void grantOnTable(HBaseTestingUtil util, String user, TableName tableName,
                            Permission.Action... actions) throws Exception {
     SecureTestUtil.grantOnTable(util, user, tableName, null, null, actions);
   }
 
-  static void createNamespace(HBaseTestingUtility util, String namespace) throws IOException {
+  static void createNamespace(HBaseTestingUtil util, String namespace) throws IOException {
     if (Arrays.stream(util.getAdmin().listNamespaceDescriptors())
         .noneMatch(ns -> ns.getName().equals(namespace))) {
       NamespaceDescriptor namespaceDescriptor = NamespaceDescriptor.create(namespace).build();
@@ -57,7 +57,7 @@ final class TestHDFSAclHelper {
     }
   }
 
-  static Table createTable(HBaseTestingUtility util, TableName tableName) throws Exception {
+  static Table createTable(HBaseTestingUtil util, TableName tableName) throws Exception {
     createNamespace(util, tableName.getNamespaceAsString());
     TableDescriptor td = getTableDescriptorBuilder(util, tableName)
         .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build();
@@ -68,7 +68,7 @@ final class TestHDFSAclHelper {
     return util.getConnection().getTable(tableName);
   }
 
-  static Table createMobTable(HBaseTestingUtility util, TableName tableName) throws Exception {
+  static Table createMobTable(HBaseTestingUtil util, TableName tableName) throws Exception {
     createNamespace(util, tableName.getNamespaceAsString());
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN1).setMobEnabled(true)
@@ -83,7 +83,7 @@ final class TestHDFSAclHelper {
     return util.getConnection().getTable(tableName);
   }
 
-  static TableDescriptor createUserScanSnapshotDisabledTable(HBaseTestingUtility util,
+  static TableDescriptor createUserScanSnapshotDisabledTable(HBaseTestingUtil util,
       TableName tableName) throws Exception {
     createNamespace(util, tableName.getNamespaceAsString());
     TableDescriptor td = getTableDescriptorBuilder(util, tableName).build();
@@ -97,14 +97,14 @@ final class TestHDFSAclHelper {
     return td;
   }
 
-  static TableDescriptorBuilder getTableDescriptorBuilder(HBaseTestingUtility util,
+  static TableDescriptorBuilder getTableDescriptorBuilder(HBaseTestingUtil util,
       TableName tableName) {
     return TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN1).build())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).build());
   }
 
-  static void createTableAndPut(HBaseTestingUtility util, TableName tableNam) throws Exception {
+  static void createTableAndPut(HBaseTestingUtil util, TableName tableNam) throws Exception {
     try (Table t = createTable(util, tableNam)) {
       put(t);
     }
@@ -147,7 +147,7 @@ final class TestHDFSAclHelper {
    * @throws IOException user scan snapshot error
    * @throws InterruptedException user scan snapshot error
    */
-  static void canUserScanSnapshot(HBaseTestingUtility util, User user, String snapshot,
+  static void canUserScanSnapshot(HBaseTestingUtil util, User user, String snapshot,
       int expectedRowCount) throws IOException, InterruptedException {
     PrivilegedExceptionAction<Void> action =
         getScanSnapshotAction(util.getConfiguration(), snapshot, expectedRowCount);

@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -71,7 +71,7 @@ public class TestBlocksRead  {
     BloomType.ROW, BloomType.NONE };
 
   HRegion region = null;
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final String DIR = TEST_UTIL.getDataTestDir("TestBlocksRead").toString();
   private Configuration conf = TEST_UTIL.getConfiguration();
 
@@ -87,7 +87,7 @@ public class TestBlocksRead  {
   }
 
   /**
-   * Callers must afterward call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
+   * Callers must afterward call {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)}
    * @return created and initialized region.
    */
   private HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
@@ -96,7 +96,7 @@ public class TestBlocksRead  {
   }
 
   /**
-   * Callers must afterward call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
+   * Callers must afterward call {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)}
    */
   private HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
       String family, BlockCache blockCache) throws IOException {
@@ -111,9 +111,9 @@ public class TestBlocksRead  {
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
     Path path = new Path(DIR + callingMethod);
     if (blockCache != null) {
-      return HBaseTestingUtility.createRegionAndWAL(info, path, conf, builder.build(), blockCache);
+      return HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build(), blockCache);
     } else {
-      return HBaseTestingUtility.createRegionAndWAL(info, path, conf, builder.build());
+      return HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build());
     }
   }
 
@@ -259,7 +259,7 @@ public class TestBlocksRead  {
       assertEquals(1, kvs.length);
       verifyData(kvs[0], "row", "col5", 5);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -365,7 +365,7 @@ public class TestBlocksRead  {
       verifyData(kvs[1], "row", "col2", 12);
       verifyData(kvs[2], "row", "col3", 13);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -413,7 +413,7 @@ public class TestBlocksRead  {
 
       assertEquals(2 * BLOOM_TYPE.length, blocksEnd - blocksStart);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -439,7 +439,7 @@ public class TestBlocksRead  {
       assertEquals(1, kvs.length);
       verifyData(kvs[0], "row", "col99", 201);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }

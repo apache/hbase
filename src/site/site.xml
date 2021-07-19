@@ -125,14 +125,6 @@
         <item name="User API" href="1.4/apidocs/index.html" target="_blank" />
         <item name="Developer API" href="1.4/devapidocs/index.html" target="_blank" />
       </item>
-      <item name="2.2 Documentation">
-        <item name="Ref Guide" href="2.2/book.html" target="_blank" />
-        <item name="Reference Guide (PDF)" href="2.2/apache_hbase_reference_guide.pdf" target="_blank" />
-        <item name="User API" href="2.2/apidocs/index.html" target="_blank" />
-        <item name="User API (Test)" href="2.2/testapidocs/index.html" target="_blank" />
-        <item name="Developer API" href="2.2/devapidocs/index.html" target="_blank" />
-        <item name="Developer API (Test)" href="2.2/testdevapidocs/index.html" target="_blank" />
-      </item>
       <item name="2.3 Documentation">
         <item name="Ref Guide" href="2.3/book.html" target="_blank" />
         <item name="Reference Guide (PDF)" href="2.3/apache_hbase_reference_guide.pdf" target="_blank" />

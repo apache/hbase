@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.concurrent.Exchanger;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -50,7 +50,7 @@ public class TestForceUpdateProcedure {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestForceUpdateProcedure.class);
 
-  private static HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  private static HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   private static WALProcedureStore STORE;
 

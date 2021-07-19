@@ -28,9 +28,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -81,7 +81,7 @@ public class TestBlockReorderMultiBlocks {
 
   private Configuration conf;
   private MiniDFSCluster cluster;
-  private HBaseTestingUtility htu;
+  private HBaseTestingUtil htu;
   private DistributedFileSystem dfs;
   private static final String host1 = "host1";
   private static final String host2 = "host2";
@@ -92,7 +92,7 @@ public class TestBlockReorderMultiBlocks {
 
   @Before
   public void setUp() throws Exception {
-    htu = new HBaseTestingUtility();
+    htu = new HBaseTestingUtil();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
     htu.getConfiguration().setInt("dfs.replication", 3);
     htu.startMiniDFSCluster(3,
@@ -116,7 +116,7 @@ public class TestBlockReorderMultiBlocks {
     byte[] sb = Bytes.toBytes("sb");
     htu.startMiniZKCluster();
 
-    MiniHBaseCluster hbm = htu.startMiniHBaseCluster();
+    SingleProcessHBaseCluster hbm = htu.startMiniHBaseCluster();
     hbm.waitForActiveAndReadyMaster();
     HRegionServer targetRs = hbm.getRegionServer(0);
 

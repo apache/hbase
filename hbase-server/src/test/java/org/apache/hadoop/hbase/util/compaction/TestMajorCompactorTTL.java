@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -52,7 +52,7 @@ public class TestMajorCompactorTTL extends TestMajorCompactor {
   @Before
   @Override
   public void setUp() throws Exception {
-    utility = new HBaseTestingUtility();
+    utility = new HBaseTestingUtil();
     utility.getConfiguration().setInt("hbase.hfile.compaction.discharger.interval", 10);
     utility.startMiniCluster();
     admin = utility.getAdmin();

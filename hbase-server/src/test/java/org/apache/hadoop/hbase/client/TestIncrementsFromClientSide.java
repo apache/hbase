@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -76,7 +76,7 @@ public class TestIncrementsFromClientSide {
       HBaseClassTestRule.forClass(TestIncrementsFromClientSide.class);
 
   final Logger LOG = LoggerFactory.getLogger(getClass());
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
@@ -127,18 +127,18 @@ public class TestIncrementsFromClientSide {
         Table table = connection.getTableBuilder(TableName.valueOf(name.getMethodName()), null)
           .setOperationTimeout(3 * 1000).build()) {
       Increment inc = new Increment(ROW);
-      inc.addColumn(HBaseTestingUtility.fam1, QUALIFIER, 1);
+      inc.addColumn(HBaseTestingUtil.fam1, QUALIFIER, 1);
       Result result = table.increment(inc);
 
       Cell[] cells = result.rawCells();
       assertEquals(1, cells.length);
-      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, 1);
 
       // Verify expected result
       Result readResult = table.get(new Get(ROW));
       cells = readResult.rawCells();
       assertEquals(1, cells.length);
-      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, 1);
     }
   }
 
@@ -167,7 +167,7 @@ public class TestIncrementsFromClientSide {
       Table table = connection.getTableBuilder(TableName.valueOf(name.getMethodName()), null)
         .setOperationTimeout(3 * 1000).build()) {
       Increment inc = new Increment(ROW);
-      inc.addColumn(HBaseTestingUtility.fam1, QUALIFIER, 1);
+      inc.addColumn(HBaseTestingUtil.fam1, QUALIFIER, 1);
 
       // Batch increment
       Object[] results = new Object[1];
@@ -175,13 +175,13 @@ public class TestIncrementsFromClientSide {
 
       Cell[] cells = ((Result) results[0]).rawCells();
       assertEquals(1, cells.length);
-      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, 1);
 
       // Verify expected result
       Result readResult = table.get(new Get(ROW));
       cells = readResult.rawCells();
       assertEquals(1, cells.length);
-      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, 1);
     }
   }
 
