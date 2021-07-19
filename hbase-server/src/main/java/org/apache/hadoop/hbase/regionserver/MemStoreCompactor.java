@@ -208,7 +208,8 @@ public class MemStoreCompactor {
     MemStoreSegmentsIterator iterator = null;
     List<ImmutableSegment> segments = versionedList.getStoreSegments();
     for (ImmutableSegment s : segments) {
-      s.waitForUpdates(); // to ensure all updates preceding s in-memory flush have completed
+      s.waitForUpdates(); // to ensure all updates preceding s in-memory flush have completed.
+      // we skip empty segment when create MemStoreSegmentsIterator following.
     }
 
     switch (action) {

@@ -453,9 +453,14 @@ public class CompactingMemStore extends AbstractMemStore {
     inMemoryCompaction();
   }
 
-  private void flushInMemory(MutableSegment currActive) {
+  protected void flushInMemory(MutableSegment currActive) {
     LOG.trace("IN-MEMORY FLUSH: Pushing active segment into compaction pipeline");
-    pushActiveToPipeline(currActive);
+    // NOTE: Due to concurrent writes and because we first add cell size to currActive.getDataSize
+    // and then actually add cell to currActive.cellSet, it is possible that
+    // currActive.getDataSize could not accommodate cellToAdd but currActive.cellSet is still
+    // empty if pending writes which not yet add cells to currActive.cellSet.
+    // so here we should not check currActive.isEmpty or not.
+    pushActiveToPipeline(currActive, false);
   }
 
   void inMemoryCompaction() {
@@ -524,7 +529,23 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   protected void pushActiveToPipeline(MutableSegment currActive) {
-    if (!currActive.isEmpty()) {
+    pushActiveToPipeline(currActive, true);
+  }
+
+  /**
+   * NOTE: When {@link CompactingMemStore#flushInMemory(MutableSegment)} calls this method, due to
+   * concurrent writes and because we first add cell size to currActive.getDataSize and then
+   * actually add cell to currActive.cellSet, it is possible that currActive.getDataSize could not
+   * accommodate cellToAdd but currActive.cellSet is still empty if pending writes which not yet add
+   * cells to currActive.cellSet,so for
+   * {@link CompactingMemStore#flushInMemory(MutableSegment)},checkEmpty parameter is false. But if
+   * {@link CompactingMemStore#snapshot} called this method,because there is no pending
+   * write,checkEmpty parameter could be true.
+   * @param currActive
+   * @param checkEmpty
+   */
+  protected void pushActiveToPipeline(MutableSegment currActive, boolean checkEmpty) {
+    if (!checkEmpty || !currActive.isEmpty()) {
       pipeline.pushHead(currActive);
       resetActive();
     }
