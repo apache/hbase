@@ -135,6 +135,7 @@ public class RecoverableZooKeeper {
     if (this.zk == null) {
       try {
         this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
+        ZooKeeperHelper.ensureConnectedZooKeeper(this.zk, 30000);
       } catch (IOException ex) {
         LOG.warn("Unable to create ZooKeeper Connection", ex);
         throw new KeeperException.OperationTimeoutException();
