@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.MetricsMaster.convertToProcedureMetrics;
+import static org.apache.hadoop.hbase.master.MetricsMaster.convertToProcedureMetricsForMasterUI;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
@@ -41,12 +42,18 @@ public class MetricsAssignmentManager {
     assignmentManagerSource = CompatibilitySingletonFactory.getInstance(
         MetricsAssignmentManagerSource.class);
 
-    assignProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getAssignMetrics());
-    unassignProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getUnassignMetrics());
-    moveProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getMoveMetrics());
-    reopenProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getReopenMetrics());
-    openProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getOpenMetrics());
-    closeProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getCloseMetrics());
+    assignProcMetrics = convertToProcedureMetricsForMasterUI(
+      assignmentManagerSource.getAssignMetrics());
+    unassignProcMetrics = convertToProcedureMetricsForMasterUI(
+      assignmentManagerSource.getUnassignMetrics());
+    moveProcMetrics = convertToProcedureMetricsForMasterUI(
+      assignmentManagerSource.getMoveMetrics());
+    reopenProcMetrics = convertToProcedureMetricsForMasterUI(
+      assignmentManagerSource.getReopenMetrics());
+    openProcMetrics = convertToProcedureMetricsForMasterUI(
+      assignmentManagerSource.getOpenMetrics());
+    closeProcMetrics = convertToProcedureMetricsForMasterUI(
+      assignmentManagerSource.getCloseMetrics());
     splitProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getSplitMetrics());
     mergeProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getMergeMetrics());
   }
