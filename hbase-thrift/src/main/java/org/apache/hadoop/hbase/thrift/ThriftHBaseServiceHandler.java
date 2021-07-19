@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -81,7 +80,6 @@ import org.apache.hadoop.hbase.thrift.generated.TAccessControlEntity;
 import org.apache.hadoop.hbase.thrift.generated.TAppend;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
-import org.apache.hadoop.hbase.thrift.generated.TPermissionOps;
 import org.apache.hadoop.hbase.thrift.generated.TPermissionScope;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
@@ -1297,45 +1295,47 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   }
 
   @Override
-  public boolean performPermissions(TAccessControlEntity info)
-    throws IOError, TException {
+  public boolean grant(TAccessControlEntity info) throws IOError, TException {
     Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
     try {
       if (info.scope == TPermissionScope.NAMESPACE) {
-        performNamespacePermissions(info.op, info.username, info.nsName, actions,
-          connectionCache.getAdmin().getConnection());
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
+          info.getNsName(), info.getUsername(), actions);
       } else if (info.scope == TPermissionScope.TABLE) {
         TableName tableName = TableName.valueOf(info.getTableName());
-        performTablePermissions(info.op, tableName, info.username, actions,
-          connectionCache.getAdmin().getConnection());
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
+          tableName, info.getUsername(), null, null, actions);
       }
     } catch (Throwable t) {
       if (t instanceof IOException) {
-        throw getIOError((IOException) t);
+        throw getIOError(t);
       } else {
         throw getIOError(new DoNotRetryIOException(t.getMessage()));
       }
     }
     return true;
-
   }
 
-  private static void performNamespacePermissions(TPermissionOps op, String username,
-    String namespace, Permission.Action[] actions, Connection connection) throws Throwable {
-    if (op == TPermissionOps.GRANT) {
-      AccessControlClient.grant(connection, namespace, username, actions);
-    } else if (op == TPermissionOps.REVOKE) {
-      AccessControlClient.revoke(connection, namespace, username, actions);
+  @Override
+  public boolean revoke(TAccessControlEntity info) throws IOError, TException {
+    Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
+    try {
+      if (info.scope == TPermissionScope.NAMESPACE) {
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
+          info.getNsName(), info.getUsername(), actions);
+      } else if (info.scope == TPermissionScope.TABLE) {
+        TableName tableName = TableName.valueOf(info.getTableName());
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
+          tableName, info.getUsername(), null, null, actions);
+      }
+    } catch (Throwable t) {
+      if (t instanceof IOException) {
+        throw getIOError(t);
+      } else {
+        throw getIOError(new DoNotRetryIOException(t.getMessage()));
+      }
     }
-  }
-
-  private static void performTablePermissions(TPermissionOps op, TableName tableName,
-    String username, Permission.Action[] actions, Connection connection) throws Throwable {
-    if (op == TPermissionOps.GRANT) {
-      AccessControlClient.grant(connection, tableName, username, null, null, actions);
-    } else if (op == TPermissionOps.REVOKE) {
-      AccessControlClient.revoke(connection, tableName, username, null, null, actions);
-    }
+    return true;
   }
 
   private static IOError getIOError(Throwable throwable) {

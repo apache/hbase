@@ -77,7 +77,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
-import org.apache.hadoop.hbase.security.access.AccessControlUtil;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
@@ -88,7 +87,6 @@ import org.apache.hadoop.hbase.thrift.HBaseThriftTestingUtility;
 import org.apache.hadoop.hbase.thrift.HbaseHandlerMetricsProxy;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics.ThriftServerType;
-import org.apache.hadoop.hbase.thrift2.generated.NamespaceDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TAccessControlEntity;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
@@ -111,7 +109,6 @@ import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
-import org.apache.hadoop.hbase.thrift2.generated.TPermissionOps;
 import org.apache.hadoop.hbase.thrift2.generated.TPermissionScope;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TReadType;
@@ -1802,13 +1799,12 @@ public class TestThriftHBaseServiceHandler {
     String fakeUser = "user";
     TAccessControlEntity tce = new TAccessControlEntity();
     tce.setActions("R");
-    tce.setTableName(new TTableName(ByteBuffer.wrap(tableAname)));
+    tce.setTableName(Bytes.toString(tableAname));
     tce.setScope(TPermissionScope.TABLE);
     tce.setUsername(fakeUser);
-    tce.setOp(TPermissionOps.GRANT);
 
     ThriftHBaseServiceHandler handler = createHandler();
-    handler.performPermissions(tce);
+    handler.grant(tce);
 
     List<UserPermission> permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
         Bytes.toString(tableAname), fakeUser);
@@ -1820,8 +1816,7 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(actions[0], Permission.Action.READ);
 
     // than revoke the permission
-    tce.setOp(TPermissionOps.REVOKE);
-    handler.performPermissions(tce);
+    handler.revoke(tce);
     permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
       Bytes.toString(tableAname), fakeUser);
 
@@ -1840,10 +1835,9 @@ public class TestThriftHBaseServiceHandler {
     tce.setNsName(defaultNameSpace);
     tce.setScope(TPermissionScope.NAMESPACE);
     tce.setUsername(fakeUser);
-    tce.setOp(TPermissionOps.GRANT);
 
     ThriftHBaseServiceHandler handler = createHandler();
-    handler.performPermissions(tce);
+    handler.grant(tce);
 
     List<UserPermission> permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
       "@" + defaultNameSpace, fakeUser);
@@ -1856,8 +1850,7 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(actions[0], Permission.Action.READ);
 
     // revoke the permission
-    tce.setOp(TPermissionOps.REVOKE);
-    handler.performPermissions(tce);
+    handler.revoke(tce);
     permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
       "@" + defaultNameSpace, fakeUser);
 

@@ -206,18 +206,12 @@ enum TPermissionScope {
   NAMESPACE = 1
 }
 
-enum TPermissionOps {
-  GRANT = 0,
-  REVOKE = 1
-}
-
 /**
  * TAccessControlEntity for permission control
  */
 struct TAccessControlEntity {
  1: required string username
  2: required TPermissionScope scope
- 3: required TPermissionOps op
  4: required string actions
  5: optional Bytes tableName
  6: optional string nsName
@@ -1002,10 +996,16 @@ service Hbase {
    string getClusterId()
 
    /**
-    * Perform a permission grant or revoke on namespace or table level.
+    * Grant permissions in namespace or table level.
     */
-   bool performPermissions(
+   bool grant(
      1: required TAccessControlEntity info
    ) throws (1: IOError io)
 
+   /**
+    * Revoke permissions in namespace or table level.
+    */
+   bool revoke(
+     1: required TAccessControlEntity info
+   ) throws (1: IOError io)
 }

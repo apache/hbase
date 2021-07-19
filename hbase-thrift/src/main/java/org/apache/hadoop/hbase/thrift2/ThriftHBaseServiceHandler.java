@@ -63,7 +63,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.LogQueryFilter;
@@ -88,7 +87,6 @@ import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
-import org.apache.hadoop.hbase.thrift2.generated.TPermissionOps;
 import org.apache.hadoop.hbase.thrift2.generated.TPermissionScope;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
@@ -863,17 +861,16 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   }
 
   @Override
-  public boolean performPermissions(TAccessControlEntity info)
-    throws TIOError, TException {
+  public boolean grant(TAccessControlEntity info) throws TIOError, TException {
     Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
     try {
       if (info.scope == TPermissionScope.NAMESPACE) {
-        performNamespacePermissions(info.op, info.username, info.nsName, actions,
-            connectionCache.getAdmin().getConnection());
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
+          info.getNsName(), info.getUsername(), actions);
       } else if (info.scope == TPermissionScope.TABLE) {
-        TableName tableName = ThriftUtilities.tableNameFromThrift(info.getTableName());
-        performTablePermissions(info.op, tableName, info.username, actions,
-            connectionCache.getAdmin().getConnection());
+        TableName tableName = TableName.valueOf(info.getTableName());
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
+          tableName, info.getUsername(), null, null, actions);
       }
     } catch (Throwable t) {
       if (t instanceof IOException) {
@@ -885,24 +882,27 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     return true;
   }
 
-  private static void performNamespacePermissions(TPermissionOps op, String username,
-      String namespace, Permission.Action[] actions, Connection connection) throws Throwable {
-    if (op == TPermissionOps.GRANT) {
-      AccessControlClient.grant(connection, namespace, username, actions);
-    } else if (op == TPermissionOps.REVOKE) {
-      AccessControlClient.revoke(connection, namespace, username, actions);
+  @Override
+  public boolean revoke(TAccessControlEntity info) throws TIOError, TException {
+    Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
+    try {
+      if (info.scope == TPermissionScope.NAMESPACE) {
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
+          info.getNsName(), info.getUsername(), actions);
+      } else if (info.scope == TPermissionScope.TABLE) {
+        TableName tableName = TableName.valueOf(info.getTableName());
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
+          tableName, info.getUsername(), null, null, actions);
+      }
+    } catch (Throwable t) {
+      if (t instanceof IOException) {
+        throw getTIOError((IOException) t);
+      } else {
+        throw getTIOError(new DoNotRetryIOException(t.getMessage()));
+      }
     }
+    return true;
   }
-
-  private static void performTablePermissions(TPermissionOps op, TableName tableName,
-      String username, Permission.Action[] actions, Connection connection) throws Throwable {
-    if (op == TPermissionOps.GRANT) {
-      AccessControlClient.grant(connection, tableName, username, null, null, actions);
-    } else if (op == TPermissionOps.REVOKE) {
-      AccessControlClient.revoke(connection, tableName, username, null, null, actions);
-    }
-  }
-
 
   @Override
   public List<TNamespaceDescriptor> listNamespaceDescriptors() throws TIOError, TException {
