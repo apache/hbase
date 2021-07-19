@@ -104,18 +104,16 @@ public class TestDefaultCompactor {
     // so that we can use it later as parameter for Compactor.commitCompaction
     Path filePath = null;
     List<Path> tmpFilesList = new ArrayList<>();
-    for(HStoreFile file : store.getStorefiles()){
-      filePath = file.getPath();
-      Path tmpPath = new Path(store.getRegionFileSystem().getRegionDir(), ".tmp");
-      tmpPath = new Path(tmpPath, filePath.getName());
-      store.getFileSystem().rename(filePath, tmpPath);
-      tmpFilesList.add(tmpPath);
-      break;
-    }
+    final HStoreFile file = (HStoreFile)store.getStorefiles().toArray()[0];
+    filePath = file.getPath();
+    Path tmpPath = new Path(store.getRegionFileSystem().getRegionDir(), ".tmp");
+    tmpPath = new Path(tmpPath, filePath.getName());
+    store.getFileSystem().rename(filePath, tmpPath);
+    tmpFilesList.add(tmpPath);
     DefaultCompactor compactor = new DefaultCompactor(config, store);
     //pass the renamed original file, then asserts it has the proper store dir path
     List<HStoreFile> result = compactor.commitCompaction(mock(CompactionRequestImpl.class),
-      tmpFilesList, null);
+      tmpFilesList, null, p -> file);
     assertEquals(1, result.size());
     assertEquals(filePath, result.get(0).getPath());
   }

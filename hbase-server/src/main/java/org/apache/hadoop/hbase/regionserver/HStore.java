@@ -694,7 +694,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     refreshStoreSizeAndTotalBytes();
   }
 
-  public HStoreFile createStoreFileAndReader(final Path p) throws IOException {
+  HStoreFile createStoreFileAndReader(final Path p) throws IOException {
     StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(),
         p, isPrimaryReplicaStore());
     return createStoreFileAndReader(info);
@@ -1505,7 +1505,14 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       List<Path> newFiles) throws IOException {
     // Do the steps necessary to complete the compaction.
     setStoragePolicyFromFileName(newFiles);
-    List<HStoreFile> sfs = this.storeEngine.compactor.commitCompaction(cr, newFiles, user);
+    List<HStoreFile> sfs = this.storeEngine.compactor.commitCompaction(cr, newFiles, user,
+      p -> {
+        try {
+          return this.createStoreFileAndReader((Path) p);
+        }catch(IOException e){
+          throw new RuntimeException(e);
+        }
+      });
     writeCompactionWalRecord(filesToCompact, sfs);
     replaceStoreFiles(filesToCompact, sfs);
     if (cr.isMajor()) {

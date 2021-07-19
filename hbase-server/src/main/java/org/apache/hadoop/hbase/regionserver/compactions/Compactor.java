@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -558,18 +559,19 @@ public abstract class Compactor<T extends CellSink> {
    * @param cr the compaction request.
    * @param newFiles the new files created by this compaction under a temp dir.
    * @param user the running user.
+   * @param fileAcessor a lambda expression with logic for loading a HStoreFile given a Path.
    * @return A list of the resulting store files already placed in the store dir and loaded into the
    * store cache.
    * @throws IOException if the commit fails.
    */
-  public List<HStoreFile> commitCompaction(CompactionRequestImpl cr, List<Path> newFiles, User user)
-      throws IOException {
+  public List<HStoreFile> commitCompaction(CompactionRequestImpl cr, List<Path> newFiles,
+      User user, Function<Path, HStoreFile> fileAcessor) throws IOException {
     List<HStoreFile> sfs = new ArrayList<>(newFiles.size());
     for (Path newFile : newFiles) {
       assert newFile != null;
       this.store.validateStoreFile(newFile);
       // Move the file into the right spot
-      HStoreFile sf = createFileInStoreDir(newFile);
+      HStoreFile sf = createFileInStoreDir(newFile, fileAcessor);
       if (this.store.getCoprocessorHost() != null) {
         this.store.getCoprocessorHost().postCompact(this.store, sf, cr.getTracker(), cr, user);
       }
@@ -584,12 +586,14 @@ public abstract class Compactor<T extends CellSink> {
    * Moves the new file from temp to the actual store directory, then create the related
    * HStoreFile instance
    * @param newFile the new file created.
+   * @param fileAcessor a lambda expression with logic for loading a HStoreFile given a Path.
    * @return an HStoreFile instance.
    * @throws IOException if the file store creation fails.
    */
-  protected HStoreFile createFileInStoreDir(Path newFile) throws IOException {
+  protected HStoreFile createFileInStoreDir(Path newFile, Function<Path, HStoreFile> fileAcessor)
+      throws IOException {
     Path destPath = this.store.getRegionFileSystem().
       commitStoreFile(this.store.getColumnFamilyName(), newFile);
-    return  this.store.createStoreFileAndReader(destPath);
+    return fileAcessor.apply(destPath);
   }
 }

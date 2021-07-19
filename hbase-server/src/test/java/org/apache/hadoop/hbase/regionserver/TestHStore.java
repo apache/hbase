@@ -50,6 +50,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -1970,7 +1972,7 @@ public class TestHStore {
 
     @Override
     public List<HStoreFile> commitCompaction(CompactionRequestImpl cr,
-      List<Path> newFiles, User user){
+      List<Path> newFiles, User user, Function<Path, HStoreFile> fileAccessor){
       countDownLatch.countDown();
       return null;
     }

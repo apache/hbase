@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.apache.commons.io.file.AccumulatorPathVisitor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -47,7 +49,10 @@ import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.AtomicUtils;
 import org.apache.hadoop.hbase.util.ChecksumType;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -55,6 +60,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
+
+import java.util.concurrent.atomic.LongAccumulator;
 
 /**
  * Test class for DirectStoreCompactor.
@@ -125,11 +132,13 @@ public class TestDirectStoreCompactor {
   @Test
   public void testCreateFileInStoreDir() throws Exception {
     HStoreFile mockFile = mock(HStoreFile.class);
-    ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
-    when(mockStore.createStoreFileAndReader(pathCaptor.capture())).thenReturn(mockFile);
+    final StringBuilder builder = new StringBuilder();
     DirectStoreCompactor compactor = new DirectStoreCompactor(config, mockStore);
     StoreFileWriter writer = compactor.initWriter(mockFileDetails, false, false);
-    compactor.createFileInStoreDir(writer.getPath());
-    assertEquals(writer.getPath(), pathCaptor.getValue());
+    compactor.createFileInStoreDir(writer.getPath(), p -> {
+      builder.append(p.getParent().getName());
+      return mockFile;
+    });
+    assertEquals(writer.getPath().getParent().getName(), builder.toString());
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -90,11 +91,13 @@ public class DirectStoreCompactor extends DefaultCompactor {
    * Overrides Compactor original implementation, assuming the passed file is already in the store
    * directory, thus it only creates the related HStoreFile for the passed Path.
    * @param newFile the new file created.
+   * @param fileAcessor a lambda expression with logic for loading a HStoreFile given a Path.
    * @return HStoreFile reference for the newly created file.
    * @throws IOException if any error occurs.
    */
   @Override
-  protected HStoreFile createFileInStoreDir(Path newFile) throws IOException {
-    return this.store.createStoreFileAndReader(newFile);
+  protected HStoreFile createFileInStoreDir(Path newFile,
+      Function<Path, HStoreFile> fileAcessor) throws IOException {
+    return fileAcessor.apply(newFile);
   }
 }
