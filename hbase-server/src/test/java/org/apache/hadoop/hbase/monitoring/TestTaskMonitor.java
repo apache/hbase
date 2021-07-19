@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
-import static org.junit.Assert.*;
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -34,9 +37,12 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestTaskMonitor {
+  private static final Logger LOG = LoggerFactory.getLogger(TestTaskMonitor.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -225,6 +231,67 @@ public class TestTaskMonitor {
     task.setStatus("status3");
     assertEquals("status3", task.getStatusJournal().get(1).getStatus());
     tm.shutdown();
+  }
+
+  @Test
+  public void testClone() throws Exception {
+    MonitoredRPCHandlerImpl monitor = new MonitoredRPCHandlerImpl();
+    monitor.abort("abort RPC");
+    TestParam testParam = new TestParam("param1");
+    monitor.setRPC("method1", new Object[]{ testParam }, 0);
+    MonitoredRPCHandlerImpl clone = monitor.clone();
+    assertEquals(clone.getDescription(), monitor.getDescription());
+    assertEquals(clone.getState(), monitor.getState());
+    assertEquals(clone.getStatus(), monitor.getStatus());
+    assertEquals(clone.toString(), monitor.toString());
+    assertEquals(clone.toMap(), monitor.toMap());
+    assertEquals(clone.toJSON(), monitor.toJSON());
+
+    // mark complete and make param dirty
+    monitor.markComplete("complete RPC");
+    testParam.setParam("dirtyParam");
+    assertEquals(clone.getDescription(), monitor.getDescription());
+    assertNotEquals(clone.getState(), monitor.getState());
+    assertNotEquals(clone.getStatus(), monitor.getStatus());
+    monitor.setState(MonitoredTask.State.RUNNING);
+    try {
+      // when markComplete, the param in monitor is set null, so toMap should fail here
+      monitor.toMap();
+      fail("Should not call toMap successfully, because param=null");
+    } catch (Exception e) {
+    }
+    // the param of clone monitor should not be dirty
+    assertNotEquals("[dirtyString]",
+      String.valueOf(((Map<String, Object>) clone.toMap().get("rpcCall")).get("params")));
+
+    monitor.resume("resume");
+    monitor.setRPC("method2", new Object[]{new TestParam("param2")}, 1);
+    assertNotEquals(((Map<String, Object>) clone.toMap().get("rpcCall")).get("params"),
+      ((Map<String, Object>) monitor.toMap().get("rpcCall")).get(
+        "params"));
+    LOG.info(String.valueOf(clone.toMap()));
+    LOG.info(String.valueOf(monitor.toMap()));
+    assertNotEquals(clone.toString(), monitor.toString());
+    assertNotEquals(clone.getRPCQueueTime(), monitor.getRPCQueueTime());
+    assertNotEquals(clone.toMap(), monitor.toMap());
+    assertNotEquals(clone.toJSON(), monitor.toJSON());
+  }
+
+  private class TestParam {
+    public String param = null;
+
+    public TestParam(String param) {
+      this.param = param;
+    }
+
+    public void setParam(String param) {
+      this.param = param;
+    }
+
+    @Override
+    public String toString() {
+      return param;
+    }
   }
 }
 

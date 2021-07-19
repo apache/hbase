@@ -53,11 +53,20 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
 
   @Override
   public synchronized MonitoredRPCHandlerImpl clone() {
-    return (MonitoredRPCHandlerImpl) super.clone();
+    MonitoredRPCHandlerImpl clone = (MonitoredRPCHandlerImpl) super.clone();
+    return wrap(clone);
+  }
+
+  public synchronized WrappedMonitoredRPCHandlerImpl wrap(MonitoredRPCHandlerImpl
+    monitoredRPCHandler) {
+    WrappedMonitoredRPCHandlerImpl wrappedMonitoredRPCHandler =
+      new WrappedMonitoredRPCHandlerImpl(monitoredRPCHandler);
+    wrappedMonitoredRPCHandler.setCallInfoMap(toMap());
+    return wrappedMonitoredRPCHandler;
   }
 
   /**
-   * Gets the status of this handler; if it is currently servicing an RPC, 
+   * Gets the status of this handler; if it is currently servicing an RPC,
    * this status will include the RPC information.
    * @return a String describing the current status.
    */
