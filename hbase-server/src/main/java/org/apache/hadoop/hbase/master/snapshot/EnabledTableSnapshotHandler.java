@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -70,8 +71,11 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
    */
   @Override
   protected void snapshotRegions(List<Pair<RegionInfo, ServerName>> regions) throws IOException {
-    Set<String> regionServers = new HashSet<>(regions.size());
-    for (Pair<RegionInfo, ServerName> region : regions) {
+    List<Pair<RegionInfo, ServerName>> defaultRegions = regions.stream()
+      .filter(region -> RegionReplicaUtil.isDefaultReplica(region.getFirst()))
+      .collect(Collectors.toList());
+    Set<String> regionServers = new HashSet<>(defaultRegions.size());
+    for (Pair<RegionInfo, ServerName> region : defaultRegions) {
       if (region != null && region.getFirst() != null && region.getSecond() != null) {
         RegionInfo hri = region.getFirst();
         if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) continue;
@@ -96,7 +100,7 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
       LOG.info("Done waiting - online snapshot for " + this.snapshot.getName());
 
       // Take the offline regions as disabled
-      for (Pair<RegionInfo, ServerName> region : regions) {
+      for (Pair<RegionInfo, ServerName> region : defaultRegions) {
         RegionInfo regionInfo = region.getFirst();
         if (regionInfo.isOffline() && (regionInfo.isSplit() || regionInfo.isSplitParent()) &&
             RegionReplicaUtil.isDefaultReplica(regionInfo)) {

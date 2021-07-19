@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.zookeeper.KeeperException;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -148,6 +149,11 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
       involvedRegions = getRegionsToFlush(table);
     } catch (IOException e1) {
       throw new IllegalStateException("Failed to figure out if there is region to flush.", e1);
+    }
+
+    if (CollectionUtils.isEmpty(involvedRegions)) {
+      LOG.info("no region of {} is online on the {}.", table, this.rss.getServerName());
+      return null;
     }
 
     // We need to run the subprocedure even if we have no relevant regions.  The coordinator
