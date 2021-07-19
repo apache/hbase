@@ -124,10 +124,12 @@ class ReplicationSourceWALReader extends Thread {
     int sleepMultiplier = 1;
     while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
       WALEntryBatch batch = null;
-      try (WALEntryStream entryStream =
+      WALEntryStream entryStream = null;
+      try {
+        entryStream =
           new WALEntryStream(logQueue, conf, currentPosition,
-              source.getWALFileLengthProvider(), source.getServerWALsBelongTo(),
-              source.getSourceMetrics(), walGroupId)) {
+            source.getWALFileLengthProvider(), source.getServerWALsBelongTo(),
+            source.getSourceMetrics(), walGroupId);
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
           batch = null;
           if (!source.isPeerEnabled()) {
@@ -156,7 +158,7 @@ class ReplicationSourceWALReader extends Thread {
           sleepMultiplier = 1;
         }
       } catch (WALEntryFilterRetryableException | IOException e) { // stream related
-        if (!handleEofException(e, batch)) {
+        if (!handleEofException(e, batch, entryStream)) {
           LOG.warn("Failed to read stream of replication entries", e);
           if (sleepMultiplier < maxRetriesMultiplier) {
             sleepMultiplier++;
@@ -166,6 +168,14 @@ class ReplicationSourceWALReader extends Thread {
       } catch (InterruptedException e) {
         LOG.trace("Interrupted while sleeping between WAL reads or adding WAL batch to ship queue");
         Thread.currentThread().interrupt();
+      } finally {
+        try {
+          if (entryStream != null) {
+            entryStream.close();
+          }
+        } catch (IOException ioe) {
+          LOG.warn("Exception while closing WALEntryStream", ioe);
+        }
       }
     }
   }
@@ -268,17 +278,20 @@ class ReplicationSourceWALReader extends Thread {
    * logs from replication queue
    * @return true only the IOE can be handled
    */
-  private boolean handleEofException(Exception e, WALEntryBatch batch) {
+  private boolean handleEofException(Exception e, WALEntryBatch batch, WALEntryStream entryStream) {
     PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
     // Dump the log even if logQueue size is 1 if the source is from recovered Source
     // since we don't add current log to recovered source queue so it is safe to remove.
     if ((e instanceof EOFException || e.getCause() instanceof EOFException) &&
       (source.isRecovered() || queue.size() > 1) && this.eofAutoRecovery) {
-      Path head = queue.peek();
+      Path path = queue.peek();
       try {
-        if (fs.getFileStatus(head).getLen() == 0) {
-          // head of the queue is an empty log file
-          LOG.warn("Forcing removal of 0 length log in queue: {}", head);
+        if (!fs.exists(path)) {
+          // There is a chance that wal has moved to oldWALs directory, so look there also.
+          path = entryStream.getArchivedLog(path);
+        }
+        if (fs.getFileStatus(path).getLen() == 0) {
+          LOG.warn("Forcing removal of 0 length log in queue: {}", path);
           logQueue.remove(walGroupId);
           currentPosition = 0;
           if (batch != null) {
@@ -289,7 +302,7 @@ class ReplicationSourceWALReader extends Thread {
           return true;
         }
       } catch (IOException ioe) {
-        LOG.warn("Couldn't get file length information about log " + queue.peek(), ioe);
+        LOG.warn("Couldn't get file length information about log " + path, ioe);
       } catch (InterruptedException ie) {
         LOG.trace("Interrupted while adding WAL batch to ship queue");
         Thread.currentThread().interrupt();
