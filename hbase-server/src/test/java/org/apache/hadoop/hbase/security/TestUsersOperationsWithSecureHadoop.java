@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -66,6 +67,11 @@ public class TestUsersOperationsWithSecureHadoop {
   @BeforeClass
   public static void setUp() throws Exception {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
+
+    // update default realm
+    sun.security.krb5.Config.refresh();
+    KerberosName.resetDefaultRealm();
+
     PRINCIPAL = "hbase/" + HOST;
     CLIENT_NAME = "foo";
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, CLIENT_NAME);
