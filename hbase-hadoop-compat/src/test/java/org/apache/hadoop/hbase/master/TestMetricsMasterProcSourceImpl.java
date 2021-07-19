@@ -20,10 +20,14 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -38,6 +42,23 @@ public class TestMetricsMasterProcSourceImpl {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetricsMasterProcSourceImpl.class);
 
+  public static MetricsAssertHelper HELPER =
+    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+
+  private MetricsMasterWrapperStub wrapper;
+  private MetricsMasterProcSourceImpl masterProcSource;
+
+  @BeforeClass
+  public static void classSetup() {
+    HELPER.init();
+  }
+
+  @Before
+  public void setUp() {
+    wrapper = new MetricsMasterWrapperStub();
+    masterProcSource = new MetricsMasterProcSourceImpl(wrapper);
+  }
+
   @Test
   public void testGetInstance() throws Exception {
     MetricsMasterProcSourceFactory metricsMasterProcSourceFactory = CompatibilitySingletonFactory
@@ -48,4 +69,13 @@ public class TestMetricsMasterProcSourceImpl {
             CompatibilitySingletonFactory.getInstance(MetricsMasterProcSourceFactory.class));
   }
 
+  @Test
+  public void testSplitProcedureMetrics() {
+    HELPER
+      .assertGauge(MetricsMasterProcSource.NUM_SPLIT_PROCEDURE_REQUEST_NAME, 32, masterProcSource);
+    HELPER
+      .assertGauge(MetricsMasterProcSource.NUM_SPLIT_PROCEDURE_SUCCESS_NAME, 24, masterProcSource);
+    HELPER.assertGauge("SplitProcedureTime_max", 3011, masterProcSource);
+    HELPER.assertGauge("SplitProcedureTime_min", 2082, masterProcSource);
+  }
 }

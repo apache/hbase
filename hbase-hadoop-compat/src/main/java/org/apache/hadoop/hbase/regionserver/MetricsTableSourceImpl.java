@@ -55,11 +55,6 @@ import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.MAJ
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.MAJOR_COMPACTION_OUTPUT_SIZE_DESC;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.MAJOR_COMPACTION_TIME;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.MAJOR_COMPACTION_TIME_DESC;
-import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_KEY;
-import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_REQUEST_DESC;
-import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_REQUEST_KEY;
-import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_DESC;
-import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_KEY;
 
 import java.util.Map;
 import java.util.Map.Entry;
@@ -184,10 +179,6 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
       MAJOR_COMPACTED_INPUT_BYTES_DESC, 0L);
     majorCompactedOutputBytes = registry.newCounter(tableNamePrefix + MAJOR_COMPACTED_OUTPUT_BYTES,
       MAJOR_COMPACTED_OUTPUT_BYTES_DESC, 0L);
-
-    splitTimeHisto = registry.newTimeHistogram(tableNamePrefix + SPLIT_KEY);
-    splitRequest = registry.newCounter(tableNamePrefix + SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0L);
-    splitSuccess = registry.newCounter(tableNamePrefix + SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0L);
   }
 
   private void deregisterMetrics() {
@@ -210,9 +201,6 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     registry.removeHistogramMetrics(tableNamePrefix + MAJOR_COMPACTION_OUTPUT_SIZE);
     registry.removeMetric(tableNamePrefix + MAJOR_COMPACTED_INPUT_BYTES);
     registry.removeMetric(tableNamePrefix + MAJOR_COMPACTED_OUTPUT_BYTES);
-    registry.removeHistogramMetrics(tableNamePrefix + SPLIT_KEY);
-    registry.removeMetric(tableNamePrefix + SPLIT_REQUEST_KEY);
-    registry.removeMetric(tableNamePrefix + SPLIT_SUCCESS_KEY);
   }
 
   @Override

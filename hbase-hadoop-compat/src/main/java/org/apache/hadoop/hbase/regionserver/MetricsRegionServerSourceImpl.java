@@ -56,11 +56,6 @@ public class MetricsRegionServerSourceImpl
   private final MutableFastCounter slowIncrement;
   private final MutableFastCounter slowAppend;
 
-  // split related metrics
-  private final MutableFastCounter splitRequest;
-  private final MutableFastCounter splitSuccess;
-  private final MetricHistogram splitTimeHisto;
-
   // flush related metrics
   private final MetricHistogram flushTimeHisto;
   private final MetricHistogram flushMemstoreSizeHisto;
@@ -168,10 +163,6 @@ public class MetricsRegionServerSourceImpl
     majorCompactedOutputBytes = getMetricsRegistry()
         .newCounter(MAJOR_COMPACTED_OUTPUT_BYTES, MAJOR_COMPACTED_OUTPUT_BYTES_DESC, 0L);
 
-    splitTimeHisto = getMetricsRegistry().newTimeHistogram(SPLIT_KEY);
-    splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0L);
-    splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0L);
-
     // pause monitor metrics
     infoPauseThresholdExceeded = getMetricsRegistry().newCounter(INFO_THRESHOLD_COUNT_KEY,
       INFO_THRESHOLD_COUNT_DESC, 0L);
@@ -244,21 +235,6 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void incrSlowAppend() {
     slowAppend.incr();
-  }
-
-  @Override
-  public void incrSplitRequest() {
-    splitRequest.incr();
-  }
-
-  @Override
-  public void incrSplitSuccess() {
-    splitSuccess.incr();
-  }
-
-  @Override
-  public void updateSplitTime(long t) {
-    splitTimeHisto.add(t);
   }
 
   @Override
