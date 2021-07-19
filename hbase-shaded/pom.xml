@@ -41,6 +41,7 @@
     <modules>
         <module>hbase-shaded-client-byo-hadoop</module>
         <module>hbase-shaded-client</module>
+        <module>hbase-shaded-endpoint</module>
         <module>hbase-shaded-mapreduce</module>
         <module>hbase-shaded-testing-util</module>
         <module>hbase-shaded-testing-util-tester</module>
