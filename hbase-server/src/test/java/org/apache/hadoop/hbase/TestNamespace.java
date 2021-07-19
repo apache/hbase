@@ -169,6 +169,15 @@ public class TestNamespace {
     } finally {
       assertTrue(exceptionCaught);
     }
+
+    try {
+      admin.deleteNamespace(NamespaceDescriptor.MASTER_NAMESPACE_NAME_STR);
+    } catch (IOException exp) {
+      LOG.warn(exp.toString(), exp);
+      exceptionCaught = true;
+    } finally {
+      assertTrue(exceptionCaught);
+    }
   }
 
   @Test
