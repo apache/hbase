@@ -26,6 +26,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -169,13 +170,8 @@ class ReplicationSourceWALReader extends Thread {
         LOG.trace("Interrupted while sleeping between WAL reads or adding WAL batch to ship queue");
         Thread.currentThread().interrupt();
       } finally {
-        try {
-          if (entryStream != null) {
-            entryStream.close();
-          }
-        } catch (IOException ioe) {
-          LOG.warn("Exception while closing WALEntryStream", ioe);
-        }
+        IOUtils.closeQuietly(entryStream,
+          e -> LOG.warn("Exception while closing WALEntryStream", e));
       }
     }
   }
