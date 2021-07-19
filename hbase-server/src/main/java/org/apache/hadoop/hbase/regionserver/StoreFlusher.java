@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -70,10 +71,17 @@ abstract class StoreFlusher {
     writer.close();
   }
 
+  protected final StoreFileWriter createWriter(MemStoreSnapshot snapshot, boolean alwaysIncludesTag)
+    throws IOException {
+    return store.getStoreEngine().getStoreFileTracker()
+      .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(snapshot.getCellsCount())
+        .compression(store.getColumnFamilyDescriptor().getCompressionType()).isCompaction(false)
+        .includeMVCCReadpoint(true).includesTag(alwaysIncludesTag || snapshot.isTagsPresent())
+        .shouldDropBehind(false));
+  }
 
   /**
    * Creates the scanner for flushing snapshot. Also calls coprocessors.
-   * @param snapshotScanners
    * @return The scanner; null if coprocessor is canceling the flush.
    */
   protected final InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,

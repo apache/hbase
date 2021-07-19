@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 
@@ -42,7 +43,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
-  StripeCompactionPolicy, StripeCompactor, StripeStoreFileManager> {
+  StripeCompactionPolicy, StripeCompactor, StripeStoreFileManager, StoreFileTracker> {
   private static final Logger LOG = LoggerFactory.getLogger(StripeStoreEngine.class);
   private StripeStoreConfig config;
 
@@ -65,6 +66,7 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
     this.storeFlusher = new StripeStoreFlusher(
       conf, store, this.compactionPolicy, this.storeFileManager);
     this.compactor = new StripeCompactor(conf, store);
+    this.storeFileTracker = createStoreFileTracker(store);
   }
 
   /**

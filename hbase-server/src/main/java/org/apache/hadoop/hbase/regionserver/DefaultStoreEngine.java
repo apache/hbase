@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -39,8 +40,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * their derivatives.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class DefaultStoreEngine extends StoreEngine<
-  DefaultStoreFlusher, RatioBasedCompactionPolicy, DefaultCompactor, DefaultStoreFileManager> {
+public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher,
+  RatioBasedCompactionPolicy, DefaultCompactor, DefaultStoreFileManager, StoreFileTracker> {
 
   public static final String DEFAULT_STORE_FLUSHER_CLASS_KEY =
       "hbase.hstore.defaultengine.storeflusher.class";
@@ -71,6 +72,7 @@ public class DefaultStoreEngine extends StoreEngine<
     storeFileManager =
         new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
             compactionPolicy.getConf());
+    storeFileTracker = createStoreFileTracker(store);
   }
 
   protected void createCompactor(Configuration conf, HStore store) throws IOException {

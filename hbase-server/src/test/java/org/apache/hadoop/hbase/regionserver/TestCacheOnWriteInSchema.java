@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -215,8 +216,10 @@ public class TestCacheOnWriteInSchema {
   @Test
   public void testCacheOnWriteInSchema() throws IOException {
     // Write some random data into the store
-    StoreFileWriter writer = store.createWriterInTmp(Integer.MAX_VALUE,
-        HFile.DEFAULT_COMPRESSION_ALGORITHM, false, true, false, false);
+    StoreFileWriter writer = store.getStoreEngine().getStoreFileTracker()
+      .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(Integer.MAX_VALUE)
+        .compression(HFile.DEFAULT_COMPRESSION_ALGORITHM).isCompaction(false)
+        .includeMVCCReadpoint(true).includesTag(false).shouldDropBehind(false));
     writeStoreFile(writer);
     writer.close();
     // Verify the block types of interest were cached on write
