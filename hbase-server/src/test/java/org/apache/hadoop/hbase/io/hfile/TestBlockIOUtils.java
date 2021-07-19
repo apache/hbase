@@ -21,6 +21,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -138,9 +139,11 @@ public class TestBlockIOUtils {
     ByteBuff bb = new SingleByteBuff(ByteBuffer.wrap(buf, 0, totalLen));
     FSDataInputStream in = mock(FSDataInputStream.class);
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(totalLen);
+    when(in.hasCapability(anyString())).thenReturn(false);
     boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
     assertFalse("Expect false return when no extra bytes requested", ret);
     verify(in).read(position, buf, bufOffset, totalLen);
+    verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
   }
 
@@ -156,10 +159,12 @@ public class TestBlockIOUtils {
     FSDataInputStream in = mock(FSDataInputStream.class);
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(5);
     when(in.read(5, buf, 5, 5)).thenReturn(5);
+    when(in.hasCapability(anyString())).thenReturn(false);
     boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
     assertFalse("Expect false return when no extra bytes requested", ret);
     verify(in).read(position, buf, bufOffset, totalLen);
     verify(in).read(5, buf, 5, 5);
+    verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
   }
 
@@ -174,9 +179,11 @@ public class TestBlockIOUtils {
     ByteBuff bb = new SingleByteBuff(ByteBuffer.wrap(buf, 0, totalLen));
     FSDataInputStream in = mock(FSDataInputStream.class);
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(totalLen);
+    when(in.hasCapability(anyString())).thenReturn(false);
     boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
     assertTrue("Expect true return when reading extra bytes succeeds", ret);
     verify(in).read(position, buf, bufOffset, totalLen);
+    verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
   }
 
@@ -191,9 +198,11 @@ public class TestBlockIOUtils {
     ByteBuff bb = new SingleByteBuff(ByteBuffer.wrap(buf, 0, totalLen));
     FSDataInputStream in = mock(FSDataInputStream.class);
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(necessaryLen);
+    when(in.hasCapability(anyString())).thenReturn(false);
     boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
     assertFalse("Expect false return when reading extra bytes fails", ret);
     verify(in).read(position, buf, bufOffset, totalLen);
+    verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
   }
 
@@ -210,10 +219,12 @@ public class TestBlockIOUtils {
     FSDataInputStream in = mock(FSDataInputStream.class);
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(5);
     when(in.read(5, buf, 5, 10)).thenReturn(10);
+    when(in.hasCapability(anyString())).thenReturn(false);
     boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
     assertTrue("Expect true return when reading extra bytes succeeds", ret);
     verify(in).read(position, buf, bufOffset, totalLen);
     verify(in).read(5, buf, 5, 10);
+    verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
   }
 
@@ -229,6 +240,7 @@ public class TestBlockIOUtils {
     FSDataInputStream in = mock(FSDataInputStream.class);
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(9);
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(-1);
+    when(in.hasCapability(anyString())).thenReturn(false);
     exception.expect(IOException.class);
     exception.expectMessage("EOF");
     BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
