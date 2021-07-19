@@ -181,7 +181,21 @@ public interface AsyncAdmin {
    * Modify an existing table, more IRB friendly version.
    * @param desc modified description of the table
    */
-  CompletableFuture<Void> modifyTable(TableDescriptor desc);
+  default CompletableFuture<Void> modifyTable(TableDescriptor desc){
+    return modifyTable(desc, false);
+  }
+
+  /**
+   * Modify an existing table, more IRB friendly version.
+   * @param desc description of the table
+   * @param lazyMode When the lazy mode is enabled, the modification will not
+   *                 reopen any regions of the table so as to avoid RIT.
+   *                 A region would not aware of this modification till it reopened
+   *                 by another procedure(e.g. balance, move).
+   *                 Note that it temporarily lead to inconsistencies in the configuration of regions
+   */
+  CompletableFuture<Void> modifyTable(TableDescriptor desc, boolean lazyMode);
+
 
   /**
    * Deletes a table.

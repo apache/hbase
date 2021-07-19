@@ -467,7 +467,12 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
-    return admin.modifyTable(td);
+    return modifyTableAsync(td, false);
+  }
+
+  @Override
+  public Future<Void> modifyTableAsync(TableDescriptor td, boolean lazyMode) throws IOException {
+    return admin.modifyTable(td, lazyMode);
   }
 
   @Override

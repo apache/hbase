@@ -715,6 +715,10 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException("modifyTableAsync not supported in ThriftAdmin");
   }
 
+  @Override public Future<Void> modifyTableAsync(TableDescriptor td, boolean lazyMode){
+    throw new NotImplementedException("modifyTableAsync not supported in ThriftAdmin");
+  }
+
   @Override
   public void shutdown() {
     throw new NotImplementedException("shutdown not supported in ThriftAdmin");

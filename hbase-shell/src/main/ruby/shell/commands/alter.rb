@@ -72,6 +72,12 @@ You can also set configuration settings specific to this table or column family:
   hbase> alter 't1', CONFIGURATION => {'hbase.hregion.scan.loadColumnFamiliesOnDemand' => 'true'}
   hbase> alter 't1', {NAME => 'f2', CONFIGURATION => {'hbase.hstore.blockingStoreFiles' => '10'}}
 
+You can also set configuration setting with lazy_mode to avoid regions RIT, which let the
+modification take effect after regions was reopened (Be careful, the regions of the table may be
+configured inconsistently If using lazy mode)
+
+  hbase> alter 't1', METHOD => 'lazy_mode', CONFIGURATION => {'hbase.hregion.scan.loadColumnFamiliesOnDemand' => 'true'}
+
 You can also unset configuration settings specific to this table:
 
   hbase> alter 't1', METHOD => 'table_conf_unset', NAME => 'hbase.hregion.majorcompaction'

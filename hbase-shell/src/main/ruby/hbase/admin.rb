@@ -770,6 +770,7 @@ module Hbase
       # Get table descriptor
       tdb = TableDescriptorBuilder.newBuilder(@admin.getDescriptor(table_name))
       hasTableUpdate = false
+      lazy_mode = false
 
       # Process all args
       args.each do |arg|
@@ -782,6 +783,12 @@ module Hbase
         # There are 3 possible options.
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
         method = arg.delete(METHOD)
+
+        if !method.nil? && method == 'lazy_mode'
+          lazy_mode = true;
+          method = nil
+        end
+
         if method.nil? && arg.key?(NAME)
           descriptor = cfd(arg, tdb)
           column_name = descriptor.getNameAsString
@@ -891,9 +898,13 @@ module Hbase
 
       # Bulk apply all table modifications.
       if hasTableUpdate
-        future = @admin.modifyTableAsync(tdb.build)
-
-        if wait == true
+        future = @admin.modifyTableAsync(tdb.build, lazy_mode)
+        if lazy_mode == true
+          puts("WARNING: You are using lazy_mode to modify a table, which will cause "\
+                            "inconsistencies in online regions configuration and other risks. "\
+                            "If you encounter any problems, use non-lazy mode to alter again!")
+          future.get
+        elsif wait == true
           puts 'Updating all regions with the new schema...'
           future.get
         end

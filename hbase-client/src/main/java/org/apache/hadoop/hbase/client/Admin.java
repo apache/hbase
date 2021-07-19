@@ -1033,7 +1033,25 @@ public interface Admin extends Abortable, Closeable {
    * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
    *         operation to complete
    */
-  Future<Void> modifyTableAsync(TableDescriptor td) throws IOException;
+  default Future<Void> modifyTableAsync(TableDescriptor td) throws IOException{
+    return modifyTableAsync(td, false);
+  }
+
+  /**
+   * Same as {@link #modifyTableAsync(TableDescriptor td)}. except
+   * {@code lazyMode} will control whether user lazy mode to modify a table
+   * @param td description of the table
+   * @param lazyMode When the lazy mode is enabled, the modification will not
+   *                 reopen any regions of the table so as to avoid RIT.
+   *                 A region would not aware of this modification till it reopened
+   *                 by another procedure(e.g. balance, move).
+   *                 Note that it temporarily lead to inconsistencies
+   *                 in the configuration of regions
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete
+   */
+  Future<Void> modifyTableAsync(TableDescriptor td, boolean lazyMode) throws IOException;
 
   /**
    * Shuts down the HBase cluster.

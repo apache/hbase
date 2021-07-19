@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -32,9 +33,11 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -59,6 +62,7 @@ public class ModifyTableProcedure
   private TableDescriptor modifiedTableDescriptor;
   private boolean deleteColumnFamilyInModify;
   private boolean shouldCheckDescriptor;
+  private boolean lazyMode;
   /**
    * List of column families that cannot be deleted from the hbase:meta table.
    * They are critical to cluster operation. This is a bit of an odd place to
@@ -89,9 +93,17 @@ public class ModifyTableProcedure
       final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
       final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor)
           throws HBaseIOException {
+    this(env, newTableDescriptor, latch, oldTableDescriptor, shouldCheckDescriptor, false);
+  }
+
+  public ModifyTableProcedure(final MasterProcedureEnv env,
+    final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
+    final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor,
+    final boolean lazyMode) throws HBaseIOException {
     super(env, latch);
     initialize(oldTableDescriptor, shouldCheckDescriptor);
     this.modifiedTableDescriptor = newTableDescriptor;
+    this.lazyMode = lazyMode;
     preflightChecks(env, null/*No table checks; if changing peers, table can be online*/);
   }
 
@@ -109,6 +121,47 @@ public class ModifyTableProcedure
         }
       }
     }
+    if (lazyMode) {
+      if (this.unmodifiedTableDescriptor == null) {
+        throw new HBaseIOException(
+          "unmodifiedTableDescriptor is null when use lazy mode to modify table");
+      }
+      if (0 != this.unmodifiedTableDescriptor.getTableName()
+        .compareTo(this.modifiedTableDescriptor.getTableName())) {
+        throw new HBaseIOException("Inconsistent unmodified and modified table names");
+      }
+      if (0 != TableDescriptor.getColumnFamilyComparator(ColumnFamilyDescriptor.COMPARATOR)
+        .compare(this.unmodifiedTableDescriptor, this.modifiedTableDescriptor)){
+        throw new HBaseIOException("Can not modify Column Family when the lazy mode was enabled");
+      }
+      if (this.unmodifiedTableDescriptor.getCoprocessorDescriptors().hashCode()
+        != this.modifiedTableDescriptor.getCoprocessorDescriptors().hashCode()) {
+        throw new HBaseIOException("Can not modify Coprocessor when the lazy mode was enabled");
+      }
+      final Set<String> s = new HashSet<>(
+        Arrays.asList(
+          TableDescriptorBuilder.REGION_REPLICATION,
+          TableDescriptorBuilder.REGION_MEMSTORE_REPLICATION,
+          RSGroupInfo.TABLE_DESC_PROP_GROUP));
+      for (String k : s) {
+        if (isTablePropertyModified(this.unmodifiedTableDescriptor, this.modifiedTableDescriptor, k)) {
+          throw new HBaseIOException(
+            "Can not modify " + k + " of a table when the lazy mode was enabled");
+        }
+      }
+    }
+  }
+
+  private boolean isTablePropertyModified(TableDescriptor oldDescriptor, TableDescriptor newDescriptor,
+    String key) {
+    String oldV = oldDescriptor.getValue(key);
+    String newV = newDescriptor.getValue(key);
+    if (oldV == null && newV == null) {
+      return false;
+    } else if (oldV != null && newV != null && oldV.equals(newV)) {
+      return false;
+    }
+    return true;
   }
 
   private void initialize(final TableDescriptor unmodifiedTableDescriptor,
@@ -130,7 +183,12 @@ public class ModifyTableProcedure
           break;
         case MODIFY_TABLE_PRE_OPERATION:
           preModify(env, state);
-          setNextState(ModifyTableState.MODIFY_TABLE_CLOSE_EXCESS_REPLICAS);
+          if (lazyMode){
+            //lazy mode does not allow to modify replicas
+            setNextState(ModifyTableState.MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR);
+          }else {
+            setNextState(ModifyTableState.MODIFY_TABLE_CLOSE_EXCESS_REPLICAS);
+          }
           break;
         case MODIFY_TABLE_CLOSE_EXCESS_REPLICAS:
           if (isTableEnabled(env)) {
@@ -140,7 +198,12 @@ public class ModifyTableProcedure
           break;
         case MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR:
           updateTableDescriptor(env);
-          setNextState(ModifyTableState.MODIFY_TABLE_REMOVE_REPLICA_COLUMN);
+          if(lazyMode){
+            //lazy mode does not allow to modify replicas
+            setNextState(ModifyTableState.MODIFY_TABLE_POST_OPERATION);
+          }else {
+            setNextState(ModifyTableState.MODIFY_TABLE_REMOVE_REPLICA_COLUMN);
+          }
           break;
         case MODIFY_TABLE_REMOVE_REPLICA_COLUMN:
           removeReplicaColumnsIfNeeded(env);
@@ -148,7 +211,13 @@ public class ModifyTableProcedure
           break;
         case MODIFY_TABLE_POST_OPERATION:
           postModify(env, state);
-          setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
+          if (lazyMode){
+            //Since lazy mode does not allow to reopen regions or modify replica and no CF modification
+            return Flow.NO_MORE_STATE;
+          }
+          else {
+            setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
+          }
           break;
         case MODIFY_TABLE_REOPEN_ALL_REGIONS:
           if (isTableEnabled(env)) {
@@ -242,7 +311,8 @@ public class ModifyTableProcedure
             .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
             .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor))
             .setDeleteColumnFamilyInModify(deleteColumnFamilyInModify)
-            .setShouldCheckDescriptor(shouldCheckDescriptor);
+            .setShouldCheckDescriptor(shouldCheckDescriptor)
+            .setLazyMode(lazyMode);
 
     if (unmodifiedTableDescriptor != null) {
       modifyTableMsg
@@ -264,6 +334,8 @@ public class ModifyTableProcedure
     deleteColumnFamilyInModify = modifyTableMsg.getDeleteColumnFamilyInModify();
     shouldCheckDescriptor = modifyTableMsg.hasShouldCheckDescriptor()
         ? modifyTableMsg.getShouldCheckDescriptor() : false;
+    lazyMode = modifyTableMsg.hasLazyMode()
+      ? modifyTableMsg.getLazyMode() : false;
 
     if (modifyTableMsg.hasUnmodifiedTableSchema()) {
       unmodifiedTableDescriptor =

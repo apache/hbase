@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
+import java.util.List;
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -37,6 +40,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility.St
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -593,5 +597,105 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     t1.join();
     t2.join();
     assertFalse("Expected ConcurrentTableModificationException.", (t1.exception || t2.exception));
+  }
+
+  @Test
+  public void testModifyInLazyMode() throws IOException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf");
+    UTIL.getAdmin().disableTable(tableName);
+
+    // Test 1: Modify property in lazy mode
+    TableDescriptor htd = UTIL.getAdmin().getDescriptor(tableName);
+    TableDescriptor modifiedDescriptor =
+      TableDescriptorBuilder.newBuilder(htd)
+        .setValue("test.hbase.conf", "test.hbase.conf.value")
+        .build();
+    long procId1 = ProcedureTestingUtility.submitAndWait(procExec,
+      new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd, false,
+        true));
+    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId1));
+    TableDescriptor currentHtd = UTIL.getAdmin().getDescriptor(tableName);
+    assertEquals("test.hbase.conf.value", currentHtd.getValue("test.hbase.conf"));
+    List<HRegion> onlineRegions = UTIL.getHBaseCluster().getRegions(tableName);
+    //Regions should not aware of any changes.
+    for (HRegion r : onlineRegions) {
+      Assert.assertNull(r.getTableDescriptor().getValue("test.hbase.conf"));
+    }
+    //Force regions reopen
+    for (HRegion r : onlineRegions) {
+      getMaster().getAssignmentManager().move(r.getRegionInfo());
+    }
+    //After regions reopen, check the conf should be updated
+    for (HRegion r : onlineRegions) {
+      Assert.assertEquals("test.hbase.conf.value",
+        r.getTableDescriptor().getValue("test.hbase.conf.value"));
+    }
+
+    // Test 2: Modify region replication in lazy mode
+    htd = UTIL.getAdmin().getDescriptor(tableName);
+    long oldRegionReplication = htd.getRegionReplication();
+    modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd)
+      .setRegionReplication(3)
+      .build();
+    try {
+      new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd, false,
+        true);
+      Assert.fail("Should have throw exception while modifying region replication properties!");
+    } catch (HBaseIOException e) {
+      Assert.assertTrue(e.getMessage().contains("Can not modify"));
+    }
+    currentHtd = UTIL.getAdmin().getDescriptor(tableName);
+    //Nothing changed
+    assertEquals(oldRegionReplication, currentHtd.getRegionReplication());
+
+    // Test 3: Add CF in lazy mode
+    htd = UTIL.getAdmin().getDescriptor(tableName);
+    modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder("NewCF".getBytes()).build())
+      .build();
+    try {
+      new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd, false,
+        true);
+      Assert.fail("Should have throw exception while modifying CF!");
+    } catch (HBaseIOException e) {
+      Assert.assertTrue(e.getMessage().contains("Can not modify Column Family"));
+    }
+    currentHtd = UTIL.getAdmin().getDescriptor(tableName);
+    Assert.assertNull(currentHtd.getColumnFamily("NewCF".getBytes()));
+
+    // Test 4: Modify CF property in lazy mode
+    htd = UTIL.getAdmin().getDescriptor(tableName);
+    modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd)
+      .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes()).
+        setCompressionType(Compression.Algorithm.SNAPPY)
+        .build())
+      .build();
+    try {
+      new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd, false,
+        true);
+      Assert.fail("Should have throw exception while modifying CF!");
+    } catch (HBaseIOException e) {
+      Assert.assertTrue(e.getMessage().contains("Can not modify Column Family"));
+    }
+    currentHtd = UTIL.getAdmin().getDescriptor(tableName);
+    Assert.assertEquals(Compression.Algorithm.NONE, currentHtd.getColumnFamily("cf".getBytes()).getCompressionType());
+
+    // Test 5: Modify coprocessor in lazy mode
+    htd = UTIL.getAdmin().getDescriptor(tableName);
+    modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd)
+      .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder("any.coprocessor.name").setJarPath("fake/path").build())
+      .build();
+    try {
+      new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd, false,
+        true);
+      Assert.fail("Should have throw exception while modifying coprocessor!");
+    } catch (HBaseIOException e) {
+      Assert.assertTrue(e.getMessage().contains("Can not modify Coprocessor"));
+    }
+    currentHtd = UTIL.getAdmin().getDescriptor(tableName);
+    Assert.assertEquals(0, currentHtd.getCoprocessorDescriptors().size());
   }
 }

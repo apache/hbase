@@ -213,11 +213,31 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
+  default long modifyTable(
+    final TableName tableName,
+    final TableDescriptor descriptor,
+    final long nonceGroup,
+    final long nonce)
+    throws IOException{
+    return modifyTable(tableName, descriptor, nonceGroup, nonce, false);
+  }
+
+
+  /**
+   * Modify the descriptor of an existing table
+   * @param tableName The table name
+   * @param descriptor The updated table descriptor
+   * @param nonceGroup
+   * @param nonce
+   * @param lazyMode
+   * @throws IOException
+   */
   long modifyTable(
       final TableName tableName,
       final TableDescriptor descriptor,
       final long nonceGroup,
-      final long nonce)
+      final long nonce,
+      final boolean lazyMode)
       throws IOException;
 
   /**
