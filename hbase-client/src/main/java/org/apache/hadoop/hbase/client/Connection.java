@@ -111,7 +111,7 @@ public interface Connection extends Abortable, Closeable {
    * Retrieve a {@link BufferedMutator} for performing client-side buffering of writes. The
    * {@link BufferedMutator} returned by this method is thread-safe.
    * This accessor will create a new ThreadPoolExecutor and will be shutdown once we close the
-   *  BufferMutator. This object can be used for long lived operations.
+   *  BufferedMutator. This object can be used for long lived operations.
    * </p>
    * <p>
    * The caller is responsible for calling {@link BufferedMutator#close()} on
