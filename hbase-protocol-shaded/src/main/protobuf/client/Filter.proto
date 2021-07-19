@@ -88,10 +88,6 @@ message FilterWrapper {
 message FirstKeyOnlyFilter {
 }
 
-message FirstKeyValueMatchingQualifiersFilter {
-  repeated bytes qualifiers = 1;
-}
-
 message FuzzyRowFilter {
   repeated BytesBytesPair fuzzy_keys_data = 1;
 }

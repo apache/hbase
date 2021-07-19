@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.TreeSet;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange;
@@ -130,25 +129,6 @@ public class TestFilterSerialization {
         new ColumnRangeFilter(Bytes.toBytes("e"), false, Bytes.toBytes("f"), true));
     assertTrue(filterWrapper.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterWrapper))));
-  }
-
-  @SuppressWarnings("deprecation")
-  @Test
-  public void testFirstKeyValueMatchingQualifiersFilter() throws Exception {
-    // empty qualifiers set
-    TreeSet<byte []> set = new TreeSet<>(Bytes.BYTES_COMPARATOR);
-    FirstKeyValueMatchingQualifiersFilter firstKeyValueMatchingQualifiersFilter =
-      new FirstKeyValueMatchingQualifiersFilter(set);
-    assertTrue(firstKeyValueMatchingQualifiersFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(firstKeyValueMatchingQualifiersFilter))));
-
-    // non-empty qualifiers set
-    set.add(Bytes.toBytes("col0"));
-    set.add(Bytes.toBytes("col1"));
-    firstKeyValueMatchingQualifiersFilter =
-      new FirstKeyValueMatchingQualifiersFilter(set);
-    assertTrue(firstKeyValueMatchingQualifiersFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(firstKeyValueMatchingQualifiersFilter))));
   }
 
   @Test
