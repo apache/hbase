@@ -205,7 +205,8 @@ import org.mortbay.jetty.servlet.ServletHolder;
 @SuppressWarnings("deprecation")
 public class HMaster extends HRegionServer implements MasterServices, Server {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
-
+  public static final String HBASE_TABLE_NORMALIZATION_ENABLED =
+    "hbase.table.normalization.enabled";
   /**
    * Protection against zombie master. Started once Master accepts active responsibility and
    * starts taking over responsibilities. Allows a finite time window before giving up ownership.
@@ -381,6 +382,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private long splitPlanCount;
   private long mergePlanCount;
+  private boolean defaultNormalizerTableLevel;
 
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
@@ -529,6 +531,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       activeMasterManager = null;
     }
     cachedClusterId = new CachedClusterId(conf);
+    this.defaultNormalizerTableLevel =  extractDefaultNormalizerValue(conf);
   }
 
   // return the actual infoPort, -1 means disable info server.
@@ -1019,7 +1022,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           LOG.info("Closing excess replica of meta region " + r.getRegion());
           // send a close and wait for a max of 30 seconds
           ServerManager.closeRegionSilentlyAndWait(getConnection(), r.getServerName(),
-              r.getRegion(), 30000);
+            r.getRegion(), 30000);
           ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(replicaId));
         }
       }
@@ -1117,6 +1120,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     status.setStatus("META assigned.");
   }
 
+  private boolean extractDefaultNormalizerValue(final Configuration configuration) {
+    String s = configuration.get(HBASE_TABLE_NORMALIZATION_ENABLED);
+    return Boolean.parseBoolean(s);
+  }
+  
   private void assignMetaZkLess(RegionStates regionStates, RegionState regionState, long timeout,
       Set<ServerName> previouslyFailedRs) throws IOException, KeeperException {
     ServerName currentServer = regionState.getServerName();
@@ -1692,12 +1700,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         if (table.isSystemTable()) {
           continue;
         }
-
+        boolean normalizationEnabled;
         HTableDescriptor tableDescriptor = getTableDescriptors().get(table);
-        if (tableDescriptor != null && !tableDescriptor.isNormalizationEnabled()) {
-          LOG.debug("Skipping normalization for table: " + table
-              + ", as it doesn't have auto normalization turned on");
-          continue;
+        if (tableDescriptor != null) {
+          String defined = tableDescriptor.getValue(HTableDescriptor.NORMALIZATION_ENABLED);
+          if (defined != null) {
+            normalizationEnabled = tableDescriptor.isNormalizationEnabled();
+          } else {
+            normalizationEnabled = this.defaultNormalizerTableLevel;
+          }
+          if (!normalizationEnabled) {
+            LOG.debug("Skipping table " + table + " because normalization is disabled in its "
+                + "table properties and normalization is also disabled at table level by default");
+            continue;
+          }
         }
         // make one last check that the cluster isn't shutting down before proceeding.
         if (skipRegionManagementAction("region normalizer")) {

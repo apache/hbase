@@ -185,13 +185,13 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   /**
    * Instantiate a ZooKeeper connection and watcher.
-   * @param identifier string that is passed to RecoverableZookeeper to be used as
-   * identifier for this instance. Use null for default.
+   * @param identifier string that is passed to RecoverableZookeeper to be used as identifier for
+   *          this instance. Use null for default.
    * @throws IOException
    * @throws ZooKeeperConnectionException
    */
-  public ZooKeeperWatcher(Configuration conf, String identifier,
-      Abortable abortable) throws ZooKeeperConnectionException, IOException {
+  public ZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable)
+      throws ZooKeeperConnectionException, IOException {
     this(conf, identifier, abortable, false);
   }
 
