@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hbase.thirdparty.io.netty.util.IllegalReferenceCountException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -222,15 +223,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     = "hbase.lru.cache.heavy.eviction.overhead.coefficient";
   private static final float DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT = 0.01f;
 
-  /**
-   * Defined the cache map as {@link ConcurrentHashMap} here, because in
-   * {@link LruAdaptiveBlockCache#getBlock}, we need to guarantee the atomicity
-   * of map#computeIfPresent (key, func). Besides, the func method must execute exactly once only
-   * when the key is present and under the lock context, otherwise the reference count will be
-   * messed up. Notice that the
-   * {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that.
-   */
-  private transient final ConcurrentHashMap<BlockCacheKey, LruCachedBlock> map;
+  private transient final Map<BlockCacheKey, LruCachedBlock> map;
 
   /** Eviction lock (locked when eviction in process) */
   private transient final ReentrantLock evictionLock = new ReentrantLock(true);
@@ -646,14 +639,16 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
     boolean updateCacheMetrics) {
-    LruCachedBlock cb = map.computeIfPresent(cacheKey, (key, val) -> {
-      // It will be referenced by RPC path, so increase here. NOTICE: Must do the retain inside
-      // this block. because if retain outside the map#computeIfPresent, the evictBlock may remove
-      // the block and release, then we're retaining a block with refCnt=0 which is disallowed.
-      // see HBASE-22422.
-      val.getBuffer().retain();
-      return val;
-    });
+    LruCachedBlock cb = map.get(cacheKey);
+    if (cb != null) {
+      try {
+        cb.getBuffer().retain();
+      } catch (IllegalReferenceCountException e) {
+        cb = null;
+        LOG.debug("AdaptiveLRU cache block retain caused refCount Exception. Treating this as L1"
+          + " cache miss. Exception: {}", e.getMessage());
+      }
+    }
     if (cb == null) {
       if (!repeat && updateCacheMetrics) {
         stats.miss(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
