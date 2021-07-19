@@ -34,11 +34,9 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -65,14 +63,12 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -178,11 +174,10 @@ public final class BackupSystemTable implements Closeable {
   final static byte[] BL_PREPARE = Bytes.toBytes("R");
   final static byte[] BL_COMMIT = Bytes.toBytes("D");
 
-  private final static String WALS_PREFIX = "wals:";
   private final static String SET_KEY_PREFIX = "backupset:";
 
   // separator between BULK_LOAD_PREFIX and ordinals
-  protected final static String BLK_LD_DELIM = ":";
+  private final static String BLK_LD_DELIM = ":";
   private final static byte[] EMPTY_VALUE = new byte[] {};
 
   // Safe delimiter in a string
@@ -858,7 +853,7 @@ public final class BackupSystemTable implements Closeable {
    * @throws IOException exception
    */
   public void writeRegionServerLogTimestamp(Set<TableName> tables,
-      HashMap<String, Long> newTimestamps, String backupRoot) throws IOException {
+      Map<String, Long> newTimestamps, String backupRoot) throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("write RS log time stamps to backup system table for tables ["
           + StringUtils.join(tables, ",") + "]");
@@ -883,13 +878,13 @@ public final class BackupSystemTable implements Closeable {
    *         RegionServer,PreviousTimeStamp
    * @throws IOException exception
    */
-  public HashMap<TableName, HashMap<String, Long>> readLogTimestampMap(String backupRoot)
+  public Map<TableName, Map<String, Long>> readLogTimestampMap(String backupRoot)
       throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("read RS log ts from backup system table for root=" + backupRoot);
     }
 
-    HashMap<TableName, HashMap<String, Long>> tableTimestampMap = new HashMap<>();
+    Map<TableName, Map<String, Long>> tableTimestampMap = new HashMap<>();
 
     Scan scan = createScanForReadLogTimestampMap(backupRoot);
     try (Table table = connection.getTable(tableName);
@@ -1009,148 +1004,6 @@ public final class BackupSystemTable implements Closeable {
       Delete delete = createDeleteForIncrBackupTableSet(backupRoot);
       table.delete(delete);
     }
-  }
-
-  /**
-   * Register WAL files as eligible for deletion
-   * @param files files
-   * @param backupId backup id
-   * @param backupRoot root directory path to backup destination
-   * @throws IOException exception
-   */
-  public void addWALFiles(List<String> files, String backupId, String backupRoot)
-      throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("add WAL files to backup system table: " + backupId + " " + backupRoot + " files ["
-          + StringUtils.join(files, ",") + "]");
-    }
-    if (LOG.isDebugEnabled()) {
-      files.forEach(file -> LOG.debug("add :" + file));
-    }
-    try (Table table = connection.getTable(tableName)) {
-      List<Put> puts = createPutsForAddWALFiles(files, backupId, backupRoot);
-      table.put(puts);
-    }
-  }
-
-  /**
-   * Register WAL files as eligible for deletion
-   * @param backupRoot root directory path to backup
-   * @throws IOException exception
-   */
-  public Iterator<WALItem> getWALFilesIterator(String backupRoot) throws IOException {
-    LOG.trace("get WAL files from backup system table");
-
-    final Table table = connection.getTable(tableName);
-    Scan scan = createScanForGetWALs(backupRoot);
-    final ResultScanner scanner = table.getScanner(scan);
-    final Iterator<Result> it = scanner.iterator();
-    return new Iterator<WALItem>() {
-
-      @Override
-      public boolean hasNext() {
-        boolean next = it.hasNext();
-        if (!next) {
-          // close all
-          try {
-            scanner.close();
-            table.close();
-          } catch (IOException e) {
-            LOG.error("Close WAL Iterator", e);
-          }
-        }
-        return next;
-      }
-
-      @Override
-      public WALItem next() {
-        Result next = it.next();
-        List<Cell> cells = next.listCells();
-        byte[] buf = cells.get(0).getValueArray();
-        int len = cells.get(0).getValueLength();
-        int offset = cells.get(0).getValueOffset();
-        String backupId = new String(buf, offset, len);
-        buf = cells.get(1).getValueArray();
-        len = cells.get(1).getValueLength();
-        offset = cells.get(1).getValueOffset();
-        String walFile = new String(buf, offset, len);
-        buf = cells.get(2).getValueArray();
-        len = cells.get(2).getValueLength();
-        offset = cells.get(2).getValueOffset();
-        String backupRoot = new String(buf, offset, len);
-        return new WALItem(backupId, walFile, backupRoot);
-      }
-
-      @Override
-      public void remove() {
-        // not implemented
-        throw new RuntimeException("remove is not supported");
-      }
-    };
-  }
-
-  /**
-   * Check if WAL file is eligible for deletion Future: to support all backup destinations
-   * @param file name of a file to check
-   * @return true, if deletable, false otherwise.
-   * @throws IOException exception
-   */
-  // TODO: multiple backup destination support
-  public boolean isWALFileDeletable(String file) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Check if WAL file has been already backed up in backup system table " + file);
-    }
-    try (Table table = connection.getTable(tableName)) {
-      Get get = createGetForCheckWALFile(file);
-      Result res = table.get(get);
-      return (!res.isEmpty());
-    }
-  }
-
-  /**
-   * Check if WAL file is eligible for deletion using multi-get
-   * @param files names of a file to check
-   * @return map of results (key: FileStatus object. value: true if the file is deletable, false
-   *         otherwise)
-   * @throws IOException exception
-   */
-  public Map<FileStatus, Boolean> areWALFilesDeletable(Iterable<FileStatus> files)
-      throws IOException {
-    final int BUF_SIZE = 100;
-
-    Map<FileStatus, Boolean> ret = new HashMap<>();
-    try (Table table = connection.getTable(tableName)) {
-      List<Get> getBuffer = new ArrayList<>();
-      List<FileStatus> fileStatuses = new ArrayList<>();
-
-      for (FileStatus file : files) {
-        String fn = file.getPath().getName();
-        if (fn.startsWith(WALProcedureStore.LOG_PREFIX)) {
-          ret.put(file, true);
-          continue;
-        }
-        String wal = file.getPath().toString();
-        Get get = createGetForCheckWALFile(wal);
-        getBuffer.add(get);
-        fileStatuses.add(file);
-        if (getBuffer.size() >= BUF_SIZE) {
-          Result[] results = table.get(getBuffer);
-          for (int i = 0; i < results.length; i++) {
-            ret.put(fileStatuses.get(i), !results[i].isEmpty());
-          }
-          getBuffer.clear();
-          fileStatuses.clear();
-        }
-      }
-
-      if (!getBuffer.isEmpty()) {
-        Result[] results = table.get(getBuffer);
-        for (int i = 0; i < results.length; i++) {
-          ret.put(fileStatuses.get(i), !results[i].isEmpty());
-        }
-      }
-    }
-    return ret;
   }
 
   /**
@@ -1653,7 +1506,7 @@ public final class BackupSystemTable implements Closeable {
     }
   }
 
-  protected static boolean snapshotExists(Admin admin, String snapshotName) throws IOException {
+  private static boolean snapshotExists(Admin admin, String snapshotName) throws IOException {
     List<SnapshotDescription> list = admin.listSnapshots();
     for (SnapshotDescription desc : list) {
       if (desc.getName().equals(snapshotName)) {
@@ -1905,56 +1758,6 @@ public final class BackupSystemTable implements Closeable {
     put.addColumn(BackupSystemTable.META_FAMILY, FAM_COL, fam);
     put.addColumn(BackupSystemTable.META_FAMILY, PATH_COL, Bytes.toBytes(p));
     return put;
-  }
-
-  /**
-   * Creates put list for list of WAL files
-   * @param files list of WAL file paths
-   * @param backupId backup id
-   * @return put list
-   */
-  private List<Put> createPutsForAddWALFiles(List<String> files, String backupId,
-      String backupRoot) {
-    List<Put> puts = new ArrayList<>(files.size());
-    for (String file : files) {
-      Put put = new Put(rowkey(WALS_PREFIX, BackupUtils.getUniqueWALFileNamePart(file)));
-      put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes("backupId"),
-        Bytes.toBytes(backupId));
-      put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes("file"), Bytes.toBytes(file));
-      put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes("root"),
-        Bytes.toBytes(backupRoot));
-      puts.add(put);
-    }
-    return puts;
-  }
-
-  /**
-   * Creates Scan operation to load WALs
-   * @param backupRoot path to backup destination
-   * @return scan operation
-   */
-  private Scan createScanForGetWALs(String backupRoot) {
-    // TODO: support for backupRoot
-    Scan scan = new Scan();
-    byte[] startRow = Bytes.toBytes(WALS_PREFIX);
-    byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
-    stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.withStartRow(startRow);
-    scan.withStopRow(stopRow);
-    scan.addFamily(BackupSystemTable.META_FAMILY);
-    return scan;
-  }
-
-  /**
-   * Creates Get operation for a given wal file name TODO: support for backup destination
-   * @param file file
-   * @return get operation
-   */
-  private Get createGetForCheckWALFile(String file) {
-    Get get = new Get(rowkey(WALS_PREFIX, BackupUtils.getUniqueWALFileNamePart(file)));
-    // add backup root column
-    get.addFamily(BackupSystemTable.META_FAMILY);
-    return get;
   }
 
   /**
