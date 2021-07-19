@@ -275,7 +275,7 @@ public interface TableDescriptor {
 
   /**
    * Check if normalization enable flag of the table is true. If flag is false
-   * then no region normalizer won't attempt to normalize this table.
+   * then region normalizer won't attempt to normalize this table.
    *
    * @return true if region normalization is enabled for this table
    */

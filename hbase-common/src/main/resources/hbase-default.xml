@@ -661,6 +661,13 @@ possible configurations would overwhelm and obscure the important.
       MBs.</description>
   </property>
   <property>
+    <name>hbase.table.normalization.enabled</name>
+    <value>false</value>
+    <description>This config is used to set default behaviour of normalizer at table level.
+      To override this at table level one can set NORMALIZATION_ENABLED at table descriptor level
+      and that property will be honored</description>
+  </property>
+  <property>
     <name>hbase.server.thread.wakefrequency</name>
     <value>10000</value>
     <description>In master side, this config is the period used for FS related behaviors:
