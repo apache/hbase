@@ -72,13 +72,14 @@ public class CachedEntryQueue {
    * @param entry a bucket entry with key to try to add to the queue
    */
   public void add(Map.Entry<BlockCacheKey, BucketEntry> entry) {
-    if (cacheSize < maxSize) {
+    int candidateCacheSize = entry.getValue().getLength();
+    if (cacheSize + candidateCacheSize < maxSize) {
       queue.add(entry);
-      cacheSize += entry.getValue().getLength();
+      cacheSize += candidateCacheSize;
     } else {
       BucketEntry head = queue.peek().getValue();
       if (BucketEntry.COMPARATOR.compare(entry.getValue(), head) > 0) {
-        cacheSize += entry.getValue().getLength();
+        cacheSize += candidateCacheSize;
         cacheSize -= head.getLength();
         if (cacheSize > maxSize) {
           queue.poll();
