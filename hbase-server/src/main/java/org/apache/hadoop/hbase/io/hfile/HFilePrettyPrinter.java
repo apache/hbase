@@ -355,9 +355,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       FixedFileTrailer trailer =
         FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
       long offset = trailer.getFirstDataBlockOffset(),
-        max = trailer.getLastDataBlockOffset();
+        max = trailer.getLoadOnOpenDataOffset();
       HFileBlock block;
-      while (offset <= max) {
+      while (offset < max) {
         block = reader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
           /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
         offset += block.getOnDiskSizeWithHeader();
