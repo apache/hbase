@@ -33,10 +33,13 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Random;
+
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -96,6 +99,7 @@ public class TestPerformanceEvaluation {
     final int clients = 10;
     opts.setNumClientThreads(clients);
     opts.setPerClientRunRows(10);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
     Path dir =
       PerformanceEvaluation.writeInputFile(HTU.getConfiguration(), opts, HTU.getDataTestDir());
     FileSystem fs = FileSystem.get(HTU.getConfiguration());
@@ -103,12 +107,22 @@ public class TestPerformanceEvaluation {
     long len = fs.getFileStatus(p).getLen();
     assertTrue(len > 0);
     byte[] content = new byte[(int) len];
+    Map<Integer, Boolean> map = new HashMap<>();
+    for (int i = 0;i < 10; i++) {
+      map.put(i * 10, false);
+    }
     try (FSDataInputStream dis = fs.open(p)) {
       dis.readFully(content);
       BufferedReader br = new BufferedReader(
         new InputStreamReader(new ByteArrayInputStream(content), StandardCharsets.UTF_8));
       int count = 0;
-      while (br.readLine() != null) {
+      Gson gson = GsonUtil.createGson().create();
+      while (br.ready()) {
+        String s = br.readLine();
+        PerformanceEvaluation.TestOptions options =
+          gson.fromJson(s, PerformanceEvaluation.TestOptions.class);
+        assertFalse(map.get(options.getStartRow()));
+        map.put(options.getStartRow(), true);
         count++;
       }
       assertEquals(clients, count);
@@ -118,48 +132,91 @@ public class TestPerformanceEvaluation {
   @Test
   public void testSizeCalculation() {
     TestOptions opts = new PerformanceEvaluation.TestOptions();
-    opts = PerformanceEvaluation.calculateRowsAndSize(opts);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
     int rows = opts.getPerClientRunRows();
     // Default row count
     final int defaultPerClientRunRows = 1024 * 1024;
     assertEquals(defaultPerClientRunRows, rows);
     // If size is 2G, then twice the row count.
     opts.setSize(2.0f);
-    opts = PerformanceEvaluation.calculateRowsAndSize(opts);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
     assertEquals(defaultPerClientRunRows * 2, opts.getPerClientRunRows());
     // If two clients, then they get half the rows each.
     opts.setNumClientThreads(2);
-    opts = PerformanceEvaluation.calculateRowsAndSize(opts);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
     assertEquals(defaultPerClientRunRows, opts.getPerClientRunRows());
     // What if valueSize is 'random'? Then half of the valueSize so twice the rows.
     opts.valueRandom = true;
-    opts = PerformanceEvaluation.calculateRowsAndSize(opts);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
     assertEquals(defaultPerClientRunRows * 2, opts.getPerClientRunRows());
+  }
+
+  @Test
+  public void testSizeCalculation2() {
+    TestOptions opts = new PerformanceEvaluation.TestOptions();
+    PerformanceEvaluation.calculateRowsAndSize(opts);
+    // Default row count
+    final int defaultPerClientRunRows = 1024 * 1024;
+    assertEquals(defaultPerClientRunRows, opts.getPerClientRunRows());
+    assertEquals(defaultPerClientRunRows, opts.getTotalRows());
+    assertEquals(opts.getTotalRows(), opts.getInitRows());
+    // When initRows is not set
+    opts = new PerformanceEvaluation.TestOptions();
+    opts.setNumClientThreads(2);
+    opts.setPerClientRunRows(1000);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
+    assertEquals(1000, opts.getPerClientRunRows());
+    assertEquals(2000, opts.getTotalRows());
+    assertEquals(opts.getTotalRows(), opts.getInitRows());
+    // When initRows is not set, and size is 2G
+    opts = new PerformanceEvaluation.TestOptions();
+    opts.setNumClientThreads(2);
+    opts.setSize(2);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
+    assertEquals(defaultPerClientRunRows, opts.getPerClientRunRows());
+    assertEquals(defaultPerClientRunRows * 2, opts.getTotalRows());
+    assertEquals(opts.getTotalRows(), opts.getInitRows());
+    // When initRows is set, and greater than totalRows
+    opts = new PerformanceEvaluation.TestOptions();
+    opts.setNumClientThreads(2);
+    opts.setPerClientRunRows(1000);
+    opts.setInitRows(10000);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
+    assertEquals(1000, opts.getPerClientRunRows());
+    assertEquals(2000, opts.getTotalRows());
+    assertEquals(10000, opts.getInitRows());
+    // When initRows is set, and less than totalRows
+    opts = new PerformanceEvaluation.TestOptions();
+    opts.setNumClientThreads(2);
+    opts.setPerClientRunRows(1000);
+    opts.setInitRows(100);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
+    assertEquals(1000, opts.getPerClientRunRows());
+    assertEquals(2000, opts.getTotalRows());
+    assertEquals(opts.getTotalRows(), opts.getInitRows());
   }
 
   @Test
   public void testRandomReadCalculation() {
     TestOptions opts = new PerformanceEvaluation.TestOptions();
-    opts = PerformanceEvaluation.calculateRowsAndSize(opts);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
     int rows = opts.getPerClientRunRows();
     // Default row count
     final int defaultPerClientRunRows = 1024 * 1024;
     assertEquals(defaultPerClientRunRows, rows);
-    // If size is 2G, then twice the row count.
-    opts.setSize(2.0f);
+    // If initRows is 4 * 1024 * 1024
+    opts.setInitRows(defaultPerClientRunRows * 4);
     opts.setPerClientRunRows(1000);
-    opts.setCmdName(PerformanceEvaluation.RANDOM_READ);
-    opts = PerformanceEvaluation.calculateRowsAndSize(opts);
-    assertEquals(1000, opts.getPerClientRunRows());
-    // If two clients, then they get half the rows each.
     opts.setNumClientThreads(2);
-    opts = PerformanceEvaluation.calculateRowsAndSize(opts);
+    opts.setCmdName(PerformanceEvaluation.RANDOM_READ);
+    PerformanceEvaluation.calculateRowsAndSize(opts);
     assertEquals(1000, opts.getPerClientRunRows());
+    assertEquals(defaultPerClientRunRows * 4, opts.getInitRows());
     Random random = new Random();
     // assuming we will get one before this loop expires
     boolean foundValue = false;
     for (int i = 0; i < 10000000; i++) {
-      int randomRow = PerformanceEvaluation.generateRandomRow(random, opts.totalRows);
+      int randomRow = PerformanceEvaluation.generateRandomRow(random, opts.initRows);
       if (randomRow > 1000) {
         foundValue = true;
         break;
