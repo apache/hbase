@@ -140,6 +140,21 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     return serverManager.getDeadServers().size();
   }
 
+  @Override
+  public int getOrphanRegionsOnRs() {
+    return master.getHbckChore().getOrphanRegionsOnRS().size();
+  }
+
+  @Override
+  public int getOrphanRegionsOnFs() {
+    return master.getHbckChore().getOrphanRegionsOnFS().size();
+  }
+
+  @Override
+  public int getInconsistentRegions() {
+    return master.getHbckChore().getInconsistentRegions().size();
+  }
+
   @Override public boolean isRunning() {
     return !(master.isStopped() || master.isStopping());
   }
