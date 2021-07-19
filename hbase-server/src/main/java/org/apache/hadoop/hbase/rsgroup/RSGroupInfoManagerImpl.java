@@ -1316,8 +1316,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         + " can't be stored persistently");
     }
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
-    rsGroupInfo.getConfiguration().forEach((k, v) -> rsGroupInfo.removeConfiguration(k));
-    configuration.forEach((k, v) -> rsGroupInfo.setConfiguration(k, v));
+    Sets.newHashSet(rsGroupInfo.getConfiguration().keySet())
+        .forEach(rsGroupInfo::removeConfiguration);
+    configuration.forEach(rsGroupInfo::setConfiguration);
     flushConfig();
   }
 }
