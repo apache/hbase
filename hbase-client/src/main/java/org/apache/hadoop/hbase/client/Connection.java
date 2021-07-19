@@ -109,16 +109,15 @@ public interface Connection extends Abortable, Closeable {
   /**
    * <p>
    * Retrieve a {@link BufferedMutator} for performing client-side buffering of writes. The
-   * {@link BufferedMutator} returned by this method is thread-safe. This BufferedMutator will
-   * use the Connection's ExecutorService. This object can be used for long lived operations.
+   * {@link BufferedMutator} returned by this method is thread-safe.
+   * This accessor will create a new ThreadPoolExecutor and will be shutdown once we close the
+   *  BufferMutator. This object can be used for long lived operations.
    * </p>
    * <p>
    * The caller is responsible for calling {@link BufferedMutator#close()} on
    * the returned {@link BufferedMutator} instance.
    * </p>
    * <p>
-   * This accessor will use the connection's ExecutorService and will throw an
-   * exception in the main thread when an asynchronous exception occurs.
    *
    * @param tableName the name of the table
    *
