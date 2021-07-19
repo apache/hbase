@@ -940,6 +940,32 @@ public class TestMasterProcedureScheduler {
     }
   }
 
+  public static class TestServerProcedure extends TestProcedure implements ServerProcedureInterface {
+    private final ServerName serverName;
+    private final boolean carryingMeta;
+
+    public TestServerProcedure(long procId, boolean carryingMeta, ServerName serverName) {
+      super(procId);
+      this.carryingMeta = carryingMeta;
+      this.serverName = serverName;
+    }
+
+    @Override
+    public ServerName getServerName() {
+      return serverName;
+    }
+
+    @Override
+    public boolean hasMetaTableRegion() {
+      return carryingMeta;
+    }
+
+    @Override
+    public ServerOperationType getServerOperationType() {
+      return ServerOperationType.CRASH_HANDLER;
+    }
+  }
+
   private static LockProcedure createLockProcedure(LockType lockType, long procId)
       throws Exception {
     LockProcedure procedure = new LockProcedure();
@@ -982,8 +1008,9 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testListLocksServer() throws Exception {
-    LockProcedure procedure = createExclusiveLockProcedure(0);
-    queue.waitServerExclusiveLock(procedure, ServerName.valueOf("server1,1234,0"));
+    ServerName serverName = ServerName.valueOf("server1,1234,0");
+    TestServerProcedure procedure = new TestServerProcedure(0, false, serverName);
+    queue.waitServerExclusiveLock(procedure, serverName);
 
     List<LockedResource> resources = queue.getLocks();
     assertEquals(1, resources.size());
@@ -1151,5 +1178,57 @@ public class TestMasterProcedureScheduler {
 
     queue.wakeRegion(proc, regionInfo);
     queue.wakeTableExclusiveLock(parentProc, tableName);
+  }
+
+  @Test
+  public void testHighPriorityProcedure() {
+    ServerName serverName = ServerName.valueOf("server1,1234,0");
+    ServerName serverName2 = ServerName.valueOf("server2,1234,0");
+    TestServerProcedure highPriorityProcedure = new TestServerProcedure(0, true, serverName);
+    TestServerProcedure normalProcedure = new TestServerProcedure(0, false, serverName2);
+    queue.addFront(normalProcedure);
+    queue.addFront(highPriorityProcedure);
+    //test pollHighPriority
+    assertEquals(2, queue.queueSize());
+    assertSame(highPriorityProcedure, queue.pollHighPriority());
+    assertEquals(1, queue.queueSize());
+    assertSame(null, queue.pollHighPriority());
+
+    assertSame(normalProcedure, queue.poll());
+    assertEquals(0, queue.queueSize());
+    assertFalse(queue.queueHasRunnables());
+
+    //test poll
+    queue.addFront(normalProcedure);
+    queue.addFront(highPriorityProcedure);
+    assertSame(highPriorityProcedure, queue.poll());
+    assertSame(normalProcedure, queue.poll());
+    assertEquals(0, queue.queueSize());
+    assertFalse(queue.queueHasRunnables());
+
+    queue.addFront(normalProcedure);
+    queue.addFront(highPriorityProcedure);
+    assertEquals(2, queue.queueSize());
+    assertTrue(queue.queueHasRunnables());
+    queue.clear();
+    assertEquals(0, queue.queueSize());
+    assertFalse(queue.queueHasRunnables());
+
+    queue.addFront(normalProcedure);
+    queue.addFront(highPriorityProcedure);
+    assertEquals(2, queue.queueSize());
+    assertTrue(queue.queueHasRunnables());
+
+    TestServerProcedure proc1 = (TestServerProcedure) queue.poll();
+    queue.waitServerExclusiveLock(proc1, proc1.getServerName());
+    queue.wakeServerExclusiveLock(proc1, proc1.getServerName());
+    queue.completionCleanup(proc1);
+
+    TestServerProcedure proc2 = (TestServerProcedure) queue.poll();
+    queue.waitServerExclusiveLock(proc2, proc2.getServerName());
+    queue.wakeServerExclusiveLock(proc2, proc2.getServerName());
+    queue.completionCleanup(proc2);
+    assertEquals(0, queue.queueSize());
+    assertFalse(queue.queueHasRunnables());
   }
 }
