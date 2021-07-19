@@ -27,7 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -67,7 +67,7 @@ public class TestSplitWALManager {
       HBaseClassTestRule.forClass(TestSplitWALManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitWALManager.class);
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   private HMaster master;
   private SplitWALManager splitWALManager;
   private TableName TABLE_NAME;
@@ -75,7 +75,7 @@ public class TestSplitWALManager {
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.getConfiguration().setBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, false);
     TEST_UTIL.getConfiguration().setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 1);
     TEST_UTIL.startMiniCluster(3);
@@ -212,7 +212,7 @@ public class TestSplitWALManager {
     Assert.assertEquals(0, metaWals.size());
   }
 
-  private void splitLogsTestHelper(HBaseTestingUtility testUtil) throws Exception {
+  private void splitLogsTestHelper(HBaseTestingUtil testUtil) throws Exception {
     HMaster hmaster = testUtil.getHBaseCluster().getMaster();
     SplitWALManager splitWALManager = hmaster.getSplitWALManager();
     LOG.info("The Master FS is pointing to: " + hmaster.getMasterFileSystem()
@@ -247,7 +247,7 @@ public class TestSplitWALManager {
 
   @Test
   public void testSplitLogsWithDifferentWalAndRootFS() throws Exception{
-    HBaseTestingUtility testUtil2 = new HBaseTestingUtility();
+    HBaseTestingUtil testUtil2 = new HBaseTestingUtil();
     testUtil2.getConfiguration().setBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, false);
     testUtil2.getConfiguration().setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 1);
     Path dir = TEST_UTIL.getDataTestDirOnTestFS("testWalDir");

@@ -39,7 +39,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
@@ -103,7 +103,7 @@ public abstract class TestAssignmentManagerBase {
   protected static final int NREGIONS = 1 * 1000;
   protected static final int NSERVERS = Math.max(1, NREGIONS / 100);
 
-  protected HBaseTestingUtility util;
+  protected HBaseTestingUtil util;
   protected MockRSProcedureDispatcher rsDispatcher;
   protected MockMasterServices master;
   protected AssignmentManager am;
@@ -153,7 +153,7 @@ public abstract class TestAssignmentManagerBase {
 
   @Before
   public void setUp() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
       .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     setupConfiguration(util.getConfiguration());

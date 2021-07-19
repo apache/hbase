@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -73,7 +73,7 @@ public class TestSnapshotFromClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFromClient.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static final int NUM_RS = 2;
   protected static final String STRING_TABLE_NAME = "test";
   protected static final byte[] TEST_FAM = Bytes.toBytes("fam");

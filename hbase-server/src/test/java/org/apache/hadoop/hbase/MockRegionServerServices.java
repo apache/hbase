@@ -84,17 +84,17 @@ public class MockRegionServerServices implements RegionServerServices {
   private volatile boolean stopping = false;
   private final AtomicBoolean running = new AtomicBoolean(true);
 
-  MockRegionServerServices(ZKWatcher zkw) {
+  public MockRegionServerServices(ZKWatcher zkw) {
     this(zkw, null);
   }
 
-  MockRegionServerServices(ZKWatcher zkw, ServerName serverName) {
+  public MockRegionServerServices(ZKWatcher zkw, ServerName serverName) {
     this.zkw = zkw;
     this.serverName = serverName;
     this.conf = (zkw == null ? new Configuration() : zkw.getConfiguration());
   }
 
-  MockRegionServerServices(){
+  public MockRegionServerServices(){
     this(null, null);
   }
 

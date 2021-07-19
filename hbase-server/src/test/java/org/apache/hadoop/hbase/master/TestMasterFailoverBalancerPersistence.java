@@ -24,10 +24,10 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -51,12 +51,12 @@ public class TestMasterFailoverBalancerPersistence {
   @Test
   public void testMasterFailoverBalancerPersistence() throws Exception {
     // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numMasters(3).build();
     TEST_UTIL.startMiniCluster(option);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
     assertTrue(cluster.waitForActiveAndReadyMaster());
     HMaster active = cluster.getMaster();
@@ -92,7 +92,7 @@ public class TestMasterFailoverBalancerPersistence {
    * @throws InterruptedException
    * @throws java.io.IOException
    */
-  private HMaster killActiveAndWaitForNewActive(MiniHBaseCluster cluster)
+  private HMaster killActiveAndWaitForNewActive(SingleProcessHBaseCluster cluster)
       throws InterruptedException, IOException {
     int activeIndex = getActiveMasterIndex(cluster);
     HMaster active = cluster.getMaster();
@@ -111,7 +111,8 @@ public class TestMasterFailoverBalancerPersistence {
    * @throws org.apache.hadoop.hbase.MasterNotRunningException
    *          if no active master found
    */
-  private int getActiveMasterIndex(MiniHBaseCluster cluster) throws MasterNotRunningException {
+  private int getActiveMasterIndex(SingleProcessHBaseCluster cluster)
+    throws MasterNotRunningException {
     // get all the master threads
     List<JVMClusterUtil.MasterThread> masterThreads = cluster.getMasterThreads();
 

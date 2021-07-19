@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.COLUMNS;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -30,7 +30,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -62,7 +62,7 @@ public class TestKeepDeletes {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestKeepDeletes.class);
 
-  HBaseTestingUtility hbu = new HBaseTestingUtility();
+  HBaseTestingUtil hbu = new HBaseTestingUtil();
   private final byte[] T0 = Bytes.toBytes("0");
   private final byte[] T1 = Bytes.toBytes("1");
   private final byte[] T2 = Bytes.toBytes("2");
@@ -188,7 +188,7 @@ public class TestKeepDeletes {
     checkResult(r, c0, c0, T1);
     assertEquals(0, countDeleteMarkers(region));
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -238,7 +238,7 @@ public class TestKeepDeletes {
     scan.next(kvs);
     assertTrue(kvs.isEmpty());
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -293,7 +293,7 @@ public class TestKeepDeletes {
     // major compaction deleted it
     assertEquals(0, countDeleteMarkers(region));
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -317,7 +317,7 @@ public class TestKeepDeletes {
       // ok!
     }
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -407,7 +407,7 @@ public class TestKeepDeletes {
     assertTrue(CellUtil.isDelete(kvs.get(1)));
 
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -450,7 +450,7 @@ public class TestKeepDeletes {
     region.compact(true);
     assertEquals(0, countDeleteMarkers(region));
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -513,7 +513,7 @@ public class TestKeepDeletes {
     region.compact(true);
     assertEquals(0, countDeleteMarkers(region));
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -591,7 +591,7 @@ public class TestKeepDeletes {
     region.compact(true);
     assertEquals(1, countDeleteMarkers(region));
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -671,7 +671,7 @@ public class TestKeepDeletes {
     checkGet(region, T2, c1, c0, ts+3, T2, T1);
     checkGet(region, T2, c1, c1, ts+3, T2, T1);
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -766,7 +766,7 @@ public class TestKeepDeletes {
     region.compact(true);
     assertEquals(1, countDeleteMarkers(region));
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -817,7 +817,7 @@ public class TestKeepDeletes {
     assertEquals(4, kvs.size());
     scanner.close();
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -895,7 +895,7 @@ public class TestKeepDeletes {
     region.compact(true);
     assertEquals(0, countDeleteMarkers(region));
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /**
@@ -939,7 +939,7 @@ public class TestKeepDeletes {
     // all delete marker gone
     assertEquals(0, countDeleteMarkers(region));
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   private void checkGet(Region region, byte[] row, byte[] fam, byte[] col,

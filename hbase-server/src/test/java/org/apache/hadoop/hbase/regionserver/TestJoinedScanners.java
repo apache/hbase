@@ -24,8 +24,8 @@ import java.util.Random;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -73,7 +73,7 @@ public class TestJoinedScanners {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJoinedScanners.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final byte[] cf_essential = Bytes.toBytes("essential");
   private static final byte[] cf_joined = Bytes.toBytes("joined");
@@ -97,7 +97,7 @@ public class TestJoinedScanners {
 
     String[] dataNodeHosts = new String[] {"host1", "host2", "host3"};
     int regionServersCount = 3;
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numRegionServers(regionServersCount).dataNodeHosts(dataNodeHosts).build();
     TEST_UTIL.startMiniCluster(option);
   }

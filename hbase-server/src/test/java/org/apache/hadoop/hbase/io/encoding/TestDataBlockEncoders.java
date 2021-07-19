@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
@@ -91,7 +91,7 @@ public class TestDataBlockEncoders {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseTestingUtility.memStoreTSTagsAndOffheapCombination();
+    return HBaseTestingUtil.memStoreTSTagsAndOffheapCombination();
   }
 
   public TestDataBlockEncoders(boolean includesMemstoreTS, boolean includesTag,

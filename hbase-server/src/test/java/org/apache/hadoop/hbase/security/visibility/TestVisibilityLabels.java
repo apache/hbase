@@ -35,7 +35,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -91,7 +91,7 @@ public abstract class TestVisibilityLabels {
       + "\u0027&\\";
   public static final String UC1 = "\u0027\"\u002b";
   public static final String UC2 = "\u002d\u003f";
-  public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  public static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   public static final byte[] row1 = Bytes.toBytes("row1");
   public static final byte[] row2 = Bytes.toBytes("row2");
   public static final byte[] row3 = Bytes.toBytes("row3");

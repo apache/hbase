@@ -145,17 +145,6 @@ public class Scan extends Query {
   public static final boolean DEFAULT_HBASE_CLIENT_SCANNER_ASYNC_PREFETCH = false;
 
   /**
-   * Set it true for small scan to get better performance Small scan should use pread and big scan
-   * can use seek + read seek + read is fast but can cause two problem (1) resource contention (2)
-   * cause too much network io [89-fb] Using pread for non-compaction read request
-   * https://issues.apache.org/jira/browse/HBASE-7266 On the other hand, if setting it true, we
-   * would do openScanner,next,closeScanner in one RPC call. It means the better performance for
-   * small scan. [HBASE-9488]. Generally, if the scan range is within one data block(64KB), it could
-   * be considered as a small scan.
-   */
-  private boolean small = false;
-
-  /**
    * The mvcc read point to use when open a scanner. Remember to clear it after switching regions as
    * the mvcc is only valid within region scope.
    */
@@ -203,7 +192,6 @@ public class Scan extends Query {
     this.setIsolationLevel(scan.getIsolationLevel());
     reversed = scan.isReversed();
     asyncPrefetch = scan.isAsyncPrefetch();
-    small = scan.isSmall();
     allowPartialResults = scan.getAllowPartialResults();
     tr = scan.getTimeRange(); // TimeRange is immutable
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
@@ -318,24 +306,6 @@ public class Scan extends Query {
   public Scan setTimeRange(long minStamp, long maxStamp) throws IOException {
     tr = TimeRange.between(minStamp, maxStamp);
     return this;
-  }
-
-  /**
-   * Get versions of columns with the specified timestamp. Note, default maximum
-   * versions to return is 1.  If your time range spans more than one version
-   * and you want all versions returned, up the number of versions beyond the
-   * defaut.
-   * @param timestamp version timestamp
-   * @see #readAllVersions()
-   * @see #readVersions(int)
-   * @return this
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #setTimestamp(long)} instead
-   */
-  @Deprecated
-  public Scan setTimeStamp(long timestamp)
-  throws IOException {
-    return this.setTimestamp(timestamp);
   }
 
   /**
@@ -872,45 +842,6 @@ public class Scan extends Query {
   public boolean isRaw() {
     byte[] attr = getAttribute(RAW_ATTR);
     return attr == null ? false : Bytes.toBoolean(attr);
-  }
-
-  /**
-   * Set whether this scan is a small scan
-   * <p>
-   * Small scan should use pread and big scan can use seek + read seek + read is fast but can cause
-   * two problem (1) resource contention (2) cause too much network io [89-fb] Using pread for
-   * non-compaction read request https://issues.apache.org/jira/browse/HBASE-7266 On the other hand,
-   * if setting it true, we would do openScanner,next,closeScanner in one RPC call. It means the
-   * better performance for small scan. [HBASE-9488]. Generally, if the scan range is within one
-   * data block(64KB), it could be considered as a small scan.
-   * @param small
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #setLimit(int)} and
-   *   {@link #setReadType(ReadType)} instead. And for the one rpc optimization, now we will also
-   *   fetch data when openScanner, and if the number of rows reaches the limit then we will close
-   *   the scanner automatically which means we will fall back to one rpc.
-   * @see #setLimit(int)
-   * @see #setReadType(ReadType)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17045">HBASE-17045</a>
-   */
-  @Deprecated
-  public Scan setSmall(boolean small) {
-    this.small = small;
-    if (small) {
-      this.readType = ReadType.PREAD;
-    }
-    return this;
-  }
-
-  /**
-   * Get whether this scan is a small scan
-   * @return true if small scan
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. See the comment of
-   *   {@link #setSmall(boolean)}
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17045">HBASE-17045</a>
-   */
-  @Deprecated
-  public boolean isSmall() {
-    return small;
   }
 
   @Override

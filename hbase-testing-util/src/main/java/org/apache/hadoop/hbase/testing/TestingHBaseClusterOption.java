@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.testing;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -156,8 +156,8 @@ public final class TestingHBaseClusterOption {
   /**
    * Convert to the internal option. Not for public use so package private.
    */
-  StartMiniClusterOption convert() {
-    return StartMiniClusterOption.builder().numMasters(numMasters)
+  StartTestingClusterOption convert() {
+    return StartTestingClusterOption.builder().numMasters(numMasters)
       .numAlwaysStandByMasters(numAlwaysStandByMasters).numRegionServers(numRegionServers)
       .rsPorts(rsPorts).numDataNodes(numDataNodes).dataNodeHosts(dataNodeHosts)
       .numZkServers(numZkServers).createRootDir(createRootDir).createWALDir(createWALDir).build();

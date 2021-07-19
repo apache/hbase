@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.tool;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.countRows;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -96,7 +96,7 @@ public class TestBulkLoadHFiles {
   private static final byte[][] SPLIT_KEYS =
     new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ppp") };
 
-  static HBaseTestingUtility util = new HBaseTestingUtility();
+  static HBaseTestingUtil util = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -292,7 +292,7 @@ public class TestBulkLoadHFiles {
     runTest(testName, htd, preCreateTable, tableSplitKeys, hfileRanges, useMap, false, depth);
   }
 
-  public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtility util,
+  public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtil util,
       byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
       byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles,
       int initRowCount, int factor) throws Exception {
@@ -300,7 +300,7 @@ public class TestBulkLoadHFiles {
       useMap, deleteFile, copyFiles, initRowCount, factor, 2);
   }
 
-  public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtility util,
+  public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtil util,
       byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
       byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles,
       int initRowCount, int factor, int depth) throws Exception {
@@ -774,7 +774,7 @@ public class TestBulkLoadHFiles {
     try {
       loader.bulkLoad(table.getName(), dir);
       assertEquals(families.length, attmptedCalls.get());
-      assertEquals(1000 * families.length, HBaseTestingUtility.countRows(table));
+      assertEquals(1000 * families.length, HBaseTestingUtil.countRows(table));
     } finally {
       if (null != table) {
         table.close();

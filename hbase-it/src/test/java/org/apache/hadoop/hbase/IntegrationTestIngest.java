@@ -64,7 +64,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   // Log is being used in IntegrationTestIngestWithEncryption, hence it is protected
   protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestIngest.class);
   protected IntegrationTestingUtility util;
-  protected HBaseCluster cluster;
+  protected HBaseClusterInterface cluster;
   protected LoadTestTool loadTool;
 
   protected String[] LOAD_TEST_TOOL_INIT_ARGS = {

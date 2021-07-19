@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -117,7 +117,7 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
     write(UTIL2, 200, 300);
   }
 
-  private void verifyNoClusterIdInRemoteLog(HBaseTestingUtility utility, Path remoteDir,
+  private void verifyNoClusterIdInRemoteLog(HBaseTestingUtil utility, Path remoteDir,
       String peerId) throws Exception {
     FileSystem fs2 = utility.getTestFileSystem();
     FileStatus[] files = fs2.listStatus(new Path(remoteDir, peerId));

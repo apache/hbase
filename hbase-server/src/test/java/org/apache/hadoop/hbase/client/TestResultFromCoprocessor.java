@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -51,7 +51,7 @@ public class TestResultFromCoprocessor {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestResultFromCoprocessor.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] ROW = Bytes.toBytes("normal_row");
   private static final byte[] FAMILY = Bytes.toBytes("fm");
   private static final byte[] QUAL = Bytes.toBytes("qual");

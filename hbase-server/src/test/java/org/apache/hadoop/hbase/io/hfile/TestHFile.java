@@ -55,9 +55,9 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
@@ -104,7 +104,7 @@ public class TestHFile  {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFile.class);
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static String ROOT_DIR =
     TEST_UTIL.getDataTestDir("TestHFile").toString();
   private final int minBlockSize = 512;
@@ -633,7 +633,7 @@ public class TestHFile  {
   @Test
   public void testNullMetaBlocks() throws Exception {
     for (Compression.Algorithm compressAlgo :
-        HBaseCommonTestingUtility.COMPRESSION_ALGORITHMS) {
+        HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS) {
       Path mFile = new Path(ROOT_DIR, "nometa_" + compressAlgo + ".hfile");
       FSDataOutputStream fout = createFSOutput(mFile);
       HFileContext meta = new HFileContextBuilder().withCompression(compressAlgo)

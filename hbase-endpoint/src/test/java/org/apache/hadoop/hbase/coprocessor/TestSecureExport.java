@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -91,7 +91,7 @@ public class TestSecureExport {
       HBaseClassTestRule.forClass(TestSecureExport.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureExport.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static MiniKdc KDC;
   private static final File KEYTAB_FILE = new File(UTIL.getDataTestDir("keytab").toUri().getPath());
   private static String USERNAME;

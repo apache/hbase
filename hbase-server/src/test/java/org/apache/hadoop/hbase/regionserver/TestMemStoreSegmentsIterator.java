@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -76,7 +76,7 @@ public class TestMemStoreSegmentsIterator {
   @Before
   public void setup() throws IOException {
     Configuration conf = new Configuration();
-    HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
+    HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
     TableDescriptorBuilder tableDescriptorBuilder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE));
     ColumnFamilyDescriptor columnFamilyDescriptor =
@@ -85,7 +85,7 @@ public class TestMemStoreSegmentsIterator {
 
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE)).build();
     Path rootPath = hbaseUtility.getDataTestDir(ROOT_SUB_PATH);
-    this.wal = HBaseTestingUtility.createWal(conf, rootPath, info);
+    this.wal = HBaseTestingUtil.createWal(conf, rootPath, info);
     this.region = HRegion.createHRegion(info, rootPath, conf,
       tableDescriptorBuilder.build(), this.wal, true);
     this.store = new HStore(this.region, columnFamilyDescriptor, conf, false);

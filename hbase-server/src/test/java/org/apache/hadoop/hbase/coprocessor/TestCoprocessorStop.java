@@ -25,8 +25,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -50,7 +50,7 @@ public class TestCoprocessorStop {
       HBaseClassTestRule.forClass(TestCoprocessorStop.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorStop.class);
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final String MASTER_FILE = "master" + EnvironmentEdgeManager.currentTime();
   private static final String REGIONSERVER_FILE = "regionserver" +
     EnvironmentEdgeManager.currentTime();
@@ -113,7 +113,7 @@ public class TestCoprocessorStop {
   @Test
   public void testStopped() throws Exception {
     //shutdown hbase only. then check flag file.
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     LOG.info("shutdown hbase cluster...");
     cluster.shutdown();
     LOG.info("wait for the hbase cluster shutdown...");

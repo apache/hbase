@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.util.compaction;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -44,11 +44,11 @@ public class TestMajorCompactor {
       HBaseClassTestRule.forClass(TestMajorCompactor.class);
 
   public static final byte[] FAMILY = Bytes.toBytes("a");
-  protected HBaseTestingUtility utility;
+  protected HBaseTestingUtil utility;
   protected Admin admin;
 
   @Before public void setUp() throws Exception {
-    utility = new HBaseTestingUtility();
+    utility = new HBaseTestingUtil();
     utility.getConfiguration().setInt("hbase.hfile.compaction.discharger.interval", 10);
     utility.startMiniCluster();
   }

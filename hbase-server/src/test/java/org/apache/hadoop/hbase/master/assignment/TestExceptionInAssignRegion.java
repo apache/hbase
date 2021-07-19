@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -49,7 +49,7 @@ public class TestExceptionInAssignRegion {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestExceptionInAssignRegion.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final TableName TABLE_NAME = TableName.valueOf("test");
 

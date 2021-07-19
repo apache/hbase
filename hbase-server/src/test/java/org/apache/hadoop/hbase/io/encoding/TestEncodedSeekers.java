@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
@@ -79,7 +79,7 @@ public class TestEncodedSeekers {
   private static final int NUM_HFILES = 4;
   private static final int NUM_ROWS_PER_FLUSH = NUM_ROWS / NUM_HFILES;
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
   private final DataBlockEncoding encoding;
   private final boolean includeTags;
   private final boolean compressTags;

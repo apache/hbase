@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -42,7 +42,7 @@ public class TestBackupUtils {
       HBaseClassTestRule.forClass(TestBackupUtils.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupUtils.class);
 
-  protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static Configuration conf = TEST_UTIL.getConfiguration();
 
   @Test

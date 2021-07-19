@@ -36,7 +36,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.TimeoutException;
@@ -71,7 +71,7 @@ public class TestZKProcedure {
       HBaseClassTestRule.forClass(TestZKProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKProcedure.class);
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final String COORDINATOR_NODE_NAME = "coordinator";
   private static final long KEEP_ALIVE = 100; // seconds
   private static final int POOL_SIZE = 1;

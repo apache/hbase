@@ -34,10 +34,10 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -82,13 +82,13 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFavoredStochasticLoadBalancer.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final int SLAVES = 8;
   private static final int REGION_NUM = SLAVES * 3;
 
   private Admin admin;
   private HMaster master;
-  private MiniHBaseCluster cluster;
+  private SingleProcessHBaseCluster cluster;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {

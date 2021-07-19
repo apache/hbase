@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -70,7 +70,7 @@ public class TestVisibilityLabelsWithACL {
   private static final String PRIVATE = "private";
   private static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] row1 = Bytes.toBytes("row1");
   private final static byte[] fam = Bytes.toBytes("info");
   private final static byte[] qual = Bytes.toBytes("qual");

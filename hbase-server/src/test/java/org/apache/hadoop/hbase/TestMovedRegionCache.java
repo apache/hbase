@@ -50,7 +50,7 @@ public class TestMovedRegionCache {
   @Rule
   public TestName name = new TestName();
 
-  private HBaseTestingUtility UTIL;
+  private HBaseTestingUtil UTIL;
   private MiniZooKeeperCluster zkCluster;
   private HRegionServer source;
   private HRegionServer dest;
@@ -58,10 +58,11 @@ public class TestMovedRegionCache {
 
   @Before
   public void setup() throws Exception {
-    UTIL = new HBaseTestingUtility();
+    UTIL = new HBaseTestingUtil();
     zkCluster = UTIL.startMiniZKCluster();
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
-    MiniHBaseCluster cluster = UTIL.startMiniHBaseCluster(option);
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(2).build();
+    SingleProcessHBaseCluster cluster = UTIL.startMiniHBaseCluster(option);
     source = cluster.getRegionServer(0);
     dest = cluster.getRegionServer(1);
     assertEquals(2, cluster.getRegionServerThreads().size());

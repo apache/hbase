@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -93,7 +93,7 @@ public class TestCoprocessorMetrics {
       HBaseClassTestRule.forClass(TestCoprocessorMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorMetrics.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final byte[] foo = Bytes.toBytes("foo");
   private static final byte[] bar = Bytes.toBytes("bar");

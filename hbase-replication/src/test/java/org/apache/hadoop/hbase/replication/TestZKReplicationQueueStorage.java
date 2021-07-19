@@ -30,7 +30,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -56,7 +56,7 @@ public class TestZKReplicationQueueStorage {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestZKReplicationQueueStorage.class);
 
-  private static final HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
+  private static final HBaseZKTestingUtil UTIL = new HBaseZKTestingUtil();
 
   private static ZKReplicationQueueStorage STORAGE;
 

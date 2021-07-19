@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -58,7 +58,7 @@ public class TestRestoreFlushSnapshotFromClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRestoreFlushSnapshotFromClient.class);
 
-  protected final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   protected final byte[] FAMILY = Bytes.toBytes("cf");
 
@@ -217,7 +217,7 @@ public class TestRestoreFlushSnapshotFromClient {
     UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
   }
 
-  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+  protected void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
       long expectedRows) throws IOException {
     SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
   }

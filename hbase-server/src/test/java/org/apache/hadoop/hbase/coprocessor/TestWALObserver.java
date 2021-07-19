@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -89,7 +89,7 @@ public class TestWALObserver {
       HBaseClassTestRule.forClass(TestWALObserver.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALObserver.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static byte[] TEST_TABLE = Bytes.toBytes("observedTable");
   private static byte[][] TEST_FAMILY = { Bytes.toBytes("fam1"),
@@ -342,7 +342,7 @@ public class TestWALObserver {
     // sync to fs.
     wal.sync();
 
-    User user = HBaseTestingUtility.getDifferentUser(newConf,
+    User user = HBaseTestingUtil.getDifferentUser(newConf,
         ".replay.wal.secondtime");
     user.runAs(new PrivilegedExceptionAction<Void>() {
       @Override

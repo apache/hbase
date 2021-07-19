@@ -22,9 +22,9 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -43,12 +43,12 @@ public class TestUpdateConfiguration extends AbstractTestUpdateConfiguration {
       HBaseClassTestRule.forClass(TestUpdateConfiguration.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestUpdateConfiguration.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setup() throws Exception {
     setUpConfigurationFiles(TEST_UTIL);
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(2).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(2).build();
     TEST_UTIL.startMiniCluster(option);
     addResourceToRegionServerConfiguration(TEST_UTIL);
   }

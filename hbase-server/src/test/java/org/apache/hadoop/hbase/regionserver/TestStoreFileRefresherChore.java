@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -67,7 +67,7 @@ public class TestStoreFileRefresherChore {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestStoreFileRefresherChore.class);
 
-  private HBaseTestingUtility TEST_UTIL;
+  private HBaseTestingUtil TEST_UTIL;
   private Path testDir;
 
   @Rule
@@ -75,7 +75,7 @@ public class TestStoreFileRefresherChore {
 
   @Before
   public void setUp() throws IOException {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     testDir = TEST_UTIL.getDataTestDir("TestStoreFileRefresherChore");
     CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), testDir);
   }

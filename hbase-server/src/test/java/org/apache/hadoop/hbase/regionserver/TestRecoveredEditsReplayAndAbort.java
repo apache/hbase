@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -83,7 +83,7 @@ public class TestRecoveredEditsReplayAndAbort {
   protected TableName tableName;
   protected String method;
 
-  protected static HBaseTestingUtility TEST_UTIL;
+  protected static HBaseTestingUtil TEST_UTIL;
   public static Configuration CONF ;
   private HRegion region = null;
 
@@ -91,7 +91,7 @@ public class TestRecoveredEditsReplayAndAbort {
 
   @Before
   public void setup() throws IOException {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     CONF = TEST_UTIL.getConfiguration();
     method = name.getMethodName();
     tableName = TableName.valueOf(method);
@@ -129,7 +129,7 @@ public class TestRecoveredEditsReplayAndAbort {
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     Path logDir = TEST_UTIL
         .getDataTestDirOnTestFS("TestRecoveredEidtsReplayAndAbort.log");
-    final WAL wal = HBaseTestingUtility.createWal(CONF, logDir, info);
+    final WAL wal = HBaseTestingUtil.createWal(CONF, logDir, info);
     Path rootDir = TEST_UTIL.getDataTestDir();
     Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
     HRegionFileSystem
@@ -204,7 +204,7 @@ public class TestRecoveredEditsReplayAndAbort {
       //a memory leak.
       Assert.assertEquals(0, ChunkCreator.getInstance().numberOfMappedChunks());
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
       wals.close();
     }

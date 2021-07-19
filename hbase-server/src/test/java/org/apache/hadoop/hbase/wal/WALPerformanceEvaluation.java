@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.TableName;
@@ -99,7 +99,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
 
   private final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
-  private HBaseTestingUtility TEST_UTIL;
+  private HBaseTestingUtil TEST_UTIL;
 
   static final String TABLE_NAME = "WALPerformanceEvaluation";
   static final String QUALIFIER_PREFIX = "q";
@@ -278,7 +278,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     getConf().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, numThreads);
 
     if (rootRegionDir == null) {
-      TEST_UTIL = new HBaseTestingUtility(getConf());
+      TEST_UTIL = new HBaseTestingUtil(getConf());
       rootRegionDir = TEST_UTIL.getDataTestDirOnTestFS("WALPerformanceEvaluation");
     }
     // Run WAL Performance Evaluation

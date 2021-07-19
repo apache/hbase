@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
@@ -51,7 +51,7 @@ public class FlushRandomRegionOfTableAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
+    HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
 
     getLogger().info("Performing action: Flush random region of table " + tableName);

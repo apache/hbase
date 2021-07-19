@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -64,7 +64,7 @@ public class TestInvocationRecordFilter {
   private static final String QUALIFIER_PREFIX = "qualifier";
   private static final String VALUE_PREFIX = "value";
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private HRegion region;
 
   @Before
@@ -72,7 +72,7 @@ public class TestInvocationRecordFilter {
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME_BYTES))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME_BYTES)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+    this.region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
       TEST_UTIL.getConfiguration(), htd);
 
     Put put = new Put(ROW_BYTES);

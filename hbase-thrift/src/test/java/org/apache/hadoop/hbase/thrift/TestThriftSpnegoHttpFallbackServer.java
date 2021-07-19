@@ -31,7 +31,7 @@ import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -114,7 +114,7 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
   public static void setUpBeforeClass() throws Exception {
     kdc = SimpleKdcServerUtil.
       getRunningSimpleKdcServer(new File(TEST_UTIL.getDataTestDir().toString()),
-        HBaseTestingUtility::randomFreePort);
+        HBaseTestingUtil::randomFreePort);
 
     File keytabDir = Paths.get(TEST_UTIL.getRandomDir().toString()).toAbsolutePath().toFile();
     assertTrue(keytabDir.mkdirs());

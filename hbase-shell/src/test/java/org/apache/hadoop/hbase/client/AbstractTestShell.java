@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -39,7 +39,7 @@ public abstract class AbstractTestShell {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractTestShell.class);
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected final static ScriptingContainer jruby = new ScriptingContainer();
 
   protected static void setUpConfig() throws IOException {

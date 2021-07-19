@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -64,7 +64,7 @@ public class TestQualifierFilterWithEmptyQualifier {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestQualifierFilterWithEmptyQualifier.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private HRegion region;
 
   @Rule
@@ -85,7 +85,7 @@ public class TestQualifierFilterWithEmptyQualifier {
         .newBuilder(TableName.valueOf("TestQualifierFilter"))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-    this.region = HBaseTestingUtility
+    this.region = HBaseTestingUtil
         .createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
 
     // Insert data
@@ -104,7 +104,7 @@ public class TestQualifierFilterWithEmptyQualifier {
 
   @After
   public void tearDown() throws Exception {
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @Test

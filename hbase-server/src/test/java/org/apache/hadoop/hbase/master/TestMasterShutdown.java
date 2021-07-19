@@ -27,10 +27,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -53,7 +53,7 @@ public class TestMasterShutdown {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMasterShutdown.class);
 
-  private HBaseTestingUtility htu;
+  private HBaseTestingUtil htu;
 
   @Before
   public void shutdownCluster() throws IOException {
@@ -78,13 +78,13 @@ public class TestMasterShutdown {
 
     // Start the cluster
     try {
-      htu = new HBaseTestingUtility(conf);
-      StartMiniClusterOption option = StartMiniClusterOption.builder()
+      htu = new HBaseTestingUtil(conf);
+      StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numMasters(3)
         .numRegionServers(1)
         .numDataNodes(1)
         .build();
-      final MiniHBaseCluster cluster = htu.startMiniCluster(option);
+      final SingleProcessHBaseCluster cluster = htu.startMiniCluster(option);
 
       // wait for all master thread to spawn and start their run loop.
       final long thirtySeconds = TimeUnit.SECONDS.toMillis(30);
@@ -128,16 +128,16 @@ public class TestMasterShutdown {
   public void testMasterShutdownBeforeStartingAnyRegionServer() throws Exception {
     LocalHBaseCluster hbaseCluster = null;
     try {
-      htu = new HBaseTestingUtility(
+      htu = new HBaseTestingUtil(
         createMasterShutdownBeforeStartingAnyRegionServerConfiguration());
 
       // configure a cluster with
-      final StartMiniClusterOption options = StartMiniClusterOption.builder()
+      final StartTestingClusterOption options = StartTestingClusterOption.builder()
         .numDataNodes(1)
         .numMasters(1)
         .numRegionServers(0)
         .masterClass(HMaster.class)
-        .rsClass(MiniHBaseCluster.MiniHBaseClusterRegionServer.class)
+        .rsClass(SingleProcessHBaseCluster.MiniHBaseClusterRegionServer.class)
         .createRootDir(true)
         .build();
 

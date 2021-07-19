@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RestTests;
@@ -56,7 +56,7 @@ public class TestRemoteAdminRetries {
   private static final int RETRIES = 3;
   private static final long MAX_TIME = SLEEP_TIME * (RETRIES - 1);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private RemoteAdmin remoteAdmin;
   private Client client;

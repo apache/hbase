@@ -25,7 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -79,7 +79,7 @@ public class TestSCVFWithMiniCluster {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    HBaseTestingUtility util = new HBaseTestingUtility();
+    HBaseTestingUtil util = new HBaseTestingUtil();
 
     util.startMiniCluster(1);
 

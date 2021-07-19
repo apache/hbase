@@ -31,10 +31,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Admin;
@@ -64,11 +64,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
  */
 public class SyncReplicationTestBase {
 
-  protected static final HBaseZKTestingUtility ZK_UTIL = new HBaseZKTestingUtility();
+  protected static final HBaseZKTestingUtil ZK_UTIL = new HBaseZKTestingUtil();
 
-  protected static final HBaseTestingUtility UTIL1 = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
 
-  protected static final HBaseTestingUtility UTIL2 = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
 
   protected static TableName TABLE_NAME = TableName.valueOf("SyncRep");
 
@@ -82,7 +82,7 @@ public class SyncReplicationTestBase {
 
   protected static Path REMOTE_WAL_DIR2;
 
-  protected static void initTestingUtility(HBaseTestingUtility util, String zkParent) {
+  protected static void initTestingUtility(HBaseTestingUtil util, String zkParent) {
     util.setZkCluster(ZK_UTIL.getZkCluster());
     Configuration conf = util.getConfiguration();
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, zkParent);
@@ -106,8 +106,8 @@ public class SyncReplicationTestBase {
     ZK_UTIL.startMiniZKCluster();
     initTestingUtility(UTIL1, "/cluster1");
     initTestingUtility(UTIL2, "/cluster2");
-    StartMiniClusterOption option =
-      StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
     UTIL1.startMiniCluster(option);
     UTIL2.startMiniCluster(option);
     TableDescriptor td =
@@ -135,7 +135,7 @@ public class SyncReplicationTestBase {
         .setRemoteWALDir(REMOTE_WAL_DIR1.toUri().toString()).build());
   }
 
-  private static void shutdown(HBaseTestingUtility util) throws Exception {
+  private static void shutdown(HBaseTestingUtil util) throws Exception {
     if (util.getHBaseCluster() == null) {
       return;
     }
@@ -158,7 +158,7 @@ public class SyncReplicationTestBase {
     ZK_UTIL.shutdownMiniZKCluster();
   }
 
-  protected final void write(HBaseTestingUtility util, int start, int end) throws IOException {
+  protected final void write(HBaseTestingUtil util, int start, int end) throws IOException {
     try (Table table = util.getConnection().getTable(TABLE_NAME)) {
       for (int i = start; i < end; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
@@ -166,7 +166,7 @@ public class SyncReplicationTestBase {
     }
   }
 
-  protected final void verify(HBaseTestingUtility util, int start, int end) throws IOException {
+  protected final void verify(HBaseTestingUtil util, int start, int end) throws IOException {
     try (Table table = util.getConnection().getTable(TABLE_NAME)) {
       for (int i = start; i < end; i++) {
         assertEquals(i, Bytes.toInt(table.get(new Get(Bytes.toBytes(i))).getValue(CF, CQ)));
@@ -174,7 +174,7 @@ public class SyncReplicationTestBase {
     }
   }
 
-  protected final void verifyThroughRegion(HBaseTestingUtility util, int start, int end)
+  protected final void verifyThroughRegion(HBaseTestingUtil util, int start, int end)
       throws IOException {
     HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
     for (int i = start; i < end; i++) {
@@ -182,7 +182,7 @@ public class SyncReplicationTestBase {
     }
   }
 
-  protected final void verifyNotReplicatedThroughRegion(HBaseTestingUtility util, int start,
+  protected final void verifyNotReplicatedThroughRegion(HBaseTestingUtil util, int start,
       int end) throws IOException {
     HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
     for (int i = start; i < end; i++) {
@@ -190,7 +190,7 @@ public class SyncReplicationTestBase {
     }
   }
 
-  protected final void waitUntilReplicationDone(HBaseTestingUtility util, int end)
+  protected final void waitUntilReplicationDone(HBaseTestingUtil util, int end)
       throws Exception {
     // The reject check is in RSRpcService so we can still read through HRegion
     HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
@@ -208,8 +208,8 @@ public class SyncReplicationTestBase {
     });
   }
 
-  protected final void writeAndVerifyReplication(HBaseTestingUtility util1,
-      HBaseTestingUtility util2, int start, int end) throws Exception {
+  protected final void writeAndVerifyReplication(HBaseTestingUtil util1,
+      HBaseTestingUtil util2, int start, int end) throws Exception {
     write(util1, start, end);
     waitUntilReplicationDone(util2, end);
     verifyThroughRegion(util2, start, end);
@@ -229,7 +229,7 @@ public class SyncReplicationTestBase {
   }
 
   protected final void verifyRemovedPeer(String peerId, Path remoteWALDir,
-      HBaseTestingUtility utility) throws Exception {
+      HBaseTestingUtil utility) throws Exception {
     ReplicationPeerStorage rps = ReplicationStorageFactory
       .getReplicationPeerStorage(utility.getZooKeeperWatcher(), utility.getConfiguration());
     try {
@@ -256,7 +256,7 @@ public class SyncReplicationTestBase {
     assertTrue(error.getMessage().contains(TABLE_NAME.toString()));
   }
 
-  protected final void verifyReplicationRequestRejection(HBaseTestingUtility utility,
+  protected final void verifyReplicationRequestRejection(HBaseTestingUtil utility,
       boolean expectedRejection) throws Exception {
     HRegionServer regionServer = utility.getRSForFirstRegionInTable(TABLE_NAME);
     AsyncClusterConnection connection = regionServer.getAsyncClusterConnection();
@@ -283,7 +283,7 @@ public class SyncReplicationTestBase {
     }
   }
 
-  protected final void waitUntilDeleted(HBaseTestingUtility util, Path remoteWAL) throws Exception {
+  protected final void waitUntilDeleted(HBaseTestingUtil util, Path remoteWAL) throws Exception {
     MasterFileSystem mfs = util.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     util.waitFor(30000, new ExplainingPredicate<Exception>() {
 

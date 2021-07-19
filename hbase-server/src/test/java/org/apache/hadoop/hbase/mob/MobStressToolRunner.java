@@ -26,7 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -61,7 +61,7 @@ public class MobStressToolRunner {
   private static final Logger LOG = LoggerFactory.getLogger(MobStressToolRunner.class);
 
 
-  private HBaseTestingUtility HTU;
+  private HBaseTestingUtil HTU;
 
   private final static String famStr = "f1";
   private final static byte[] fam = Bytes.toBytes(famStr);

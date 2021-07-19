@@ -35,7 +35,7 @@ public class TestClusterPortAssignment {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestClusterPortAssignment.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestClusterPortAssignment.class);
 
   /**
@@ -46,10 +46,10 @@ public class TestClusterPortAssignment {
   public void testClusterPortAssignment() throws Exception {
     boolean retry = false;
     do {
-      int masterPort =  HBaseTestingUtility.randomFreePort();
-      int masterInfoPort =  HBaseTestingUtility.randomFreePort();
-      int rsPort =  HBaseTestingUtility.randomFreePort();
-      int rsInfoPort =  HBaseTestingUtility.randomFreePort();
+      int masterPort =  HBaseTestingUtil.randomFreePort();
+      int masterInfoPort =  HBaseTestingUtil.randomFreePort();
+      int rsPort =  HBaseTestingUtil.randomFreePort();
+      int rsInfoPort =  HBaseTestingUtil.randomFreePort();
       TEST_UTIL.getConfiguration().setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, false);
       TEST_UTIL.getConfiguration().setBoolean(HConstants.REGIONSERVER_INFO_PORT_AUTO, false);
       TEST_UTIL.getConfiguration().setBoolean("fs.hdfs.impl.disable.cache", true);
@@ -59,7 +59,7 @@ public class TestClusterPortAssignment {
       TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_INFO_PORT, rsInfoPort);
       LOG.info("Ports: {}, {}, {}, {}", masterPort, masterInfoPort, rsPort, rsInfoPort);
       try {
-        MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster();
+        SingleProcessHBaseCluster cluster = TEST_UTIL.startMiniCluster();
         assertTrue("Cluster failed to come up", cluster.waitForActiveAndReadyMaster(30000));
         retry = false;
         assertEquals("Master RPC port is incorrect", masterPort,

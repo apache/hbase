@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -132,12 +132,12 @@ public class TestZKLeaderManager {
     }
   }
 
-  private static HBaseZKTestingUtility TEST_UTIL;
+  private static HBaseZKTestingUtil TEST_UTIL;
   private static MockLeader[] CANDIDATES;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    TEST_UTIL = new HBaseZKTestingUtility();
+    TEST_UTIL = new HBaseZKTestingUtil();
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
 

@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Append;
@@ -63,7 +63,7 @@ public class TestHRegionTracing {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestHRegionTracing.class);
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static byte[] FAMILY = Bytes.toBytes("family");
 
@@ -96,7 +96,7 @@ public class TestHRegionTracing {
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    wal = HBaseTestingUtility.createWal(UTIL.getConfiguration(),
+    wal = HBaseTestingUtil.createWal(UTIL.getConfiguration(),
       new Path(UTIL.getDataTestDir(), tableName.getNameAsString()), null);
     region = HRegion.createHRegion(info, UTIL.getDataTestDir(), UTIL.getConfiguration(), desc, wal);
     region = UTIL.createLocalHRegion(info, desc);

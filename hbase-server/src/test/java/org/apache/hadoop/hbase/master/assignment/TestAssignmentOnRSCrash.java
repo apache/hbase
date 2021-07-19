@@ -24,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
@@ -58,7 +58,7 @@ public class TestAssignmentOnRSCrash {
   private static final byte[] FAMILY = Bytes.toBytes(FAMILY_STR);
   private static final int NUM_RS = 3;
 
-  private HBaseTestingUtility UTIL;
+  private HBaseTestingUtil UTIL;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -67,7 +67,7 @@ public class TestAssignmentOnRSCrash {
 
   @Before
   public void setup() throws Exception {
-    UTIL = new HBaseTestingUtility();
+    UTIL = new HBaseTestingUtil();
 
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);

@@ -23,8 +23,8 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -51,13 +51,13 @@ public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
   @Before
   @Override
   public void setUp() throws Exception {
-    utility = new HBaseTestingUtility();
+    utility = new HBaseTestingUtil();
     Configuration conf = utility.getConfiguration();
     RSGroupUtil.enableRSGroup(conf);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_SLAVES_BASE);
     conf.setInt("hbase.hfile.compaction.discharger.interval", 10);
     utility.startMiniCluster(NUM_SLAVES_BASE);
-    MiniHBaseCluster cluster = utility.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = utility.getHBaseCluster();
     final HMaster master = cluster.getMaster();
 
     //wait for balancer to come online

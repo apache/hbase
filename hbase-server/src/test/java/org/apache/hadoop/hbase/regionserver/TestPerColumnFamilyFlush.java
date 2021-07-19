@@ -30,10 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -75,7 +75,7 @@ public class TestPerColumnFamilyFlush {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPerColumnFamilyFlush.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final Path DIR = TEST_UTIL.getDataTestDir("TestHRegion");
 
@@ -97,7 +97,7 @@ public class TestPerColumnFamilyFlush {
     }
     RegionInfo info = RegionInfoBuilder.newBuilder(TABLENAME).build();
     Path path = new Path(DIR, callingMethod);
-    return HBaseTestingUtility.createRegionAndWAL(info, path, conf, builder.build());
+    return HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build());
   }
 
   // A helper function to create puts.
@@ -132,7 +132,7 @@ public class TestPerColumnFamilyFlush {
   @Test
   public void testSelectiveFlushWhenEnabled() throws IOException {
     // Set up the configuration, use new one to not conflict with minicluster in other tests
-    Configuration conf = new HBaseTestingUtility().getConfiguration();
+    Configuration conf = new HBaseTestingUtil().getConfiguration();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllLargeStoresPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
@@ -268,13 +268,13 @@ public class TestPerColumnFamilyFlush {
     // Since we won't find any CF above the threshold, and hence no specific
     // store to flush, we should flush all the memstores.
     assertEquals(0, region.getMemStoreDataSize());
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @Test
   public void testSelectiveFlushWhenNotEnabled() throws IOException {
     // Set up the configuration, use new one to not conflict with minicluster in other tests
-    Configuration conf = new HBaseTestingUtility().getConfiguration();
+    Configuration conf = new HBaseTestingUtil().getConfiguration();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllStoresPolicy.class.getName());
 
@@ -327,12 +327,12 @@ public class TestPerColumnFamilyFlush {
     assertEquals(MutableSegment.DEEP_OVERHEAD, cf3MemstoreSize.getHeapSize());
     assertEquals(0, totalMemstoreSize);
     assertEquals(HConstants.NO_SEQNUM, smallestSeqInRegionCurrentMemstore);
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   // Find the (first) region which has the specified name.
   private static Pair<HRegion, HRegionServer> getRegionWithName(TableName tableName) {
-    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();

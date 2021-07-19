@@ -37,27 +37,22 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * A helper class for process-based mini-cluster tests. Unlike
- * {@link MiniHBaseCluster}, starts daemons as separate processes, allowing to
+ * {@link SingleProcessHBaseCluster}, starts daemons as separate processes, allowing to
  * do real kill testing.
  */
-@Category({MiscTests.class, LargeTests.class})
 public class ProcessBasedLocalHBaseCluster {
 
   private final String hbaseHome, workDir;
@@ -81,7 +76,7 @@ public class ProcessBasedLocalHBaseCluster {
 
   private MiniDFSCluster dfsCluster;
 
-  private HBaseTestingUtility testUtil;
+  private HBaseTestingUtil testUtil;
 
   private Thread logTailerThread;
 
@@ -115,7 +110,7 @@ public class ProcessBasedLocalHBaseCluster {
     this.numDataNodes = numDataNodes;
 
     hbaseDaemonScript = hbaseHome + "/bin/hbase-daemon.sh";
-    zkClientPort = HBaseTestingUtility.randomFreePort();
+    zkClientPort = HBaseTestingUtil.randomFreePort();
 
     this.rsPorts = sortedPorts(numRegionServers);
     this.masterPorts = sortedPorts(numMasters);
@@ -131,7 +126,7 @@ public class ProcessBasedLocalHBaseCluster {
    */
   public void startMiniDFS() throws Exception {
     if (testUtil == null) {
-      testUtil = new HBaseTestingUtility(conf);
+      testUtil = new HBaseTestingUtil(conf);
     }
     dfsCluster = testUtil.startMiniDFSCluster(numDataNodes);
   }
@@ -144,7 +139,7 @@ public class ProcessBasedLocalHBaseCluster {
   private static List<Integer> sortedPorts(int n) {
     List<Integer> ports = new ArrayList<>(n);
     for (int i = 0; i < n; ++i) {
-      ports.add(HBaseTestingUtility.randomFreePort());
+      ports.add(HBaseTestingUtil.randomFreePort());
     }
     Collections.sort(ports);
     return ports;
@@ -158,7 +153,7 @@ public class ProcessBasedLocalHBaseCluster {
     LOG.info("Starting ZooKeeper on port " + zkClientPort);
     startZK();
 
-    HBaseTestingUtility.waitForHostPort(HConstants.LOCALHOST, zkClientPort);
+    HBaseTestingUtil.waitForHostPort(HConstants.LOCALHOST, zkClientPort);
 
     for (int masterPort : masterPorts) {
       startMaster(masterPort);
@@ -386,13 +381,13 @@ public class ProcessBasedLocalHBaseCluster {
     if (serverType == ServerType.MASTER) {
       confMap.put(HConstants.MASTER_PORT, rpcPort);
 
-      int masterInfoPort = HBaseTestingUtility.randomFreePort();
+      int masterInfoPort = HBaseTestingUtil.randomFreePort();
       reportWebUIPort("master", masterInfoPort);
       confMap.put(HConstants.MASTER_INFO_PORT, masterInfoPort);
     } else if (serverType == ServerType.RS) {
       confMap.put(HConstants.REGIONSERVER_PORT, rpcPort);
 
-      int rsInfoPort = HBaseTestingUtility.randomFreePort();
+      int rsInfoPort = HBaseTestingUtil.randomFreePort();
       reportWebUIPort("region server", rsInfoPort);
       confMap.put(HConstants.REGIONSERVER_INFO_PORT, rsInfoPort);
     } else {

@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -101,7 +101,7 @@ public class TestVerifyReplication extends TestReplicationBase {
 
     Connection connection2 = ConnectionFactory.createConnection(CONF2);
     try (Admin admin2 = connection2.getAdmin()) {
-      admin2.createTable(peerTable, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin2.createTable(peerTable, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     }
     htable3 = connection2.getTable(peerTableName);
   }
@@ -174,10 +174,10 @@ public class TestVerifyReplication extends TestReplicationBase {
       Connection connection1 = ConnectionFactory.createConnection(CONF1);
       Connection connection2 = ConnectionFactory.createConnection(CONF2);
       try (Admin admin1 = connection1.getAdmin()) {
-        admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+        admin1.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
       }
       try (Admin admin2 = connection2.getAdmin()) {
-        admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+        admin2.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
       }
       UTIL1.waitUntilAllRegionsAssigned(tableName);
       UTIL2.waitUntilAllRegionsAssigned(tableName);

@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -45,7 +45,7 @@ public class TestStochasticLoadBalancerHeterogeneousCostRulesLoadFromHDFS
     HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCostRulesLoadFromHDFS.class);
 
   private HeterogeneousRegionCountCostFunction costFunction;
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   @Before
   public void setUp() throws Exception {

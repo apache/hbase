@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -45,7 +45,7 @@ public class TestTimestampFilterSeekHint {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTimestampFilterSeekHint.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static String RK = "myRK";
   private final static byte[] RK_BYTES = Bytes.toBytes(RK);
 

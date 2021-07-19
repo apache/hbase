@@ -22,9 +22,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,9 +35,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 @InterfaceAudience.Private
 class TestingHBaseClusterImpl implements TestingHBaseCluster {
 
-  private final HBaseTestingUtility util = new HBaseTestingUtility();
+  private final HBaseTestingUtil util = new HBaseTestingUtil();
 
-  private final StartMiniClusterOption option;
+  private final StartTestingClusterOption option;
 
   private final ExecutorService executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder()
     .setNameFormat(getClass().getSuperclass() + "-%d").setDaemon(true).build());

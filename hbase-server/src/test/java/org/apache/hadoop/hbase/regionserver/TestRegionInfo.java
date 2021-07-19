@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -176,17 +176,17 @@ public class TestRegionInfo {
 
   @Test
   public void testReadAndWriteHRegionInfoFile() throws IOException, InterruptedException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
+    HBaseTestingUtil htu = new HBaseTestingUtil();
     RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
     Path basedir = htu.getDataTestDir();
     // Create a region.  That'll write the .regioninfo file.
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(htu.getConfiguration());
     FSTableDescriptors.tryUpdateMetaTableDescriptor(htu.getConfiguration());
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, basedir, htu.getConfiguration(),
+    HRegion r = HBaseTestingUtil.createRegionAndWAL(hri, basedir, htu.getConfiguration(),
         fsTableDescriptors.get(TableName.META_TABLE_NAME));
     // Get modtime on the file.
     long modtime = getModTime(r);
-    HBaseTestingUtility.closeRegionAndWAL(r);
+    HBaseTestingUtil.closeRegionAndWAL(r);
     Thread.sleep(1001);
     r = HRegion.openHRegion(basedir, hri, fsTableDescriptors.get(TableName.META_TABLE_NAME),
         null, htu.getConfiguration());
@@ -199,7 +199,7 @@ public class TestRegionInfo {
         r.getRegionFileSystem().getFileSystem(), r.getRegionFileSystem().getRegionDir());
     assertEquals(0,
       org.apache.hadoop.hbase.client.RegionInfo.COMPARATOR.compare(hri, deserializedHri));
-    HBaseTestingUtility.closeRegionAndWAL(r);
+    HBaseTestingUtil.closeRegionAndWAL(r);
   }
 
   long getModTime(final HRegion r) throws IOException {

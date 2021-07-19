@@ -24,10 +24,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
@@ -65,12 +65,12 @@ public class TestMasterFailover {
     final int NUM_RS = 3;
 
     // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     try {
-      StartMiniClusterOption option = StartMiniClusterOption.builder()
+      StartTestingClusterOption option = StartTestingClusterOption.builder()
           .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
       TEST_UTIL.startMiniCluster(option);
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
       // get all the master threads
       List<MasterThread> masterThreads = cluster.getMasterThreads();
@@ -175,10 +175,10 @@ public class TestMasterFailover {
   @Test
   public void testMetaInTransitionWhenMasterFailover() throws Exception {
     // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniCluster();
     try {
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       LOG.info("Cluster started");
 
       HMaster activeMaster = cluster.getMaster();

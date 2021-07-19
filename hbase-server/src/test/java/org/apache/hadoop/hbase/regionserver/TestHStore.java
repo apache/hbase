@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
@@ -157,7 +157,7 @@ public class TestHStore {
   long id = EnvironmentEdgeManager.currentTime();
   Get get = new Get(row);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestStore").toString();
 
   @Before
@@ -497,7 +497,7 @@ public class TestHStore {
         new HStore(this.store.getHRegion(), this.store.getColumnFamilyDescriptor(), c, false);
     assertEquals(2, this.store.getStorefilesCount());
 
-    result = HBaseTestingUtility.getFromStoreFile(store,
+    result = HBaseTestingUtil.getFromStoreFile(store,
         get.getRow(),
         qualifiers);
     assertEquals(1, result.size());
@@ -519,7 +519,7 @@ public class TestHStore {
     this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null), null);
 
     //Get
-    result = HBaseTestingUtility.getFromStoreFile(store,
+    result = HBaseTestingUtil.getFromStoreFile(store,
         get.getRow(), qualifiers);
 
     //Compare
@@ -583,7 +583,7 @@ public class TestHStore {
     flush(3);
 
     //Get
-    result = HBaseTestingUtility.getFromStoreFile(store,
+    result = HBaseTestingUtil.getFromStoreFile(store,
         get.getRow(),
         qualifiers);
     //this.store.get(get, qualifiers, result);
@@ -619,7 +619,7 @@ public class TestHStore {
     this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null), null);
 
     //Get
-    result = HBaseTestingUtility.getFromStoreFile(store,
+    result = HBaseTestingUtil.getFromStoreFile(store,
         get.getRow(), qualifiers);
 
     //Need to sort the result since multiple files
@@ -829,27 +829,27 @@ public class TestHStore {
     get.addColumn(family,qf1);
 
     get.setTimeRange(0,15);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(40,90);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(10,45);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(80,145);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(1,2);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(90,200);
-    result = HBaseTestingUtility.getFromStoreFile(store, get);
+    result = HBaseTestingUtil.getFromStoreFile(store, get);
     assertTrue(result.size()==0);
   }
 

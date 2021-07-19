@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -64,7 +64,7 @@ public class TestIncrementTimeRange {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestIncrementTimeRange.class);
 
-  private static final HBaseTestingUtility util = new HBaseTestingUtility();
+  private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
 
   private static final TableName TEST_TABLE = TableName.valueOf("test");

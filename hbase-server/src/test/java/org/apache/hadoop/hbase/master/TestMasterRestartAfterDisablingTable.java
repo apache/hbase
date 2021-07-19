@@ -25,9 +25,9 @@ import java.util.NavigableSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -67,11 +67,11 @@ public class TestMasterRestartAfterDisablingTable {
     // Start the cluster
     log("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil(conf);
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numMasters(NUM_MASTERS).build();
     TEST_UTIL.startMiniCluster(option);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     log("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
 
@@ -90,7 +90,7 @@ public class TestMasterRestartAfterDisablingTable {
     log("Disabling table\n");
     TEST_UTIL.getAdmin().disableTable(tableName);
 
-    NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
+    NavigableSet<String> regions = HBaseTestingUtil.getAllOnlineRegions(cluster);
     assertEquals("The number of regions for the table tableRestart should be 0 and only" +
       "the catalog table should be present.", 1, regions.size());
 
@@ -118,7 +118,7 @@ public class TestMasterRestartAfterDisablingTable {
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Verifying there are " + numRegions + " assigned on cluster\n");
-    regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
+    regions = HBaseTestingUtil.getAllOnlineRegions(cluster);
     assertEquals("The assigned regions were not onlined after master" +
       " switch except for the catalog table.", 5, regions.size());
     assertTrue("The table should be in enabled state", cluster.getMaster().getTableStateManager()

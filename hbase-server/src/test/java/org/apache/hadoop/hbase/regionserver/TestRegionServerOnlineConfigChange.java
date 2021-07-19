@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -64,7 +64,7 @@ public class TestRegionServerOnlineConfigChange {
   private static final Logger LOG =
           LoggerFactory.getLogger(TestRegionServerOnlineConfigChange.class.getName());
   private static final long WAIT_TIMEOUT = TimeUnit.MINUTES.toMillis(2);
-  private static HBaseTestingUtility hbaseTestingUtility = new HBaseTestingUtility();
+  private static HBaseTestingUtil hbaseTestingUtility = new HBaseTestingUtil();
   private static Configuration conf = null;
 
   private static Table t1 = null;

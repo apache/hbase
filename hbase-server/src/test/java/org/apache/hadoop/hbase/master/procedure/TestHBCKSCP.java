@@ -27,11 +27,11 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -76,7 +76,7 @@ public class TestHBCKSCP extends TestSCPBase {
   @Test
   public void test() throws Exception {
     // we are about to do one for it?
-    MiniHBaseCluster cluster = this.util.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = this.util.getHBaseCluster();
 
     // Assert that we have three RegionServers. Test depends on there being multiple.
     assertEquals(RS_COUNT, cluster.getLiveRegionServerThreads().size());
@@ -84,7 +84,7 @@ public class TestHBCKSCP extends TestSCPBase {
     int count;
     try (Table table = createTable(TableName.valueOf(this.name.getMethodName()))) {
       // Load the table with a bit of data so some logs to split and some edits in each region.
-      this.util.loadTable(table, HBaseTestingUtility.COLUMNS[0]);
+      this.util.loadTable(table, HBaseTestingUtil.COLUMNS[0]);
       count = util.countRows(table);
     }
     assertTrue("expected some rows", count > 0);

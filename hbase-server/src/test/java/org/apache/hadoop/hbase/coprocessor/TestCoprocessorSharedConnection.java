@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SharedConnection;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -49,7 +49,7 @@ public class TestCoprocessorSharedConnection {
 
   @Rule
   public TestName name = new TestName();
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   /**
    * Start up a mini cluster with my three CPs loaded.

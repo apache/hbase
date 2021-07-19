@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -237,7 +238,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
 
   private Result getReverseScanResult(Table table, byte[] row) throws IOException {
     Scan scan = new Scan().withStartRow(row);
-    scan.setSmall(true);
+    scan.setReadType(ReadType.PREAD);
     scan.setReversed(true);
     scan.setCaching(1);
     scan.addFamily(HConstants.CATALOG_FAMILY);
@@ -1336,7 +1337,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan2 = new Scan();
       scan2.setScanMetricsEnabled(true);
       scan2.setCaching(1);
-      scan2.setSmall(true);
+      scan2.setReadType(ReadType.PREAD);
       try (ResultScanner scanner = ht.getScanner(scan2)) {
         int numBytes = 0;
         for (Result result : scanner) {
@@ -1908,7 +1909,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       // small scan
       Scan scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
         .withStopRow(HConstants.EMPTY_END_ROW, true);
-      scan.setSmall(true);
+      scan.setReadType(ReadType.PREAD);
       scan.setCaching(2);
       try (ResultScanner scanner = table.getScanner(scan)) {
         int count = 0;
@@ -2433,12 +2434,13 @@ public class TestFromClientSide5 extends FromClientSideBase {
         assertEquals(12, count);
       }
 
-      reverseScanTest(table, false);
-      reverseScanTest(table, true);
+      reverseScanTest(table, ReadType.STREAM);
+      reverseScanTest(table, ReadType.PREAD);
+      reverseScanTest(table, ReadType.DEFAULT);
     }
   }
 
-  private void reverseScanTest(Table table, boolean small) throws IOException {
+  private void reverseScanTest(Table table, ReadType readType) throws IOException {
     // scan backward
     Scan scan = new Scan();
     scan.setReversed(true);
@@ -2460,7 +2462,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     }
 
     scan = new Scan();
-    scan.setSmall(small);
+    scan.setReadType(readType);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("002"));
     try (ResultScanner scanner = table.getScanner(scan)) {
@@ -2481,7 +2483,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     }
 
     scan = new Scan();
-    scan.setSmall(small);
+    scan.setReadType(readType);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("002"));
     scan.withStopRow(Bytes.toBytes("000"));
@@ -2503,7 +2505,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     }
 
     scan = new Scan();
-    scan.setSmall(small);
+    scan.setReadType(readType);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("001"));
     try (ResultScanner scanner = table.getScanner(scan)) {
@@ -2524,7 +2526,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     }
 
     scan = new Scan();
-    scan.setSmall(small);
+    scan.setReadType(readType);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("000"));
     try (ResultScanner scanner = table.getScanner(scan)) {
@@ -2545,7 +2547,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     }
 
     scan = new Scan();
-    scan.setSmall(small);
+    scan.setReadType(readType);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("006"));
     scan.withStopRow(Bytes.toBytes("002"));

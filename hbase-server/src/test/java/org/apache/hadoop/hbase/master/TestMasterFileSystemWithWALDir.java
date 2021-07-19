@@ -21,8 +21,8 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -42,12 +42,12 @@ public class TestMasterFileSystemWithWALDir {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMasterFileSystemWithWALDir.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setupTest() throws Exception {
     // Set createWALDir to true and use default values for other options.
-    UTIL.startMiniCluster(StartMiniClusterOption.builder().createWALDir(true).build());
+    UTIL.startMiniCluster(StartTestingClusterOption.builder().createWALDir(true).build());
   }
 
   @AfterClass

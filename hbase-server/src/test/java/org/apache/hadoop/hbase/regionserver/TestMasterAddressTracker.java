@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -55,7 +55,7 @@ public class TestMasterAddressTracker {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterAddressTracker.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   // Cleaned up after each unit test.
   private static ZKWatcher zk;
 

@@ -20,29 +20,24 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertFalse;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Make sure we can spin up a HBTU without a hbase-site.xml
  */
-@Category({MiscTests.class, MediumTests.class})
-public class TestHBaseTestingUtilSpinup {
+@Category({ MiscTests.class, MediumTests.class })
+public class TestHBaseTestingUtilitySpinup {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseTestingUtilSpinup.class);
+    HBaseClassTestRule.forClass(TestHBaseTestingUtilitySpinup.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseTestingUtilSpinup.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   @BeforeClass

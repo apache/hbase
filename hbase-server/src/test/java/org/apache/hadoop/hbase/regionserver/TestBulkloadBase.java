@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 public class TestBulkloadBase {
   @ClassRule
   public static TemporaryFolder testFolder = new TemporaryFolder();
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected final WAL log = mock(WAL.class);
   protected final Configuration conf = HBaseConfiguration.create();
   private final Random random = new Random();

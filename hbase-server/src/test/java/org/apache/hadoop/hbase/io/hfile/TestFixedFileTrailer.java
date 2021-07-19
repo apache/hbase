@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
@@ -73,7 +73,7 @@ public class TestFixedFileTrailer {
    */
   private static final int[] NUM_FIELDS_BY_VERSION = new int[] { 14, 15 };
 
-  private HBaseTestingUtility util = new HBaseTestingUtility();
+  private HBaseTestingUtil util = new HBaseTestingUtil();
   private FileSystem fs;
   private ByteArrayOutputStream baos = new ByteArrayOutputStream();
   private int version;

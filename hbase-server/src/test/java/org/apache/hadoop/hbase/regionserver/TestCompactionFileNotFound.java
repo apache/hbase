@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -57,7 +57,7 @@ public class TestCompactionFileNotFound {
       HBaseClassTestRule.forClass(TestCompactionFileNotFound.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactionFileNotFound.class);
-  private static final HBaseTestingUtility util = new HBaseTestingUtility();
+  private static final HBaseTestingUtil util = new HBaseTestingUtil();
 
   private static final TableName TEST_TABLE = TableName.valueOf("test");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");

@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -51,7 +51,7 @@ public class TestWALReplay extends AbstractTestWALReplay {
     wal.init();
     // Set down maximum recovery so we dfsclient doesn't linger retrying something
     // long gone.
-    HBaseTestingUtility.setMaxRecoveryErrorCount(wal.getOutputStream(), 1);
+    HBaseTestingUtil.setMaxRecoveryErrorCount(wal.getOutputStream(), 1);
     return wal;
   }
 }

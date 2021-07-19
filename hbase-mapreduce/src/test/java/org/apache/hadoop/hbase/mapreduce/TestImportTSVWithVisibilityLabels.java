@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -86,7 +86,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestImportTSVWithVisibilityLabels.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
-  protected static HBaseTestingUtility util = new HBaseTestingUtility();
+  protected static HBaseTestingUtil util = new HBaseTestingUtil();
 
   /**
    * Delete the tmp directory after running doMROnTableTest. Boolean. Default is
@@ -320,7 +320,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     util.deleteTable(tableName);
   }
 
-  protected static Tool doMROnTableTest(HBaseTestingUtility util, String family, String data,
+  protected static Tool doMROnTableTest(HBaseTestingUtil util, String family, String data,
       String[] args, int valueMultiplier) throws Exception {
     return doMROnTableTest(util, family, data, args, valueMultiplier, -1);
   }
@@ -338,7 +338,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
    *
    * @return The Tool instance used to run the test.
    */
-  protected static Tool doMROnTableTest(HBaseTestingUtility util, String family, String data,
+  protected static Tool doMROnTableTest(HBaseTestingUtil util, String family, String data,
       String[] args, int valueMultiplier,int expectedKVCount) throws Exception {
     TableName table = TableName.valueOf(args[args.length - 1]);
     Configuration conf = new Configuration(util.getConfiguration());

@@ -1026,9 +1026,6 @@ public final class ProtobufUtil {
     if (scan.getMaxResultSize() > 0) {
       scanBuilder.setMaxResultSize(scan.getMaxResultSize());
     }
-    if (scan.isSmall()) {
-      scanBuilder.setSmall(scan.isSmall());
-    }
     if (scan.getAllowPartialResults()) {
       scanBuilder.setAllowPartialResults(scan.getAllowPartialResults());
     }
@@ -1179,9 +1176,6 @@ public final class ProtobufUtil {
     if (proto.hasMaxResultSize()) {
       scan.setMaxResultSize(proto.getMaxResultSize());
     }
-    if (proto.hasSmall()) {
-      scan.setSmall(proto.getSmall());
-    }
     if (proto.hasAllowPartialResults()) {
       scan.setAllowPartialResults(proto.getAllowPartialResults());
     }
@@ -1212,9 +1206,7 @@ public final class ProtobufUtil {
     if (proto.hasMvccReadPoint()) {
       PackagePrivateFieldAccessor.setMvccReadPoint(scan, proto.getMvccReadPoint());
     }
-    if (scan.isSmall()) {
-      scan.setReadType(Scan.ReadType.PREAD);
-    } else if (proto.hasReadType()) {
+    if (proto.hasReadType()) {
       scan.setReadType(toReadType(proto.getReadType()));
     }
     if (proto.getNeedCursorResult()) {

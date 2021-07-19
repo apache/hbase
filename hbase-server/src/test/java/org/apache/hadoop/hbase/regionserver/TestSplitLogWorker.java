@@ -34,7 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
@@ -70,8 +70,8 @@ public class TestSplitLogWorker {
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitLogWorker.class);
   private static final int WAIT_TIME = 15000;
   private final ServerName MANAGER = ServerName.valueOf("manager,1,1");
-  private final static HBaseTestingUtility TEST_UTIL =
-    new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL =
+    new HBaseTestingUtil();
   private DummyServer ds;
   private ZKWatcher zkw;
   private SplitLogWorker slw;

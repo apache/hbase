@@ -28,7 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -62,7 +62,7 @@ public class TestCatalogJanitorCluster {
   @Rule
   public final TestName name = new TestName();
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName T1 = TableName.valueOf("t1");
   private static final TableName T2 = TableName.valueOf("t2");
   private static final TableName T3 = TableName.valueOf("t3");

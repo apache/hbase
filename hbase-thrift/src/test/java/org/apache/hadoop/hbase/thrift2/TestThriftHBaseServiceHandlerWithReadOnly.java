@@ -30,7 +30,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -68,7 +68,7 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestThriftHBaseServiceHandlerWithReadOnly.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   // Static names for tables, columns, rows, and values
   private static byte[] tableAname = Bytes.toBytes("tableA");

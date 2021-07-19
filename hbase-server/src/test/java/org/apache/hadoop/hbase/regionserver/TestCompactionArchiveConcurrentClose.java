@@ -32,7 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -66,7 +66,7 @@ public class TestCompactionArchiveConcurrentClose {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCompactionArchiveConcurrentClose.class);
 
-  private HBaseTestingUtility testUtil;
+  private HBaseTestingUtil testUtil;
 
   private Path testDir;
   private AtomicBoolean archived = new AtomicBoolean();
@@ -76,7 +76,7 @@ public class TestCompactionArchiveConcurrentClose {
 
   @Before
   public void setup() throws Exception {
-    testUtil = new HBaseTestingUtility();
+    testUtil = new HBaseTestingUtil();
     testDir = testUtil.getDataTestDir("TestStoreFileRefresherChore");
     CommonFSUtils.setRootDir(testUtil.getConfiguration(), testDir);
   }

@@ -18,14 +18,12 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
-
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,6 +38,7 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
@@ -249,7 +248,6 @@ public class TestScan {
         .setRowOffsetPerColumnFamily(5)
         .setRowPrefixFilter(Bytes.toBytes("row_"))
         .setScanMetricsEnabled(true)
-        .setSmall(true)
         .setReadType(ReadType.STREAM)
         .withStartRow(Bytes.toBytes("row_1"))
         .withStopRow(Bytes.toBytes("row_2"))
@@ -297,11 +295,8 @@ public class TestScan {
   @Test
   public void testScanReadType() throws Exception {
     Scan scan = new Scan();
-    assertFalse(scan.isSmall());
     assertEquals(ReadType.DEFAULT, scan.getReadType());
     Scan copyScan = new Scan(scan);
-    copyScan.setSmall(scan.isSmall());
-    assertFalse(copyScan.isSmall());
     assertEquals(ReadType.DEFAULT, copyScan.getReadType());
   }
 }

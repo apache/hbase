@@ -22,9 +22,9 @@ import java.lang.reflect.Field;
 
 import org.apache.hadoop.hbase.ExecutorStatusChore;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.AfterClass;
@@ -46,11 +46,11 @@ public class TestRSChoresScheduled {
 
   private static HRegionServer hRegionServer;
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniCluster(StartMiniClusterOption.builder().numRegionServers(1).build());
+    UTIL.startMiniCluster(StartTestingClusterOption.builder().numRegionServers(1).build());
     hRegionServer = UTIL.getMiniHBaseCluster().getRegionServer(0);
   }
 

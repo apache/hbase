@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.COLUMNS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -61,7 +61,7 @@ public class TestMinVersions {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMinVersions.class);
 
-  HBaseTestingUtility hbu = new HBaseTestingUtility();
+  HBaseTestingUtil hbu = new HBaseTestingUtil();
   private final byte[] T0 = Bytes.toBytes("0");
   private final byte[] T1 = Bytes.toBytes("1");
   private final byte[] T2 = Bytes.toBytes("2");
@@ -123,7 +123,7 @@ public class TestMinVersions {
       r = hbu.getClosestRowBefore(region, T2, c0);
       checkResult(r, c0, T4);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 
@@ -187,7 +187,7 @@ public class TestMinVersions {
       r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3,T2,T1);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 
@@ -252,7 +252,7 @@ public class TestMinVersions {
       r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 
@@ -332,7 +332,7 @@ public class TestMinVersions {
       r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T5,T4);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 
@@ -429,7 +429,7 @@ public class TestMinVersions {
       r = region.get(g);
       assertTrue(r.isEmpty());
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 
@@ -521,7 +521,7 @@ public class TestMinVersions {
       r = region.get(g);
       checkResult(r, c0, T2);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 
@@ -582,7 +582,7 @@ public class TestMinVersions {
       region.compact(true);
       verifyAfterTtl(region, ts);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 
