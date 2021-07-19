@@ -591,6 +591,10 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Move a region
     def move(encoded_region_name, server = nil)
+      if encoded_region_name == 'hbase:meta'
+        meta_region_location = @connection.getRegionLocator(org.apache.hadoop.hbase.TableName::META_TABLE_NAME).getAllRegionLocations.to_a
+        encoded_region_name = meta_region_location[0].getRegion().getEncodedName()
+      end
       @admin.move(encoded_region_name.to_java_bytes, server ? server.to_java_bytes : nil)
     end
 
