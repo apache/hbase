@@ -34,7 +34,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class ChainWALEntryFilter implements WALEntryFilter {
 
-  private final WALEntryFilter[] filters;
+  //needed 'protected' for testing
+  protected final WALEntryFilter[] filters;
   private WALCellFilter[] cellFilters;
 
   public ChainWALEntryFilter(WALEntryFilter...filters) {

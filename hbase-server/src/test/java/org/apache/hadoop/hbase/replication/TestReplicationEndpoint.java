@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -26,8 +28,10 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -70,8 +74,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,6 +94,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationEndpoint.class);
 
   static int numRegionServers;
+
+  @Rule
+  public final TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -163,7 +172,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       }
     });
 
-    Assert.assertEquals(0, ReplicationEndpointForTest.replicateCount.get());
+    assertEquals(0, ReplicationEndpointForTest.replicateCount.get());
 
     // now replicate some data.
     doPut(Bytes.toBytes("row42"));
@@ -182,7 +191,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
   @Test
   public void testReplicationEndpointReturnsFalseOnReplicate() throws Exception {
-    Assert.assertEquals(0, ReplicationEndpointForTest.replicateCount.get());
+    assertEquals(0, ReplicationEndpointForTest.replicateCount.get());
     Assert.assertTrue(!ReplicationEndpointReturningFalse.replicated.get());
     int peerCount = hbaseAdmin.listReplicationPeers().size();
     final String id = "testReplicationEndpointReturnsFalseOnReplicate";
@@ -296,6 +305,53 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     Assert.assertTrue(EverythingPassesWALEntryFilter.hasPassedAnEntry());
     hbaseAdmin.removeReplicationPeer("testWALEntryFilterFromReplicationEndpoint");
   }
+
+  @Test
+  public void testNamespacesMutualExclusiveScopesWALEntryFilter() throws Exception {
+    Set<String> namespaces = new HashSet<String>();
+    namespaces.add("default");
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
+      .setReplicationEndpointImpl(SelfWrappedReplicationEndpointForTest.class.getName())
+      .setReplicateAllUserTables(false)
+      // sets namespaces
+      .setNamespaces(namespaces).build();
+    hbaseAdmin.addReplicationPeer(name.getMethodName(), rpc);
+    ChainWALEntryFilter filter = (ChainWALEntryFilter)
+      SelfWrappedReplicationEndpointForTest.endpoint.getWALEntryfilter();
+    //The above peer config should always create exactly one filter of type
+    assertEquals(1, filter.filters.length);
+    //We had set namespaces, so it should be a NamespaceTableCfWALEntryFilter
+    assertTrue(filter.filters[0] instanceof NamespaceTableCfWALEntryFilter);
+    hbaseAdmin.removeReplicationPeer(name.getMethodName());
+    rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
+      .setReplicationEndpointImpl(SelfWrappedReplicationEndpointForTest.class.getName())
+      .build();
+    hbaseAdmin.addReplicationPeer(name.getMethodName(), rpc);
+    filter = (ChainWALEntryFilter)
+      SelfWrappedReplicationEndpointForTest.endpoint.getWALEntryfilter();
+    assertEquals(1, filter.filters.length);
+    //We had not set namespaces nor tableCfsMap, so it should be a ScopeWALEntryFilter
+    assertTrue(filter.filters[0] instanceof ScopeWALEntryFilter);
+    hbaseAdmin.removeReplicationPeer(name.getMethodName());
+    Map<TableName,List<String>> tableCfsMap = new HashMap<>();
+    tableCfsMap.put(TableName.valueOf("test-tbl"), new ArrayList<>());
+    rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
+      .setReplicationEndpointImpl(SelfWrappedReplicationEndpointForTest.class.getName())
+      .setReplicateAllUserTables(false)
+      .setTableCFsMap(tableCfsMap)
+      .build();
+    hbaseAdmin.addReplicationPeer(name.getMethodName(), rpc);
+    filter = (ChainWALEntryFilter)
+      SelfWrappedReplicationEndpointForTest.endpoint.getWALEntryfilter();
+    assertEquals(1, filter.filters.length);
+    //We had set tableCfsMap, so it should be a NamespaceTableCfWALEntryFilter
+    assertTrue(filter.filters[0] instanceof NamespaceTableCfWALEntryFilter);
+    hbaseAdmin.removeReplicationPeer(name.getMethodName());
+  }
+
 
   @Test(expected = IOException.class)
   public void testWALEntryFilterAddValidation() throws Exception {
@@ -449,9 +505,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     if (ReplicationEndpointForTest.lastEntries == null) {
       return; // first call
     }
-    Assert.assertEquals(1, ReplicationEndpointForTest.lastEntries.size());
+    assertEquals(1, ReplicationEndpointForTest.lastEntries.size());
     List<Cell> cells = ReplicationEndpointForTest.lastEntries.get(0).getEdit().getCells();
-    Assert.assertEquals(1, cells.size());
+    assertEquals(1, cells.size());
     Assert.assertTrue(Bytes.equals(cells.get(0).getRowArray(), cells.get(0).getRowOffset(),
       cells.get(0).getRowLength(), row, 0, row.length));
   }
@@ -599,6 +655,16 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       replicated.set(replicateCount.get() > COUNT); // first 10 times, we return false
       return replicated.get();
     }
+  }
+
+  public static class SelfWrappedReplicationEndpointForTest extends ReplicationEndpointForTest {
+
+    static BaseReplicationEndpoint endpoint;
+
+    public SelfWrappedReplicationEndpointForTest() {
+      endpoint = this;
+    }
+
   }
 
   // return a WALEntry filter which only accepts "row", but not other rows
