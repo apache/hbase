@@ -22,8 +22,10 @@ import static org.apache.hadoop.hbase.util.Bytes.getBytes;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.TreeMap;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -35,6 +37,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.TAppend;
@@ -236,5 +239,20 @@ public final class ThriftUtilities {
       append.addColumn(famAndQf[0], famAndQf[1], getBytes(values.get(i)));
     }
     return append;
+  }
+
+  public static Permission.Action[] permissionActionsFromString(String permission_actions) {
+    Set<Permission.Action> actions = new HashSet<>();
+    for (char c : permission_actions.toCharArray()) {
+      switch (c) {
+        case 'R': actions.add(Permission.Action.READ);   break;
+        case 'W': actions.add(Permission.Action.WRITE);  break;
+        case 'C': actions.add(Permission.Action.CREATE); break;
+        case 'X': actions.add(Permission.Action.EXEC);   break;
+        case 'A': actions.add(Permission.Action.ADMIN);  break;
+        default:                                         break;
+      }
+    }
+    return actions.toArray(new Permission.Action[0]);
   }
 }

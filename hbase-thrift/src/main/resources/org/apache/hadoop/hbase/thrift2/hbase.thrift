@@ -530,6 +530,28 @@ enum TThriftServerType {
   TWO = 2
 }
 
+enum TPermissionScope {
+  TABLE = 0,
+  NAMESPACE = 1
+}
+
+enum TPermissionOps {
+  GRANT = 0,
+  REVOKE = 1
+}
+
+/**
+ * TAccessControlEntity for permission control
+ */
+struct TAccessControlEntity {
+ 1: required string username
+ 2: required TPermissionScope scope
+ 3: required TPermissionOps op
+ 4: required string actions
+ 5: optional TTableName tableName
+ 6: optional string nsName
+}
+
 service THBaseService {
 
   /**
@@ -1132,4 +1154,10 @@ service THBaseService {
     1: set<TServerName> serverNames
   ) throws (1: TIOError io)
 
+  /**
+   * Perform a permission grant or revoke on namespace or table level.
+   */
+  bool performPermissions(
+    1: required TAccessControlEntity info
+  ) throws (1: TIOError io)
 }
