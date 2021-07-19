@@ -53,7 +53,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
@@ -314,7 +314,7 @@ public class HRegionServer extends Thread implements
    * Lock for gating access to {@link #onlineRegions}.
    * TODO: If this map is gated by a lock, does it need to be a ConcurrentHashMap?
    */
-  private final ReentrantReadWriteLock onlineRegionsLock = new ReentrantReadWriteLock();
+  private final ReentrantLock onlineRegionsLock = new ReentrantLock();
 
   /**
    * Map of encoded region names to the DataNode locations they should be hosted on
@@ -2927,7 +2927,7 @@ public class HRegionServer extends Thread implements
    */
   private void closeMetaTableRegions(final boolean abort) {
     HRegion meta = null;
-    this.onlineRegionsLock.writeLock().lock();
+    this.onlineRegionsLock.lock();
     try {
       for (Map.Entry<String, HRegion> e: onlineRegions.entrySet()) {
         RegionInfo hri = e.getValue().getRegionInfo();
@@ -2937,7 +2937,7 @@ public class HRegionServer extends Thread implements
         if (meta != null) break;
       }
     } finally {
-      this.onlineRegionsLock.writeLock().unlock();
+      this.onlineRegionsLock.unlock();
     }
     if (meta != null) closeRegionIgnoreErrors(meta.getRegionInfo(), abort);
   }
@@ -2949,7 +2949,7 @@ public class HRegionServer extends Thread implements
    * @param abort Whether we're running an abort.
    */
   private void closeUserRegions(final boolean abort) {
-    this.onlineRegionsLock.writeLock().lock();
+    this.onlineRegionsLock.lock();
     try {
       for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
@@ -2959,7 +2959,7 @@ public class HRegionServer extends Thread implements
         }
       }
     } finally {
-      this.onlineRegionsLock.writeLock().unlock();
+      this.onlineRegionsLock.unlock();
     }
   }
 
@@ -3249,25 +3249,21 @@ public class HRegionServer extends Thread implements
    */
   @Override
   public List<HRegion> getRegions(TableName tableName) {
-     List<HRegion> tableRegions = new ArrayList<>();
-     synchronized (this.onlineRegions) {
-       for (HRegion region: this.onlineRegions.values()) {
-         RegionInfo regionInfo = region.getRegionInfo();
-         if(regionInfo.getTable().equals(tableName)) {
-           tableRegions.add(region);
-         }
-       }
-     }
-     return tableRegions;
-   }
+    List<HRegion> tableRegions = new ArrayList<>();
+    for (HRegion region : this.onlineRegions.values()) {
+      RegionInfo regionInfo = region.getRegionInfo();
+      if (regionInfo.getTable().equals(tableName)) {
+        tableRegions.add(region);
+      }
+    }
+    return tableRegions;
+  }
 
   @Override
   public List<HRegion> getRegions() {
     List<HRegion> allRegions;
-    synchronized (this.onlineRegions) {
-      // Return a clone copy of the onlineRegions
-      allRegions = new ArrayList<>(onlineRegions.values());
-    }
+    // Return a clone copy of the onlineRegions
+    allRegions = new ArrayList<>(onlineRegions.values());
     return allRegions;
   }
 
@@ -3278,10 +3274,8 @@ public class HRegionServer extends Thread implements
    */
   public Set<TableName> getOnlineTables() {
     Set<TableName> tables = new HashSet<>();
-    synchronized (this.onlineRegions) {
-      for (Region region: this.onlineRegions.values()) {
-        tables.add(region.getTableDescriptor().getTableName());
-      }
+    for (Region region : this.onlineRegions.values()) {
+      tables.add(region.getTableDescriptor().getTableName());
     }
     return tables;
   }
