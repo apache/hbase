@@ -122,13 +122,14 @@ public class TestUsersOperationsWithSecureHadoop {
 
     Configuration conf = getSecuredConfiguration();
     conf.set(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, clientKeytab);
-    conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, clientPrincipal);
+    conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE, clientPrincipal);
     UserGroupInformation.setConfiguration(conf);
 
     UserProvider provider = UserProvider.instantiate(conf);
     assertTrue("Client principal or keytab is empty", provider.shouldLoginFromKeytab());
 
-    provider.login(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL);
+    provider.login(AuthUtil.HBASE_CLIENT_KEYTAB_FILE,
+      AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE);
     User loginUser = provider.getCurrent();
     assertEquals(CLIENT_NAME, loginUser.getShortName());
     assertEquals(getClientPrincipalForTesting(), loginUser.getName());
@@ -140,7 +141,7 @@ public class TestUsersOperationsWithSecureHadoop {
     String clientPrincipal = getClientPrincipalForTesting();
     Configuration conf = getSecuredConfiguration();
     conf.set(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, clientKeytab);
-    conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, clientPrincipal);
+    conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE, clientPrincipal);
     UserGroupInformation.setConfiguration(conf);
 
     User user = AuthUtil.loginClient(conf);

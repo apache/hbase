@@ -280,7 +280,11 @@ public abstract class User {
     Optional<String> keytab =
       Optional.ofNullable(conf.get(AuthUtil.HBASE_CLIENT_KEYTAB_FILE));
     Optional<String> principal =
-      Optional.ofNullable(conf.get(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL));
+      Optional.ofNullable(conf.get(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE));
+    if (!principal.isPresent()) {
+      // check for deprecated principal key
+      principal = Optional.ofNullable(conf.get(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL));
+    }
     return keytab.isPresent() && principal.isPresent();
   }
 
