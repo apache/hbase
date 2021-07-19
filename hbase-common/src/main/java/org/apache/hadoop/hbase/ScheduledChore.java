@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * Don't subclass ScheduledChore if the task relies on being woken up for something to do, such as
  * an entry being added to a queue, etc.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public abstract class ScheduledChore implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(ScheduledChore.class);
 
