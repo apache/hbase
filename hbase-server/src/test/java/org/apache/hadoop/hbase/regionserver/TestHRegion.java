@@ -1276,9 +1276,6 @@ public class TestHRegion {
     try {
       region.flush(true);
       fail("This should have thrown exception");
-    } catch (DroppedSnapshotException unexpected) {
-      // this should not be a dropped snapshot exception. Meaning that RS will not abort
-      throw unexpected;
     } catch (IOException expected) {
       // expected
     }

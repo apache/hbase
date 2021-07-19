@@ -2844,7 +2844,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     String s = "Finished memstore snapshotting " + this + ", syncing WAL and waiting on mvcc, " +
         "flushsize=" + totalSizeOfFlushableStores;
     status.setStatus(s);
-    doSyncOfUnflushedWALChanges(wal, getRegionInfo());
+
+    doSyncOfUnflushedWALChanges(status, wal, getRegionInfo());
     return new PrepareFlushResult(storeFlushCtxs, committedFiles, storeFlushableSize, startTime,
         flushOpSeqId, flushedSeqId, totalSizeOfFlushableStores);
   }
@@ -2901,17 +2902,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Sync unflushed WAL changes. See HBASE-8208 for details
    */
-  private static void doSyncOfUnflushedWALChanges(final WAL wal, final RegionInfo hri)
-  throws IOException {
+  private void doSyncOfUnflushedWALChanges(MonitoredTask status, final WAL wal,
+    final RegionInfo hri) throws IOException {
     if (wal == null) {
       return;
     }
-    try {
-      wal.sync(); // ensure that flush marker is sync'ed
-    } catch (IOException ioe) {
-      wal.abortCacheFlush(hri.getEncodedNameAsBytes());
-      throw ioe;
-    }
+    int retry = 0;
+    int maxRetry = 3;
+    IOException lastIOE = null;
+    do {
+      try {
+        wal.sync(); // ensure that flush marker is sync'ed
+        return;
+      } catch (IOException ioe) {
+        retry++;
+        LOG.warn("Sync region " + hri + " unflushed WAL changes failed, retry time " + retry, ioe);
+        lastIOE = ioe;
+      }
+    } while (retry < maxRetry);
+    status.abort("Sync region " + hri + " unflushed WAL changes failed: " + StringUtils
+      .stringifyException(lastIOE));
+    fatalForFlushCache(lastIOE);
   }
 
   /**
@@ -3034,22 +3045,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         wal.abortCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
       }
-      DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
-        Bytes.toStringBinary(getRegionInfo().getRegionName()), t);
       status.abort("Flush failed: " + StringUtils.stringifyException(t));
-
-      // Callers for flushcache() should catch DroppedSnapshotException and abort the region server.
-      // However, since we may have the region read lock, we cannot call close(true) here since
-      // we cannot promote to a write lock. Instead we are setting closing so that all other region
-      // operations except for close will be rejected.
-      this.closing.set(true);
-
-      if (rsServices != null) {
-        // This is a safeguard against the case where the caller fails to explicitly handle aborting
-        rsServices.abort("Replay of WAL required. Forcing server shutdown", dse);
-      }
-
-      throw dse;
+      fatalForFlushCache(t);
     }
 
     // If we get to here, the HStores have been written.
@@ -3093,6 +3090,24 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return new FlushResultImpl(compactionRequested ?
         FlushResult.Result.FLUSHED_COMPACTION_NEEDED :
           FlushResult.Result.FLUSHED_NO_COMPACTION_NEEDED, flushOpSeqId);
+  }
+
+  private void fatalForFlushCache(Throwable t) throws DroppedSnapshotException {
+    DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
+      Bytes.toStringBinary(getRegionInfo().getRegionName()), t);
+
+    // Callers for flushcache() should catch DroppedSnapshotException and abort the region server.
+    // However, since we may have the region read lock, we cannot call close(true) here since
+    // we cannot promote to a write lock. Instead we are setting closing so that all other region
+    // operations except for close will be rejected.
+    this.closing.set(true);
+
+    if (rsServices != null) {
+      // This is a safeguard against the case where the caller fails to explicitly handle aborting
+      rsServices.abort("Replay of WAL required. Forcing server shutdown", dse);
+    }
+
+    throw dse;
   }
 
   /**
