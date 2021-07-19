@@ -25,8 +25,8 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -65,7 +65,7 @@ public class TestCompactionWithThroughputController {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestCompactionWithThroughputController.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final double EPSILON = 1E-6;
 
@@ -76,7 +76,7 @@ public class TestCompactionWithThroughputController {
   private final byte[] qualifier = Bytes.toBytes("q");
 
   private HStore getStoreWithName(TableName tableName) {
-    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();

@@ -25,9 +25,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
@@ -62,12 +62,12 @@ public class TestClearRegionBlockCache {
   private static final byte[][] SPLIT_KEY = new byte[][] { Bytes.toBytes("5") };
   private static final int NUM_RS = 2;
 
-  private final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   private Configuration CONF = HTU.getConfiguration();
   private Table table;
   private HRegionServer rs1, rs2;
-  private MiniHBaseCluster cluster;
+  private SingleProcessHBaseCluster cluster;
 
   @Parameterized.Parameter public String cacheType;
 

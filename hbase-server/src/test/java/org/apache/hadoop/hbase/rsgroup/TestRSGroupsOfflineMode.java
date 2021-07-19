@@ -21,10 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCluster;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseClusterInterface;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -67,8 +67,8 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsOfflineMode.class);
   private static HMaster master;
   private static Admin hbaseAdmin;
-  private static HBaseTestingUtility TEST_UTIL;
-  private static HBaseCluster cluster;
+  private static HBaseTestingUtil TEST_UTIL;
+  private static HBaseClusterInterface cluster;
   private final static long WAIT_TIMEOUT = 60000 * 5;
 
   @Rule
@@ -76,14 +76,14 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     RSGroupUtil.enableRSGroup(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().set(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, "1");
-    StartMiniClusterOption option =
-      StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
     TEST_UTIL.startMiniCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
-    master = ((MiniHBaseCluster) cluster).getMaster();
+    master = ((SingleProcessHBaseCluster) cluster).getMaster();
     master.balanceSwitch(false);
     hbaseAdmin = TEST_UTIL.getAdmin();
     // wait till the balancer is in online mode
@@ -107,9 +107,9 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
     // Table should be after group table name so it gets assigned later.
     final TableName failoverTable = TableName.valueOf(getNameWithoutIndex(name.getMethodName()));
     TEST_UTIL.createTable(failoverTable, Bytes.toBytes("f"));
-    final HRegionServer killRS = ((MiniHBaseCluster) cluster).getRegionServer(0);
-    final HRegionServer groupRS = ((MiniHBaseCluster) cluster).getRegionServer(1);
-    final HRegionServer failoverRS = ((MiniHBaseCluster) cluster).getRegionServer(2);
+    final HRegionServer killRS = ((SingleProcessHBaseCluster) cluster).getRegionServer(0);
+    final HRegionServer groupRS = ((SingleProcessHBaseCluster) cluster).getRegionServer(1);
+    final HRegionServer failoverRS = ((SingleProcessHBaseCluster) cluster).getRegionServer(2);
     String newGroup = "my_group";
     Admin admin = TEST_UTIL.getAdmin();
     admin.addRSGroup(newGroup);
@@ -162,7 +162,8 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
     });
 
     // Get groupInfoManager from the new active master.
-    RSGroupInfoManager groupMgr = ((MiniHBaseCluster) cluster).getMaster().getRSGroupInfoManager();
+    RSGroupInfoManager groupMgr =
+      ((SingleProcessHBaseCluster) cluster).getMaster().getRSGroupInfoManager();
     // Make sure balancer is in offline mode, since this is what we're testing.
     assertFalse(groupMgr.isOnline());
     // Kill final regionserver to see the failover happens for all tables except GROUP table since

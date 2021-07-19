@@ -22,7 +22,7 @@ import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -53,7 +53,7 @@ public class TestNewVersionBehaviorFromClientSide {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestNewVersionBehaviorFromClientSide.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final byte[] ROW = Bytes.toBytes("r1");
   private static final byte[] ROW2 = Bytes.toBytes("r2");

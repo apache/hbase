@@ -33,10 +33,10 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -73,7 +73,7 @@ public class TestFSErrorsExposed {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSErrorsExposed.class);
 
-  HBaseTestingUtility util = new HBaseTestingUtility();
+  HBaseTestingUtil util = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -231,7 +231,7 @@ public class TestFSErrorsExposed {
       util.getDFSCluster().restartDataNodes();
 
     } finally {
-      MiniHBaseCluster cluster = util.getMiniHBaseCluster();
+      SingleProcessHBaseCluster cluster = util.getMiniHBaseCluster();
       if (cluster != null) cluster.killAll();
       util.shutdownMiniCluster();
     }

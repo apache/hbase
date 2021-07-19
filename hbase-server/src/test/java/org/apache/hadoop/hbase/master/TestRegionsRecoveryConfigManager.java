@@ -24,9 +24,9 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
@@ -45,9 +45,9 @@ public class TestRegionsRecoveryConfigManager {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionsRecoveryConfigManager.class);
 
-  private static final HBaseTestingUtility HBASE_TESTING_UTILITY = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
 
-  private MiniHBaseCluster cluster;
+  private SingleProcessHBaseCluster cluster;
 
   private HMaster hMaster;
 
@@ -60,8 +60,8 @@ public class TestRegionsRecoveryConfigManager {
     conf = HBASE_TESTING_UTILITY.getConfiguration();
     conf.unset("hbase.regions.recovery.store.file.ref.count");
     conf.unset("hbase.master.regions.recovery.check.interval");
-    StartMiniClusterOption option = StartMiniClusterOption.builder().masterClass(TestHMaster.class)
-      .numRegionServers(1).numDataNodes(1).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
+      .masterClass(TestHMaster.class).numRegionServers(1).numDataNodes(1).build();
     HBASE_TESTING_UTILITY.startMiniCluster(option);
     cluster = HBASE_TESTING_UTILITY.getMiniHBaseCluster();
   }

@@ -65,9 +65,9 @@ public class TestNamespace {
   private static final Logger LOG = LoggerFactory.getLogger(TestNamespace.class);
   private static HMaster master;
   protected final static int NUM_SLAVES_BASE = 4;
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   protected static Admin admin;
-  protected static HBaseCluster cluster;
+  protected static HBaseClusterInterface cluster;
   private String prefix = "TestNamespace";
 
   @Rule
@@ -75,11 +75,11 @@ public class TestNamespace {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE);
     admin = TEST_UTIL.getAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
-    master = ((MiniHBaseCluster)cluster).getMaster();
+    master = ((SingleProcessHBaseCluster)cluster).getMaster();
     LOG.info("Done initializing cluster");
   }
 

@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.IntegrationTestBase;
@@ -776,14 +776,14 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             .build();
 
           // If we want to pre-split compute how many splits.
-          if (conf.getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
-              HBaseTestingUtility.PRESPLIT_TEST_TABLE)) {
+          if (conf.getBoolean(HBaseTestingUtil.PRESPLIT_TEST_TABLE_KEY,
+              HBaseTestingUtil.PRESPLIT_TEST_TABLE)) {
             int numberOfServers = admin.getRegionServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
             }
-            int regionsPerServer = conf.getInt(HBaseTestingUtility.REGIONS_PER_SERVER_KEY,
-                HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+            int regionsPerServer = conf.getInt(HBaseTestingUtil.REGIONS_PER_SERVER_KEY,
+                HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
             int totalNumberOfRegions = numberOfServers * regionsPerServer;
             LOG.info("Number of live regionservers: " + numberOfServers + ", " +
                 "pre-splitting table into " + totalNumberOfRegions + " regions " +
@@ -1932,9 +1932,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     System.err.println(" -D"+ TABLE_NAME_KEY+ "=<tableName>");
     System.err.println("    Run using the <tableName> as the tablename.  Defaults to "
         + DEFAULT_TABLE_NAME);
-    System.err.println(" -D"+ HBaseTestingUtility.REGIONS_PER_SERVER_KEY+ "=<# regions>");
+    System.err.println(" -D"+ HBaseTestingUtil.REGIONS_PER_SERVER_KEY+ "=<# regions>");
     System.err.println("    Create table with presplit regions per server.  Defaults to "
-        + HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+        + HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
 
     System.err.println(" -DuseMob=<true|false>");
     System.err.println("    Create table so that the mob read/write path is forced.  " +

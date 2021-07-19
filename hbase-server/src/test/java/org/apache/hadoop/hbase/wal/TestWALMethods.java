@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.ServerName;
@@ -59,7 +59,7 @@ public class TestWALMethods {
   private static final TableName TEST_TABLE =
       TableName.valueOf("test_table");
 
-  private final HBaseTestingUtility util = new HBaseTestingUtility();
+  private final HBaseTestingUtil util = new HBaseTestingUtil();
 
   @Test
   public void testServerNameFromWAL() throws Exception {

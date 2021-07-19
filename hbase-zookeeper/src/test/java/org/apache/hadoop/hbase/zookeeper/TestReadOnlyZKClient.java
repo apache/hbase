@@ -46,7 +46,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -70,7 +70,7 @@ public class TestReadOnlyZKClient {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestReadOnlyZKClient.class);
 
-  private static HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
+  private static HBaseZKTestingUtil UTIL = new HBaseZKTestingUtil();
 
   private static String PATH = "/test";
 

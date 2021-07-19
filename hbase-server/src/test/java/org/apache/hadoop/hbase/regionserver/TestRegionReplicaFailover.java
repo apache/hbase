@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -66,13 +66,13 @@ public class TestRegionReplicaFailover {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRegionReplicaReplicationEndpoint.class);
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   private static final int NB_SERVERS = 3;
 
-  protected final byte[][] families = new byte[][] {HBaseTestingUtility.fam1,
-      HBaseTestingUtility.fam2, HBaseTestingUtility.fam3};
-  protected final byte[] fam = HBaseTestingUtility.fam1;
+  protected final byte[][] families =
+    new byte[][] { HBaseTestingUtil.fam1, HBaseTestingUtil.fam2, HBaseTestingUtil.fam3 };
+  protected final byte[] fam = HBaseTestingUtil.fam1;
   protected final byte[] qual1 = Bytes.toBytes("qual1");
   protected final byte[] value1 = Bytes.toBytes("value1");
   protected final byte[] row = Bytes.toBytes("rowA");

@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
@@ -69,8 +69,8 @@ public class TestGlobalReplicationThrottler {
   private static Configuration conf1;
   private static Configuration conf2;
 
-  private static HBaseTestingUtility utility1;
-  private static HBaseTestingUtility utility2;
+  private static HBaseTestingUtil utility1;
+  private static HBaseTestingUtil utility2;
 
   private static final byte[] famName = Bytes.toBytes("f");
   private static final byte[] VALUE = Bytes.toBytes("v");
@@ -89,7 +89,7 @@ public class TestGlobalReplicationThrottler {
     conf1.setInt(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY, REPLICATION_SOURCE_QUOTA);
     conf1.setLong("replication.source.per.peer.node.bandwidth", 100L);
 
-    utility1 = new HBaseTestingUtility(conf1);
+    utility1 = new HBaseTestingUtil(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     new ZKWatcher(conf1, "cluster1", null, true);
@@ -97,7 +97,7 @@ public class TestGlobalReplicationThrottler {
     conf2 = new Configuration(conf1);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
 
-    utility2 = new HBaseTestingUtility(conf2);
+    utility2 = new HBaseTestingUtil(conf2);
     utility2.setZkCluster(miniZK);
     new ZKWatcher(conf2, "cluster2", null, true);
 

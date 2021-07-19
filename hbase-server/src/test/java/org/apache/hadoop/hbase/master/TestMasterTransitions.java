@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -57,7 +57,7 @@ public class TestMasterTransitions {
       HBaseClassTestRule.forClass(TestMasterTransitions.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterTransitions.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TABLENAME = TableName.valueOf("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),
     Bytes.toBytes("b"), Bytes.toBytes("c")};

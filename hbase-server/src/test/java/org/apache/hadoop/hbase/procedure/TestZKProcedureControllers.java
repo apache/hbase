@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -63,7 +63,7 @@ public class TestZKProcedureControllers {
       HBaseClassTestRule.forClass(TestZKProcedureControllers.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKProcedureControllers.class);
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final String COHORT_NODE_NAME = "expected";
   private static final String CONTROLLER_NODE_NAME = "controller";
   private static final VerificationMode once = Mockito.times(1);

@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -111,7 +111,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   private static AtomicInteger BULK_LOADS_COUNT;
   private static CountDownLatch BULK_LOAD_LATCH;
 
-  protected static final HBaseTestingUtility UTIL3 = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL3 = new HBaseTestingUtil();
   protected static final Configuration CONF3 = UTIL3.getConfiguration();
 
   private static final Path BULK_LOAD_BASE_DIR = new Path("/bulk_dir");
@@ -148,7 +148,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
     Connection connection3 = ConnectionFactory.createConnection(CONF3);
     try (Admin admin3 = connection3.getAdmin()) {
-      admin3.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin3.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     }
     UTIL3.waitUntilAllRegionsAssigned(tableName);
     htable3 = connection3.getTable(tableName);
@@ -176,12 +176,12 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     BULK_LOADS_COUNT = new AtomicInteger(0);
   }
 
-  private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtility util) {
+  private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtil util) {
     return ReplicationPeerConfig.newBuilder()
       .setClusterKey(util.getClusterKey()).setSerial(isSerialPeer()).build();
   }
 
-  private void setupCoprocessor(HBaseTestingUtility cluster){
+  private void setupCoprocessor(HBaseTestingUtil cluster){
     cluster.getHBaseCluster().getRegions(tableName).forEach(r -> {
       try {
         TestBulkLoadReplication.BulkReplicationTestObserver cp = r.getCoprocessorHost().
@@ -247,7 +247,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
 
   protected void assertBulkLoadConditions(TableName tableName, byte[] row, byte[] value,
-      HBaseTestingUtility utility, Table...tables) throws Exception {
+      HBaseTestingUtil utility, Table...tables) throws Exception {
     BULK_LOAD_LATCH = new CountDownLatch(3);
     bulkLoadOnCluster(tableName, row, value, utility);
     assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.MINUTES));
@@ -257,7 +257,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   }
 
   protected void bulkLoadOnCluster(TableName tableName, byte[] row, byte[] value,
-                                 HBaseTestingUtility cluster) throws Exception {
+                                 HBaseTestingUtil cluster) throws Exception {
     String bulkLoadFilePath = createHFileForFamilies(row, value, cluster.getConfiguration());
     copyToHdfs(bulkLoadFilePath, cluster.getDFSCluster());
     BulkLoadHFilesTool bulkLoadHFilesTool = new BulkLoadHFilesTool(cluster.getConfiguration());

@@ -24,10 +24,10 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -55,7 +55,7 @@ public class TestGetLastFlushedSequenceId {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestGetLastFlushedSequenceId.class);
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
 
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName(), "test");
 
@@ -81,7 +81,7 @@ public class TestGetLastFlushedSequenceId {
     Table table = testUtil.createTable(tableName, families);
     table.put(new Put(Bytes.toBytes("k"))
             .addColumn(family, Bytes.toBytes("q"), Bytes.toBytes("v")));
-    MiniHBaseCluster cluster = testUtil.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = testUtil.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     Region region = null;
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {

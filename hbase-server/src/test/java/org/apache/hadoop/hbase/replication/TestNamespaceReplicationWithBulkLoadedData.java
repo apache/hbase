@@ -27,7 +27,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -68,7 +68,7 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
   private static final Logger LOG =
       LoggerFactory.getLogger(TestNamespaceReplicationWithBulkLoadedData.class);
 
-  private static final HBaseTestingUtility UTIL4 = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL4 = new HBaseTestingUtil();
   private static final String PEER4_CLUSTER_ID = "peer4";
   private static final String PEER4_NS = "ns_peer1";
   private static final String PEER4_NS_TABLE = "ns_peer2";
@@ -101,7 +101,7 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
 
     Connection connection4 = ConnectionFactory.createConnection(CONF4);
     try (Admin admin4 = connection4.getAdmin()) {
-      admin4.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin4.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     }
     UTIL4.waitUntilAllRegionsAssigned(tableName);
   }

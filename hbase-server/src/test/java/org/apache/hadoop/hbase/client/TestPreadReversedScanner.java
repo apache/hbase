@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -42,7 +42,7 @@ public class TestPreadReversedScanner {
       HBaseClassTestRule.forClass(TestPreadReversedScanner.class);
 
   public static final Logger LOG = LoggerFactory.getLogger(TestPreadReversedScanner.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final TableName TABLE_NAME = TableName.valueOf("testPreadSmall");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("columnFamily");

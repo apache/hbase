@@ -62,8 +62,8 @@ public class TestGlobalMemStoreSize {
   // total region num = region num + meta regions
   private static int totalRegionNum = regionNum + 1;
 
-  private HBaseTestingUtility TEST_UTIL;
-  private MiniHBaseCluster cluster;
+  private HBaseTestingUtil TEST_UTIL;
+  private SingleProcessHBaseCluster cluster;
 
   @Rule
   public TestName name = new TestName();
@@ -78,7 +78,7 @@ public class TestGlobalMemStoreSize {
     // Start the cluster
     LOG.info("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
-    TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL = new HBaseTestingUtil(conf);
     TEST_UTIL.startMiniCluster(regionServerNum);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
@@ -178,7 +178,7 @@ public class TestGlobalMemStoreSize {
    */
   private void waitForAllRegionsAssigned() throws IOException {
     while (true) {
-      int regionCount = HBaseTestingUtility.getAllOnlineRegions(cluster).size();
+      int regionCount = HBaseTestingUtil.getAllOnlineRegions(cluster).size();
       if (regionCount >= totalRegionNum) break;
       LOG.debug("Waiting for there to be "+ totalRegionNum
         +" regions, but there are " + regionCount + " right now.");

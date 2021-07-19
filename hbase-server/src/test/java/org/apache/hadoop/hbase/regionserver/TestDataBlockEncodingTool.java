@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -50,7 +50,7 @@ public class TestDataBlockEncodingTool {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestDataBlockEncodingTool.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String ROOT_DIR =
       TEST_UTIL.getDataTestDir("TestDataBlockEncodingTool").toString();
   private static final Configuration conf = TEST_UTIL.getConfiguration();

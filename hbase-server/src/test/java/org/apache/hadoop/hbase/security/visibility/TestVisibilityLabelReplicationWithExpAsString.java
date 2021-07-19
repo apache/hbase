@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
@@ -112,7 +112,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     User.createUserForTesting(conf,
         User.getCurrent().getShortName(), new String[] { "supergroup" });
     USER1 = User.createUserForTesting(conf, "user1", new String[] {});
-    TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL = new HBaseTestingUtil(conf);
     TEST_UTIL.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = TEST_UTIL.getZkCluster();
     zkw1 = new ZKWatcher(conf, "cluster1", null, true);
@@ -127,7 +127,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
             TestCoprocessorForTagsAtSink.class.getName());
     setVisibilityLabelServiceImpl(conf1, ExpAsStringVisibilityLabelServiceImpl.class);
-    TEST_UTIL1 = new HBaseTestingUtility(conf1);
+    TEST_UTIL1 = new HBaseTestingUtil(conf1);
     TEST_UTIL1.setZkCluster(miniZK);
     zkw2 = new ZKWatcher(conf1, "cluster2", null, true);
 

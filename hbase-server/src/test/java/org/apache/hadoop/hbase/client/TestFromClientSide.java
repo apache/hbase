@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.countRows;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -136,19 +136,19 @@ public class TestFromClientSide extends FromClientSideBase {
       Table table = connection.getTableBuilder(name.getTableName(), null).
         setOperationTimeout(3 * 1000).build()) {
       Append append = new Append(ROW);
-      append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      append.addColumn(HBaseTestingUtil.fam1, QUALIFIER, VALUE);
       Result result = table.append(append);
 
       // Verify expected result
       Cell[] cells = result.rawCells();
       assertEquals(1, cells.length);
-      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      assertKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, VALUE);
 
       // Verify expected result again
       Result readResult = table.get(new Get(ROW));
       cells = readResult.rawCells();
       assertEquals(1, cells.length);
-      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      assertKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, VALUE);
     }
   }
 
@@ -179,7 +179,7 @@ public class TestFromClientSide extends FromClientSideBase {
       Table table = connection.getTableBuilder(name.getTableName(), null).
         setOperationTimeout(3 * 1000).build()) {
       Append append = new Append(ROW);
-      append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      append.addColumn(HBaseTestingUtil.fam1, QUALIFIER, VALUE);
 
       // Batch append
       Object[] results = new Object[1];
@@ -188,13 +188,13 @@ public class TestFromClientSide extends FromClientSideBase {
       // Verify expected result
       Cell[] cells = ((Result) results[0]).rawCells();
       assertEquals(1, cells.length);
-      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      assertKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, VALUE);
 
       // Verify expected result again
       Result readResult = table.get(new Get(ROW));
       cells = readResult.rawCells();
       assertEquals(1, cells.length);
-      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      assertKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, VALUE);
     }
   }
 
@@ -340,9 +340,9 @@ public class TestFromClientSide extends FromClientSideBase {
     try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES)) {
       String value = "this is the value";
       String value2 = "this is some other value";
-      String keyPrefix1 = HBaseTestingUtility.getRandomUUID().toString();
-      String keyPrefix2 = HBaseTestingUtility.getRandomUUID().toString();
-      String keyPrefix3 = HBaseTestingUtility.getRandomUUID().toString();
+      String keyPrefix1 = HBaseTestingUtil.getRandomUUID().toString();
+      String keyPrefix2 = HBaseTestingUtil.getRandomUUID().toString();
+      String keyPrefix3 = HBaseTestingUtil.getRandomUUID().toString();
       putRows(ht, 3, value, keyPrefix1);
       putRows(ht, 3, value, keyPrefix2);
       putRows(ht, 3, value, keyPrefix3);

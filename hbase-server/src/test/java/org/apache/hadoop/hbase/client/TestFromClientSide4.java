@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
@@ -1241,7 +1241,7 @@ public class TestFromClientSide4 extends FromClientSideBase {
       }
 
       // stop the master
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       cluster.stopMaster(0, false);
       cluster.waitOnMaster(0);
 

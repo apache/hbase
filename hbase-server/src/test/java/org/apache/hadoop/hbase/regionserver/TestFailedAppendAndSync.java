@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
@@ -78,7 +78,7 @@ public class TestFailedAppendAndSync {
 
   HRegion region = null;
   // Do not run unit tests in parallel (? Why not?  It don't work?  Why not?  St.Ack)
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   public static Configuration CONF ;
   private String dir;
 
@@ -87,7 +87,7 @@ public class TestFailedAppendAndSync {
 
   @Before
   public void setup() throws IOException {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     CONF = TEST_UTIL.getConfiguration();
     // Disable block cache.
     CONF.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
@@ -314,7 +314,7 @@ public class TestFailedAppendAndSync {
 
   /**
    * @return A region on which you must call
-   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
+   *         {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)} when done.
    */
   public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
       Configuration conf, WAL wal) throws IOException {

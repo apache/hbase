@@ -24,7 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -43,7 +43,7 @@ public class TestRecoverLeaseFSUtils {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRecoverLeaseFSUtils.class);
 
-  private static final HBaseCommonTestingUtility HTU = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil HTU = new HBaseCommonTestingUtil();
   static {
     Configuration conf = HTU.getConfiguration();
     conf.setInt("hbase.lease.recovery.first.pause", 10);

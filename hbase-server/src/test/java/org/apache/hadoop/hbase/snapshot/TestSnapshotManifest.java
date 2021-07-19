@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -62,7 +62,7 @@ public class TestSnapshotManifest {
   private static final int TEST_NUM_REGIONS = 16000;
   private static final int TEST_NUM_REGIONFILES = 1000000;
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   private Configuration conf;
   private FileSystem fs;
   private Path rootDir;
@@ -72,7 +72,7 @@ public class TestSnapshotManifest {
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
 
     rootDir = TEST_UTIL.getDataTestDir(TABLE_NAME_STR);
     fs = TEST_UTIL.getTestFileSystem();

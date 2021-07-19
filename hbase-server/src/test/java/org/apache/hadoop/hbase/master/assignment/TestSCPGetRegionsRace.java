@@ -27,10 +27,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -145,7 +145,7 @@ public class TestSCPGetRegionsRace {
     }
   }
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName NAME = TableName.valueOf("Assign");
 
@@ -153,7 +153,7 @@ public class TestSCPGetRegionsRace {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniCluster(StartMiniClusterOption.builder().masterClass(HMasterForTest.class)
+    UTIL.startMiniCluster(StartTestingClusterOption.builder().masterClass(HMasterForTest.class)
       .numMasters(1).numRegionServers(3).build());
     UTIL.createTable(NAME, CF);
     UTIL.waitTableAvailable(NAME);

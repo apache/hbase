@@ -25,9 +25,9 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -83,10 +83,10 @@ public class TestRogueRSAssignment {
   private static final int initialRegionCount = 3;
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Configuration conf = UTIL.getConfiguration();
   private static Admin admin;
-  private static MiniHBaseCluster cluster;
+  private static SingleProcessHBaseCluster cluster;
   private static HMaster master;
 
   private static void setupConf(Configuration conf) {

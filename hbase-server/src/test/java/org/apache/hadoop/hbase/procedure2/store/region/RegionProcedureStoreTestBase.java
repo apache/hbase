@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.procedure2.store.region;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
@@ -36,7 +36,7 @@ import org.junit.Before;
  */
 public class RegionProcedureStoreTestBase {
 
-  protected HBaseCommonTestingUtility htu;
+  protected HBaseCommonTestingUtil htu;
 
   protected MasterRegion region;
 
@@ -44,7 +44,7 @@ public class RegionProcedureStoreTestBase {
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
     Configuration conf = htu.getConfiguration();
     conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
     // Runs on local filesystem. Test does not need sync. Turn off checks.

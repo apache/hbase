@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -55,7 +55,7 @@ public class TestModifyTableWhileMerging {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestModifyTableWhileMerging.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static TableName TABLE_NAME = TableName.valueOf("test");
   private static Admin admin;
   private static Table client;

@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -52,7 +52,7 @@ public class TestCompactionWithByteBuff {
   @Rule
   public TestName name = new TestName();
 
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf = TEST_UTIL.getConfiguration();
   private static Admin admin = null;
 
@@ -109,7 +109,7 @@ public class TestCompactionWithByteBuff {
     }
   }
 
-  private Table createTable(HBaseTestingUtility util, TableName tableName)
+  private Table createTable(HBaseTestingUtil util, TableName tableName)
       throws IOException {
     TableDescriptor td =
         TableDescriptorBuilder.newBuilder(tableName)

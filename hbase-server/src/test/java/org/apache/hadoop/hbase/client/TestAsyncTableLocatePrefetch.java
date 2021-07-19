@@ -21,7 +21,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -41,7 +41,7 @@ public class TestAsyncTableLocatePrefetch {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAsyncTableLocatePrefetch.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static TableName TABLE_NAME = TableName.valueOf("async");
 
@@ -75,7 +75,7 @@ public class TestAsyncTableLocatePrefetch {
     Thread.sleep(1000);
     // confirm that the locations of all the regions have been cached.
     assertNotNull(LOCATOR.getRegionLocationInCache(TABLE_NAME, Bytes.toBytes("aaa")));
-    for (byte[] row : HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE) {
+    for (byte[] row : HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE) {
       assertNotNull(LOCATOR.getRegionLocationInCache(TABLE_NAME, row));
     }
   }

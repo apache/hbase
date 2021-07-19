@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcCallback;
@@ -73,7 +73,7 @@ public class TestNamedQueueRecorder {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamedQueueRecorder.class);
 
-  private static final HBaseTestingUtility HBASE_TESTING_UTILITY = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
 
   private NamedQueueRecorder namedQueueRecorder;
 

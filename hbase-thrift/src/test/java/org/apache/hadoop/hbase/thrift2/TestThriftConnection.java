@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -104,7 +104,7 @@ public class TestThriftConnection {
   private static final long TS_1 = TS_2 - ONE_HOUR;
 
 
-  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected static ThriftServer thriftServer;
 
@@ -165,8 +165,8 @@ public class TestThriftConnection {
     // Do not start info server
     TEST_UTIL.getConfiguration().setInt(THRIFT_INFO_SERVER_PORT , -1);
     TEST_UTIL.startMiniCluster();
-    thriftPort = HBaseTestingUtility.randomFreePort();
-    httpPort = HBaseTestingUtility.randomFreePort();
+    thriftPort = HBaseTestingUtil.randomFreePort();
+    httpPort = HBaseTestingUtil.randomFreePort();
     // Start a thrift server
     thriftServer = startThriftServer(thriftPort, false);
     // Start an HTTP thrift server

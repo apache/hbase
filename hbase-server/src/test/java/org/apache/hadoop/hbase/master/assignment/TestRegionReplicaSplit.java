@@ -26,7 +26,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -62,7 +62,7 @@ public class TestRegionReplicaSplit {
 
   private static final int NB_SERVERS = 4;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   @BeforeClass
@@ -153,7 +153,7 @@ public class TestRegionReplicaSplit {
       // To test AssignProcedure can defend this case.
       HTU.getMiniHBaseCluster().getMaster().getAssignmentManager().assign(fakeHri);
       // Wait until all assigns are done.
-      HBaseTestingUtility.await(50, () -> {
+      HBaseTestingUtil.await(50, () -> {
         return HTU.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getActiveProcIds()
           .isEmpty();
       });

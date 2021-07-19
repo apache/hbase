@@ -31,8 +31,8 @@ import javax.xml.bind.Unmarshaller;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -76,7 +76,7 @@ public class TestMultiRowResource {
   private static final String ROW_2 = "testrow6";
   private static final String VALUE_2 = "testvalue6";
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
 
   private static Client client;
@@ -90,7 +90,7 @@ public class TestMultiRowResource {
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
   }
 
   public TestMultiRowResource(Boolean csrf) {

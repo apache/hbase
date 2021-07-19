@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -38,8 +37,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </pre>
  *
  * Default values can be found in {@link Builder}.
+ * @deprecated since 3.0.0, will be removed in 4.0.0. Use
+ *             {@link org.apache.hadoop.hbase.testing.TestingHBaseCluster} instead.
  */
 @InterfaceAudience.Public
+@Deprecated
 public final class StartMiniClusterOption {
   /**
    * Number of masters to start up.  We'll start this many hbase masters.  If numMasters > 1, you

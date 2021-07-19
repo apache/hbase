@@ -24,7 +24,7 @@ import java.util.Optional;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -48,7 +48,7 @@ public class TestTableOperationException {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTableOperationException.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName TABLE_DONOT_RETRY = TableName.valueOf("TableDoNotRetry");
 

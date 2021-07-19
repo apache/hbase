@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -41,7 +41,7 @@ public class TestUnloadAccessController extends SecureTestUtil {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestUnloadAccessController.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static TableName TEST_TABLE = TableName.valueOf("TestUnloadAccessController");
   private static Permission permission =
       Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build();

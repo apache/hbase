@@ -29,7 +29,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -63,7 +63,7 @@ public class TestScannerSelectionUsingKeyRange {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestScannerSelectionUsingKeyRange.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static TableName TABLE = TableName.valueOf("myTable");
   private static String FAMILY = "myCF";
   private static byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
@@ -109,7 +109,7 @@ public class TestScannerSelectionUsingKeyRange {
       .build();
 
     RegionInfo info = RegionInfoBuilder.newBuilder(TABLE).build();
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
       tableDescriptor);
 
     for (int iFile = 0; iFile < NUM_FILES; ++iFile) {
@@ -136,6 +136,6 @@ public class TestScannerSelectionUsingKeyRange {
       Set<String> accessedFiles = ((LruBlockCache)cache).getCachedFileNamesForTest();
       assertEquals(expectedCount, accessedFiles.size());
     }
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 }

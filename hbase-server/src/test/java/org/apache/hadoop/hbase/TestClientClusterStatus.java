@@ -53,19 +53,19 @@ public class TestClientClusterStatus {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestClientClusterStatus.class);
 
-  private static HBaseTestingUtility UTIL;
+  private static HBaseTestingUtil UTIL;
   private static Admin ADMIN;
   private final static int SLAVES = 5;
   private final static int MASTERS = 3;
-  private static MiniHBaseCluster CLUSTER;
+  private static SingleProcessHBaseCluster CLUSTER;
   private static HRegionServer DEAD;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MyObserver.class.getName());
-    UTIL = new HBaseTestingUtility(conf);
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    UTIL = new HBaseTestingUtil(conf);
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numMasters(MASTERS).numRegionServers(SLAVES).numDataNodes(SLAVES).build();
     UTIL.startMiniCluster(option);
     CLUSTER = UTIL.getHBaseCluster();

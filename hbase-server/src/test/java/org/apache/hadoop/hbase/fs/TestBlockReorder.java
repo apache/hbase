@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -69,7 +69,7 @@ public class TestBlockReorder {
 
   private Configuration conf;
   private MiniDFSCluster cluster;
-  private HBaseTestingUtility htu;
+  private HBaseTestingUtil htu;
   private DistributedFileSystem dfs;
   private static final String host1 = "host1";
   private static final String host2 = "host2";
@@ -80,7 +80,7 @@ public class TestBlockReorder {
 
   @Before
   public void setUp() throws Exception {
-    htu = new HBaseTestingUtility();
+    htu = new HBaseTestingUtil();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
     htu.getConfiguration().setInt("dfs.replication", 3);
     htu.startMiniDFSCluster(3,

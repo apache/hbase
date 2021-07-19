@@ -53,7 +53,7 @@ public class TestJMXConnectorServer {
       HBaseClassTestRule.forClass(TestJMXConnectorServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJMXConnectorServer.class);
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static Configuration conf = null;
   private static Admin admin;

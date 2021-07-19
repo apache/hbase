@@ -23,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -36,7 +36,7 @@ import org.junit.Test;
 
 public abstract class AbstractTestRegionLocator {
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   protected static TableName TABLE_NAME = TableName.valueOf("Locator");
 
@@ -48,7 +48,7 @@ public abstract class AbstractTestRegionLocator {
 
   protected static void startClusterAndCreateTable() throws Exception {
     UTIL.startMiniCluster(3);
-    HBaseTestingUtility.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, REGION_REPLICATION);
+    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, REGION_REPLICATION);
     TableDescriptor td =
       TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(REGION_REPLICATION)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();

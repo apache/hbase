@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
- * Facility for <strong>integration/system</strong> tests. This extends {@link HBaseTestingUtility}
+ * Facility for <strong>integration/system</strong> tests. This extends {@link HBaseTestingUtil}
  * and adds-in the functionality needed by integration and system tests. This class understands
  * distributed and pseudo-distributed/local cluster deployments, and abstracts those from the tests
  * in this module.
@@ -39,7 +39,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * via {@link #initializeCluster(int)}. Individual tests should not directly call
  * {@link #setUseDistributedCluster(Configuration)}.
  */
-public class IntegrationTestingUtility extends HBaseTestingUtility {
+public class IntegrationTestingUtility extends HBaseTestingUtil {
 
   public IntegrationTestingUtility() {
     this(HBaseConfiguration.create());
@@ -84,7 +84,7 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
    * exception otherwise.
    */
   public void checkNodeCount(int numSlaves) throws Exception {
-    HBaseCluster cluster = getHBaseClusterInterface();
+    HBaseClusterInterface cluster = getHBaseClusterInterface();
     if (cluster.getClusterMetrics().getLiveServerMetrics().size() < numSlaves) {
       throw new Exception("Cluster does not have enough nodes:" + numSlaves);
     }

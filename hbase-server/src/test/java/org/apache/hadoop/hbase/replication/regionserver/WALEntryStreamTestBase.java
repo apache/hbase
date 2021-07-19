@@ -25,7 +25,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -57,7 +57,7 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 public abstract class WALEntryStreamTestBase {
 
   protected static final long TEST_TIMEOUT_MS = 5000;
-  protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();;
+  protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();;
   protected static Configuration CONF;
   protected static FileSystem fs;
   protected static MiniDFSCluster cluster;
@@ -125,7 +125,7 @@ public abstract class WALEntryStreamTestBase {
   protected final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
   protected static void startCluster() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     CONF = TEST_UTIL.getConfiguration();
     CONF.setLong("replication.source.sleepforretries", 10);
     TEST_UTIL.startMiniDFSCluster(3);

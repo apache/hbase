@@ -53,7 +53,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -105,7 +105,7 @@ public abstract class AbstractTestFSWAL {
   protected static Configuration CONF;
   protected static FileSystem FS;
   protected static Path DIR;
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public final TestName currentTest = new TestName();
@@ -417,9 +417,9 @@ public abstract class AbstractTestFSWAL {
     final byte[] rowName = tableName.getName();
     final TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, TEST_UTIL.getDefaultRootDirPath(),
+    HRegion r = HBaseTestingUtil.createRegionAndWAL(hri, TEST_UTIL.getDefaultRootDirPath(),
       TEST_UTIL.getConfiguration(), htd);
-    HBaseTestingUtility.closeRegionAndWAL(r);
+    HBaseTestingUtil.closeRegionAndWAL(r);
     final int countPerFamily = 10;
     final AtomicBoolean goslow = new AtomicBoolean(false);
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);

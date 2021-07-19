@@ -25,7 +25,7 @@ import java.util.Optional;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
@@ -51,7 +51,7 @@ public class TestSplitWALProcedure {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSplitWALProcedure.class);
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   private HMaster master;
   private TableName TABLE_NAME;
   private SplitWALManager splitWALManager;
@@ -59,7 +59,7 @@ public class TestSplitWALProcedure {
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.getConfiguration().setBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, false);
     TEST_UTIL.getConfiguration().setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 1);
     TEST_UTIL.startMiniCluster(3);

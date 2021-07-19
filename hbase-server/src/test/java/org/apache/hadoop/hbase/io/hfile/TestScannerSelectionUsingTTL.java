@@ -27,7 +27,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -67,7 +67,7 @@ public class TestScannerSelectionUsingTTL {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestScannerSelectionUsingTTL.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static TableName TABLE = TableName.valueOf("myTable");
   private static String FAMILY = "myCF";
   private static byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
@@ -105,7 +105,7 @@ public class TestScannerSelectionUsingTTL {
         ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES).setMaxVersions(Integer.MAX_VALUE)
             .setTimeToLive(TTL_SECONDS).build()).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(TABLE).build();
-    HRegion region = HBaseTestingUtility
+    HRegion region = HBaseTestingUtil
         .createRegionAndWAL(info, TEST_UTIL.getDataTestDir(info.getEncodedName()), conf, td, cache);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -146,6 +146,6 @@ public class TestScannerSelectionUsingTTL {
 
     region.compact(false);
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 }

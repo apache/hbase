@@ -38,11 +38,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -100,7 +100,7 @@ public class TestNamespaceAuditor {
       HBaseClassTestRule.forClass(TestNamespaceAuditor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamespaceAuditor.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Admin ADMIN;
   private String prefix = "TestNamespaceAuditor";
 
@@ -115,7 +115,7 @@ public class TestNamespaceAuditor {
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     conf.setClass("hbase.coprocessor.regionserver.classes", CPRegionServerObserver.class,
       RegionServerObserver.class);
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(2).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(2).build();
     UTIL.startMiniCluster(option);
     waitForQuotaInitialize(UTIL);
     ADMIN = UTIL.getAdmin();
@@ -395,7 +395,7 @@ public class TestNamespaceAuditor {
     Collections.sort(hris, RegionInfo.COMPARATOR);
 
     // Fail region merge through Coprocessor hook
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     MasterCoprocessorHost cpHost = cluster.getMaster().getMasterCoprocessorHost();
     Coprocessor coprocessor = cpHost.findCoprocessor(CPMasterObserver.class);
     CPMasterObserver masterObserver = (CPMasterObserver) coprocessor;
@@ -544,7 +544,7 @@ public class TestNamespaceAuditor {
         .getTables().size(), after.getTables().size());
   }
 
-  public static void waitForQuotaInitialize(final HBaseTestingUtility util) throws Exception {
+  public static void waitForQuotaInitialize(final HBaseTestingUtil util) throws Exception {
     util.waitFor(60000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {

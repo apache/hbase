@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.thrift;
 
 import static org.junit.Assert.assertNotNull;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -33,7 +33,7 @@ public class TestBindExceptionHandling {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestBindExceptionHandling.class);
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   /**
    * See if random port choosing works around protocol port clashes

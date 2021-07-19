@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -58,7 +58,7 @@ public class TestHMasterRPCException {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHMasterRPCException.class);
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
 
   private HMaster master;
 

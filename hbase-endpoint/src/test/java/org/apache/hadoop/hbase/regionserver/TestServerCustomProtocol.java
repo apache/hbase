@@ -26,7 +26,7 @@ import java.util.Collections;
 import java.util.Map;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -150,7 +150,7 @@ public class TestServerCustomProtocol {
   private static final byte[] ROW_AB = Bytes.toBytes("abb");
   private static final byte[] ROW_BC = Bytes.toBytes("bcc");
 
-  private static HBaseTestingUtility util = new HBaseTestingUtility();
+  private static HBaseTestingUtil util = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {

@@ -38,9 +38,12 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Common helpers for testing HBase that do not depend on specific server/etc. things.
- * @see org.apache.hadoop.hbase.HBaseCommonTestingUtility
+ * @see org.apache.hadoop.hbase.HBaseCommonTestingUtil
+ * @deprecated since 3.0.0, will be removed in 4.0.0. Use
+ *             {@link org.apache.hadoop.hbase.testing.TestingHBaseCluster} instead.
  */
 @InterfaceAudience.Public
+@Deprecated
 public class HBaseCommonTestingUtility {
   protected static final Logger LOG = LoggerFactory.getLogger(HBaseCommonTestingUtility.class);
 
@@ -197,7 +200,7 @@ public class HBaseCommonTestingUtility {
    * @param subdir Test subdir name.
    * @return True if we removed the test dir
    */
-  boolean cleanupTestDir(final String subdir) {
+  public boolean cleanupTestDir(final String subdir) {
     if (this.dataTestDir == null) {
       return false;
     }

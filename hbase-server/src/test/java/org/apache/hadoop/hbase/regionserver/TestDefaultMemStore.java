@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -920,7 +920,7 @@ public class TestDefaultMemStore {
     try {
       EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
       EnvironmentEdgeManager.injectEdge(edge);
-      HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
+      HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
       String cf = "foo";
       HRegion region =
           hbaseUtility.createTestRegion("foobar", ColumnFamilyDescriptorBuilder.of(cf));
@@ -946,7 +946,7 @@ public class TestDefaultMemStore {
     // the MEMSTORE_PERIODIC_FLUSH_INTERVAL is set to a higher value)
     Configuration conf = new Configuration();
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.SYSTEM_CACHE_FLUSH_INTERVAL * 10);
-    HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
+    HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
     Path testDir = hbaseUtility.getDataTestDir();
     EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
     EnvironmentEdgeManager.injectEdge(edge);

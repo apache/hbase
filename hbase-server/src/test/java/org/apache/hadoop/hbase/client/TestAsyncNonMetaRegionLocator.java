@@ -37,7 +37,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -74,7 +74,7 @@ public class TestAsyncNonMetaRegionLocator {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncNonMetaRegionLocator.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static TableName TABLE_NAME = TableName.valueOf("async");
 
@@ -103,7 +103,7 @@ public class TestAsyncNonMetaRegionLocator {
     admin.balancerSwitch(false, true);
 
     // Enable hbase:meta replication.
-    HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, numOfMetaReplica);
+    HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, numOfMetaReplica);
     TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getRegions(
       TableName.META_TABLE_NAME).size() >= numOfMetaReplica);
 

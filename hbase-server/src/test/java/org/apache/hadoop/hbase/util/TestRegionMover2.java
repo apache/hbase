@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -65,7 +65,7 @@ public class TestRegionMover2 {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover2.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -98,7 +98,7 @@ public class TestRegionMover2 {
   @Test
   public void testWithMergedRegions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<>();
@@ -133,7 +133,7 @@ public class TestRegionMover2 {
   @Test
   public void testWithSplitRegions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<>();
@@ -182,7 +182,7 @@ public class TestRegionMover2 {
   @Test
   public void testFailedRegionMove() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<>();

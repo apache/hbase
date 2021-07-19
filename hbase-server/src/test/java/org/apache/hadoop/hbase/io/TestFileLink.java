@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -94,7 +94,7 @@ public class TestFileLink {
    */
   @Test
   public void testHDFSLinkReadDuringRename() throws Exception {
-    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
     Configuration conf = testUtil.getConfiguration();
     conf.setInt("dfs.blocksize", 1024 * 1024);
     conf.setInt("dfs.client.read.prefetch.size", 2 * 1024 * 1024);
@@ -126,7 +126,7 @@ public class TestFileLink {
   }
   @Test(expected = FileNotFoundException.class)
   public void testLinkReadWithMissingFile() throws Exception {
-    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
     FileSystem fs = new MyDistributedFileSystem();
 
     Path originalPath = new Path(testUtil.getDefaultRootDirPath(), "test.file");
@@ -146,7 +146,7 @@ public class TestFileLink {
    */
   @Test
   public void testLocalLinkReadDuringRename() throws IOException {
-    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
     FileSystem fs = testUtil.getTestFileSystem();
     assertEquals("file", fs.getUri().getScheme());
     testLinkReadDuringRename(fs, testUtil.getDataTestDir());
@@ -218,7 +218,7 @@ public class TestFileLink {
    */
   @Test
   public void testHDFSLinkReadDuringDelete() throws Exception {
-    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
     Configuration conf = testUtil.getConfiguration();
     conf.setInt("dfs.blocksize", 1024 * 1024);
     conf.setInt("dfs.client.read.prefetch.size", 2 * 1024 * 1024);

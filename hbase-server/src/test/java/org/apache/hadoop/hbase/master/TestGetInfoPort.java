@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -40,7 +40,7 @@ public class TestGetInfoPort {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestGetInfoPort.class);
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
 
   @Before
   public void setUp() throws Exception {

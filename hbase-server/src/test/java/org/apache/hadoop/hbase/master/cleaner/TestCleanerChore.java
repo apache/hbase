@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -56,7 +56,7 @@ public class TestCleanerChore {
     HBaseClassTestRule.forClass(TestCleanerChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCleanerChore.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static DirScanPool POOL;
 
   @BeforeClass
@@ -313,7 +313,7 @@ public class TestCleanerChore {
     Stoppable stop = new StoppableImplementation();
     // need to use a localutil to not break the rest of the test that runs on the local FS, which
     // gets hosed when we start to use a minicluster.
-    HBaseTestingUtility localUtil = new HBaseTestingUtility();
+    HBaseTestingUtil localUtil = new HBaseTestingUtil();
     Configuration conf = localUtil.getConfiguration();
     final Path testDir = UTIL.getDataTestDir();
     final FileSystem fs = UTIL.getTestFileSystem();

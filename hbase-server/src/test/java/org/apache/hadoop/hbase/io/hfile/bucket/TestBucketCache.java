@@ -38,7 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -112,7 +112,7 @@ public class TestBucketCache {
   final int writerQLen = BucketCache.DEFAULT_WRITER_QUEUE_ITEMS;
   private String ioEngineName = "offheap";
 
-  private static final HBaseTestingUtility HBASE_TESTING_UTILITY = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
 
   private static class MockedBucketCache extends BucketCache {
 
@@ -349,7 +349,7 @@ public class TestBucketCache {
   @Test
   public void testRetrieveFromMultipleFiles() throws Exception {
     final Path testDirInitial = createAndGetTestDir();
-    final Path newTestDir = new HBaseTestingUtility().getDataTestDir();
+    final Path newTestDir = new HBaseTestingUtil().getDataTestDir();
     HBASE_TESTING_UTILITY.getTestFileSystem().mkdirs(newTestDir);
     String ioEngineName = new StringBuilder("files:").append(testDirInitial)
             .append("/bucket1.cache").append(FileIOEngine.FILE_DELIMITER).append(newTestDir)

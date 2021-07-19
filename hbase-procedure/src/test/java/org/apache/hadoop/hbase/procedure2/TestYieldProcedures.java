@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -55,14 +55,14 @@ public class TestYieldProcedures {
   private TestScheduler procRunnables;
   private ProcedureStore procStore;
 
-  private HBaseCommonTestingUtility htu;
+  private HBaseCommonTestingUtil htu;
   private FileSystem fs;
   private Path testDir;
   private Path logDir;
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
     testDir = htu.getDataTestDir();
     fs = testDir.getFileSystem(htu.getConfiguration());
     assertTrue(testDir.depth() > 1);

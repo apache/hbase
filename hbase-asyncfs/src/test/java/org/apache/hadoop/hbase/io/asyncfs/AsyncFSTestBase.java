@@ -21,7 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +30,7 @@ public abstract class AsyncFSTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncFSTestBase.class);
 
-  protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  protected static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   protected static File CLUSTER_TEST_DIR;
 
@@ -49,7 +49,7 @@ public abstract class AsyncFSTestBase {
     // Using randomUUID ensures that multiple clusters can be launched by
     // a same test, if it stops & starts them
     Path testDir =
-      UTIL.getDataTestDir("cluster_" + HBaseCommonTestingUtility.getRandomUUID().toString());
+      UTIL.getDataTestDir("cluster_" + HBaseCommonTestingUtil.getRandomUUID().toString());
     CLUSTER_TEST_DIR = new File(testDir.toString()).getAbsoluteFile();
     // Have it cleaned up on exit
     boolean b = deleteOnExit();

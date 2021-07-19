@@ -51,8 +51,11 @@ import org.slf4j.LoggerFactory;
  * cases from unit tests, or if more control is needed, you can use the subclasses directly.
  * In that sense, this class does not abstract away <strong>every</strong> interface that
  * MiniHBaseCluster or DistributedHBaseCluster provide.
+ * @deprecated since 3.0.0, will be removed in 4.0.0. Use
+ *             {@link org.apache.hadoop.hbase.testing.TestingHBaseCluster} instead.
  */
 @InterfaceAudience.Public
+@Deprecated
 public abstract class HBaseCluster implements Closeable, Configurable {
   // Log is being used in DistributedHBaseCluster class, hence keeping it as package scope
   static final Logger LOG = LoggerFactory.getLogger(HBaseCluster.class.getName());

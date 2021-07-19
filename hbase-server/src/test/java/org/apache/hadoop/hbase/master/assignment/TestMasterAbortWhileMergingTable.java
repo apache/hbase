@@ -22,7 +22,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -54,7 +54,7 @@ public class TestMasterAbortWhileMergingTable {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestMasterAbortWhileMergingTable.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static TableName TABLE_NAME = TableName.valueOf("test");
   private static Admin admin;
   private static byte[] CF = Bytes.toBytes("cf");

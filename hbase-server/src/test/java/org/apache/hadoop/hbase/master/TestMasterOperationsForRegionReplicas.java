@@ -38,13 +38,13 @@ import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -81,11 +81,11 @@ public class TestMasterOperationsForRegionReplicas {
     HBaseClassTestRule.forClass(TestMasterOperationsForRegionReplicas.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Connection CONNECTION = null;
   private static Admin ADMIN;
   private static int numSlaves = 2;
-  private final static StartMiniClusterOption option = StartMiniClusterOption.builder().
+  private final static StartTestingClusterOption option = StartTestingClusterOption.builder().
       numRegionServers(numSlaves).numMasters(1).numAlwaysStandByMasters(1).build();
   private static Configuration conf;
 
@@ -201,8 +201,8 @@ public class TestMasterOperationsForRegionReplicas {
         rsports.add(rst.getRegionServer().getRpcServer().getListenerAddress().getPort());
       }
       TEST_UTIL.shutdownMiniHBaseCluster();
-      StartMiniClusterOption option =
-        StartMiniClusterOption.builder().numRegionServers(numSlaves).rsPorts(rsports).build();
+      StartTestingClusterOption option =
+        StartTestingClusterOption.builder().numRegionServers(numSlaves).rsPorts(rsports).build();
       TEST_UTIL.startMiniHBaseCluster(option);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
@@ -350,7 +350,7 @@ public class TestMasterOperationsForRegionReplicas {
     assertEquals(numRegions, count.get());
   }
 
-  private void validateFromSnapshotFromMeta(HBaseTestingUtility util, TableName table,
+  private void validateFromSnapshotFromMeta(HBaseTestingUtil util, TableName table,
       int numRegions, int numReplica, Connection connection) throws IOException {
     SnapshotOfRegionAssignmentFromMeta snapshot =
       new SnapshotOfRegionAssignmentFromMeta(connection);

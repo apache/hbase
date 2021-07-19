@@ -29,11 +29,11 @@ import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -69,7 +69,7 @@ public class TestRollingRestart {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRollingRestart.class);
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   @Rule
   public TestName name = new TestName();
 
@@ -91,11 +91,11 @@ public class TestRollingRestart {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
         splitWALCoordinatedByZK);
-    TEST_UTIL = new HBaseTestingUtility(conf);
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    TEST_UTIL = new HBaseTestingUtil(conf);
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
     TEST_UTIL.startMiniCluster(option);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     log("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
 
@@ -116,7 +116,7 @@ public class TestRollingRestart {
     TEST_UTIL.getAdmin().disableTable(tableName);
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-    NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
+    NavigableSet<String> regions = HBaseTestingUtil.getAllOnlineRegions(cluster);
     log("Verifying only catalog region is assigned\n");
     if (regions.size() != 1) {
       for (String oregion : regions) {
@@ -129,7 +129,7 @@ public class TestRollingRestart {
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Verifying there are " + numRegions + " assigned on cluster\n");
-    regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
+    regions = HBaseTestingUtil.getAllOnlineRegions(cluster);
     assertRegionsAssigned(cluster, regions);
     assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
 
@@ -256,7 +256,7 @@ public class TestRollingRestart {
     LOG.debug("\n\nTRR: " + msg + "\n");
   }
 
-  private int getNumberOfOnlineRegions(MiniHBaseCluster cluster) {
+  private int getNumberOfOnlineRegions(SingleProcessHBaseCluster cluster) {
     int numFound = 0;
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       numFound += rst.getRegionServer().getNumberOfOnlineRegions();
@@ -267,14 +267,14 @@ public class TestRollingRestart {
     return numFound;
   }
 
-  private void assertRegionsAssigned(MiniHBaseCluster cluster,
+  private void assertRegionsAssigned(SingleProcessHBaseCluster cluster,
       Set<String> expectedRegions) throws IOException {
     int numFound = getNumberOfOnlineRegions(cluster);
     if (expectedRegions.size() > numFound) {
       log("Expected to find " + expectedRegions.size() + " but only found"
           + " " + numFound);
       NavigableSet<String> foundRegions =
-        HBaseTestingUtility.getAllOnlineRegions(cluster);
+        HBaseTestingUtil.getAllOnlineRegions(cluster);
       for (String region : expectedRegions) {
         if (!foundRegions.contains(region)) {
           log("Missing region: " + region);
@@ -296,7 +296,7 @@ public class TestRollingRestart {
   }
 
   private NavigableSet<String> getDoubleAssignedRegions(
-      MiniHBaseCluster cluster) throws IOException {
+      SingleProcessHBaseCluster cluster) throws IOException {
     NavigableSet<String> online = new TreeSet<>();
     NavigableSet<String> doubled = new TreeSet<>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {

@@ -32,7 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
@@ -99,7 +99,7 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     UTIL.getHBaseCluster().killAll();
     UTIL.getHBaseCluster().waitUntilShutDown();
     LOG.info("Restarting cluster");
-    UTIL.restartHBaseCluster(StartMiniClusterOption.builder().masterClass(HMasterForTest.class)
+    UTIL.restartHBaseCluster(StartTestingClusterOption.builder().masterClass(HMasterForTest.class)
         .numMasters(1).numRegionServers(3).rsPorts(ports).build());
     LOG.info("Started cluster");
     UTIL.waitFor(60000, () -> UTIL.getHBaseCluster().getMaster().isInitialized());
@@ -138,7 +138,7 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
   private void setupCluster() throws Exception {
     LOG.info("Setup cluster");
     UTIL.startMiniCluster(
-        StartMiniClusterOption.builder().masterClass(HMasterForTest.class).numMasters(1)
+        StartTestingClusterOption.builder().masterClass(HMasterForTest.class).numMasters(1)
             .numRegionServers(3).build());
     LOG.info("Cluster is up");
     UTIL.waitFor(60000, () -> UTIL.getMiniHBaseCluster().getMaster().isInitialized());

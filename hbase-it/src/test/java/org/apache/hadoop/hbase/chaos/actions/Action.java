@@ -32,13 +32,13 @@ import java.util.function.Consumer;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseCluster;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseClusterInterface;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -87,7 +87,7 @@ public abstract class Action {
   protected static final long START_NAMENODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
 
   protected ActionContext context;
-  protected HBaseCluster cluster;
+  protected HBaseClusterInterface cluster;
   protected ClusterMetrics initialStatus;
   protected ServerName[] initialServers;
   protected Properties monkeyProps;
@@ -197,7 +197,7 @@ public abstract class Action {
   protected void suspendRs(ServerName server) throws IOException {
     getLogger().info("Suspending regionserver {}", server);
     cluster.suspendRegionServer(server);
-    if(!(cluster instanceof MiniHBaseCluster)){
+    if(!(cluster instanceof SingleProcessHBaseCluster)){
       cluster.waitForRegionServerToStop(server, killRsTimeout);
     }
     getLogger().info("Suspending regionserver {}. Reported num of rs:{}", server,
@@ -207,7 +207,7 @@ public abstract class Action {
   protected void resumeRs(ServerName server) throws IOException {
     getLogger().info("Resuming regionserver {}", server);
     cluster.resumeRegionServer(server);
-    if(!(cluster instanceof MiniHBaseCluster)){
+    if(!(cluster instanceof SingleProcessHBaseCluster)){
       cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
     }
     getLogger().info("Resuming regionserver {}. Reported num of rs:{}", server,
@@ -342,7 +342,7 @@ public abstract class Action {
    */
   protected void modifyAllTableColumns(TableName tableName,
     BiConsumer<String, ColumnFamilyDescriptorBuilder> transform) throws IOException {
-    HBaseTestingUtility util = this.context.getHBaseIntegrationTestingUtility();
+    HBaseTestingUtil util = this.context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
 
     TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
@@ -401,7 +401,7 @@ public abstract class Action {
       return util;
     }
 
-    public HBaseCluster getHBaseCluster() {
+    public HBaseClusterInterface getHBaseCluster() {
       return util.getHBaseClusterInterface();
     }
 

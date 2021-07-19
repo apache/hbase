@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY_BYTES;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY_BYTES;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -32,7 +32,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
@@ -78,7 +78,7 @@ public class TestScanner {
   @Rule public TestName name = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScanner.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final byte [] FIRST_ROW = HConstants.EMPTY_START_ROW;
   private static final byte [][] COLS = { HConstants.CATALOG_FAMILY };
@@ -165,7 +165,7 @@ public class TestScanner {
       assertTrue(count > 10);
       s.close();
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
     }
   }
 
@@ -218,7 +218,7 @@ public class TestScanner {
       rowInclusiveStopFilter(scan, stopRow);
 
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
     }
   }
 
@@ -244,7 +244,7 @@ public class TestScanner {
         return;
       }
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
     }
   }
 
@@ -283,7 +283,7 @@ public class TestScanner {
 
       // Store some new information
 
-      String address = HConstants.LOCALHOST_IP + ":" + HBaseTestingUtility.randomFreePort();
+      String address = HConstants.LOCALHOST_IP + ":" + HBaseTestingUtil.randomFreePort();
 
       put = new Put(ROW_KEY, EnvironmentEdgeManager.currentTime());
       put.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
@@ -354,7 +354,7 @@ public class TestScanner {
 
     } finally {
       // clean up
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
     }
   }
 
@@ -470,7 +470,7 @@ public class TestScanner {
       LOG.error("Failed", e);
       throw e;
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
     }
   }
 
@@ -492,7 +492,7 @@ public class TestScanner {
       LOG.error("Failed", e);
       throw e;
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
     }
   }
 
@@ -548,7 +548,7 @@ public class TestScanner {
       assertTrue(CellUtil.matchingFamily(results.get(0), fam1));
       assertTrue(CellUtil.matchingFamily(results.get(1), fam2));
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
     }
   }
 

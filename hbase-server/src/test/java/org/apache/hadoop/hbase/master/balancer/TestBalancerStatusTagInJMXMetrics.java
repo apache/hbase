@@ -22,8 +22,8 @@ import static org.junit.Assert.assertEquals;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.metrics2.MetricsSource;
@@ -45,10 +45,10 @@ public class TestBalancerStatusTagInJMXMetrics extends BalancerTestBase {
       HBaseClassTestRule.forClass(TestBalancerStatusTagInJMXMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBalancerStatusTagInJMXMetrics.class);
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static int connectorPort = 61120;
   private static HMaster master;
-  private static MiniHBaseCluster cluster;
+  private static SingleProcessHBaseCluster cluster;
   private static Configuration conf = null;
 
   /**
@@ -62,7 +62,7 @@ public class TestBalancerStatusTagInJMXMetrics extends BalancerTestBase {
       do {
         int sign = i % 2 == 0 ? 1 : -1;
         connectorPort += sign * rand.nextInt(100);
-      } while (!HBaseTestingUtility.available(connectorPort));
+      } while (!HBaseTestingUtil.available(connectorPort));
       try {
         conf.setInt("regionserver.rmi.registry.port", connectorPort);
         cluster = UTIL.startMiniCluster();

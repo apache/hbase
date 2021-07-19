@@ -35,7 +35,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -61,7 +61,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
   private static final Logger LOG =
     LoggerFactory.getLogger(TestStochasticLoadBalancerHeterogeneousCost.class);
   private static final double ALLOWED_WINDOW = 1.20;
-  private static final HBaseCommonTestingUtility HTU = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil HTU = new HBaseCommonTestingUtil();
   private static String RULES_FILE;
 
   @BeforeClass

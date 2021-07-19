@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.http.HttpConfig;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.log.LogLevel.CLI;
@@ -83,13 +83,13 @@ public class TestLogLevel {
   private static final String LOCALHOST = "localhost";
   private static final String clientPrincipal = "client/" + LOCALHOST;
   private static String HTTP_PRINCIPAL = "HTTP/" + LOCALHOST;
-  private static HBaseCommonTestingUtility HTU;
+  private static HBaseCommonTestingUtil HTU;
   private static File keyTabFile;
 
   @BeforeClass
   public static void setUp() throws Exception {
     serverConf = new Configuration();
-    HTU = new HBaseCommonTestingUtility(serverConf);
+    HTU = new HBaseCommonTestingUtil(serverConf);
 
     File keystoreDir = new File(HTU.getDataTestDir("keystore").toString());
     keystoreDir.mkdirs();

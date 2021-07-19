@@ -26,7 +26,7 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -64,12 +64,12 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static File keystoresDir;
   private static String sslConfDir;
   private static SSLFactory clientSslFactory;
-  private static HBaseCommonTestingUtility HTU;
+  private static HBaseCommonTestingUtil HTU;
 
   @BeforeClass
   public static void setup() throws Exception {
 
-    HTU = new HBaseCommonTestingUtility();
+    HTU = new HBaseCommonTestingUtil();
     serverConf = HTU.getConfiguration();
 
     serverConf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);

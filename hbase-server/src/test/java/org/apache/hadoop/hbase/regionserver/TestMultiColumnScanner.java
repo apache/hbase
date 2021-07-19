@@ -35,7 +35,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -104,7 +104,7 @@ public abstract class TestMultiColumnScanner {
   /** The probability to delete a row/column pair */
   private static final double DELETE_PROBABILITY = 0.02;
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Parameter(0)
   public Compression.Algorithm comprAlgo;
@@ -258,7 +258,7 @@ public abstract class TestMultiColumnScanner {
         "pairs", lastDelTimeMap.size() > 0);
     LOG.info("Number of row/col pairs deleted at least once: " +
        lastDelTimeMap.size());
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   private static String getRowQualStr(Cell kv) {

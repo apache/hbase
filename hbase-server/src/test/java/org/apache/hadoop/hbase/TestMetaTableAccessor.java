@@ -78,7 +78,7 @@ public class TestMetaTableAccessor {
     HBaseClassTestRule.forClass(TestMetaTableAccessor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableAccessor.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Connection connection;
   private Random random = new Random();
 
@@ -408,7 +408,7 @@ public class TestMetaTableAccessor {
     UTIL.createTable(tableName, FAMILY, SPLIT_KEYS);
     Table table = connection.getTable(tableName);
     // Make sure all the regions are deployed
-    HBaseTestingUtility.countRows(table);
+    HBaseTestingUtil.countRows(table);
 
     ClientMetaTableAccessor.Visitor visitor = mock(ClientMetaTableAccessor.Visitor.class);
     doReturn(true).when(visitor).visit((Result) anyObject());

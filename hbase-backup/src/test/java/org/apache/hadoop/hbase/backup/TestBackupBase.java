@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -78,8 +78,8 @@ import org.slf4j.LoggerFactory;
 public class TestBackupBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupBase.class);
 
-  protected static HBaseTestingUtility TEST_UTIL;
-  protected static HBaseTestingUtility TEST_UTIL2;
+  protected static HBaseTestingUtil TEST_UTIL;
+  protected static HBaseTestingUtil TEST_UTIL2;
   protected static Configuration conf1;
   protected static Configuration conf2;
 
@@ -296,7 +296,7 @@ public class TestBackupBase {
     if (useSecondCluster) {
       conf2 = HBaseConfiguration.create(conf1);
       conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
-      TEST_UTIL2 = new HBaseTestingUtility(conf2);
+      TEST_UTIL2 = new HBaseTestingUtil(conf2);
       TEST_UTIL2.setZkCluster(TEST_UTIL.getZkCluster());
       TEST_UTIL2.startMiniDFSCluster(3);
       String root2 = TEST_UTIL2.getConfiguration().get("fs.defaultFS");
@@ -329,7 +329,7 @@ public class TestBackupBase {
    */
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     conf1 = TEST_UTIL.getConfiguration();
     autoRestoreOnFailure = true;
     useSecondCluster = false;

@@ -24,7 +24,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -57,7 +57,7 @@ public class TestDisabledWAL {
   public TestName name = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDisabledWAL.class);
-  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private Table table;
   private TableName tableName;
   private byte[] fam = Bytes.toBytes("f1");

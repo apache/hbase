@@ -34,9 +34,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -79,13 +79,13 @@ public class SpaceQuotaHelperForTests {
   public static final long ONE_MEGABYTE = ONE_KILOBYTE * ONE_KILOBYTE;
   public static final long ONE_GIGABYTE = ONE_MEGABYTE * ONE_KILOBYTE;
 
-  private final HBaseTestingUtility testUtil;
+  private final HBaseTestingUtil testUtil;
   private final TestName testName;
   private final AtomicLong counter;
   private static final int NUM_RETRIES = 10;
 
   public SpaceQuotaHelperForTests(
-      HBaseTestingUtility testUtil, TestName testName, AtomicLong counter) {
+      HBaseTestingUtil testUtil, TestName testName, AtomicLong counter) {
     this.testUtil = Objects.requireNonNull(testUtil);
     this.testName = Objects.requireNonNull(testName);
     this.counter = Objects.requireNonNull(counter);
@@ -690,10 +690,10 @@ public class SpaceQuotaHelperForTests {
    * Predicate that waits for all store files in a table to have no compacted files.
    */
   static class NoFilesToDischarge implements Predicate<Exception> {
-    private final MiniHBaseCluster cluster;
+    private final SingleProcessHBaseCluster cluster;
     private final TableName tn;
 
-    NoFilesToDischarge(MiniHBaseCluster cluster, TableName tn) {
+    NoFilesToDischarge(SingleProcessHBaseCluster cluster, TableName tn) {
       this.cluster = cluster;
       this.tn = tn;
     }

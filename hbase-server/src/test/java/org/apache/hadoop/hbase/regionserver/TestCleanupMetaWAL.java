@@ -23,7 +23,7 @@ import static org.junit.Assert.fail;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
 public class TestCleanupMetaWAL {
   private static final Logger LOG = LoggerFactory.getLogger(TestCleanupMetaWAL.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

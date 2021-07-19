@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.security.User;
@@ -55,7 +55,7 @@ public class TestZKPermissionWatcher {
       HBaseClassTestRule.forClass(TestZKPermissionWatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKPermissionWatcher.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static AuthManager AUTH_A;
   private static AuthManager AUTH_B;
   private static ZKPermissionWatcher WATCHER_A;

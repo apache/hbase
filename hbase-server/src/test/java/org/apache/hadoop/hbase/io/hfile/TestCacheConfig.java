@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -278,7 +278,7 @@ public class TestCacheConfig {
 
   @Test
   public void testFileBucketCacheConfig() throws IOException {
-    HBaseTestingUtility htu = new HBaseTestingUtility(this.conf);
+    HBaseTestingUtil htu = new HBaseTestingUtil(this.conf);
     try {
       Path p = new Path(htu.getDataTestDir(), "bc.txt");
       FileSystem fs = FileSystem.get(this.conf);

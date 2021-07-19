@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -69,7 +69,7 @@ public class TestMasterRegistryHedgedReads {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterRegistryHedgedReads.class);
 
-  private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   private static final ExecutorService EXECUTOR =
     Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true).build());

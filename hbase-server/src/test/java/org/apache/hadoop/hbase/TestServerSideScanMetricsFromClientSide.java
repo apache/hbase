@@ -57,7 +57,7 @@ public class TestServerSideScanMetricsFromClientSide {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestServerSideScanMetricsFromClientSide.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static Table TABLE = null;
 

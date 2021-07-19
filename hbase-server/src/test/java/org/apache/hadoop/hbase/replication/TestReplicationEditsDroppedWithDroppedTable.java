@@ -22,7 +22,7 @@ import static org.junit.Assert.fail;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -63,8 +63,8 @@ public class TestReplicationEditsDroppedWithDroppedTable {
   private static Configuration conf1 = HBaseConfiguration.create();
   private static Configuration conf2 = HBaseConfiguration.create();
 
-  protected static HBaseTestingUtility utility1;
-  protected static HBaseTestingUtility utility2;
+  protected static HBaseTestingUtil utility1;
+  protected static HBaseTestingUtil utility2;
 
   private static Admin admin1;
   private static Admin admin2;
@@ -89,14 +89,14 @@ public class TestReplicationEditsDroppedWithDroppedTable {
         true);
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     conf1.setInt("replication.source.nb.capacity", 1);
-    utility1 = new HBaseTestingUtility(conf1);
+    utility1 = new HBaseTestingUtil(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     conf1 = utility1.getConfiguration();
 
     conf2 = HBaseConfiguration.create(conf1);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
-    utility2 = new HBaseTestingUtility(conf2);
+    utility2 = new HBaseTestingUtil(conf2);
     utility2.setZkCluster(miniZK);
 
     utility1.startMiniCluster(1);

@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -61,7 +61,7 @@ public class TestFailedProcCleanup {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFailedProcCleanup.class);
 
-  protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
   private static final TableName TABLE = TableName.valueOf("test");
   private static final byte[] FAMILY = Bytes.toBytesBinary("f");

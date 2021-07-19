@@ -24,7 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -52,7 +52,7 @@ public class TestSnapshotCleanerChore {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotCleanerChore.class);
 
-  private static final HBaseTestingUtility HBASE_TESTING_UTILITY = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
 
   private SnapshotManager snapshotManager;
 
@@ -130,7 +130,7 @@ public class TestSnapshotCleanerChore {
   public void testSnapshotCleanerWithReadIOE() throws IOException {
     snapshotManager = Mockito.mock(SnapshotManager.class);
     Stoppable stopper = new StoppableImplementation();
-    Configuration conf = new HBaseTestingUtility().getConfiguration();
+    Configuration conf = new HBaseTestingUtil().getConfiguration();
     SnapshotCleanerChore snapshotCleanerChore =
             new SnapshotCleanerChore(stopper, conf, snapshotManager);
     Mockito.when(snapshotManager.getCompletedSnapshots()).thenThrow(IOException.class);

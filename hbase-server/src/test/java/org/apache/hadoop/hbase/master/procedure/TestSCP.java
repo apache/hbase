@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -56,8 +56,8 @@ public class TestSCP extends TestSCPBase {
     final TableName tableName = TableName.valueOf("testConcurrentSCPForSameServer");
     try (Table t = createTable(tableName)) {
       // Load the table with a bit of data so some logs to split and some edits in each region.
-      this.util.loadTable(t, HBaseTestingUtility.COLUMNS[0]);
-      final int count = HBaseTestingUtility.countRows(t);
+      this.util.loadTable(t, HBaseTestingUtil.COLUMNS[0]);
+      final int count = HBaseTestingUtil.countRows(t);
       assertTrue("expected some rows", count > 0);
       // find the first server that match the request and executes the test
       ServerName rsToKill = null;

@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -53,7 +53,7 @@ public class TestCompactSplitThread {
       HBaseClassTestRule.forClass(TestCompactSplitThread.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactSplitThread.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName());
   private final byte[] family = Bytes.toBytes("f");
   private static final int NUM_RS = 1;

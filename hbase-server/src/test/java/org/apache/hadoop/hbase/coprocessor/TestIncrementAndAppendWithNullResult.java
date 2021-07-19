@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
@@ -54,7 +54,7 @@ public class TestIncrementAndAppendWithNullResult {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestIncrementAndAppendWithNullResult.class);
 
-  private static final HBaseTestingUtility util = new HBaseTestingUtility();
+  private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static final TableName TEST_TABLE = TableName.valueOf("test");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
   private static final byte[] ROW_A = Bytes.toBytes("aaa");

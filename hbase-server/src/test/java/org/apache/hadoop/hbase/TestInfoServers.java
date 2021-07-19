@@ -51,7 +51,7 @@ public class TestInfoServers {
       HBaseClassTestRule.forClass(TestInfoServers.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestInfoServers.class);
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();

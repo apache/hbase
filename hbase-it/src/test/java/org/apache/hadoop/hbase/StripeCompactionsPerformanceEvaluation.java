@@ -296,7 +296,7 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
   private void createTable(TableDescriptorBuilder builder)
       throws Exception {
     deleteTable();
-    if (util.getHBaseClusterInterface() instanceof MiniHBaseCluster) {
+    if (util.getHBaseClusterInterface() instanceof SingleProcessHBaseCluster) {
       LOG.warn("Test does not make a lot of sense for minicluster. Will set flush size low.");
       builder.setValue(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, "1048576");
     }

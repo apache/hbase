@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -58,7 +58,7 @@ public class TestRowCounter {
     HBaseClassTestRule.forClass(TestRowCounter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRowCounter.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static String TABLE_NAME = "testRowCounter";
   private final static String TABLE_NAME_TS_RANGE = "testRowCounter_ts_range";
   private final static String COL_FAM = "col_fam";

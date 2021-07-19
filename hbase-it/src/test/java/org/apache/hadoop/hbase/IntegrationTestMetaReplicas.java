@@ -57,7 +57,7 @@ public class IntegrationTestMetaReplicas {
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
     // Make sure there are three servers.
     util.initializeCluster(3);
-    HBaseTestingUtility.setReplicas(util.getAdmin(), TableName.META_TABLE_NAME, 3);
+    HBaseTestingUtil.setReplicas(util.getAdmin(), TableName.META_TABLE_NAME, 3);
     ZKWatcher zkw = util.getZooKeeperWatcher();
     Configuration conf = util.getConfiguration();
     String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,

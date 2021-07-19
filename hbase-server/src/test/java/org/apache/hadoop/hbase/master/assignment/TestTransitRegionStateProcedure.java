@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -54,7 +54,7 @@ public class TestTransitRegionStateProcedure {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestTransitRegionStateProcedure.class);
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static byte[] CF = Bytes.toBytes("cf");
 

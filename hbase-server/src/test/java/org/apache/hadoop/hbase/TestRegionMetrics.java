@@ -54,7 +54,7 @@ public class TestRegionMetrics {
       HBaseClassTestRule.forClass(TestRegionMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMetrics.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Admin admin;
 
   private static final TableName TABLE_1 = TableName.valueOf("table_1");

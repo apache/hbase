@@ -28,7 +28,7 @@ import java.util.NavigableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -50,7 +50,7 @@ import org.slf4j.Logger;
  * implementations.
  */
 public abstract class TestTableMapReduceBase {
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static final TableName MULTI_REGION_TABLE_NAME = TableName.valueOf("mrtest");
   protected static final TableName TABLE_FOR_NEGATIVE_TESTS = TableName.valueOf("testfailuretable");
   protected static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");

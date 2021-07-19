@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -77,7 +77,7 @@ public class TestDependentColumnFilter {
     Bytes.toBytes("bad1"), Bytes.toBytes("bad2"), Bytes.toBytes("bad3")
   };
   private static final byte[] MATCH_VAL = Bytes.toBytes("match");
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   List<KeyValue> testVals;
   private HRegion region;
@@ -94,14 +94,14 @@ public class TestDependentColumnFilter {
           ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[1]).setMaxVersions(3).build())
         .build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+    this.region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), tableDescriptor);
     addData();
   }
 
   @After
   public void tearDown() throws Exception {
-    HBaseTestingUtility.closeRegionAndWAL(this.region);
+    HBaseTestingUtil.closeRegionAndWAL(this.region);
   }
 
   private void addData() throws IOException {

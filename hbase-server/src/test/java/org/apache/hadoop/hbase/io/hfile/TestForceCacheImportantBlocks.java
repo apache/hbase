@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -61,7 +61,7 @@ public class TestForceCacheImportantBlocks {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestForceCacheImportantBlocks.class);
 
-  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final String TABLE = "myTable";
   private static final String CF = "myCF";
