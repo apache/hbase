@@ -97,13 +97,14 @@ REGION_INFO = 'regioninfo'.to_java_bytes
 scan.addColumn INFO, REGION_INFO
 table = nil
 iter = nil
+scanner = nil
 loop do
   begin
     table = connection.getTable(TableName.valueOf('hbase:meta'))
     scanner = table.getScanner(scan)
     iter = scanner.iterator
     break
-  rescue IOException => ioe
+  rescue Exception => ioe
     print "Exception trying to scan META: #{ioe}"
     sleep 1
   end
@@ -117,7 +118,7 @@ while iter.hasNext
     break
   end
 
-  region = MetaTableAccessor.getHRegionInfo(result)
+  region = MetaTableAccessor.getRegionInfo(result)
   unless region.isOffline
     # only include regions that should be online
     meta_count += 1
