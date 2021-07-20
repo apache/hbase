@@ -132,25 +132,6 @@ public class TestFilterSerialization {
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterWrapper))));
   }
 
-  @SuppressWarnings("deprecation")
-  @Test
-  public void testFirstKeyValueMatchingQualifiersFilter() throws Exception {
-    // empty qualifiers set
-    TreeSet<byte []> set = new TreeSet<>(Bytes.BYTES_COMPARATOR);
-    FirstKeyValueMatchingQualifiersFilter firstKeyValueMatchingQualifiersFilter =
-      new FirstKeyValueMatchingQualifiersFilter(set);
-    assertTrue(firstKeyValueMatchingQualifiersFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(firstKeyValueMatchingQualifiersFilter))));
-
-    // non-empty qualifiers set
-    set.add(Bytes.toBytes("col0"));
-    set.add(Bytes.toBytes("col1"));
-    firstKeyValueMatchingQualifiersFilter =
-      new FirstKeyValueMatchingQualifiersFilter(set);
-    assertTrue(firstKeyValueMatchingQualifiersFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(firstKeyValueMatchingQualifiersFilter))));
-  }
-
   @Test
   public void testFirstKeyOnlyFilter() throws Exception {
     FirstKeyOnlyFilter firstKeyOnlyFilter = new FirstKeyOnlyFilter();
