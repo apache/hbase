@@ -1189,29 +1189,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return builder.build();
   }
 
-  public HFileContext createFileContext(Compression.Algorithm compression,
+  HFileContext createFileContext(Compression.Algorithm compression,
     boolean includeMVCCReadpoint, boolean includesTag, Encryption.Context encryptionContext) {
-    if (compression == null) {
-      compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
-    }
-    ColumnFamilyDescriptor family = getColumnFamilyDescriptor();
-    HFileContext hFileContext = new HFileContextBuilder()
-      .withIncludesMvcc(includeMVCCReadpoint)
-      .withIncludesTags(includesTag)
-      .withCompression(compression)
-      .withCompressTags(family.isCompressTags())
-      .withChecksumType(StoreUtils.getChecksumType(conf))
-      .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
-      .withBlockSize(family.getBlocksize())
-      .withHBaseCheckSum(true)
-      .withDataBlockEncoding(family.getDataBlockEncoding())
-      .withEncryptionContext(encryptionContext)
-      .withCreateTime(EnvironmentEdgeManager.currentTime())
-      .withColumnFamily(getColumnFamilyDescriptor().getName())
-      .withTableName(getTableName().getName())
-      .withCellComparator(getComparator())
-      .build();
-    return hFileContext;
+    return storeEngine.createFileContext(compression, includeMVCCReadpoint, includesTag,
+      encryptionContext, getColumnFamilyDescriptor(), getTableName(), getComparator(), conf);
   }
 
   private long getTotalSize(Collection<HStoreFile> sfs) {

@@ -298,6 +298,11 @@ public class CacheConfig {
   }
 
   /**
+   * Checks if write cache should be enabled for compactions.
+   *
+   * To be called only in the context of compactions,
+   * for flushes or other write operations, use <code>enableCacheOnWrite</code>.
+   *
    * If hbase.rs.cachecompactedblocksonwrite configuration is set to true and
    * 'totalCompactedFilesSize' is lower than 'cacheCompactedDataOnWriteThreshold',
    * enables cache on write for below properties:

@@ -18,50 +18,26 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static junit.framework.TestCase.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import org.apache.commons.io.file.AccumulatorPathVisitor;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.AtomicUtils;
-import org.apache.hadoop.hbase.util.ChecksumType;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mockito.ArgumentCaptor;
 
-import java.util.concurrent.atomic.LongAccumulator;
+import java.io.IOException;
 
 /**
  * Test class for DirectStoreCompactor.
@@ -76,64 +52,44 @@ public class TestDirectStoreCompactor {
   @Rule
   public TestName name = new TestName();
 
-  private Configuration config = new Configuration();
-  private HStore mockStore;
-  private String cfName = name.getMethodName()+"-CF";
-  private Compactor.FileDetails mockFileDetails;
+  private final Configuration config = new Configuration();
+  private final String cfName = "cf";
+
+  private HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private TableName table;
 
   @Before
   public void setup() throws Exception {
-    Path filePath = new Path(name.getMethodName());
-    mockStore = mock(HStore.class);
-    HRegionFileSystem mockRegionFS = mock(HRegionFileSystem.class);
-    when(mockStore.getRegionFileSystem()).thenReturn(mockRegionFS);
-    when(mockRegionFS.getRegionDir()).thenReturn(filePath);
-    when(mockStore.getColumnFamilyName()).thenReturn(cfName);
-    HFileContext mockFileContext = mock(HFileContext.class);
-    when(mockFileContext.getBytesPerChecksum()).thenReturn(100);
-    when(mockStore.createFileContext(isNull(), anyBoolean(),
-      anyBoolean(), isNull())).thenReturn(mockFileContext);
-    when(mockStore.getHRegion()).thenReturn(mock(HRegion.class));
-    when(mockStore.getStoreContext()).thenReturn(new StoreContext.Builder().
-      withFavoredNodesSupplier(()-> null).build());
-    ColumnFamilyDescriptor mockDesc = mock(ColumnFamilyDescriptor.class);
-    when(mockDesc.getBloomFilterType()).thenReturn(BloomType.NONE);
-    when(mockDesc.getNameAsString()).thenReturn(cfName);
-    when(mockStore.getColumnFamilyDescriptor()).thenReturn(mockDesc);
-    FileSystem mockFS = mock(FileSystem.class);
-    when(mockFS.exists(any(Path.class))).thenReturn(true);
-    FileStatus mockFileStatus = mock(FileStatus.class);
-    when(mockFileStatus.isDirectory()).thenReturn(true);
-    when(mockFS.getFileStatus(any(Path.class))).thenReturn(mockFileStatus);
-    when(mockStore.getFileSystem()).thenReturn(mockFS);
-    when(mockFS.getConf()).thenReturn(config);
-    when(mockFS.create(any(Path.class), any(FsPermission.class), any(Boolean.class),
-      any(Integer.class), any(Short.class), any(Long.class), any()))
-      .thenReturn(mock(FSDataOutputStream.class));
-    CacheConfig mockCacheConfig = mock(CacheConfig.class);
-    when(mockCacheConfig.getByteBuffAllocator()).thenReturn(mock(ByteBuffAllocator.class));
-    when(mockStore.getCacheConfig()).thenReturn(mockCacheConfig);
-    when(mockFileContext.getEncryptionContext()).thenReturn(Encryption.Context.NONE);
-    when(mockFileContext.getCompression()).thenReturn(Compression.Algorithm.NONE);
-    when(mockFileContext.getChecksumType()).thenReturn(ChecksumType.NULL);
-    when(mockFileContext.getCellComparator()).thenReturn(mock(CellComparator.class));
-    when(mockStore.getRegionInfo()).thenReturn(mock(RegionInfo.class));
-    this.mockFileDetails = mock(Compactor.FileDetails.class);
+    UTIL.startMiniCluster();
+    table = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(table, Bytes.toBytes(cfName));
+
+  }
+
+  @After
+  public void shutdown() throws IOException {
+    UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testInitWriter() throws Exception {
-    DirectStoreCompactor compactor = new DirectStoreCompactor(config, mockStore);
+    HStore store = UTIL.getMiniHBaseCluster().getRegionServer(0).
+      getRegions(table).get(0).getStores().get(0);
+    DirectStoreCompactor compactor = new DirectStoreCompactor(config, store);
+    Compactor.FileDetails mockFileDetails = mock(Compactor.FileDetails.class);
     StoreFileWriter writer = compactor.initWriter(mockFileDetails, false, false);
-    Path filePath = new Path(name.getMethodName());
-    assertEquals(new Path(filePath, cfName), writer.getPath().getParent());
+    //asserts the parent dir is the family dir itself, not .tmp
+    assertEquals(cfName, writer.getPath().getParent().getName());
   }
 
   @Test
   public void testCreateFileInStoreDir() throws Exception {
     HStoreFile mockFile = mock(HStoreFile.class);
     final StringBuilder builder = new StringBuilder();
-    DirectStoreCompactor compactor = new DirectStoreCompactor(config, mockStore);
+    HStore store = UTIL.getMiniHBaseCluster().getRegionServer(0).
+      getRegions(table).get(0).getStores().get(0);
+    DirectStoreCompactor compactor = new DirectStoreCompactor(config, store);
+    Compactor.FileDetails mockFileDetails = mock(Compactor.FileDetails.class);
     StoreFileWriter writer = compactor.initWriter(mockFileDetails, false, false);
     compactor.createFileInStoreDir(writer.getPath(), p -> {
       builder.append(p.getParent().getName());

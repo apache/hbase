@@ -24,9 +24,17 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -127,5 +135,47 @@ public abstract class StoreEngine<SF extends StoreFlusher,
     } catch (Exception e) {
       throw new IOException("Unable to load configured store engine '" + className + "'", e);
     }
+  }
+
+  /**
+   * Constructs an <code>HFileContext</code> instance for the given store.
+   * @param compression the Compression.Algorithm to be used.
+   * @param includeMVCCReadpoint whether MVCC read point is to be used.
+   * @param includesTag wheter Tags should be used.
+   * @param encryptionContext the Encryption.Context to be used.
+   * @param familyDescriptor ColumnFamilyDescriptor with info about the column family.
+   * @param tableName the table name this store belongs to.
+   * @param cellComparator the CellComparator to be used.
+   * @param conf the cluster configuration.
+   * @return an HFileContext instance.
+   */
+  public HFileContext createFileContext(Compression.Algorithm compression,
+      boolean includeMVCCReadpoint, boolean includesTag,
+      Encryption.Context encryptionContext,
+      ColumnFamilyDescriptor familyDescriptor,
+      TableName tableName,
+      CellComparator cellComparator,
+      Configuration conf) {
+    if (compression == null) {
+      compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    }
+    ColumnFamilyDescriptor family = familyDescriptor;
+    HFileContext hFileContext = new HFileContextBuilder()
+      .withIncludesMvcc(includeMVCCReadpoint)
+      .withIncludesTags(includesTag)
+      .withCompression(compression)
+      .withCompressTags(family.isCompressTags())
+      .withChecksumType(StoreUtils.getChecksumType(conf))
+      .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
+      .withBlockSize(family.getBlocksize())
+      .withHBaseCheckSum(true)
+      .withDataBlockEncoding(family.getDataBlockEncoding())
+      .withEncryptionContext(encryptionContext)
+      .withCreateTime(EnvironmentEdgeManager.currentTime())
+      .withColumnFamily(family.getName())
+      .withTableName(tableName.getName())
+      .withCellComparator(cellComparator)
+      .build();
+    return hFileContext;
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -106,4 +107,5 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
         e);
     }
   }
+
 }

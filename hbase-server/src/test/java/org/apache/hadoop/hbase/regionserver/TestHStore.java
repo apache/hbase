@@ -1758,6 +1758,7 @@ public class TestHStore {
     try {
       store.doCompaction(mock(CompactionRequestImpl.class),
         null, mock(User.class), 0, files);
+      fail();
     } catch(Throwable e){}
     assertEquals(0, DummyCompactor.countDownLatch.getCount());
   }

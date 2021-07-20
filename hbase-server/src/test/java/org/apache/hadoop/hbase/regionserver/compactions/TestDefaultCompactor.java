@@ -59,9 +59,7 @@ public class TestDefaultCompactor {
   public TestName name = new TestName();
 
   private final Configuration config = new Configuration();
-  private HStore store;
   private final String cfName = "cf";
-  private Compactor.FileDetails mockFileDetails;
 
   private HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private TableName table;
@@ -81,10 +79,10 @@ public class TestDefaultCompactor {
 
   @Test
   public void testInitWriter() throws Exception {
-    store = UTIL.getMiniHBaseCluster().getRegionServer(0).
+    HStore store = UTIL.getMiniHBaseCluster().getRegionServer(0).
       getRegions(table).get(0).getStores().get(0);
     DefaultCompactor compactor = new DefaultCompactor(config, store);
-    mockFileDetails = mock(Compactor.FileDetails.class);
+    Compactor.FileDetails mockFileDetails = mock(Compactor.FileDetails.class);
     StoreFileWriter writer = compactor.initWriter(mockFileDetails, false, false);
     Path tmpPath = new Path(store.getRegionFileSystem().getRegionDir(), ".tmp");
     assertEquals(new Path(tmpPath, cfName), writer.getPath().getParent());
@@ -98,7 +96,7 @@ public class TestDefaultCompactor {
     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("1"), Bytes.toBytes("v1"));
     tbl.put(put);
     UTIL.flush(table);
-    store = UTIL.getMiniHBaseCluster().getRegionServer(0).
+    HStore store = UTIL.getMiniHBaseCluster().getRegionServer(0).
       getRegions(table).get(0).getStores().get(0);
     //Will move the existing file into a tmp folder,
     // so that we can use it later as parameter for Compactor.commitCompaction

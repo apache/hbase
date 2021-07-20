@@ -136,7 +136,13 @@ public abstract class Compactor<T extends CellSink> {
     /** Min SeqId to keep during a major compaction **/
     public long minSeqIdToKeep = 0;
     /** Total size of the compacted files **/
-    public long totalCompactedFilesSize = 0;
+    private long totalCompactedFilesSize = 0;
+
+    public long getTotalCompactedFilesSize() {
+      return totalCompactedFilesSize;
+    }
+
+
   }
 
   /**
@@ -586,14 +592,14 @@ public abstract class Compactor<T extends CellSink> {
    * Moves the new file from temp to the actual store directory, then create the related
    * HStoreFile instance
    * @param newFile the new file created.
-   * @param fileAcessor a lambda expression with logic for loading a HStoreFile given a Path.
+   * @param fileAccessor a lambda expression with logic for loading a HStoreFile given a Path.
    * @return an HStoreFile instance.
    * @throws IOException if the file store creation fails.
    */
-  protected HStoreFile createFileInStoreDir(Path newFile, Function<Path, HStoreFile> fileAcessor)
-      throws IOException {
+  protected HStoreFile createFileInStoreDir(Path newFile, Function<Path, HStoreFile> fileAccessor)
+    throws IOException {
     Path destPath = this.store.getRegionFileSystem().
       commitStoreFile(this.store.getColumnFamilyName(), newFile);
-    return fileAcessor.apply(destPath);
+    return fileAccessor.apply(destPath);
   }
 }

@@ -33,7 +33,10 @@ import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Alternative Compactor implementation, this class extends <code>DefaultCompactor</code> class,
+ * Alternative Compactor implementation that writes compacted files straight
+ * into the store directory.
+ *
+ * This class extends <code>DefaultCompactor</code> class,
  * modifying original behaviour of <code>initWriter</code> and <code>createFileInStoreDir</code>
  * methods to create compacted files in the final store directory, rather than temp, avoid the
  * need to perform renames at compaction commit time.
@@ -61,18 +64,19 @@ public class DirectStoreCompactor extends DefaultCompactor {
     return createWriterInStoreDir(fd.maxKeyCount,
       major ? majorCompactionCompression : minorCompactionCompression,
       fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0,
-      shouldDropBehind, fd.totalCompactedFilesSize);
+      shouldDropBehind, fd.getTotalCompactedFilesSize());
   }
 
   private StoreFileWriter createWriterInStoreDir(long maxKeyCount,
       Compression.Algorithm compression, boolean includeMVCCReadpoint, boolean includesTag,
         boolean shouldDropBehind, long totalCompactedFilesSize) throws IOException {
-    final CacheConfig writerCacheConf;
-    writerCacheConf = new CacheConfig(store.getCacheConfig());
+    final CacheConfig writerCacheConf = new CacheConfig(store.getCacheConfig());
     writerCacheConf.enableCacheOnWriteForCompactions(totalCompactedFilesSize);
     InetSocketAddress[] favoredNodes = store.getStoreContext().getFavoredNodes();
-    HFileContext hFileContext = store.createFileContext(compression, includeMVCCReadpoint,
-      includesTag, store.getStoreContext().getEncryptionContext());
+    HFileContext hFileContext = store.getStoreEngine().
+      createFileContext(compression, includeMVCCReadpoint,includesTag,
+        store.getStoreContext().getEncryptionContext(), store.getColumnFamilyDescriptor(),
+        store.getTableName(), store.getComparator(), conf);
     Path familyDir = new Path(store.getRegionFileSystem().getRegionDir(),
       store.getColumnFamilyDescriptor().getNameAsString());
     StoreFileWriter.Builder builder = new StoreFileWriter.Builder(conf, writerCacheConf,
@@ -91,13 +95,13 @@ public class DirectStoreCompactor extends DefaultCompactor {
    * Overrides Compactor original implementation, assuming the passed file is already in the store
    * directory, thus it only creates the related HStoreFile for the passed Path.
    * @param newFile the new file created.
-   * @param fileAcessor a lambda expression with logic for loading a HStoreFile given a Path.
+   * @param fileAccessor a lambda expression with logic for loading a HStoreFile given a Path.
    * @return HStoreFile reference for the newly created file.
    * @throws IOException if any error occurs.
    */
   @Override
   protected HStoreFile createFileInStoreDir(Path newFile,
-      Function<Path, HStoreFile> fileAcessor) throws IOException {
-    return fileAcessor.apply(newFile);
+      Function<Path, HStoreFile> fileAccessor) throws IOException {
+    return fileAccessor.apply(newFile);
   }
 }
