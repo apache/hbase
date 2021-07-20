@@ -26,7 +26,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -125,12 +125,10 @@ class ReplicationSourceWALReader extends Thread {
     int sleepMultiplier = 1;
     while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
       WALEntryBatch batch = null;
-      WALEntryStream entryStream = null;
-      try {
-        entryStream =
+      try (WALEntryStream entryStream =
           new WALEntryStream(logQueue, conf, currentPosition,
-            source.getWALFileLengthProvider(), source.getServerWALsBelongTo(),
-            source.getSourceMetrics(), walGroupId);
+              source.getWALFileLengthProvider(), source.getServerWALsBelongTo(),
+              source.getSourceMetrics(), walGroupId)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
           batch = null;
           if (!source.isPeerEnabled()) {
@@ -159,7 +157,7 @@ class ReplicationSourceWALReader extends Thread {
           sleepMultiplier = 1;
         }
       } catch (WALEntryFilterRetryableException | IOException e) { // stream related
-        if (!handleEofException(e, batch, entryStream)) {
+        if (!handleEofException(e, batch)) {
           LOG.warn("Failed to read stream of replication entries", e);
           if (sleepMultiplier < maxRetriesMultiplier) {
             sleepMultiplier++;
@@ -169,9 +167,6 @@ class ReplicationSourceWALReader extends Thread {
       } catch (InterruptedException e) {
         LOG.trace("Interrupted while sleeping between WAL reads or adding WAL batch to ship queue");
         Thread.currentThread().interrupt();
-      } finally {
-        IOUtils.closeQuietly(entryStream,
-          e -> LOG.warn("Exception while closing WALEntryStream", e));
       }
     }
   }
@@ -274,7 +269,7 @@ class ReplicationSourceWALReader extends Thread {
    * logs from replication queue
    * @return true only the IOE can be handled
    */
-  private boolean handleEofException(Exception e, WALEntryBatch batch, WALEntryStream entryStream) {
+  private boolean handleEofException(Exception e, WALEntryBatch batch) {
     PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
     // Dump the log even if logQueue size is 1 if the source is from recovered Source
     // since we don't add current log to recovered source queue so it is safe to remove.
@@ -284,7 +279,7 @@ class ReplicationSourceWALReader extends Thread {
       try {
         if (!fs.exists(path)) {
           // There is a chance that wal has moved to oldWALs directory, so look there also.
-          path = entryStream.getArchivedLog(path);
+          path = AbstractFSWALProvider.getArchivedLogPath(path, conf);
         }
         if (fs.getFileStatus(path).getLen() == 0) {
           LOG.warn("Forcing removal of 0 length log in queue: {}", path);

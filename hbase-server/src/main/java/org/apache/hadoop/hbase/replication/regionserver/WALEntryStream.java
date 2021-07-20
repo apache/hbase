@@ -316,8 +316,9 @@ class WALEntryStream implements Closeable {
     return false;
   }
 
-  Path getArchivedLog(Path path) throws IOException {
+  private Path getArchivedLog(Path path) throws IOException {
     Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+
     // Try found the log in old dir
     Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     Path archivedLogLocation = new Path(oldLogDir, path.getName());

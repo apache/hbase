@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -733,31 +734,27 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     // Wait for in flight wal close count to become 0. This makes sure that empty wal is moved to
     // oldWALs directory.
     Waiter.waitFor(CONF, 5000,
-      (Waiter.Predicate<Exception>) () ->abstractWAL.getInflightWALCloseCount() == 0);
+      (Waiter.Predicate<Exception>) () -> abstractWAL.getInflightWALCloseCount() == 0);
     // There will 2 logs in the queue.
     assertEquals(2, logQueue.getQueueSize(fakeWalGroupId));
 
-    Configuration localConf = new Configuration(CONF);
-    localConf.setInt("replication.source.maxretriesmultiplier", 1);
-    localConf.setBoolean("replication.source.eof.autorecovery", true);
-
-    try (WALEntryStream entryStream = new WALEntryStreamWithRetries(logQueue, localConf, 0, log,
-      null, logQueue.getMetrics(), fakeWalGroupId)) {
-      // Get the archived dir path for the first wal.
-      Path archivePath = entryStream.getArchivedLog(emptyLogFile);
-      // Make sure that the wal path is not the same as archived Dir path.
-      assertNotEquals(emptyLogFile.toString(), archivePath.toString());
-      assertTrue(fs.exists(archivePath));
-      fs.truncate(archivePath, 0);
-      // make sure the size of the wal file is 0.
-      assertEquals(0, fs.getFileStatus(archivePath).getLen());
-    }
+    // Get the archived dir path for the first wal.
+    Path archivePath = AbstractFSWALProvider.getArchivedLogPath(emptyLogFile, CONF);
+    // Make sure that the wal path is not the same as archived Dir path.
+    assertNotEquals(emptyLogFile.toString(), archivePath.toString());
+    assertTrue(fs.exists(archivePath));
+    fs.truncate(archivePath, 0);
+    // make sure the size of the wal file is 0.
+    assertEquals(0, fs.getFileStatus(archivePath).getLen());
 
     ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
     ReplicationSource source = Mockito.mock(ReplicationSource.class);
     when(source.isPeerEnabled()).thenReturn(true);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
 
+    Configuration localConf = new Configuration(CONF);
+    localConf.setInt("replication.source.maxretriesmultiplier", 1);
+    localConf.setBoolean("replication.source.eof.autorecovery", true);
     // Start the reader thread.
     createReader(false, localConf);
     // Wait for the replication queue size to be 1. This means that we have handled
