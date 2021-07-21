@@ -282,6 +282,7 @@ message MergeTableRegionsStateData {
   repeated RegionInfo region_info = 2;
   optional RegionInfo merged_region_info = 3;
   optional bool forcible = 4 [default = false];
+  optional string merge_strategy = 5;
 }
 
 
