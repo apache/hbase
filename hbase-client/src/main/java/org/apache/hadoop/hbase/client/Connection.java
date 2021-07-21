@@ -109,16 +109,15 @@ public interface Connection extends Abortable, Closeable {
   /**
    * <p>
    * Retrieve a {@link BufferedMutator} for performing client-side buffering of writes. The
-   * {@link BufferedMutator} returned by this method is thread-safe. This BufferedMutator will
-   * use the Connection's ExecutorService. This object can be used for long lived operations.
+   * {@link BufferedMutator} returned by this method is thread-safe.
+   * This accessor will create a new ThreadPoolExecutor and will be shutdown once we close the
+   *  BufferedMutator. This object can be used for long lived operations.
    * </p>
    * <p>
    * The caller is responsible for calling {@link BufferedMutator#close()} on
    * the returned {@link BufferedMutator} instance.
    * </p>
    * <p>
-   * This accessor will use the connection's ExecutorService and will throw an
-   * exception in the main thread when an asynchronous exception occurs.
    *
    * @param tableName the name of the table
    *
@@ -129,7 +128,10 @@ public interface Connection extends Abortable, Closeable {
   /**
    * Retrieve a {@link BufferedMutator} for performing client-side buffering of writes. The
    * {@link BufferedMutator} returned by this method is thread-safe. This object can be used for
-   * long lived table operations. The caller is responsible for calling
+   * long lived table operations. If user passes ThreadPool in BufferedMutatorParams then we will
+   * use that otherwise we will create for the user. For user specified ThreadPool, it is the user's
+   * responsibility to shutdown. For ThreadPool created by us, we will shutdown when user calls
+   * {@link BufferedMutator#close()}. The caller is responsible for calling
    * {@link BufferedMutator#close()} on the returned {@link BufferedMutator} instance.
    *
    * @param params details on how to instantiate the {@code BufferedMutator}.
