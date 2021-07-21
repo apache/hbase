@@ -567,7 +567,7 @@ public abstract class Compactor<T extends CellSink> {
    * @param user the running user.
    * @param fileAcessor a lambda expression with logic for loading a HStoreFile given a Path.
    * @return A list of the resulting store files already placed in the store dir and loaded into the
-   * store cache.
+   *  store cache.
    * @throws IOException if the commit fails.
    */
   public List<HStoreFile> commitCompaction(CompactionRequestImpl cr, List<Path> newFiles,

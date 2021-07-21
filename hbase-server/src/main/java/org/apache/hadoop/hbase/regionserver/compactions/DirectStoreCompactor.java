@@ -53,8 +53,8 @@ public class DirectStoreCompactor extends DefaultCompactor {
    * @param fd the file details.
    * @param shouldDropBehind boolean for the drop-behind output stream cache settings.
    * @param major if compaction is major.
-   * @return
-   * @throws IOException
+   * @return an instance of StoreFileWriter for the given file details.
+   * @throws IOException if any error occurs.
    */
   @Override
   protected StoreFileWriter initWriter(FileDetails fd, boolean shouldDropBehind, boolean major)

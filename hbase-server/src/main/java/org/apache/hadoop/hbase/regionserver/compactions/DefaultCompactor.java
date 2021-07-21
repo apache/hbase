@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -49,13 +48,13 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   }
 
   private final CellSinkFactory<StoreFileWriter> writerFactory =
-      new CellSinkFactory<StoreFileWriter>() {
-        @Override
-        public StoreFileWriter createWriter(InternalScanner scanner, FileDetails fd,
-            boolean shouldDropBehind, boolean major) throws IOException {
-          return initWriter(fd, shouldDropBehind, major);
-        }
-      };
+    new CellSinkFactory<StoreFileWriter>() {
+      @Override
+      public StoreFileWriter createWriter(InternalScanner scanner, FileDetails fd,
+          boolean shouldDropBehind, boolean major) throws IOException {
+        return initWriter(fd, shouldDropBehind, major);
+      }
+    };
 
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
