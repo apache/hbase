@@ -78,7 +78,13 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching,
       boolean repeat, boolean updateCacheMetrics) {
     // After HBASE-26094, in CombinedBC L2 cache is not the victim handler of L1.
-    return lruCache.containsBlock(cacheKey)?
+    boolean existInL1 = lruCache.containsBlock(cacheKey);
+    if (!existInL1 && updateCacheMetrics && !repeat) {
+      // If the block does not exist in L1, this check should be counted as a miss.
+      combinedCacheStats.lruCacheStats
+        .miss(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
+    }
+    return existInL1 ?
         lruCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics):
         l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
