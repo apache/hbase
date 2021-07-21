@@ -1958,6 +1958,11 @@ public class AssignmentManager extends ZooKeeperListener {
           // Can be a socket timeout, EOF, NoRouteToHost, etc
           LOG.info("Unable to communicate with " + destination
             + " in order to assign regions, ", e);
+          for (HRegionInfo region : regions) {
+            if (!regionStates.isRegionOnline(region)) {
+              invokeAssign(region);
+            }
+          }
           return false;
         }
       } finally {
