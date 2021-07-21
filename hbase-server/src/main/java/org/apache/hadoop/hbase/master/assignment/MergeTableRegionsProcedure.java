@@ -118,6 +118,10 @@ public class MergeTableRegionsProcedure
 
   private void createMergeStrategy(Configuration conf) {
     String className = conf.get(MERGE_REGION_STRATEGY, DefaultMergeStrategy.class.getName());
+    createMergeStrategy(className);
+  }
+
+  private void createMergeStrategy(String className) {
     try {
       LOG.info("instantiating write strategy {}", className);
       mergeStrategy = (MergeRegionsStrategy) Class.forName(className).newInstance();
@@ -377,7 +381,8 @@ public class MergeTableRegionsProcedure
         MasterProcedureProtos.MergeTableRegionsStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setMergedRegionInfo(ProtobufUtil.toRegionInfo(mergedRegion))
-        .setForcible(force);
+        .setForcible(force)
+        .setMergeStrategy(mergeStrategy.getClass().getName());
     for (RegionInfo ri: regionsToMerge) {
       mergeTableRegionsMsg.addRegionInfo(ProtobufUtil.toRegionInfo(ri));
     }
@@ -398,6 +403,7 @@ public class MergeTableRegionsProcedure
     for (int i = 0; i < regionsToMerge.length; i++) {
       regionsToMerge[i] = ProtobufUtil.toRegionInfo(mergeTableRegionsMsg.getRegionInfo(i));
     }
+    createMergeStrategy(mergeTableRegionsMsg.getMergeStrategy());
 
     mergedRegion = ProtobufUtil.toRegionInfo(mergeTableRegionsMsg.getMergedRegionInfo());
   }
@@ -741,8 +747,6 @@ public class MergeTableRegionsProcedure
 
     private void mergeStoreFiles(MasterProcedureEnv env, HRegionFileSystem regionFs, Path mergeDir,
         RegionInfo mergedRegion) throws IOException {
-      final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-      final Configuration conf = env.getMasterConfiguration();
       final TableDescriptor htd = env.getMasterServices().getTableDescriptors()
         .get(mergedRegion.getTable());
       for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
