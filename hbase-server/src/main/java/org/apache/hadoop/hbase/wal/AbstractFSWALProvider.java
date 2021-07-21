@@ -507,6 +507,10 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @throws IOException exception
    */
   public static Path findArchivedLog(Path path, Configuration conf) throws IOException {
+    // If the path contains oldWALs keyword then exit early.
+    if (path.toString().contains(HConstants.HREGION_OLDLOGDIR_NAME)) {
+      return null;
+    }
     Path walRootDir = CommonFSUtils.getWALRootDir(conf);
     FileSystem fs = path.getFileSystem(conf);
     // Try finding the log in old dir
