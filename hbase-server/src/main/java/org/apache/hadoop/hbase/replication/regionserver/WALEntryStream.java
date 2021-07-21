@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -319,8 +318,8 @@ class WALEntryStream implements Closeable {
 
   private void handleFileNotFound(Path path, FileNotFoundException fnfe) throws IOException {
     // If the log was archived, continue reading from there
-    Path archivedLog = AbstractFSWALProvider.getArchivedLog(path, conf);
-    if (!path.equals(archivedLog)) {
+    Path archivedLog = AbstractFSWALProvider.findArchivedLog(path, conf);
+    if (archivedLog != null) {
       openReader(archivedLog);
     } else {
       throw fnfe;
@@ -384,8 +383,8 @@ class WALEntryStream implements Closeable {
       seek();
     } catch (FileNotFoundException fnfe) {
       // If the log was archived, continue reading from there
-      Path archivedLog = AbstractFSWALProvider.getArchivedLog(currentPath, conf);
-      if (!currentPath.equals(archivedLog)) {
+      Path archivedLog = AbstractFSWALProvider.findArchivedLog(currentPath, conf);
+      if (archivedLog != null) {
         openReader(archivedLog);
       } else {
         throw fnfe;

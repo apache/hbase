@@ -739,9 +739,9 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     assertEquals(2, logQueue.getQueueSize(fakeWalGroupId));
 
     // Get the archived dir path for the first wal.
-    Path archivePath = AbstractFSWALProvider.getArchivedLog(emptyLogFile, CONF);
+    Path archivePath = AbstractFSWALProvider.findArchivedLog(emptyLogFile, CONF);
     // Make sure that the wal path is not the same as archived Dir path.
-    assertNotEquals(emptyLogFile.toString(), archivePath.toString());
+    assertNotNull(archivePath);
     assertTrue(fs.exists(archivePath));
     fs.truncate(archivePath, 0);
     // make sure the size of the wal file is 0.

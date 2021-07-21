@@ -500,13 +500,13 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Get the archived WAL file path
+   * Find the archived WAL file path if it is not able to locate in WALs dir.
    * @param path - active WAL file path
    * @param conf - configuration
-   * @return archived path if exists, path - otherwise
+   * @return archived path if exists, null - otherwise
    * @throws IOException exception
    */
-  public static Path getArchivedLog(Path path, Configuration conf) throws IOException {
+  public static Path findArchivedLog(Path path, Configuration conf) throws IOException {
     Path walRootDir = CommonFSUtils.getWALRootDir(conf);
     FileSystem fs = path.getFileSystem(conf);
     // Try finding the log in old dir
@@ -529,7 +529,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
 
     LOG.error("Couldn't locate log: " + path);
-    return path;
+    return null;
   }
 
   /**
