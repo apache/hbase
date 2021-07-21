@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import java.util.Set;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 
