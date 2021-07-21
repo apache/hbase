@@ -416,9 +416,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (params.getTableName() == null) {
       throw new IllegalArgumentException("TableName cannot be null.");
     }
-    if (params.getPool() == null) {
-      params.pool(HTable.getDefaultExecutor(getConfiguration()));
-    }
     if (params.getWriteBufferSize() == BufferedMutatorParams.UNSET) {
       params.writeBufferSize(connectionConfig.getWriteBufferSize());
     }
