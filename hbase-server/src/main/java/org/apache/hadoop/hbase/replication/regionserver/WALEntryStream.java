@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -316,34 +317,9 @@ class WALEntryStream implements Closeable {
     return false;
   }
 
-  private Path getArchivedLog(Path path) throws IOException {
-    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
-
-    // Try found the log in old dir
-    Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    Path archivedLogLocation = new Path(oldLogDir, path.getName());
-    if (fs.exists(archivedLogLocation)) {
-      LOG.info("Log " + path + " was moved to " + archivedLogLocation);
-      return archivedLogLocation;
-    }
-
-    // Try found the log in the seperate old log dir
-    oldLogDir =
-        new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
-            .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
-    archivedLogLocation = new Path(oldLogDir, path.getName());
-    if (fs.exists(archivedLogLocation)) {
-      LOG.info("Log " + path + " was moved to " + archivedLogLocation);
-      return archivedLogLocation;
-    }
-
-    LOG.error("Couldn't locate log: " + path);
-    return path;
-  }
-
   private void handleFileNotFound(Path path, FileNotFoundException fnfe) throws IOException {
     // If the log was archived, continue reading from there
-    Path archivedLog = getArchivedLog(path);
+    Path archivedLog = AbstractFSWALProvider.getArchivedLog(path, conf);
     if (!path.equals(archivedLog)) {
       openReader(archivedLog);
     } else {
@@ -408,7 +384,7 @@ class WALEntryStream implements Closeable {
       seek();
     } catch (FileNotFoundException fnfe) {
       // If the log was archived, continue reading from there
-      Path archivedLog = getArchivedLog(currentPath);
+      Path archivedLog = AbstractFSWALProvider.getArchivedLog(currentPath, conf);
       if (!currentPath.equals(archivedLog)) {
         openReader(archivedLog);
       } else {

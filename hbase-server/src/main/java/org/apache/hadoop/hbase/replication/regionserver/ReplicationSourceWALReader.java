@@ -279,7 +279,7 @@ class ReplicationSourceWALReader extends Thread {
       try {
         if (!fs.exists(path)) {
           // There is a chance that wal has moved to oldWALs directory, so look there also.
-          path = AbstractFSWALProvider.getArchivedLogPath(path, conf);
+          path = AbstractFSWALProvider.getArchivedLog(path, conf);
         }
         if (fs.getFileStatus(path).getLen() == 0) {
           LOG.warn("Forcing removal of 0 length log in queue: {}", path);
