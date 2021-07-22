@@ -56,6 +56,11 @@ public class MetaCellComparator extends CellComparatorImpl {
   }
 
   @Override
+  public int compareRows(byte[] leftRow, byte[] rightRow) {
+    return compareRows(leftRow, 0, leftRow.length, rightRow, 0, rightRow.length);
+  }
+
+  @Override
   public int compare(final Cell a, final Cell b, boolean ignoreSequenceid) {
     int diff = compareRows(a, b);
     if (diff != 0) {
