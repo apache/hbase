@@ -29,8 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * The Class MetricsReplicationSourceRefresherChore for 
- * refreshing age related replication source metrics
+ * The Class MetricsReplicationSourceRefresherChore for refreshing age related replication source
+ * metrics
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
