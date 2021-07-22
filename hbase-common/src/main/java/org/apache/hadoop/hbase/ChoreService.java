@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
  * When finished with a ChoreService it is good practice to call {@link ChoreService#shutdown()}.
  * Calling this method ensures that all scheduled chores are cancelled and cleaned up properly.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class ChoreService {
   private static final Logger LOG = LoggerFactory.getLogger(ChoreService.class);
 
