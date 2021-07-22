@@ -162,7 +162,8 @@ public abstract class RpcExecutor {
       Optional<Class<? extends BlockingQueue<CallRunner>>> pluggableQueueClass = getPluggableQueueClass();
 
       if (!pluggableQueueClass.isPresent()) {
-        throw new PluggableRpcQueueNotFound("Pluggable call queue failed to load and selected call queue type required");
+        throw new PluggableRpcQueueNotFound("Pluggable call queue failed to load and selected call"
+          + " queue type required");
       } else {
         this.queueInitArgs = new Object[] { maxQueueLength, this.priority, conf };
         this.queueClass = pluggableQueueClass.get();
@@ -467,7 +468,8 @@ public abstract class RpcExecutor {
     String queueClassName = conf.get(PLUGGABLE_CALL_QUEUE_CLASS_NAME);
 
     if (queueClassName == null) {
-      LOG.error("Pluggable queue class config at " + PLUGGABLE_CALL_QUEUE_CLASS_NAME + " was not found");
+      LOG.error("Pluggable queue class config at " + PLUGGABLE_CALL_QUEUE_CLASS_NAME +
+        " was not found");
       return Optional.empty();
     }
 
@@ -477,7 +479,8 @@ public abstract class RpcExecutor {
       if (BlockingQueue.class.isAssignableFrom(clazz)) {
         return Optional.of((Class<? extends BlockingQueue<CallRunner>>) clazz);
       } else {
-        LOG.error("Pluggable Queue class " + queueClassName + " does not extend BlockingQueue<CallRunner>");
+        LOG.error("Pluggable Queue class " + queueClassName +
+          " does not extend BlockingQueue<CallRunner>");
         return Optional.empty();
       }
     } catch (ClassNotFoundException exception) {

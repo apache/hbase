@@ -278,7 +278,9 @@ public class TestSimpleRpcScheduler {
     testRpcScheduler(queueType, null);
   }
 
-  private void testRpcScheduler(final String queueType, final String pluggableQueueClass) throws Exception {
+  private void testRpcScheduler(final String queueType, final String pluggableQueueClass)
+    throws Exception {
+
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, queueType);
 
