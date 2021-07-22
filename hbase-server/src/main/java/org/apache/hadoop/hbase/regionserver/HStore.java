@@ -1486,13 +1486,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     // Do the steps necessary to complete the compaction.
     setStoragePolicyFromFileName(newFiles);
     List<HStoreFile> sfs = this.storeEngine.compactor.commitCompaction(cr, newFiles, user,
-      p -> {
-        try {
-          return this.createStoreFileAndReader((Path) p);
-        }catch(IOException e){
-          throw new RuntimeException(e);
-        }
-      });
+      p -> createStoreFileAndReader(p));
     writeCompactionWalRecord(filesToCompact, sfs);
     replaceStoreFiles(filesToCompact, sfs);
     if (cr.isMajor()) {

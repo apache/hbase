@@ -95,13 +95,13 @@ public class DirectStoreCompactor extends DefaultCompactor {
    * Overrides Compactor original implementation, assuming the passed file is already in the store
    * directory, thus it only creates the related HStoreFile for the passed Path.
    * @param newFile the new file created.
-   * @param fileAccessor a lambda expression with logic for loading a HStoreFile given a Path.
+   * @param fileProvider a lambda expression with logic for loading a HStoreFile given a Path.
    * @return HStoreFile reference for the newly created file.
    * @throws IOException if any error occurs.
    */
   @Override
-  protected HStoreFile createFileInStoreDir(Path newFile,
-      Function<Path, HStoreFile> fileAccessor) throws IOException {
-    return fileAccessor.apply(newFile);
+  protected HStoreFile createFileInStoreDir(Path newFile, StoreFileProvider fileProvider)
+      throws IOException {
+    return fileProvider.createFile(newFile);
   }
 }

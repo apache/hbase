@@ -565,19 +565,19 @@ public abstract class Compactor<T extends CellSink> {
    * @param cr the compaction request.
    * @param newFiles the new files created by this compaction under a temp dir.
    * @param user the running user.
-   * @param fileAcessor a lambda expression with logic for loading a HStoreFile given a Path.
+   * @param fileProvider a lambda expression with logic for loading a HStoreFile given a Path.
    * @return A list of the resulting store files already placed in the store dir and loaded into the
    *  store cache.
    * @throws IOException if the commit fails.
    */
   public List<HStoreFile> commitCompaction(CompactionRequestImpl cr, List<Path> newFiles,
-      User user, Function<Path, HStoreFile> fileAcessor) throws IOException {
+      User user, StoreFileProvider fileProvider) throws IOException {
     List<HStoreFile> sfs = new ArrayList<>(newFiles.size());
     for (Path newFile : newFiles) {
       assert newFile != null;
       this.store.validateStoreFile(newFile);
       // Move the file into the right spot
-      HStoreFile sf = createFileInStoreDir(newFile, fileAcessor);
+      HStoreFile sf = createFileInStoreDir(newFile, fileProvider);
       if (this.store.getCoprocessorHost() != null) {
         this.store.getCoprocessorHost().postCompact(this.store, sf, cr.getTracker(), cr, user);
       }
@@ -592,14 +592,22 @@ public abstract class Compactor<T extends CellSink> {
    * Moves the new file from temp to the actual store directory, then create the related
    * HStoreFile instance
    * @param newFile the new file created.
-   * @param fileAccessor a lambda expression with logic for loading a HStoreFile given a Path.
+   * @param fileProvider a lambda expression with logic for creating a HStoreFile given a Path.
    * @return an HStoreFile instance.
    * @throws IOException if the file store creation fails.
    */
-  protected HStoreFile createFileInStoreDir(Path newFile, Function<Path, HStoreFile> fileAccessor)
+  protected HStoreFile createFileInStoreDir(Path newFile, StoreFileProvider fileProvider)
     throws IOException {
     Path destPath = this.store.getRegionFileSystem().
       commitStoreFile(this.store.getColumnFamilyName(), newFile);
-    return fileAccessor.apply(destPath);
+    return fileProvider.createFile(destPath);
+  }
+
+  /**
+   * Functional interface to allow callers provide the logic specific for creating StoreFiles.
+   */
+  @FunctionalInterface
+  public interface StoreFileProvider {
+    HStoreFile createFile(Path path) throws IOException;
   }
 }

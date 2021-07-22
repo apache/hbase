@@ -1973,7 +1973,7 @@ public class TestHStore {
 
     @Override
     public List<HStoreFile> commitCompaction(CompactionRequestImpl cr,
-      List<Path> newFiles, User user, Function<Path, HStoreFile> fileAccessor){
+      List<Path> newFiles, User user, StoreFileProvider fileProvider){
       countDownLatch.countDown();
       return null;
     }
