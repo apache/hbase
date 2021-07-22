@@ -108,6 +108,14 @@ public class TableSnapshotInputFormatImpl {
       "hbase.TableSnapshotInputFormat.row.limit.per.inputsplit";
 
   /**
+   * Whether to enable scan metrics on Scan, default to true
+   */
+  public static final String  SNAPSHOT_INPUTFORMAT_SCAN_METRICS_ENABLED =
+    "hbase.TableSnapshotInputFormat.scan_metrics.enabled";
+
+  public static final boolean SNAPSHOT_INPUTFORMAT_SCAN_METRICS_ENABLED_DEFAULT = true;
+
+  /**
    * Implementation class for InputSplit logic common between mapred and mapreduce.
    */
   public static class InputSplit implements Writable {
@@ -240,7 +248,6 @@ public class TableSnapshotInputFormatImpl {
       scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
       // disable caching of data blocks
       scan.setCacheBlocks(false);
-      scan.setScanMetricsEnabled(true);
 
       scanner =
           new ClientSideRegionScanner(conf, fs, new Path(split.restoreDir), htd, hri, scan, null);
@@ -380,6 +387,10 @@ public class TableSnapshotInputFormatImpl {
 
     boolean localityEnabled = conf.getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY,
                                               SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT);
+
+    boolean scanMetricsEnabled = conf.getBoolean(SNAPSHOT_INPUTFORMAT_SCAN_METRICS_ENABLED,
+      SNAPSHOT_INPUTFORMAT_SCAN_METRICS_ENABLED_DEFAULT);
+    scan.setScanMetricsEnabled(scanMetricsEnabled);
 
     List<InputSplit> splits = new ArrayList<>();
     for (HRegionInfo hri : regionManifests) {
