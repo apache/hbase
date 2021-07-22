@@ -30,8 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /*
-  Class that does enqueueing/dequeuing of wal at one place so that we can update the metrics
-  just at one place.
+  Class that does enqueueing/dequeuing of wal at one place
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
