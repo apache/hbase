@@ -26,11 +26,14 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * The Class MetricsReplicationSourceRefresherChore for refreshing age related replication source metrics
+ * The Class MetricsReplicationSourceRefresherChore for 
+ * refreshing age related replication source metrics
  */
 @InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class MetricsReplicationSourceRefresherChore extends ScheduledChore {
 
   private ReplicationSource replicationSource;

@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.MetricsReplicationSourceRefresherChore;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
@@ -225,8 +224,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.abortOnError = this.conf.getBoolean("replication.source.regionserver.abort",
       true);
     int duration = this.conf.getInt(MetricsReplicationSourceRefresherChore.DURATION,
-	    	MetricsReplicationSourceRefresherChore.DEFAULT_DURATION);
-    this.server.getChoreService().scheduleChore(new MetricsReplicationSourceRefresherChore(duration, server, this));
+	    	MetricsReplicationSourceRefresherChore.DEFAULT_DURATION_MILLISECONDS);
+    this.server.getChoreService()
+        .scheduleChore(new MetricsReplicationSourceRefresherChore(duration, server, this));
     LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
       replicationPeer.getId(), this.currentBandwidth);
   }
