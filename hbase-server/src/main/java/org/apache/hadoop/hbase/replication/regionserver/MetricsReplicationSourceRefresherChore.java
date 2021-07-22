@@ -38,9 +38,9 @@ public class MetricsReplicationSourceRefresherChore extends ScheduledChore {
 		this.metrics.setOldestWalAge(getOldestWalAge());
 	}
 
-   /*
+	/*
     Returns the age of oldest wal.
-   */
+    */
 	long getOldestWalAge() {
 	    long now = EnvironmentEdgeManager.currentTime();
 	    long timestamp = getOldestWalTimestamp();
@@ -52,11 +52,10 @@ public class MetricsReplicationSourceRefresherChore extends ScheduledChore {
 	    long age = now - timestamp;
 	    return age;
 	}
-
 	/*
 	  Get the oldest wal timestamp from all the queues.
 	*/
-    private long getOldestWalTimestamp() {
+	private long getOldestWalTimestamp() {
 		long oldestWalTimestamp = Long.MAX_VALUE;
 		for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : this.replicationSource.getQueues().entrySet()) {
 			PriorityBlockingQueue<Path> queue = entry.getValue();
