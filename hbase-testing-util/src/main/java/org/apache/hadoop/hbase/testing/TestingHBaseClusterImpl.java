@@ -33,7 +33,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @InterfaceAudience.Private
-class TestingHBaseClusterImpl implements TestingHBaseCluster {
+class TestingHBaseClusterImpl implements ServerTestingHBaseCluster {
 
   private final HBaseTestingUtil util = new HBaseTestingUtil();
 
@@ -53,6 +53,10 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   @Override
   public Configuration getConf() {
     return util.getConfiguration();
+  }
+
+  public HBaseTestingUtil getUtil() {
+    return util;
   }
 
   private int getRegionServerIndex(ServerName serverName) {

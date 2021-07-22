@@ -172,7 +172,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * <p>To preserve test data directories, pass the system property "hbase.testing.preserve.testdir"
  * setting it to true.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.PHOENIX)
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC,
+  HBaseInterfaceAudience.REPLICATION,
+  HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class HBaseTestingUtil extends HBaseZKTestingUtil {
 

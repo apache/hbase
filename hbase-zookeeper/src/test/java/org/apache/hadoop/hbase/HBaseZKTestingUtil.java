@@ -30,7 +30,9 @@ import org.apache.yetus.audience.InterfaceStability;
  * Helpers for testing HBase that do not depend on specific server/etc. things. The main difference
  * from {@link HBaseCommonTestingUtil} is that we can start a zookeeper cluster.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.PHOENIX)
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC,
+  HBaseInterfaceAudience.REPLICATION,
+  HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class HBaseZKTestingUtil extends HBaseCommonTestingUtil {
   private MiniZooKeeperCluster zkCluster;

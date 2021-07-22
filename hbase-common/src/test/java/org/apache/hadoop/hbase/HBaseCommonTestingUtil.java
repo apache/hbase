@@ -40,7 +40,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Common helpers for testing HBase that do not depend on specific server/etc. things.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.PHOENIX)
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC,
+  HBaseInterfaceAudience.REPLICATION,
+  HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class HBaseCommonTestingUtil {
   protected static final Logger LOG = LoggerFactory.getLogger(HBaseCommonTestingUtil.class);
