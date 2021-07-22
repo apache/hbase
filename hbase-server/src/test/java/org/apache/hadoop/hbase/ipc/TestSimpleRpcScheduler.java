@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -247,9 +248,43 @@ public class TestSimpleRpcScheduler {
     testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
   }
 
+  @Test
+  public void testPluggableRpcQueue() throws Exception {
+    testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE,
+      "org.apache.hadoop.hbase.ipc.TestPluggableQueueImpl");
+
+    try {
+      testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE,
+        "MissingClass");
+      fail("Expected a PluggableRpcQueueNotFound for unloaded class");
+    } catch (PluggableRpcQueueNotFound e) {
+      // expected
+    } catch (Exception e) {
+      fail("Expected a PluggableRpcQueueNotFound for unloaded class, but instead got " + e);
+    }
+
+    try {
+      testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE,
+        "org.apache.hadoop.hbase.ipc.SimpleRpcServer");
+      fail("Expected a PluggableRpcQueueNotFound for incompatible class");
+    } catch (PluggableRpcQueueNotFound e) {
+      // expected
+    } catch (Exception e) {
+      fail("Expected a PluggableRpcQueueNotFound for incompatible class, but instead got " + e);
+    }
+  }
+
   private void testRpcScheduler(final String queueType) throws Exception {
+    testRpcScheduler(queueType, null);
+  }
+
+  private void testRpcScheduler(final String queueType, final String pluggableQueueClass) throws Exception {
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, queueType);
+
+    if (RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE.equals(queueType)) {
+      schedConf.set(RpcExecutor.PLUGGABLE_CALL_QUEUE_CLASS_NAME, pluggableQueueClass);
+    }
 
     PriorityFunction priority = mock(PriorityFunction.class);
     when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
