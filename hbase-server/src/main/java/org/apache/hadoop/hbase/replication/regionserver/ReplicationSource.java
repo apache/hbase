@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
-import org.apache.hadoop.hbase.replication.regionserver.Replication.ReplicationStatisticsChore;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -814,7 +813,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public ReplicationQueueStorage getReplicationQueueStorage() {
     return queueStorage;
   }
-  
+
   void removeWorker(ReplicationSourceShipper worker) {
     workerThreads.remove(worker.walGroupId, worker);
   }
