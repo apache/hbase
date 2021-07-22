@@ -22,7 +22,11 @@ public class MetricsReplicationSourceRefresherChore extends ScheduledChore {
 	
 	public static final String DURATION = "hbase.metrics.replication.source.refresher.duration";
 	public static final int DEFAULT_DURATION = 60000;
-	
+
+	public MetricsReplicationSourceRefresherChore(Stoppable stopper, ReplicationSource replicationSource) {
+		this(DEFAULT_DURATION, stopper, replicationSource);
+	}
+
 	public MetricsReplicationSourceRefresherChore(int duration, Stoppable stopper, ReplicationSource replicationSource) {
 	    super("MetricsSourceRefresherChore", stopper, duration);
 	    this.replicationSource = replicationSource;
