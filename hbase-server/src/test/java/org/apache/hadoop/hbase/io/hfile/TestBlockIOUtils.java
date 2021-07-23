@@ -21,6 +21,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -244,5 +246,85 @@ public class TestBlockIOUtils {
     exception.expect(IOException.class);
     exception.expectMessage("EOF");
     BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
+  }
+
+  /**
+   * Determine if ByteBufferPositionedReadable API is available
+   * .
+   * @return true if FSDataInputStream implements ByteBufferPositionedReadable API.
+   */
+  private boolean isByteBufferPositionedReadable() {
+    try {
+      //long position, ByteBuffer buf
+      FSDataInputStream.class.getMethod("read", long.class, ByteBuffer.class);
+    } catch (NoSuchMethodException e) {
+      return false;
+    }
+    return true;
+  }
+
+  public static class MyFSDataInputStream extends FSDataInputStream {
+    public MyFSDataInputStream(InputStream in) {
+      super(in);
+    }
+
+    // This is the ByteBufferPositionReadable API we want to test.
+    // Because the API is only available in Hadoop 3.3, FSDataInputStream in older Hadoop
+    // does not implement the interface, and it wouldn't compile trying to mock the method.
+    // So explicitly declare the method here to make mocking possible.
+    public int read(long position, ByteBuffer buf) throws IOException {
+      return 0;
+    }
+  }
+
+  @Test
+  public void testByteBufferPositionedReadable() throws IOException {
+    assumeTrue("Skip the test because ByteBufferPositionedReadable is not available",
+      isByteBufferPositionedReadable());
+    long position = 0;
+    int necessaryLen = 10;
+    int extraLen = 1;
+    int totalLen = necessaryLen + extraLen;
+    int firstReadLen = 6;
+    int secondReadLen = totalLen - firstReadLen;
+    ByteBuffer buf = ByteBuffer.allocate(totalLen);
+    ByteBuff bb = new SingleByteBuff(buf);
+    MyFSDataInputStream in = mock(MyFSDataInputStream.class);
+
+    when(in.read(position, buf)).thenReturn(firstReadLen);
+    when(in.read(firstReadLen, buf)).thenReturn(secondReadLen);
+    when(in.hasCapability(anyString())).thenReturn(true);
+    boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
+    assertTrue("Expect true return when reading extra bytes succeeds", ret);
+    verify(in).read(position, buf);
+    verify(in).read(firstReadLen, buf);
+    verify(in).hasCapability(anyString());
+    verifyNoMoreInteractions(in);
+  }
+
+  @Test
+  public void testByteBufferPositionedReadableEOF() throws IOException {
+    assumeTrue("Skip the test because ByteBufferPositionedReadable is not available",
+      isByteBufferPositionedReadable());
+    long position = 0;
+    int necessaryLen = 10;
+    int extraLen = 0;
+    int totalLen = necessaryLen + extraLen;
+    int firstReadLen = 9;
+    ByteBuffer buf = ByteBuffer.allocate(totalLen);
+    ByteBuff bb = new SingleByteBuff(buf);
+    MyFSDataInputStream in = mock(MyFSDataInputStream.class);
+
+    when(in.read(position, buf)).thenReturn(firstReadLen);
+    when(in.read(position, buf)).thenReturn(-1);
+    when(in.hasCapability(anyString())).thenReturn(true);
+    exception.expect(IOException.class);
+    exception.expectMessage("EOF");
+    BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
+
+    verify(in).read(position, buf);
+    verify(in).read(firstReadLen, buf);
+    verify(in).hasCapability(anyString());
+    verifyNoMoreInteractions(in);
   }
 }
