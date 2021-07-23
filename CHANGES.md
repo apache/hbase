@@ -20,6 +20,79 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.5 - 2021-07-31
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26108](https://issues.apache.org/jira/browse/HBASE-26108) | add option to disable scanMetrics in TableSnapshotInputFormat |  Major | . |
+| [HBASE-26025](https://issues.apache.org/jira/browse/HBASE-26025) | Add a flag to mark if the IOError can be solved by retry in thrift IOError |  Major | Thrift |
+| [HBASE-25986](https://issues.apache.org/jira/browse/HBASE-25986) | Expose the NORMALIZARION\_ENABLED table descriptor through a property in hbase-site |  Minor | Normalizer |
+| [HBASE-26012](https://issues.apache.org/jira/browse/HBASE-26012) | Improve logging and dequeue logic in DelayQueue |  Minor | . |
+| [HBASE-26020](https://issues.apache.org/jira/browse/HBASE-26020) | Split TestWALEntryStream.testDifferentCounts out |  Major | Replication, test |
+| [HBASE-25937](https://issues.apache.org/jira/browse/HBASE-25937) | Clarify UnknownRegionException |  Minor | Client |
+| [HBASE-25998](https://issues.apache.org/jira/browse/HBASE-25998) | Revisit synchronization in SyncFuture |  Major | Performance, regionserver, wal |
+| [HBASE-26000](https://issues.apache.org/jira/browse/HBASE-26000) | Optimize the display of ZK dump in the master web UI |  Minor | . |
+| [HBASE-25995](https://issues.apache.org/jira/browse/HBASE-25995) | Change the method name for DoubleArrayCost.setCosts |  Major | Balancer |
+| [HBASE-26002](https://issues.apache.org/jira/browse/HBASE-26002) | MultiRowMutationEndpoint should return the result of the conditional update |  Major | Coprocessors |
+| [HBASE-25993](https://issues.apache.org/jira/browse/HBASE-25993) | Make excluded SSL cipher suites configurable for all Web UIs |  Major | . |
+| [HBASE-25987](https://issues.apache.org/jira/browse/HBASE-25987) | Make SSL keystore type configurable for HBase ThriftServer |  Major | Thrift |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-24984](https://issues.apache.org/jira/browse/HBASE-24984) | WAL corruption due to early DBBs re-use when Durability.ASYNC\_WAL is used with multi operation |  Critical | rpc, wal |
+| [HBASE-26088](https://issues.apache.org/jira/browse/HBASE-26088) | conn.getBufferedMutator(tableName) leaks thread executors and other problems |  Critical | Client |
+| [HBASE-25973](https://issues.apache.org/jira/browse/HBASE-25973) | Balancer should explain progress in a better way in log |  Major | Balancer |
+| [HBASE-26083](https://issues.apache.org/jira/browse/HBASE-26083) | L1 miss metric is incorrect when using CombinedBlockCache |  Minor | BlockCache |
+| [HBASE-26086](https://issues.apache.org/jira/browse/HBASE-26086) | TestHRegionReplayEvents do not pass in branch-2 and throws NullPointerException |  Minor | . |
+| [HBASE-26036](https://issues.apache.org/jira/browse/HBASE-26036) | DBB released too early and dirty data for some operations |  Critical | rpc |
+| [HBASE-26068](https://issues.apache.org/jira/browse/HBASE-26068) | The last assertion in TestHStore.testRefreshStoreFilesNotChanged is wrong |  Major | test |
+| [HBASE-22923](https://issues.apache.org/jira/browse/HBASE-22923) | hbase:meta is assigned to localhost when we downgrade the hbase version |  Major | . |
+| [HBASE-26030](https://issues.apache.org/jira/browse/HBASE-26030) | hbase-cleanup.sh did not clean the wal dir if hbase.wal.dir configured individually |  Major | scripts |
+| [HBASE-26035](https://issues.apache.org/jira/browse/HBASE-26035) | Redundant null check in the compareTo function |  Minor | metrics, Performance |
+| [HBASE-25902](https://issues.apache.org/jira/browse/HBASE-25902) | Add missing CFs in meta during HBase 1 to 2.3+ Upgrade |  Critical | meta, Operability |
+| [HBASE-26028](https://issues.apache.org/jira/browse/HBASE-26028) | The view as json page shows exception when using TinyLfuBlockCache |  Major | UI |
+| [HBASE-26039](https://issues.apache.org/jira/browse/HBASE-26039) | TestReplicationKillRS is useless after HBASE-23956 |  Major | Replication, test |
+| [HBASE-25980](https://issues.apache.org/jira/browse/HBASE-25980) | Master table.jsp pointed at meta throws 500 when no all replicas are online |  Major | master, meta replicas, UI |
+| [HBASE-26013](https://issues.apache.org/jira/browse/HBASE-26013) | Get operations readRows metrics becomes zero after HBASE-25677 |  Minor | metrics |
+| [HBASE-25877](https://issues.apache.org/jira/browse/HBASE-25877) | Add access  check for compactionSwitch |  Major | security |
+| [HBASE-25698](https://issues.apache.org/jira/browse/HBASE-25698) | Persistent IllegalReferenceCountException at scanner open when using TinyLfuBlockCache |  Major | BucketCache, HFile, Scanners |
+| [HBASE-26001](https://issues.apache.org/jira/browse/HBASE-26001) | When turn on access control, the cell level TTL of Increment and Append operations is invalid. |  Minor | Coprocessors |
+| [HBASE-25984](https://issues.apache.org/jira/browse/HBASE-25984) | FSHLog WAL lockup with sync future reuse [RS deadlock] |  Critical | regionserver, wal |
+| [HBASE-25997](https://issues.apache.org/jira/browse/HBASE-25997) | NettyRpcFrameDecoder decode request header wrong  when handleTooBigRequest |  Major | rpc |
+| [HBASE-25967](https://issues.apache.org/jira/browse/HBASE-25967) | The readRequestsCount does not calculate when the outResults is empty |  Major | metrics |
+| [HBASE-25981](https://issues.apache.org/jira/browse/HBASE-25981) | JVM crash when displaying regionserver UI |  Major | rpc, UI |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26093](https://issues.apache.org/jira/browse/HBASE-26093) | Replication is stuck due to zero length wal file in oldWALs directory [master/branch-2] |  Major | . |
+| [HBASE-24734](https://issues.apache.org/jira/browse/HBASE-24734) | RegionInfo#containsRange should support check meta table |  Major | HFile, MTTR |
+| [HBASE-25739](https://issues.apache.org/jira/browse/HBASE-25739) | TableSkewCostFunction need to use aggregated deviation |  Major | Balancer, master |
+| [HBASE-25992](https://issues.apache.org/jira/browse/HBASE-25992) | Polish the ReplicationSourceWALReader code for 2.x after HBASE-25596 |  Major | Replication |
+| [HBASE-25989](https://issues.apache.org/jira/browse/HBASE-25989) | FanOutOneBlockAsyncDFSOutput using shaded protobuf in hdfs 3.3+ |  Major | . |
+| [HBASE-25947](https://issues.apache.org/jira/browse/HBASE-25947) | Backport 'HBASE-25894 Improve the performance for region load and region count related cost functions' to branch-2.4 and branch-2.3 |  Major | Balancer, Performance |
+| [HBASE-25969](https://issues.apache.org/jira/browse/HBASE-25969) | Cleanup netty-all transitive includes |  Major | . |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25934](https://issues.apache.org/jira/browse/HBASE-25934) | Add username for RegionScannerHolder |  Minor | . |
+| [HBASE-25521](https://issues.apache.org/jira/browse/HBASE-25521) | Change ChoreService and ScheduledChore to IA.Private |  Major | util |
+| [HBASE-26015](https://issues.apache.org/jira/browse/HBASE-26015) | Should implement getRegionServers(boolean) method in AsyncAdmin |  Major | Admin, Client |
+| [HBASE-25918](https://issues.apache.org/jira/browse/HBASE-25918) | Upgrade hbase-thirdparty dependency to 3.5.1 |  Critical | dependencies |
+
+
 ## Release 2.4.4 - 2021-06-14
 
 
