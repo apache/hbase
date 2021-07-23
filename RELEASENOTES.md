@@ -20,6 +20,129 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.3.6 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-26088](https://issues.apache.org/jira/browse/HBASE-26088) | *Critical* | **conn.getBufferedMutator(tableName) leaks thread executors and other problems**
+
+The API doc for Connection#getBufferedMutator(TableName) and Connection#getBufferedMutator(BufferedMutatorParams) mentioned that when user dont pass a ThreadPool to be used, we use the ThreadPool in the Connection.  But in reality, we were creating new ThreadPool in such cases.
+
+We are keeping the behaviour of code as is but corrected the Javadoc and also a bug of not closing this new pool while Closing the BufferedMutator.
+
+
+---
+
+* [HBASE-22923](https://issues.apache.org/jira/browse/HBASE-22923) | *Major* | **hbase:meta is assigned to localhost when we downgrade the hbase version**
+
+Introduced new config: hbase.min.version.move.system.tables
+
+When the operator uses this configuration option, any version between
+the current cluster version and the value of "hbase.min.version.move.system.tables"
+does not trigger any auto-region movement. Auto-region movement here
+refers to auto-migration of system table regions to newer server versions.
+It is assumed that the configured range of versions does not require special
+handling of moving system table regions to higher versioned RegionServer.
+This auto-migration is done by AssignmentManager#checkIfShouldMoveSystemRegionAsync().
+Example: Let's assume the cluster is on version 1.4.0 and we have
+set "hbase.min.version.move.system.tables" as "2.0.0". Now if we upgrade
+one RegionServer on 1.4.0 cluster to 1.6.0 (\< 2.0.0), then AssignmentManager will
+not move hbase:meta, hbase:namespace and other system table regions
+to newly brought up RegionServer 1.6.0 as part of auto-migration.
+However, if we upgrade one RegionServer on 1.4.0 cluster to 2.2.0 (\> 2.0.0),
+then AssignmentManager will move all system table regions to newly brought
+up RegionServer 2.2.0 as part of auto-migration done by
+AssignmentManager#checkIfShouldMoveSystemRegionAsync().
+
+Overall, assuming we have system RSGroup where we keep HBase system tables, if we use
+config "hbase.min.version.move.system.tables" with value x.y.z then while upgrading cluster to
+version greater than or equal to x.y.z, the first RegionServer that we upgrade must
+belong to system RSGroup only.
+
+
+---
+
+* [HBASE-25902](https://issues.apache.org/jira/browse/HBASE-25902) | *Critical* | **Add missing CFs in meta during HBase 1 to 2.3+ Upgrade**
+
+While upgrading cluster from 1.x to 2.3+ versions, after the active master is done setting it's status as 'Initialized', it attempts to add 'table' and 'repl\_barrier' CFs in meta. Once CFs are added successfully, master is aborted with PleaseRestartMasterException because master has missed certain initialization events (e.g ClusterSchemaService is not initialized and tableStateManager fails to migrate table states from ZK to meta due to missing CFs). Subsequent active master initialization is expected to be smooth. 
+In the presence of multi masters, when one of them becomes active for the first time after upgrading to HBase 2.3+, it is aborted after fixing CFs in meta and one of the other backup masters will take over and become active soon. Hence, overall this is expected to be smooth upgrade if we have backup masters configured. If not, operator is expected to restart same master again manually.
+
+
+---
+
+* [HBASE-25877](https://issues.apache.org/jira/browse/HBASE-25877) | *Major* | **Add access  check for compactionSwitch**
+
+Now calling RSRpcService.compactionSwitch, i.e, Admin.compactionSwitch at client side, requires ADMIN permission.
+This is an incompatible change but it is also a bug, as we should not allow any users to disable compaction on a regionserver, so we apply this to all active branches.
+
+
+---
+
+* [HBASE-25984](https://issues.apache.org/jira/browse/HBASE-25984) | *Critical* | **FSHLog WAL lockup with sync future reuse [RS deadlock]**
+
+Fixes a WAL lockup issue due to premature reuse of the sync futures by the WAL consumers. The lockup causes the WAL system to hang resulting in blocked appends and syncs thus holding up the RPC handlers from progressing. Only workaround without this fix is to force abort the region server.
+
+
+---
+
+* [HBASE-25993](https://issues.apache.org/jira/browse/HBASE-25993) | *Major* | **Make excluded SSL cipher suites configurable for all Web UIs**
+
+Add "ssl.server.exclude.cipher.list" configuration to excluded cipher suites for the http server started by the InfoServer.
+
+
+---
+
+* [HBASE-25963](https://issues.apache.org/jira/browse/HBASE-25963) | *Major* | **HBaseCluster should be marked as IA.Public**
+
+Change HBaseCluster to IA.Public as its sub class MiniHBaseCluster is IA.Public.
+
+
+---
+
+* [HBASE-25775](https://issues.apache.org/jira/browse/HBASE-25775) | *Major* | **Use a special balancer to deal with maintenance mode**
+
+Introduced a MaintenanceLoadBalancer to be used only under maintenance mode. Typically you should not use it as your balancer implementation.
+
+
+---
+
+* [HBASE-25767](https://issues.apache.org/jira/browse/HBASE-25767) | *Major* | **CandidateGenerator.getRandomIterationOrder is too slow on large cluster**
+
+In the actual implementation classes of CandidateGenerator, now we just random select a start point and then iterate sequentially, instead of using the old way, where we will create a big array to hold all the integers in [0, num\_regions\_in\_cluster), shuffle the array, and then iterate on the array.
+The new implementation is 'random' enough as every time we just select one candidate. The problem for the old implementation is that, it will create an array every time when we want to get a candidate, if we have tens of thousands regions, we will create an array with tens of thousands length everytime, which causes big GC pressure and slow down the balancer execution.
+
+
+---
+
+* [HBASE-25199](https://issues.apache.org/jira/browse/HBASE-25199) | *Minor* | **Remove HStore#getStoreHomedir**
+
+Moved the following methods from HStore to HRegionFileSystem
+
+- #getStoreHomedir(Path, RegionInfo, byte[])
+- #getStoreHomedir(Path, String, byte[])
+
+
+---
+
+* [HBASE-24305](https://issues.apache.org/jira/browse/HBASE-24305) | *Minor* | **Handle deprecations in ServerName**
+
+The following methods were removed or made private from ServerName (due to HBASE-17624):
+
+- getHostNameMinusDomain(String): Was made private without a replacement.
+- parseHostname(String): Use #valueOf(String) instead.
+- parsePort(String): Use #valueOf(String) instead.
+- parseStartcode(String): Use #valueOf(String) instead.
+- getServerName(String, int, long): Was made private. Use #valueOf(String, int, long) instead.
+- getServerName(String, long): Use #valueOf(String, long) instead.
+- getHostAndPort(): Use #getAddress() instead.
+- getServerStartcodeFromServerName(String): Use instance of ServerName to pull out start code)
+- getServerNameLessStartCode(String): Use #getAddress() instead.
+
+
+
 # HBASE  2.3.5 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

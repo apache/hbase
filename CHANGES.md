@@ -20,6 +20,114 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.3.6 - Unreleased (as of 2021-07-23)
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26108](https://issues.apache.org/jira/browse/HBASE-26108) | add option to disable scanMetrics in TableSnapshotInputFormat |  Major | . |
+| [HBASE-26025](https://issues.apache.org/jira/browse/HBASE-26025) | Add a flag to mark if the IOError can be solved by retry in thrift IOError |  Major | Thrift |
+| [HBASE-26012](https://issues.apache.org/jira/browse/HBASE-26012) | Improve logging and dequeue logic in DelayQueue |  Minor | . |
+| [HBASE-25937](https://issues.apache.org/jira/browse/HBASE-25937) | Clarify UnknownRegionException |  Minor | Client |
+| [HBASE-25998](https://issues.apache.org/jira/browse/HBASE-25998) | Revisit synchronization in SyncFuture |  Major | Performance, regionserver, wal |
+| [HBASE-26000](https://issues.apache.org/jira/browse/HBASE-26000) | Optimize the display of ZK dump in the master web UI |  Minor | . |
+| [HBASE-25995](https://issues.apache.org/jira/browse/HBASE-25995) | Change the method name for DoubleArrayCost.setCosts |  Major | Balancer |
+| [HBASE-25993](https://issues.apache.org/jira/browse/HBASE-25993) | Make excluded SSL cipher suites configurable for all Web UIs |  Major | . |
+| [HBASE-25987](https://issues.apache.org/jira/browse/HBASE-25987) | Make SSL keystore type configurable for HBase ThriftServer |  Major | Thrift |
+| [HBASE-25933](https://issues.apache.org/jira/browse/HBASE-25933) | Log trace raw exception, instead of cause message in NettyRpcServerRequestDecoder |  Minor | . |
+| [HBASE-25860](https://issues.apache.org/jira/browse/HBASE-25860) | Add metric for successful wal roll requests. |  Major | metrics, wal |
+| [HBASE-25754](https://issues.apache.org/jira/browse/HBASE-25754) | StripeCompactionPolicy should support compacting cold regions |  Minor | Compaction |
+| [HBASE-25798](https://issues.apache.org/jira/browse/HBASE-25798) | typo in MetricsAssertHelper |  Minor | . |
+| [HBASE-25770](https://issues.apache.org/jira/browse/HBASE-25770) | Http InfoServers should honor gzip encoding when requested |  Major | UI |
+| [HBASE-25776](https://issues.apache.org/jira/browse/HBASE-25776) | Use Class.asSubclass to fix the warning in StochasticLoadBalancer.loadCustomCostFunctions |  Minor | Balancer |
+| [HBASE-25767](https://issues.apache.org/jira/browse/HBASE-25767) | CandidateGenerator.getRandomIterationOrder is too slow on large cluster |  Major | Balancer, Performance |
+| [HBASE-25762](https://issues.apache.org/jira/browse/HBASE-25762) | Improvement for some debug-logging guards |  Minor | logging, Performance |
+| [HBASE-25653](https://issues.apache.org/jira/browse/HBASE-25653) | Add units and round off region size to 2 digits after decimal |  Major | master, Normalizer |
+| [HBASE-25482](https://issues.apache.org/jira/browse/HBASE-25482) | Improve SimpleRegionNormalizer#getAverageRegionSizeMb |  Minor | Normalizer |
+| [HBASE-25759](https://issues.apache.org/jira/browse/HBASE-25759) | The master services field in LocalityBasedCostFunction is never used |  Major | Balancer |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-24984](https://issues.apache.org/jira/browse/HBASE-24984) | WAL corruption due to early DBBs re-use when Durability.ASYNC\_WAL is used with multi operation |  Critical | rpc, wal |
+| [HBASE-26088](https://issues.apache.org/jira/browse/HBASE-26088) | conn.getBufferedMutator(tableName) leaks thread executors and other problems |  Critical | Client |
+| [HBASE-25973](https://issues.apache.org/jira/browse/HBASE-25973) | Balancer should explain progress in a better way in log |  Major | Balancer |
+| [HBASE-26083](https://issues.apache.org/jira/browse/HBASE-26083) | L1 miss metric is incorrect when using CombinedBlockCache |  Minor | BlockCache |
+| [HBASE-26086](https://issues.apache.org/jira/browse/HBASE-26086) | TestHRegionReplayEvents do not pass in branch-2 and throws NullPointerException |  Minor | . |
+| [HBASE-26068](https://issues.apache.org/jira/browse/HBASE-26068) | The last assertion in TestHStore.testRefreshStoreFilesNotChanged is wrong |  Major | test |
+| [HBASE-22923](https://issues.apache.org/jira/browse/HBASE-22923) | hbase:meta is assigned to localhost when we downgrade the hbase version |  Major | . |
+| [HBASE-26030](https://issues.apache.org/jira/browse/HBASE-26030) | hbase-cleanup.sh did not clean the wal dir if hbase.wal.dir configured individually |  Major | scripts |
+| [HBASE-26035](https://issues.apache.org/jira/browse/HBASE-26035) | Redundant null check in the compareTo function |  Minor | metrics, Performance |
+| [HBASE-25902](https://issues.apache.org/jira/browse/HBASE-25902) | Add missing CFs in meta during HBase 1 to 2.3+ Upgrade |  Critical | meta, Operability |
+| [HBASE-26028](https://issues.apache.org/jira/browse/HBASE-26028) | The view as json page shows exception when using TinyLfuBlockCache |  Major | UI |
+| [HBASE-26039](https://issues.apache.org/jira/browse/HBASE-26039) | TestReplicationKillRS is useless after HBASE-23956 |  Major | Replication, test |
+| [HBASE-25980](https://issues.apache.org/jira/browse/HBASE-25980) | Master table.jsp pointed at meta throws 500 when no all replicas are online |  Major | master, meta replicas, UI |
+| [HBASE-26013](https://issues.apache.org/jira/browse/HBASE-26013) | Get operations readRows metrics becomes zero after HBASE-25677 |  Minor | metrics |
+| [HBASE-25877](https://issues.apache.org/jira/browse/HBASE-25877) | Add access  check for compactionSwitch |  Major | security |
+| [HBASE-25698](https://issues.apache.org/jira/browse/HBASE-25698) | Persistent IllegalReferenceCountException at scanner open when using TinyLfuBlockCache |  Major | BucketCache, HFile, Scanners |
+| [HBASE-26001](https://issues.apache.org/jira/browse/HBASE-26001) | When turn on access control, the cell level TTL of Increment and Append operations is invalid. |  Minor | Coprocessors |
+| [HBASE-25984](https://issues.apache.org/jira/browse/HBASE-25984) | FSHLog WAL lockup with sync future reuse [RS deadlock] |  Critical | regionserver, wal |
+| [HBASE-25997](https://issues.apache.org/jira/browse/HBASE-25997) | NettyRpcFrameDecoder decode request header wrong  when handleTooBigRequest |  Major | rpc |
+| [HBASE-25967](https://issues.apache.org/jira/browse/HBASE-25967) | The readRequestsCount does not calculate when the outResults is empty |  Major | metrics |
+| [HBASE-25981](https://issues.apache.org/jira/browse/HBASE-25981) | JVM crash when displaying regionserver UI |  Major | rpc, UI |
+| [HBASE-25930](https://issues.apache.org/jira/browse/HBASE-25930) | Thrift does not support requests in Kerberos environment |  Major | Thrift |
+| [HBASE-25929](https://issues.apache.org/jira/browse/HBASE-25929) | RegionServer JVM crash when compaction |  Critical | Compaction |
+| [HBASE-25903](https://issues.apache.org/jira/browse/HBASE-25903) | ReadOnlyZKClient APIs - CompletableFuture.get() calls can cause threads to hang forver when ZK client create throws Non IOException |  Major | . |
+| [HBASE-25898](https://issues.apache.org/jira/browse/HBASE-25898) | RS getting aborted due to NPE in Replication WALEntryStream |  Critical | Replication |
+| [HBASE-25875](https://issues.apache.org/jira/browse/HBASE-25875) | RegionServer failed to start due to IllegalThreadStateException in AuthenticationTokenSecretManager.start |  Major | . |
+| [HBASE-25901](https://issues.apache.org/jira/browse/HBASE-25901) | Replication may lose data during regionserver restart when multiwal is in use |  Major | multiwal, Replication |
+| [HBASE-25892](https://issues.apache.org/jira/browse/HBASE-25892) | 'False' should be 'True' in auditlog of listLabels |  Major | logging, security |
+| [HBASE-25817](https://issues.apache.org/jira/browse/HBASE-25817) | Memory leak from thrift server hashMap |  Minor | Thrift |
+| [HBASE-25848](https://issues.apache.org/jira/browse/HBASE-25848) | Add flexibility to backup replication in case replication filter throws an exception |  Major | . |
+| [HBASE-25774](https://issues.apache.org/jira/browse/HBASE-25774) | ServerManager.getOnlineServer may miss some region servers when refreshing state in some procedure implementations |  Critical | Replication |
+| [HBASE-25825](https://issues.apache.org/jira/browse/HBASE-25825) | RSGroupBasedLoadBalancer.onConfigurationChange should chain the request to internal balancer |  Major | Balancer |
+| [HBASE-25806](https://issues.apache.org/jira/browse/HBASE-25806) | Backport the region location finder initialization fix in HBASE-25802 |  Major | Balancer |
+| [HBASE-25717](https://issues.apache.org/jira/browse/HBASE-25717) | RegionServer aborted due to ClassCastException |  Major | . |
+| [HBASE-25743](https://issues.apache.org/jira/browse/HBASE-25743) | Retry REQUESTTIMEOUT KeeperExceptions from ZK |  Major | Zookeeper |
+| [HBASE-25726](https://issues.apache.org/jira/browse/HBASE-25726) | MoveCostFunction is not included in the list of cost functions for StochasticLoadBalancer |  Major | Balancer |
+| [HBASE-25692](https://issues.apache.org/jira/browse/HBASE-25692) | Failure to instantiate WALCellCodec leaks socket in replication |  Major | Replication |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25910](https://issues.apache.org/jira/browse/HBASE-25910) | Fix TestClusterPortAssignment.testClusterPortAssignment test and re-enable it. |  Minor | flakies, test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-24734](https://issues.apache.org/jira/browse/HBASE-24734) | RegionInfo#containsRange should support check meta table |  Major | HFile, MTTR |
+| [HBASE-25739](https://issues.apache.org/jira/browse/HBASE-25739) | TableSkewCostFunction need to use aggregated deviation |  Major | Balancer, master |
+| [HBASE-25947](https://issues.apache.org/jira/browse/HBASE-25947) | Backport 'HBASE-25894 Improve the performance for region load and region count related cost functions' to branch-2.4 and branch-2.3 |  Major | Balancer, Performance |
+| [HBASE-25963](https://issues.apache.org/jira/browse/HBASE-25963) | HBaseCluster should be marked as IA.Public |  Major | API |
+| [HBASE-25941](https://issues.apache.org/jira/browse/HBASE-25941) | TestRESTServerSSL fails because of jdk bug |  Major | test |
+| [HBASE-25838](https://issues.apache.org/jira/browse/HBASE-25838) | Use double instead of Double in StochasticLoadBalancer |  Major | Balancer, Performance |
+| [HBASE-25840](https://issues.apache.org/jira/browse/HBASE-25840) | CatalogJanitor warns about skipping gc of regions during RIT, but does not actually skip |  Minor | . |
+| [HBASE-25775](https://issues.apache.org/jira/browse/HBASE-25775) | Use a special balancer to deal with maintenance mode |  Major | Balancer |
+| [HBASE-25199](https://issues.apache.org/jira/browse/HBASE-25199) | Remove HStore#getStoreHomedir |  Minor | . |
+| [HBASE-25696](https://issues.apache.org/jira/browse/HBASE-25696) | Need to initialize SLF4JBridgeHandler in jul-to-slf4j for redirecting jul to slf4j |  Major | logging |
+| [HBASE-25695](https://issues.apache.org/jira/browse/HBASE-25695) | Link to the filter on hbase:meta from user tables panel on master page |  Major | UI |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26015](https://issues.apache.org/jira/browse/HBASE-26015) | Should implement getRegionServers(boolean) method in AsyncAdmin |  Major | Admin, Client |
+| [HBASE-25755](https://issues.apache.org/jira/browse/HBASE-25755) | Exclude tomcat-embed-core from libthrift |  Critical | dependencies, Thrift |
+| [HBASE-25750](https://issues.apache.org/jira/browse/HBASE-25750) | Upgrade RpcControllerFactory and HBaseRpcController from Private to LimitedPrivate(COPROC,PHOENIX) |  Major | Coprocessors, phoenix, rpc |
+| [HBASE-24305](https://issues.apache.org/jira/browse/HBASE-24305) | Handle deprecations in ServerName |  Minor | . |
+| [HBASE-24492](https://issues.apache.org/jira/browse/HBASE-24492) | ProtobufLogReader.readNext does not need looping |  Minor | Replication, wal |
+
+
 ## Release 2.3.5 - Unreleased (as of 2021-03-25)
 
 
