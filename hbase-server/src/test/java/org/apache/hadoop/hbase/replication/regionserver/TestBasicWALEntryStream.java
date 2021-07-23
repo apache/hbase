@@ -52,12 +52,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -715,5 +717,49 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
       assertNotNull(entryStream.next());
       assertEquals(0, logQueue.getMetrics().getUncleanlyClosedWALs());
     }
+  }
+
+  /**
+   * Tests that we handle EOFException properly if the wal has moved to oldWALs directory.
+   * @throws Exception exception
+   */
+  @Test
+  public void testEOFExceptionInOldWALsDirectory() throws Exception {
+    assertEquals(1, logQueue.getQueueSize(fakeWalGroupId));
+    AbstractFSWAL  abstractWAL = (AbstractFSWAL)log;
+    Path emptyLogFile = abstractWAL.getCurrentFileName();
+    log.rollWriter(true);
+
+    // AsyncFSWAl and FSHLog both moves the log from WALs to oldWALs directory asynchronously.
+    // Wait for in flight wal close count to become 0. This makes sure that empty wal is moved to
+    // oldWALs directory.
+    Waiter.waitFor(CONF, 5000,
+      (Waiter.Predicate<Exception>) () -> abstractWAL.getInflightWALCloseCount() == 0);
+    // There will 2 logs in the queue.
+    assertEquals(2, logQueue.getQueueSize(fakeWalGroupId));
+
+    // Get the archived dir path for the first wal.
+    Path archivePath = AbstractFSWALProvider.findArchivedLog(emptyLogFile, CONF);
+    // Make sure that the wal path is not the same as archived Dir path.
+    assertNotNull(archivePath);
+    assertTrue(fs.exists(archivePath));
+    fs.truncate(archivePath, 0);
+    // make sure the size of the wal file is 0.
+    assertEquals(0, fs.getFileStatus(archivePath).getLen());
+
+    ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    when(source.isPeerEnabled()).thenReturn(true);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
+
+    Configuration localConf = new Configuration(CONF);
+    localConf.setInt("replication.source.maxretriesmultiplier", 1);
+    localConf.setBoolean("replication.source.eof.autorecovery", true);
+    // Start the reader thread.
+    createReader(false, localConf);
+    // Wait for the replication queue size to be 1. This means that we have handled
+    // 0 length wal from oldWALs directory.
+    Waiter.waitFor(localConf, 10000,
+      (Waiter.Predicate<Exception>) () -> logQueue.getQueueSize(fakeWalGroupId) == 1);
   }
 }
