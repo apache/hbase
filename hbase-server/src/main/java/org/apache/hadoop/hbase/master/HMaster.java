@@ -409,6 +409,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
+  private int balanceParallelRegions;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -484,6 +485,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
 
       cachedClusterId = new CachedClusterId(this, conf);
+      this.balanceParallelRegions = conf.getInt(HConstants.BALANCE_PARALLEL_REGIONS, 5);
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.
@@ -1763,10 +1765,9 @@ public class HMaster extends HRegionServer implements MasterServices {
         // ignore the force flag in that case
         boolean metaInTransition = assignmentManager.isMetaRegionInTransition();
         List<RegionStateNode> toPrint = regionsInTransition;
-        int max = 5;
         boolean truncated = false;
-        if (regionsInTransition.size() > max) {
-          toPrint = regionsInTransition.subList(0, max);
+        if (regionsInTransition.size() > this.balanceParallelRegions) {
+          toPrint = regionsInTransition.subList(0, this.balanceParallelRegions);
           truncated = true;
         }
         if (!force || metaInTransition) {
