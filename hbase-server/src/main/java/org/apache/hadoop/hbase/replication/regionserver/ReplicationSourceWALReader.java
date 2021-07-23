@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -274,11 +275,15 @@ class ReplicationSourceWALReader extends Thread {
     // since we don't add current log to recovered source queue so it is safe to remove.
     if ((e instanceof EOFException || e.getCause() instanceof EOFException) &&
       (source.isRecovered() || queue.size() > 1) && this.eofAutoRecovery) {
-      Path head = queue.peek();
+      Path path = queue.peek();
       try {
-        if (fs.getFileStatus(head).getLen() == 0) {
-          // head of the queue is an empty log file
-          LOG.warn("Forcing removal of 0 length log in queue: {}", head);
+        if (!fs.exists(path)) {
+          // There is a chance that wal has moved to oldWALs directory, so look there also.
+          path = AbstractFSWALProvider.findArchivedLog(path, conf);
+          // path is null if it couldn't find archive path.
+        }
+        if (path != null && fs.getFileStatus(path).getLen() == 0) {
+          LOG.warn("Forcing removal of 0 length log in queue: {}", path);
           logQueue.remove(walGroupId);
           currentPosition = 0;
           if (batch != null) {
@@ -289,7 +294,7 @@ class ReplicationSourceWALReader extends Thread {
           return true;
         }
       } catch (IOException ioe) {
-        LOG.warn("Couldn't get file length information about log " + queue.peek(), ioe);
+        LOG.warn("Couldn't get file length information about log " + path, ioe);
       } catch (InterruptedException ie) {
         LOG.trace("Interrupted while adding WAL batch to ship queue");
         Thread.currentThread().interrupt();

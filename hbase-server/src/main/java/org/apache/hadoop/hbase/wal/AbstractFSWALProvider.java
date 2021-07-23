@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -498,6 +497,43 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       LOG.error("Couldn't locate log: " + path);
       return path;
     }
+  }
+
+  /**
+   * Find the archived WAL file path if it is not able to locate in WALs dir.
+   * @param path - active WAL file path
+   * @param conf - configuration
+   * @return archived path if exists, null - otherwise
+   * @throws IOException exception
+   */
+  public static Path findArchivedLog(Path path, Configuration conf) throws IOException {
+    // If the path contains oldWALs keyword then exit early.
+    if (path.toString().contains(HConstants.HREGION_OLDLOGDIR_NAME)) {
+      return null;
+    }
+    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+    FileSystem fs = path.getFileSystem(conf);
+    // Try finding the log in old dir
+    Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    Path archivedLogLocation = new Path(oldLogDir, path.getName());
+    if (fs.exists(archivedLogLocation)) {
+      LOG.info("Log " + path + " was moved to " + archivedLogLocation);
+      return archivedLogLocation;
+    }
+
+    ServerName serverName = getServerNameFromWALDirectoryName(path);
+    // Try finding the log in separate old log dir
+    oldLogDir =
+      new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
+        .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
+    archivedLogLocation = new Path(oldLogDir, path.getName());
+    if (fs.exists(archivedLogLocation)) {
+      LOG.info("Log " + path + " was moved to " + archivedLogLocation);
+      return archivedLogLocation;
+    }
+
+    LOG.error("Couldn't locate log: " + path);
+    return null;
   }
 
   /**
