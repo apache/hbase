@@ -67,7 +67,7 @@ public class DirectStoreMergeRegionsStrategy extends MergeRegionsStrategy {
    * @throws IOException if any error occurs while creating the region dir.
    */
   @Override
-  public HRegionFileSystem innerMergeRegions(MasterProcedureEnv env, FileSystem fs,
+  public HRegionFileSystem createDirAndMergeFiles(MasterProcedureEnv env, FileSystem fs,
       RegionInfo[] regionsToMerge, Path tableDir, RegionInfo mergedRegion) throws IOException {
     //creates the resulting merge region dir directly under the table directory, instead of
     //the temp ".merges" dir

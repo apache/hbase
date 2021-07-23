@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -124,9 +125,10 @@ public class MergeTableRegionsProcedure
   private void createMergeStrategy(String className) {
     try {
       LOG.info("instantiating write strategy {}", className);
-      mergeStrategy = (MergeRegionsStrategy) Class.forName(className).newInstance();
+      mergeStrategy = (MergeRegionsStrategy) ReflectionUtils.newInstance(Class.forName(className));
     } catch (Exception e) {
       LOG.error("Unable to create write strategy: {}", className, e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -403,7 +405,12 @@ public class MergeTableRegionsProcedure
     for (int i = 0; i < regionsToMerge.length; i++) {
       regionsToMerge[i] = ProtobufUtil.toRegionInfo(mergeTableRegionsMsg.getRegionInfo(i));
     }
-    createMergeStrategy(mergeTableRegionsMsg.getMergeStrategy());
+    if(mergeTableRegionsMsg.getMergeStrategy()==null ||
+      mergeTableRegionsMsg.getMergeStrategy().isEmpty()){
+      this.createMergeStrategy(DefaultMergeStrategy.class.getName());
+    } else {
+      createMergeStrategy(mergeTableRegionsMsg.getMergeStrategy());
+    }
 
     mergedRegion = ProtobufUtil.toRegionInfo(mergeTableRegionsMsg.getMergedRegionInfo());
   }
@@ -730,7 +737,7 @@ public class MergeTableRegionsProcedure
      * the old parent regions.
      */
     @Override
-    public HRegionFileSystem innerMergeRegions(MasterProcedureEnv env, FileSystem fs,
+    public HRegionFileSystem createDirAndMergeFiles(MasterProcedureEnv env, FileSystem fs,
         RegionInfo[] regionsToMerge, Path tableDir, RegionInfo mergedRegion) throws IOException {
       HRegionFileSystem mergeRegionFs = null;
       for (RegionInfo ri: regionsToMerge) {

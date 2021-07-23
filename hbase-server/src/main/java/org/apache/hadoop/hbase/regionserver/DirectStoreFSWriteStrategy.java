@@ -51,7 +51,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @InterfaceAudience.Private
 public class DirectStoreFSWriteStrategy extends HRegionFileSystemWriteStrategy {
   private StoreFilePathAccessor accessor;
-  private Map<String, Map<String,List<Path>>> regionSplitReferences = new ConcurrentHashMap<>();
+  private Map<String, Map<String,List<Path>>> regionSplitReferences = new HashMap<>();
   private Map<String, List<Path>> mergeReferences = new HashMap();
 
   public DirectStoreFSWriteStrategy(HRegionFileSystem fileSystem) throws IOException {
@@ -175,19 +175,19 @@ public class DirectStoreFSWriteStrategy extends HRegionFileSystemWriteStrategy {
   @Override
   public Path mergeStoreFile(RegionInfo regionToMerge, RegionInfo mergedRegion, String familyName,
       HStoreFile f, Path mergedDir, FileSystem fs) throws IOException {
-//    Path path = super.mergeStoreFile(regionToMerge, mergedRegion, familyName, f, mergedDir, fs);
-
-    Path path = (this.fileSystem.regionInfoForFs.equals(regionToMerge)) ?
-      super.mergeStoreFile(mergedRegion, regionToMerge, familyName, f, mergedDir, fs)
-      : super.mergeStoreFile(regionToMerge, mergedRegion, familyName, f, mergedDir, fs);
-
-    List<Path> referenceFiles = mergeReferences.get(familyName);
-    if(referenceFiles==null){
-      referenceFiles = new ArrayList<>();
-      mergeReferences.put(familyName, referenceFiles);
+    if (this.fileSystem.regionInfoForFs.equals(regionToMerge)) {
+      Path path = super.mergeStoreFile(mergedRegion, regionToMerge, familyName, f, mergedDir, fs);
+      List<Path> referenceFiles = mergeReferences.get(familyName);
+      if (referenceFiles == null) {
+        referenceFiles = new ArrayList<>();
+        mergeReferences.put(familyName, referenceFiles);
+      }
+      referenceFiles.add(path);
+      return path;
+    } else {
+      throw new IOException("Wrong ordering of regions parameter. "
+        + "The resulting merge should be the first param.");
     }
-    referenceFiles.add(path);
-    return path;
   }
 
   /**
@@ -196,7 +196,6 @@ public class DirectStoreFSWriteStrategy extends HRegionFileSystemWriteStrategy {
    */
   @Override
   public void cleanupSplitsDir() throws IOException {
-    //do nothing, the split dir is the store dir itself, so we cannot delete it.
   }
 
   /**
@@ -237,6 +236,7 @@ public class DirectStoreFSWriteStrategy extends HRegionFileSystemWriteStrategy {
           StoreFilePathUpdate.builder().withStorePaths(referenceList).build());
       }
     }
+    regionSplitReferences.remove(regionInfo.getEncodedName());
     return regionDir;
   }
 
@@ -254,5 +254,6 @@ public class DirectStoreFSWriteStrategy extends HRegionFileSystemWriteStrategy {
         family,
         StoreFilePathUpdate.builder().withStorePaths(mergeReferences.get(family)).build());
     }
+    mergeReferences.clear();
   }
 }

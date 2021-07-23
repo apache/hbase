@@ -52,7 +52,7 @@ public abstract class MergeRegionsStrategy {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
     final FileSystem fs = mfs.getFileSystem();
-    HRegionFileSystem mergeRegionFs = innerMergeRegions(env, fs, regionsToMerge,
+    HRegionFileSystem mergeRegionFs = createDirAndMergeFiles(env, fs, regionsToMerge,
       tabledir, mergedRegion);
     assert mergeRegionFs != null;
     mergeRegionFs.commitMergedRegion(mergedRegion);
@@ -72,7 +72,7 @@ public abstract class MergeRegionsStrategy {
    * @return HRegionFileSystem for the resulting merging region.
    * @throws IOException if any error occurs while creating the region dir.
    */
-  abstract protected HRegionFileSystem innerMergeRegions(MasterProcedureEnv env, FileSystem fs,
+  abstract protected HRegionFileSystem createDirAndMergeFiles(MasterProcedureEnv env, FileSystem fs,
     RegionInfo[] regionsToMerge, Path tableDir, RegionInfo mergedRegion) throws IOException;
 
 

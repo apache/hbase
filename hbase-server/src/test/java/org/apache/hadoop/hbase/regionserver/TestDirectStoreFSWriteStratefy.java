@@ -303,7 +303,7 @@ public class TestDirectStoreFSWriteStratefy {
 
   private void mergeFileFromRegion(DirectStoreFSWriteStrategy writeStrategy, HRegion regionToMerge,
       RegionInfo resultingMerge, HStoreFile file) throws IOException {
-    Path mergedFile = writeStrategy.mergeStoreFile(regionToMerge.getRegionInfo(), resultingMerge,
+    Path mergedFile = writeStrategy.mergeStoreFile(resultingMerge, regionToMerge.getRegionInfo(),
       CF_NAME, file, regionToMerge.getRegionFileSystem().getMergesDir(),
       regionToMerge.getRegionFileSystem().getFileSystem());
     validateResultingFile(regionToMerge.getRegionInfo().getEncodedName(), mergedFile);

@@ -584,7 +584,7 @@ public class HRegionFileSystem {
    *
    * @return {@link Path} to the temp directory used during split operations
    * */
-  Path getSplitsDir() {
+  Path getSplitsDir () {
     return this.writeStrategy.getParentSplitsDir();
   }
 
@@ -1158,6 +1158,7 @@ public class HRegionFileSystem {
         new Class[] { HRegionFileSystem.class }, new Object[] { this });
     } catch (Exception e) {
       LOG.error("Unable to create write strategy: {}", className, e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -1200,7 +1201,7 @@ public class HRegionFileSystem {
     public void createSplitsDir(RegionInfo daughterA, RegionInfo daughterB) throws IOException {
       Path splitdir = getParentSplitsDir();
       if (this.fileSystem.fs.exists(splitdir)) {
-        LOG.info("The " + splitdir + " directory exists.  Hence deleting it to recreate it");
+        LOG.info("The {} directory exists.  Hence deleting it to recreate it.", splitdir);
         if (!this.fileSystem.deleteDir(splitdir)) {
           throw new IOException("Failed deletion of " + splitdir + " before creating them again.");
         }
