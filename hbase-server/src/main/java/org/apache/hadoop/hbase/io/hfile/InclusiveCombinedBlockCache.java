@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class InclusiveCombinedBlockCache extends CombinedBlockCache implements BlockCache {
   public InclusiveCombinedBlockCache(LruBlockCache l1, BlockCache l2) {
     super(l1,l2);
+    l1.setVictimCache(l2);
   }
 
   @Override
