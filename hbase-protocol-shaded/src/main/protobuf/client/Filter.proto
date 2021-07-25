@@ -89,6 +89,8 @@ message FirstKeyOnlyFilter {
 }
 
 message FirstKeyValueMatchingQualifiersFilter {
+  //Just deprecate it to guarantee old client could communicate with server
+  option deprecated = true;
   repeated bytes qualifiers = 1;
 }
 
