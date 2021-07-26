@@ -99,7 +99,8 @@ public class CompactionThreadManager implements ThroughputControllerService {
     this.server = server;
     try {
       this.rootDir = CommonFSUtils.getRootDir(this.conf);
-      this.tableDescriptors = new FSTableDescriptors(conf);
+      this.tableDescriptors = new FSTableDescriptors(CommonFSUtils.getCurrentFileSystem(conf),
+          CommonFSUtils.getRootDir(conf), true, false);
       int largeThreads =
           Math.max(1, conf.getInt(LARGE_COMPACTION_THREADS, LARGE_COMPACTION_THREADS_DEFAULT));
       int smallThreads = conf.getInt(SMALL_COMPACTION_THREADS, SMALL_COMPACTION_THREADS_DEFAULT);
@@ -213,7 +214,8 @@ public class CompactionThreadManager implements ThroughputControllerService {
     tableDescriptors.get(regionInfo.getTable());
     HStore store = getStore(conf, server.getFileSystem(), rootDir,
       tableDescriptors.get(regionInfo.getTable()), regionInfo, cfd.getNameAsString());
-
+    // handle TTL case
+    store.removeUnneededFiles(false);
     // CompactedHFilesDischarger only run on regionserver, so compactionserver does not have
     // opportunity to clean compacted file at that time, we clean compacted files here
     compactionFilesCache.cleanupCompactedFiles(regionInfo, cfd,
