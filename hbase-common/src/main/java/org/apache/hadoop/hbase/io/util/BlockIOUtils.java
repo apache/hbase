@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.io.util;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.fs.ByteBufferReadable;
@@ -27,13 +29,34 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public final class BlockIOUtils {
+  private static final Logger LOG =
+    LoggerFactory.getLogger(BlockIOUtils.class);
+  // TODO: remove the reflection when we update to Hadoop 3.3 or above.
+  private static Method byteBufferPositionedReadMethod;
+
+  static {
+    initByteBufferPositionReadableMethod();
+  }
 
   // Disallow instantiation
   private BlockIOUtils() {
 
+  }
+
+  private static void initByteBufferPositionReadableMethod() {
+    try {
+      //long position, ByteBuffer buf
+      byteBufferPositionedReadMethod = FSDataInputStream.class.getMethod("read", long.class,
+        ByteBuffer.class);
+    } catch (NoSuchMethodException e) {
+      LOG.debug("Unable to find positioned bytebuffer read API of FSDataInputStream. "
+        + "preadWithExtra() will use a temporary on-heap byte array.");
+    }
   }
 
   public static boolean isByteBufferReadable(FSDataInputStream is) {
@@ -197,6 +220,10 @@ public final class BlockIOUtils {
    * {@link IOUtils#readFully(InputStream, byte[], int, int)}, but uses positional read and
    * specifies a number of "extra" bytes that would be desirable but not absolutely necessary to
    * read.
+   *
+   * If the input stream supports ByteBufferPositionedReadable, it reads to the byte buffer
+   * directly, and does not allocate a temporary byte array.
+   *
    * @param buff ByteBuff to read into.
    * @param dis the input stream to read from
    * @param position the position within the stream from which to start reading
@@ -207,6 +234,17 @@ public final class BlockIOUtils {
    */
   public static boolean preadWithExtra(ByteBuff buff, FSDataInputStream dis, long position,
       int necessaryLen, int extraLen) throws IOException {
+    boolean preadbytebuffer = dis.hasCapability("in:preadbytebuffer");
+
+    if (preadbytebuffer) {
+      return preadWithExtraDirectly(buff, dis, position, necessaryLen, extraLen);
+    } else {
+      return preadWithExtraOnHeap(buff, dis, position, necessaryLen, extraLen);
+    }
+  }
+
+  private static boolean preadWithExtraOnHeap(ByteBuff buff, FSDataInputStream dis, long position,
+    int necessaryLen, int extraLen) throws IOException {
     int remain = necessaryLen + extraLen;
     byte[] buf = new byte[remain];
     int bytesRead = 0;
@@ -220,12 +258,46 @@ public final class BlockIOUtils {
       bytesRead += ret;
       remain -= ret;
     }
-    // Copy the bytes from on-heap bytes[] to ByteBuffer[] now, and after resolving HDFS-3246, we
-    // will read the bytes to ByteBuffer[] directly without allocating any on-heap byte[].
-    // TODO I keep the bytes copy here, because I want to abstract the ByteBuffer[]
-    // preadWithExtra method for the upper layer, only need to refactor this method if the
-    // ByteBuffer pread is OK.
     copyToByteBuff(buf, 0, bytesRead, buff);
+    return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
+  }
+
+  private static boolean preadWithExtraDirectly(ByteBuff buff, FSDataInputStream dis, long position,
+    int necessaryLen, int extraLen) throws IOException {
+    int remain = necessaryLen + extraLen, bytesRead = 0, idx = 0;
+    ByteBuffer[] buffers = buff.nioByteBuffers();
+    ByteBuffer cur = buffers[idx];
+    while (bytesRead < necessaryLen) {
+      int ret;
+      while (!cur.hasRemaining()) {
+        if (++idx >= buffers.length) {
+          throw new IOException("Not enough ByteBuffers to read the reminding " + remain + "bytes");
+        }
+        cur = buffers[idx];
+      }
+      cur.limit(cur.position() + Math.min(remain, cur.remaining()));
+      try {
+        ret = (Integer) byteBufferPositionedReadMethod.invoke(dis, position + bytesRead, cur);
+      } catch (IllegalAccessException e) {
+        throw new IOException("Unable to invoke ByteBuffer positioned read when trying to read "
+          + bytesRead + " bytes from position " + position, e);
+      } catch (InvocationTargetException e) {
+        throw new IOException("Encountered an exception when invoking ByteBuffer positioned read"
+          + " when trying to read " + bytesRead + " bytes from position " + position, e);
+      } catch (NullPointerException e) {
+        throw new IOException("something is null");
+      } catch (Exception e) {
+        throw e;
+      }
+      if (ret < 0) {
+        throw new IOException("Premature EOF from inputStream (positional read returned " + ret
+          + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
+          + " extra bytes, successfully read " + bytesRead);
+      }
+      bytesRead += ret;
+      remain -= ret;
+    }
+
     return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
   }
 
