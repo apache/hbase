@@ -592,6 +592,9 @@ public final class ProtobufUtil {
     if (proto.hasLoadColumnFamiliesOnDemand()) {
       get.setLoadColumnFamiliesOnDemand(proto.getLoadColumnFamiliesOnDemand());
     }
+    if (proto.hasMaxResultSize()) {
+      get.setMaxResultSize(proto.getMaxResultSize());
+    }
     return get;
   }
 
@@ -1256,6 +1259,9 @@ public final class ProtobufUtil {
     if (loadColumnFamiliesOnDemand != null) {
       builder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand);
     }
+    if (get.getMaxResultSize() > 0) {
+      builder.setMaxResultSize(get.getMaxResultSize());
+    }
     return builder.build();
   }
 
@@ -1457,6 +1463,7 @@ public final class ProtobufUtil {
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     builder.setAssociatedCellCount(size);
     builder.setStale(result.isStale());
+    builder.setPartial(result.mayHaveMoreCellsInRow());
     return builder.build();
   }
 
@@ -1547,7 +1554,7 @@ public final class ProtobufUtil {
 
     return (cells == null || cells.isEmpty())
         ? (proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT)
-        : Result.create(cells, null, proto.getStale());
+        : Result.create(cells, null, proto.getStale(), proto.getPartial());
   }
 
 
