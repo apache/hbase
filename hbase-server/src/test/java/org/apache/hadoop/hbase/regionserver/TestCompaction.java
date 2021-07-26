@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.SIZE
 import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.TIME_LIMIT_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -72,6 +74,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -85,8 +88,6 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test compaction framework and common functions
@@ -97,8 +98,6 @@ public class TestCompaction {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCompaction.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestCompaction.class);
 
   @Rule
   public TestName name = new TestName();
@@ -346,32 +345,22 @@ public class TestCompaction {
     HStore store = r.getStore(COLUMN_FAMILY);
 
     Collection<HStoreFile> storeFiles = store.getStorefiles();
-    DefaultCompactor tool = (DefaultCompactor)store.storeEngine.getCompactor();
+    DefaultCompactor tool = (DefaultCompactor) store.storeEngine.getCompactor();
     CompactionRequestImpl request = new CompactionRequestImpl(storeFiles);
     tool.compact(request, NoLimitThroughputController.INSTANCE, null);
 
     // Now lets corrupt the compacted file.
     FileSystem fs = store.getFileSystem();
     // default compaction policy created one and only one new compacted file
-    Path dstPath = store.getRegionFileSystem().createTempName();
-    FSDataOutputStream stream = fs.create(dstPath, null, true, 512, (short)3, 1024L, null);
-    stream.writeChars("CORRUPT FILE!!!!");
-    stream.close();
-    Path origPath = store.getRegionFileSystem().commitStoreFile(
-      Bytes.toString(COLUMN_FAMILY), dstPath);
-
-    try {
-      ((HStore)store).moveFileIntoPlace(origPath);
-    } catch (Exception e) {
-      // The complete compaction should fail and the corrupt file should remain
-      // in the 'tmp' directory;
-      assertTrue(fs.exists(origPath));
-      assertFalse(fs.exists(dstPath));
-      LOG.info("testCompactionWithCorruptResult Passed");
-      return;
+    Path tmpPath = store.getRegionFileSystem().createTempName();
+    try (FSDataOutputStream stream = fs.create(tmpPath, null, true, 512, (short) 3, 1024L, null)) {
+      stream.writeChars("CORRUPT FILE!!!!");
     }
-    fail("testCompactionWithCorruptResult failed since no exception was" +
-        "thrown while completing a corrupt file");
+    // The complete compaction should fail and the corrupt file should remain
+    // in the 'tmp' directory;
+    assertThrows(IOException.class, () -> store.doCompaction(null, null, null,
+      EnvironmentEdgeManager.currentTime(), Collections.singletonList(tmpPath)));
+    assertTrue(fs.exists(tmpPath));
   }
 
   /**
