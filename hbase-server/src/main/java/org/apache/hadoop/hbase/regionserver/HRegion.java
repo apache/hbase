@@ -142,6 +142,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.Write
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.ForbidMajorCompactionChecker;
+import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
@@ -3871,8 +3872,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             Result result;
             if (returnResults) {
               // convert duplicate increment/append to get
-              List<Cell> results = region.get(toGet(mutation), false, nonceGroup, nonce);
-              result = Result.create(results);
+              result = region.get(toGet(mutation), false, nonceGroup, nonce);
             } else {
               result = Result.EMPTY_RESULT;
             }
@@ -7524,9 +7524,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public Result get(final Get get) throws IOException {
     prepareGet(get);
-    List<Cell> results = get(get, true);
-    boolean stale = this.getRegionInfo().getReplicaId() != 0;
-    return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
+    return get(get, true, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   void prepareGet(final Get get) throws IOException {
@@ -7545,17 +7543,37 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public List<Cell> get(Get get, boolean withCoprocessor) throws IOException {
-    return get(get, withCoprocessor, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    return get(get, null, withCoprocessor, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  private List<Cell> get(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
+  private Result get(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
     throws IOException {
-    return TraceUtil.trace(() -> getInternal(get, withCoprocessor, nonceGroup, nonce),
+
+    ScannerContext scannerContext = get.getMaxResultSize() > 0
+      ? ScannerContext.newBuilder()
+          .setSizeLimit(LimitScope.BETWEEN_CELLS, get.getMaxResultSize(), get.getMaxResultSize())
+          .build()
+      : null;
+
+    List<Cell> result = get(get, scannerContext, withCoprocessor, nonceGroup, nonce);
+    boolean stale = this.getRegionInfo().getReplicaId() != 0;
+
+    return Result.create(
+      result,
+      get.isCheckExistenceOnly() ? !result.isEmpty() : null,
+      stale,
+      scannerContext != null && scannerContext.mayHaveMoreCellsInRow());
+  }
+
+  private List<Cell> get(Get get, ScannerContext scannerContext, boolean withCoprocessor,
+    long nonceGroup, long nonce) throws IOException {
+    return TraceUtil.trace(
+      () -> getInternal(get, scannerContext, withCoprocessor, nonceGroup, nonce),
       () -> createRegionSpan("Region.get"));
   }
 
-  private List<Cell> getInternal(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
-    throws IOException {
+  private List<Cell> getInternal(Get get, ScannerContext scannerContext, boolean withCoprocessor,
+    long nonceGroup, long nonce) throws IOException {
     List<Cell> results = new ArrayList<>();
     long before = EnvironmentEdgeManager.currentTime();
 
@@ -7572,7 +7590,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     try (RegionScanner scanner = getScanner(scan, null, nonceGroup, nonce)) {
       List<Cell> tmp = new ArrayList<>();
-      scanner.next(tmp);
+      scanner.next(tmp, scannerContext);
       // Copy EC to heap, then close the scanner.
       // This can be an EXPENSIVE call. It may make an extra copy from offheap to onheap buffers.
       // See more details in HBASE-26036.

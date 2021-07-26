@@ -24,20 +24,23 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
+import org.apache.hadoop.hbase.filter.FamilyFilter;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.FirstKeyValueMatchingQualifiersFilter;
 import org.apache.hadoop.hbase.filter.RandomRowFilter;
@@ -132,6 +135,46 @@ public class TestPartialResultsFromClientSide {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testGetPartialResults() throws Exception {
+    byte[] row = ROWS[0];
+
+    Result result;
+    int cf = 0;
+    int qf = 0;
+    int total = 0;
+
+    do {
+      // this will ensure we always return only 1 result
+      Get get = new Get(row)
+        .setMaxResultSize(1);
+
+      // we want to page through the entire row, this will ensure we always get the next
+      if (total > 0) {
+        get.setFilter(new FilterList(FilterList.Operator.MUST_PASS_ALL,
+          new ColumnRangeFilter(QUALIFIERS[qf], true, null, false),
+          new FamilyFilter(CompareOperator.GREATER_OR_EQUAL, new BinaryComparator(FAMILIES[cf]))));
+      }
+
+      // all values are the same, but there should be a value
+      result = TABLE.get(get);
+      assertTrue(String.format("Value for family %s (# %s) and qualifier %s (# %s)",
+        Bytes.toStringBinary(FAMILIES[cf]), cf, Bytes.toStringBinary(QUALIFIERS[qf]), qf),
+        Bytes.equals(VALUE, result.getValue(FAMILIES[cf], QUALIFIERS[qf])));
+
+      total++;
+      if (++qf >= NUM_QUALIFIERS) {
+        cf++;
+        qf = 0;
+      }
+    } while (result.mayHaveMoreCellsInRow());
+
+    // ensure we iterated all cells in row
+    assertEquals(NUM_COLS, total);
+    assertEquals(NUM_FAMILIES, cf);
+    assertEquals(0, qf);
   }
 
   /**
