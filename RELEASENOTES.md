@@ -27,6 +27,13 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-25165](https://issues.apache.org/jira/browse/HBASE-25165) | *Minor* | **Change 'State time' in UI so sorts**
+
+Start time on the Master UI is now displayed using ISO8601 format instead of java Date#toString().
+
+
+---
+
 * [HBASE-26088](https://issues.apache.org/jira/browse/HBASE-26088) | *Critical* | **conn.getBufferedMutator(tableName) leaks thread executors and other problems**
 
 The API doc for Connection#getBufferedMutator(TableName) and Connection#getBufferedMutator(BufferedMutatorParams) mentioned that when user dont pass a ThreadPool to be used, we use the ThreadPool in the Connection.  But in reality, we were creating new ThreadPool in such cases.
