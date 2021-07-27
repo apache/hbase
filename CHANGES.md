@@ -46,6 +46,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-26001](https://issues.apache.org/jira/browse/HBASE-26001) | When turn on access control, the cell level TTL of Increment and Append operations is invalid. |  Minor | Coprocessors |
 | [HBASE-24984](https://issues.apache.org/jira/browse/HBASE-24984) | WAL corruption due to early DBBs re-use when Durability.ASYNC\_WAL is used with multi operation |  Critical | rpc, wal |
 | [HBASE-26088](https://issues.apache.org/jira/browse/HBASE-26088) | conn.getBufferedMutator(tableName) leaks thread executors and other problems |  Critical | Client |
 | [HBASE-25973](https://issues.apache.org/jira/browse/HBASE-25973) | Balancer should explain progress in a better way in log |  Major | Balancer |
@@ -63,7 +64,6 @@
 | [HBASE-26013](https://issues.apache.org/jira/browse/HBASE-26013) | Get operations readRows metrics becomes zero after HBASE-25677 |  Minor | metrics |
 | [HBASE-25877](https://issues.apache.org/jira/browse/HBASE-25877) | Add access  check for compactionSwitch |  Major | security |
 | [HBASE-25698](https://issues.apache.org/jira/browse/HBASE-25698) | Persistent IllegalReferenceCountException at scanner open when using TinyLfuBlockCache |  Major | BucketCache, HFile, Scanners |
-| [HBASE-26001](https://issues.apache.org/jira/browse/HBASE-26001) | When turn on access control, the cell level TTL of Increment and Append operations is invalid. |  Minor | Coprocessors |
 | [HBASE-25984](https://issues.apache.org/jira/browse/HBASE-25984) | FSHLog WAL lockup with sync future reuse [RS deadlock] |  Critical | regionserver, wal |
 | [HBASE-25997](https://issues.apache.org/jira/browse/HBASE-25997) | NettyRpcFrameDecoder decode request header wrong  when handleTooBigRequest |  Major | rpc |
 | [HBASE-25967](https://issues.apache.org/jira/browse/HBASE-25967) | The readRequestsCount does not calculate when the outResults is empty |  Major | metrics |
@@ -88,6 +88,7 @@
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
 | [HBASE-25934](https://issues.apache.org/jira/browse/HBASE-25934) | Add username for RegionScannerHolder |  Minor | . |
+| [HBASE-26123](https://issues.apache.org/jira/browse/HBASE-26123) | Restore fields dropped by HBASE-25986 to public interfaces |  Major | . |
 | [HBASE-25521](https://issues.apache.org/jira/browse/HBASE-25521) | Change ChoreService and ScheduledChore to IA.Private |  Major | util |
 | [HBASE-26015](https://issues.apache.org/jira/browse/HBASE-26015) | Should implement getRegionServers(boolean) method in AsyncAdmin |  Major | Admin, Client |
 | [HBASE-25918](https://issues.apache.org/jira/browse/HBASE-25918) | Upgrade hbase-thirdparty dependency to 3.5.1 |  Critical | dependencies |
