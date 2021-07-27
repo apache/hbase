@@ -85,10 +85,14 @@ message RemoveRSGroupResponse {
 
 message BalanceRSGroupRequest {
   required string r_s_group_name = 1;
+  optional bool ignore_rit = 2;
+  optional bool dry_run = 3;
 }
 
 message BalanceRSGroupResponse {
   required bool balanceRan = 1;
+  optional uint32 moves_calculated = 2;
+  optional uint32 moves_executed = 3;
 }
 
 message ListRSGroupInfosRequest {

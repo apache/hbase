@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -93,7 +95,7 @@ public interface RSGroupInfoManager {
   /**
    * Balance a region server group.
    */
-  boolean balanceRSGroup(String groupName) throws IOException;
+  BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException;
 
   /**
    * Set group for tables.

@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -79,12 +81,65 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
   @Test
   public void testGroupBalance() throws Exception {
-    LOG.info(name.getMethodName());
-    String newGroupName = getGroupName(name.getMethodName());
+    String methodName = name.getMethodName();
+
+    LOG.info(methodName);
+    String newGroupName = getGroupName(methodName);
+    TableName tableName = TableName.valueOf(TABLE_PREFIX + "_ns", methodName);
+
+    ServerName first = setupBalanceTest(newGroupName, tableName);
+
+    // balance the other group and make sure it doesn't affect the new group
+    ADMIN.balancerSwitch(true, true);
+    ADMIN.balanceRSGroup(RSGroupInfo.DEFAULT_GROUP);
+    assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
+
+    // disable balance, balancer will not be run and return false
+    ADMIN.balancerSwitch(false, true);
+    assertFalse(ADMIN.balanceRSGroup(newGroupName).isBalancerRan());
+    assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
+
+    // enable balance
+    ADMIN.balancerSwitch(true, true);
+    ADMIN.balanceRSGroup(newGroupName);
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        for (List<String> regions : getTableServerRegionMap().get(tableName).values()) {
+          if (2 != regions.size()) {
+            return false;
+          }
+        }
+        return true;
+      }
+    });
+    ADMIN.balancerSwitch(false, true);
+  }
+
+  @Test
+  public void testGroupDryRunBalance() throws Exception {
+    String methodName = name.getMethodName();
+
+    LOG.info(methodName);
+    String newGroupName = getGroupName(methodName);
+    final TableName tableName = TableName.valueOf(TABLE_PREFIX + "_ns", methodName);
+
+    ServerName first = setupBalanceTest(newGroupName, tableName);
+
+    // run the balancer in dry run mode. it should return true, but should not actually move any regions
+    ADMIN.balancerSwitch(true, true);
+    BalanceResponse response = ADMIN.balanceRSGroup(newGroupName,
+      BalanceRequest.newBuilder().setDryRun(true).build());
+    assertTrue(response.isBalancerRan());
+    assertTrue(response.getMovesCalculated() > 0);
+    assertEquals(0, response.getMovesExecuted());
+    // validate imbalance still exists.
+    assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
+  }
+
+  private ServerName setupBalanceTest(String newGroupName, TableName tableName) throws Exception {
     addGroup(newGroupName, 3);
 
-    final TableName tableName =
-      TableName.valueOf(TABLE_PREFIX + "_ns", getNameWithoutIndex(name.getMethodName()));
     ADMIN.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
       .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
@@ -126,31 +181,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
       }
     });
 
-    // balance the other group and make sure it doesn't affect the new group
-    ADMIN.balancerSwitch(true, true);
-    ADMIN.balanceRSGroup(RSGroupInfo.DEFAULT_GROUP);
-    assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
-
-    // disable balance, balancer will not be run and return false
-    ADMIN.balancerSwitch(false, true);
-    assertFalse(ADMIN.balanceRSGroup(newGroupName));
-    assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
-
-    // enable balance
-    ADMIN.balancerSwitch(true, true);
-    ADMIN.balanceRSGroup(newGroupName);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        for (List<String> regions : getTableServerRegionMap().get(tableName).values()) {
-          if (2 != regions.size()) {
-            return false;
-          }
-        }
-        return true;
-      }
-    });
-    ADMIN.balancerSwitch(false, true);
+    return first;
   }
 
   @Test
@@ -168,7 +199,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
       .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, rsGroupInfo.getName()).build());
 
     ADMIN.balancerSwitch(true, true);
-    assertTrue(ADMIN.balanceRSGroup(rsGroupInfo.getName()));
+    assertTrue(ADMIN.balanceRSGroup(rsGroupInfo.getName()).isBalancerRan());
     ADMIN.balancerSwitch(false, true);
     assertTrue(OBSERVER.preBalanceRSGroupCalled);
     assertTrue(OBSERVER.postBalanceRSGroupCalled);

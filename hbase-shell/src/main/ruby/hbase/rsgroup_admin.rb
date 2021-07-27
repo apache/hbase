@@ -18,6 +18,8 @@
 include Java
 java_import org.apache.hadoop.hbase.util.Pair
 
+require 'hbase/balancer_utils'
+
 # Wrapper for org.apache.hadoop.hbase.group.GroupAdminClient
 # Which is an API to manage region server groups
 
@@ -60,8 +62,9 @@ module Hbase
 
     #--------------------------------------------------------------------------
     # balance a group
-    def balance_rs_group(group_name)
-      @admin.balanceRSGroup(group_name)
+    def balance_rs_group(group_name, *args)
+      request = ::Hbase::BalancerUtils.create_balance_request(args)
+      @admin.balanceRSGroup(group_name, request)
     end
 
     #--------------------------------------------------------------------------

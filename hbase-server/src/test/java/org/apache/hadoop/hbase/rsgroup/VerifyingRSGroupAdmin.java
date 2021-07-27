@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -329,12 +331,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.balancerSwitch(onOrOff, synchronous);
   }
 
-  public boolean balance() throws IOException {
-    return admin.balance();
-  }
-
-  public boolean balance(boolean force) throws IOException {
-    return admin.balance(force);
+  public BalanceResponse balance(BalanceRequest request) throws IOException {
+    return admin.balance(request);
   }
 
   public boolean isBalancerEnabled() throws IOException {
@@ -829,8 +827,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     verify();
   }
 
-  public boolean balanceRSGroup(String groupName) throws IOException {
-    return admin.balanceRSGroup(groupName);
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+    return admin.balanceRSGroup(groupName, request);
   }
 
   @Override
