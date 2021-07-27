@@ -824,7 +824,7 @@ public class TestMultiParallel {
 
     @Override
     public void postBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<RegionPlan> plans) throws IOException {
+        BalanceRequest request, List<RegionPlan> plans) throws IOException {
       if (!plans.isEmpty()) {
         postBalanceCount.incrementAndGet();
       }

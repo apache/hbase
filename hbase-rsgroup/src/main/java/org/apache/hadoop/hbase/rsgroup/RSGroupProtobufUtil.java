@@ -23,10 +23,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -34,6 +36,21 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 final class RSGroupProtobufUtil {
   private RSGroupProtobufUtil() {
+  }
+
+  static BalanceRSGroupRequest createBalanceRSGroupRequest(String groupName, BalanceRequest request) {
+    return BalanceRSGroupRequest.newBuilder()
+      .setRSGroupName(groupName)
+      .setDryRun(request.isDryRun())
+      .setIgnoreRit(request.isIgnoreRegionsInTransition())
+      .build();
+  }
+
+  static BalanceRequest toBalanceRequest(BalanceRSGroupRequest request) {
+    return BalanceRequest.newBuilder()
+      .setDryRun(request.hasDryRun() && request.getDryRun())
+      .setIgnoreRegionsInTransition(request.hasIgnoreRit() && request.getIgnoreRit())
+      .build();
   }
 
   static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {

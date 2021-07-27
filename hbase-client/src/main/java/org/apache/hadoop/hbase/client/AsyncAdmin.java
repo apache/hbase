@@ -1257,7 +1257,7 @@ public interface AsyncAdmin {
    *         {@link CompletableFuture}.
    */
   default CompletableFuture<Boolean> balance() {
-    return balance(false);
+    return balance(BalanceRequest.defaultInstance());
   }
 
   /**
@@ -1267,8 +1267,25 @@ public interface AsyncAdmin {
    * @param forcible whether we should force balance even if there is region in transition.
    * @return True if balancer ran, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}.
+   * @deprecated Since 2.5.0. Will be removed in 4.0.0.
+   *  Use {@link #balance(BalanceRequest)} instead.
    */
-  CompletableFuture<Boolean> balance(boolean forcible);
+  default CompletableFuture<Boolean> balance(boolean forcible) {
+    return balance(
+      BalanceRequest.newBuilder()
+        .setIgnoreRegionsInTransition(forcible)
+        .build()
+    );
+  }
+
+  /**
+   * Invoke the balancer with the given balance request.  The BalanceRequest defines how the
+   * balancer will run. See {@link BalanceRequest} for more details.
+   *
+   * @param request defines how the balancer should run
+   * @return <code>true</code> if balancer ran, <code>false</code> otherwise.
+   */
+  CompletableFuture<Boolean> balance(BalanceRequest request);
 
   /**
    * Query the current state of the balancer.

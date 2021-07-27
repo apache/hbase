@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -92,8 +93,8 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
   }
 
   @Override
-  public boolean balanceRSGroup(String groupName) throws IOException {
-    return wrapped.balanceRSGroup(groupName);
+  public boolean balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+    return wrapped.balanceRSGroup(groupName, request);
   }
 
   @Override

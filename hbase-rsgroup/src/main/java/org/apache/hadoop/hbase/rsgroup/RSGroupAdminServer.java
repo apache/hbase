@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -508,28 +509,30 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   }
 
   @Override
-  public boolean balanceRSGroup(String groupName) throws IOException {
+  public boolean balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
     ServerManager serverManager = master.getServerManager();
     LoadBalancer balancer = master.getLoadBalancer();
 
     synchronized (balancer) {
       // If balance not true, don't run balancer.
-      if (!((HMaster) master).isBalancerOn()) {
+      if (!((HMaster) master).isBalancerOn() && !request.isDryRun()) {
         return false;
       }
 
       if (getRSGroupInfo(groupName) == null) {
         throw new ConstraintException("RSGroup does not exist: "+groupName);
       }
+
       // Only allow one balance run at at time.
       Map<String, RegionState> groupRIT = rsGroupGetRegionsInTransition(groupName);
-      if (groupRIT.size() > 0) {
+      if (groupRIT.size() > 0 && !request.isIgnoreRegionsInTransition()) {
         LOG.debug("Not running balancer because {} region(s) in transition: {}", groupRIT.size(),
             StringUtils.abbreviate(
               master.getAssignmentManager().getRegionStates().getRegionsInTransition().toString(),
               256));
         return false;
       }
+
       if (serverManager.areDeadServersInProgress()) {
         LOG.debug("Not running balancer because processing dead regionserver(s): {}",
             serverManager.getDeadServers());
@@ -541,6 +544,11 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           getRSGroupAssignmentsByTable(master.getTableStateManager(), groupName);
       List<RegionPlan> plans = balancer.balanceCluster(assignmentsByTable);
       boolean balancerRan = !plans.isEmpty();
+
+      if (request.isDryRun()) {
+        return balancerRan;
+      }
+
       if (balancerRan) {
         LOG.info("RSGroup balance {} starting with plan count: {}", groupName, plans.size());
         master.executeRegionPlansWithThrottling(plans);

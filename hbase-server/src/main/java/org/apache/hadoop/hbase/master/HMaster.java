@@ -61,6 +61,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -1772,7 +1773,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   public boolean balance() throws IOException {
-    return balance(false);
+    return balance(BalanceRequest.defaultInstance());
   }
 
   /**
@@ -1798,10 +1799,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     return false;
   }
 
-  public boolean balance(boolean force) throws IOException {
-    if (loadBalancerTracker == null || !loadBalancerTracker.isBalancerOn()) {
+  public boolean balance(BalanceRequest request) throws IOException {
+    if (loadBalancerTracker == null
+      || !(loadBalancerTracker.isBalancerOn() || request.isDryRun())) {
       return false;
     }
+
     if (skipRegionManagementAction("balancer")) {
       return false;
     }
@@ -1820,10 +1823,11 @@ public class HMaster extends HRegionServer implements MasterServices {
           toPrint = regionsInTransition.subList(0, max);
           truncated = true;
         }
-        if (!force || metaInTransition) {
-          LOG.info("Not running balancer (force=" + force + ", metaRIT=" + metaInTransition +
-            ") because " + regionsInTransition.size() + " region(s) in transition: " + toPrint +
-            (truncated? "(truncated list)": ""));
+
+        if (!request.isIgnoreRegionsInTransition() || metaInTransition) {
+          LOG.info("Not running balancer (ignoreRIT=false" + ", metaRIT=" + metaInTransition +
+            ") because " + regionsInTransition.size() + " region(s) in transition: " + toPrint
+            + (truncated? "(truncated list)": ""));
           return false;
         }
       }
@@ -1835,7 +1839,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       if (this.cpHost != null) {
         try {
-          if (this.cpHost.preBalance()) {
+          if (this.cpHost.preBalance(request)) {
             LOG.debug("Coprocessor bypassing balancer request");
             return false;
           }
@@ -1857,16 +1861,22 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
 
+      // make one last check that the cluster isn't shutting down before proceeding.
       if (skipRegionManagementAction("balancer")) {
-        // make one last check that the cluster isn't shutting down before proceeding.
-        return false;
+        // return isDryRun because in this case the dry run did run, and the user could see
+        // the results in the master logs.
+        return request.isDryRun();
       }
 
-      List<RegionPlan> sucRPs = executeRegionPlansWithThrottling(plans);
+      // For dry run we don't actually want to execute the moves, but we do want
+      // to execute the coprocessor below
+      List<RegionPlan> sucRPs = request.isDryRun()
+        ? Collections.emptyList()
+        : executeRegionPlansWithThrottling(plans);
 
       if (this.cpHost != null) {
         try {
-          this.cpHost.postBalance(sucRPs);
+          this.cpHost.postBalance(request, sucRPs);
         } catch (IOException ioe) {
           // balancing already succeeded so don't change the result
           LOG.error("Error invoking master coprocessor postBalance()", ioe);

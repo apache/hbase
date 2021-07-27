@@ -1477,23 +1477,11 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public boolean balance() throws IOException {
+  public boolean balance(BalanceRequest request) throws IOException {
     return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
-      @Override
-      protected Boolean rpcCall() throws Exception {
-        return master.balance(getRpcController(),
-            RequestConverter.buildBalanceRequest(false)).getBalancerRan();
-      }
-    });
-  }
-
-  @Override
-  public boolean balance(final boolean force) throws IOException {
-    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
-      @Override
-      protected Boolean rpcCall() throws Exception {
-        return master.balance(getRpcController(),
-            RequestConverter.buildBalanceRequest(force)).getBalancerRan();
+      @Override protected Boolean rpcCall() throws Exception {
+        return master.balance(getRpcController(), ProtobufUtil.toBalanceRequest(request))
+          .getBalancerRan();
       }
     });
   }

@@ -27,6 +27,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HConstants;
@@ -783,6 +784,10 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public boolean balance(boolean force) {
+    throw new NotImplementedException("balance not supported in ThriftAdmin");
+  }
+
+  @Override public boolean balance(BalanceRequest request) throws IOException {
     throw new NotImplementedException("balance not supported in ThriftAdmin");
   }
 

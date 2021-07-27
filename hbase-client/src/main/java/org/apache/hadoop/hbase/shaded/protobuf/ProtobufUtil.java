@@ -46,6 +46,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
@@ -3750,6 +3751,20 @@ public final class ProtobufUtil {
     return HBaseProtos.LogRequest.newBuilder()
       .setLogClassName(balancerRejectionsRequest.getClass().getName())
       .setLogMessage(balancerRejectionsRequest.toByteString())
+      .build();
+  }
+
+  public static MasterProtos.BalanceRequest toBalanceRequest(BalanceRequest request) {
+    return MasterProtos.BalanceRequest.newBuilder()
+      .setDryRun(request.isDryRun())
+      .setIgnoreRit(request.isIgnoreRegionsInTransition())
+      .build();
+  }
+
+  public static BalanceRequest toBalanceRequest(MasterProtos.BalanceRequest request) {
+    return BalanceRequest.newBuilder()
+      .setDryRun(request.hasDryRun() && request.getDryRun())
+      .setIgnoreRegionsInTransition(request.hasIgnoreRit() && request.getIgnoreRit())
       .build();
   }
 

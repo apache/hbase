@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -291,18 +292,21 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     @Override
     public void balanceRSGroup(RpcController controller,
         BalanceRSGroupRequest request, RpcCallback<BalanceRSGroupResponse> done) {
+      BalanceRequest balanceRequest = RSGroupProtobufUtil.toBalanceRequest(request);
+
       BalanceRSGroupResponse.Builder builder = BalanceRSGroupResponse.newBuilder();
       LOG.info(master.getClientIdAuditPrefix() + " balance rsgroup, group="
           + request.getRSGroupName());
       try {
         if (master.getMasterCoprocessorHost() != null) {
-          master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName());
+          master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName(), balanceRequest);
         }
         checkPermission("balanceRSGroup");
-        boolean balancerRan = groupAdminServer.balanceRSGroup(request.getRSGroupName());
+        boolean balancerRan = groupAdminServer.balanceRSGroup(request.getRSGroupName(), balanceRequest);
         builder.setBalanceRan(balancerRan);
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postBalanceRSGroup(request.getRSGroupName(),
+              balanceRequest,
               balancerRan);
         }
       } catch (IOException e) {
