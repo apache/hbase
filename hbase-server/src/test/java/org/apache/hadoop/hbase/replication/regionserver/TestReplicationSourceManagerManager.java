@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -507,6 +508,20 @@ public class TestReplicationSourceManagerManager extends TestReplicationSourceMa
             && (!peers.contains(peerId));
       }
     });
+  }
+
+  @Test
+  public void testSameWALPrefix() throws IOException {
+    Set<Path> latestWalsBefore = manager.getLastestPath();
+    Path walName1 = new Path("localhost,8080,12345-45678-Peer.34567");
+    Path walName2 = new Path("localhost,8080,12345.56789");
+    manager.preLogRoll(walName1);
+    manager.preLogRoll(walName2);
+    Set<Path> latestWals = manager.getLastestPath();
+    latestWals.removeAll(latestWalsBefore);
+    assertEquals(2, latestWals.size());
+    assertTrue(latestWals.contains(walName1));
+    assertTrue(latestWals.contains(walName2));
   }
 
   private WALEdit getBulkLoadWALEdit() {

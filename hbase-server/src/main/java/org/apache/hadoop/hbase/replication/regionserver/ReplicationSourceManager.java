@@ -19,14 +19,13 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -108,7 +107,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Configuration conf;
   private final FileSystem fs;
   // The paths to the latest log of each wal group, for new coming peers
-  private Set<Path> latestPaths;
+  private final Map<String, Path> latestPaths;
   // Path to the wals directories
   private final Path logDir;
   // Path to the wal archive
@@ -171,7 +170,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     tfb.setDaemon(true);
     this.executor.setThreadFactory(tfb.build());
     this.rand = new Random();
-    this.latestPaths = Collections.synchronizedSet(new HashSet<Path>());
+    this.latestPaths = new HashMap<>();
     replicationForBulkLoadDataEnabled =
         conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
           HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
@@ -305,23 +304,22 @@ public class ReplicationSourceManager implements ReplicationListener {
       this.walsById.put(id, walsByGroup);
       // Add the latest wal to that source's queue
       synchronized (latestPaths) {
-        if (this.latestPaths.size() > 0) {
-          for (Path logPath : latestPaths) {
-            String name = logPath.getName();
-            String walPrefix = DefaultWALProvider.getWALPrefixFromWALName(name);
-            SortedSet<String> logs = new TreeSet<String>();
-            logs.add(name);
-            walsByGroup.put(walPrefix, logs);
+        if (!latestPaths.isEmpty()) {
+          for (Map.Entry<String, Path> walPrefixAndPath : latestPaths.entrySet()) {
+            Path walPath = walPrefixAndPath.getValue();
+            SortedSet<String> wals = new TreeSet<>();
+            wals.add(walPath.getName());
+            walsByGroup.put(walPrefixAndPath.getKey(), wals);
             try {
-              this.replicationQueues.addLog(id, name);
+              this.replicationQueues.addLog(id, walPath.getName());
             } catch (ReplicationException e) {
               String message =
                   "Cannot add log to queue when creating a new source, queueId=" + id
-                      + ", filename=" + name;
+                      + ", filename=" + walPath.getName();
               server.stop(message);
               throw e;
             }
-            src.enqueueLog(logPath);
+            src.enqueueLog(walPath);
           }
         }
       }
@@ -409,15 +407,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     String logName = newLog.getName();
     String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(logName);
     synchronized (latestPaths) {
-      Iterator<Path> iterator = latestPaths.iterator();
-      while (iterator.hasNext()) {
-        Path path = iterator.next();
-        if (path.getName().contains(logPrefix)) {
-          iterator.remove();
-          break;
-        }
-      }
-      this.latestPaths.add(newLog);
+      latestPaths.put(logPrefix, newLog);
     }
   }
 
@@ -690,6 +680,12 @@ public class ReplicationSourceManager implements ReplicationListener {
       } catch (Exception e) {
         LOG.error("Error while adding a new peer", e);
       }
+    }
+  }
+
+  Set<Path> getLastestPath() {
+    synchronized (latestPaths) {
+      return Sets.newHashSet(latestPaths.values());
     }
   }
 
