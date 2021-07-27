@@ -114,6 +114,7 @@ import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
 import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
 import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
 import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
+import org.apache.hadoop.hbase.master.http.RitServlet;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
@@ -654,6 +655,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   protected void configureInfoServer() {
     infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
+    infoServer.addPrivilegedServlet("rits", "/rits", RitServlet.class);
     infoServer.setAttribute(MASTER, this);
     if (maintenanceMode) {
       super.configureInfoServer();

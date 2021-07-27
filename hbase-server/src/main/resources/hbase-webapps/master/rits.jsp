@@ -27,6 +27,7 @@
          import="org.apache.hadoop.hbase.master.assignment.RegionStateNode"
          import="org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure"
 %>
+<%@ page import="org.apache.hadoop.hbase.master.RegionState" %>
 <%
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
     List<RegionStateNode> rit = master.getAssignmentManager().getRegionsInTransition();
@@ -69,24 +70,29 @@
         <div class="page-header">
             <a href="/rits.jsp?format=txt&filter=region&table=<%=table%>&state=<%=state%>" class="btn btn-primary">Regions in text format</a>
             <a href="/rits.jsp?format=txt&filter=procedure&table=<%=table%>&state=<%=state%>" class="btn btn-info">Procedures in text format</a>
+            <a href="/rits" class="btn btn-info">RIT info as JSON</a>
             <p>regions and procedures in text format can be copied and passed to command-line utils such as hbck2</p>
         </div>
     </div>
 
-    <% if (rit != null && rit.size() > 0) { %>
+  <% if (rit != null && rit.size() > 0) { %>
         <table class="table table-striped">
             <tr>
                 <th>Region</th>
                 <th>Table</th>
                 <th>RegionState</th>
+                <th>Server</th>
                 <th>Procedure</th>
                 <th>ProcedureState</th>
+                <th>Start Time</th>
+                <th>Duration (ms)</th>
             </tr>
             <% for (RegionStateNode regionStateNode : rit) { %>
             <tr>
                 <td><%= regionStateNode.getRegionInfo().getEncodedName() %></td>
                 <td><%= regionStateNode.getRegionInfo().getTable() %></td>
                 <td><%= regionStateNode.getState() %></td>
+                <td><%= regionStateNode.getRegionLocation().getServerName() %></td>
                 <%
                     TransitRegionStateProcedure procedure = regionStateNode.getProcedure();
 
@@ -98,13 +104,18 @@
                     <td><%= procedure.getProcId() %></td>
                     <td><%= escapeXml(procedure.getState().toString() + (procedure.isBypass() ? "(Bypassed)" : "")) %></td>
                 <% } %>
+
+                <% RegionState rs = regionStateNode.toRegionState(); %>
+                <td><%= rs.getStamp() %></td>
+                <td><%= System.currentTimeMillis() - rs.getStamp() %></td>
             </tr>
             <% } %>
             <p><%= rit.size() %> region(s) in transition.</p>
         </table>
-    <% } else { %>
-    <p> no region in transition right now. </p>
-    <% } %>
+  <% } else { %>
+  <p> no region in transition right now. </p>
+  <% } %>
+
 </div>
 <jsp:include page="footer.jsp" />
 
