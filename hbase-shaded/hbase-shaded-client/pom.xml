@@ -76,7 +76,6 @@
                                     <exclude>com.github.spotbugs:*</exclude>
                                     <exclude>org.apache.htrace:*</exclude>
                                     <exclude>org.apache.yetus:*</exclude>
-                                    <exclude>org.apache.logging.log4j:*</exclude>
                                     <exclude>log4j:*</exclude>
                                     <exclude>commons-logging:*</exclude>
                                     <exclude>org.javassist:*</exclude>
