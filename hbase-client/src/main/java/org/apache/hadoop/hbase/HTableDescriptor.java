@@ -57,6 +57,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final Bytes OWNER_KEY = TableDescriptorBuilder.OWNER_KEY;
   public static final String READONLY = TableDescriptorBuilder.READONLY;
   public static final String COMPACTION_ENABLED = TableDescriptorBuilder.COMPACTION_ENABLED;
+  public static final boolean DEFAULT_NORMALIZATION_ENABLED =
+    TableDescriptorBuilder.DEFAULT_NORMALIZATION_ENABLED;
   public static final String SPLIT_ENABLED = TableDescriptorBuilder.SPLIT_ENABLED;
   public static final String MERGE_ENABLED = TableDescriptorBuilder.MERGE_ENABLED;
   public static final String MEMSTORE_FLUSHSIZE = TableDescriptorBuilder.MEMSTORE_FLUSHSIZE;

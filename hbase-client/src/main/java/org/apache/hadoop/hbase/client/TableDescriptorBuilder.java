@@ -107,6 +107,12 @@ public class TableDescriptorBuilder {
   private static final Bytes MERGE_ENABLED_KEY = new Bytes(Bytes.toBytes(MERGE_ENABLED));
 
   /**
+   * Constant that denotes whether the table is normalized by default.
+   */
+  @InterfaceAudience.Private
+  public static final boolean DEFAULT_NORMALIZATION_ENABLED = false;
+
+  /**
    * Used by HBase Shell interface to access this metadata attribute which represents the maximum
    * size of the memstore after which its contents are flushed onto the disk.
    */
@@ -903,7 +909,8 @@ public class TableDescriptorBuilder {
      **/
     @Override
     public boolean isNormalizationEnabled() {
-      return getOrDefault(NORMALIZATION_ENABLED_KEY, Boolean::valueOf, false);
+      return getOrDefault(NORMALIZATION_ENABLED_KEY, Boolean::valueOf,
+        DEFAULT_NORMALIZATION_ENABLED);
     }
 
     /**
