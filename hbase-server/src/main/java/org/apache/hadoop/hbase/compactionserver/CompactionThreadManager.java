@@ -158,7 +158,8 @@ public class CompactionThreadManager implements ThroughputControllerService {
     status.setStatus("Open store");
     HStore store = getStore(conf, server.getFileSystem(), rootDir,
       tableDescriptors.get(regionInfo.getTable()), regionInfo, cfd.getNameAsString());
-
+    // handle TTL case
+    store.removeUnneededFiles(false);
     // CompactedHFilesDischarger only run on regionserver, so compactionserver does not have
     // opportunity to clean compacted file at that time, we clean compacted files here
     compactionFilesCache.cleanupCompactedFiles(regionInfo, cfd,
