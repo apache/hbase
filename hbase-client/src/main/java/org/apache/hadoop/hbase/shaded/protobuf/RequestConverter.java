@@ -105,7 +105,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
@@ -1324,15 +1323,6 @@ public final class RequestConverter {
    */
   public static IsMasterRunningRequest buildIsMasterRunningRequest() {
     return IsMasterRunningRequest.newBuilder().build();
-  }
-
-  /**
-   * Creates a protocol buffer BalanceRequest
-   *
-   * @return a BalanceRequest
-   */
-  public static BalanceRequest buildBalanceRequest(boolean force) {
-    return BalanceRequest.newBuilder().setForce(force).build();
   }
 
   /**

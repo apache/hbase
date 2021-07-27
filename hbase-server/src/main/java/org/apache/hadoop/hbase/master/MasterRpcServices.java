@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -48,6 +47,8 @@ import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
@@ -127,7 +128,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
@@ -137,7 +137,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
@@ -176,8 +175,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
@@ -696,11 +693,10 @@ public class MasterRpcServices extends RSRpcServices implements
 
 
   @Override
-  public BalanceResponse balance(RpcController controller,
-      BalanceRequest request) throws ServiceException {
+  public MasterProtos.BalanceResponse balance(RpcController controller,
+      MasterProtos.BalanceRequest request) throws ServiceException {
     try {
-      return BalanceResponse.newBuilder().setBalancerRan(master.balance(
-        request.hasForce()? request.getForce(): false)).build();
+      return ProtobufUtil.toBalanceResponse(master.balance(ProtobufUtil.toBalanceRequest(request)));
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }
@@ -3141,18 +3137,24 @@ public class MasterRpcServices extends RSRpcServices implements
   @Override
   public BalanceRSGroupResponse balanceRSGroup(RpcController controller,
       BalanceRSGroupRequest request) throws ServiceException {
-    BalanceRSGroupResponse.Builder builder = BalanceRSGroupResponse.newBuilder();
+    BalanceRequest balanceRequest = ProtobufUtil.toBalanceRequest(request);
+
+    BalanceRSGroupResponse.Builder builder = BalanceRSGroupResponse.newBuilder()
+      .setBalanceRan(false);
+
     LOG.info(
-        master.getClientIdAuditPrefix() + " balance rsgroup, group=" + request.getRSGroupName());
+      master.getClientIdAuditPrefix() + " balance rsgroup, group=" + request.getRSGroupName());
     try {
       if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName());
+        master.getMasterCoprocessorHost()
+          .preBalanceRSGroup(request.getRSGroupName(), balanceRequest);
       }
-      boolean balancerRan =
-          master.getRSGroupInfoManager().balanceRSGroup(request.getRSGroupName());
-      builder.setBalanceRan(balancerRan);
+      BalanceResponse response =
+        master.getRSGroupInfoManager().balanceRSGroup(request.getRSGroupName(), balanceRequest);
+      ProtobufUtil.populateBalanceRSGroupResponse(builder, response);
       if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postBalanceRSGroup(request.getRSGroupName(), balancerRan);
+        master.getMasterCoprocessorHost()
+          .postBalanceRSGroup(request.getRSGroupName(), balanceRequest, response);
       }
     } catch (IOException e) {
       throw new ServiceException(e);

@@ -694,8 +694,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> balance(boolean forcible) {
-    return wrap(rawAdmin.balance(forcible));
+  public CompletableFuture<BalanceResponse> balance(BalanceRequest request) {
+    return wrap(rawAdmin.balance(request));
   }
 
   @Override
@@ -883,8 +883,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> balanceRSGroup(String groupName) {
-    return wrap(rawAdmin.balanceRSGroup(groupName));
+  public CompletableFuture<BalanceResponse> balanceRSGroup(String groupName, BalanceRequest request) {
+    return wrap(rawAdmin.balanceRSGroup(groupName, request));
   }
 
   @Override
