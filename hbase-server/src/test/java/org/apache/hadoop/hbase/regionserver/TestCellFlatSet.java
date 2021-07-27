@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -330,7 +331,9 @@ public class TestCellFlatSet {
     // allocate new chunks and use the data JUMBO chunk to hold the full data of the cells
     // and the normal index chunk to hold the cell-representations
     Chunk dataJumboChunk =
-        chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP, smallChunkSize);
+        chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP, ChunkType.JUMBO_CHUNK,
+          smallChunkSize);
+    assertTrue(dataJumboChunk.isJumbo());
     Chunk idxChunk  = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
     // the array of index chunks to be used as a basis for CellChunkMap
     Chunk[] chunkArray = new Chunk[8];  // according to test currently written 8 is way enough
@@ -364,7 +367,10 @@ public class TestCellFlatSet {
 
       // Jumbo chunks are working only with one cell per chunk, thus always allocate a new jumbo
       // data chunk for next cell
-      dataJumboChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP,smallChunkSize);
+      dataJumboChunk =
+          chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP, ChunkType.JUMBO_CHUNK,
+            smallChunkSize);
+      assertTrue(dataJumboChunk.isJumbo());
       dataBuffer = dataJumboChunk.getData();
       dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
     }
