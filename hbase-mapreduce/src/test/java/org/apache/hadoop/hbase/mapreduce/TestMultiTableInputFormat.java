@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.mapreduce.Job;
@@ -43,8 +44,8 @@ public class TestMultiTableInputFormat extends MultiTableInputFormatTestBase {
 
   @BeforeClass
   public static void setupLogging() {
-    TEST_UTIL.enableDebug(MultiTableInputFormat.class);
-      }
+    Log4jUtils.enableDebug(MultiTableInputFormat.class);
+  }
 
     @Override
   protected void initJob(List<Scan> scans, Job job) throws IOException {

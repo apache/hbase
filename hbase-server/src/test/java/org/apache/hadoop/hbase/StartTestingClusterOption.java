@@ -45,8 +45,8 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public final class StartTestingClusterOption {
   /**
-   * Number of masters to start up.  We'll start this many hbase masters.  If numMasters > 1, you
-   * can find the active/primary master with {@link SingleProcessHBaseCluster#getMaster()}.
+   * Number of masters to start up. We'll start this many hbase masters. If numMasters > 1, you can
+   * find the active/primary master with {@link SingleProcessHBaseCluster#getMaster()}.
    */
   private final int numMasters;
 
@@ -63,9 +63,8 @@ public final class StartTestingClusterOption {
   private final Class<? extends HMaster> masterClass;
 
   /**
-   * Number of region servers to start up.
-   * If this value is > 1, then make sure config "hbase.regionserver.info.port" is -1
-   * (i.e. no ui per regionserver) otherwise bind errors.
+   * Number of region servers to start up. If this value is > 1, then make sure config
+   * "hbase.regionserver.info.port" is -1 (i.e. no ui per regionserver) otherwise bind errors.
    */
   private final int numRegionServers;
   /**
@@ -96,13 +95,13 @@ public final class StartTestingClusterOption {
   private final int numZkServers;
 
   /**
-   * Whether to create a new root or data directory path.  If true, the newly created data directory
-   * will be configured as HBase rootdir.  This will overwrite existing root directory config.
+   * Whether to create a new root or data directory path. If true, the newly created data directory
+   * will be configured as HBase rootdir. This will overwrite existing root directory config.
    */
   private final boolean createRootDir;
 
   /**
-   * Whether to create a new WAL directory.  If true, the newly created directory will be configured
+   * Whether to create a new WAL directory. If true, the newly created directory will be configured
    * as HBase wal.dir which is separate from HBase rootdir.
    */
   private final boolean createWALDir;
@@ -174,15 +173,15 @@ public final class StartTestingClusterOption {
 
   @Override
   public String toString() {
-    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass
-        + ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts)
-        + ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes
-        + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers
-        + ", createRootDir=" + createRootDir + ", createWALDir=" + createWALDir + '}';
+    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass +
+      ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts) +
+      ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes + ", dataNodeHosts=" +
+      Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers + ", createRootDir=" +
+      createRootDir + ", createWALDir=" + createWALDir + '}';
   }
 
   /**
-   * @return a new builder.
+   * Returns a new builder.
    */
   public static Builder builder() {
     return new Builder();
@@ -190,7 +189,7 @@ public final class StartTestingClusterOption {
 
   /**
    * Builder pattern for creating an {@link StartTestingClusterOption}.
-   *
+   * <p/>
    * The default values of its fields should be considered public and constant. Changing the default
    * values may cause other tests fail.
    */
@@ -214,9 +213,9 @@ public final class StartTestingClusterOption {
       if (dataNodeHosts != null && dataNodeHosts.length != 0) {
         numDataNodes = dataNodeHosts.length;
       }
-      return new StartTestingClusterOption(numMasters,numAlwaysStandByMasters, masterClass,
-          numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
-          createRootDir, createWALDir);
+      return new StartTestingClusterOption(numMasters, numAlwaysStandByMasters, masterClass,
+        numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
+        createRootDir, createWALDir);
     }
 
     public Builder numMasters(int numMasters) {

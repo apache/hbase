@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -53,8 +54,8 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
 
   @BeforeClass
   public static void setUpSnapshots() throws Exception {
-    TEST_UTIL.enableDebug(MultiTableSnapshotInputFormat.class);
-    TEST_UTIL.enableDebug(MultiTableSnapshotInputFormatImpl.class);
+    Log4jUtils.enableDebug(MultiTableSnapshotInputFormat.class);
+    Log4jUtils.enableDebug(MultiTableSnapshotInputFormatImpl.class);
 
     // take a snapshot of every table we have.
     for (String tableName : TABLES) {
