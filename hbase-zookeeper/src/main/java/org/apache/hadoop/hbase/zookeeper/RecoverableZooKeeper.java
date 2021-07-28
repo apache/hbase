@@ -207,11 +207,6 @@ public class RecoverableZooKeeper {
    * @return A Stat instance
    */
   public Stat exists(String path, Watcher watcher) throws KeeperException, InterruptedException {
-    return exists(path, watcher, null);
-  }
-
-  private Stat exists(String path, Watcher watcher, Boolean watch)
-    throws InterruptedException, KeeperException {
     Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.exists").startSpan();
     try (Scope scope = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
