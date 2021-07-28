@@ -20,7 +20,7 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.3.6 - Unreleased (as of 2021-07-26)
+## Release 2.3.6 - Unreleased (as of 2021-07-28)
 
 
 
@@ -54,6 +54,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-26120](https://issues.apache.org/jira/browse/HBASE-26120) | New replication gets stuck or data loss when multiwal groups more than 10 |  Critical | Replication |
 | [HBASE-25165](https://issues.apache.org/jira/browse/HBASE-25165) | Change 'State time' in UI so sorts |  Minor | UI |
 | [HBASE-24984](https://issues.apache.org/jira/browse/HBASE-24984) | WAL corruption due to early DBBs re-use when Durability.ASYNC\_WAL is used with multi operation |  Critical | rpc, wal |
 | [HBASE-26088](https://issues.apache.org/jira/browse/HBASE-26088) | conn.getBufferedMutator(tableName) leaks thread executors and other problems |  Critical | Client |
@@ -125,7 +126,6 @@
 | [HBASE-25755](https://issues.apache.org/jira/browse/HBASE-25755) | Exclude tomcat-embed-core from libthrift |  Critical | dependencies, Thrift |
 | [HBASE-25750](https://issues.apache.org/jira/browse/HBASE-25750) | Upgrade RpcControllerFactory and HBaseRpcController from Private to LimitedPrivate(COPROC,PHOENIX) |  Major | Coprocessors, phoenix, rpc |
 | [HBASE-24305](https://issues.apache.org/jira/browse/HBASE-24305) | Handle deprecations in ServerName |  Minor | . |
-| [HBASE-24492](https://issues.apache.org/jira/browse/HBASE-24492) | ProtobufLogReader.readNext does not need looping |  Minor | Replication, wal |
 
 
 ## Release 2.3.5 - Unreleased (as of 2021-03-25)
