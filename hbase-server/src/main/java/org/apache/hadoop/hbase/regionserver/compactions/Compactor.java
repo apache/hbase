@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -136,6 +137,12 @@ public abstract class Compactor<T extends CellSink> {
     public long minSeqIdToKeep = 0;
     /** Total size of the compacted files **/
     private long totalCompactedFilesSize = 0;
+
+    public long getTotalCompactedFilesSize() {
+      return totalCompactedFilesSize;
+    }
+
+
   }
 
   /**
@@ -266,7 +273,9 @@ public abstract class Compactor<T extends CellSink> {
    * @param fd The file details.
    * @return Writer for a new StoreFile in the tmp dir.
    * @throws IOException if creation failed
+   * @deprecated Use initWriter instead.
    */
+  @Deprecated
   protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind, boolean major)
       throws IOException {
     // When all MVCC readpoints are 0, don't write them.
@@ -276,6 +285,21 @@ public abstract class Compactor<T extends CellSink> {
         true, fd.maxMVCCReadpoint > 0,
         fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize,
         HConstants.EMPTY_STRING);
+  }
+
+  /**
+   * Default method for initializing a StoreFileWriter in the compaction process, this creates the
+   * resulting files on a temp directory. Therefore, upon compaction commit time, these files
+   * should be renamed into the actual store dir.
+   * @param fd the file details.
+   * @param shouldDropBehind boolean for the drop-behind output stream cache settings.
+   * @param major if compaction is major.
+   * @return Writer for a new StoreFile in the tmp dir.
+   * @throws IOException if it fails to initialise the writer.
+   */
+  protected StoreFileWriter initWriter(FileDetails fd, boolean shouldDropBehind, boolean major)
+    throws IOException {
+    return createTmpWriter(fd, shouldDropBehind, major);
   }
 
   protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind,
@@ -532,5 +556,58 @@ public abstract class Compactor<T extends CellSink> {
       byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
     return new StoreScanner(store, scanInfo, scanners, smallestReadPoint, earliestPutTs,
         dropDeletesFromRow, dropDeletesToRow);
+  }
+
+  /**
+   * Default implementation for committing store files created after a compaction. Assumes new files
+   * had been created on a temp directory, so it renames those files into the actual store dir,
+   * then create a reader and cache it into the store.
+   * @param cr the compaction request.
+   * @param newFiles the new files created by this compaction under a temp dir.
+   * @param user the running user.
+   * @param fileProvider a lambda expression with logic for loading a HStoreFile given a Path.
+   * @return A list of the resulting store files already placed in the store dir and loaded into the
+   *  store cache.
+   * @throws IOException if the commit fails.
+   */
+  public List<HStoreFile> commitCompaction(CompactionRequestImpl cr, List<Path> newFiles,
+      User user, StoreFileProvider fileProvider) throws IOException {
+    List<HStoreFile> sfs = new ArrayList<>(newFiles.size());
+    for (Path newFile : newFiles) {
+      assert newFile != null;
+      this.store.validateStoreFile(newFile);
+      // Move the file into the right spot
+      HStoreFile sf = createFileInStoreDir(newFile, fileProvider);
+      if (this.store.getCoprocessorHost() != null) {
+        this.store.getCoprocessorHost().postCompact(this.store, sf, cr.getTracker(), cr, user);
+      }
+      assert sf != null;
+      sfs.add(sf);
+    }
+    return sfs;
+  }
+
+  /**
+   * Assumes new file was created initially on a temp folder.
+   * Moves the new file from temp to the actual store directory, then create the related
+   * HStoreFile instance
+   * @param newFile the new file created.
+   * @param fileProvider a lambda expression with logic for creating a HStoreFile given a Path.
+   * @return an HStoreFile instance.
+   * @throws IOException if the file store creation fails.
+   */
+  protected HStoreFile createFileInStoreDir(Path newFile, StoreFileProvider fileProvider)
+    throws IOException {
+    Path destPath = this.store.getRegionFileSystem().
+      commitStoreFile(this.store.getColumnFamilyName(), newFile);
+    return fileProvider.createFile(destPath);
+  }
+
+  /**
+   * Functional interface to allow callers provide the logic specific for creating StoreFiles.
+   */
+  @FunctionalInterface
+  public interface StoreFileProvider {
+    HStoreFile createFile(Path path) throws IOException;
   }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -49,6 +50,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -92,6 +95,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.quotas.RegionSizeStoreImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
@@ -1731,6 +1735,34 @@ public class TestHStore {
     assertArrayEquals(table, hFileContext.getTableName());
   }
 
+  @Test
+  public void testDoCompactionDelegatesCommit() throws Exception {
+    final Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
+    conf.set(DEFAULT_COMPACTOR_CLASS_KEY, DummyCompactor.class.getName());
+    HFileContext fileContext = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).build();
+    store = init(this.name.getMethodName(), conf);
+    Path storeDir =this.store.getStoreContext().getRegionFileSystem().getStoreDir("family");
+    StoreFileWriter w = new StoreFileWriter.Builder(conf, new CacheConfig(conf),
+      store.getFileSystem())
+      .withOutputDir(storeDir)
+      .withFileContext(fileContext)
+      .build();
+    w.appendMetadata(1, false);
+    w.close();
+    HStoreFile mockStoreFile = mock(HStoreFile.class);
+    List<HStoreFile> mockFiles = new ArrayList<>();
+    mockFiles.add(mockStoreFile);
+    List<Path> files = new ArrayList<>();
+    files.add(w.getPath());
+    DummyCompactor.countDownLatch = new CountDownLatch(1);
+    try {
+      store.doCompaction(mock(CompactionRequestImpl.class),
+        null, mock(User.class), 0, files);
+      fail();
+    } catch(Exception e){}
+    assertEquals(0, DummyCompactor.countDownLatch.getCount());
+  }
+
   private HStoreFile mockStoreFileWithLength(long length) {
     HStoreFile sf = mock(HStoreFile.class);
     StoreFileReader sfr = mock(StoreFileReader.class);
@@ -1929,5 +1961,22 @@ public class TestHStore {
 
     @Override
     public List<T> subList(int fromIndex, int toIndex) {return delegatee.subList(fromIndex, toIndex);}
+  }
+
+  private static class DummyCompactor extends DefaultCompactor {
+
+    static CountDownLatch countDownLatch;
+
+    public DummyCompactor(Configuration conf, HStore store) {
+      super(conf, store);
+    }
+
+    @Override
+    public List<HStoreFile> commitCompaction(CompactionRequestImpl cr,
+      List<Path> newFiles, User user, StoreFileProvider fileProvider){
+      countDownLatch.countDown();
+      return null;
+    }
+
   }
 }

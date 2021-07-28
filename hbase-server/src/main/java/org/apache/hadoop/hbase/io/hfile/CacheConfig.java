@@ -298,6 +298,35 @@ public class CacheConfig {
   }
 
   /**
+   * Checks if write cache should be enabled for compactions.
+   *
+   * To be called only in the context of compactions,
+   * for flushes or other write operations, use <code>enableCacheOnWrite</code>.
+   *
+   * If hbase.rs.cachecompactedblocksonwrite configuration is set to true and
+   * 'totalCompactedFilesSize' is lower than 'cacheCompactedDataOnWriteThreshold',
+   * enables cache on write for below properties:
+   * - cacheDataOnWrite
+   * - cacheIndexesOnWrite
+   * - cacheBloomsOnWrite
+   *
+   * Otherwise, sets 'cacheDataOnWrite' only to false.
+   *
+   * @param totalCompactedFilesSize the total size of compacted files.
+   * @return true if the checks mentioned above pass and the cache is enabled, false otherwise.
+   */
+  public boolean enableCacheOnWriteForCompactions(long totalCompactedFilesSize) {
+    if (shouldCacheCompactedBlocksOnWrite() && totalCompactedFilesSize <=
+      getCacheCompactedBlocksOnWriteThreshold()) {
+      enableCacheOnWrite();
+      return true;
+    } else {
+      setCacheDataOnWrite(false);
+      return false;
+    }
+  }
+
+  /**
    * @return true if index blocks should be written to the cache when an HFile
    *         is written, false if not
    */
