@@ -57,6 +57,8 @@
 #   HBASE_JSHELL_ARGS Additional arguments passed to the jshell.
 #                     Defaults to `--startup DEFAULT --startup PRINTING --startup hbase_startup.jsh`
 #
+#   HBASE_HBCK_OPTS  Extra options passed to hbck.
+#                    Defaults to HBASE_SERVER_JAAS_OPTS if specified, or HBASE_REGIONSERVER_OPTS.
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 
@@ -432,12 +434,18 @@ else
 	HBASE_OPTS="$HBASE_OPTS $CLIENT_GC_OPTS"
 fi
 
-if [ "$AUTH_AS_SERVER" == "true" ] || [ "$COMMAND" = "hbck" ]; then
-   if [ -n "$HBASE_SERVER_JAAS_OPTS" ]; then
-     HBASE_OPTS="$HBASE_OPTS $HBASE_SERVER_JAAS_OPTS"
-   else
-     HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS"
-   fi
+if [ -n "$HBASE_SERVER_JAAS_OPTS" ]; then
+  AUTH_AS_SERVER_OPTS="$HBASE_SERVER_JAAS_OPTS"
+else
+  AUTH_AS_SERVER_OPTS="$HBASE_REGIONSERVER_OPTS"
+fi
+
+if [ "$AUTH_AS_SERVER" == "true" ]; then
+  HBASE_OPTS="$HBASE_OPTS $AUTH_AS_SERVER_OPTS"
+elif [ -z "$HBASE_HBCK_OPTS" ]; then
+  # The default for hbck should be to use auth-as-server args, for compatibility
+  # with HBASE-15145
+  HBASE_HBCK_OPTS="$AUTH_AS_SERVER_OPTS"
 fi
 
 # check if the command needs jline
@@ -569,6 +577,7 @@ elif [ "$COMMAND" = "hbck" ] ; then
     CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
     ;;
   esac
+  HBASE_OPTS="$HBASE_OPTS $HBASE_HBCK_OPTS"
 elif [ "$COMMAND" = "wal" ] ; then
   CLASS='org.apache.hadoop.hbase.wal.WALPrettyPrinter'
 elif [ "$COMMAND" = "hfile" ] ; then
