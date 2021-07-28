@@ -798,6 +798,12 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Map<String, Long>> updateCompactionServerTotalThroughput(Long upperBound,
+      Long lowerBound, Long offPeak) {
+    return wrap(rawAdmin.updateCompactionServerTotalThroughput(upperBound, lowerBound, offPeak));
+  }
+
+  @Override
   public CompletableFuture<Boolean> isCompactionOffloadEnabled() {
     return wrap(rawAdmin.isCompactionOffloadEnabled());
   }

@@ -20,15 +20,8 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -36,10 +29,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
@@ -47,7 +38,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -55,7 +45,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ RegionServerTests.class, LargeTests.class })
-public class TestCompactionWithThroughputController {
+public class TestCompactionWithThroughputController
+    extends TestCompactionWithThroughputControllerBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -63,107 +54,6 @@ public class TestCompactionWithThroughputController {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestCompactionWithThroughputController.class);
-
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
-  private static final double EPSILON = 1E-6;
-
-  private final TableName tableName = TableName.valueOf(getClass().getSimpleName());
-
-  private final byte[] family = Bytes.toBytes("f");
-
-  private final byte[] qualifier = Bytes.toBytes("q");
-
-  private HStore getStoreWithName(TableName tableName) {
-    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
-    List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
-    for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
-      HRegionServer hrs = rsts.get(i).getRegionServer();
-      for (Region region : hrs.getRegions(tableName)) {
-        return ((HRegion) region).getStores().iterator().next();
-      }
-    }
-    return null;
-  }
-
-  private HStore prepareData() throws IOException {
-    Admin admin = TEST_UTIL.getAdmin();
-    if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-    }
-    Table table = TEST_UTIL.createTable(tableName, family);
-    for (int i = 0; i < 10; i++) {
-      for (int j = 0; j < 10; j++) {
-        byte[] value = new byte[128 * 1024];
-        ThreadLocalRandom.current().nextBytes(value);
-        table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
-      }
-      admin.flush(tableName);
-    }
-    return getStoreWithName(tableName);
-  }
-
-  private long testCompactionWithThroughputLimit() throws Exception {
-    long throughputLimit = 1024L * 1024;
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, DefaultStoreEngine.class.getName());
-    conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 100);
-    conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 200);
-    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
-    conf.setLong(
-      PressureAwareCompactionThroughputController
-        .HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND,
-      throughputLimit);
-    conf.setLong(
-      PressureAwareCompactionThroughputController
-        .HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND,
-      throughputLimit);
-    conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
-      PressureAwareCompactionThroughputController.class.getName());
-    TEST_UTIL.startMiniCluster(1);
-    try {
-      HStore store = prepareData();
-      assertEquals(10, store.getStorefilesCount());
-      long startTime = System.currentTimeMillis();
-      TEST_UTIL.getAdmin().majorCompact(tableName);
-      while (store.getStorefilesCount() != 1) {
-        Thread.sleep(20);
-      }
-      long duration = System.currentTimeMillis() - startTime;
-      double throughput = (double) store.getStorefilesSize() / duration * 1000;
-      // confirm that the speed limit work properly(not too fast, and also not too slow)
-      // 20% is the max acceptable error rate.
-      assertTrue(throughput < throughputLimit * 1.2);
-      assertTrue(throughput > throughputLimit * 0.8);
-      return System.currentTimeMillis() - startTime;
-    } finally {
-      TEST_UTIL.shutdownMiniCluster();
-    }
-  }
-
-  private long testCompactionWithoutThroughputLimit() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, DefaultStoreEngine.class.getName());
-    conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 100);
-    conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 200);
-    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
-    conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
-      NoLimitThroughputController.class.getName());
-    TEST_UTIL.startMiniCluster(1);
-    try {
-      HStore store = prepareData();
-      assertEquals(10, store.getStorefilesCount());
-      long startTime = System.currentTimeMillis();
-      TEST_UTIL.getAdmin().majorCompact(tableName);
-      while (store.getStorefilesCount() != 1) {
-        Thread.sleep(20);
-      }
-      return System.currentTimeMillis() - startTime;
-    } finally {
-      TEST_UTIL.shutdownMiniCluster();
-    }
-  }
 
   @Test
   public void testCompaction() throws Exception {

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.SwitchCompactionOffloadProcedure;
 import org.apache.hadoop.hbase.regionserver.CompactionOffloadSwitchStorage;
 import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,8 +56,45 @@ public class CompactionOffloadManager {
   /** Map of registered servers to their current load */
   private final Cache<ServerName, CompactionServerMetrics> onlineServers;
   private CompactionOffloadSwitchStorage compactionOffloadSwitchStorage;
+  private volatile long maxThroughputUpperBound;
+  private volatile long maxThroughputLowerBound;
+  private volatile long maxThroughputOffPeak;
+  // throughput config
+  public static final String COMPACTION_SERVER_MAX_THROUGHPUT_HIGHER_BOUND =
+    "hbase.compaction.server.compaction.throughput.higher.bound";
+  public static final long DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_HIGHER_BOUND = 1000L * 1024 * 1024;
+  public static final String COMPACTION_SERVER_MAX_THROUGHPUT_LOWER_BOUND =
+    "hbase.compaction.server.compaction.throughput.lower.bound";
+  public static final long DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_LOWER_BOUND = 500L * 1024 * 1024;
+  public static final String COMPACTION_SERVER_MAX_THROUGHPUT_OFFPEAK =
+    "hbase.compaction.server.compaction.throughput.offpeak";
+  public static final long DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_OFFPEAK = Long.MAX_VALUE;
   private static final Logger LOG =
       LoggerFactory.getLogger(CompactionOffloadManager.class.getName());
+
+  public long getMaxThroughputUpperBound() {
+    return maxThroughputUpperBound;
+  }
+
+  public void setMaxThroughputUpperBound(long maxThroughputUpperBound) {
+    this.maxThroughputUpperBound = maxThroughputUpperBound;
+  }
+
+  public long getMaxThroughputLowerBound() {
+    return maxThroughputLowerBound;
+  }
+
+  public void setMaxThroughputLowerBound(long maxThroughputLowerBound) {
+    this.maxThroughputLowerBound = maxThroughputLowerBound;
+  }
+
+  public long getMaxThroughputOffPeak() {
+    return maxThroughputOffPeak;
+  }
+
+  public void setMaxThroughputOffPeak(long maxThroughputOffPeak) {
+    this.maxThroughputOffPeak = maxThroughputOffPeak;
+  }
 
   public CompactionOffloadManager(final MasterServices master) {
     this.masterServices = master;
@@ -68,10 +106,22 @@ public class CompactionOffloadManager {
       compactionServerMsgInterval * compactionServerExpiredFactor, TimeUnit.MILLISECONDS).build();
     this.compactionOffloadSwitchStorage = new CompactionOffloadSwitchStorage(
         masterServices.getZooKeeper(), masterServices.getConfiguration());
+    this.maxThroughputUpperBound =
+        master.getConfiguration().getLong(COMPACTION_SERVER_MAX_THROUGHPUT_HIGHER_BOUND,
+          DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_HIGHER_BOUND);
+    this.maxThroughputLowerBound =
+        master.getConfiguration().getLong(COMPACTION_SERVER_MAX_THROUGHPUT_LOWER_BOUND,
+          DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_LOWER_BOUND);
+    this.maxThroughputOffPeak = master.getConfiguration().getLong(
+      COMPACTION_SERVER_MAX_THROUGHPUT_OFFPEAK, DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_OFFPEAK);
   }
 
-  public void compactionServerReport(ServerName sn, CompactionServerMetrics sl) {
+  public Triple<Long, Long, Long> compactionServerReport(ServerName sn,
+    CompactionServerMetrics sl) {
     this.onlineServers.put(sn, sl);
+    long size = Math.max(onlineServers.size(), 1);
+    return new Triple<>(maxThroughputUpperBound / size, maxThroughputLowerBound / size,
+      maxThroughputOffPeak / size);
   }
 
   /**

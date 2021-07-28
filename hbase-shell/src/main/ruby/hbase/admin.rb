@@ -121,6 +121,13 @@ module Hbase
       @admin.compactionSwitch(java.lang.Boolean.valueOf(on_or_off), servers)
     end
 
+    # update compaction server total throughput bound
+    def update_compaction_server_total_throughput(upper_bound, lower_bound, offpeak)
+      @admin.updateCompactionServerTotalThroughput(java.lang.Long.value_of(upper_bound),
+                                                   java.lang.Long.value_of(lower_bound),
+                                                   java.lang.Long.value_of(offpeak))
+    end
+
     #----------------------------------------------------------------------------------------------
     # Gets compaction state for specified table
     def getCompactionState(table_name)

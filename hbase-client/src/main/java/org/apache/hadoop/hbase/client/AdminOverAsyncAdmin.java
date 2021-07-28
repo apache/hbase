@@ -919,6 +919,12 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public Map<String, Long> updateCompactionServerTotalThroughput(Long upperBound, Long lowerBound,
+      Long offPeak) throws IOException {
+    return get(admin.updateCompactionServerTotalThroughput(upperBound, lowerBound, offPeak));
+  }
+
+  @Override
   public boolean isCompactionOffloadEnabled() throws IOException {
     return get(admin.isCompactionOffloadEnabled());
   }

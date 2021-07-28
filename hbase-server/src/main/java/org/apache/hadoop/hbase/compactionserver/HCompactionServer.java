@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.PressureAwareCompactionThroughputController;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -179,7 +181,20 @@ public class HCompactionServer extends AbstractServer {
           CompactionServerStatusProtos.CompactionServerReportRequest.newBuilder();
       request.setServer(ProtobufUtil.toServerName(getServerName()));
       request.setLoad(sl);
-      this.cssStub.compactionServerReport(null, request.build());
+      CompactionServerStatusProtos.CompactionServerReportResponse compactionServerReportResponse =
+          this.cssStub.compactionServerReport(null, request.build());
+      ThroughputController throughputController =
+          compactionThreadManager.getCompactionThroughputController();
+      if (throughputController instanceof PressureAwareCompactionThroughputController) {
+        ((PressureAwareCompactionThroughputController) throughputController)
+            .setMaxThroughputUpperBound(
+              compactionServerReportResponse.getMaxThroughputUpperBound());
+        ((PressureAwareCompactionThroughputController) throughputController)
+            .setMaxThroughputLowerBound(
+              compactionServerReportResponse.getMaxThroughputLowerBound());
+        ((PressureAwareCompactionThroughputController) throughputController)
+            .setMaxThroughputOffPeak(compactionServerReportResponse.getMaxThroughputOffPeak());
+      }
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {

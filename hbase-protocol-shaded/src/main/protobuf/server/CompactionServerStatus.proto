@@ -37,6 +37,9 @@ message CompactionServerReportRequest {
 }
 
 message CompactionServerReportResponse {
+  required int64 max_throughput_upper_bound = 1 ;
+  required int64 max_throughput_lower_bound = 2 ;
+  required int64 max_throughput_off_peak = 3 ;
 }
 
 service CompactionServerStatusService {

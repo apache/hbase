@@ -64,9 +64,9 @@ public abstract class PressureAwareThroughputController extends Configured imple
     }
   }
 
-  protected long maxThroughputUpperBound;
+  protected volatile long maxThroughputUpperBound;
 
-  protected long maxThroughputLowerBound;
+  protected volatile long maxThroughputLowerBound;
 
   protected OffPeakHours offPeakHours;
 
@@ -169,5 +169,21 @@ public abstract class PressureAwareThroughputController extends Configured imple
   public void setMaxThroughput(double maxThroughput) {
     this.maxThroughput = maxThroughput;
     maxThroughputPerOperation = getMaxThroughput() / activeOperations.size();
+  }
+
+  public void setMaxThroughputUpperBound(long maxThroughputUpperBound) {
+    this.maxThroughputUpperBound = maxThroughputUpperBound;
+  }
+
+  public void setMaxThroughputLowerBound(long maxThroughputLowerBound) {
+    this.maxThroughputLowerBound = maxThroughputLowerBound;
+  }
+
+  public long getMaxThroughputUpperBound() {
+    return maxThroughputUpperBound;
+  }
+
+  public long getMaxThroughputLowerBound() {
+    return maxThroughputLowerBound;
   }
 }

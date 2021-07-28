@@ -124,6 +124,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -343,6 +344,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UpdateCompactionServerTotalThroughputRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UpdateCompactionServerTotalThroughputResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot;
@@ -682,14 +685,17 @@ public class MasterRpcServices extends RSRpcServices implements
         versionNumber = VersionInfoUtil.getVersionNumber(versionInfo);
       }
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
-      CompactionServerMetrics newLoad =
-          CompactionServerMetricsBuilder.toCompactionServerMetrics(serverName, versionNumber,
-            version, request.getLoad());
-      master.getCompactionOffloadManager().compactionServerReport(serverName, newLoad);
+      CompactionServerMetrics newLoad = CompactionServerMetricsBuilder
+          .toCompactionServerMetrics(serverName, versionNumber, version, request.getLoad());
+      Triple<Long, Long, Long> throughput =
+          master.getCompactionOffloadManager().compactionServerReport(serverName, newLoad);
+      return CompactionServerReportResponse.newBuilder()
+          .setMaxThroughputUpperBound(throughput.getFirst())
+          .setMaxThroughputLowerBound(throughput.getSecond())
+          .setMaxThroughputOffPeak(throughput.getThird()).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return CompactionServerReportResponse.newBuilder().build();
   }
 
   @Override
@@ -3494,6 +3500,31 @@ public class MasterRpcServices extends RSRpcServices implements
   public CompleteCompactionResponse completeCompaction(RpcController controller,
     CompleteCompactionRequest request) {
     throw new UnsupportedOperationException("master not receive completeCompaction");
+  }
+
+  @Override
+  public UpdateCompactionServerTotalThroughputResponse updateCompactionServerTotalThroughput(
+      RpcController controller, UpdateCompactionServerTotalThroughputRequest request)
+      throws ServiceException {
+    if (request.getMaxThroughputUpperBound() > 0) {
+      master.getCompactionOffloadManager()
+          .setMaxThroughputUpperBound(request.getMaxThroughputUpperBound());
+    }
+    if (request.getMaxThroughputLowerBound() > 0) {
+      master.getCompactionOffloadManager()
+          .setMaxThroughputLowerBound(request.getMaxThroughputLowerBound());
+    }
+    if (request.getMaxThroughputOffPeak() > 0) {
+      master.getCompactionOffloadManager()
+          .setMaxThroughputOffPeak(request.getMaxThroughputOffPeak());
+    }
+    return UpdateCompactionServerTotalThroughputResponse.newBuilder()
+        .setMaxThroughputUpperBound(
+          master.getCompactionOffloadManager().getMaxThroughputUpperBound())
+        .setMaxThroughputLowerBound(
+          master.getCompactionOffloadManager().getMaxThroughputLowerBound())
+        .setMaxThroughputOffPeak(master.getCompactionOffloadManager().getMaxThroughputOffPeak())
+        .build();
   }
 
 }

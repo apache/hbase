@@ -283,6 +283,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UpdateCompactionServerTotalThroughputRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UpdateCompactionServerTotalThroughputResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
@@ -3818,6 +3820,27 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                   .build(),
               (s, c, req, done) -> s.switchCompactionOffload(c, req, done),
               resp -> resp.getPreviousCompactionOffloadEnabled()))
+        .call();
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Map<String, Long>> updateCompactionServerTotalThroughput(Long upperBound,
+      Long lowerBound, Long offPeak) {
+    CompletableFuture<Map<String, Long>> future = this.<Map<String, Long>> newMasterCaller().action(
+      (controller, stub) -> this
+          .<UpdateCompactionServerTotalThroughputRequest, UpdateCompactionServerTotalThroughputResponse, Map<String, Long>> call(
+            controller, stub,
+            UpdateCompactionServerTotalThroughputRequest.newBuilder()
+                .setMaxThroughputUpperBound(upperBound).setMaxThroughputLowerBound(lowerBound)
+                .setMaxThroughputOffPeak(offPeak).build(),
+            (s, c, req, done) -> s.updateCompactionServerTotalThroughput(c, req, done), resp -> {
+              Map<String, Long> result = new HashMap<>();
+              result.put("UpperBound", resp.getMaxThroughputUpperBound());
+              result.put("LowerBound", resp.getMaxThroughputLowerBound());
+              result.put("OffPeak", resp.getMaxThroughputOffPeak());
+              return result;
+            }))
         .call();
     return future;
   }

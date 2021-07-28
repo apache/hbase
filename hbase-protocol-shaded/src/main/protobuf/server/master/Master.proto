@@ -732,6 +732,18 @@ message SwitchCompactionOffloadResponse {
   required bool previous_compaction_offload_enabled = 1;
 }
 
+message UpdateCompactionServerTotalThroughputRequest {
+  required int64 max_throughput_upper_bound = 1;
+  required int64 max_throughput_lower_bound = 2;
+  required int64 max_throughput_off_peak = 3;
+}
+
+message UpdateCompactionServerTotalThroughputResponse {
+  required int64 max_throughput_upper_bound = 1;
+  required int64 max_throughput_lower_bound = 2;
+  required int64 max_throughput_off_peak = 3;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -1111,6 +1123,9 @@ service MasterService {
   /** Turn the compaction offload on or off */
   rpc SwitchCompactionOffload (SwitchCompactionOffloadRequest)
     returns (SwitchCompactionOffloadResponse);
+
+  rpc UpdateCompactionServerTotalThroughput(UpdateCompactionServerTotalThroughputRequest)
+    returns (UpdateCompactionServerTotalThroughputResponse);
 
   /** Get if is compaction offload enabled */
   rpc IsCompactionOffloadEnabled (IsCompactionOffloadEnabledRequest)

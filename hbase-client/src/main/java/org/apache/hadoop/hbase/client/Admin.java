@@ -2257,6 +2257,17 @@ public interface Admin extends Abortable, Closeable {
   boolean isCompactionOffloadEnabled() throws IOException;
 
   /**
+   * update compaction server total throughput bound
+   * @param upperBound the total throughput upper bound of all compaction servers
+   * @param lowerBound the total throughput lower bound of all compaction servers
+   * @param offPeak the total throughput offPeak bound of all compaction servers
+   * @return the now total throughput of all compaction servers
+   * @throws IOException if a remote or network exception occurs
+   */
+  Map<String, Long> updateCompactionServerTotalThroughput(Long upperBound, Long lowerBound,
+      Long offPeak) throws IOException;
+
+  /**
    * Switch the exceed throttle quota. If enabled, user/table/namespace throttle quota
    * can be exceeded if region server has availble quota.
    * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.

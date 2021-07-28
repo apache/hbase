@@ -512,6 +512,24 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
+    define_test 'set compaction server throughput lower bound' do
+      output = capture_stdout { command(:set_compaction_server_throughput_lower_bound, 500)}
+      assert(output.include?("LowerBound 500"))
+      output = capture_stdout { command(:set_compaction_server_throughput_lower_bound, 1500)}
+      assert(output.include?("LowerBound 1500"))
+    end
+    define_test 'set compaction server throughput upper bound' do
+      output = capture_stdout { command(:set_compaction_server_throughput_upper_bound, 5000)}
+      assert(output.include?("UpperBound 5000"))
+      output = capture_stdout { command(:set_compaction_server_throughput_upper_bound, 15000)}
+      assert(output.include?("UpperBound 15000"))
+    end
+    define_test 'set compaction server throughput offPeak' do
+      output = capture_stdout { command(:set_compaction_server_throughput_offpeak, 5000)}
+      assert(output.include?("OffPeak 5000"))
+      output = capture_stdout { command(:set_compaction_server_throughput_offpeak, 15000)}
+      assert(output.include?("OffPeak 15000"))
+    end
     define_test "describe should fail for non-existent tables" do
       assert_raise(ArgumentError) do
         admin.describe('NOT.EXISTS')
