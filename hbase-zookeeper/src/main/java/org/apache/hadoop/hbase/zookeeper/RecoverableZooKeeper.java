@@ -283,11 +283,6 @@ public class RecoverableZooKeeper {
    */
   public List<String> getChildren(String path, Watcher watcher)
     throws KeeperException, InterruptedException {
-    return getChildren(path, watcher, null);
-  }
-
-  private List<String> getChildren(String path, Watcher watcher, Boolean watch)
-    throws InterruptedException, KeeperException {
     Span span =
       TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getChildren").startSpan();
     try (Scope scope = span.makeCurrent()) {
@@ -357,11 +352,6 @@ public class RecoverableZooKeeper {
    */
   public byte[] getData(String path, Watcher watcher, Stat stat)
     throws KeeperException, InterruptedException {
-    return getData(path, watcher, null, stat);
-  }
-
-  private byte[] getData(String path, Watcher watcher, Boolean watch, Stat stat)
-    throws InterruptedException, KeeperException {
     Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getData").startSpan();
     try (Scope scope = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();

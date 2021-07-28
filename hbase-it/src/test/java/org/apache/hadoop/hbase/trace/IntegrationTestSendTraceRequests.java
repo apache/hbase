@@ -111,6 +111,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
     util = null;
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void doScans(ExecutorService service, final LinkedBlockingQueue<Long> rks) {
     for (int i = 0; i < 100; i++) {
       Runnable runnable = new Runnable() {
@@ -142,6 +143,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
             span.addEvent("exception",
               Attributes.of(AttributeKey.stringKey("exception"), e.getClass().getSimpleName()));
           } catch (Exception e) {
+            e.printStackTrace();
           } finally {
             span.end();
             if (rs != null) {
