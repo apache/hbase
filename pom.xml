@@ -19,7 +19,6 @@
  * limitations under the License.
  */
 
-
   ON MVN COMPILE NOT WORKING
 
   If you wondering why 'mvn compile' does not work building HBase
