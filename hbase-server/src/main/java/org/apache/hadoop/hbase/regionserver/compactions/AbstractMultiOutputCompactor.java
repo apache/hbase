@@ -51,13 +51,14 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
     WriterFactory writerFactory = new WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
-        return createTmpWriter(fd, shouldDropBehind);
+        return AbstractMultiOutputCompactor.this.createWriter(fd, shouldDropBehind);
       }
 
       @Override
       public StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
           throws IOException {
-        return createTmpWriter(fd, shouldDropBehind, fileStoragePolicy);
+        return AbstractMultiOutputCompactor.this.createWriter(fd, shouldDropBehind,
+          fileStoragePolicy);
       }
     };
     // Prepare multi-writer, and perform the compaction using scanner and writer.

@@ -464,7 +464,6 @@ public class TestHMobStore {
    * @throws IOException
    */
   private void flush(int storeFilesSize) throws IOException{
-    this.store.snapshot();
     flushStore(store, id++);
     Assert.assertEquals(storeFilesSize, this.store.getStorefiles().size());
     Assert.assertEquals(0, ((AbstractMemStore)this.store.memstore).getActive().getCellsCount());

@@ -152,13 +152,7 @@ public class TestScannerSelectionUsingTTL {
     Set<String> accessedFiles = cache.getCachedFileNamesForTest();
     LOG.debug("Files accessed during scan: " + accessedFiles);
 
-    // Exercise both compaction codepaths.
-    if (explicitCompaction) {
-      HStore store = region.getStore(FAMILY_BYTES);
-      store.compactRecentForTestingAssumingDefaultPolicy(totalNumFiles);
-    } else {
-      region.compact(false);
-    }
+    region.compact(false);
 
     HBaseTestingUtility.closeRegionAndWAL(region);
   }

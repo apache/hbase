@@ -254,7 +254,7 @@ public class TestCompaction {
     region.flush(true);
   }
 
-  @Test
+  @Test(expected=IOException.class)
   public void testCompactionWithCorruptResult() throws Exception {
     int nfiles = 10;
     for (int i = 0; i < nfiles; i++) {
@@ -269,23 +269,13 @@ public class TestCompaction {
     // Now lets corrupt the compacted file.
     FileSystem fs = store.getFileSystem();
     // default compaction policy created one and only one new compacted file
-    Path dstPath = store.getRegionFileSystem().createTempName();
+    Path dstPath = ((HStoreFile)store.getStorefiles().toArray()[0]).getPath();
     FSDataOutputStream stream = fs.create(dstPath, null, true, 512, (short)3, 1024L, null);
     stream.writeChars("CORRUPT FILE!!!!");
     stream.close();
-    Path origPath = store.getRegionFileSystem().commitStoreFile(
-      Bytes.toString(COLUMN_FAMILY), dstPath);
 
-    try {
-      ((HStore)store).moveFileIntoPlace(origPath);
-    } catch (Exception e) {
-      // The complete compaction should fail and the corrupt file should remain
-      // in the 'tmp' directory;
-      assertTrue(fs.exists(origPath));
-      assertFalse(fs.exists(dstPath));
-      System.out.println("testCompactionWithCorruptResult Passed");
-      return;
-    }
+    store.getRegionFileSystem().commitStoreFile(Bytes.toString(COLUMN_FAMILY), dstPath);
+
     fail("testCompactionWithCorruptResult failed since no exception was" +
         "thrown while completing a corrupt file");
   }

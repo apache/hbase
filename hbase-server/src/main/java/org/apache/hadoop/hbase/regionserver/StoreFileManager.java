@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Comparator;
@@ -46,12 +47,16 @@ public interface StoreFileManager {
    * Loads the initial store files into empty StoreFileManager.
    * @param storeFiles The files to load.
    */
+  @RestrictedApi(explanation = "Should only be called in StoreEngine", link = "",
+    allowedOnPath = ".*(/org/apache/hadoop/hbase/regionserver/StoreEngine.java|/src/test/.*)")
   void loadFiles(List<HStoreFile> storeFiles);
 
   /**
    * Adds new files, either for from MemStore flush or bulk insert, into the structure.
    * @param sfs New store files.
    */
+  @RestrictedApi(explanation = "Should only be called in StoreEngine", link = "",
+    allowedOnPath = ".*(/org/apache/hadoop/hbase/regionserver/StoreEngine.java|/src/test/.*)")
   void insertNewFiles(Collection<HStoreFile> sfs) throws IOException;
 
   /**
@@ -59,14 +64,17 @@ public interface StoreFileManager {
    * @param compactedFiles The input files for the compaction.
    * @param results The resulting files for the compaction.
    */
-  void addCompactionResults(
-      Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results) throws IOException;
+  @RestrictedApi(explanation = "Should only be called in StoreEngine", link = "",
+    allowedOnPath = ".*(/org/apache/hadoop/hbase/regionserver/StoreEngine.java|/src/test/.*)")
+  void addCompactionResults(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results)
+    throws IOException;
 
   /**
    * Remove the compacted files
    * @param compactedFiles the list of compacted files
-   * @throws IOException
    */
+  @RestrictedApi(explanation = "Should only be called in StoreEngine", link = "",
+    allowedOnPath = ".*(/org/apache/hadoop/hbase/regionserver/StoreEngine.java|/src/test/.*)")
   void removeCompactedFiles(Collection<HStoreFile> compactedFiles) throws IOException;
 
   /**
@@ -145,7 +153,6 @@ public interface StoreFileManager {
   /**
    * Gets the split point for the split of this set of store files (approx. middle).
    * @return The mid-point if possible.
-   * @throws IOException
    */
   Optional<byte[]> getSplitPoint() throws IOException;
 

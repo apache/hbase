@@ -210,14 +210,16 @@ public class TestIOFencing {
     }
 
     @Override
-    protected void completeCompaction(Collection<HStoreFile> compactedFiles) throws IOException {
-      try {
-        r.compactionsWaiting.countDown();
-        r.compactionsBlocked.await();
-      } catch (InterruptedException ex) {
-        throw new IOException(ex);
+    protected void refreshStoreSizeAndTotalBytes() throws IOException {
+      if (r != null) {
+        try {
+          r.compactionsWaiting.countDown();
+          r.compactionsBlocked.await();
+        } catch (InterruptedException ex) {
+          throw new IOException(ex);
+        }
       }
-      super.completeCompaction(compactedFiles);
+      super.refreshStoreSizeAndTotalBytes();
     }
   }
 

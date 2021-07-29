@@ -32,6 +32,9 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -45,6 +48,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 /**
  * Test minor compactions
@@ -214,7 +219,9 @@ public class TestMinorCompaction {
     HStore store2 = r.getStore(fam2);
     int numFiles1 = store2.getStorefiles().size();
     assertTrue("Was expecting to see 4 store files", numFiles1 > compactionThreshold); // > 3
-    ((HStore)store2).compactRecentForTestingAssumingDefaultPolicy(compactionThreshold);   // = 3
+    Optional<CompactionContext> compaction = store2.requestCompaction();
+    assertTrue(compaction.isPresent());
+    store2.compact(compaction.get(), NoLimitThroughputController.INSTANCE, null); // = 3
     int numFiles2 = store2.getStorefiles().size();
     // Check that we did compact
     assertTrue("Number of store files should go down", numFiles1 > numFiles2);
