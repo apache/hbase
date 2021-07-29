@@ -20,10 +20,11 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.ERROR;
 import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SIZE;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
-
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.Sequence;
 import com.lmax.disruptor.Sequencer;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -44,7 +45,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -58,12 +58,11 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -401,7 +400,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   private void addTimeAnnotation(SyncFuture future, String annotation) {
-    TraceUtil.addTimelineAnnotation(annotation);
+    Span.current().addEvent(annotation);
     // TODO handle htrace API change, see HBASE-18895
     // future.setSpan(scope.getSpan());
   }
@@ -624,7 +623,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   @Override
   public void sync(boolean forceSync) throws IOException {
-    try (TraceScope scope = TraceUtil.createTrace("AsyncFSWAL.sync")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("AsyncFSWAL.sync").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       long txid = waitingConsumePayloads.next();
       SyncFuture future;
       try {
@@ -638,6 +638,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         consumeExecutor.execute(consumer);
       }
       blockOnSync(future);
+    } finally {
+      span.end();
     }
   }
 
@@ -646,7 +648,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     if (highestSyncedTxid.get() >= txid) {
       return;
     }
-    try (TraceScope scope = TraceUtil.createTrace("AsyncFSWAL.sync")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("AsyncFSWAL.sync").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       // here we do not use ring buffer sequence as txid
       long sequence = waitingConsumePayloads.next();
       SyncFuture future;
@@ -661,6 +664,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         consumeExecutor.execute(consumer);
       }
       blockOnSync(future);
+    } finally {
+      span.end();
     }
   }
 

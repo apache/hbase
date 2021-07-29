@@ -19,11 +19,9 @@ package org.apache.hadoop.hbase.io.asyncfs;
 
 import java.io.File;
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,7 +102,6 @@ public abstract class AsyncFSTestBase {
     org.apache.log4j.Logger.getLogger(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class)
       .setLevel(org.apache.log4j.Level.ERROR);
 
-    TraceUtil.initTracer(conf);
     CLUSTER = new MiniDFSCluster.Builder(conf).numDataNodes(servers).build();
     CLUSTER.waitClusterUp();
   }
