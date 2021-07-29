@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.regionserver.CellSink;
+import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -61,6 +61,7 @@ import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
@@ -261,29 +262,32 @@ public abstract class Compactor<T extends CellSink> {
     }
   };
 
-  /**
-   * Creates a writer for a new file in a temporary directory.
-   * @param fd The file details.
-   * @return Writer for a new StoreFile in the tmp dir.
-   * @throws IOException if creation failed
-   */
-  protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind, boolean major)
-      throws IOException {
-    // When all MVCC readpoints are 0, don't write them.
-    // See HBASE-8166, HBASE-12600, and HBASE-13389.
-    return store.createWriterInTmp(fd.maxKeyCount,
-        major ? majorCompactionCompression : minorCompactionCompression,
-        true, fd.maxMVCCReadpoint > 0,
-        fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize,
-        HConstants.EMPTY_STRING);
+  protected final CreateStoreFileWriterParams createParams(FileDetails fd, boolean shouldDropBehind,
+    boolean major) {
+    return CreateStoreFileWriterParams.create().maxKeyCount(fd.maxKeyCount)
+      .compression(major ? majorCompactionCompression : minorCompactionCompression)
+      .isCompaction(true).includeMVCCReadpoint(fd.maxMVCCReadpoint > 0)
+      .includesTag(fd.maxTagsLength > 0).shouldDropBehind(shouldDropBehind)
+      .totalCompactedFilesSize(fd.totalCompactedFilesSize);
   }
 
-  protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind,
-      String fileStoragePolicy, boolean major) throws IOException {
-    return store.createWriterInTmp(fd.maxKeyCount,
-      major ? majorCompactionCompression : minorCompactionCompression,
-      true, fd.maxMVCCReadpoint > 0,
-      fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize, fileStoragePolicy);
+  /**
+   * Creates a writer for a new file.
+   * @param fd The file details.
+   * @return Writer for a new StoreFile
+   * @throws IOException if creation failed
+   */
+  protected final StoreFileWriter createWriter(FileDetails fd, boolean shouldDropBehind,
+    boolean major) throws IOException {
+    // When all MVCC readpoints are 0, don't write them.
+    // See HBASE-8166, HBASE-12600, and HBASE-13389.
+    return store.getStoreEngine().createWriter(createParams(fd, shouldDropBehind, major));
+  }
+
+  protected final StoreFileWriter createWriter(FileDetails fd, boolean shouldDropBehind,
+    String fileStoragePolicy, boolean major) throws IOException {
+    return store.getStoreEngine()
+      .createWriter(createParams(fd, shouldDropBehind, major).fileStoragePolicy(fileStoragePolicy));
   }
 
   private ScanInfo preCompactScannerOpen(CompactionRequestImpl request, ScanType scanType,
