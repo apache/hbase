@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
@@ -118,8 +118,10 @@ public class TestStripeStoreEngine {
   }
 
   private static TestStoreEngine createEngine(Configuration conf) throws Exception {
+    HRegion region = mock(HRegion.class);
     HStore store = mock(HStore.class);
-    when(store.getRegionInfo()).thenReturn(HRegionInfo.FIRST_META_REGIONINFO);
+    when(store.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    when(store.getHRegion()).thenReturn(region);
     CellComparatorImpl kvComparator = mock(CellComparatorImpl.class);
     return (TestStoreEngine)StoreEngine.create(store, conf, kvComparator);
   }

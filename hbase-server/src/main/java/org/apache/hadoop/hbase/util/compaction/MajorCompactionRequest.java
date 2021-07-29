@@ -101,7 +101,6 @@ class MajorCompactionRequest {
 
   boolean shouldCFBeCompacted(HRegionFileSystem fileSystem, String family, long ts)
       throws IOException {
-
     // do we have any store files?
     Collection<StoreFileInfo> storeFiles = fileSystem.getStoreFiles(family);
     if (storeFiles == null) {
