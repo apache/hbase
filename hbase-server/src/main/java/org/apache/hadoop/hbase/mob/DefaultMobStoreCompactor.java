@@ -22,7 +22,6 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -80,17 +79,16 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   };
 
   private final CellSinkFactory<StoreFileWriter> writerFactory =
-      new CellSinkFactory<StoreFileWriter>() {
-        @Override
-        public StoreFileWriter createWriter(InternalScanner scanner,
-            org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-            boolean shouldDropBehind, boolean major) throws IOException {
-          // make this writer with tags always because of possible new cells with tags.
-          return store.createWriterInTmp(fd.maxKeyCount, 
-            major ? majorCompactionCompression : minorCompactionCompression, true, true, true,
-            shouldDropBehind);
-        }
-      };
+    new CellSinkFactory<StoreFileWriter>() {
+      @Override
+      public StoreFileWriter createWriter(InternalScanner scanner,
+        org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
+        boolean shouldDropBehind, boolean major) throws IOException {
+        // make this writer with tags always because of possible new cells with tags.
+        return store.getStoreEngine().createWriter(
+          createParams(fd, shouldDropBehind, major).includeMVCCReadpoint(true).includesTag(true));
+      }
+    };
 
   public DefaultMobStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);

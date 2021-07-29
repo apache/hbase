@@ -30,7 +30,6 @@ import java.util.Random;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,6 +61,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * This test tests whether parallel {@link StoreScanner#close()} and
  * {@link StoreScanner#updateReaders(List, List)} works perfectly ensuring
@@ -85,7 +85,6 @@ public class TestStoreScannerClosure {
   private static CacheConfig cacheConf;
   private static FileSystem fs;
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestHFile").toString();
   private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
       KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
   private final static byte[] fam = Bytes.toBytes("cf_1");
@@ -127,13 +126,12 @@ public class TestStoreScannerClosure {
       p.addColumn(fam, Bytes.toBytes("q1"), Bytes.toBytes("val"));
       region.put(p);
       HStore store = region.getStore(fam);
-      ReentrantReadWriteLock lock = store.lock;
       // use the lock to manually get a new memstore scanner. this is what
       // HStore#notifyChangedReadersObservers does under the lock.(lock is not needed here
       //since it is just a testcase).
-      lock.readLock().lock();
+      store.getStoreEngine().readLock();
       final List<KeyValueScanner> memScanners = store.memstore.getScanners(Long.MAX_VALUE);
-      lock.readLock().unlock();
+      store.getStoreEngine().readUnlock();
       Thread closeThread = new Thread() {
         public void run() {
           // close should be completed
