@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -108,9 +109,10 @@ public class BaseTestHBaseFsck {
    * Debugging method to dump the contents of meta.
    */
   protected void dumpMeta(TableName tableName) throws IOException {
-    List<byte[]> metaRows = TEST_UTIL.getMetaTableRows(tableName);
-    for (byte[] row : metaRows) {
-      LOG.info(Bytes.toString(row));
+    List<RegionInfo> regions =
+      MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName);
+    for (RegionInfo region : regions) {
+      LOG.info(region.getRegionNameAsString());
     }
   }
 
@@ -210,7 +212,6 @@ public class BaseTestHBaseFsck {
       LOG.info(hri.toString() + hsa.toString());
     }
 
-    TEST_UTIL.getMetaTableRows(htd.getTableName());
     LOG.info("*** After delete:");
     dumpMeta(htd.getTableName());
   }
