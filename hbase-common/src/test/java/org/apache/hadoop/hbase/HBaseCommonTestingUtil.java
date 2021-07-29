@@ -49,26 +49,19 @@ public class HBaseCommonTestingUtil {
    * Compression algorithms to use in parameterized JUnit 4 tests
    */
   public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED =
-    Arrays.asList(new Object[][] {
-      { Compression.Algorithm.NONE },
-      { Compression.Algorithm.GZ }
-    });
+    Arrays.asList(new Object[][] { { Compression.Algorithm.NONE }, { Compression.Algorithm.GZ } });
 
   /**
    * This is for unit tests parameterized with a two booleans.
    */
   public static final List<Object[]> BOOLEAN_PARAMETERIZED =
-      Arrays.asList(new Object[][] {
-          {false},
-          {true}
-      });
+    Arrays.asList(new Object[][] { { false }, { true } });
 
   /**
    * Compression algorithms to use in testing
    */
-  public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = {
-    Compression.Algorithm.NONE, Compression.Algorithm.GZ
-  };
+  public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS =
+    { Compression.Algorithm.NONE, Compression.Algorithm.GZ };
 
   protected final Configuration conf;
 
@@ -82,7 +75,6 @@ public class HBaseCommonTestingUtil {
 
   /**
    * Returns this classes's instance of {@link Configuration}.
-   *
    * @return Instance of Configuration.
    */
   public Configuration getConfiguration() {
@@ -92,8 +84,7 @@ public class HBaseCommonTestingUtil {
   /**
    * System property key to get base test directory value
    */
-  public static final String BASE_TEST_DIRECTORY_KEY =
-      "test.build.data.basedirectory";
+  public static final String BASE_TEST_DIRECTORY_KEY = "test.build.data.basedirectory";
 
   /**
    * Default base directory for test output.
@@ -127,13 +118,11 @@ public class HBaseCommonTestingUtil {
 
   /**
    * Sets up a directory for a test to use.
-   *
    * @return New directory path, if created.
    */
   protected Path setupDataTestDir() {
     if (this.dataTestDir != null) {
-      LOG.warn("Data test dir already setup in " +
-          dataTestDir.getAbsolutePath());
+      LOG.warn("Data test dir already setup in " + dataTestDir.getAbsolutePath());
       return null;
     }
     Path testPath = getRandomDir();
@@ -151,7 +140,7 @@ public class HBaseCommonTestingUtil {
   }
 
   /**
-   * Returns A dir with a random (uuid) name under the test dir
+   * Returns a dir with a random (uuid) name under the test dir
    * @see #getBaseTestDir()
    */
   public Path getRandomDir() {
@@ -159,8 +148,7 @@ public class HBaseCommonTestingUtil {
   }
 
   public static UUID getRandomUUID() {
-    return new UUID(ThreadLocalRandom.current().nextLong(),
-                    ThreadLocalRandom.current().nextLong());
+    return new UUID(ThreadLocalRandom.current().nextLong(), ThreadLocalRandom.current().nextLong());
   }
 
   protected void createSubDir(String propertyName, Path parent, String subDirName) {
@@ -212,8 +200,7 @@ public class HBaseCommonTestingUtil {
    * @see #setupDataTestDir()
    */
   private Path getBaseTestDir() {
-    String PathName = System.getProperty(
-        BASE_TEST_DIRECTORY_KEY, DEFAULT_BASE_TEST_DIRECTORY);
+    String PathName = System.getProperty(BASE_TEST_DIRECTORY_KEY, DEFAULT_BASE_TEST_DIRECTORY);
 
     return new Path(PathName);
   }
@@ -248,8 +235,7 @@ public class HBaseCommonTestingUtil {
   /**
    * Wrapper method for {@link Waiter#waitFor(Configuration, long, Predicate)}.
    */
-  public <E extends Exception> long waitFor(long timeout, Predicate<E> predicate)
-      throws E {
+  public <E extends Exception> long waitFor(long timeout, Predicate<E> predicate) throws E {
     return Waiter.waitFor(this.conf, timeout, predicate);
   }
 
@@ -257,15 +243,15 @@ public class HBaseCommonTestingUtil {
    * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, Predicate)}.
    */
   public <E extends Exception> long waitFor(long timeout, long interval, Predicate<E> predicate)
-      throws E {
+    throws E {
     return Waiter.waitFor(this.conf, timeout, interval, predicate);
   }
 
   /**
    * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate)}.
    */
-  public <E extends Exception> long waitFor(long timeout, long interval,
-      boolean failIfTimeout, Predicate<E> predicate) throws E {
+  public <E extends Exception> long waitFor(long timeout, long interval, boolean failIfTimeout,
+    Predicate<E> predicate) throws E {
     return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
   }
 
@@ -331,12 +317,11 @@ public class HBaseCommonTestingUtil {
     }
 
     /**
-     * Returns a random port. These ports cannot be registered with IANA and are
-     * intended for dynamic allocation (see http://bit.ly/dynports).
+     * Returns a random port. These ports cannot be registered with IANA and are intended for
+     * dynamic allocation (see http://bit.ly/dynports).
      */
     private int randomPort() {
-      return MIN_RANDOM_PORT
-        + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
+      return MIN_RANDOM_PORT + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
     }
 
     interface AvailablePortChecker {

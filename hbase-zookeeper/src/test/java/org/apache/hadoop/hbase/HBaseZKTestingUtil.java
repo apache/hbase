@@ -54,8 +54,8 @@ public class HBaseZKTestingUtil extends HBaseCommonTestingUtil {
   }
 
   /**
-   * @return Where the cluster will write data on the local subsystem. Creates it if it does not
-   *         exist already. A subdir of {@code HBaseCommonTestingUtility#getBaseTestDir()}
+   * Returns Where the cluster will write data on the local subsystem. Creates it if it does not
+   * exist already. A subdir of {@code HBaseCommonTestingUtility#getBaseTestDir()}
    */
   Path getClusterTestDir() {
     if (clusterTestDir == null) {
@@ -99,7 +99,7 @@ public class HBaseZKTestingUtil extends HBaseCommonTestingUtil {
    * @return zk cluster started.
    */
   public MiniZooKeeperCluster startMiniZKCluster(int zooKeeperServerNum, int... clientPortList)
-      throws Exception {
+    throws Exception {
     setupClusterTestDir();
     return startMiniZKCluster(clusterTestDir, zooKeeperServerNum, clientPortList);
   }
@@ -109,7 +109,7 @@ public class HBaseZKTestingUtil extends HBaseCommonTestingUtil {
    * port mentioned is used as the default port for ZooKeeper.
    */
   private MiniZooKeeperCluster startMiniZKCluster(File dir, int zooKeeperServerNum,
-      int[] clientPortList) throws Exception {
+    int[] clientPortList) throws Exception {
     if (this.zkCluster != null) {
       throw new IOException("Cluster already running at " + dir);
     }
@@ -159,7 +159,7 @@ public class HBaseZKTestingUtil extends HBaseCommonTestingUtil {
    * users. Don't close it, it will be closed automatically when the cluster shutdowns
    * @return The ZKWatcher instance.
    */
-  public synchronized ZKWatcher getZooKeeperWatcher() throws IOException {
+  public ZKWatcher getZooKeeperWatcher() throws IOException {
     if (zooKeeperWatcher == null) {
       zooKeeperWatcher = new ZKWatcher(conf, "testing utility", new Abortable() {
         @Override
@@ -177,27 +177,7 @@ public class HBaseZKTestingUtil extends HBaseCommonTestingUtil {
   }
 
   /**
-   * Gets a ZKWatcher.
-   */
-  public static ZKWatcher getZooKeeperWatcher(HBaseZKTestingUtil testUtil) throws IOException {
-    return new ZKWatcher(testUtil.getConfiguration(), "unittest", new Abortable() {
-      boolean aborted = false;
-
-      @Override
-      public void abort(String why, Throwable e) {
-        aborted = true;
-        throw new RuntimeException("Fatal ZK error, why=" + why, e);
-      }
-
-      @Override
-      public boolean isAborted() {
-        return aborted;
-      }
-    });
-  }
-
-  /**
-   * @return True if we removed the test dirs
+   * Returns true if we removed the test dirs
    */
   @Override
   public boolean cleanupTestDir() {
