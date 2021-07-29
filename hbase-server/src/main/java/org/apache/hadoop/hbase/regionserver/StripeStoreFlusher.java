@@ -70,7 +70,7 @@ public class StripeStoreFlusher extends StoreFlusher {
     StripeMultiFileWriter mw = null;
     try {
       mw = req.createWriter(); // Writer according to the policy.
-      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(cellsCount);
+      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(snapshot);
       StoreScanner storeScanner = (scanner instanceof StoreScanner) ? (StoreScanner)scanner : null;
       mw.init(storeScanner, factory);
 
@@ -98,13 +98,12 @@ public class StripeStoreFlusher extends StoreFlusher {
     return result;
   }
 
-  private StripeMultiFileWriter.WriterFactory createWriterFactory(final long kvCount) {
+  private StripeMultiFileWriter.WriterFactory createWriterFactory(MemStoreSnapshot snapshot) {
     return new StripeMultiFileWriter.WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
-        StoreFileWriter writer = store.createWriterInTmp(kvCount,
-            store.getColumnFamilyDescriptor().getCompressionType(), false, true, true, false);
-        return writer;
+        // XXX: it used to always pass true for includesTag, re-consider?
+        return StripeStoreFlusher.this.createWriter(snapshot, true);
       }
     };
   }

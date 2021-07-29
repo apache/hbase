@@ -53,8 +53,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.IntBinaryOperator;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -313,7 +313,7 @@ public class TestHStore {
 
   /**
    * Verify that compression and data block encoding are respected by the
-   * Store.createWriterInTmp() method, used on store flush.
+   * createWriter method, used on store flush.
    */
   @Test
   public void testCreateWriter() throws Exception {
@@ -325,9 +325,11 @@ public class TestHStore {
         .build();
     init(name.getMethodName(), conf, hcd);
 
-    // Test createWriterInTmp()
-    StoreFileWriter writer =
-        store.createWriterInTmp(4, hcd.getCompressionType(), false, true, false, false);
+    // Test createWriter
+    StoreFileWriter writer = store.getStoreEngine()
+      .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(4)
+        .compression(hcd.getCompressionType()).isCompaction(false).includeMVCCReadpoint(true)
+        .includesTag(false).shouldDropBehind(false));
     Path path = writer.getPath();
     writer.append(new KeyValue(row, family, qf1, Bytes.toBytes(1)));
     writer.append(new KeyValue(row, family, qf2, Bytes.toBytes(2)));
@@ -1024,19 +1026,19 @@ public class TestHStore {
     // add one more file
     addStoreFile();
 
-    HStore spiedStore = spy(store);
+    StoreEngine<?, ?, ?, ?> spiedStoreEngine = spy(store.getStoreEngine());
 
     // call first time after files changed
-    spiedStore.refreshStoreFiles();
+    spiedStoreEngine.refreshStoreFiles();
     assertEquals(2, this.store.getStorefilesCount());
-    verify(spiedStore, times(1)).replaceStoreFiles(any(), any());
+    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any());
 
     // call second time
-    spiedStore.refreshStoreFiles();
+    spiedStoreEngine.refreshStoreFiles();
 
     // ensure that replaceStoreFiles is not called, i.e, the times does not change, if files are not
     // refreshed,
-    verify(spiedStore, times(1)).replaceStoreFiles(any(), any());
+    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any());
   }
 
   private long countMemStoreScanner(StoreScanner scanner) {
@@ -1647,7 +1649,7 @@ public class TestHStore {
     // Do compaction
     MyThread thread = new MyThread(storeScanner);
     thread.start();
-    store.replaceStoreFiles(actualStorefiles, actualStorefiles1);
+    store.replaceStoreFiles(actualStorefiles, actualStorefiles1, false);
     thread.join();
     KeyValueHeap heap2 = thread.getHeap();
     assertFalse(heap.equals(heap2));
@@ -1713,8 +1715,10 @@ public class TestHStore {
   @Test
   public void testHFileContextSetWithCFAndTable() throws Exception {
     init(this.name.getMethodName());
-    StoreFileWriter writer = store.createWriterInTmp(10000L,
-        Compression.Algorithm.NONE, false, true, false, true);
+    StoreFileWriter writer = store.getStoreEngine()
+      .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(10000L)
+        .compression(Compression.Algorithm.NONE).isCompaction(true).includeMVCCReadpoint(true)
+        .includesTag(false).shouldDropBehind(true));
     HFileContext hFileContext = writer.getHFileWriter().getFileContext();
     assertArrayEquals(family, hFileContext.getColumnFamily());
     assertArrayEquals(table, hFileContext.getTableName());
@@ -3054,7 +3058,8 @@ public class TestHStore {
         int currentCount = clearSnapshotCounter.incrementAndGet();
         if (currentCount == 1) {
           try {
-            if (store.lock.isWriteLockedByCurrentThread()) {
+            if (((ReentrantReadWriteLock) store.getStoreEngine().getLock())
+              .isWriteLockedByCurrentThread()) {
               shouldWait = false;
             }
             /**
