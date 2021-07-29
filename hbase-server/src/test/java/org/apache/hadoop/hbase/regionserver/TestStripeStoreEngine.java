@@ -118,8 +118,10 @@ public class TestStripeStoreEngine {
   }
 
   private static TestStoreEngine createEngine(Configuration conf) throws Exception {
+    HRegion region = mock(HRegion.class);
     HStore store = mock(HStore.class);
     when(store.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    when(store.getHRegion()).thenReturn(region);
     CellComparatorImpl kvComparator = mock(CellComparatorImpl.class);
     return (TestStoreEngine) StoreEngine.create(store, conf, kvComparator);
   }
