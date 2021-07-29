@@ -70,10 +70,17 @@ abstract class StoreFlusher {
     writer.close();
   }
 
+  protected final StoreFileWriter createWriter(MemStoreSnapshot snapshot, boolean alwaysIncludesTag)
+    throws IOException {
+    return store.getStoreEngine()
+      .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(snapshot.getCellsCount())
+        .compression(store.getColumnFamilyDescriptor().getCompressionType()).isCompaction(false)
+        .includeMVCCReadpoint(true).includesTag(alwaysIncludesTag || snapshot.isTagsPresent())
+        .shouldDropBehind(false));
+  }
 
   /**
    * Creates the scanner for flushing snapshot. Also calls coprocessors.
-   * @param snapshotScanners
    * @return The scanner; null if coprocessor is canceling the flush.
    */
   protected final InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
