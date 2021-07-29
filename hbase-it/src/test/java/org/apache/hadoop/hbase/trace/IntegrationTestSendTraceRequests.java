@@ -46,12 +46,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 @Category(IntegrationTests.class)
 public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
-
+  private static final Logger LOG =
+    LoggerFactory.getLogger(IntegrationTestSendTraceRequests.class);
   public static final String TABLE_ARG = "t";
   public static final String CF_ARG = "f";
 
@@ -139,11 +142,11 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
             ht.close();
             ht = null;
           } catch (IOException e) {
-            e.printStackTrace();
+            LOG.warn("Exception occurred while scanning table", e);
             span.addEvent("exception",
               Attributes.of(AttributeKey.stringKey("exception"), e.getClass().getSimpleName()));
           } catch (Exception e) {
-            e.printStackTrace();
+            LOG.warn("Exception occurred while scanning table", e);
           } finally {
             span.end();
             if (rs != null) {
