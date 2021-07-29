@@ -211,11 +211,13 @@ public class TestIOFencing {
 
     @Override
     protected void refreshStoreSizeAndTotalBytes() throws IOException {
-      try {
-        r.compactionsWaiting.countDown();
-        r.compactionsBlocked.await();
-      } catch (InterruptedException ex) {
-        throw new IOException(ex);
+      if (r != null) {
+        try {
+          r.compactionsWaiting.countDown();
+          r.compactionsBlocked.await();
+        } catch (InterruptedException ex) {
+          throw new IOException(ex);
+        }
       }
       super.refreshStoreSizeAndTotalBytes();
     }

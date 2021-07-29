@@ -45,14 +45,14 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   }
 
   private final CellSinkFactory<StoreFileWriter> writerFactory =
-      new CellSinkFactory<StoreFileWriter>() {
-        @Override
-        public StoreFileWriter createWriter(InternalScanner scanner,
-            org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-            boolean shouldDropBehind, boolean major) throws IOException {
-          return createTmpWriter(fd, shouldDropBehind, major);
-        }
-      };
+    new CellSinkFactory<StoreFileWriter>() {
+      @Override
+      public StoreFileWriter createWriter(InternalScanner scanner,
+        org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
+        boolean shouldDropBehind, boolean major) throws IOException {
+        return DefaultCompactor.this.createWriter(fd, shouldDropBehind, major);
+      }
+    };
 
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
