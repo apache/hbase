@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -24,13 +25,13 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /** A call waiting for a value. */
@@ -73,7 +74,7 @@ class Call {
     this.timeout = timeout;
     this.priority = priority;
     this.callback = callback;
-    this.span = Tracer.getCurrentSpan();
+    this.span = Span.current();
   }
 
   /**
