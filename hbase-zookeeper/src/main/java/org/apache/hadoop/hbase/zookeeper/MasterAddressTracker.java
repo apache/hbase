@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -33,6 +32,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
@@ -57,6 +57,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
  */
 @InterfaceAudience.Private
 public class MasterAddressTracker extends ZKNodeTracker {
+
+  private volatile List<ServerName> backupMasters = Collections.emptyList();
+
   /**
    * Construct a master address listener with the specified
    * <code>zookeeper</code> reference.
@@ -70,6 +73,26 @@ public class MasterAddressTracker extends ZKNodeTracker {
    */
   public MasterAddressTracker(ZKWatcher watcher, Abortable abortable) {
     super(watcher, watcher.getZNodePaths().masterAddressZNode, abortable);
+  }
+
+  private void loadBackupMasters() {
+    try {
+      backupMasters = Collections.unmodifiableList(getBackupMastersAndRenewWatch(watcher));
+    } catch (InterruptedIOException e) {
+      abortable.abort("Unexpected exception handling nodeChildrenChanged event", e);
+    }
+  }
+
+  @Override
+  protected void postStart() {
+    loadBackupMasters();
+  }
+
+  @Override
+  public void nodeChildrenChanged(String path) {
+    if (path.equals(watcher.getZNodePaths().backupMasterAddressesZNode)) {
+      loadBackupMasters();
+    }
   }
 
   /**
@@ -252,11 +275,12 @@ public class MasterAddressTracker extends ZKNodeTracker {
     }
     int prefixLen = ProtobufUtil.lengthOfPBMagic();
     try {
-      return ZooKeeperProtos.Master.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
+      return ZooKeeperProtos.Master.parser().parseFrom(data, prefixLen, data.length - prefixLen);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
   }
+
   /**
    * delete the master znode if its content is same as the parameter
    * @param zkw must not be null
@@ -284,7 +308,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   public List<ServerName> getBackupMasters() throws InterruptedIOException {
-    return getBackupMastersAndRenewWatch(watcher);
+    return backupMasters;
   }
 
   /**
