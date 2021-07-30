@@ -30,16 +30,16 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({ SmallTests.class, ReplicationTests.class })
+@Category({SmallTests.class,ReplicationTests.class})
 public class TestReplicationSourceLogQueue {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationSourceLogQueue.class);
+    HBaseClassTestRule.forClass(TestReplicationSourceLogQueue.class);
 
   /*
-   * Testing enqueue and dequeuing of wal
-   */
+    Testing enqueue and dequeuing of wal
+  */
   @Test
   public void testEnqueueDequeue() {
     String walGroupId1 = "fake-walgroup-id-1";

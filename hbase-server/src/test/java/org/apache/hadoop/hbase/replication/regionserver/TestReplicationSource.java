@@ -639,6 +639,7 @@ public class TestReplicationSource {
     try {
       ManualEnvironmentEdge manualEdge = new ManualEnvironmentEdge();
       EnvironmentEdgeManager.injectEdge(manualEdge);
+
       String id = "1";
       MetricsSource metrics = new MetricsSource(id);
       Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
