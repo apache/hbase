@@ -265,7 +265,9 @@ public class TestReplicationSource {
       testConf.setInt("replication.source.maxretriesmultiplier", 1);
       ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
       Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
-      source.init(testConf, null, manager, null, mockPeer, null, "testPeer",
+      RegionServerServices rss =
+          TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
+      source.init(testConf, null, manager, null, mockPeer, rss, "testPeer",
         null, p -> OptionalLong.empty(), null);
       ExecutorService executor = Executors.newSingleThreadExecutor();
       Future<?> future = executor.submit(
@@ -289,7 +291,9 @@ public class TestReplicationSource {
     ReplicationPeer mockPeer = mock(ReplicationPeer.class);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
     Configuration testConf = HBaseConfiguration.create();
-    source.init(testConf, null, mockManager, null, mockPeer, null,
+    RegionServerServices rss =
+        TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
+    source.init(testConf, null, mockManager, null, mockPeer, rss,
       "testPeer", null, p -> OptionalLong.empty(), mock(MetricsSource.class));
     ReplicationSourceWALReader reader = new ReplicationSourceWALReader(null,
       conf, null, 0, null, source, null);
@@ -635,10 +639,10 @@ public class TestReplicationSource {
     try {
       ManualEnvironmentEdge manualEdge = new ManualEnvironmentEdge();
       EnvironmentEdgeManager.injectEdge(manualEdge);
-
       String id = "1";
       MetricsSource metrics = new MetricsSource(id);
       Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+      conf.setInt(MetricsReplicationSourceRefresherChore.DURATION, 1000);
       conf.setInt("replication.source.maxretriesmultiplier", 1);
       ReplicationPeer mockPeer = Mockito.mock(ReplicationPeer.class);
       Mockito.when(mockPeer.getConfiguration()).thenReturn(conf);
@@ -653,7 +657,6 @@ public class TestReplicationSource {
         thenReturn(mock(MetricsReplicationGlobalSourceSource.class));
       RegionServerServices rss =
         TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
-
       ReplicationSource source = new ReplicationSource();
       source.init(conf, null, manager, null, mockPeer, rss, id, null,
         p -> OptionalLong.empty(), metrics);
@@ -662,12 +665,16 @@ public class TestReplicationSource {
       manualEdge.setValue(10);
       // Diff of current time (10) and  log-walgroup-a.8 timestamp will be 2.
       source.enqueueLog(log1);
+      // Sleep for chore to update WAL age
+      Thread.sleep(1000);
       MetricsReplicationSourceSource metricsSource1 = getSourceMetrics(id);
       assertEquals(2, metricsSource1.getOldestWalAge());
 
       final Path log2 = new Path(logDir, "log-walgroup-b.4");
       // Diff of current time (10) and log-walgroup-b.4 will be 6 so oldestWalAge should be 6
       source.enqueueLog(log2);
+      // Sleep for chore to update WAL age
+      Thread.sleep(1000);
       assertEquals(6, metricsSource1.getOldestWalAge());
       // Clear all metrics.
       metrics.clear();
