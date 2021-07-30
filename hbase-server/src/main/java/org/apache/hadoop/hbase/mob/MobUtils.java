@@ -863,6 +863,7 @@ public final class MobUtils {
   public static ExecutorService createMobCompactorThreadPool(Configuration conf) {
     int maxThreads = conf.getInt(MobConstants.MOB_COMPACTION_THREADS_MAX,
         MobConstants.DEFAULT_MOB_COMPACTION_THREADS_MAX);
+    // resets to default mob compaction thread number when the user sets this value incorrectly      
     if (maxThreads <= 0) {
       maxThreads = 1;
     }
