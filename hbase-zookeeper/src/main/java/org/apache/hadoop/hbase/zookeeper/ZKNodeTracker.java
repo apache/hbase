@@ -42,7 +42,7 @@ public abstract class ZKNodeTracker extends ZKListener {
   protected final String node;
 
   /** Data of the node being tracked */
-  private byte [] data;
+  private byte[] data;
 
   /** Used to abort if a fatal error occurs */
   protected final Abortable abortable;
@@ -51,16 +51,14 @@ public abstract class ZKNodeTracker extends ZKListener {
 
   /**
    * Constructs a new ZK node tracker.
-   *
-   * <p>After construction, use {@link #start} to kick off tracking.
-   *
+   * <p/>
+   * After construction, use {@link #start} to kick off tracking.
    * @param watcher reference to the {@link ZKWatcher} which also contains configuration and
-   *                constants
+   *          constants
    * @param node path of the node being tracked
    * @param abortable used to abort if a fatal error occurs
    */
-  public ZKNodeTracker(ZKWatcher watcher, String node,
-                       Abortable abortable) {
+  public ZKNodeTracker(ZKWatcher watcher, String node, Abortable abortable) {
     super(watcher);
     this.node = node;
     this.abortable = abortable;
@@ -69,9 +67,9 @@ public abstract class ZKNodeTracker extends ZKListener {
 
   /**
    * Starts the tracking of the node in ZooKeeper.
-   *
-   * <p>Use {@link #blockUntilAvailable()} to block until the node is available
-   * or {@link #getData(boolean)} to get the data of the node if it is available.
+   * <p/>
+   * Use {@link #blockUntilAvailable()} to block until the node is available or
+   * {@link #getData(boolean)} to get the data of the node if it is available.
    */
   public synchronized void start() {
     this.watcher.registerListener(this);
@@ -89,6 +87,13 @@ public abstract class ZKNodeTracker extends ZKListener {
     } catch (KeeperException e) {
       abortable.abort("Unexpected exception during initialization, aborting", e);
     }
+    postStart();
+  }
+
+  /**
+   * Called after start is called. Sub classes could implement this method to load more data on zk.
+   */
+  protected void postStart() {
   }
 
   public synchronized void stop() {
