@@ -629,8 +629,7 @@ public class TestHStore {
     assertCheck();
   }
 
-  private void flush(int storeFilessize) throws IOException{
-    this.store.snapshot();
+  private void flush(int storeFilessize) throws IOException {
     flushStore(store, id++);
     assertEquals(storeFilessize, this.store.getStorefiles().size());
     assertEquals(0, ((AbstractMemStore)this.store.memstore).getActive().getCellsCount());
@@ -801,7 +800,6 @@ public class TestHStore {
 
   /**
    * Test to ensure correctness when using Stores with multiple timestamps
-   * @throws IOException
    */
   @Test
   public void testMultipleTimestamps() throws IOException {
@@ -816,7 +814,6 @@ public class TestHStore {
       this.store.add(kv, null);
     }
 
-    this.store.snapshot();
     flushStore(store, id++);
 
     List<Cell> kvList2 = getKeyValueSet(timestamps2,numRows, qf1, family);
