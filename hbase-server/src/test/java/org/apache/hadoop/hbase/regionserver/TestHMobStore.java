@@ -461,11 +461,8 @@ public class TestHMobStore {
 
   /**
    * Flush the memstore
-   * @param storeFilesSize
-   * @throws IOException
    */
   private void flush(int storeFilesSize) throws IOException{
-    this.store.snapshot();
     flushStore(store, id++);
     Assert.assertEquals(storeFilesSize, this.store.getStorefiles().size());
     Assert.assertEquals(0, ((AbstractMemStore)this.store.memstore).getActive().getCellsCount());
@@ -473,9 +470,6 @@ public class TestHMobStore {
 
   /**
    * Flush the memstore
-   * @param store
-   * @param id
-   * @throws IOException
    */
   private static void flushStore(HMobStore store, long id) throws IOException {
     StoreFlushContext storeFlushCtx = store.createFlushContext(id, FlushLifeCycleTracker.DUMMY);

@@ -996,22 +996,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   /**
-   * Snapshot this stores memstore. Call before running
-   * {@link #flushCache(long, MemStoreSnapshot, MonitoredTask, ThroughputController,
-   * FlushLifeCycleTracker)}
-   *  so it has some work to do.
-   */
-  void snapshot() {
-    this.lock.writeLock().lock();
-    try {
-      this.memstore.snapshot();
-    } finally {
-      this.lock.writeLock().unlock();
-    }
-  }
-
-  /**
-   * Write out current snapshot. Presumes {@link #snapshot()} has been called previously.
+   * Write out current snapshot. Presumes {@code StoreFlusherImpl.prepare()} has been called
+   * previously.
    * @param logCacheFlushId flush sequence number
    * @return The path name of the tmp file to which the store was flushed
    * @throws IOException if exception occurs during process
@@ -1254,9 +1240,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     this.lock.writeLock().lock();
     try {
       this.storeEngine.getStoreFileManager().insertNewFiles(sfs);
-      if (snapshotId > 0) {
-        this.memstore.clearSnapshot(snapshotId);
-      }
     } finally {
       // We need the lock, as long as we are updating the storeFiles
       // or changing the memstore. Let us release it before calling
@@ -1264,6 +1247,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       // deadlock scenario that could have happened if continue to hold
       // the lock.
       this.lock.writeLock().unlock();
+    }
+    // We do not need to call clearSnapshot method inside the write lock.
+    // The clearSnapshot itself is thread safe, which can be called at the same time with other
+    // memstore operations expect snapshot and clearSnapshot. And for these two methods, in HRegion
+    // we can guarantee that there is only one onging flush, so they will be no race.
+    if (snapshotId > 0) {
+      this.memstore.clearSnapshot(snapshotId);
     }
     // notify to be called here - only in case of flushes
     notifyChangedReadersObservers(sfs);
