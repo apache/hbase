@@ -28,6 +28,8 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -240,12 +242,14 @@ public class TestMemStoreChunkPool {
     ChunkCreator newCreator = new ChunkCreator(chunkSize, false, 400, 1, 0.5f, null, 0);
     assertEquals(initialCount, newCreator.getPoolSize());
     assertEquals(maxCount, newCreator.getMaxCount());
-    ChunkCreator.instance = newCreator;// Replace the global ref with the new one we created.
-                                             // Used it for the testing. Later in finally we put
-                                             // back the original
-    final Throwable[] exceptions = new Throwable[1];
+    // Replace the global ref with the new one we created.
+    // Used it for the testing. Later in finally we put
+    // back the original
+    ChunkCreator.instance = newCreator;
+
     final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
         new byte[valSize]);
+    final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>();
     try {
       Runnable r = new Runnable() {
         @Override
@@ -253,13 +257,14 @@ public class TestMemStoreChunkPool {
           try {
             MemStoreLAB memStoreLAB = new MemStoreLABImpl(conf);
             for (int i = 0; i < maxCount; i++) {
-              memStoreLAB.copyCellInto(kv);// Try allocate size = chunkSize. Means every
+              // Try allocate size = chunkSize. Means every
               // allocate call will result in a new chunk
+              memStoreLAB.copyCellInto(kv);
             }
             // Close MemStoreLAB so that all chunks will be tried to be put back to pool
             memStoreLAB.close();
           } catch (Throwable execption) {
-            exceptions[0] = execption;
+            exceptionRef.set(execption);
           }
         }
       };
@@ -272,15 +277,16 @@ public class TestMemStoreChunkPool {
       t1.join();
       t2.join();
       t3.join();
-      assertTrue(exceptions[0] == null);
+      assertTrue(exceptionRef.get() == null);
       assertTrue(newCreator.getPoolSize() <= maxCount && newCreator.getPoolSize() > 0);
     } finally {
       ChunkCreator.instance = oldCreator;
     }
   }
 
+  // This test is for HBASE-26142, which throws NPE when IndexChunks is null.
   @Test
-  public void testNullPointerExceptionWhenIndexChunksPollIsNullBug26142() throws Exception {
+  public void testNoIndexChunksPoolOrNoDataChunksPool() throws Exception {
     final int maxCount = 10;
     final int initialCount = 5;
     final int newChunkSize = 40;
@@ -315,6 +321,7 @@ public class TestMemStoreChunkPool {
       assertEquals(initialCount, newCreator.getPoolSize());
       assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
 
+      // We set ChunkCreator.indexChunkSize to 0, but we want to get a IndexChunk
       try {
         newCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP, ChunkType.INDEX_CHUNK);
         fail();
@@ -350,6 +357,7 @@ public class TestMemStoreChunkPool {
       assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
 
       try {
+        // We set ChunkCreator.indexChunkSize to 0, but we want to get a IndexChunk
         newCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP, ChunkType.INDEX_CHUNK);
         fail();
       } catch (IllegalArgumentException e) {
