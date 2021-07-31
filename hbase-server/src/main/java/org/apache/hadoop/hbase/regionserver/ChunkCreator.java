@@ -237,7 +237,7 @@ public class ChunkCreator {
   Chunk getJumboChunk(int jumboSize) {
     int allocSize = jumboSize + SIZEOF_CHUNK_HEADER;
 
-    if (allocSize <= this.getChunkSize()) {
+    if (allocSize <= this.getChunkSize(ChunkType.DATA_CHUNK)) {
       LOG.warn("Jumbo chunk size " + jumboSize + " must be more than regular chunk size "
           + this.getChunkSize() + ". Converting to regular chunk.");
       return getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
