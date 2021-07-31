@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.testing;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -38,6 +39,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public final class TestingHBaseClusterOption {
+
+  /**
+   * Configuration for this testing cluster. Can be {@code null}.
+   */
+  private final Configuration conf;
 
   /**
    * Number of masters to start up. We'll start this many hbase masters.
@@ -95,9 +101,10 @@ public final class TestingHBaseClusterOption {
   /**
    * Private constructor. Use {@link Builder#build()}.
    */
-  private TestingHBaseClusterOption(int numMasters, int numAlwaysStandByMasters,
+  private TestingHBaseClusterOption(Configuration conf, int numMasters, int numAlwaysStandByMasters,
     int numRegionServers, List<Integer> rsPorts, int numDataNodes, String[] dataNodeHosts,
     int numZkServers, boolean createRootDir, boolean createWALDir) {
+    this.conf = conf;
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
     this.numRegionServers = numRegionServers;
@@ -107,6 +114,10 @@ public final class TestingHBaseClusterOption {
     this.numZkServers = numZkServers;
     this.createRootDir = createRootDir;
     this.createWALDir = createWALDir;
+  }
+
+  public Configuration conf() {
+    return conf;
   }
 
   public int getNumMasters() {
@@ -176,6 +187,7 @@ public final class TestingHBaseClusterOption {
    * tests fail.
    */
   public static final class Builder {
+    private Configuration conf;
     private int numMasters = 1;
     private int numAlwaysStandByMasters = 0;
     private int numRegionServers = 1;
@@ -193,8 +205,14 @@ public final class TestingHBaseClusterOption {
       if (dataNodeHosts != null && dataNodeHosts.length != 0) {
         numDataNodes = dataNodeHosts.length;
       }
-      return new TestingHBaseClusterOption(numMasters, numAlwaysStandByMasters, numRegionServers,
-        rsPorts, numDataNodes, dataNodeHosts, numZkServers, createRootDir, createWALDir);
+      return new TestingHBaseClusterOption(conf, numMasters, numAlwaysStandByMasters,
+        numRegionServers, rsPorts, numDataNodes, dataNodeHosts, numZkServers, createRootDir,
+        createWALDir);
+    }
+
+    public Builder conf(Configuration conf) {
+      this.conf = conf;
+      return this;
     }
 
     public Builder numMasters(int numMasters) {

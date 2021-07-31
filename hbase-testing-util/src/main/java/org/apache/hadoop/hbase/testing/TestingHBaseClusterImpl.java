@@ -35,7 +35,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 @InterfaceAudience.Private
 class TestingHBaseClusterImpl implements TestingHBaseCluster {
 
-  private final HBaseTestingUtility util = new HBaseTestingUtility();
+  private final HBaseTestingUtility util;
 
   private final StartMiniClusterOption option;
 
@@ -47,6 +47,7 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   private boolean miniHBaseClusterRunning = false;
 
   TestingHBaseClusterImpl(TestingHBaseClusterOption option) {
+    this.util = new HBaseTestingUtility(option.conf());
     this.option = option.convert();
   }
 
