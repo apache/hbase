@@ -239,7 +239,7 @@ public class ChunkCreator {
 
     if (allocSize <= this.getChunkSize(ChunkType.DATA_CHUNK)) {
       LOG.warn("Jumbo chunk size " + jumboSize + " must be more than regular chunk size "
-          + this.getChunkSize() + ". Converting to regular chunk.");
+          + this.getChunkSize(ChunkType.DATA_CHUNK) + ". Converting to regular chunk.");
       return getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
     }
     // the new chunk is going to hold the jumbo cell data and needs to be referenced by
