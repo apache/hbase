@@ -284,7 +284,7 @@ public class TestMemStoreChunkPool {
     }
   }
 
-  // This test is for HBASE-26142, which throws NPE when IndexChunks is null.
+  // This test is for HBASE-26142, which throws NPE when indexChunksPool is null.
   @Test
   public void testNoIndexChunksPoolOrNoDataChunksPool() throws Exception {
     final int maxCount = 10;
