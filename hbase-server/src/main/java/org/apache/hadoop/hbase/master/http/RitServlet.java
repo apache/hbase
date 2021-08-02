@@ -82,11 +82,7 @@ public class RitServlet extends DefaultServlet {
         rits.add(rit);
       }
 
-      if (rits.isEmpty()) {
-        out.write("There are currently no regions in transition.");
-      } else {
-        out.write(GSON.toJson(map));
-      }
+      out.write(GSON.toJson(map));
       out.flush();
     }
   }

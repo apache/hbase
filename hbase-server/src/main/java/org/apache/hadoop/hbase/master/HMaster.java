@@ -655,7 +655,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   protected void configureInfoServer() {
     infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
-    infoServer.addPrivilegedServlet("rits", "/rits", RitServlet.class);
+    infoServer.addPrivilegedServlet("rit", "/rit", RitServlet.class);
     infoServer.setAttribute(MASTER, this);
     if (maintenanceMode) {
       super.configureInfoServer();
