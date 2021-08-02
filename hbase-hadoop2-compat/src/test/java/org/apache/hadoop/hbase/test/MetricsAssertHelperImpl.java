@@ -184,7 +184,7 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   @Override
   public void assertCounter(String name, long expected, BaseSource source) {
     long found = getCounter(name, source);
-    assertEquals("Metrics Counters should be equal", (long) Long.valueOf(expected), found);
+    assertEquals(name + "(" + found + ") should be equal", (long) Long.valueOf(expected), found);
   }
 
   @Override
