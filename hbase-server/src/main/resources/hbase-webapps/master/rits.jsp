@@ -70,7 +70,7 @@
         <div class="page-header">
             <a href="/rits.jsp?format=txt&filter=region&table=<%=table%>&state=<%=state%>" class="btn btn-primary">Regions in text format</a>
             <a href="/rits.jsp?format=txt&filter=procedure&table=<%=table%>&state=<%=state%>" class="btn btn-info">Procedures in text format</a>
-            <a href="/rits" class="btn btn-info">RIT info as JSON</a>
+            <a href="/rit" class="btn btn-info">RIT info as JSON</a>
             <p>regions and procedures in text format can be copied and passed to command-line utils such as hbck2</p>
         </div>
     </div>
