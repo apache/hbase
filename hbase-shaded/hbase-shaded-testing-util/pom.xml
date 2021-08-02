@@ -69,6 +69,10 @@
                   <groupId>javax.ws.rs</groupId>
                   <artifactId>jsr311-api</artifactId>
                 </exclusion>
+                <exclusion>
+                  <groupId>javax.servlet</groupId>
+                  <artifactId>servlet-api</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -107,6 +111,10 @@
                 <exclusion>
                   <groupId>javax.ws.rs</groupId>
                   <artifactId>jsr311-api</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>javax.servlet</groupId>
+                  <artifactId>servlet-api</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
