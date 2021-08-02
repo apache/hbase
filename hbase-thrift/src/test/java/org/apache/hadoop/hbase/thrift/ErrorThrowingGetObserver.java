@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSource;
+import org.apache.hadoop.hbase.quotas.QuotaExceededException;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -79,6 +81,10 @@ public class ErrorThrowingGetObserver implements RegionCoprocessor, RegionObserv
           throw new RegionTooBusyException("Failing for test");
         case OUT_OF_ORDER_SCANNER_NEXT:
           throw new OutOfOrderScannerNextException("Failing for test");
+        case QUOTA_EXCEEDED:
+          throw new QuotaExceededException("Failing for test");
+        case RPC_THROTTLING:
+          throw new RpcThrottlingException("Failing for test");
         default:
           throw new DoNotRetryIOException("Failing for test");
       }
@@ -94,7 +100,9 @@ public class ErrorThrowingGetObserver implements RegionCoprocessor, RegionObserv
     SCANNER_RESET(ExceptionTrackingSource.EXCEPTIONS_SCANNER_RESET_NAME),
     UNKNOWN_SCANNER(ExceptionTrackingSource.EXCEPTIONS_UNKNOWN_NAME),
     REGION_TOO_BUSY(ExceptionTrackingSource.EXCEPTIONS_BUSY_NAME),
-    OUT_OF_ORDER_SCANNER_NEXT(ExceptionTrackingSource.EXCEPTIONS_OOO_NAME);
+    OUT_OF_ORDER_SCANNER_NEXT(ExceptionTrackingSource.EXCEPTIONS_OOO_NAME),
+    QUOTA_EXCEEDED(ExceptionTrackingSource.EXCEPTIONS_QUOTA_EXCEEDED),
+    RPC_THROTTLING(ExceptionTrackingSource.EXCEPTIONS_RPC_THROTTLING);
 
     private final String metricName;
 
