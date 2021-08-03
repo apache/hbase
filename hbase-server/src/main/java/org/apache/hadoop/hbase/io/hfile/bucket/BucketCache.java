@@ -430,6 +430,11 @@ public class BucketCache implements BlockCache, HeapSize {
     if (cacheEnabled) {
       if (backingMap.containsKey(cacheKey) || ramCache.containsKey(cacheKey)) {
         if (BlockCacheUtil.shouldReplaceExistingCacheBlock(this, cacheKey, cachedItem)) {
+          BucketEntry bucketEntry = backingMap.get(cacheKey);
+          if (bucketEntry != null && bucketEntry.isRpcRef()) {
+            // avoid replace when there are RPC refs for the bucket entry in bucket cache
+            return;
+          }
           cacheBlockWithWaitInternal(cacheKey, cachedItem, inMemory, wait);
         }
       } else {
