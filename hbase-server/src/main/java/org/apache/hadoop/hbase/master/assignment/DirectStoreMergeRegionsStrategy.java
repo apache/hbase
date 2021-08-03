@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.apache.hadoop.hbase.regionserver.HRegionFileSystem.REGION_WRITE_STRATEGY;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -24,6 +26,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.regionserver.DirectStoreFSWriteStrategy;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -71,12 +74,14 @@ public class DirectStoreMergeRegionsStrategy extends MergeRegionsStrategy {
       RegionInfo[] regionsToMerge, Path tableDir, RegionInfo mergedRegion) throws IOException {
     //creates the resulting merge region dir directly under the table directory, instead of
     //the temp ".merges" dir
+    Configuration configuration = new Configuration(env.getMasterConfiguration());
+    configuration.set(REGION_WRITE_STRATEGY, DirectStoreFSWriteStrategy.class.getName());
     HRegionFileSystem mergeRegionFs = HRegionFileSystem.createRegionOnFileSystem(
-      env.getMasterConfiguration(), fs, tableDir, mergedRegion);
+      configuration, fs, tableDir, mergedRegion);
     mergeRegionFs.createMergesDir();
     for (RegionInfo ri: regionsToMerge) {
       HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
-        env.getMasterConfiguration(), fs, tableDir, ri, false);
+        configuration, fs, tableDir, ri, false);
       mergeStoreFiles(env, regionFs, mergeRegionFs, mergedRegion);
     }
     return mergeRegionFs;

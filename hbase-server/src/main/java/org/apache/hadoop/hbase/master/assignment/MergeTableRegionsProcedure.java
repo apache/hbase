@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -114,11 +115,13 @@ public class MergeTableRegionsProcedure
     // Preflight depends on mergedRegion being set (at least).
     preflightChecks(env, true);
     this.force = force;
-    createMergeStrategy(env.getMasterConfiguration());
+    TableDescriptor descriptor = env.getMasterServices().getTableDescriptors().
+      get(mergedRegion.getTable());
+    createMergeStrategy(descriptor);
   }
 
-  private void createMergeStrategy(Configuration conf) {
-    String className = conf.get(MERGE_REGION_STRATEGY, DefaultMergeStrategy.class.getName());
+  private void createMergeStrategy(TableDescriptor descriptor) {
+    String className = descriptor.getValue(MERGE_REGION_STRATEGY);
     createMergeStrategy(className);
   }
 

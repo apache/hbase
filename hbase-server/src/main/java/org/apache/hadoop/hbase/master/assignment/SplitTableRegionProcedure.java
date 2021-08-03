@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.apache.hadoop.hbase.regionserver.HRegionFileSystem.REGION_WRITE_STRATEGY;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -616,8 +618,12 @@ public class SplitTableRegionProcedure
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), getTableName());
     final FileSystem fs = mfs.getFileSystem();
+    TableDescriptor descriptor = env.getMasterServices().getTableDescriptors().
+      get(this.getParentRegion().getTable());
+    Configuration configuration = new Configuration(env.getMasterConfiguration());
+    configuration.set(REGION_WRITE_STRATEGY, descriptor.getValue(REGION_WRITE_STRATEGY));
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
-      env.getMasterConfiguration(), fs, tabledir, getParentRegion(), false);
+      configuration, fs, tabledir, getParentRegion(), false);
     regionFs.createSplitsDir(daughterOneRI, daughterTwoRI);
     Pair<Integer, Integer> expectedReferences = splitStoreFiles(env, regionFs);
     assertReferenceFileCount(fs, expectedReferences.getFirst(),
