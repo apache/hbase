@@ -15,15 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ThreadFactory;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.types.CopyOnWriteArrayMap;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
@@ -35,7 +35,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -87,10 +89,10 @@ public class MetaRegionLocationCache extends ZKListener {
     // are established. Subsequent updates are handled by the registered listener. Also, this runs
     // in a separate thread in the background to not block master init.
     ThreadFactory threadFactory = new ThreadFactoryBuilder().setDaemon(true).build();
-    RetryCounterFactory retryFactory = new RetryCounterFactory(
-        Integer.MAX_VALUE, SLEEP_INTERVAL_MS_BETWEEN_RETRIES, SLEEP_INTERVAL_MS_MAX);
-    threadFactory.newThread(
-      ()->loadMetaLocationsFromZk(retryFactory.create(), ZNodeOpType.INIT)).start();
+    RetryCounterFactory retryFactory = new RetryCounterFactory(Integer.MAX_VALUE,
+      SLEEP_INTERVAL_MS_BETWEEN_RETRIES, SLEEP_INTERVAL_MS_MAX);
+    threadFactory.newThread(() -> loadMetaLocationsFromZk(retryFactory.create(), ZNodeOpType.INIT))
+      .start();
   }
 
   /**

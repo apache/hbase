@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.MetaRegionLocationCache;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.PleaseRestartMasterException;
@@ -302,12 +303,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   // manager of assignment nodes in zookeeper
   private AssignmentManager assignmentManager;
 
-  /**
-   * Cache for the meta region replica's locations. Also tracks their changes to avoid stale
-   * cache entries.
-   */
-  private final MetaRegionLocationCache metaRegionLocationCache;
-
   // manager of replication
   private ReplicationPeerManager replicationPeerManager;
 
@@ -474,7 +469,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
 
-      this.metaRegionLocationCache = new MetaRegionLocationCache(this.zooKeeper);
       this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
 
       cachedClusterId = new CachedClusterId(this, conf);
@@ -3791,10 +3785,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       return super.getClusterId();
     }
     return cachedClusterId.getFromCacheOrFetch();
-  }
-
-  public MetaRegionLocationCache getMetaRegionLocationCache() {
-    return this.metaRegionLocationCache;
   }
 
   /**

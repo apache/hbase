@@ -146,7 +146,7 @@ public class TestScannersFromClientSide {
     Class<?> confClass = conf.getClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
       ZKConnectionRegistry.class);
     int hedgedReqConfig = conf.getInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY,
-      MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_DEFAULT);
+      AbstractRpcBasedConnectionRegistry.HEDGED_REQS_FANOUT_DEFAULT);
     return confClass.getName().equals(registryImpl.getName()) && numHedgedReqs == hedgedReqConfig;
   }
 
