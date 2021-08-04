@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Scope;
 import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -50,6 +48,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1288,8 +1287,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("HFileReaderImpl.readBlock").startSpan();
-    try (Scope traceScope = span.makeCurrent()) {
+    try (TraceScope traceScope = TraceUtil.createTrace("HFileReaderImpl.readBlock")) {
       while (true) {
         // Check cache for block. If found return.
         if (cacheConf.shouldReadBlockFromCache(expectedBlockType)) {
@@ -1304,7 +1302,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             if (LOG.isTraceEnabled()) {
               LOG.trace("From Cache " + cachedBlock);
             }
-            span.addEvent("blockCacheHit");
+            TraceUtil.addTimelineAnnotation("blockCacheHit");
             assert cachedBlock.isUnpacked() : "Packed block leak.";
             if (cachedBlock.getBlockType().isData()) {
               if (updateCacheMetrics) {
@@ -1334,7 +1332,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           // Carry on, please load.
         }
 
-        span.addEvent("blockCacheMiss");
+        TraceUtil.addTimelineAnnotation("blockCacheMiss");
         // Load block from filesystem.
         HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread,
           !isCompaction, shouldUseHeap(expectedBlockType));
@@ -1364,7 +1362,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       if (lockEntry != null) {
         offsetLock.releaseLockEntry(lockEntry);
       }
-      span.end();
     }
   }
 

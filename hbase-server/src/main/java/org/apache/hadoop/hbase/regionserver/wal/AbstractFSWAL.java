@@ -25,8 +25,6 @@ import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.c
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 import com.lmax.disruptor.RingBuffer;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Scope;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -85,6 +83,7 @@ import org.apache.hadoop.hbase.wal.WALProvider.WriterBase;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -785,12 +784,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * @throws IOException if there is a problem flushing or closing the underlying FS
    */
   Path replaceWriter(Path oldPath, Path newPath, W nextWriter) throws IOException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("FSHFile.replaceWriter").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    try (TraceScope scope = TraceUtil.createTrace("FSHFile.replaceWriter")) {
       doReplaceWriter(oldPath, newPath, nextWriter);
       return newPath;
-    } finally {
-      span.end();
     }
   }
 
@@ -838,8 +834,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         LOG.debug("WAL closed. Skipping rolling of writer");
         return regionsToFlush;
       }
-      Span span = TraceUtil.getGlobalTracer().spanBuilder("FSHLog.rollWriter").startSpan();
-      try (Scope scope = span.makeCurrent()) {
+      try (TraceScope scope = TraceUtil.createTrace("FSHLog.rollWriter")) {
         Path oldPath = getOldPath();
         Path newPath = getNewPath();
         // Any exception from here on is catastrophic, non-recoverable so we currently abort.
@@ -866,8 +861,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         throw new IOException(
             "Underlying FileSystem can't meet stream requirements. See RS log " + "for details.",
             exception);
-      } finally {
-        span.end();
       }
       return regionsToFlush;
     } finally {
@@ -1059,7 +1052,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
           .append(TimeUnit.NANOSECONDS.toMillis(timeInNanos))
           .append(" ms, current pipeline: ")
           .append(Arrays.toString(getPipeline())).toString();
-      Span.current().addEvent(msg);
+      TraceUtil.addTimelineAnnotation(msg);
       LOG.info(msg);
       // A single sync took too long.
       // Elsewhere in checkSlowSync, called from checkLogRoll, we will look at cumulative
@@ -1095,14 +1088,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     long txid = txidHolder.longValue();
     ServerCall<?> rpcCall = RpcServer.getCurrentCall().filter(c -> c instanceof ServerCall)
       .filter(c -> c.getCellScanner() != null).map(c -> (ServerCall) c).orElse(null);
-    Span span = TraceUtil.getGlobalTracer().spanBuilder(implClassName + ".append").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    try (TraceScope scope = TraceUtil.createTrace(implClassName + ".append")) {
       FSWALEntry entry = new FSWALEntry(txid, key, edits, hri, inMemstore, rpcCall);
       entry.stampRegionSequenceId(we);
       ringBuffer.get(txid).load(entry);
     } finally {
       ringBuffer.publish(txid);
-      span.end();
     }
     return txid;
   }

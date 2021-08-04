@@ -78,6 +78,7 @@ public class IntegrationTestTableMapReduceUtil implements Configurable, Tool {
     assertTrue(tmpjars.contains("netty"));
     assertTrue(tmpjars.contains("protobuf"));
     assertTrue(tmpjars.contains("guava"));
+    assertTrue(tmpjars.contains("htrace"));
   }
 
   @Override
