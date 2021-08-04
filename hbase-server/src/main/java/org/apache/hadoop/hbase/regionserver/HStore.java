@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
@@ -59,7 +60,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
@@ -106,7 +105,6 @@ import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
@@ -115,7 +113,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 
@@ -598,6 +595,169 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
 
     return results;
+  }
+
+  @Override
+  public void reopenNewlyLocalStoreFiles() throws IOException {
+    reopenNewlyLocalStoreFiles(0.0);
+  }
+
+  /**
+   * Opens new HStoreFile objects for any underlying store file whose locality has improved
+   * more than the improvementThreshold. Locality is computed when the HStoreFile is initially
+   * opened, and then re-computed on invocation of this method. If the new value is greater
+   * than the initial value by at least the improvementThreshold, it is a candidate for reopening.
+   * Store files who are currently undergoing compaction are not considered for re-opening.
+   * @param improvementThreshold
+   * @throws IOException
+   */
+  @RestrictedApi(
+    explanation = "Should only be called in HStore and TestHStore",
+    link = "", allowedOnPath = ".*(Test)?HStore.java")
+  void reopenNewlyLocalStoreFiles(double improvementThreshold) throws IOException {
+    StoreFileManager sfm = storeEngine.getStoreFileManager();
+    String identifier =  this.getRegionInfo().getRegionNameAsString() + " (" + this + ")";
+
+    // Inspect all currently known StoreFiles with a read lock. If a file's current known locality
+    // index is lower than the actual locality index, opens a new StoreFile object for that file.
+    // This part could be (relatively) expensive because we are hitting the namenode to get block
+    // locations and are initializing new StoreFile objects. We do it in a separate read lock, then
+    // verify and do the actual swap in the write lock below.
+
+    Map<HStoreFile, HStoreFile> filesToReplace = findStoreFilesToReOpen(
+      sfm, identifier, improvementThreshold
+    );
+
+    if (filesToReplace.isEmpty()) {
+      LOG.info("No candidates found for re-opening");
+      return;
+    }
+
+    // We've done the expensive part, so now we want to swap in our new files with the write lock.
+    // There is obviously a gap here where we held no lock. A few things could happen in
+    // this period:
+    // - file could get enqueued for compaction
+    // - file could get compacted and thus deleted (unlikely, since we exclude compactingFiles
+    //   above, but possible)
+    // - files could be cleaned up (removed)
+    // - HStore could be closed
+    // - file could get created from memstore flush or bulk load (don't care about these)
+    // We'll protect against the ones we care about below
+
+    this.lock.writeLock().lock();
+    try {
+      LOG.debug("Verifying {} file replacements under write lock for store {}",
+        filesToReplace.size(), identifier
+      );
+
+      // block compactions while we check all of this real quick
+      // all filesCompacting synchronizations are under read or write lock or are fast
+      // list operations
+      synchronized (filesCompacting) {
+        // Check again that none of the files we selected are compacting. There is no point messing
+        // with a file who will soon be rewritten. Note: if the compaction fails or is cancelled,
+        // this might mean leaving the non-local block locations in place. In that case we can
+        // re-call this method externally.
+        filesToReplace.entrySet().removeIf(entry ->
+          closeAndFilter(entry, "is compacting", filesCompacting::contains)
+        );
+
+        Collection<HStoreFile> currentStoreFiles = sfm.getStorefiles();
+
+        // this will be empty if the Store was closed
+        if (currentStoreFiles.isEmpty()) {
+          LOG.info("Store was closed before we could re-open newly local files. Skipping.");
+          return;
+        }
+
+        // Check that none of the files we want to replace have been removed, i.e. due to a
+        // compaction finishing or archive cleaning up, etc.
+        filesToReplace.entrySet().removeIf(entry ->
+          closeAndFilter(entry, "was removed", sf -> !currentStoreFiles.contains(sf))
+        );
+
+        if (filesToReplace.isEmpty()) {
+          LOG.info("All candidates for re-opening were filtered. Finished.");
+          return;
+        }
+
+        LOG.info("Swapping in {} re-opened store files for store {}",
+          filesToReplace.size(), identifier
+        );
+
+        // not strictly a compaction, but this is the way to replace one set of files with another
+        sfm.addCompactionResults(filesToReplace.keySet(), filesToReplace.values());
+      }
+    } finally {
+      this.lock.writeLock().unlock();
+    }
+  }
+
+  private Map<HStoreFile, HStoreFile> findStoreFilesToReOpen(StoreFileManager sfm,
+    String identifier, double improvementThreshold) throws IOException {
+    this.lock.readLock().lock();
+    try {
+      Collection<HStoreFile> currentFiles = sfm.getStorefiles();
+
+      Map<HStoreFile, HStoreFile> filesToReplace = new HashMap<>(currentFiles.size());
+      Map<StoreFileInfo, HStoreFile> storeFilesByFileInfo = new HashMap<>(currentFiles.size());
+
+      String hostName = region.getRegionServerServices().getServerName().getHostname();
+
+      LOG.info("Checking {} for store files whose locality has improved since opening", identifier);
+
+      synchronized (filesCompacting) {
+        for (HStoreFile sf : currentFiles) {
+          if (filesCompacting.contains(sf)) {
+            LOG.debug("Skipping {} because it's currently compacting", sf);
+            continue;
+          }
+
+          float cachedLocality = sf.getHDFSBlockDistribution()
+            .getBlockLocalityIndex(hostName);
+          float realLocality = sf.getFileInfo()
+            .computeHDFSBlocksDistribution(getFileSystem())
+            .getBlockLocalityIndex(hostName);
+
+          if (realLocality - cachedLocality > improvementThreshold) {
+            LOG.debug("Found candidate for re-opening: {} had {} locality but now has {}",
+              sf, cachedLocality, realLocality
+            );
+            storeFilesByFileInfo.put(sf.getFileInfo(), sf);
+          } else {
+            LOG.debug("File {} does not need re-opening: had {}, now has {}",
+              sf, cachedLocality, realLocality
+            );
+          }
+        }
+
+        if (!storeFilesByFileInfo.isEmpty()) {
+          for (HStoreFile newlyOpened : openStoreFiles(storeFilesByFileInfo.keySet(), false)) {
+            HStoreFile existing = storeFilesByFileInfo.get(newlyOpened.getFileInfo());
+            filesToReplace.put(existing, newlyOpened);
+          }
+        }
+      }
+
+      return filesToReplace;
+    } finally {
+      this.lock.readLock().unlock();
+    }
+
+  }
+
+  private boolean closeAndFilter(Map.Entry<HStoreFile, HStoreFile> entryToReplace, String reason,
+    Predicate<StoreFile> shouldFilter) {
+    if (shouldFilter.test(entryToReplace.getKey())) {
+      try {
+        LOG.debug("Skipping re-opened file because original {}: {}", reason, entryToReplace.getKey());
+        entryToReplace.getValue().closeStoreFile(false);
+      } catch (IOException e) {
+        LOG.warn("IOException closing unneeded reopened storeFile", e);
+      }
+      return true;
+    }
+    return false;
   }
 
   @Override

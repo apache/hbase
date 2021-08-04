@@ -251,6 +251,16 @@ public interface Store {
   boolean hasTooManyStoreFiles();
 
   /**
+   * Checks the underlying store files, and opens new handles on files whose locality has
+   * improved since originally opened. The newly opened HStoreFile objects are swapped in to
+   * replace existing HStoreFile objects.
+   * This has no impact on the actual data served for the Store, it just reflects a refresh of
+   * the Reader so that it can take advantage of newly local block locations.
+   * @throws IOException
+   */
+  void reopenNewlyLocalStoreFiles() throws IOException;
+
+  /**
    * Checks the underlying store files, and opens the files that have not been opened, and removes
    * the store file readers for store files no longer available. Mainly used by secondary region
    * replicas to keep up to date with the primary region files.

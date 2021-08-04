@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -75,6 +77,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -1825,6 +1828,62 @@ public class TestHStore {
       (smallCellByteSize, largeCellByteSize) -> smallCellByteSize + largeCellByteSize);
     doWriteTestLargeCellAndSmallCellConcurrently(
       (smallCellByteSize, largeCellByteSize) -> smallCellByteSize + largeCellByteSize + 1);
+  }
+
+  @Test
+  public void testReopenNewlyLocalStoreFiles() throws IOException {
+    init(name.getMethodName());
+
+    RegionServerServices rsServices = mock(RegionServerServices.class);
+    when(rsServices.getServerName()).thenReturn(ServerName.valueOf("localhost", 1000, 1000));
+    region.rsServices = rsServices;
+
+    assertEquals(0, this.store.getStorefilesCount());
+
+    // add some data, flush
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), null);
+    flush(1);
+    assertEquals(1, this.store.getStorefilesCount());
+
+    StoreFile storeFile = this.store.getStorefiles().iterator().next();
+
+    this.store.reopenNewlyLocalStoreFiles();
+
+    // should not have been re-opened, because locality has not changed and not forced
+    assertEquals(1, this.store.getStorefilesCount());
+    assertSame(storeFile, this.store.getStorefiles().iterator().next());
+
+    this.store.reopenNewlyLocalStoreFiles(-1);
+
+    // SHOULD have been re-opened, because we triggered the locality check to fail
+    assertEquals(1, this.store.getStorefilesCount());
+    assertNotSame(storeFile, this.store.getStorefiles().iterator().next());
+  }
+
+  @Test
+  public void testSkipReopeningCompactingFiles() throws IOException {
+    init(name.getMethodName());
+
+    RegionServerServices rsServices = mock(RegionServerServices.class);
+    when(rsServices.getServerName()).thenReturn(ServerName.valueOf("localhost", 1000, 1000));
+    region.rsServices = rsServices;
+
+    assertEquals(0, this.store.getStorefilesCount());
+
+    // add some data, flush
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), null);
+    flush(1);
+    assertEquals(1, this.store.getStorefilesCount());
+
+    StoreFile storeFile = this.store.getStorefiles().iterator().next();
+
+    this.store.triggerMajorCompaction();
+    this.store.requestCompaction();
+    this.store.reopenNewlyLocalStoreFiles(-1);
+
+    // should not have been re-opened, because locality has not changed and not forced
+    assertEquals(1, this.store.getStorefilesCount());
+    assertSame(storeFile, this.store.getStorefiles().iterator().next());
   }
 
   private void doWriteTestLargeCellAndSmallCellConcurrently(
