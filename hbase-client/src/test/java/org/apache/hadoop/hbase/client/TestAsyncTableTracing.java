@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,6 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -112,8 +111,8 @@ public class TestAsyncTableTracing {
           if (req.hasCloseScanner() && req.getCloseScanner()) {
             done.run(ScanResponse.getDefaultInstance());
           } else {
-            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Type.Put)
-              .setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
+            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setType(Cell.Type.Put).setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
               .setFamily(Bytes.toBytes("cf")).setQualifier(Bytes.toBytes("cq"))
               .setValue(Bytes.toBytes("v")).build();
             Result result = Result.create(Arrays.asList(cell));
@@ -154,8 +153,9 @@ public class TestAsyncTableTracing {
           case INCREMENT:
             ColumnValue value = req.getColumnValue(0);
             QualifierValue qvalue = value.getQualifierValue(0);
-            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Type.Put)
-              .setRow(req.getRow().toByteArray()).setFamily(value.getFamily().toByteArray())
+            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setType(Cell.Type.Put).setRow(req.getRow().toByteArray())
+              .setFamily(value.getFamily().toByteArray())
               .setQualifier(qvalue.getQualifier().toByteArray())
               .setValue(qvalue.getValue().toByteArray()).build();
             resp = MutateResponse.newBuilder()
@@ -314,11 +314,11 @@ public class TestAsyncTableTracing {
   }
 
   @Test
-  public void testMutateRow() throws IOException {
+  public void testMutateRow() throws Exception {
     byte[] row = Bytes.toBytes(0);
     RowMutations mutation = new RowMutations(row);
     mutation.add(new Delete(row));
-    table.mutateRow(mutation);
+    table.mutateRow(mutation).get();
     assertTrace("mutateRow");
   }
 

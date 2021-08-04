@@ -198,8 +198,8 @@ class AsyncConnectionImpl implements AsyncConnection {
   @Override
   public void close() {
     TraceUtil.trace(() -> {
-      // As the code below is safe to be executed in parallel, here we do not use CAS or lock, just a
-      // simple volatile flag.
+      // As the code below is safe to be executed in parallel, here we do not use CAS or lock,
+      // just a simple volatile flag.
       if (closed) {
         return;
       }
@@ -207,7 +207,8 @@ class AsyncConnectionImpl implements AsyncConnection {
       if (LOG.isDebugEnabled()) {
         logCallStack(Thread.currentThread().getStackTrace());
       }
-      IOUtils.closeQuietly(clusterStatusListener, e -> LOG.warn("failed to close clusterStatusListener", e));
+      IOUtils.closeQuietly(clusterStatusListener,
+        e -> LOG.warn("failed to close clusterStatusListener", e));
       IOUtils.closeQuietly(rpcClient, e -> LOG.warn("failed to close rpcClient", e));
       IOUtils.closeQuietly(registry, e -> LOG.warn("failed to close registry", e));
       synchronized (this) {
