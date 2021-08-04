@@ -61,7 +61,7 @@ class Call {
   final Span span;
   Timeout timeoutTask;
 
-  Call(int id, final Descriptors.MethodDescriptor md, Message param,
+  protected Call(int id, final Descriptors.MethodDescriptor md, Message param,
       final CellScanner cells, final Message responseDefaultType, int timeout, int priority,
       RpcCallback<Call> callback, MetricsConnection.CallStats callStats) {
     this.param = param;

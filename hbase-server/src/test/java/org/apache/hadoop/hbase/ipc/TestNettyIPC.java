@@ -39,7 +39,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
-
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollSocketChannel;

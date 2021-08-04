@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.opentelemetry.api.GlobalOpenTelemetry;
-import io.opentelemetry.context.Context;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -51,7 +49,6 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.FastThreadLocal;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos.RPCTInfo;
 
 /**
  * Utility to help ipc'ing.
@@ -115,10 +112,11 @@ class IPCUtil {
   static RequestHeader buildRequestHeader(Call call, CellBlockMeta cellBlockMeta) {
     RequestHeader.Builder builder = RequestHeader.newBuilder();
     builder.setCallId(call.id);
-    RPCTInfo.Builder traceBuilder = RPCTInfo.newBuilder();
-    GlobalOpenTelemetry.getPropagators().getTextMapPropagator().inject(Context.current(),
-      traceBuilder, (carrier, key, value) -> carrier.putHeaders(key, value));
-    builder.setTraceInfo(traceBuilder.build());
+    //TODO handle htrace API change, see HBASE-18895
+    /*if (call.span != null) {
+      builder.setTraceInfo(RPCTInfo.newBuilder().setParentId(call.span.getSpanId())
+          .setTraceId(call.span.getTracerId()));
+    }*/
     builder.setMethodName(call.md.getName());
     builder.setRequestParam(call.param != null);
     if (cellBlockMeta != null) {
