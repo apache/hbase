@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.errorprone.annotations.RestrictedApi;
 import java.util.Collection;
 import java.util.List;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -78,8 +77,6 @@ final class StoreFilePathUpdate {
       return this;
     }
 
-    @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
     Builder withStorePaths(List<Path> storeFiles) {
       this.storeFiles = storeFiles;
       return this;
