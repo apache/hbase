@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HealthCheckChore;
+import org.apache.hadoop.hbase.MetaRegionLocationCache;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PleaseHoldException;
@@ -179,6 +180,7 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RegionServerAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -422,6 +424,16 @@ public class HRegionServer extends Thread implements
 
   // master address tracker
   private final MasterAddressTracker masterAddressTracker;
+
+  /**
+   * Cache for the meta region replica's locations. Also tracks their changes to avoid stale cache
+   * entries. Used for serving ClientMetaService.
+   */
+  private final MetaRegionLocationCache metaRegionLocationCache;
+  /**
+   * Cache for all the region servers in the cluster. Used for serving ClientMetaService.
+   */
+  private final RegionServerAddressTracker regionServerAddressTracker;
 
   // Cluster Status Tracker
   protected final ClusterStatusTracker clusterStatusTracker;
@@ -669,6 +681,8 @@ public class HRegionServer extends Thread implements
         clusterStatusTracker = null;
       }
       this.rpcServices.start(zooKeeper);
+      this.metaRegionLocationCache = new MetaRegionLocationCache(zooKeeper);
+      this.regionServerAddressTracker = new RegionServerAddressTracker(zooKeeper, this);
       // This violates 'no starting stuff in Constructor' but Master depends on the below chore
       // and executor being created and takes a different startup route. Lots of overlap between HRS
       // and M (An M IS A HRS now). Need to refactor so less duplication between M and its super
@@ -3991,5 +4005,13 @@ public class HRegionServer extends Thread implements
   @InterfaceAudience.Private
   public long getRetryPauseTime() {
     return this.retryPauseTime;
+  }
+
+  public MetaRegionLocationCache getMetaRegionLocationCache() {
+    return this.metaRegionLocationCache;
+  }
+
+  RegionServerAddressTracker getRegionServerAddressTracker() {
+    return regionServerAddressTracker;
   }
 }
