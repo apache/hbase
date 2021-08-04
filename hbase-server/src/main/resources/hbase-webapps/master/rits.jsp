@@ -80,7 +80,7 @@
         </div>
     </div>
 
-  <% if (rit != null && rit.size() > 0) { %>
+    <% if (rit != null && rit.size() > 0) { %>
         <table class="table table-striped">
             <tr>
                 <th>Region</th>
@@ -117,9 +117,9 @@
             <% } %>
             <p><%= rit.size() %> region(s) in transition.</p>
         </table>
-  <% } else { %>
-  <p> no region in transition right now. </p>
-  <% } %>
+    <% } else { %>
+    <p> no region in transition right now. </p>
+    <% } %>
 
 </div>
 <jsp:include page="footer.jsp" />
