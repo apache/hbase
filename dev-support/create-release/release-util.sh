@@ -179,24 +179,26 @@ function get_release_info {
   # - If not, need to check whether the previous version has been already released or not.
   #   - If it has, then we're building RC0 of the current version.
   #   - If it has not, we're building the next RC of the previous version.
-  local RC_COUNT
-  if [ "$REV" != 0 ]; then
-    local PREV_REL_REV=$((REV - 1))
-    PREV_REL_TAG="rel/${SHORT_VERSION}.${PREV_REL_REV}"
-    if git ls-remote --tags "$ASF_REPO" "$PREV_REL_TAG" | grep -q "refs/tags/${PREV_REL_TAG}$" ; then
-      RC_COUNT=0
+  if [[ -z "${RC_COUNT}" ]]; then
+    local RC_COUNT
+    if [ "$REV" != 0 ]; then
+      local PREV_REL_REV=$((REV - 1))
+      PREV_REL_TAG="rel/${SHORT_VERSION}.${PREV_REL_REV}"
+      if git ls-remote --tags "$ASF_REPO" "$PREV_REL_TAG" | grep -q "refs/tags/${PREV_REL_TAG}$" ; then
+        RC_COUNT=0
+        REV=$((REV + 1))
+        NEXT_VERSION="${SHORT_VERSION}.${REV}-SNAPSHOT"
+      else
+        RELEASE_VERSION="${SHORT_VERSION}.${PREV_REL_REV}"
+        RC_COUNT="$(git ls-remote --tags "$ASF_REPO" "${RELEASE_VERSION}RC*" | wc -l)"
+        # This makes a 'number' of it.
+        RC_COUNT=$((RC_COUNT))
+      fi
+    else
       REV=$((REV + 1))
       NEXT_VERSION="${SHORT_VERSION}.${REV}-SNAPSHOT"
-    else
-      RELEASE_VERSION="${SHORT_VERSION}.${PREV_REL_REV}"
-      RC_COUNT="$(git ls-remote --tags "$ASF_REPO" "${RELEASE_VERSION}RC*" | wc -l)"
-      # This makes a 'number' of it.
-      RC_COUNT=$((RC_COUNT))
+      RC_COUNT=0
     fi
-  else
-    REV=$((REV + 1))
-    NEXT_VERSION="${SHORT_VERSION}.${REV}-SNAPSHOT"
-    RC_COUNT=0
   fi
 
   RELEASE_VERSION="$(read_config "RELEASE_VERSION" "$RELEASE_VERSION")"
@@ -204,8 +206,10 @@ function get_release_info {
   export RELEASE_VERSION NEXT_VERSION
 
   RC_COUNT="$(read_config "RC_COUNT" "$RC_COUNT")"
-  RELEASE_TAG="${RELEASE_VERSION}RC${RC_COUNT}"
-  RELEASE_TAG="$(read_config "RELEASE_TAG" "$RELEASE_TAG")"
+  if [[ -z "${RELEASE_TAG}" ]]; then
+    RELEASE_TAG="${RELEASE_VERSION}RC${RC_COUNT}"
+    RELEASE_TAG="$(read_config "RELEASE_TAG" "$RELEASE_TAG")"
+  fi
 
   # Check if the RC already exists, and if re-creating the RC, skip tag creation.
   SKIP_TAG=0
@@ -236,12 +240,14 @@ function get_release_info {
   GIT_NAME="$(read_config "GIT_NAME" "$GIT_NAME")"
 
   GIT_EMAIL="$ASF_USERNAME@apache.org"
-  GPG_KEY="$(read_config "GPG_KEY" "$GIT_EMAIL")"
+  if [[ -z "${GPG_KEY}" ]]; then
+    GPG_KEY="$(read_config "GPG_KEY" "$GIT_EMAIL")"
+  fi
   if ! GPG_KEY_ID=$("${GPG}" "${GPG_ARGS[@]}" --keyid-format 0xshort --list-public-key "${GPG_KEY}" | grep "\[S\]" | grep -o "0x[0-9A-F]*") ||
       [ -z "${GPG_KEY_ID}" ] ; then
     GPG_KEY_ID=$("${GPG}" "${GPG_ARGS[@]}" --keyid-format 0xshort --list-public-key "${GPG_KEY}" | head -n 1 | grep -o "0x[0-9A-F]*" || true)
   fi
-  read -r -p "We think the key '${GPG_KEY}' corresponds to the key id '${GPG_KEY_ID}'. Is this correct [y/n]? " ANSWER
+  read -r -p "Does the GPG key '${GPG_KEY}' corresponds to the GPG key id '${GPG_KEY_ID}'. Is this correct [y/n]? " ANSWER
   if [ "$ANSWER" = "y" ]; then
     GPG_KEY="${GPG_KEY_ID}"
   fi
