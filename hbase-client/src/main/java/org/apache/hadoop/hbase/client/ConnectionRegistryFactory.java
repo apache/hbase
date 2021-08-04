@@ -35,8 +35,8 @@ final class ConnectionRegistryFactory {
    * @return The connection registry implementation to use.
    */
   static ConnectionRegistry getRegistry(Configuration conf) {
-    Class<? extends ConnectionRegistry> clazz = conf.getClass(
-        CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, ZKConnectionRegistry.class,
+    Class<? extends ConnectionRegistry> clazz =
+      conf.getClass(CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, ZKConnectionRegistry.class,
         ConnectionRegistry.class);
     return ReflectionUtils.newInstance(clazz, conf);
   }

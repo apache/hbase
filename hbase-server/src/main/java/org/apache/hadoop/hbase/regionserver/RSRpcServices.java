@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -156,6 +157,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -254,6 +256,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ClientMetaService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetBootstrapNodesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetBootstrapNodesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersResponseEntry;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -266,8 +280,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
 public class RSRpcServices implements HBaseRPCErrorHandler,
-    AdminService.BlockingInterface, ClientService.BlockingInterface, PriorityFunction,
-    ConfigurationObserver {
+    AdminService.BlockingInterface, ClientService.BlockingInterface,
+    ClientMetaService.BlockingInterface, PriorityFunction, ConfigurationObserver {
   protected static final Logger LOG = LoggerFactory.getLogger(RSRpcServices.class);
 
   /** RPC scheduler to use for the region server. */
@@ -373,9 +387,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * where you would ever turn off one or the other).
    */
   public static final String REGIONSERVER_ADMIN_SERVICE_CONFIG =
-      "hbase.regionserver.admin.executorService";
+    "hbase.regionserver.admin.executorService";
   public static final String REGIONSERVER_CLIENT_SERVICE_CONFIG =
-      "hbase.regionserver.client.executorService";
+    "hbase.regionserver.client.executorService";
+  public static final String REGIONSERVER_CLIENT_META_SERVICE_CONFIG =
+    "hbase.regionserver.client.meta.executorService";
 
   /**
    * An Rpc callback for closing a RegionScanner.
@@ -1578,23 +1594,24 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * supports
    */
   protected List<BlockingServiceAndInterface> getServices() {
-    boolean admin =
-      getConfiguration().getBoolean(REGIONSERVER_ADMIN_SERVICE_CONFIG, true);
-    boolean client =
-      getConfiguration().getBoolean(REGIONSERVER_CLIENT_SERVICE_CONFIG, true);
+    boolean admin = getConfiguration().getBoolean(REGIONSERVER_ADMIN_SERVICE_CONFIG, true);
+    boolean client = getConfiguration().getBoolean(REGIONSERVER_CLIENT_SERVICE_CONFIG, true);
+    boolean clientMeta =
+      getConfiguration().getBoolean(REGIONSERVER_CLIENT_META_SERVICE_CONFIG, true);
     List<BlockingServiceAndInterface> bssi = new ArrayList<>();
     if (client) {
-      bssi.add(new BlockingServiceAndInterface(
-      ClientService.newReflectiveBlockingService(this),
-      ClientService.BlockingInterface.class));
+      bssi.add(new BlockingServiceAndInterface(ClientService.newReflectiveBlockingService(this),
+        ClientService.BlockingInterface.class));
     }
     if (admin) {
-      bssi.add(new BlockingServiceAndInterface(
-      AdminService.newReflectiveBlockingService(this),
-      AdminService.BlockingInterface.class));
+      bssi.add(new BlockingServiceAndInterface(AdminService.newReflectiveBlockingService(this),
+        AdminService.BlockingInterface.class));
     }
-    return new org.apache.hbase.thirdparty.com.google.common.collect.
-        ImmutableList.Builder<BlockingServiceAndInterface>().addAll(bssi).build();
+    if (clientMeta) {
+      bssi.add(new BlockingServiceAndInterface(ClientMetaService.newReflectiveBlockingService(this),
+        ClientMetaService.BlockingInterface.class));
+    }
+    return new ImmutableList.Builder<BlockingServiceAndInterface>().addAll(bssi).build();
   }
 
   public InetSocketAddress getSocketAddress() {
@@ -4007,5 +4024,62 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   protected ZKPermissionWatcher getZkPermissionWatcher() {
     return zkPermissionWatcher;
+  }
+
+  @Override
+  public GetClusterIdResponse getClusterId(RpcController controller, GetClusterIdRequest request)
+    throws ServiceException {
+    return GetClusterIdResponse.newBuilder().setClusterId(regionServer.getClusterId()).build();
+  }
+
+  @Override
+  public GetActiveMasterResponse getActiveMaster(RpcController controller,
+    GetActiveMasterRequest request) throws ServiceException {
+    GetActiveMasterResponse.Builder builder = GetActiveMasterResponse.newBuilder();
+    ServerName activeMaster = regionServer.getMasterAddressTracker().getMasterAddress();
+    if (activeMaster != null) {
+      builder.setServerName(ProtobufUtil.toServerName(activeMaster));
+    }
+    return builder.build();
+  }
+
+  @Override
+  public GetMastersResponse getMasters(RpcController controller, GetMastersRequest request)
+    throws ServiceException {
+    try {
+      GetMastersResponse.Builder builder = GetMastersResponse.newBuilder();
+      ServerName activeMaster = regionServer.getMasterAddressTracker().getMasterAddress();
+      if (activeMaster != null) {
+        builder.addMasterServers(GetMastersResponseEntry.newBuilder()
+          .setServerName(ProtobufUtil.toServerName(activeMaster)).setIsActive(true));
+      }
+      for (ServerName backupMaster : regionServer.getMasterAddressTracker().getBackupMasters()) {
+        builder.addMasterServers(GetMastersResponseEntry.newBuilder()
+          .setServerName(ProtobufUtil.toServerName(backupMaster)).setIsActive(false));
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController controller,
+    GetMetaRegionLocationsRequest request) throws ServiceException {
+    GetMetaRegionLocationsResponse.Builder builder = GetMetaRegionLocationsResponse.newBuilder();
+    Optional<List<HRegionLocation>> metaLocations =
+      regionServer.getMetaRegionLocationCache().getMetaRegionLocations();
+    metaLocations.ifPresent(hRegionLocations -> hRegionLocations
+      .forEach(location -> builder.addMetaLocations(ProtobufUtil.toRegionLocation(location))));
+    return builder.build();
+  }
+
+  @Override
+  public GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
+    GetBootstrapNodesRequest request) throws ServiceException {
+    GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
+    regionServer.getRegionServerAddressTracker().getRegionServers().stream()
+      .map(ProtobufUtil::toServerName).forEach(builder::addServerName);
+    return builder.build();
   }
 }

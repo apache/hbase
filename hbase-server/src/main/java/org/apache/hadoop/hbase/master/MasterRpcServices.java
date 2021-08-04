@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -76,7 +75,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.janitor.MetaFixer;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -178,7 +176,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceReq
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
@@ -203,21 +200,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProced
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponseEntry;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
@@ -354,6 +342,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ClientMetaService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetBootstrapNodesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetBootstrapNodesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -2986,9 +2984,11 @@ public class MasterRpcServices extends RSRpcServices implements
     return true;
   }
 
+  // Override this method since for backup master we will not set the clusterId field, which means
+  // we need to find another way to get cluster id for backup masters.
   @Override
   public GetClusterIdResponse getClusterId(RpcController rpcController, GetClusterIdRequest request)
-      throws ServiceException {
+    throws ServiceException {
     GetClusterIdResponse.Builder resp = GetClusterIdResponse.newBuilder();
     String clusterId = master.getClusterId();
     if (clusterId != null) {
@@ -2997,40 +2997,43 @@ public class MasterRpcServices extends RSRpcServices implements
     return resp.build();
   }
 
+  // Override this method since we use ActiveMasterManager to get active master on HMaster while in
+  // HRegionServer we use MasterAddressTracker
   @Override
   public GetActiveMasterResponse getActiveMaster(RpcController rpcController,
-      GetActiveMasterRequest request) throws ServiceException {
+    GetActiveMasterRequest request) throws ServiceException {
     GetActiveMasterResponse.Builder resp = GetActiveMasterResponse.newBuilder();
     Optional<ServerName> serverName = master.getActiveMaster();
     serverName.ifPresent(name -> resp.setServerName(ProtobufUtil.toServerName(name)));
     return resp.build();
   }
 
+  // Override this method since we use ActiveMasterManager to get backup masters on HMaster while in
+  // HRegionServer we use MasterAddressTracker
   @Override
   public GetMastersResponse getMasters(RpcController rpcController, GetMastersRequest request)
-      throws ServiceException {
+    throws ServiceException {
     GetMastersResponse.Builder resp = GetMastersResponse.newBuilder();
     // Active master
     Optional<ServerName> serverName = master.getActiveMaster();
     serverName.ifPresent(name -> resp.addMasterServers(GetMastersResponseEntry.newBuilder()
-        .setServerName(ProtobufUtil.toServerName(name)).setIsActive(true).build()));
+      .setServerName(ProtobufUtil.toServerName(name)).setIsActive(true).build()));
     // Backup masters
-    for (ServerName backupMaster: master.getBackupMasters()) {
-      resp.addMasterServers(GetMastersResponseEntry.newBuilder().setServerName(
-          ProtobufUtil.toServerName(backupMaster)).setIsActive(false).build());
+    for (ServerName backupMaster : master.getBackupMasters()) {
+      resp.addMasterServers(GetMastersResponseEntry.newBuilder()
+        .setServerName(ProtobufUtil.toServerName(backupMaster)).setIsActive(false).build());
     }
     return resp.build();
   }
 
   @Override
-  public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController rpcController,
-      GetMetaRegionLocationsRequest request) throws ServiceException {
-    GetMetaRegionLocationsResponse.Builder response = GetMetaRegionLocationsResponse.newBuilder();
-    Optional<List<HRegionLocation>> metaLocations =
-        master.getMetaRegionLocationCache().getMetaRegionLocations();
-    metaLocations.ifPresent(hRegionLocations -> hRegionLocations.forEach(
-      location -> response.addMetaLocations(ProtobufUtil.toRegionLocation(location))));
-    return response.build();
+  public GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
+    GetBootstrapNodesRequest request) throws ServiceException {
+    GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
+    for (ServerName sn : master.getServerManager().getOnlineServers().keySet()) {
+      builder.addServerName(ProtobufUtil.toServerName(sn));
+    }
+    return builder.build();
   }
   @Override
   public HBaseProtos.LogEntry getLogEntries(RpcController controller,
