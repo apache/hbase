@@ -29,6 +29,10 @@ import org.apache.yetus.audience.InterfaceStability;
  * The intention is that the constructor shape helps re-inforce the expected parameters needed
  * to match up to how the RpcExecutor will instantiate instances of the queue.
  *
+ * If the implementation class implements the
+ * {@link org.apache.hadoop.hbase.conf.ConfigurationObserver} interface, it will also be wired
+ * into configuration changes.
+ *
  * Instantiation requires a constructor with {@code
  *     final int maxQueueLength,
  *     final PriorityFunction priority,

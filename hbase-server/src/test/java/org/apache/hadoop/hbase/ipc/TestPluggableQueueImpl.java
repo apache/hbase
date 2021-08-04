@@ -22,6 +22,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 
 /**
@@ -30,14 +31,17 @@ import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
  * Used to verify that the pluggable call queue type for the RpcExecutor can load correctly
  * via the FQCN reflection semantics.
  */
-public class TestPluggableQueueImpl extends PluggableBlockingQueue {
+public class TestPluggableQueueImpl extends PluggableBlockingQueue implements
+  ConfigurationObserver {
 
   private final BoundedPriorityBlockingQueue<CallRunner> inner;
+  private static boolean configurationRecentlyChanged = false;
 
   public TestPluggableQueueImpl(int maxQueueLength, PriorityFunction priority, Configuration conf) {
     super(maxQueueLength, priority, conf);
     Comparator<CallRunner> comparator = Comparator.comparingInt(r -> r.getRpcCall().getPriority());
     inner = new BoundedPriorityBlockingQueue<>(maxQueueLength, comparator);
+    configurationRecentlyChanged = false;
   }
 
   @Override public boolean add(CallRunner callRunner) {
@@ -139,5 +143,13 @@ public class TestPluggableQueueImpl extends PluggableBlockingQueue {
 
   @Override public int drainTo(Collection<? super CallRunner> c, int maxElements) {
     return inner.drainTo(c, maxElements);
+  }
+
+  public static boolean hasObservedARecentConfigurationChange() {
+    return configurationRecentlyChanged;
+  }
+
+  @Override public void onConfigurationChange(Configuration conf) {
+    configurationRecentlyChanged = true;
   }
 }

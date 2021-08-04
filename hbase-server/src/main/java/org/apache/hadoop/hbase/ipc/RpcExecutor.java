@@ -34,6 +34,7 @@ import java.util.HashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -460,7 +461,7 @@ public abstract class RpcExecutor {
     return callQueueType.equals(CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
   }
 
-  private boolean isPluggableQueueType(String callQueueType) {
+  public static boolean isPluggableQueueType(String callQueueType) {
     return callQueueType.equals(CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE);
   }
 
@@ -566,6 +567,8 @@ public abstract class RpcExecutor {
       if (queue instanceof AdaptiveLifoCoDelCallQueue) {
         ((AdaptiveLifoCoDelCallQueue) queue).updateTunables(codelTargetDelay, codelInterval,
           codelLifoThreshold);
+      } else if (queue instanceof ConfigurationObserver) {
+        ((ConfigurationObserver)queue).onConfigurationChange(conf);
       }
     }
   }
